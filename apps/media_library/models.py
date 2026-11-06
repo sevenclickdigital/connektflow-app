@@ -5,6 +5,7 @@ import uuid
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from .managers import MediaAssetManager
 
@@ -78,10 +79,10 @@ class MediaAsset(models.Model):
     """
 
     class MediaType(models.TextChoices):
-        IMAGE = "image", "Image"
-        VIDEO = "video", "Video"
+        IMAGE = "image", _("Image")
+        VIDEO = "video", _("Video")
         GIF = "gif", "GIF"
-        DOCUMENT = "document", "Document"
+        DOCUMENT = "document", _("Document")
 
     class ProcessingStatus(models.TextChoices):
         PENDING = "pending", "Pending"

@@ -71,7 +71,7 @@
                     {% if n.body %}
                     <p class="text-[12px] text-stone-500 leading-relaxed mt-0.5 line-clamp-2">{{ n.body }}</p>
                     {% endif %}
-                    <p class="text-[11px] text-stone-400 mt-1 font-medium tabular-nums">{{ n.created_at|timesince }} ago</p>
+                    <p class="text-[11px] text-stone-400 mt-1 font-medium tabular-nums">{% blocktranslate with time=n.created_at|timesince %}{{ time }} ago{% endblocktranslate %}</p>
                 </div>
 
                 {% if not n.is_read %}

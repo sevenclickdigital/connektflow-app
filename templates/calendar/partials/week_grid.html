@@ -42,7 +42,7 @@ Context: week_days, week_slots, workspace.
                     {% if not slot.is_past %}
                     <a href="{% url 'composer:compose' workspace_id=workspace.id %}?account={{ slot.account.id }}&scheduled_date={{ slot.compose_date }}&scheduled_time={{ slot.compose_time }}"
                        class="calendar-slot-add"
-                       title="Schedule post for {{ slot.account.account_name|default:slot.account.account_handle }} at {{ slot.time_label }}">
+                       title="{% blocktranslate with account=slot.account.account_name|default:slot.account.account_handle time=slot.time_label %}Schedule post for {{ account }} at {{ time }}{% endblocktranslate %}">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                     </a>
                     {% else %}
@@ -55,7 +55,7 @@ Context: week_days, week_slots, workspace.
             {% for pp in cell.posts %}
             <a href="{% url 'composer:compose_edit' workspace_id=workspace.id post_id=pp.post_id %}?account={{ pp.social_account_id }}"
                class="post-chip status-{{ pp.status }}{% if pp.is_reschedulable %} is-draggable{% endif %}"
-               title="{% if pp.is_reschedulable %}Move or open{% else %}Open{% endif %}"
+               title="{% if pp.is_reschedulable %}{% translate 'Move or open' %}{% else %}{% translate 'Open' %}{% endif %}"
                {% if pp.is_reschedulable %}draggable="true" data-platform-post-id="{{ pp.id }}"{% else %}draggable="false"{% endif %}>
                 {% if pp.is_bulk_selectable %}{% include "calendar/partials/_select_checkbox.html" with pp_id=pp.id %}{% endif %}
                 <span class="w-4 h-4 rounded flex items-center justify-center pi-{{ pp.social_account.platform }} flex-shrink-0 text-white">

@@ -14,6 +14,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods
 
 from apps.accounts.signup_links import custom_signup_url, signup_allowed
+from apps.calendar.services import day_label, month_label, week_label, weekday_names
 from apps.common.validators import clean_display_name
 from apps.composer.models import PlatformPost, Post, Tag
 from apps.members.decorators import require_org_role
@@ -315,7 +316,7 @@ def cross_workspace_calendar(request):
             "workspace_colors": workspace_colors,
             "target_date": target_date,
             "default_workspace": workspaces.first(),
-            "day_names": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            "day_names": weekday_names(),
             "settings_active": "calendars",
             "view_type": view_type,
             "social_accounts": social_accounts,
@@ -366,7 +367,7 @@ def _build_month_context(base_pps, target_date, today):
 
     return {
         "calendar_weeks": calendar_weeks,
-        "period_label": date(year, month, 1).strftime("%B %Y"),
+        "period_label": month_label(date(year, month, 1)),
         "prev_date": prev_month.isoformat(),
         "next_date": next_month.isoformat(),
     }
@@ -405,7 +406,7 @@ def _build_week_context(base_pps, target_date, today):
         "week_slots": week_slots,
         "today": today,
         "current_hour": _tz.now().hour,
-        "period_label": f"{week_days[0].strftime('%b %d')} – {week_days[6].strftime('%b %d, %Y')}",
+        "period_label": week_label(week_days[0], week_days[6]),
         "prev_date": (monday - timedelta(weeks=1)).isoformat(),
         "next_date": (monday + timedelta(weeks=1)).isoformat(),
     }
@@ -432,7 +433,7 @@ def _build_day_context(base_pps, target_date, today):
         "is_today": target_date == today,
         "is_past_day": target_date < today,
         "current_hour": now.hour,
-        "period_label": target_date.strftime("%A, %B %d, %Y"),
+        "period_label": day_label(target_date),
         "prev_date": (target_date - timedelta(days=1)).isoformat(),
         "next_date": (target_date + timedelta(days=1)).isoformat(),
     }

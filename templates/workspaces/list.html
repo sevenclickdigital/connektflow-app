@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block page_title %}Workspaces{% endblock %}
+{% block page_title %}{% translate "Workspaces" %}{% endblock %}
 {% block content %}
 <div style="max-width: 720px;">
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
@@ -62,7 +62,7 @@
                 <input
                     type="text"
                     name="name"
-                    placeholder="Workspace name"
+                    placeholder="{% translate 'Workspace name' %}"
                     required
                     class="form-input-styled"
                 >

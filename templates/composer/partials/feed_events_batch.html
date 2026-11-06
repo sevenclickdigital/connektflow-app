@@ -38,9 +38,9 @@
         {% endif %}
         <div class="mt-2 text-sm text-stone-500">
             {% if event.published_at %}
-            {{ event.published_at|timesince }} ago
+            {% blocktranslate with time=event.published_at|timesince %}{{ time }} ago{% endblocktranslate %}
             {% else %}
-            Recently
+            {% translate "Recently" %}
             {% endif %}
         </div>
     </div>

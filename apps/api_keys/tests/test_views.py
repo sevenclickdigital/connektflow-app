@@ -29,6 +29,12 @@ from apps.members.models import (
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def _english_responses(settings):
+    """Render pages in English so assertions test behaviour, not the pt-br wording."""
+    settings.LANGUAGE_CODE = "en-us"
+
+
 @pytest.fixture
 def admin_user(db):
     from apps.accounts.models import User

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static i18n %}
 
-{% block title %}Publish - {{ workspace.name }} - Brightbean{% endblock %}
+{% block title %}{% translate "Publish" %} - {{ workspace.name }} - Brightbean{% endblock %}
 
 {% block page_header %}
 <div class="flex flex-wrap items-center justify-between gap-3 mb-4 lg:mb-[25px]">
@@ -384,9 +384,13 @@ ticked (see the `sel` Alpine store).{% endcomment %}
             </div>
             <h3 class="text-base font-bold text-stone-900" x-text="confirmAction === 'delete' ? '{% translate "Delete posts?" %}' : '{% translate "Publish now?" %}'"></h3>
             <p class="text-sm text-stone-500 mt-1 leading-relaxed"
-               x-text="confirmAction === 'delete'
-                   ? ('Permanently delete ' + $store.sel.count + ' selected post' + ($store.sel.count === 1 ? '' : 's') + '. This can\'t be undone.')
-                   : ('Publish ' + $store.sel.count + ' selected post' + ($store.sel.count === 1 ? '' : 's') + ' now — they go out on their platforms shortly.')"></p>
+               data-delete-one="{% translate "Permanently delete {n} selected post. This can't be undone." %}"
+               data-delete-many="{% translate "Permanently delete {n} selected posts. This can't be undone." %}"
+               data-publish-one="{% translate 'Publish {n} selected post now — it goes out on its platform shortly.' %}"
+               data-publish-many="{% translate 'Publish {n} selected posts now — they go out on their platforms shortly.' %}"
+               x-text="(confirmAction === 'delete'
+                   ? ($store.sel.count === 1 ? $el.dataset.deleteOne : $el.dataset.deleteMany)
+                   : ($store.sel.count === 1 ? $el.dataset.publishOne : $el.dataset.publishMany)).replace('{n}', $store.sel.count)"></p>
             <div class="flex gap-2 mt-5">
                 <button @click="confirmAction = null" class="flex-1 px-4 py-2 text-sm font-semibold rounded-full border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors">{% translate "Cancel" %}</button>
                 <button @click="exec(confirmAction)" :disabled="busy"
@@ -400,6 +404,10 @@ ticked (see the `sel` Alpine store).{% endcomment %}
 {% endblock %}
 
 {% block extra_js %}
+{% translate "Could not complete that action." as lbl_cal_action_failed %}
+{% translate "Could not reschedule that post." as lbl_cal_reschedule_failed %}
+{{ lbl_cal_action_failed|json_script:"cal-action-failed" }}
+{{ lbl_cal_reschedule_failed|json_script:"cal-reschedule-failed" }}
 <script nonce="{{ request.csp_nonce }}">
 /* Surface a rejected request through the shared toast host
    (approvals/partials/_toasts.html), which listens for a `showToast` event on
@@ -452,7 +460,7 @@ function bulkBar() {
                 if (!res.ok) {
                     // e.g. the publish_directly gate. Keep the selection so the
                     // user can retry with an action they are allowed to take.
-                    bbFailureToast(res, 'Could not complete that action.');
+                    bbFailureToast(res, JSON.parse(document.getElementById('cal-action-failed').textContent));
                     return;
                 }
                 store.clear();
@@ -598,7 +606,7 @@ function calendarApp() {
                     // drop rejected by the publish gate would otherwise look
                     // like the chip just sprang back for no reason.
                     this.reloadCalendar();
-                    bbFailureToast(res, 'Could not reschedule that post.');
+                    bbFailureToast(res, JSON.parse(document.getElementById('cal-reschedule-failed').textContent));
                     return;
                 }
                 // Re-render on success too. SortableJS drops the chip at the

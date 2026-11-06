@@ -1,9 +1,9 @@
-Hi there,
+{% load i18n %}{% translate "Hi there," %}
 
-{{ invited_by.display_name }} has invited you to join {{ org_name }} as a team member on Brightbean.
+{% blocktranslate with inviter=invited_by.display_name org=org_name %}{{ inviter }} has invited you to join {{ org }} as a team member on Brightbean.{% endblocktranslate %}
 
-Accept the invitation by visiting the link below:
+{% translate "Accept the invitation by visiting the link below:" %}
 
 {{ accept_url }}
 
-This invitation expires in 7 days. If it expires, ask your team admin for a new one.
+{% translate "This invitation expires in 7 days. If it expires, ask your team admin for a new one." %}

@@ -34,6 +34,12 @@ from apps.notifications.models import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _english_responses(settings):
+    """Render pages in English so assertions test behaviour, not the pt-br wording."""
+    settings.LANGUAGE_CODE = "en-us"
+
+
 def fail(user, n=1, title="TikTok post failed to publish"):
     for i in range(n):
         notify(user, EventType.POST_FAILED, title, body=f"reason {i}")

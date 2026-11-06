@@ -905,6 +905,8 @@ class RecurringPostPublishabilityTests(TestCase):
                 self.assertEqual(set(clones.values_list("status", flat=True)), {"draft"})
 
 
+# The project defaults to pt-br; pin English so the badge text assertion is stable.
+@override_settings(LANGUAGE_CODE="en-us")
 class PublishTabTimezoneTests(TestCase):
     """The publish tabs must render times in a user-supplied ?tz= without 500ing."""
 

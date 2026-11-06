@@ -9,7 +9,7 @@
     <div>
       <h4 class="text-sm font-semibold" style="color: var(--warning-700, #A16207);">{% translate "Cannot delete this asset" %}</h4>
       <p class="text-xs mt-1" style="color: var(--warning-700, #A16207);">
-        This media is referenced by {{ referencing_posts|length }} scheduled post{{ referencing_posts|pluralize }}. Remove it from those posts first.
+        {% blocktranslate count counter=referencing_posts|length %}This media is referenced by {{ counter }} scheduled post. Remove it from those posts first.{% plural %}This media is referenced by {{ counter }} scheduled posts. Remove it from those posts first.{% endblocktranslate %}
       </p>
       {% if referencing_posts %}
       <ul class="mt-2 space-y-1">

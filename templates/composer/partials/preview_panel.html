@@ -11,7 +11,7 @@ Context: previews (list of dicts with account, title, caption, first_comment, ch
         <!-- Platform label + char badge -->
         <div class="px-3.5 py-2 border-b flex items-center gap-2" style="border-color: #E7E5E4;">
             {% if p.account.platform != "youtube" %}{% include "partials/_platform_icon.html" with platform=p.account.platform size="sm" %}{% endif %}
-            <span class="text-[11px] font-semibold text-stone-500 flex-1">{% if p.account.platform == "youtube" %}YouTube{% else %}{{ p.account.platform|title }}{% endif %} Preview</span>
+            <span class="text-[11px] font-semibold text-stone-500 flex-1">{% if p.account.platform == "youtube" %}{% blocktranslate with platform="YouTube" %}{{ platform }} Preview{% endblocktranslate %}{% else %}{% blocktranslate with platform=p.account.platform|title %}{{ platform }} Preview{% endblocktranslate %}{% endif %}</span>
             <span class="text-[10px] font-semibold tabular-nums px-2 py-0.5 rounded-full
                          {% if p.is_over_limit %}bg-red-50 text-red-600{% else %}bg-stone-100 text-stone-500{% endif %}">
                 {{ p.char_count }}/{{ p.char_limit }}
@@ -223,7 +223,7 @@ Context: previews (list of dicts with account, title, caption, first_comment, ch
                 {% endif %}
                 <div class="flex-1 min-w-0">
                     <div class="text-[13px] font-semibold text-stone-900">{{ p.account.account_name|default:p.account.account_handle }}</div>
-                    <div class="text-[11px] text-stone-400 leading-tight truncate">{{ p.account.account_handle|default:"Company page" }}</div>
+                    <div class="text-[11px] text-stone-400 leading-tight truncate">{{ p.account.account_handle|default:_("Company page") }}</div>
                     <div class="text-[11px] text-stone-400 flex items-center gap-1 mt-0.5">{% translate "Just now ·" %} <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1116 0A8 8 0 010 8zm5.496-3.397A.75.75 0 004.5 5.25v5.5a.75.75 0 001.052.687l4.97-2.522.063-.035a.75.75 0 000-1.34l-.063-.036-4.97-2.521-.056-.02z"/></svg></div>
                 </div>
                 <svg class="w-5 h-5 text-stone-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>
@@ -349,7 +349,7 @@ Context: previews (list of dicts with account, title, caption, first_comment, ch
                 <!-- Music ticker -->
                 <div class="flex items-center gap-1.5 mt-2">
                     <svg class="w-3 h-3 flex-shrink-0" fill="white" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-                    <span class="text-[11px] truncate drop-shadow-sm">Original sound - {{ p.account.account_name|default:p.account.account_handle }}</span>
+                    <span class="text-[11px] truncate drop-shadow-sm">{% blocktranslate with name=p.account.account_name|default:p.account.account_handle %}Original sound - {{ name }}{% endblocktranslate %}</span>
                 </div>
             </div>
         </div>
@@ -545,7 +545,7 @@ Context: previews (list of dicts with account, title, caption, first_comment, ch
         {% if p.is_over_limit %}
         <div class="px-3 py-2 border-t border-red-100 bg-red-50/50 flex items-center gap-1.5 text-[11px] font-medium text-red-500">
             <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-            Caption exceeds {{ p.char_limit }} character limit
+            {% blocktranslate with limit=p.char_limit %}Caption exceeds {{ limit }} character limit{% endblocktranslate %}
         </div>
         {% endif %}
     </div>

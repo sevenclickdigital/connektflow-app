@@ -30,7 +30,7 @@ Usage: {% include "social_accounts/partials/_account_card.html" with account=acc
             <div class="flex items-center gap-3 mt-2">
                 {% include "social_accounts/partials/_status_badge.html" with status=account.connection_status error=account.last_error %}
                 {% if account.follower_count %}
-                <span class="text-xs text-stone-400">{{ account.follower_count|format_number }} {% if account.platform == "youtube" %}subscribers{% else %}followers{% endif %}</span>
+                <span class="text-xs text-stone-400">{{ account.follower_count|format_number }} {% if account.platform == "youtube" %}{% translate "subscribers" %}{% else %}{% translate "followers" %}{% endif %}</span>
                 {% endif %}
             </div>
         </div>
@@ -146,9 +146,9 @@ Usage: {% include "social_accounts/partials/_account_card.html" with account=acc
     <div class="mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
         <div class="flex items-start justify-between gap-3">
             <p class="text-xs text-amber-800">
-                <span class="font-semibold">Some real-time inbox updates are unavailable.</span>
-                {{ webhook_warning.message|default:"We couldn't set up real-time updates for this account." }}
-                Activity with the required permissions can still arrive through polling.
+                <span class="font-semibold">{% translate "Some real-time inbox updates are unavailable." %}</span>
+                {{ webhook_warning.message|default:_("We couldn't set up real-time updates for this account.") }}
+                {% translate "Activity with the required permissions can still arrive through polling." %}
             </p>
             {% if webhook_warning.needs_reconnect %}
             <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=workspace_id account_id=account.id %}">

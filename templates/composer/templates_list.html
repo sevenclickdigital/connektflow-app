@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}Post Templates - {{ workspace.name }} - Brightbean{% endblock %}
+{% block title %}{% translate "Post Templates" %} - {{ workspace.name }} - Brightbean{% endblock %}
 
 {% block page_header %}
 <div class="flex items-center justify-between mb-6">
@@ -48,7 +48,7 @@
             {% endif %}
             <div class="flex items-center justify-between">
                 <span class="text-[11px] text-stone-400">
-                    {% if tpl.created_by %}by {{ tpl.created_by.name|default:tpl.created_by.email }}{% endif %}
+                    {% if tpl.created_by %}{% blocktranslate with name=tpl.created_by.name|default:tpl.created_by.email %}by {{ name }}{% endblocktranslate %}{% endif %}
                 </span>
                 <a href="{% url 'composer:use_template' workspace_id=workspace.id template_id=tpl.id %}"
                    class="text-xs font-semibold py-1.5 px-3 rounded-full border border-stone-200 hover:border-stone-300 text-stone-700 hover:text-stone-900 transition-colors">

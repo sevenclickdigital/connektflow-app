@@ -106,7 +106,7 @@
     {# Pagination #}
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-top: 1px solid var(--neutral-100);">
         <span class="a-mono" style="font-size: 0.75rem; color: var(--text-tertiary);">
-            {{ table.page_from }}–{{ table.page_to }} of {{ table.total }}
+            {% blocktranslate with page_from=table.page_from page_to=table.page_to total=table.total %}{{ page_from }}–{{ page_to }} of {{ total }}{% endblocktranslate %}
         </span>
         <div style="display: flex; align-items: center; gap: 8px;">
             {% if table.page > 1 %}

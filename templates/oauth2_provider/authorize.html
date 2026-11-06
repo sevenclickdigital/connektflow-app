@@ -1,7 +1,7 @@
 {% extends "oauth2_provider/base.html" %}
 {% load i18n static %}
 
-{% block title %}Authorize {{ application.name|default:"an app" }} · BrightBean Studio{% endblock title %}
+{% block title %}{% blocktranslate with name=application.name|default:_("an app") %}Authorize {{ name }}{% endblocktranslate %} · BrightBean Studio{% endblock title %}
 
 {% block content %}
     <div class="bb-head">
@@ -11,8 +11,8 @@
 
     <div class="bb-card">
         {% if not error %}
-            <h1>{% blocktrans with name=application.name|default:"This application" %}Authorize {{ name }}?{% endblocktrans %}</h1>
-            <p>{% blocktrans with name=application.name|default:"This application" %}{{ name }} wants to connect to your BrightBean Studio workspace with the following permissions:{% endblocktrans %}</p>
+            <h1>{% blocktrans with name=application.name|default:_("This application") %}Authorize {{ name }}?{% endblocktrans %}</h1>
+            <p>{% blocktrans with name=application.name|default:_("This application") %}{{ name }} wants to connect to your BrightBean Studio workspace with the following permissions:{% endblocktrans %}</p>
 
             <form id="authorizationForm" method="post">
                 {% csrf_token %}

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static i18n %}
 
-{% block title %}Create - {{ workspace.name }} - Brightbean{% endblock %}
+{% block title %}{% translate "Create" %} - {{ workspace.name }} - Brightbean{% endblock %}
 
 {% comment %}Header is rendered inside the content block to avoid overlap with the -m-6 layout{% endcomment %}
 
@@ -639,7 +639,7 @@
                                         <button type="button" @click="persistAndToggleCreateTag(createTagSearch.trim())"
                                                 style="color: var(--primary);">
                                             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                            {% translate "Create \"" %}<span x-text="createTagSearch.trim()"></span>"
+                                            {% translate "Create" %} “<span x-text="createTagSearch.trim()"></span>”
                                         </button>
                                     </div>
                                 </template>
@@ -836,7 +836,7 @@
                                         <button type="button" @click="persistAndToggleEditTag(editTagSearch.trim())"
                                                 style="color: var(--primary);">
                                             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                            {% translate "Create \"" %}<span x-text="editTagSearch.trim()"></span>"
+                                            {% translate "Create" %} “<span x-text="editTagSearch.trim()"></span>”
                                         </button>
                                     </div>
                                 </template>
@@ -1089,6 +1089,48 @@
 {% endblock %}
 
 {% block extra_js %}
+{% translate "Unassigned" as lbl_cl_unassigned %}
+{% translate "Request validation failed." as lbl_cl_request_invalid %}
+{% translate "Request failed." as lbl_cl_request_failed %}
+{% translate "Security token missing. Please reload the page." as lbl_cl_csrf_missing %}
+{% translate "Idea form is missing." as lbl_cl_idea_form_missing %}
+{% translate "Idea form action is missing." as lbl_cl_idea_action_missing %}
+{% translate "Could not refresh board." as lbl_cl_refresh_failed %}
+{% translate "Could not save the idea. Please try again." as lbl_cl_save_idea_failed %}
+{% translate "Could not save the idea before creating a post." as lbl_cl_save_before_post_failed %}
+{% translate "Could not open the composer for this idea." as lbl_cl_open_composer_failed %}
+{% translate "Could not create a post from this idea. Please try again." as lbl_cl_create_post_failed_retry %}
+{% translate "Idea is missing." as lbl_cl_idea_missing %}
+{% translate "Could not create a post from this idea." as lbl_cl_create_post_failed %}
+{% translate "Could not delete the idea. Please try again." as lbl_cl_delete_idea_failed %}
+{% translate "Could not create column. Please try again." as lbl_cl_create_column_failed %}
+{% translate "Could not delete column. Please try again." as lbl_cl_delete_column_failed %}
+{% translate "One of the files failed to upload. Please try again." as lbl_cl_file_upload_failed %}
+{{ lbl_cl_unassigned|json_script:"cl-unassigned" }}
+{{ lbl_cl_request_invalid|json_script:"cl-request-invalid" }}
+{{ lbl_cl_request_failed|json_script:"cl-request-failed" }}
+{{ lbl_cl_csrf_missing|json_script:"cl-csrf-missing" }}
+{{ lbl_cl_idea_form_missing|json_script:"cl-idea-form-missing" }}
+{{ lbl_cl_idea_action_missing|json_script:"cl-idea-action-missing" }}
+{{ lbl_cl_refresh_failed|json_script:"cl-refresh-failed" }}
+{{ lbl_cl_save_idea_failed|json_script:"cl-save-idea-failed" }}
+{{ lbl_cl_save_before_post_failed|json_script:"cl-save-before-post-failed" }}
+{{ lbl_cl_open_composer_failed|json_script:"cl-open-composer-failed" }}
+{{ lbl_cl_create_post_failed_retry|json_script:"cl-create-post-failed-retry" }}
+{{ lbl_cl_idea_missing|json_script:"cl-idea-missing" }}
+{{ lbl_cl_create_post_failed|json_script:"cl-create-post-failed" }}
+{{ lbl_cl_delete_idea_failed|json_script:"cl-delete-idea-failed" }}
+{{ lbl_cl_create_column_failed|json_script:"cl-create-column-failed" }}
+{{ lbl_cl_delete_column_failed|json_script:"cl-delete-column-failed" }}
+{{ lbl_cl_file_upload_failed|json_script:"cl-file-upload-failed" }}
+<script nonce="{{ request.csp_nonce }}">
+// Reads a label the template translated and left in a json_script tag, so
+// strings shown by the board's JavaScript stay visible to makemessages.
+function clLabel(id) {
+    const node = document.getElementById('cl-' + id);
+    return node ? JSON.parse(node.textContent) : '';
+}
+</script>
 <script nonce="{{ request.csp_nonce }}">
 function kanbanBoard() {
     const ideaHelpers = window.ideaModalHelpers || {
@@ -1210,11 +1252,11 @@ function kanbanBoard() {
         },
 
         createGroupLabel() {
-            return this._columnMap[this.createSelectedGroup] || 'Unassigned';
+            return this._columnMap[this.createSelectedGroup] || clLabel('unassigned');
         },
 
         editGroupLabel() {
-            return this._columnMap[this.editSelectedGroup] || 'Unassigned';
+            return this._columnMap[this.editSelectedGroup] || clLabel('unassigned');
         },
 
         toggleEditTag(tag) {
@@ -1463,13 +1505,13 @@ function kanbanBoard() {
             if (data && typeof data.error === 'string' && data.error.trim()) return data.error;
             if (data && typeof data.detail === 'string' && data.detail.trim()) return data.detail;
             if (typeof fallback === 'string' && fallback.trim()) return fallback;
-            if (response && response.status === 400) return 'Request validation failed.';
-            return 'Request failed.';
+            if (response && response.status === 400) return clLabel('request-invalid');
+            return clLabel('request-failed');
         },
 
         _requestKanbanMutation(url, options) {
             var csrfToken = this._getCsrfToken();
-            if (!csrfToken) return Promise.reject(new Error('Security token missing. Please reload the page.'));
+            if (!csrfToken) return Promise.reject(new Error(clLabel('csrf-missing')));
             var opts = options || {};
             var headers = Object.assign(
                 {
@@ -1499,9 +1541,9 @@ function kanbanBoard() {
         },
 
         _submitIdeaMutation(formEl) {
-            if (!formEl) return Promise.reject(new Error('Idea form is missing.'));
+            if (!formEl) return Promise.reject(new Error(clLabel('idea-form-missing')));
             var url = formEl.getAttribute('action') || formEl.getAttribute('hx-post');
-            if (!url) return Promise.reject(new Error('Idea form action is missing.'));
+            if (!url) return Promise.reject(new Error(clLabel('idea-action-missing')));
             return this._requestKanbanMutation(url, { body: new FormData(formEl) });
         },
 
@@ -1586,7 +1628,7 @@ function kanbanBoard() {
                     var groupId = column.dataset.groupId || '';
                     if (!groupId) return;
                     var label = column.querySelector('.group-label');
-                    map[groupId] = label ? label.textContent.trim() : 'Unassigned';
+                    map[groupId] = label ? label.textContent.trim() : clLabel('unassigned');
                 });
             }
             this._columnMap = map;
@@ -1608,7 +1650,7 @@ function kanbanBoard() {
             }
             return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(function(response) {
-                    if (!response.ok) throw new Error('Could not refresh board.');
+                    if (!response.ok) throw new Error(clLabel('refresh-failed'));
                     return response.text();
                 })
                 .then((html) => {
@@ -1637,7 +1679,7 @@ function kanbanBoard() {
                     this.closeCreateModal();
                 })
                 .catch((error) => {
-                    window.alert(error && error.message ? error.message : 'Could not save the idea. Please try again.');
+                    window.alert(error && error.message ? error.message : clLabel('save-idea-failed'));
                     this.refreshBoardHard().catch(function() {});
                 })
                 .finally(() => {
@@ -1660,7 +1702,7 @@ function kanbanBoard() {
                     this.editingIdea = null;
                 })
                 .catch((error) => {
-                    window.alert(error && error.message ? error.message : 'Could not save the idea. Please try again.');
+                    window.alert(error && error.message ? error.message : clLabel('save-idea-failed'));
                     this.refreshBoardHard().catch(function() {});
                 })
                 .finally(() => {
@@ -1685,7 +1727,7 @@ function kanbanBoard() {
                 .then((payload) => {
                     ideaPayload = payload || {};
                     if (!ideaPayload.idea_id) {
-                        throw new Error('Could not save the idea before creating a post.');
+                        throw new Error(clLabel('save-before-post-failed'));
                     }
                     if (!this._upsertIdeaCard(ideaPayload, { prepend: true })) {
                         return this.refreshBoardHard();
@@ -1697,7 +1739,7 @@ function kanbanBoard() {
                 })
                 .then((payload) => {
                     if (!payload || !payload.compose_url) {
-                        throw new Error('Could not open the composer for this idea.');
+                        throw new Error(clLabel('open-composer-failed'));
                     }
                     if (isEdit) {
                         this.editingIdea = null;
@@ -1708,7 +1750,7 @@ function kanbanBoard() {
                     window.location.href = payload.compose_url;
                 })
                 .catch((error) => {
-                    window.alert(error && error.message ? error.message : 'Could not create a post from this idea. Please try again.');
+                    window.alert(error && error.message ? error.message : clLabel('create-post-failed-retry'));
                     this.refreshBoardHard().catch(function() {});
                 })
                 .finally(() => {
@@ -1718,11 +1760,11 @@ function kanbanBoard() {
         },
 
         _createPostFromIdea(ideaId) {
-            if (!ideaId) return Promise.reject(new Error('Idea is missing.'));
+            if (!ideaId) return Promise.reject(new Error(clLabel('idea-missing')));
             return this._requestKanbanMutation('/workspace/{{ workspace.id }}/ideas/' + ideaId + '/create-post/', {})
                 .then((payload) => {
                     if (!payload || !payload.ok || !payload.post_id || !payload.compose_url) {
-                        throw new Error('Could not create a post from this idea.');
+                        throw new Error(clLabel('create-post-failed'));
                     }
                     return payload;
                 });
@@ -1751,7 +1793,7 @@ function kanbanBoard() {
                     this._refreshColumnMeta();
                 })
                 .catch((error) => {
-                    window.alert(error && error.message ? error.message : 'Could not delete the idea. Please try again.');
+                    window.alert(error && error.message ? error.message : clLabel('delete-idea-failed'));
                     this.refreshBoardHard().catch(function() {});
                 });
         },
@@ -1766,7 +1808,7 @@ function kanbanBoard() {
                     }
                 })
                 .catch((error) => {
-                    window.alert(error && error.message ? error.message : 'Could not create column. Please try again.');
+                    window.alert(error && error.message ? error.message : clLabel('create-column-failed'));
                     this.refreshBoardHard().catch(function() {});
                 });
         },
@@ -1780,7 +1822,7 @@ function kanbanBoard() {
                     }
                 })
                 .catch((error) => {
-                    window.alert(error && error.message ? error.message : 'Could not delete column. Please try again.');
+                    window.alert(error && error.message ? error.message : clLabel('delete-column-failed'));
                     this.refreshBoardHard().catch(function() {});
                 });
         },
@@ -1798,7 +1840,7 @@ function kanbanBoard() {
                     }
                 )
                 .catch(() => {
-                    window.alert('One of the files failed to upload. Please try again.');
+                    window.alert(clLabel('file-upload-failed'));
                 })
                 .finally(() => {
                     if (target === 'edit') this.editMediaUploadCount = Math.max(0, this.editMediaUploadCount - 1);

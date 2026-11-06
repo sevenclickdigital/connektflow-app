@@ -4,8 +4,32 @@ import zoneinfo
 from datetime import datetime, time, timedelta
 
 from django.utils import timezone
+from django.utils.dates import WEEKDAYS
+from django.utils.formats import date_format
+from django.utils.text import capfirst
 
 from .models import PostingSlot, Queue, QueueEntry
+
+
+def weekday_names():
+    """Localized weekday names, Monday first, for calendar grid headers."""
+    return [WEEKDAYS[i] for i in range(7)]
+
+
+def month_label(day):
+    """Localized "November 2026" / "Novembro de 2026" heading for a month view."""
+    return capfirst(date_format(day, "YEAR_MONTH_FORMAT"))
+
+
+def week_label(first, last):
+    """Localized range heading for a week view, e.g. "Nov. 2 – Nov. 8, 2026"."""
+    return f"{date_format(first, 'MONTH_DAY_FORMAT')} – {date_format(last, 'DATE_FORMAT')}"
+
+
+def day_label(day):
+    """Localized heading for a day view, e.g. "Friday, Nov. 6, 2026"."""
+    return f"{capfirst(date_format(day, 'l'))}, {date_format(day, 'DATE_FORMAT')}"
+
 
 # Default posting slots created automatically for newly connected channels.
 DEFAULT_POSTING_SLOTS = {

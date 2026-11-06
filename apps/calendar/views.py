@@ -11,6 +11,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import QuerySet
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from apps.common.validators import is_valid_hex_color
@@ -22,6 +23,7 @@ from apps.workspaces.models import Workspace
 
 from .holidays import get_holidays_for_range
 from .models import CustomCalendarEvent, PostingSlot, Queue, QueueEntry
+from .services import day_label, month_label, week_label, weekday_names
 
 # Common timezones for the publish page timezone dropdown
 COMMON_TIMEZONES = [
@@ -490,8 +492,7 @@ def _annotate_automation(platform_posts) -> None:
 
     rows = [pp for pp in platform_posts]
     flows = {
-        flow.platform_post_id: flow
-        for flow in PostAutomation.objects.filter(platform_post__in=[pp.id for pp in rows])
+        flow.platform_post_id: flow for flow in PostAutomation.objects.filter(platform_post__in=[pp.id for pp in rows])
     }
     for pp in rows:
         # Published *and* carrying an id: a flow matches comments by the post's
@@ -906,11 +907,11 @@ def _month_view_data(request, workspace, target_date, context):
     context.update(
         {
             "calendar_weeks": calendar_weeks,
-            "period_label": date(year, month, 1).strftime("%B %Y"),
+            "period_label": month_label(date(year, month, 1)),
             "prev_date": prev_month.isoformat(),
             "next_date": next_month.isoformat(),
             "unscheduled_drafts": drafts,
-            "day_names": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            "day_names": weekday_names(),
         }
     )
 
@@ -989,7 +990,7 @@ def _week_view_data(request, workspace, target_date, context):
             "current_hour": now.hour,
             "prev_date": (monday - timedelta(weeks=1)).isoformat(),
             "next_date": (monday + timedelta(weeks=1)).isoformat(),
-            "period_label": f"{week_days[0].strftime('%b %d')} – {week_days[6].strftime('%b %d, %Y')}",
+            "period_label": week_label(week_days[0], week_days[6]),
         }
     )
 
@@ -1058,7 +1059,7 @@ def _day_view_data(request, workspace, target_date, context):
             "current_hour": now.hour,
             "prev_date": (target_date - timedelta(days=1)).isoformat(),
             "next_date": (target_date + timedelta(days=1)).isoformat(),
-            "period_label": target_date.strftime("%A, %B %d, %Y"),
+            "period_label": day_label(target_date),
         }
     )
 
@@ -1082,7 +1083,7 @@ def _list_view(request, workspace, target_date, context):
     context.update(
         {
             "posts": posts,
-            "period_label": "All Posts",
+            "period_label": _("All Posts"),
             "prev_date": target_date.isoformat(),
             "next_date": target_date.isoformat(),
             "has_connected_accounts": has_connected_accounts,

@@ -1,9 +1,9 @@
-Hi {{ client_user.display_name }},
+{% load i18n %}{% blocktranslate with name=client_user.display_name %}Hi {{ name }},{% endblocktranslate %}
 
-{{ created_by.display_name }} has shared content for your review in {{ workspace.name }}.
+{% blocktranslate with sender=created_by.display_name workspace=workspace.name %}{{ sender }} has shared content for your review in {{ workspace }}.{% endblocktranslate %}
 
-Click the link below to access your portal and approve or provide feedback on scheduled posts:
+{% translate "Click the link below to access your portal and approve or provide feedback on scheduled posts:" %}
 
 {{ magic_url }}
 
-This link is valid for 30 days. If it expires, ask your account manager for a new one.
+{% translate "This link is valid for 30 days. If it expires, ask your account manager for a new one." %}

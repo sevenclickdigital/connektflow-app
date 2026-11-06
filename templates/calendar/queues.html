@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}Queues - {{ workspace.name }} - Brightbean{% endblock %}
+{% block title %}{% translate "Queues" %} - {{ workspace.name }} - Brightbean{% endblock %}
 
 {% block page_header %}
 <div class="flex items-center justify-between mb-6">
@@ -35,7 +35,7 @@
 
             <div>
                 <label class="block text-xs font-semibold text-stone-700 mb-1">{% translate "Queue Name" %}</label>
-                <input type="text" name="name" placeholder="e.g., Educational - MWF 9am" required class="form-input w-full text-sm">
+                <input type="text" name="name" placeholder="{% translate 'e.g., Educational - MWF 9am' %}" required class="form-input w-full text-sm">
             </div>
 
             <div class="grid grid-cols-2 gap-3">
@@ -97,7 +97,7 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-stone-400">{{ queue.entries.count }} post{{ queue.entries.count|pluralize }}</span>
+                        <span class="text-xs text-stone-400">{% blocktranslate count counter=queue.entries.count %}{{ counter }} post{% plural %}{{ counter }} posts{% endblocktranslate %}</span>
                         <a href="{% url 'calendar:queue_detail' workspace_id=workspace.id queue_id=queue.id %}"
                            class="text-xs font-semibold py-1.5 px-3 rounded-full border border-stone-200 hover:border-stone-300 text-stone-600 hover:text-stone-800 transition-colors">
                             {% translate "View" %}

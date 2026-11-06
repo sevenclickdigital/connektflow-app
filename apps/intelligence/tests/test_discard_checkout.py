@@ -149,6 +149,8 @@ class CancelStudioCheckoutSessionClientTests(SimpleTestCase):
 # ---------------------------------------------------------------------------
 
 
+# The project defaults to pt-br; pin English so message assertions are stable.
+@override_settings(LANGUAGE_CODE="en-us")
 class DiscardCheckoutViewTests(TestCase):
     """Direct-call tests on the view function via RequestFactory.
 

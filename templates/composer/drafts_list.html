@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load tz i18n %}
 
-{% block title %}Drafts - {{ workspace.name }} - Brightbean{% endblock %}
-{% block page_title %}Drafts{% endblock %}
+{% block title %}{% translate "Drafts" %} - {{ workspace.name }} - Brightbean{% endblock %}
+{% block page_title %}{% translate "Drafts" %}{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl">
@@ -26,15 +26,15 @@
             <div class="flex items-start gap-4">
                 <div class="flex-1 min-w-0">
                     <p class="text-sm text-stone-700 line-clamp-2 group-hover:text-stone-900 transition-colors">
-                        {{ draft.caption_snippet|default:"(No caption)" }}
+                        {{ draft.caption_snippet|default:_("(No caption)") }}
                     </p>
                     <div class="flex items-center gap-3 mt-2">
                         <span class="inline-flex items-center gap-1 text-xs text-stone-400">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            {{ draft.updated_at|timesince }} ago
+                            {% blocktranslate with time=draft.updated_at|timesince %}{{ time }} ago{% endblocktranslate %}
                         </span>
                         {% if draft.author %}
-                        <span class="text-xs text-stone-400">by {{ draft.author.display_name }}</span>
+                        <span class="text-xs text-stone-400">{% blocktranslate with name=draft.author.display_name %}by {{ name }}{% endblocktranslate %}</span>
                         {% endif %}
                         {% if draft.proposed_publish_at %}
                         <span class="inline-flex items-center gap-1 text-xs font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full" title="{% translate 'Proposed publishing time' %}">

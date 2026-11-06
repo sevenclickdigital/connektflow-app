@@ -11,7 +11,7 @@
     <div class="flex-1 min-w-0">
         <div class="text-sm font-medium truncate" style="color: var(--text-primary);">{{ invite.email }}</div>
         <div class="text-xs" style="color: var(--text-tertiary);">
-            Invited by {{ invite.invited_by.display_name }} · Expires {{ invite.expires_at|timesince }} from now
+            {% blocktranslate with inviter=invite.invited_by.display_name time=invite.expires_at|timeuntil %}Invited by {{ inviter }} · Expires {{ time }} from now{% endblocktranslate %}
         </div>
     </div>
 
@@ -49,7 +49,7 @@
         <form hx-post="{% url 'members:revoke_invite' invitation_id=invite.id %}"
               hx-target="#invite-{{ invite.id }}"
               hx-swap="delete"
-              hx-confirm="Revoke invitation to {{ invite.email }}?">
+              hx-confirm="{% blocktranslate with email=invite.email %}Revoke invitation to {{ email }}?{% endblocktranslate %}">
             {% csrf_token %}
             <button type="submit"
                     class="btn-danger-soft-bg text-xs px-3 py-1.5 rounded-full font-medium cursor-pointer transition-colors"

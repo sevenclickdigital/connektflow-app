@@ -84,7 +84,7 @@ Shows all published/partially_published platform posts. Loaded via HTMX into #ta
                     {% endif %}
                 </td>
                 <td class="px-4 py-3 text-sm text-stone-600 max-w-xs truncate">
-                    {{ pp.post.title|default:pp.post.caption_snippet|default:"(no caption)" }}
+                    {{ pp.post.title|default:pp.post.caption_snippet|default:_("(no caption)") }}
                 </td>
                 <td class="px-4 py-3">
                     <div class="flex items-center gap-1.5">
@@ -109,7 +109,7 @@ Shows all published/partially_published platform posts. Loaded via HTMX into #ta
                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors
                               {% if pp.automation %}border-stone-200 text-stone-600 hover:border-stone-300 hover:text-stone-800{% else %}border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100{% endif %}">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                        {% if pp.automation %}{{ pp.automation.get_status_display }}{% else %}Set up{% endif %}
+                        {% if pp.automation %}{{ pp.automation.get_status_display }}{% else %}{% translate "Set up" %}{% endif %}
                     </a>
                     {% else %}
                     <span class="text-xs text-stone-300">—</span>
@@ -127,8 +127,8 @@ Shows all published/partially_published platform posts. Loaded via HTMX into #ta
         <div class="w-16 h-16 mx-auto rounded-2xl bg-stone-100 flex items-center justify-center mb-4">
             <svg class="w-7 h-7 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </div>
-        <p class="text-sm font-medium text-stone-500 mb-1">No sent posts yet</p>
-        <p class="text-xs text-stone-400 mb-5 max-w-[240px] mx-auto">Published posts will appear here after they go live</p>
+        <p class="text-sm font-medium text-stone-500 mb-1">{% translate "No sent posts yet" %}</p>
+        <p class="text-xs text-stone-400 mb-5 max-w-[240px] mx-auto">{% translate "Published posts will appear here after they go live" %}</p>
     </div>
     {% endif %}
     {% endif %}

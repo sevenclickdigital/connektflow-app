@@ -2876,15 +2876,22 @@ def _idea_columns(workspace, tag=None):
 
     # Ensure default groups exist for this workspace
     if not groups.exists():
-        created_groups = {}
-        for name, pos in [("Unassigned", 0), ("To Do", 1), ("In Progress", 2), ("Done", 3)]:
-            created_groups[name] = IdeaGroup.objects.create(workspace=workspace, name=name, position=pos)
-        # Seed an introductory idea in the Unassigned column
+        # Names are stored as data (users rename them), so they are seeded in
+        # the language of whoever opens the board first.
+        default_names = [_("Unassigned"), _("To Do"), _("In Progress"), _("Done")]
+        created_groups = [
+            IdeaGroup.objects.create(workspace=workspace, name=name, position=pos)
+            for pos, name in enumerate(default_names)
+        ]
+        # Seed an introductory idea in the first (unassigned) column
         Idea.objects.create(
             workspace=workspace,
-            group=created_groups["Unassigned"],
-            title="This is a place to plan \u270d\ufe0f your content",
-            description="Save your Ideas before converting them into posts. Brainstorm, plan ahead, and keep everything organized in one place.",
+            group=created_groups[0],
+            title=_("This is a place to plan \u270d\ufe0f your content"),
+            description=_(
+                "Save your Ideas before converting them into posts. Brainstorm, plan ahead, "
+                "and keep everything organized in one place."
+            ),
             status=Idea.Status.UNASSIGNED,
             position=0,
         )

@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
 from .models import (
@@ -153,8 +154,8 @@ def _save_preferences(request):
     user = request.user
 
     # Save channel toggles
-    for event_value, _ in EventType.choices:
-        for ch_value, _ in Channel.choices:
+    for event_value, _label in EventType.choices:
+        for ch_value, _label in Channel.choices:
             field_name = f"pref_{event_value}_{ch_value}"
             is_enabled = field_name in request.POST
 
@@ -166,7 +167,7 @@ def _save_preferences(request):
             )
 
     # Save quiet hours
-    quiet_hours, _ = QuietHours.objects.get_or_create(user=user)
+    quiet_hours, _created = QuietHours.objects.get_or_create(user=user)
     quiet_hours.is_enabled = "quiet_hours_enabled" in request.POST
     from datetime import time as dt_time
 

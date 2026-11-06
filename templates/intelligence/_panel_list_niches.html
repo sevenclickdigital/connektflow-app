@@ -6,7 +6,7 @@
         </div>
         <div class="p-5">
             <p class="text-xs text-stone-500 mb-5 leading-relaxed">
-                Browse the niche catalog. Returns every niche slug with its current gap count, useful for picking a niche to feed into <strong>Research content gaps</strong>.
+                {% blocktranslate trimmed %}Browse the niche catalog. Returns every niche slug with its current gap count, useful for picking a niche to feed into <strong>Research content gaps</strong>.{% endblocktranslate %}
             </p>
 
             <form class="intel-form"
@@ -14,16 +14,16 @@
                   hx-target="#list-niches-result"
                   hx-swap="innerHTML">
                 {% csrf_token %}
-                <p class="text-xs text-stone-500 mb-4">No parameters required.</p>
+                <p class="text-xs text-stone-500 mb-4">{% translate "No parameters required." %}</p>
                 <button type="submit" class="intel-submit"{% if is_preview %} disabled aria-disabled="true"{% endif %}>
                     <svg class="intel-submit-icon h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"/></svg>
                     <svg class="intel-submit-spinner hidden h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
-                    <span class="intel-submit-label">Fetch niches</span>
-                    <span class="intel-submit-loading hidden">Fetching…</span>
+                    <span class="intel-submit-label">{% translate "Fetch niches" %}</span>
+                    <span class="intel-submit-loading hidden">{% translate "Fetching…" %}</span>
                 </button>
                 {% if is_preview %}
                 <p class="intel-activate-note">
-                    {% if can_manage_billing %}<a href="{% url 'intelligence:subscribe' org_id=organization.id %}">Activate Intelligence</a> to fetch the live niche catalog.{% else %}Ask an admin to activate Intelligence to fetch the live niche catalog.{% endif %}
+                    {% if can_manage_billing %}{% url 'intelligence:subscribe' org_id=organization.id as subscribe_url %}{% blocktranslate %}<a href="{{ subscribe_url }}">Activate Intelligence</a> to fetch the live niche catalog.{% endblocktranslate %}{% else %}{% blocktranslate %}Ask an admin to activate Intelligence to fetch the live niche catalog.{% endblocktranslate %}{% endif %}
                 </p>
                 {% endif %}
             </form>
@@ -32,14 +32,14 @@
 
     <div class="rounded-xl border border-stone-200 bg-white shadow-sm">
         <div class="border-b border-stone-100 px-5 py-3.5">
-            <h2 class="text-sm font-semibold text-stone-900">Result</h2>
+            <h2 class="text-sm font-semibold text-stone-900">{% translate "Result" %}</h2>
         </div>
         <div id="list-niches-result" class="p-5 min-h-[220px]">
             {% if is_preview %}
                 {% include "intelligence/_preview_badge.html" %}
                 {% include "intelligence/_list_niches_result.html" with result=preview_results.list_niches %}
             {% else %}
-                {% include "intelligence/_panel_empty_state.html" with hint="Click Fetch niches to see the catalog." %}
+                {% include "intelligence/_panel_empty_state.html" with hint=_("Click Fetch niches to see the catalog.") %}
             {% endif %}
         </div>
     </div>

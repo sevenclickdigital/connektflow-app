@@ -1,6 +1,6 @@
 {% extends "layouts/workspace_settings.html" %}
 {% load i18n %}
-{% block title %}Settings - {{ workspace.name }} - Brightbean{% endblock %}
+{% block title %}{% translate "Settings" %} - {{ workspace.name }} - Brightbean{% endblock %}
 {% block content %}
 <div class="max-w-2xl">
     <h2 class="text-xl font-semibold mb-8" style="color: var(--text-primary);">{% translate "General" %}</h2>
@@ -38,12 +38,12 @@
                 <!-- Logo preview or default placeholder -->
                 <template x-if="preview">
                     <div class="relative">
-                        <img :src="preview" alt="Workspace logo" class="w-16 h-16 rounded-lg object-cover border" style="border-color: var(--border);">
+                        <img :src="preview" alt="{% translate 'Workspace logo' %}" class="w-16 h-16 rounded-lg object-cover border" style="border-color: var(--border);">
                         <button type="button"
                                 @click="preview = ''; $refs.fileInput.value = ''; fileName = ''"
                                 class="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer"
                                 style="background: var(--neutral-200); color: var(--text-secondary);"
-                                title="Remove logo">
+                                title="{% translate 'Remove logo' %}">
                             <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         </button>
                     </div>

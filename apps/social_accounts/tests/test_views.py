@@ -24,6 +24,12 @@ from providers.exceptions import OAuthError
 from providers.types import AccountProfile, OAuthTokens
 
 
+@pytest.fixture(autouse=True)
+def _english_responses(settings):
+    """Render pages in English so assertions test behaviour, not the pt-br wording."""
+    settings.LANGUAGE_CODE = "en-us"
+
+
 @pytest.fixture
 def workspace(db, organization):
     from apps.workspaces.models import Workspace

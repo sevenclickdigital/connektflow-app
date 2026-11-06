@@ -65,7 +65,7 @@ library's alone — picking happens on thumbnails.
   {% endif %}
 
   <span class="text-xs px-3" style="color: var(--text-tertiary, #78716C);">
-    Page {{ page.number }} of {{ page.paginator.num_pages }}
+    {% blocktranslate with number=page.number total=page.paginator.num_pages %}Page {{ number }} of {{ total }}{% endblocktranslate %}
   </span>
 
   {% if page.has_next %}

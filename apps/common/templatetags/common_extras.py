@@ -3,6 +3,7 @@ import json
 from django import template
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
+from django.utils.translation import gettext_lazy as _
 
 register = template.Library()
 
@@ -49,7 +50,7 @@ def ui_select(
     options,
     multiple=False,
     onchange="",
-    placeholder="Select",
+    placeholder="",
     value_field="id",
     label_field="",
     icon_field="",
@@ -99,6 +100,6 @@ def ui_select(
         "options_js": [{"value": o["value"], "label": str(o["label"])} for o in norm],
         "multiple": bool(multiple),
         "onchange": onchange,
-        "placeholder": placeholder,
+        "placeholder": placeholder or _("Select"),
         "icon": icon,
     }

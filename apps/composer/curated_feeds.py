@@ -6,14 +6,16 @@ per-workspace and don't need database storage.
 
 from urllib.parse import urlsplit
 
+from django.utils.translation import gettext_lazy as _
+
 FEED_CATEGORIES = [
-    {"slug": "brightbean-favorites", "label": "Brightbean Favorites"},
-    {"slug": "tech", "label": "Tech"},
-    {"slug": "news", "label": "News"},
-    {"slug": "business", "label": "Business"},
-    {"slug": "art-media", "label": "Art & Media"},
-    {"slug": "entertainment", "label": "Entertainment"},
-    {"slug": "science", "label": "Science"},
+    {"slug": "brightbean-favorites", "label": _("Brightbean Favorites")},
+    {"slug": "tech", "label": _("Tech")},
+    {"slug": "news", "label": _("News")},
+    {"slug": "business", "label": _("Business")},
+    {"slug": "art-media", "label": _("Art & Media")},
+    {"slug": "entertainment", "label": _("Entertainment")},
+    {"slug": "science", "label": _("Science")},
 ]
 
 CURATED_FEEDS = {

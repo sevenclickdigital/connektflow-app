@@ -62,7 +62,7 @@
                 {% endif %}
             </div>
             <div class="flex items-center gap-3 mt-1.5">
-                <span class="text-[11px] text-stone-400 font-medium tabular-nums">{{ n.created_at|timesince }} ago</span>
+                <span class="text-[11px] text-stone-400 font-medium tabular-nums">{% blocktranslate with time=n.created_at|timesince %}{{ time }} ago{% endblocktranslate %}</span>
                 <span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{{ n.get_event_type_display }}</span>
                 {% if not n.is_read %}
                 <button

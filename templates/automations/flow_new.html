@@ -64,7 +64,8 @@ builder; the rule itself is still created by the first save there.
         <!-- Step heading -->
         <div class="px-6 py-4 border-b border-stone-100">
           <p class="text-[11px] font-bold uppercase tracking-wider text-orange-600">
-            <span x-text="`{% translate 'Step' %} ${step} {% translate 'of' %} 3`"></span>
+            {% blocktranslate asvar step_label with step="__STEP__" %}Step {{ step }} of 3{% endblocktranslate %}
+            <span data-label="{{ step_label }}" x-text="$el.dataset.label.replace('__STEP__', step)"></span>
           </p>
           <h2 class="text-base font-semibold text-stone-900 mt-0.5"
               x-text="stepTitle()"></h2>

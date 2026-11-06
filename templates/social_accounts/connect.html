@@ -84,7 +84,7 @@
             {% endif %}
 
             {% if value not in configured_platforms and value != 'youtube' %}
-            <div class="absolute inset-0 rounded-xl bg-white/40 cursor-not-allowed" title="Platform credentials not configured. Contact your administrator."></div>
+            <div class="absolute inset-0 rounded-xl bg-white/40 cursor-not-allowed" title="{% translate 'Platform credentials not configured. Contact your administrator.' %}"></div>
             {% endif %}
         </div>
         {% endfor %}

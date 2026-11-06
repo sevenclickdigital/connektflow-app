@@ -124,7 +124,7 @@ stale is a rule that silently saves the previous keyword list.
                         <template x-for="(item, index) in items" :key="index">
                             <div class="flex items-center gap-2">
                                 <input type="text" x-model="item.text"
-                                       placeholder="e.g. price"
+                                       placeholder="{% translate 'e.g. price' %}"
                                        class="form-input flex-1">
                                 <select x-model="item.mode" class="form-input w-[13.5rem] flex-shrink-0">
                                     {% for value, label in keyword_mode_choices %}
@@ -157,7 +157,7 @@ stale is a rule that silently saves the previous keyword list.
                         <template x-for="(item, index) in items" :key="index">
                             <div class="flex items-center gap-2">
                                 <input type="text" x-model="item.text"
-                                       placeholder="e.g. price"
+                                       placeholder="{% translate 'e.g. price' %}"
                                        class="form-input flex-1">
                                 <select x-model="item.mode" class="form-input w-[13.5rem] flex-shrink-0">
                                     {% for value, label in keyword_mode_choices %}
@@ -237,7 +237,7 @@ stale is a rule that silently saves the previous keyword list.
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             {% translate "Add a variation" %}
                         </button>
-                        <p class="text-[11px] text-stone-400" x-text="modeHint" x-show="items.length > 1"></p>
+                        <p class="text-[11px] text-stone-400" data-random-hint="{% translate 'One of these is picked at random.' %}" data-fixed-hint="{% translate 'Only the first is used.' %}" x-text="modeHint($el)" x-show="items.length > 1"></p>
                     </div>
                     {# The validated field. The textareas above carry no name. #}
                     <input type="hidden" name="public_reply_texts" :value="serialised">
@@ -307,7 +307,7 @@ stale is a rule that silently saves the previous keyword list.
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             {% translate "Add a variation" %}
                         </button>
-                        <p class="text-[11px] text-stone-400" x-text="modeHint" x-show="items.length > 1"></p>
+                        <p class="text-[11px] text-stone-400" data-random-hint="{% translate 'One of these is picked at random.' %}" data-fixed-hint="{% translate 'Only the first is used.' %}" x-text="modeHint($el)" x-show="items.length > 1"></p>
                     </div>
                     {# The validated field. The textareas above carry no name. #}
                     <input type="hidden" name="private_reply_texts" :value="serialised">
@@ -491,10 +491,8 @@ stale is a rule that silently saves the previous keyword list.
             // What the mode actually does, said next to the list rather than in
             // the select: "Fixed text" does not tell you the other nineteen
             // entries are ignored.
-            get modeHint() {
-                return this.mode === 'random'
-                    ? 'One of these is picked at random.'
-                    : 'Only the first is used.';
+            modeHint(el) {
+                return this.mode === 'random' ? el.dataset.randomHint : el.dataset.fixedHint;
             },
         }));
     });

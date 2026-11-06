@@ -6,16 +6,18 @@ Optional: body (the fill-in-the-blank template text), tags (list of tag strings)
 Colors are CSS rgb strings used for the card accent.
 """
 
+from django.utils.translation import gettext_lazy as _
+
 CATEGORIES = [
-    {"slug": "all", "label": "All", "icon": "layout-grid"},
-    {"slug": "tip", "label": "Tip", "icon": "lightbulb"},
-    {"slug": "case-study", "label": "Case Study", "icon": "scroll-text"},
-    {"slug": "story", "label": "Story", "icon": "book-open"},
-    {"slug": "how-to", "label": "How-to", "icon": "pickaxe"},
-    {"slug": "question", "label": "Question", "icon": "message-circle-question"},
-    {"slug": "opinion", "label": "Opinion", "icon": "quote"},
-    {"slug": "list", "label": "List", "icon": "clipboard-list"},
-    {"slug": "behind-the-scenes", "label": "Behind the Scenes", "icon": "clapperboard"},
+    {"slug": "all", "label": _("All"), "icon": "layout-grid"},
+    {"slug": "tip", "label": _("Tip"), "icon": "lightbulb"},
+    {"slug": "case-study", "label": _("Case Study"), "icon": "scroll-text"},
+    {"slug": "story", "label": _("Story"), "icon": "book-open"},
+    {"slug": "how-to", "label": _("How-to"), "icon": "pickaxe"},
+    {"slug": "question", "label": _("Question"), "icon": "message-circle-question"},
+    {"slug": "opinion", "label": _("Opinion"), "icon": "quote"},
+    {"slug": "list", "label": _("List"), "icon": "clipboard-list"},
+    {"slug": "behind-the-scenes", "label": _("Behind the Scenes"), "icon": "clapperboard"},
 ]
 
 # Six rotating accent colors (rgb strings)

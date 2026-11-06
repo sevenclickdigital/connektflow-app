@@ -1,12 +1,12 @@
-{{ heading }}
-{{ date|date:"N j, Y" }} - {{ total }} item{{ total|pluralize }}
+{% load i18n %}{{ heading }}
+{{ date|date:"N j, Y" }} - {% blocktranslate count counter=total %}{{ counter }} item{% plural %}{{ counter }} items{% endblocktranslate %}
 {% for n in notifications %}
-- {{ n.title }}{% if n.body %}: {{ n.body|truncatewords:20 }}{% endif %} ({{ n.created_at|timesince }} ago)
+- {{ n.title }}{% if n.body %}: {{ n.body|truncatewords:20 }}{% endif %} ({% blocktranslate with time=n.created_at|timesince %}{{ time }} ago{% endblocktranslate %})
 {% endfor %}{% if overflow %}
-...and {{ overflow }} more.
+{% blocktranslate %}...and {{ overflow }} more.{% endblocktranslate %}
 {% endif %}
-View all: {{ app_url }}/notifications/
+{% translate "View all:" %} {{ app_url }}/notifications/
 
 ---
-You received this because of your notification settings.
-Manage preferences: {{ app_url }}/notifications/preferences/
+{% translate "You received this because of your notification settings." %}
+{% translate "Manage preferences:" %} {{ app_url }}/notifications/preferences/

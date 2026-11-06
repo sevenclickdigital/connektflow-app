@@ -27,7 +27,7 @@ losing the navigation you were using and having to find your way back.
 {% include "media_library/_library_styles.html" %}
 {% endblock %}
 
-{% block page_title %}Media Library{% endblock %}
+{% block page_title %}{% translate "Media Library" %}{% endblock %}
 
 {% block content %}
 {% comment %}
@@ -272,7 +272,7 @@ same amount, and turn off the ancestor's scrolling so this panel owns it.
                   </div>
                 </div>
                 <span x-show="file.status === 'complete'" class="text-xs font-semibold" style="color: var(--success-500, #22C55E);">{% translate "Done" %}</span>
-                <span x-show="file.status === 'error'" class="text-xs font-semibold" style="color: var(--error-500, #EF4444);" x-text="file.error || 'Failed'"></span>
+                <span x-show="file.status === 'error'" class="text-xs font-semibold" style="color: var(--error-500, #EF4444);" data-failed="{% translate 'Failed' %}" x-text="file.error || $el.dataset.failed"></span>
               </div>
             </template>
           </div>
@@ -321,6 +321,12 @@ same amount, and turn off the ancestor's scrolling so this panel owns it.
 {% endblock %}
 
 {% block extra_js %}
+{% translate "Upload failed" as lbl_ml_upload_failed %}
+{% translate "Network error" as lbl_ml_network_error %}
+{% translate "Maximum {n} files per upload." as lbl_ml_max_files %}
+{{ lbl_ml_upload_failed|json_script:"ml-upload-failed" }}
+{{ lbl_ml_network_error|json_script:"ml-network-error" }}
+{{ lbl_ml_max_files|json_script:"ml-max-files" }}
 <script src="{% static 'js/media-library.js' %}"></script>
 <script nonce="{{ request.csp_nonce }}">
 function mediaLibrary() {
@@ -349,7 +355,7 @@ function mediaLibrary() {
     startUpload(files) {
       const maxFiles = {{ max_bulk_upload }};
       if (files.length > maxFiles) {
-        alert(`Maximum ${maxFiles} files per upload.`);
+        alert(JSON.parse(document.getElementById('ml-max-files').textContent).replace('{n}', maxFiles));
         files = files.slice(0, maxFiles);
       }
 
@@ -388,7 +394,7 @@ function mediaLibrary() {
             this.uploadQueue[index].progress = 100;
           } else {
             this.uploadQueue[index].status = 'error';
-            this.uploadQueue[index].error = 'Upload failed';
+            this.uploadQueue[index].error = JSON.parse(document.getElementById('ml-upload-failed').textContent);
           }
           if (completed === total) {
             setTimeout(() => {
@@ -402,7 +408,7 @@ function mediaLibrary() {
         xhr.addEventListener('error', () => {
           completed++;
           this.uploadQueue[index].status = 'error';
-          this.uploadQueue[index].error = 'Network error';
+          this.uploadQueue[index].error = JSON.parse(document.getElementById('ml-network-error').textContent);
           if (completed === total) {
             setTimeout(() => {
               this.uploading = false;

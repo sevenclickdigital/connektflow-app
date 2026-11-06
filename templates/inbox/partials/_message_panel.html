@@ -110,7 +110,7 @@
         <div class="mt-3 pl-4 border-l-2 border-stone-200">
             <div class="flex items-center gap-2 mb-1">
                 <span class="text-[12px] font-semibold text-stone-700">{{ child.sender_name }}</span>
-                <span class="text-[11px] text-stone-400">{{ child.received_at|timesince }} ago</span>
+                <span class="text-[11px] text-stone-400">{% blocktranslate with time=child.received_at|timesince %}{{ time }} ago{% endblocktranslate %}</span>
             </div>
             <p class="text-[13px] text-stone-600 leading-relaxed">{{ child.body }}</p>
         </div>

@@ -1,9 +1,9 @@
-{{ notification.title }}
+{% load i18n %}{{ notification.title }}
 
 {{ notification.body }}
 
-{% if notification.data.action_url %}View details: {{ notification.data.action_url }}{% endif %}
+{% if notification.data.action_url %}{% translate "View details:" %} {{ notification.data.action_url }}{% endif %}
 
 ---
-You received this because of your notification settings.
-Manage preferences: {{ app_url }}/notifications/preferences/
+{% translate "You received this because of your notification settings." %}
+{% translate "Manage preferences:" %} {{ app_url }}/notifications/preferences/

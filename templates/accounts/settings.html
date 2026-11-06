@@ -1,6 +1,6 @@
 {% extends "layouts/settings.html" %}
 {% load i18n %}
-{% block title %}Profile - Settings - Brightbean{% endblock %}
+{% block title %}{% translate "Profile - Settings" %} - Brightbean{% endblock %}
 {% block content %}
 <div class="max-w-2xl">
     <h2 class="text-xl font-semibold mb-8" style="color: var(--text-primary);">{% translate "Profile" %}</h2>
@@ -20,12 +20,12 @@
                 <!-- Avatar preview or default silhouette -->
                 <template x-if="preview">
                     <div class="relative">
-                        <img :src="preview" alt="Profile photo" class="w-16 h-16 rounded-full object-cover border" style="border-color: var(--border);">
+                        <img :src="preview" alt="{% translate 'Profile photo' %}" class="w-16 h-16 rounded-full object-cover border" style="border-color: var(--border);">
                         <button type="button"
                                 @click="preview = ''; $refs.avatarInput.value = ''; fileName = ''"
                                 class="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer"
                                 style="background: var(--neutral-200); color: var(--text-secondary);"
-                                title="Remove photo">
+                                title="{% translate 'Remove photo' %}">
                             <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         </button>
                     </div>
@@ -84,19 +84,19 @@
         <div class="space-y-4">
             <div>
                 <label for="current_password" class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">{% translate "Current password" %}</label>
-                <input type="password" id="current_password" name="current_password" placeholder="Current password" required
+                <input type="password" id="current_password" name="current_password" placeholder="{% translate 'Current password' %}" required
                        class="input-focus w-full px-3 py-2 text-sm rounded-lg outline-none transition-colors"
                        style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
             </div>
             <div>
                 <label for="password" class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">{% translate "New password" %}</label>
-                <input type="password" id="password" name="password" placeholder="New password" minlength="8" required
+                <input type="password" id="password" name="password" placeholder="{% translate 'New password' %}" minlength="8" required
                        class="input-focus w-full px-3 py-2 text-sm rounded-lg outline-none transition-colors"
                        style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
             </div>
             <div>
                 <label for="password_confirm" class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">{% translate "Confirm new password" %}</label>
-                <input type="password" id="password_confirm" name="password_confirm" placeholder="Confirm new password" minlength="8" required
+                <input type="password" id="password_confirm" name="password_confirm" placeholder="{% translate 'Confirm new password' %}" minlength="8" required
                        class="input-focus w-full px-3 py-2 text-sm rounded-lg outline-none transition-colors"
                        style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
             </div>
@@ -129,7 +129,7 @@
                 {% endif %}
             </span>
             <span class="text-xs" style="color: var(--text-tertiary);">
-                in {{ org_membership.organization.name }}
+                {% blocktranslate with org=org_membership.organization.name %}in {{ org }}{% endblocktranslate %}
             </span>
         </div>
     </div>

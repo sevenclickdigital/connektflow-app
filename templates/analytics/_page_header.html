@@ -48,7 +48,7 @@
                             </div>
                             <span style="flex: 1; min-width: 0;">
                                 <span style="display: block; font-size: 0.8125rem; font-weight: 600; color: var(--neutral-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ acc.account_name }}{% if acc.platform == "youtube" %} <small>YouTube</small>{% endif %}</span>
-                                <span style="display: block; font-size: 0.6875rem; color: var(--text-tertiary);">{{ acc.follower_count|intcomma }} {% if acc.platform == "youtube" %}subscribers{% else %}followers{% endif %}</span>
+                                <span style="display: block; font-size: 0.6875rem; color: var(--text-tertiary);">{{ acc.follower_count|intcomma }} {% if acc.platform == "youtube" %}{% translate "subscribers" %}{% else %}{% translate "followers" %}{% endif %}</span>
                             </span>
                             {% if acc.analytics_unavailable_reason %}
                                 {% comment %}
@@ -82,7 +82,7 @@
                         {% if active_account.platform == "youtube" %}{% translate "New subscribers" %}{% else %}{% translate "New followers" %}{% endif %}
                     </div>
                     <div style="display: flex; align-items: center; gap: 7px;">
-                        <span class="a-mono" style="font-size: 0.9375rem; font-weight: 700; color: var(--text-primary);"{% if follower_growth.estimated %} title="Calculated by BrightBean from the change in follower totals"{% endif %}>+{{ follower_growth.value|floatformat:0 }}</span>
+                        <span class="a-mono" style="font-size: 0.9375rem; font-weight: 700; color: var(--text-primary);"{% if follower_growth.estimated %} title="{% translate 'Calculated by BrightBean from the change in follower totals' %}"{% endif %}>+{{ follower_growth.value|floatformat:0 }}</span>
                         {% if follower_growth.comparison_available %}{% include "analytics/_delta_chip.html" with delta=follower_growth.delta %}{% endif %}
                     </div>
                 </div>
