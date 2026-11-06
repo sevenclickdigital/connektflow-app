@@ -138,6 +138,6 @@ cd theme/static_src && npm run start      # Tailwind watcher
 
 ## Git
 
-- Work happens directly on `main` or on a short branch, at the developer's choice. Commit or push only when asked.
+- Work directly on `main`. Don't create branches: one developer works on this project. Commit or push only when asked.
 - Commit subject: one imperative sentence describing the behaviour from the user's side, no `feat:`/`fix:` prefix (e.g. "Publish the post, even when Meta refuses the feeling"). The body explains the cause and why the fix has that shape.
 - Never commit `.env*` (except the `*.example` files), dumps (`_local_dumps/`), `media/` or `test_media/`.
