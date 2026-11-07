@@ -1675,3 +1675,121 @@ def test_find_own_comment_falls_back_to_the_raw_id_like_publish_does():
 
     assert provider.find_own_comment("page-token", "video-1", "More detail") == "c-ours"
     assert provider._request.call_count == 2
+
+
+def test_publish_photo_story_stages_photo_then_attaches_it_without_caption():
+    provider = FacebookProvider({"client_id": "id", "client_secret": "secret"})
+    provider._request = MagicMock(
+        side_effect=[
+            _resp({"id": "photo-7"}),
+            _resp({"success": True, "post_id": "page-1_story-7"}),
+        ]
+    )
+
+    result = provider.publish_post(
+        "page-token",
+        PublishContent(
+            text="Stories carry no caption",
+            media_urls=["https://cdn.example.com/story.jpg"],
+            media_types=["image"],
+            post_type=PostType.STORY,
+            extra={"page_id": "page-1"},
+        ),
+    )
+
+    assert result.platform_post_id == "story-7"
+    assert result.extra == {"photo_id": "photo-7", "post_id": "page-1_story-7"}
+    assert provider._request.call_args_list == [
+        call(
+            "POST",
+            "https://graph.facebook.com/v25.0/page-1/photos",
+            access_token="page-token",
+            json={"url": "https://cdn.example.com/story.jpg", "published": False},
+        ),
+        call(
+            "POST",
+            "https://graph.facebook.com/v25.0/page-1/photo_stories",
+            access_token="page-token",
+            json={"photo_id": "photo-7"},
+        ),
+    ]
+
+
+def test_publish_video_story_uses_the_hosted_upload_protocol():
+    provider = FacebookProvider({"client_id": "id", "client_secret": "secret"})
+    provider._request = MagicMock(
+        side_effect=[
+            _resp({"video_id": "vid-3", "upload_url": "https://rupload.facebook.com/story-upload"}),
+            _resp({"success": True}),
+            _resp({"success": True, "post_id": "page-1_story-3"}),
+        ]
+    )
+
+    result = provider.publish_post(
+        "page-token",
+        PublishContent(
+            text="ignored",
+            media_urls=["https://cdn.example.com/story.mp4"],
+            media_types=["video"],
+            post_type=PostType.STORY,
+            extra={"page_id": "page-1"},
+        ),
+    )
+
+    assert result.platform_post_id == "story-3"
+    assert result.extra == {"video_id": "vid-3", "post_id": "page-1_story-3"}
+    assert provider._request.call_args_list == [
+        call(
+            "POST",
+            "https://graph.facebook.com/v25.0/page-1/video_stories",
+            access_token="page-token",
+            data={"upload_phase": "start"},
+        ),
+        call(
+            "POST",
+            "https://rupload.facebook.com/story-upload",
+            headers={"Authorization": "OAuth page-token", "file_url": "https://cdn.example.com/story.mp4"},
+        ),
+        call(
+            "POST",
+            "https://graph.facebook.com/v25.0/page-1/video_stories",
+            access_token="page-token",
+            data={"upload_phase": "finish", "video_id": "vid-3"},
+        ),
+    ]
+
+
+def test_publish_story_rejects_more_than_one_media_item():
+    provider = FacebookProvider({"client_id": "id", "client_secret": "secret"})
+    provider._request = MagicMock()
+
+    with pytest.raises(PublishError) as exc:
+        provider.publish_post(
+            "page-token",
+            PublishContent(
+                text="",
+                media_urls=["https://cdn.example.com/a.jpg", "https://cdn.example.com/b.jpg"],
+                post_type=PostType.STORY,
+                extra={"page_id": "page-1"},
+            ),
+        )
+
+    assert exc.value.retryable is False
+    provider._request.assert_not_called()
+
+
+def test_publish_story_fails_when_facebook_returns_no_story_id():
+    provider = FacebookProvider({"client_id": "id", "client_secret": "secret"})
+    provider._request = MagicMock(side_effect=[_resp({"id": "photo-7"}), _resp({"success": True})])
+
+    with pytest.raises(PublishError, match="Story id"):
+        provider.publish_post(
+            "page-token",
+            PublishContent(
+                text="",
+                media_urls=["https://cdn.example.com/story.jpg"],
+                media_types=["image"],
+                post_type=PostType.STORY,
+                extra={"page_id": "page-1"},
+            ),
+        )

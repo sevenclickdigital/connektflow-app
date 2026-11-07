@@ -148,7 +148,7 @@ class FacebookProvider(SocialProvider):
 
     @property
     def supported_post_types(self) -> list[PostType]:
-        return [PostType.TEXT, PostType.IMAGE, PostType.VIDEO, PostType.REEL, PostType.LINK]
+        return [PostType.TEXT, PostType.IMAGE, PostType.VIDEO, PostType.REEL, PostType.STORY, PostType.LINK]
 
     @property
     def supported_media_types(self) -> list[MediaType]:
@@ -368,6 +368,8 @@ class FacebookProvider(SocialProvider):
             return self._publish_photo(access_token, page_id, content)
         if content.post_type == PostType.REEL:
             return self._publish_reel(access_token, page_id, content)
+        if content.post_type == PostType.STORY:
+            return self._publish_story(access_token, page_id, content)
         if content.post_type == PostType.VIDEO and content.media_urls:
             return self._publish_video(access_token, page_id, content)
         return self._publish_text_or_link(access_token, page_id, content)
@@ -589,38 +591,9 @@ class FacebookProvider(SocialProvider):
                 retryable=False,
             )
 
-        start_data = self._request(
-            "POST",
-            f"{BASE_URL}/{page_id}/video_reels",
-            access_token=access_token,
-            data={"upload_phase": "start"},
-        ).json()
-        video_id = start_data.get("video_id")
-        upload_url = start_data.get("upload_url")
-        if not video_id or not upload_url:
-            raise PublishError(
-                "Facebook did not create a Reel upload session",
-                platform=self.platform_name,
-                raw_response=start_data,
-            )
-
-        # Meta's resumable upload host expects OAuth (not Bearer) plus the
-        # publicly fetchable video URL in a header for hosted uploads.
-        #
-        # The body matters: Meta fetches the file server-side, so the transfer
-        # can fail after the request itself was accepted with a 2xx that
-        # _request would wave through. Catching it here names the upload as the
-        # failing step rather than letting the finish call report a video that
-        # was never assembled.
-        upload_resp = self._request(
-            "POST",
-            upload_url,
-            headers={
-                "Authorization": f"OAuth {access_token}",
-                "file_url": content.media_urls[0],
-            },
+        video_id = self._start_hosted_video_upload(
+            access_token, f"{BASE_URL}/{page_id}/video_reels", content.media_urls[0], "Reel"
         )
-        self._raise_for_reel_phase(self._safe_json(upload_resp), "upload the Reel video")
 
         finish_payload: dict = {
             "upload_phase": "finish",
@@ -638,7 +611,7 @@ class FacebookProvider(SocialProvider):
             access_token=access_token,
             data=finish_payload,
         ).json()
-        self._raise_for_reel_phase(finish_data, "publish the Reel")
+        self._raise_for_upload_phase(finish_data, "publish the Reel")
 
         # Publishing already succeeded. Metadata is best-effort so a delayed
         # post_id or malformed response cannot trigger a duplicate retry.
@@ -672,8 +645,107 @@ class FacebookProvider(SocialProvider):
             },
         )
 
-    def _raise_for_reel_phase(self, data: dict, action: str) -> None:
-        """Fail a Reel phase that answered 2xx but did not actually succeed."""
+    def _start_hosted_video_upload(self, access_token: str, edge_url: str, video_url: str, label: str) -> str:
+        """Open a resumable upload session on *edge_url* and hand Meta the hosted file.
+
+        Shared by Reels (``/video_reels``) and video Stories (``/video_stories``),
+        which use the same start/upload/finish protocol. Returns the
+        ``video_id`` the finish phase needs.
+        """
+        start_data = self._request(
+            "POST",
+            edge_url,
+            access_token=access_token,
+            data={"upload_phase": "start"},
+        ).json()
+        video_id = start_data.get("video_id")
+        upload_url = start_data.get("upload_url")
+        if not video_id or not upload_url:
+            raise PublishError(
+                f"Facebook did not create a {label} upload session",
+                platform=self.platform_name,
+                raw_response=start_data,
+            )
+
+        # Meta's resumable upload host expects OAuth (not Bearer) plus the
+        # publicly fetchable video URL in a header for hosted uploads.
+        #
+        # The body matters: Meta fetches the file server-side, so the transfer
+        # can fail after the request itself was accepted with a 2xx that
+        # _request would wave through. Catching it here names the upload as the
+        # failing step rather than letting the finish call report a video that
+        # was never assembled.
+        upload_resp = self._request(
+            "POST",
+            upload_url,
+            headers={
+                "Authorization": f"OAuth {access_token}",
+                "file_url": video_url,
+            },
+        )
+        self._raise_for_upload_phase(self._safe_json(upload_resp), f"upload the {label} video")
+        return video_id
+
+    def _publish_story(self, access_token: str, page_id: str, content: PublishContent) -> PublishResult:
+        """Publish a Page Story from one hosted photo or video.
+
+        Stories carry no caption on Facebook, so ``content.text`` is not sent.
+        A photo is staged unpublished on ``/photos`` and then attached through
+        ``/photo_stories``; a video goes through the same resumable protocol as
+        Reels, on ``/video_stories``.
+        """
+        if len(content.media_urls) != 1:
+            raise PublishError(
+                "Facebook Stories require exactly one photo or video",
+                platform=self.platform_name,
+                retryable=False,
+            )
+
+        if content.is_video(0):
+            video_id = self._start_hosted_video_upload(
+                access_token, f"{BASE_URL}/{page_id}/video_stories", content.media_urls[0], "Story"
+            )
+            data = self._request(
+                "POST",
+                f"{BASE_URL}/{page_id}/video_stories",
+                access_token=access_token,
+                data={"upload_phase": "finish", "video_id": video_id},
+            ).json()
+            self._raise_for_upload_phase(data, "publish the Story")
+            extra = {"video_id": video_id}
+        else:
+            photo = self._request(
+                "POST",
+                f"{BASE_URL}/{page_id}/photos",
+                access_token=access_token,
+                json={"url": content.media_urls[0], "published": False},
+            ).json()
+            data = self._request(
+                "POST",
+                f"{BASE_URL}/{page_id}/photo_stories",
+                access_token=access_token,
+                json={"photo_id": photo["id"]},
+            ).json()
+            self._raise_for_upload_phase(data, "publish the Story")
+            extra = {"photo_id": photo["id"]}
+
+        graph_post_id = data.get("post_id")
+        if not graph_post_id:
+            raise PublishError(
+                "Facebook did not return the Story id",
+                platform=self.platform_name,
+                raw_response=data,
+            )
+        # Only identifiers, for the same reason as Reels: the engine merges this
+        # into PlatformPost.platform_extra, which clones copy as publish input.
+        return PublishResult(
+            platform_post_id=self._stored_post_id(graph_post_id),
+            url=f"https://www.facebook.com/{graph_post_id}",
+            extra={**extra, "post_id": graph_post_id},
+        )
+
+    def _raise_for_upload_phase(self, data: dict, action: str) -> None:
+        """Fail a Reel or Story phase that answered 2xx but did not actually succeed."""
         if data.get("success") is False or "error" in data:
             raise PublishError(
                 f"Facebook failed to {action}",

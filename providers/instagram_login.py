@@ -326,7 +326,8 @@ class InstagramLoginProvider(SocialProvider):
 
     def _publish_single(self, access_token: str, content: PublishContent) -> PublishResult:
         payload: dict = {}
-        if content.text:
+        # Stories take no caption: Meta rejects or drops it, so it is not sent.
+        if content.text and content.post_type != PostType.STORY:
             payload["caption"] = content.text
 
         # Route on what the asset *is*, not only on which post types name a

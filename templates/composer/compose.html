@@ -778,19 +778,20 @@
                 </div>
 
                 {% comment %}
-                Facebook video destination. Separate from the customize card
-                below (which carries place and feeling) because this one is
-                about the attachment, not about styling the post: it has to
-                appear whenever a lone video is attached, so that removing the
-                video can clear a stale Reel hint.
+                Publishing format for Facebook and Instagram. Separate from the
+                customize card below (which carries place and feeling) because
+                this one is about the attachment, not about styling the post: it
+                appears whenever exactly one photo or video is attached, so that
+                removing or replacing the media can clear a stale Reel or Story
+                hint.
                 {% endcomment %}
                 <template x-for="accId in selectedAccounts" :key="'facebook-video-settings-' + accId">
-                    <div x-show="charLimits[accId]?.platform === 'facebook' && hasSingleVideoAttached"
-                         x-data="{ facebookPostType: platformExtras[accId]?.post_type || 'video' }"
+                    <div x-show="charLimits[accId]?.platform === 'facebook' && hasSingleMediaAttached"
+                         x-data="{ facebookPostType: platformExtras[accId]?.post_type || '' }"
                          class="border border-stone-200 rounded-xl bg-white p-4 space-y-3">
                         {% comment %}
-                        Marks the panel as present in the submit even when no video is
-                        attached, so a save can clear a stale Reel hint but a non-composer
+                        Marks the panel as present in the submit even when no media is
+                        attached, so a save can clear a stale hint but a non-composer
                         save can never wipe extras it never rendered.
                         {% endcomment %}
                         <input type="hidden" :name="'facebook_panel_' + accId" value="1"
@@ -800,19 +801,53 @@
                                   :class="'pi-' + (charLimits[accId]?.platform || '')"
                                   x-html="platformIconSvg(charLimits[accId]?.platform || '')"></span>
                             <span class="text-xs font-semibold text-stone-600">
-                                <span x-text="charLimits[accId]?.name"></span> — {% translate "Video settings" %}
+                                <span x-text="charLimits[accId]?.name"></span> — {% translate "Publishing format" %}
                             </span>
                         </div>
                         <div>
                             <label class="block text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-1">{% translate "Publish as" %}</label>
                             <select :name="'facebook_post_type_' + accId"
                                     x-model="facebookPostType"
-                                    :disabled="charLimits[accId]?.platform !== 'facebook' || !hasSingleVideoAttached"
+                                    :disabled="charLimits[accId]?.platform !== 'facebook' || !hasSingleMediaAttached"
                                     class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
-                                <option value="video">{% translate "Regular Page video" %}</option>
-                                <option value="reel">{% translate "Facebook Reel" %}</option>
+                                <option value="" x-text="hasSingleVideoAttached ? $el.dataset.video : $el.dataset.feed"
+                                        data-video="{% translate 'Regular Page video' %}"
+                                        data-feed="{% translate 'Feed post' %}"></option>
+                                <option value="reel" :disabled="!hasSingleVideoAttached" x-show="hasSingleVideoAttached">{% translate "Facebook Reel" %}</option>
+                                <option value="story">{% translate "Story" context "publishing format" %}</option>
                             </select>
-                            <p class="text-[11px] text-stone-400 mt-1">{% translate "Reels use Facebook's dedicated vertical-video flow and must be 3-90 seconds. Regular Page video suits long-form and landscape uploads." %}</p>
+                            <p class="text-[11px] text-stone-400 mt-1" x-show="facebookPostType === 'reel'">{% translate "Reels use Facebook's dedicated vertical-video flow and must be 3-90 seconds. Regular Page video suits long-form and landscape uploads." %}</p>
+                            <p class="text-[11px] text-stone-400 mt-1" x-show="facebookPostType === 'story'">{% translate "Stories disappear after 24 hours and are published without the caption. Use a vertical photo or video (9:16)." %}</p>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-for="accId in selectedAccounts" :key="'instagram-format-settings-' + accId">
+                    <div x-show="['instagram', 'instagram_login'].includes(charLimits[accId]?.platform) && hasSingleMediaAttached"
+                         x-data="{ instagramPostType: platformExtras[accId]?.post_type === 'story' ? 'story' : '' }"
+                         class="border border-stone-200 rounded-xl bg-white p-4 space-y-3">
+                        <input type="hidden" :name="'instagram_panel_' + accId" value="1"
+                               :disabled="!['instagram', 'instagram_login'].includes(charLimits[accId]?.platform)">
+                        <div class="flex items-center gap-2">
+                            <span class="platform-icon w-5 h-5 rounded-[5px] flex items-center justify-center"
+                                  :class="'pi-' + (charLimits[accId]?.platform || '')"
+                                  x-html="platformIconSvg(charLimits[accId]?.platform || '')"></span>
+                            <span class="text-xs font-semibold text-stone-600">
+                                <span x-text="charLimits[accId]?.name"></span> — {% translate "Publishing format" %}
+                            </span>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-1">{% translate "Publish as" %}</label>
+                            <select :name="'instagram_post_type_' + accId"
+                                    x-model="instagramPostType"
+                                    :disabled="!['instagram', 'instagram_login'].includes(charLimits[accId]?.platform) || !hasSingleMediaAttached"
+                                    class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
+                                <option value="" x-text="hasSingleVideoAttached ? $el.dataset.reel : $el.dataset.feed"
+                                        data-reel="{% translate 'Reel' %}"
+                                        data-feed="{% translate 'Feed post' %}"></option>
+                                <option value="story">{% translate "Story" context "publishing format" %}</option>
+                            </select>
+                            <p class="text-[11px] text-stone-400 mt-1" x-show="instagramPostType === 'story'">{% translate "Stories disappear after 24 hours and are published without the caption. Use a vertical photo or video (9:16)." %}</p>
                         </div>
                     </div>
                 </template>
@@ -2691,6 +2726,7 @@ function composerApp() {
         hasMediaAttached: false,
         hasVideoAttached: false,
         hasSingleVideoAttached: false,
+        hasSingleMediaAttached: false,
         showFramePicker: false,
         framePickerAccId: null,
         framePickerMode: 'upload',
@@ -2883,6 +2919,7 @@ function composerApp() {
                 this.hasMediaAttached = thumbs.length > 0;
                 this.hasVideoAttached = videoCount > 0;
                 this.hasSingleVideoAttached = thumbs.length === 1 && videoCount === 1;
+                this.hasSingleMediaAttached = thumbs.length === 1;
             };
             this.$nextTick(syncVideoAttached);
             // Seed media_order from the thumbnails as rendered, so a save that

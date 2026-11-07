@@ -790,6 +790,26 @@ class ResolvePostTypeFromMediaTypeTest(SimpleTestCase):
             PostType.STORY,
         )
 
+    def test_a_story_hint_holds_for_one_photo_or_one_video(self):
+        for platform in ("facebook", "instagram"):
+            for media_type in ("image", "video"):
+                with self.subTest(platform=platform, media_type=media_type):
+                    self.assertEqual(
+                        self._resolve(platform, first_media_type=media_type, extra={"post_type": "story"}),
+                        PostType.STORY,
+                    )
+
+    def test_a_stale_story_hint_is_ignored(self):
+        """Media removed after the hint was saved must not reach a Stories endpoint."""
+        self.assertEqual(
+            self._resolve("facebook", media_count=0, first_media_type=None, extra={"post_type": "story"}),
+            PostType.TEXT,
+        )
+        self.assertEqual(
+            self._resolve("instagram", media_count=2, first_media_type="image", extra={"post_type": "story"}),
+            PostType.CAROUSEL,
+        )
+
 
 def _attachment(media_type: str, url: str, *, has_file: bool = True):
     """A stand-in media attachment for the dispatch loop.

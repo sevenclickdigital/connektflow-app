@@ -405,6 +405,88 @@ class FacebookVideoSettingsTests(AccountScopeTestsBase):
         self.assertNotIn("post_type", self.facebook_pp.platform_extra)
 
 
+class StorySettingsTests(AccountScopeTestsBase):
+    """The "Publish as Story" choice for Facebook and Instagram accounts."""
+
+    def setUp(self):
+        super().setUp()
+        self.facebook = SocialAccount.objects.create(
+            workspace=self.workspace,
+            platform="facebook",
+            account_platform_id="fb-page-story",
+            account_name="Facebook Page",
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+        self.instagram = SocialAccount.objects.create(
+            workspace=self.workspace,
+            platform="instagram",
+            account_platform_id="ig-story",
+            account_name="Instagram",
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+        self.facebook_pp = PlatformPost.objects.create(
+            post=self.post, social_account=self.facebook, status=PlatformPost.Status.DRAFT
+        )
+        self.instagram_pp = PlatformPost.objects.create(
+            post=self.post, social_account=self.instagram, status=PlatformPost.Status.DRAFT
+        )
+        self.image = self._asset("story.jpg", MediaAsset.MediaType.IMAGE, "image/jpeg")
+        PostMedia.objects.create(post=self.post, media_asset=self.image)
+
+    def _asset(self, name, media_type, mime):
+        return MediaAsset.objects.create(
+            organization=self.org,
+            workspace=self.workspace,
+            uploaded_by=self.user,
+            file=f"test/{name}",
+            filename=name,
+            media_type=media_type,
+            mime_type=mime,
+        )
+
+    def _story_payload(self, facebook_choice="story", instagram_choice="story"):
+        fb, ig = str(self.facebook.id), str(self.instagram.id)
+        return self._payload(
+            selected_accounts=f"{fb},{ig}",
+            account_scope="",
+            **{
+                f"facebook_panel_{fb}": "1",
+                f"facebook_post_type_{fb}": facebook_choice,
+                f"instagram_panel_{ig}": "1",
+                f"instagram_post_type_{ig}": instagram_choice,
+            },
+        )
+
+    def test_story_choice_round_trips_for_a_single_photo(self):
+        response = self.client.post(self.save_url, data=self._story_payload())
+
+        self.assertIn(response.status_code, (200, 204, 302))
+        self.facebook_pp.refresh_from_db()
+        self.instagram_pp.refresh_from_db()
+        self.assertEqual(self.facebook_pp.platform_extra["post_type"], "story")
+        self.assertEqual(self.instagram_pp.platform_extra["post_type"], "story")
+
+    def test_story_choice_is_refused_for_more_than_one_attachment(self):
+        second = self._asset("second.jpg", MediaAsset.MediaType.IMAGE, "image/jpeg")
+        PostMedia.objects.create(post=self.post, media_asset=second, position=1)
+
+        self.client.post(self.save_url, data=self._story_payload())
+
+        self.facebook_pp.refresh_from_db()
+        self.instagram_pp.refresh_from_db()
+        self.assertNotIn("post_type", self.facebook_pp.platform_extra)
+        self.assertNotIn("post_type", self.instagram_pp.platform_extra)
+
+    def test_choosing_feed_clears_an_earlier_story_choice(self):
+        self.instagram_pp.platform_extra = {"post_type": "story"}
+        self.instagram_pp.save(update_fields=["platform_extra"])
+
+        self.client.post(self.save_url, data=self._story_payload(instagram_choice=""))
+
+        self.instagram_pp.refresh_from_db()
+        self.assertEqual(self.instagram_pp.platform_extra, {})
+
+
 class PinterestBoardSelectionTests(AccountScopeTestsBase):
     def setUp(self):
         super().setUp()

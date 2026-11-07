@@ -365,6 +365,16 @@ class ScheduleFirstCommentTest(TestCase):
 
         task.assert_not_called()
 
+    def test_a_story_is_not_scheduled(self):
+        """Stories have no comment thread; the comment would only ever fail."""
+        self.platform_post.platform_extra = {"post_type": "story"}
+        self.platform_post.save(update_fields=["platform_extra"])
+
+        with patch("apps.publisher.engine._post_first_comment_task") as task:
+            PublishEngine()._maybe_schedule_first_comment(self.platform_post)
+
+        task.assert_not_called()
+
     def test_an_unpublished_row_is_not_scheduled(self):
         self.platform_post.status = PlatformPost.Status.FAILED
         self.platform_post.save(update_fields=["status"])

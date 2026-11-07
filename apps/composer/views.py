@@ -306,6 +306,16 @@ def _apply_facebook_feed_extras(request, extra, acc_id):
         extra.pop("feeling_object_id", None)
 
 
+def _first_media_types(post):
+    """Media types of the first two attachments: enough to tell "exactly one" apart."""
+    return list(post.media_attachments.values_list("media_asset__media_type", flat=True)[:2])
+
+
+def _fits_story(media_types):
+    """A Story is exactly one photo or one video."""
+    return len(media_types) == 1 and media_types[0] in ("image", "video")
+
+
 def _sync_platform_posts(request, post, workspace, initial_status=None):
     """Sync platform post selections from form data.
 
@@ -356,10 +366,12 @@ def _sync_platform_posts(request, post, workspace, initial_status=None):
                 # Reel hint that sends a text or image post to Facebook's Reel
                 # endpoint.
                 facebook_post_type = request.POST.get(f"facebook_post_type_{acc_id}", "").strip()
-                media_types = list(post.media_attachments.values_list("media_asset__media_type", flat=True)[:2])
+                media_types = _first_media_types(post)
                 has_exactly_one_video = media_types == ["video"]
                 if facebook_post_type == "reel" and has_exactly_one_video:
                     extra["post_type"] = "reel"
+                elif facebook_post_type == "story" and _fits_story(media_types):
+                    extra["post_type"] = "story"
                 else:
                     # Only the deviation from the default is worth storing. A
                     # lone video already infers PostType.VIDEO at publish time,
@@ -371,6 +383,19 @@ def _sync_platform_posts(request, post, workspace, initial_status=None):
                     extra.pop("post_type", None)
             _apply_facebook_feed_extras(request, extra, acc_id)
             pp.platform_extra = extra
+
+        elif account.platform in ("instagram", "instagram_login"):
+            # Same rule as the Facebook selector: the panel marker says the
+            # selector was rendered, so a save without it leaves the hint alone,
+            # and a hint the attachments no longer fit is cleared.
+            if f"instagram_panel_{acc_id}" in request.POST:
+                extra = {**(pp.platform_extra or {})}
+                wants_story = request.POST.get(f"instagram_post_type_{acc_id}", "").strip() == "story"
+                if wants_story and _fits_story(_first_media_types(post)):
+                    extra["post_type"] = "story"
+                else:
+                    extra.pop("post_type", None)
+                pp.platform_extra = extra
 
         elif account.platform == "youtube":
             tags_list = parse_and_truncate_youtube_tag_string(request.POST.get(f"yt_tags_{acc_id}", ""))

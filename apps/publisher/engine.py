@@ -590,6 +590,9 @@ class PublishEngine:
             return
         if not platform_post.effective_first_comment:
             return
+        # Stories have no comment thread to post into.
+        if (platform_post.platform_extra or {}).get("post_type") == "story":
+            return
         if platform_post.first_comment_status in (
             PlatformPost.FirstCommentStatus.PENDING,
             PlatformPost.FirstCommentStatus.POSTED,
@@ -974,6 +977,9 @@ class PublishEngine:
         if hint is PostType.VIDEO:
             # _publish_video posts media_urls[0] to the video endpoint as-is.
             return first_media_type == "video"
+        if hint is PostType.STORY:
+            # A Story is one photo or one video, never text or a set.
+            return media_count == 1 and first_media_type in ("image", "video")
         return True
 
     @staticmethod

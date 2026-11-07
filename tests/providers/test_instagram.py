@@ -1106,6 +1106,15 @@ def test_an_image_story_is_sent_as_an_image(make_provider, create_url):
 
 
 @pytest.mark.parametrize(("make_provider", "create_url"), IG_PUBLISHERS)
+def test_a_story_is_sent_without_the_caption(make_provider, create_url):
+    provider = make_provider()
+
+    _publish(provider, text="Not for stories", media_urls=[IMAGE_URL], post_type=PostType.STORY)
+
+    assert "caption" not in provider._request.call_args_list[0].kwargs["json"]
+
+
+@pytest.mark.parametrize(("make_provider", "create_url"), IG_PUBLISHERS)
 def test_a_carousel_video_child_is_sent_as_a_video(make_provider, create_url):
     """Same extension trap as the story branch, one level down: a presigned
     video child built as an image fails the container and strands the children
