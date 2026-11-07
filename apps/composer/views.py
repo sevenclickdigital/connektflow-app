@@ -12,6 +12,7 @@ from urllib.parse import urljoin
 import httpx
 from dateutil import parser as date_parser
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache, caches
 from django.core.exceptions import PermissionDenied, SuspiciousOperation, ValidationError
@@ -25,7 +26,7 @@ from django.utils.html import strip_tags
 from django.utils.text import get_text_list
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy, ngettext
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from apps.billing.storage_usage import WorkspaceStorageExceededError
 from apps.common.validators import (
@@ -38,6 +39,7 @@ from apps.media_library.models import MediaAsset
 from apps.media_library.quotas import StorageQuotaExceededError
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
+from apps.publisher.manual_delivery import NOTIFY_DELIVERY, is_notify_delivery
 from apps.social_accounts.models import SocialAccount
 from apps.workspaces.models import Workspace
 from providers import is_video_only, requires_media
@@ -317,6 +319,14 @@ def _fits_story(media_types):
     return len(media_types) == 1 and media_types[0] in ("image", "video")
 
 
+def _apply_delivery_choice(extra, choice):
+    """Store "notify me to publish manually" only alongside a Story it can apply to."""
+    if choice == "story_notify" and extra.get("post_type") == "story":
+        extra["delivery"] = NOTIFY_DELIVERY
+    else:
+        extra.pop("delivery", None)
+
+
 def _sync_platform_posts(request, post, workspace, initial_status=None):
     """Sync platform post selections from form data.
 
@@ -371,7 +381,7 @@ def _sync_platform_posts(request, post, workspace, initial_status=None):
                 has_exactly_one_video = media_types == ["video"]
                 if facebook_post_type == "reel" and has_exactly_one_video:
                     extra["post_type"] = "reel"
-                elif facebook_post_type == "story" and _fits_story(media_types):
+                elif facebook_post_type in ("story", "story_notify") and _fits_story(media_types):
                     extra["post_type"] = "story"
                 else:
                     # Only the deviation from the default is worth storing. A
@@ -382,6 +392,7 @@ def _sync_platform_posts(request, post, workspace, initial_status=None):
                     # route it to Facebook's video endpoint. Choosing regular
                     # video therefore clears the hint rather than recording it.
                     extra.pop("post_type", None)
+                _apply_delivery_choice(extra, facebook_post_type)
             _apply_facebook_feed_extras(request, extra, acc_id)
             pp.platform_extra = extra
 
@@ -391,11 +402,12 @@ def _sync_platform_posts(request, post, workspace, initial_status=None):
             # and a hint the attachments no longer fit is cleared.
             if f"instagram_panel_{acc_id}" in request.POST:
                 extra = {**(pp.platform_extra or {})}
-                wants_story = request.POST.get(f"instagram_post_type_{acc_id}", "").strip() == "story"
-                if wants_story and _fits_story(_first_media_types(post)):
+                instagram_post_type = request.POST.get(f"instagram_post_type_{acc_id}", "").strip()
+                if instagram_post_type in ("story", "story_notify") and _fits_story(_first_media_types(post)):
                     extra["post_type"] = "story"
                 else:
                     extra.pop("post_type", None)
+                _apply_delivery_choice(extra, instagram_post_type)
                 pp.platform_extra = extra
 
         elif account.platform == "google_business":
@@ -2808,6 +2820,47 @@ def remove_pending_media(request, workspace_id, asset_id):
     )
     response["HX-Trigger"] = "previewUpdate"
     return response
+
+
+@login_required
+@require_permission("create_posts")
+@require_http_methods(["GET", "POST"])
+def manual_publish(request, workspace_id, post_id, platform_post_id):
+    """What the "time to publish" notification opens: media, caption, and "I've published it".
+
+    Only reachable for a channel set to be published by hand
+    (``platform_extra["delivery"] == "notify"``); see apps/publisher/manual_delivery.
+    """
+    workspace = _get_workspace(request, workspace_id)
+    platform_post = get_object_or_404(
+        PlatformPost.objects.select_related("post", "social_account"),
+        id=platform_post_id,
+        post_id=post_id,
+        post__workspace_id=workspace.id,
+    )
+    if not is_notify_delivery(platform_post.platform_extra):
+        raise Http404
+
+    if request.method == "POST":
+        extra = {**(platform_post.platform_extra or {})}
+        extra.setdefault("manual_published_at", timezone.now().isoformat())
+        platform_post.platform_extra = extra
+        platform_post.save(update_fields=["platform_extra"])
+        messages.success(request, _("Marked as published. Thank you!"))
+        return redirect(request.path)
+
+    attachments = platform_post.post.media_attachments.select_related("media_asset").order_by("position")
+    return render(
+        request,
+        "composer/manual_publish.html",
+        {
+            "workspace": workspace,
+            "platform_post": platform_post,
+            "caption": platform_post.effective_caption or "",
+            "media_items": [_preview_media_item(att.media_asset) for att in attachments],
+            "published_by_hand": bool(platform_post.platform_extra.get("manual_published_at")),
+        },
+    )
 
 
 @login_required

@@ -787,7 +787,7 @@
                 {% endcomment %}
                 <template x-for="accId in selectedAccounts" :key="'facebook-video-settings-' + accId">
                     <div x-show="charLimits[accId]?.platform === 'facebook' && hasSingleMediaAttached"
-                         x-data="{ facebookPostType: platformExtras[accId]?.post_type || '' }"
+                         x-data="{ facebookPostType: platformExtras[accId]?.delivery === 'notify' ? 'story_notify' : (platformExtras[accId]?.post_type || '') }"
                          class="border border-stone-200 rounded-xl bg-white p-4 space-y-3">
                         {% comment %}
                         Marks the panel as present in the submit even when no media is
@@ -815,8 +815,10 @@
                                         data-feed="{% translate 'Feed post' %}"></option>
                                 <option value="reel" :disabled="!hasSingleVideoAttached" x-show="hasSingleVideoAttached">{% translate "Facebook Reel" %}</option>
                                 <option value="story">{% translate "Story" context "publishing format" %}</option>
+                                <option value="story_notify">{% translate "Story — notify me to publish manually" %}</option>
                             </select>
                             <p class="text-[11px] text-stone-400 mt-1" x-show="facebookPostType === 'reel'">{% translate "Reels use Facebook's dedicated vertical-video flow and must be 3-90 seconds. Regular Page video suits long-form and landscape uploads." %}</p>
+                            <p class="text-[11px] text-stone-400 mt-1" x-show="facebookPostType === 'story_notify'">{% translate "Nothing is sent to the platform. At the scheduled time you get an e-mail and a notification with the media to download and the caption to copy, so you can publish from the app with music, stickers or polls." %}</p>
                             <p class="text-[11px] text-stone-400 mt-1" x-show="facebookPostType === 'story'">{% translate "Stories disappear after 24 hours and are published without the caption. Use a vertical photo or video (9:16)." %}</p>
                         </div>
                     </div>
@@ -824,7 +826,7 @@
 
                 <template x-for="accId in selectedAccounts" :key="'instagram-format-settings-' + accId">
                     <div x-show="['instagram', 'instagram_login'].includes(charLimits[accId]?.platform) && hasSingleMediaAttached"
-                         x-data="{ instagramPostType: platformExtras[accId]?.post_type === 'story' ? 'story' : '' }"
+                         x-data="{ instagramPostType: platformExtras[accId]?.post_type === 'story' ? (platformExtras[accId]?.delivery === 'notify' ? 'story_notify' : 'story') : '' }"
                          class="border border-stone-200 rounded-xl bg-white p-4 space-y-3">
                         <input type="hidden" :name="'instagram_panel_' + accId" value="1"
                                :disabled="!['instagram', 'instagram_login'].includes(charLimits[accId]?.platform)">
@@ -846,7 +848,9 @@
                                         data-reel="{% translate 'Reel' %}"
                                         data-feed="{% translate 'Feed post' %}"></option>
                                 <option value="story">{% translate "Story" context "publishing format" %}</option>
+                                <option value="story_notify">{% translate "Story — notify me to publish manually" %}</option>
                             </select>
+                            <p class="text-[11px] text-stone-400 mt-1" x-show="instagramPostType === 'story_notify'">{% translate "Nothing is sent to the platform. At the scheduled time you get an e-mail and a notification with the media to download and the caption to copy, so you can publish from the app with music, stickers or polls." %}</p>
                             <p class="text-[11px] text-stone-400 mt-1" x-show="instagramPostType === 'story'">{% translate "Stories disappear after 24 hours and are published without the caption. Use a vertical photo or video (9:16)." %}</p>
                         </div>
                     </div>

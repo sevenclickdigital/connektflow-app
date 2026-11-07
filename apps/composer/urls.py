@@ -22,6 +22,11 @@ urlpatterns = [
     # Composer page
     path("compose/", views.compose, name="compose"),
     path("compose/<uuid:post_id>/", views.compose, name="compose_edit"),
+    path(
+        "compose/<uuid:post_id>/manual/<uuid:platform_post_id>/",
+        views.manual_publish,
+        name="manual_publish",
+    ),
     # Save actions
     path("compose/save/", views.save_post, name="save_post"),
     path("compose/<uuid:post_id>/save/", views.save_post, name="save_post_edit"),

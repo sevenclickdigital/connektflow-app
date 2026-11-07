@@ -477,6 +477,24 @@ class StorySettingsTests(AccountScopeTestsBase):
         self.assertNotIn("post_type", self.facebook_pp.platform_extra)
         self.assertNotIn("post_type", self.instagram_pp.platform_extra)
 
+    def test_notified_story_stores_the_delivery_and_plain_story_clears_it(self):
+        self.client.post(self.save_url, data=self._story_payload(instagram_choice="story_notify"))
+        self.instagram_pp.refresh_from_db()
+        self.assertEqual(self.instagram_pp.platform_extra, {"post_type": "story", "delivery": "notify"})
+
+        self.client.post(self.save_url, data=self._story_payload(instagram_choice="story"))
+        self.instagram_pp.refresh_from_db()
+        self.assertEqual(self.instagram_pp.platform_extra, {"post_type": "story"})
+
+    def test_notified_delivery_is_refused_when_the_media_cannot_be_a_story(self):
+        second = self._asset("second.jpg", MediaAsset.MediaType.IMAGE, "image/jpeg")
+        PostMedia.objects.create(post=self.post, media_asset=second, position=1)
+
+        self.client.post(self.save_url, data=self._story_payload(facebook_choice="story_notify"))
+
+        self.facebook_pp.refresh_from_db()
+        self.assertNotIn("delivery", self.facebook_pp.platform_extra)
+
     def test_choosing_feed_clears_an_earlier_story_choice(self):
         self.instagram_pp.platform_extra = {"post_type": "story"}
         self.instagram_pp.save(update_fields=["platform_extra"])

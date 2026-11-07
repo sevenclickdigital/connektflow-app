@@ -598,6 +598,16 @@ class PlatformPost(models.Model):
         return f"PlatformPost({self.social_account.platform}): {self.status}"
 
     @property
+    def delivered_by_notification(self):
+        """Settled by notifying someone to post it by hand, not by publishing it.
+
+        See apps/publisher/manual_delivery: the row is ``published`` because the
+        system's part is done, but nothing reached the platform, so the UI says
+        "Notified" instead.
+        """
+        return self.status == self.Status.PUBLISHED and (self.platform_extra or {}).get("delivery") == "notify"
+
+    @property
     def is_reschedulable(self):
         """Whether this chip may be dragged to a new date on the calendar."""
         return self.status in self.RESCHEDULABLE_STATUSES

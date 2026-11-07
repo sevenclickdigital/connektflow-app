@@ -53,6 +53,7 @@ from providers import VIDEO_POST_TYPES, get_provider
 from providers.exceptions import ProviderError, PublishError, RateLimitError
 from providers.types import PostType, PublishContent, PublishState
 
+from .manual_delivery import deliver_by_notification, is_notify_delivery
 from .models import PublishLog, RateLimitState
 
 logger = logging.getLogger(__name__)
@@ -572,6 +573,10 @@ class PublishEngine:
         """
         if platform_post.status != PlatformPost.Status.PUBLISHED:
             return
+        # A post published by hand after a notification has no platform id to
+        # match comments against.
+        if not platform_post.platform_post_id:
+            return
         from apps.automations.services import on_platform_post_published
 
         on_platform_post_published(platform_post)
@@ -769,6 +774,11 @@ class PublishEngine:
         caller supplies one, the attachment bytes are downloaded once for the
         whole post instead of once per platform, and the caller owns cleanup.
         """
+        # A post set to be published by hand never reaches the platform: the
+        # people who will post it are notified instead (see manual_delivery).
+        if is_notify_delivery(platform_post.platform_extra):
+            return deliver_by_notification(platform_post)
+
         account = platform_post.social_account
         platform = account.platform
         attachments = list(platform_post.post.media_attachments.select_related("media_asset").order_by("position"))

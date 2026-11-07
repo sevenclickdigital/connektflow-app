@@ -62,8 +62,12 @@ Shows all published/partially_published platform posts. Loaded via HTMX into #ta
                 <td class="px-4 py-3">
                     <span class="post-chip status-{{ pp.status }} inline-flex">
                         <span class="chip-dot"></span>
-                        {{ pp.get_status_display }}
+                        {% if pp.delivered_by_notification %}{% translate "Notified" %}{% else %}{{ pp.get_status_display }}{% endif %}
                     </span>
+                    {% if pp.delivered_by_notification %}
+                    <a @click.stop href="{% url 'composer:manual_publish' workspace_id=workspace.id post_id=pp.post_id platform_post_id=pp.id %}"
+                       class="block text-[11px] text-orange-600 hover:underline mt-1">{% translate "Media and caption to publish" %}</a>
+                    {% endif %}
                     {% if pp.status == "failed" and pp.publish_error %}
                     <p class="text-[11px] text-red-500 mt-1 max-w-[220px] truncate" title="{{ pp.publish_error }}">{{ pp.publish_error }}</p>
                     {% endif %}
