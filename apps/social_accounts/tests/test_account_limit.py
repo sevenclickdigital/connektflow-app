@@ -16,6 +16,12 @@ from apps.social_accounts.models import SocialAccount
 from apps.social_accounts.views import AccountLimitReached, _create_or_update_account
 
 
+@pytest.fixture(autouse=True)
+def _cap_of_three(settings):
+    """These tests exercise the cap mechanism, so they pin a cap above one."""
+    settings.MAX_ACCOUNTS_PER_PLATFORM = 3
+
+
 @pytest.fixture
 def workspace(db, organization):
     from apps.workspaces.models import Workspace

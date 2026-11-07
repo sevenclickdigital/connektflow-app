@@ -18,6 +18,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.translation import gettext as _
+from django.utils.translation import ngettext
 from django.views.decorators.http import require_GET, require_POST
 from django_ratelimit.decorators import ratelimit
 
@@ -1122,9 +1123,12 @@ def _create_or_update_account(
         connected = SocialAccount.objects.filter(workspace_id=workspace_id, platform=platform).count()
         if connected >= settings.MAX_ACCOUNTS_PER_PLATFORM:
             raise AccountLimitReached(
-                _(
+                ngettext(
+                    "This workspace already has a %(platform)s account. "
+                    "Disconnect it before connecting another.",
                     "This workspace already has the maximum of %(limit)s %(platform)s accounts. "
-                    "Disconnect one before connecting another."
+                    "Disconnect one before connecting another.",
+                    settings.MAX_ACCOUNTS_PER_PLATFORM,
                 )
                 % {
                     "limit": settings.MAX_ACCOUNTS_PER_PLATFORM,

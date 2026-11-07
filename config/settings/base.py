@@ -710,7 +710,7 @@ INBOX_DEEP_SWEEP_SECONDS = env.int("INBOX_DEEP_SWEEP_SECONDS", default=7 * 24 * 
 # decided it should vary. Enforced only against NEW connections
 # (apps.social_accounts.views._create_or_update_account), so a workspace already
 # over the cap keeps every account it has and can still reconnect them.
-MAX_ACCOUNTS_PER_PLATFORM = env.int("MAX_ACCOUNTS_PER_PLATFORM", default=3)
+MAX_ACCOUNTS_PER_PLATFORM = env.int("MAX_ACCOUNTS_PER_PLATFORM", default=1)
 
 
 # ---------------------------------------------------------------------------

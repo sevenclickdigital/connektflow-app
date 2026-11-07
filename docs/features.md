@@ -45,7 +45,7 @@ X publishes text with up to 4 photos or one video/GIF through the v2 API (`provi
 - `Workspace`: name, icon, description, timezone, primary/secondary brand colour, default hashtags, default first comment, approval workflow mode, `is_archived`.
 - Create, list and settings pages, plus a separate approvals settings page (`/workspaces/<id>/settings/approvals/`).
 - Cross-workspace calendar at `/organizations/calendar/` (`apps/organizations/views.py`).
-- A workspace can connect at most `MAX_ACCOUNTS_PER_PLATFORM` (default **3**) accounts per platform (`apps/social_accounts/views.py`). Reconnecting an account that already exists is always allowed.
+- A workspace can connect at most `MAX_ACCOUNTS_PER_PLATFORM` (default **1**) account per platform (`apps/social_accounts/views.py`). Reconnecting an account that already exists is always allowed.
 
 ### F-1.3 Members & RBAC — `apps/members/`
 - Org roles: Owner, Admin, Member (`OrgMembership`). Org-level permissions are `manage_intelligence_billing`, `use_intelligence` and `manage_api_keys`.
