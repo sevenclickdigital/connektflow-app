@@ -23,13 +23,14 @@ From `README.md`. Provider implementations are in `providers/` (one module per p
 | TikTok | ✓ | — | — | ✓ |
 | YouTube | ✓ | ✓ | — | ✓ |
 | Pinterest | ✓ | — | — | ✓ |
+| X | ✓ | — | — | ✓ |
 | Threads | ✓ | ✓ | — | ✓ |
 | Bluesky | ✓ | ✓ | — | — |
 | Google Business Profile | ✓ | — | — | ✓ |
 | Mastodon | ✓ | ✓ | — | — |
 | DEV.to | ✓ | — | — | — |
 
-X/Twitter is not supported. Instagram (Direct) still works but is hidden from the connect page by default, because new Meta apps no longer expose the Instagram App ID it needs. It is hidden through `PlatformVisibility` (`apps/social_accounts/models.py`) and can be turned back on in admin.
+X publishes text with up to 4 photos or one video/GIF through the v2 API (`providers/x.py`, OAuth 2.0 with PKCE); it needs an X app on a paid tier with write access, configured with `PLATFORM_X_CLIENT_ID` / `PLATFORM_X_CLIENT_SECRET`. Instagram (Direct) still works but is hidden from the connect page by default, because new Meta apps no longer expose the Instagram App ID it needs. It is hidden through `PlatformVisibility` (`apps/social_accounts/models.py`) and can be turned back on in admin.
 
 ---
 

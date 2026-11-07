@@ -876,6 +876,10 @@ class PublishEngine:
             if platform == "linkedin_company" and "author" not in extra:
                 extra["author"] = f"urn:li:organization:{account.account_platform_id}"
 
+            # The handle builds the post's x.com URL.
+            if platform == "x" and account.account_handle:
+                extra["account_handle"] = account.account_handle
+
             # Pop link_url from extra and set on PublishContent directly
             link_url = extra.pop("link_url", None)
 

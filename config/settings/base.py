@@ -642,6 +642,12 @@ PLATFORM_CREDENTIALS_FROM_ENV = {
     # on first connect and persisted in MastodonAppRegistration. No repo-wide
     # credentials apply.
     "mastodon": {},
+    # X - OAuth 2.0 (PKCE) client of an X developer app; publishing needs a paid
+    # API tier with write access.
+    "x": {
+        "client_id": env("PLATFORM_X_CLIENT_ID", default=""),
+        "client_secret": env("PLATFORM_X_CLIENT_SECRET", default=""),
+    },
     # DEV.to - per-account API key (no OAuth). The key is supplied by the user
     # at connect time, so no app-level credentials apply (same as Bluesky).
     "devto": {},

@@ -40,6 +40,7 @@
                     {% elif value == 'google_business' %}bg-blue-50 text-blue-500
                     {% elif value == 'mastodon' %}bg-indigo-50 text-indigo-600
                     {% elif value == 'devto' %}bg-stone-100 text-stone-900
+                    {% elif value == 'x' %}bg-stone-100 text-stone-900
                     {% endif %}">
                     {% include "social_accounts/partials/_platform_icon.html" with platform=value size="5" %}
                 </div>
@@ -61,6 +62,7 @@
                         {% elif value == 'google_business' %}{% translate "Local posts" %}
                         {% elif value == 'mastodon' %}{% translate "Federated social" %}
                         {% elif value == 'devto' %}{% translate "Articles & posts" %}
+                        {% elif value == 'x' %}{% translate "Posts, photos & video" %}
                         {% endif %}
                     </p>
                 </div>

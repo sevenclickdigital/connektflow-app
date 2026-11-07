@@ -74,6 +74,7 @@ A free hosted version is available at [brightbean.xyz/studio](https://brightbean
 | <img src="https://cdn.simpleicons.org/tiktok" width="16" height="16"> TikTok | ✓ | — | — | ✓ |
 | <img src="https://cdn.simpleicons.org/youtube" width="16" height="16"> YouTube | ✓ | ✓ | — | ✓ |
 | <img src="https://cdn.simpleicons.org/pinterest" width="16" height="16"> Pinterest | ✓ | — | — | ✓ |
+| <img src="https://cdn.simpleicons.org/x" width="16" height="16"> X | ✓ | — | — | ✓ |
 | <img src="https://cdn.simpleicons.org/threads" width="16" height="16"> Threads | ✓ | ✓ | — | ✓ |
 | <img src="https://cdn.simpleicons.org/bluesky" width="16" height="16"> Bluesky | ✓ | ✓ | — | — |
 | <img src="https://api.iconify.design/logos/google-icon.svg" width="16" height="16"> Google Business Profile | ✓ | — | — | ✓ |
@@ -679,6 +680,24 @@ before enabling enforcement. Intelligence is outside this remediation.
    PLATFORM_PINTEREST_APP_ID=your-app-id
    PLATFORM_PINTEREST_APP_SECRET=your-app-secret
    ```
+
+### X
+
+1. In the [X Developer Portal](https://developer.x.com/), create a project and an app. Publishing needs a paid API tier with write access (Basic or higher); the Free tier cannot create posts with media.
+2. Under **User authentication settings**, enable **OAuth 2.0**, choose **Web App, Automated App or Bot** (a confidential client) and set **App permissions** to **Read and write**.
+3. Add the callback URI:
+   ```
+   {APP_URL}/social-accounts/callback/x/
+   ```
+4. Copy the OAuth 2.0 **Client ID** and **Client Secret** (not the API Key / Secret, which are OAuth 1.0a).
+5. Scopes requested: `tweet.read`, `tweet.write`, `users.read`, `media.write`, `offline.access`
+6. Set the environment variables:
+   ```
+   PLATFORM_X_CLIENT_ID=your-client-id
+   PLATFORM_X_CLIENT_SECRET=your-client-secret
+   ```
+
+Posts take up to 280 characters and either up to 4 photos or one video or GIF. Analytics read each post's public metrics (impressions, likes, replies, reposts, bookmarks) and the follower count.
 
 ### Bluesky
 

@@ -171,6 +171,11 @@ _POST_FIELD_OVERRIDES: dict[str, dict[str, str]] = {
         "shares": "reposts",
         "comments": "replies",
     },
+    "x": {
+        # providers/x.py puts replies in comments and reposts+quotes in shares.
+        "shares": "reposts",
+        "comments": "replies",
+    },
 }
 
 # Per-platform overrides for ``PostMetrics.extra[key]`` → catalog metric_key.
