@@ -38,6 +38,8 @@ class PostType(enum.Enum):
     POLL = "poll"
     PIN = "pin"
     SHORT = "short"
+    # A photo added to a business profile's gallery (Google Business), not a post.
+    PROFILE_PHOTO = "profile_photo"
 
 
 class MediaType(enum.Enum):

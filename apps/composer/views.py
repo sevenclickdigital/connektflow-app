@@ -41,6 +41,7 @@ from apps.members.models import WorkspaceMembership
 from apps.social_accounts.models import SocialAccount
 from apps.workspaces.models import Workspace
 from providers import is_video_only, requires_media
+from providers.google_business import PROFILE_PHOTO_CATEGORIES
 from providers.tiktok import VALID_PRIVACY_LEVELS as TIKTOK_PRIVACY_LEVELS
 
 from .emoji import EMOJI_CATEGORIES, facebook_feeling_choices
@@ -395,6 +396,19 @@ def _sync_platform_posts(request, post, workspace, initial_status=None):
                     extra["post_type"] = "story"
                 else:
                     extra.pop("post_type", None)
+                pp.platform_extra = extra
+
+        elif account.platform == "google_business":
+            if f"gbp_panel_{acc_id}" in request.POST:
+                extra = {**(pp.platform_extra or {})}
+                wants_photo = request.POST.get(f"gbp_post_type_{acc_id}", "").strip() == "profile_photo"
+                if wants_photo and _first_media_types(post) == ["image"]:
+                    extra["post_type"] = "profile_photo"
+                    category = request.POST.get(f"gbp_photo_category_{acc_id}", "").strip()
+                    extra["photo_category"] = category if category in PROFILE_PHOTO_CATEGORIES else "ADDITIONAL"
+                else:
+                    extra.pop("post_type", None)
+                    extra.pop("photo_category", None)
                 pp.platform_extra = extra
 
         elif account.platform == "youtube":

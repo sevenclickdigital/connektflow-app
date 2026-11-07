@@ -799,6 +799,16 @@ class ResolvePostTypeFromMediaTypeTest(SimpleTestCase):
                         PostType.STORY,
                     )
 
+    def test_a_profile_photo_hint_needs_exactly_one_image(self):
+        extra = {"post_type": "profile_photo"}
+        self.assertEqual(
+            self._resolve("google_business", first_media_type="image", extra=extra), PostType.PROFILE_PHOTO
+        )
+        self.assertEqual(self._resolve("google_business", first_media_type="video", extra=extra), PostType.VIDEO)
+        self.assertEqual(
+            self._resolve("google_business", media_count=0, first_media_type=None, extra=extra), PostType.TEXT
+        )
+
     def test_a_stale_story_hint_is_ignored(self):
         """Media removed after the hint was saved must not reach a Stories endpoint."""
         self.assertEqual(

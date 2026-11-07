@@ -487,6 +487,62 @@ class StorySettingsTests(AccountScopeTestsBase):
         self.assertEqual(self.instagram_pp.platform_extra, {})
 
 
+class GoogleBusinessPhotoSettingsTests(AccountScopeTestsBase):
+    """The "Profile photo" choice for Google Business accounts."""
+
+    def setUp(self):
+        super().setUp()
+        self.gbp = SocialAccount.objects.create(
+            workspace=self.workspace,
+            platform="google_business",
+            account_platform_id="locations/11",
+            account_name="Store",
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+        self.gbp_pp = PlatformPost.objects.create(
+            post=self.post, social_account=self.gbp, status=PlatformPost.Status.DRAFT
+        )
+        image = MediaAsset.objects.create(
+            organization=self.org,
+            workspace=self.workspace,
+            uploaded_by=self.user,
+            file="test/front.jpg",
+            filename="front.jpg",
+            media_type=MediaAsset.MediaType.IMAGE,
+            mime_type="image/jpeg",
+        )
+        PostMedia.objects.create(post=self.post, media_asset=image)
+
+    def _gbp_payload(self, choice, category="EXTERIOR"):
+        acc = str(self.gbp.id)
+        return self._payload(
+            selected_accounts=acc,
+            account_scope=acc,
+            **{f"gbp_panel_{acc}": "1", f"gbp_post_type_{acc}": choice, f"gbp_photo_category_{acc}": category},
+        )
+
+    def test_profile_photo_choice_and_category_round_trip(self):
+        self.client.post(self.save_url, data=self._gbp_payload("profile_photo"))
+
+        self.gbp_pp.refresh_from_db()
+        self.assertEqual(self.gbp_pp.platform_extra, {"post_type": "profile_photo", "photo_category": "EXTERIOR"})
+
+    def test_an_unknown_category_is_stored_as_additional(self):
+        self.client.post(self.save_url, data=self._gbp_payload("profile_photo", category="COVER"))
+
+        self.gbp_pp.refresh_from_db()
+        self.assertEqual(self.gbp_pp.platform_extra["photo_category"], "ADDITIONAL")
+
+    def test_choosing_post_clears_the_photo_choice(self):
+        self.gbp_pp.platform_extra = {"post_type": "profile_photo", "photo_category": "MENU"}
+        self.gbp_pp.save(update_fields=["platform_extra"])
+
+        self.client.post(self.save_url, data=self._gbp_payload(""))
+
+        self.gbp_pp.refresh_from_db()
+        self.assertEqual(self.gbp_pp.platform_extra, {})
+
+
 class PinterestBoardSelectionTests(AccountScopeTestsBase):
     def setUp(self):
         super().setUp()

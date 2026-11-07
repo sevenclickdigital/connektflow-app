@@ -980,6 +980,8 @@ class PublishEngine:
         if hint is PostType.STORY:
             # A Story is one photo or one video, never text or a set.
             return media_count == 1 and first_media_type in ("image", "video")
+        if hint is PostType.PROFILE_PHOTO:
+            return media_count == 1 and first_media_type == "image"
         return True
 
     @staticmethod

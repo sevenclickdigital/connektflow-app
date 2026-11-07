@@ -33,6 +33,22 @@ POSTS_API = "https://mybusiness.googleapis.com/v4"
 # authorized for.
 LOCATION_READ_MASK = "name,title,storefrontAddress,phoneNumbers"
 
+# Gallery categories a profile photo can be filed under (v4 ``LocationAssociation``).
+# COVER, PROFILE and LOGO are left out: they replace the profile's identity
+# images instead of adding to the gallery.
+PROFILE_PHOTO_CATEGORIES = (
+    "ADDITIONAL",
+    "EXTERIOR",
+    "INTERIOR",
+    "PRODUCT",
+    "AT_WORK",
+    "FOOD_AND_DRINK",
+    "MENU",
+    "COMMON_AREA",
+    "ROOMS",
+    "TEAMS",
+)
+
 
 class GoogleBusinessProvider(SocialProvider):
     """Google Business Profile provider.
@@ -75,7 +91,7 @@ class GoogleBusinessProvider(SocialProvider):
 
     @property
     def supported_post_types(self) -> list[PostType]:
-        return [PostType.TEXT, PostType.IMAGE]
+        return [PostType.TEXT, PostType.IMAGE, PostType.PROFILE_PHOTO]
 
     @property
     def supported_media_types(self) -> list[MediaType]:
@@ -268,6 +284,31 @@ class GoogleBusinessProvider(SocialProvider):
             )
         return locations[0]["name"]
 
+    def _v4_location_name(self, access_token: str) -> str:
+        """The location as the v4 API names it: ``accounts/{a}/locations/{l}``.
+
+        The connected account stores the Business Information name
+        (``locations/{l}``), but the v4 ``localPosts`` and ``media`` endpoints
+        only route under the owning account. The owner is found by listing the
+        grant's accounts; with a single account (the common case) no location
+        listing is needed.
+        """
+        location = self._get_location_id(access_token)
+        if location.startswith("accounts/"):
+            return location
+
+        accounts = [a["name"] for a in self._list_accounts(access_token) if a.get("name")]
+        if len(accounts) == 1:
+            return f"{accounts[0]}/{location}"
+        for account_name in accounts:
+            if any(loc.get("name") == location for loc in self._list_locations(access_token, account_name)):
+                return f"{account_name}/{location}"
+        raise PublishError(
+            "The Google Business location is no longer reachable with this connection",
+            platform=self.platform_name,
+            retryable=False,
+        )
+
     # ------------------------------------------------------------------
     # Profile
     # ------------------------------------------------------------------
@@ -317,7 +358,10 @@ class GoogleBusinessProvider(SocialProvider):
                 retryable=False,
             )
 
-        location_id = self._get_location_id(access_token)
+        location_id = self._v4_location_name(access_token)
+
+        if content.post_type == PostType.PROFILE_PHOTO:
+            return self._publish_profile_photo(access_token, location_id, content)
 
         # Determine topic type
         topic_type = content.extra.get("topic_type", "STANDARD")
@@ -355,18 +399,61 @@ class GoogleBusinessProvider(SocialProvider):
             extra=data,
         )
 
+    def _publish_profile_photo(self, access_token: str, location_name: str, content: PublishContent) -> PublishResult:
+        """Add one photo to the profile's gallery (``media.create``) instead of posting."""
+        if len(content.media_urls) != 1 or content.is_video(0):
+            raise PublishError(
+                "A Google Business profile photo needs exactly one image",
+                platform=self.platform_name,
+                retryable=False,
+            )
+        category = content.extra.get("photo_category") or "ADDITIONAL"
+        if category not in PROFILE_PHOTO_CATEGORIES:
+            category = "ADDITIONAL"
+
+        body: dict = {
+            "mediaFormat": "PHOTO",
+            "locationAssociation": {"category": category},
+            "sourceUrl": content.media_urls[0],
+        }
+        if content.text:
+            body["description"] = content.text
+
+        data = self._request(
+            "POST",
+            f"{POSTS_API}/{location_name}/media",
+            access_token=access_token,
+            json=body,
+        ).json()
+        media_name = data.get("name")
+        if not media_name:
+            raise PublishError(
+                "Google did not return the uploaded photo",
+                platform=self.platform_name,
+                raw_response=data,
+            )
+        return PublishResult(
+            platform_post_id=media_name,
+            url=data.get("googleUrl"),
+            extra={"media_name": media_name},
+        )
+
     # ------------------------------------------------------------------
     # Analytics
     # ------------------------------------------------------------------
 
     def get_post_metrics(self, access_token: str, post_id: str) -> PostMetrics:
-        """Fetch metrics for a Google Business local post."""
+        """Fetch metrics for a Google Business local post or profile photo."""
         resp = self._request(
             "GET",
             f"{POSTS_API}/{post_id}",
             access_token=access_token,
         )
         data = resp.json()
+        if "/media/" in post_id:
+            # A gallery photo reports only how often it was viewed.
+            views = int((data.get("insights") or {}).get("viewCount") or 0)
+            return PostMetrics(impressions=views, extra={"views": views})
         search_views = 0
         maps_views = 0
         for metric in data.get("searchActionMetrics", []):
