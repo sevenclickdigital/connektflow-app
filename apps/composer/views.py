@@ -26,7 +26,7 @@ from django.utils.dateparse import parse_date
 from django.utils.html import format_html, strip_tags
 from django.utils.text import get_text_list
 from django.utils.translation import gettext as _
-from django.utils.translation import gettext_lazy, ngettext
+from django.utils.translation import gettext_lazy, ngettext, override
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from apps.billing.storage_usage import WorkspaceStorageExceededError
@@ -3352,9 +3352,10 @@ def _idea_columns(workspace, tag=None):
 
     # Ensure default groups exist for this workspace
     if not groups.exists():
-        # Names are stored as data (users rename them), so they are seeded in
-        # the language of whoever opens the board first.
-        default_names = [_("Unassigned"), _("To Do"), _("In Progress"), _("Done")]
+        # Names are stored as data (users rename them), so they are seeded once
+        # in the site's language, not in that of whoever opens the board first.
+        with override(settings.LANGUAGE_CODE):
+            default_names = [_("Unassigned"), _("To Do"), _("In Progress"), _("Done")]
         created_groups = [
             IdeaGroup.objects.create(workspace=workspace, name=name, position=pos)
             for pos, name in enumerate(default_names)

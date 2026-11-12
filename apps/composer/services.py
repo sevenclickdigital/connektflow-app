@@ -300,6 +300,31 @@ def transition_platform_post(
     return platform_post
 
 
+def create_draft_post(*, workspace, author, caption: str, title: str = "", media_asset_ids: Iterable[Any] = ()):
+    """A draft ``Post`` aimed at every connected account, for the composer to finish.
+
+    Unlike :func:`create_post` (one account, possibly scheduled), this is the
+    "open it in the composer" shape: the user picks accounts, crops and time
+    there. Media must already be in the workspace's library and is attached
+    in the given order.
+    """
+    from django.db import transaction
+
+    from apps.composer.models import PlatformPost, Post, PostMedia
+    from apps.social_accounts.models import SocialAccount
+
+    accounts = SocialAccount.objects.for_workspace(workspace.id).filter(
+        connection_status=SocialAccount.ConnectionStatus.CONNECTED
+    )
+    with transaction.atomic():
+        post = Post.objects.create(workspace=workspace, author=author, title=title[:255], caption=caption)
+        PostMedia.objects.bulk_create(
+            [PostMedia(post=post, media_asset_id=asset_id, position=i) for i, asset_id in enumerate(media_asset_ids)]
+        )
+        PlatformPost.objects.bulk_create([PlatformPost(post=post, social_account=account) for account in accounts])
+    return post
+
+
 def clone_post(post, *, author=None):
     """Create a fresh DRAFT duplicate of *post* (Clone / Repost).
 

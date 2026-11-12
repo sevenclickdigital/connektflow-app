@@ -1,0 +1,26 @@
+{% load analytics_extras i18n %}
+{# Shopee Affiliates: average commission per order and the period's orders by status. #}
+<div class="a-card a-card-hover" style="padding: 20px; display: flex; gap: 18px; flex-wrap: wrap; align-items: stretch; height: 100%;">
+    <div style="flex: 1 1 150px; min-width: 140px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+        <div>
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-bottom: 8px;">
+                <span style="font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary);">{% translate "Commission per order" %}</span>
+                <span class="a-calc-tag">{% translate "Calculated by BrightBean" %}</span>
+            </div>
+            <span style="font-size: 2.25rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); line-height: 0.95;">{{ average_commission|fmt_metric:"currency" }}</span>
+        </div>
+        <div class="a-calc-note">{% translate "Commission divided by orders, cancelled orders left out." %}</div>
+    </div>
+
+    <div style="width: 1px; background: var(--neutral-100); align-self: stretch;"></div>
+
+    <div style="flex: 1 1 215px; display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; align-content: center;">
+        {% for s in status_summary %}
+        <div style="padding: 11px 13px; border-radius: var(--radius-lg); background: var(--surface-1); border: 1px solid var(--border);">
+            <span class="a-delta {{ s.tone }}" style="font-family: inherit;">{{ s.label }}</span>
+            <div class="a-mono" style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-top: 8px;">{{ s.orders }}</div>
+            <div class="a-calc-note" style="margin-top: 2px;">{{ s.commission|fmt_metric:"currency" }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>

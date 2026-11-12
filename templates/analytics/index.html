@@ -48,7 +48,7 @@
 
 {% block content %}
 <div class="analytics-shell" x-data="{ drawerOpen: false, drawerContent: '' }">
-    {% include "analytics/_page.html" %}
+    {% block analytics_page %}{% include "analytics/_page.html" %}{% endblock %}
 
     <!-- Post detail drawer (slides from right) -->
     <div class="a-drawer-backdrop" :class="drawerOpen ? 'open' : ''" @click="drawerOpen = false"></div>

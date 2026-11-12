@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block page_title %}{% translate "Radar" %}{% endblock %}
+{% block content %}
+<div class="w-full">
+    <div class="mb-8">
+        <h2 class="text-xl font-semibold text-stone-900">{% translate "Radar" %}</h2>
+        <p class="text-sm text-stone-500 mt-1">{% translate "Find products and offers worth sharing on the platforms you connected." %}</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {% for card in cards %}
+        {% include "radar/partials/_source_card.html" with card=card action="open" can_connect=request.workspace_membership.effective_permissions.manage_social_accounts return_to="radar" %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

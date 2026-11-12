@@ -1,0 +1,73 @@
+{% comment %}
+Shopee offers grid, swapped as a whole by the filter form and "Load more".
+The toolbar above the grid (shortcuts, sort, count) lives here because the
+count changes with every request; it is still inside the filter form (this
+partial is included within it), so its controls re-request like any filter.
+"Load more" asks for one more page on top of the current filters; the server
+re-reads the earlier pages from cache and returns the full, re-sorted list.
+{% endcomment %}
+{% load i18n %}
+<div id="radar-offers">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+        <div class="flex flex-nowrap md:flex-wrap items-center gap-2 overflow-x-auto max-w-full pb-1 md:pb-0" role="radiogroup" aria-label="{% translate 'Shortcuts' %}">
+            <label class="relative flex-none cursor-pointer">
+                <input type="radio" name="quick" value="" x-model="quick" class="sr-only peer" {% if not filters.quick %}checked{% endif %}>
+                <span class="inline-flex whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border border-stone-200 bg-white text-stone-600 hover:border-stone-300 peer-checked:bg-orange-50 peer-checked:border-orange-300 peer-checked:text-orange-700 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-300">{% translate "All" %}</span>
+            </label>
+            {% for quick in quick_filters %}
+            <label class="relative flex-none cursor-pointer">
+                <input type="radio" name="quick" value="{{ quick.key }}" x-model="quick" class="sr-only peer" {% if filters.quick == quick.key %}checked{% endif %}>
+                <span class="inline-flex whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border border-stone-200 bg-white text-stone-600 hover:border-stone-300 peer-checked:bg-orange-50 peer-checked:border-orange-300 peer-checked:text-orange-700 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-300">{{ quick.label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 md:justify-end md:flex-none">
+            {% if results %}
+            <p class="text-xs text-stone-500" aria-live="polite">
+                {% blocktranslate count counter=results.offers|length with loaded=results.loaded %}{{ counter }} offer shown of {{ loaded }} loaded{% plural %}{{ counter }} offers shown of {{ loaded }} loaded{% endblocktranslate %}
+            </p>
+            {% endif %}
+            <label class="flex flex-none items-center gap-2 text-sm text-stone-600 whitespace-nowrap">
+                {% translate "Sort by" %}
+                <select name="sort" style="width: auto" class="form-input-styled text-sm py-1.5 disabled:opacity-60"
+                        :disabled="quick !== ''" :title="quick !== '' ? $el.dataset.lockedHint : ''"
+                        data-locked-hint="{% translate 'This shortcut sets its own order.' %}">
+                    {% for value, label in sort_choices %}
+                    <option value="{{ value }}" {% if active_sort == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <span id="radar-loading" class="htmx-indicator text-xs text-stone-500">{% translate "Loading offers…" %}</span>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert-error text-sm" role="alert">{{ error }}</div>
+    {% elif results %}
+
+    {% if results.offers %}
+    <div class="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3">
+        {% for offer in results.offers %}
+        {% include "radar/partials/_offer_card.html" %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12 px-6 bg-white rounded-xl border border-stone-200">
+        <p class="text-sm font-semibold text-stone-800">{% translate "No offers match these filters" %}</p>
+        <p class="text-xs text-stone-500 mt-1">{% translate "Loosen a filter or load more offers." %}</p>
+    </div>
+    {% endif %}
+
+    {% if results.has_more %}
+    <div class="mt-4 flex justify-center">
+        <button type="button" class="btn-outline max-w-xs"
+                hx-get="{% url 'radar:shopee' workspace_id=workspace_id %}?{{ next_page_query }}"
+                hx-target="#radar-offers" hx-swap="outerHTML" hx-push-url="true" hx-indicator="#radar-loading">
+            {% translate "Load more offers" %}
+        </button>
+    </div>
+    {% endif %}
+
+    {{ share_data|json_script:"radar-share-data" }}
+    {% endif %}
+</div>

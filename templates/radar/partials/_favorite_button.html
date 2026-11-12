@@ -1,0 +1,14 @@
+{% comment %}
+Star toggle for one offer; the response to a click is this partial in its new state.
+Usage: {% include "radar/partials/_favorite_button.html" with item_id=offer.item_id is_favorite=True %}
+{% endcomment %}
+{% load i18n %}
+<button type="button"
+        hx-post="{% url 'radar:offer_favorite' workspace_id=workspace_id %}" hx-vals='{"item_id": "{{ item_id }}"}'
+        hx-target="this" hx-swap="outerHTML" hx-disabled-elt="this" hx-push-url="false" hx-indicator="this"
+        aria-pressed="{% if is_favorite %}true{% else %}false{% endif %}"
+        aria-label="{% if is_favorite %}{% translate 'Remove from favorites' %}{% else %}{% translate 'Save to favorites' %}{% endif %}"
+        title="{% if is_favorite %}{% translate 'Remove from favorites' %}{% else %}{% translate 'Save to favorites' %}{% endif %}"
+        class="absolute right-2 top-2 w-9 h-9 rounded-full flex items-center justify-center bg-white/90 shadow-sm ring-1 ring-stone-200 hover:bg-white transition-colors cursor-pointer disabled:opacity-60 {% if is_favorite %}text-orange-500{% else %}text-stone-400 hover:text-orange-500{% endif %}">
+    <svg class="w-5 h-5" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" fill="{% if is_favorite %}currentColor{% else %}none{% endif %}" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5z"/></svg>
+</button>

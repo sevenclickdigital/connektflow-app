@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import zoneinfo
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -19,8 +20,12 @@ from django.views.decorators.http import require_GET, require_POST
 
 from apps.composer.models import PlatformPost
 from apps.members.models import WorkspaceMembership
+from apps.radar import reports as radar_reports
+from apps.radar.models import OpportunityConnection
+from apps.radar.services import describe_error
 from apps.social_accounts.models import AnalyticsPlatformConfig, SocialAccount
 from apps.workspaces.models import Workspace
+from providers.exceptions import ProviderError
 
 from . import history_import, services
 from .metrics import PLATFORM_COLOR, PLATFORM_PRIMARY
@@ -67,6 +72,15 @@ def _analytics_accounts(workspace, enabled_platforms):
         account.analytics_verdict = verdict
         account.analytics_unavailable_reason = verdict.message if verdict else None
     return accounts
+
+
+def _source_accounts(workspace) -> list[OpportunityConnection]:
+    """Connected opportunity sources with their own analytics (Shopee Affiliates), for the switcher."""
+    return list(
+        OpportunityConnection.objects.for_workspace(workspace.id)
+        .filter(source=OpportunityConnection.Source.SHOPEE_AFFILIATE)
+        .order_by("created_at")
+    )
 
 
 def _preferred_account(accounts):
@@ -117,20 +131,15 @@ def analytics_index(request: HttpRequest, workspace_id) -> HttpResponse:
     """Landing route: redirects to the first connected account with analytics."""
     workspace = _get_workspace(request, workspace_id)
     enabled = AnalyticsPlatformConfig.enabled_platforms()
+    accounts = _analytics_accounts(workspace, enabled) if enabled else []
+    if accounts:
+        return redirect("analytics:account", workspace_id=workspace.id, account_id=_preferred_account(accounts).id)
+    sources = _source_accounts(workspace)
+    if sources:
+        return redirect("analytics:shopee", workspace_id=workspace.id, connection_id=sources[0].id)
     if not enabled:
         raise Http404("Analytics is disabled.")
-    accounts = _analytics_accounts(workspace, enabled)
-    if not accounts:
-        return render(
-            request,
-            "analytics/no_accounts.html",
-            {"workspace": workspace},
-        )
-    from django.urls import reverse
-
-    target = _preferred_account(accounts)
-
-    return redirect(reverse("analytics:account", kwargs={"workspace_id": workspace.id, "account_id": target.id}))
+    return render(request, "analytics/no_accounts.html", {"workspace": workspace})
 
 
 @login_required
@@ -175,6 +184,7 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
         "workspace": workspace,
         "active_account": account,
         "accounts": accounts,
+        "source_accounts": _source_accounts(workspace),
         "days": days,
         "range_choices": RANGE_CHOICES,
         "primary_color": primary_color,
@@ -265,6 +275,57 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
         return render(request, "analytics/_page.html", context)
 
     return render(request, "analytics/index.html", context)
+
+
+@login_required
+@require_GET
+def shopee_report(request: HttpRequest, workspace_id, connection_id) -> HttpResponse:
+    """Analytics for a Shopee Affiliates connection: the orders its links brought.
+
+    Same page, range toggle, cards, chart and HTMX partials as a social
+    account's analytics; the numbers come from ``apps.radar.reports``.
+    """
+    workspace = _get_workspace(request, workspace_id)
+    sources = _source_accounts(workspace)
+    connection = next((c for c in sources if str(c.id) == str(connection_id)), None)
+    if connection is None:
+        raise Http404("No such Shopee Affiliates connection.")
+    enabled = AnalyticsPlatformConfig.enabled_platforms()
+    days = _parse_range(request.GET.get("range"))
+
+    context: dict = {
+        "workspace": workspace,
+        "accounts": _analytics_accounts(workspace, enabled) if enabled else [],
+        "source_accounts": sources,
+        "active_source": connection,
+        "days": days,
+        "range_choices": RANGE_CHOICES,
+        "primary_color": "var(--primary)",
+    }
+    try:
+        report = radar_reports.build_report(
+            connection,
+            days=days,
+            tz=zoneinfo.ZoneInfo(workspace.effective_timezone or "UTC"),
+            metric=request.GET.get("chart_metric"),
+            status=request.GET.get("status", "all"),
+            page=_parse_page(request.GET.get("page")),
+        )
+    except ProviderError as exc:
+        logger.warning("Shopee Affiliates report failed for connection %s: %s", connection.id, exc)
+        context["report_error"] = describe_error(exc)
+        return render(request, "analytics/shopee.html", context)
+
+    context.update(report)
+    chart = report["chart"]
+    context["chart_series_json"] = json.dumps([None if v is None else round(v, 2) for v in chart["derived"].series])
+    context["chart_labels_json"] = json.dumps(chart["labels"])
+
+    if request.headers.get("HX-Request") and request.GET.get("partial") == "chart":
+        return render(request, "analytics/_hero_chart.html", context)
+    if request.headers.get("HX-Request") and request.GET.get("partial") == "table":
+        return render(request, "analytics/_shopee_orders.html", context)
+    return render(request, "analytics/shopee.html", context)
 
 
 @login_required

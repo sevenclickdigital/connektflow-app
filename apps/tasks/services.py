@@ -18,18 +18,20 @@ from .models import Task, TaskChecklistItem, TaskColumn
 def ensure_columns(workspace) -> list[TaskColumn]:
     """The board's columns, seeding the default four the first time.
 
-    Column names are data (users rename them), so they are written in the
-    language of whoever opens the board first, like the idea board's groups.
+    Column names are data (users rename them), so they are written once, in
+    the site's language rather than that of whoever happens to open the board
+    first, which would leave a Portuguese team with English columns.
     """
     columns = list(TaskColumn.objects.for_workspace(workspace.id))
     if columns:
         return columns
-    defaults = [
-        (_("To do"), False, False),
-        (_("In progress"), False, False),
-        (_("In review"), True, False),
-        (_("Done"), False, True),
-    ]
+    with override(settings.LANGUAGE_CODE):
+        defaults = [
+            (_("To do"), False, False),
+            (_("In progress"), False, False),
+            (_("In review"), True, False),
+            (_("Done"), False, True),
+        ]
     return [
         TaskColumn.objects.create(workspace=workspace, name=name, position=pos, is_review=review, is_done=done)
         for pos, (name, review, done) in enumerate(defaults)
@@ -53,12 +55,25 @@ def resolve_assignees(workspace, raw_ids) -> list:
 
 
 def board_columns(workspace, *, assignee_id=None, priority=None):
-    """Columns with their (filtered) tasks, checklist progress and assignees, in two queries."""
+    """Columns with their (filtered) tasks, checklist progress, assignees and cover image.
+
+    ``task.cover_items`` holds the checklist items that carry an image, in
+    order; the card shows the first as its cover.
+    """
     columns = ensure_columns(workspace)
     tasks = (
         Task.objects.for_workspace(workspace.id)
         .select_related("idea")
-        .prefetch_related("assignees")
+        .prefetch_related(
+            "assignees",
+            Prefetch(
+                "checklist",
+                queryset=TaskChecklistItem.objects.filter(media_asset__media_type="image")
+                .select_related("media_asset")
+                .order_by("position"),
+                to_attr="cover_items",
+            ),
+        )
         .annotate(
             items_total=Count("checklist", distinct=True),
             items_done=Count("checklist", filter=Q(checklist__is_done=True), distinct=True),
@@ -196,6 +211,21 @@ def advance_to_review(task, actor) -> bool:
 # ---------------------------------------------------------------------------
 # Notifications
 # ---------------------------------------------------------------------------
+
+
+def propose_post_date(task, when) -> bool:
+    """Record when the task's draft post should go out (``Post.proposed_publish_at``).
+
+    That is what places the draft on the calendar and pre-fills the composer's
+    schedule. Ignored once the post is scheduled or published: from then on the
+    composer owns the date. Returns whether anything changed.
+    """
+    post = task.post
+    if post is None or post.scheduled_at or post.published_at:
+        return False
+    post.proposed_publish_at = when
+    post.save(update_fields=["proposed_publish_at", "updated_at"])
+    return True
 
 
 def task_url(task) -> str:

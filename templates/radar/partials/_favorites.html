@@ -1,0 +1,22 @@
+{% comment %}
+Starred Shopee offers, rendered from their snapshots (SavedOffer.data), so they
+stay listed after Shopee stops returning them. Same cards and share dialog as
+the offers tab; ``favorites`` is a list of (Offer, SavedOffer).
+{% endcomment %}
+{% load i18n %}
+<div id="radar-offers">
+    {% if favorites %}
+    <p class="text-xs text-stone-500 mb-3">{% translate "Offers you starred, as they were when saved. Open them on Shopee to check the current price." %}</p>
+    <div class="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3">
+        {% for offer, saved in favorites %}
+        {% include "radar/partials/_offer_card.html" with offer=offer saved=saved %}
+        {% endfor %}
+    </div>
+    {{ share_data|json_script:"radar-share-data" }}
+    {% else %}
+    <div class="text-center py-12 px-6 bg-white rounded-xl border border-stone-200">
+        <p class="text-sm font-semibold text-stone-800">{% translate "No favorite offers yet" %}</p>
+        <p class="text-xs text-stone-500 mt-1">{% translate "Tap the star on an offer to keep it here, even after Shopee stops listing it." %}</p>
+    </div>
+    {% endif %}
+</div>

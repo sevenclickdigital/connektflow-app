@@ -25,6 +25,7 @@ from django_ratelimit.decorators import ratelimit
 from apps.common.validators import is_safe_url as _is_safe_url
 from apps.credentials.models import PlatformCredential, derive_is_configured
 from apps.members.decorators import require_permission
+from apps.radar.sources import source_cards
 from providers.exceptions import QuotaExceededError
 
 from .error_messages import quota_connect_error
@@ -207,6 +208,7 @@ def account_list(request, workspace_id):
             "configured_platforms": configured_platforms,
             "platform_choices": PlatformCredential.Platform.choices,
             "settings_active": "social_accounts",
+            "opportunity_cards": [card for card in source_cards(workspace_id) if card.connection],
         },
     )
 
@@ -225,13 +227,31 @@ def connect_platform(request, workspace_id):
     visible_platform_choices = _get_visible_platform_choices()
 
     if request.method == "GET":
+        accounts_by_platform: dict[str, list] = {}
+        for account in SocialAccount.objects.for_workspace(request.workspace.id).order_by("account_name"):
+            accounts_by_platform.setdefault(account.platform, []).append(account)
+        # A platform at its account cap shows its accounts instead of the Connect
+        # button; the button returns as Reconnect when one of them lost access.
+        platform_cards = []
+        for value, label in visible_platform_choices:
+            accounts = accounts_by_platform.get(value, [])
+            platform_cards.append(
+                {
+                    "value": value,
+                    "label": label,
+                    "accounts": accounts,
+                    "can_add": len(accounts) < settings.MAX_ACCOUNTS_PER_PLATFORM,
+                    "needs_reconnect": any(a.needs_reconnect for a in accounts),
+                }
+            )
         return render(
             request,
             "social_accounts/connect.html",
             {
                 "workspace_id": workspace_id,
-                "platform_choices": visible_platform_choices,
+                "platform_cards": platform_cards,
                 "configured_platforms": configured_platforms,
+                "opportunity_cards": source_cards(workspace_id),
             },
         )
 
@@ -921,7 +941,7 @@ def disconnect(request, workspace_id, account_id):
         messages.success(request, _("Disconnected %(name)s. YouTube data was deleted immediately.") % {"name": name})
         if request.headers.get("HX-Request"):
             return render(request, "social_accounts/partials/_empty.html")
-        return redirect("social_accounts:list", workspace_id=workspace_id)
+        return _after_disconnect(request, workspace_id)
 
     # Stop the platform pushing us this account's activity before we drop the
     # token that would let us unsubscribe.
@@ -971,12 +991,23 @@ def disconnect(request, workspace_id, account_id):
     if request.headers.get("HX-Request"):
         return render(request, "social_accounts/partials/_empty.html")
 
-    return redirect("social_accounts:list", workspace_id=workspace_id)
+    return _after_disconnect(request, workspace_id)
 
 
 # ------------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------------
+
+
+def _after_disconnect(request, workspace_id):
+    """Back to the connect page when the disconnect came from there, else the list.
+
+    A fixed choice rather than a URL from the form, so it cannot be turned into
+    an open redirect.
+    """
+    if request.POST.get("return_to") == "connect":
+        return redirect("social_accounts:connect", workspace_id=workspace_id)
+    return redirect("social_accounts:list", workspace_id=workspace_id)
 
 
 def promote_meta_user_token(provider, platform, tokens) -> tuple[object, bool]:

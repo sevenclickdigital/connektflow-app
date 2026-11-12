@@ -6,123 +6,151 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
 
-    {# Left: what the task is and who does it by when #}
-    <div class="task-modal-main p-5 md:p-6 space-y-5">
-        <div>
-            <div class="flex items-start gap-3">
+    {# Left: the task, laid out like the idea modal (pills on top, borderless text) #}
+    <div class="task-modal-main flex flex-col">
+        <div class="flex flex-wrap items-center gap-2 px-6 pt-5 pb-3">
+            {% if can_edit %}
+            <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                <button type="button" class="idea-pill-btn" @click="open = !open">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                    <span>{{ task.column.name }}</span>
+                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div x-show="open" x-cloak x-transition class="idea-pill-dropdown" style="left: 0; right: auto;">
+                    {% for column in columns %}
+                    <button type="button" hx-post="{{ update_url }}" hx-vals='{"column": "{{ column.id }}"}' hx-target="#task-modal-body"
+                            class="{% if column.id == task.column_id %}font-semibold{% endif %}">
+                        <span>{{ column.name }}</span>
+                        {% if column.id == task.column_id %}<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" class="ml-auto" style="color: var(--primary);"><polyline points="20 6 9 17 4 12"/></svg>{% endif %}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                <button type="button" class="idea-pill-btn" @click="open = !open">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                    <span>{% for user in task.assignees.all %}{{ user.display_name }}{% if not forloop.last %}, {% endif %}{% empty %}{% translate "Responsible" %}{% endfor %}</span>
+                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <form x-show="open" x-cloak x-transition class="idea-pill-dropdown" style="left: 0; right: auto;"
+                      hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body">
+                    <input type="hidden" name="assignees_sent" value="1">
+                    {% for member in members %}
+                    <label>
+                        <input type="checkbox" name="assignees" value="{{ member.pk }}" class="bb-checkbox" {% if member in task.assignees.all %}checked{% endif %}>
+                        <span class="truncate">{{ member.display_name }}</span>
+                    </label>
+                    {% endfor %}
+                </form>
+            </div>
+
+            <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                <button type="button" class="idea-pill-btn" @click="open = !open">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                    <span>{{ task.get_priority_display }}</span>
+                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div x-show="open" x-cloak x-transition class="idea-pill-dropdown" style="left: 0; right: auto;">
+                    {% for value, label in priorities %}
+                    <button type="button" hx-post="{{ update_url }}" hx-vals='{"priority": "{{ value }}"}' hx-target="#task-modal-body"
+                            class="{% if value == task.priority %}font-semibold{% endif %}">
+                        <span>{{ label }}</span>
+                        {% if value == task.priority %}<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" class="ml-auto" style="color: var(--primary);"><polyline points="20 6 9 17 4 12"/></svg>{% endif %}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <span class="idea-pill-btn">{{ task.column.name }}</span>
+            <span class="idea-pill-btn">{{ task.get_priority_display }}</span>
+            {% endif %}
+        </div>
+
+        <div class="flex-1 px-6 pb-4">
+            {% if can_edit %}
+            <input name="title" value="{{ task.title }}" maxlength="255" aria-label="{% translate 'Task title' %}"
+                   placeholder="{% translate 'Task title' %}" class="idea-title-input"
+                   hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body">
+            {% else %}
+            <h2 class="text-xl font-bold text-stone-900 mb-3">{{ task.title }}</h2>
+            {% endif %}
+
+            <div class="flex flex-wrap items-center gap-x-5">
+            <label class="idea-date-row">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>{% translate "Due date" %}</span>
                 {% if can_edit %}
-                <input name="title" value="{{ task.title }}" maxlength="255" aria-label="{% translate 'Task title' %}"
-                       hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body"
-                       class="flex-1 min-w-0 text-lg font-semibold text-stone-900 bg-transparent border border-transparent hover:border-stone-200 focus:border-orange-400 focus:outline-none rounded-lg px-2 py-1 -mx-2">
+                <input type="date" name="due_date" value="{{ task.due_date|date:'Y-m-d' }}"
+                       hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body">
                 {% else %}
-                <h2 class="flex-1 text-lg font-semibold text-stone-900">{{ task.title }}</h2>
+                <span class="font-normal">{{ task.due_date|date:"d/m/Y"|default:"—" }}</span>
+                {% endif %}
+            </label>
+            {% if task.post %}
+            {% comment %}
+            The post's date: saved as Post.proposed_publish_at, it places the draft on
+            the calendar and pre-fills the composer's schedule. Read-only once the
+            post is scheduled, when the composer owns it.
+            {% endcomment %}
+            <label class="idea-date-row">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                <span>{% translate "Post date" %}</span>
+                {% if can_edit and not task.post.scheduled_at %}
+                <input type="datetime-local" name="publish_at" value="{{ task.post_date_input }}"
+                       hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body">
+                {% else %}
+                <span class="font-normal" {% if task.post.scheduled_at %}title="{% translate 'Scheduled. Change it in the composer.' %}"{% endif %}>{{ task.post_date_display|default:"—" }}</span>
+                {% endif %}
+            </label>
+            {% endif %}
+            </div>
+
+            {% if can_edit %}
+            <textarea name="description" class="form-input-styled text-sm leading-relaxed" style="min-height: 110px; overflow: hidden; resize: none;"
+                      x-data x-init="$nextTick(() => { $el.style.height = 'auto'; $el.style.height = ($el.scrollHeight + $el.offsetHeight - $el.clientHeight) + 'px' })" @input="$el.style.height = 'auto'; $el.style.height = ($el.scrollHeight + $el.offsetHeight - $el.clientHeight) + 'px'"
+                      placeholder="{% translate 'Add the details of the task…' %}"
+                      hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body">{{ task.description }}</textarea>
+            {% else %}
+            <p class="text-sm text-stone-700 whitespace-pre-line mb-4">{{ task.description|default:_("No description.") }}</p>
+            {% endif %}
+
+            <div class="pt-3 mt-1 border-t border-stone-100">
+                <span class="idea-date-row" style="margin: 0 0 6px;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    {% translate "Post caption" %}
+                </span>
+                {% if can_edit %}
+                <textarea name="post_caption" class="form-input-styled text-sm leading-relaxed" style="min-height: 110px; overflow: hidden; resize: none;"
+                      x-data x-init="$nextTick(() => { $el.style.height = 'auto'; $el.style.height = ($el.scrollHeight + $el.offsetHeight - $el.clientHeight) + 'px' })" @input="$el.style.height = 'auto'; $el.style.height = ($el.scrollHeight + $el.offsetHeight - $el.clientHeight) + 'px'"
+                          placeholder="{% translate 'The text the post goes out with' %}"
+                          hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body">{{ task.post_caption }}</textarea>
+                {% else %}
+                <p class="text-sm text-stone-700 whitespace-pre-line">{{ task.post_caption|default:_("No caption") }}</p>
                 {% endif %}
             </div>
-            <p class="text-xs text-stone-400 mt-1">
-                {% blocktranslate with column=task.column.name %}In {{ column }}{% endblocktranslate %}
-                {% if task.created_by %} · {% blocktranslate with who=task.created_by.display_name when=task.created_at|date:"d/m/Y" %}created by {{ who }} on {{ when }}{% endblocktranslate %}{% endif %}
-            </p>
-        </div>
 
-        <div>
-            <div class="task-field-label">{% translate "Description" %}</div>
-            {% if can_edit %}
-            <textarea name="description" rows="4" placeholder="{% translate 'Add the details of the task…' %}"
-                      hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body"
-                      class="form-input-styled w-full text-sm">{{ task.description }}</textarea>
-            {% elif task.description %}
-            <p class="text-sm text-stone-700 whitespace-pre-line">{{ task.description }}</p>
-            {% else %}
-            <p class="text-sm text-stone-400">{% translate "No description." %}</p>
-            {% endif %}
-        </div>
-
-        <div>
-            <div class="task-field-label">{% translate "Post caption" %}</div>
-            {% if can_edit %}
-            <textarea name="post_caption" rows="4" placeholder="{% translate 'The text the post goes out with' %}"
-                      hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body"
-                      class="form-input-styled w-full text-sm">{{ task.post_caption }}</textarea>
-            {% elif task.post_caption %}
-            <p class="text-sm text-stone-700 whitespace-pre-line">{{ task.post_caption }}</p>
-            {% else %}
-            <p class="text-sm text-stone-400">{% translate "No caption" %}</p>
-            {% endif %}
-        </div>
-
-        <div>
-            <div class="task-field-label">{% translate "Column" %}</div>
-            {% if can_edit %}
-            <select name="column" class="bb-select w-full text-sm" hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body">
-                {% for column in columns %}<option value="{{ column.id }}" {% if column.id == task.column_id %}selected{% endif %}>{{ column.name }}</option>{% endfor %}
-            </select>
-            {% else %}<p class="text-sm text-stone-700">{{ task.column.name }}</p>{% endif %}
-        </div>
-
-        <div>
-            <div class="task-field-label">{% translate "Responsible" %}</div>
-            {% if can_edit %}
-            <form hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body" class="space-y-1 max-h-44 overflow-y-auto">
-                <input type="hidden" name="assignees_sent" value="1">
-                {% for member in members %}
-                <label class="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
-                    <input type="checkbox" name="assignees" value="{{ member.pk }}" class="bb-checkbox"
-                           {% if member in task.assignees.all %}checked{% endif %}>
-                    <span class="truncate">{{ member.display_name }}</span>
-                </label>
-                {% endfor %}
-            </form>
-            {% else %}
-            <p class="text-sm text-stone-700">{% for user in task.assignees.all %}{{ user.display_name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-stone-400">{% translate "Nobody" %}</span>{% endfor %}</p>
-            {% endif %}
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-            <div>
-                <div class="task-field-label">{% translate "Due date" %}</div>
-                {% if can_edit %}
-                <input type="date" name="due_date" value="{{ task.due_date|date:'Y-m-d' }}" class="form-input-styled w-full text-sm"
-                       hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body">
-                {% else %}<p class="text-sm text-stone-700">{{ task.due_date|date:"d/m/Y"|default:"—" }}</p>{% endif %}
-            </div>
-            <div>
-                <div class="task-field-label">{% translate "Priority" %}</div>
-                {% if can_edit %}
-                <select name="priority" class="bb-select w-full text-sm" hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body">
-                    {% for value, label in priorities %}<option value="{{ value }}" {% if value == task.priority %}selected{% endif %}>{{ label }}</option>{% endfor %}
-                </select>
-                {% else %}<p class="text-sm text-stone-700">{{ task.get_priority_display }}</p>{% endif %}
-            </div>
-        </div>
-
-        {% if task.idea or task.post or task.calendar_event %}
-        <div>
-            <div class="task-field-label">{% translate "Linked to" %}</div>
-            <ul class="space-y-1 text-sm">
-                {% if task.idea %}<li class="text-stone-700">💡 {{ task.idea.title }}</li>{% endif %}
-                {% if task.calendar_event %}<li class="text-stone-700">📅 {{ task.calendar_event.title }}</li>{% endif %}
-                {% if task.post %}<li><a class="text-orange-600 hover:underline" href="{% url 'composer:compose_edit' workspace_id=workspace.id post_id=task.post_id %}">{% translate "Post created from these arts" %}</a></li>{% endif %}
+            {% if task.idea or task.post or task.calendar_event %}
+            <ul class="mt-3 space-y-1 text-xs text-stone-500">
+                {% if task.idea %}<li>💡 {{ task.idea.title }}</li>{% endif %}
+                {% if task.calendar_event %}<li>📅 {{ task.calendar_event.title }}</li>{% endif %}
             </ul>
-        </div>
-        {% endif %}
-
-        {% if task.has_publishable_art and can_edit %}
-        <div>
-            {% if task.post %}
-            <a href="{% url 'composer:compose_edit' workspace_id=workspace.id post_id=task.post_id %}" class="btn-brand w-full justify-center text-sm">{% translate "Open the post" %}</a>
-            {% else %}
-            <button type="button" class="btn-brand w-full justify-center text-sm"
-                    hx-post="{% url 'tasks:task_create_post' workspace_id=workspace.id task_id=task.id %}" hx-swap="none">{% translate "Create post with these arts" %}</button>
-            <p class="text-[11px] text-stone-400 mt-1.5">{% translate "Each art goes to the format it was made for." %}</p>
             {% endif %}
         </div>
-        {% endif %}
 
         {% if can_edit %}
-        <div class="pt-2 border-t border-stone-200">
-            <button type="button" class="btn-danger-soft text-xs px-3 py-1.5"
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-6 py-4 border-t border-stone-200">
+            <button type="button" class="btn-danger-tint px-4 py-2 text-sm font-medium rounded-full" style="color: var(--danger, #ef4444); margin-right: auto; background: transparent;"
                     hx-post="{% url 'tasks:task_delete' workspace_id=workspace.id task_id=task.id %}" hx-swap="none"
-                    hx-confirm="{% translate 'Delete this task? This cannot be undone.' %}">{% translate "Delete task" %}</button>
+                    hx-confirm="{% translate 'Delete this task? This cannot be undone.' %}">{% translate "Delete" %}</button>
+            {% if task.post %}
+            <a href="{% url 'composer:compose_edit' workspace_id=workspace.id post_id=task.post_id %}"
+               class="btn-brand flex-none whitespace-nowrap px-5 py-2 text-sm" style="width: auto;">{% translate "Open the post" %}</a>
+            {% elif task.has_publishable_art %}
+            <button type="button" class="btn-brand flex-none whitespace-nowrap px-5 py-2 text-sm" style="width: auto;"
+                    title="{% translate 'Each art goes to the format it was made for.' %}"
+                    hx-post="{% url 'tasks:task_create_post' workspace_id=workspace.id task_id=task.id %}" hx-swap="none">{% translate "Create post with these arts" %}</button>
+            {% endif %}
         </div>
         {% endif %}
     </div>
@@ -181,6 +209,18 @@
                                 </label>
                             </form>
                             {% endif %}
+                        </div>
+                        {% elif item.media_asset and item.media_asset.file and item.media_asset.media_type == "image" %}
+                        {# Reference material attached to a plain item, e.g. the product image from the Radar. #}
+                        <div class="mt-1.5 flex items-center gap-2">
+                            <a href="{{ item.media_asset.file.url }}" target="_blank" rel="noopener" class="block w-20 h-20 rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200 flex-shrink-0">
+                                <img src="{% if item.media_asset.thumbnail %}{{ item.media_asset.thumbnail.url }}{% else %}{{ item.media_asset.file.url }}{% endif %}" alt="{{ item.text }}" class="w-full h-full object-cover">
+                            </a>
+                            <div class="text-[11.5px] leading-tight">
+                                <a href="{{ item.media_asset.file.url }}" download class="font-semibold text-stone-700 hover:text-orange-600">{% translate "Download" %}</a>
+                                {% if item.media_asset.width %}<div class="text-stone-400 tabular-nums">{{ item.media_asset.width }} × {{ item.media_asset.height }}</div>{% endif %}
+                                <a href="{% url 'media_library:index' workspace_id=workspace.id %}" class="text-stone-500 hover:text-orange-600">{% translate "In the media library" %}</a>
+                            </div>
                         </div>
                         {% endif %}
                     </div>

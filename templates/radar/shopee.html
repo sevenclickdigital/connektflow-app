@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block page_title %}{% translate "Shopee Affiliates" %}{% endblock %}
+{% block content %}
+{% comment %}
+Shopee offers. The filter form drives everything: any change re-requests this
+URL with hx-get and swaps #radar-offers (radar/partials/_offers.html), so the
+URL always reflects the filters and can be bookmarked or reloaded.
+The share dialog lives here, outside the swapped block, and reads each offer's
+texts from the #radar-share-data json_script the partial renders
+(radar/partials/_share_dialog.html).
+The Favorites tab renders radar/partials/_favorites.html in place of the form.
+{% endcomment %}
+<div class="w-full"
+     x-data="{
+        open: false, offerId: '', offer: null, tpl: 'direct', text: '', term: '', termCopied: false,
+        show(id) {
+            const data = JSON.parse(document.getElementById('radar-share-data').textContent);
+            this.offerId = id; this.offer = data[id]; this.setTpl('direct');
+            this.term = (this.offer.terms || [])[0] || ''; this.termCopied = false; this.open = true;
+        },
+        setTpl(name) { this.tpl = name; this.text = this.offer ? this.offer.texts[name] : ''; },
+        searchVideos(base) {
+            const q = this.term.trim();
+            if (!q) return;
+            if (navigator.clipboard) navigator.clipboard.writeText(q).catch(() => {});
+            this.termCopied = true;
+            window.open(base + encodeURIComponent(q), '_blank', 'noopener');
+        }
+     }"
+     @keydown.escape.window="open = false">
+
+    <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+        <div>
+            <a href="{% url 'radar:index' workspace_id=workspace_id %}" class="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-700 transition-colors mb-3">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                {% translate "Radar" %}
+            </a>
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
+                    {% include "social_accounts/partials/_platform_icon.html" with platform="shopee_affiliate" size="5" %}
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold text-stone-900">{% translate "Shopee Affiliates" %}</h2>
+                    <p class="text-xs text-stone-500">{% blocktranslate with label=connection.account_label %}App ID {{ label }}{% endblocktranslate %}</p>
+                </div>
+            </div>
+        </div>
+        <a href="{% url 'analytics:shopee' workspace_id=workspace_id connection_id=connection.id %}" class="btn-outline inline-flex items-center gap-1.5" style="width: auto;">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 14l4-4 4 4 6-6"/></svg>
+            {% translate "Commissions and orders" %}
+        </a>
+    </div>
+
+    <nav class="flex gap-1 border-b border-stone-200 mb-5" aria-label="{% translate 'Shopee Affiliates' %}">
+        <a href="{% url 'radar:shopee' workspace_id=workspace_id %}" {% if tab == "offers" %}aria-current="page"{% endif %}
+           class="px-3 py-2 -mb-px text-sm font-semibold border-b-2 transition-colors {% if tab == 'offers' %}border-orange-500 text-orange-700{% else %}border-transparent text-stone-500 hover:text-stone-700{% endif %}">{% translate "Offers" %}</a>
+        <a href="{% url 'radar:shopee_favorites' workspace_id=workspace_id %}" {% if tab == "favorites" %}aria-current="page"{% endif %}
+           class="px-3 py-2 -mb-px text-sm font-semibold border-b-2 transition-colors {% if tab == 'favorites' %}border-orange-500 text-orange-700{% else %}border-transparent text-stone-500 hover:text-stone-700{% endif %}">{% translate "Favorites" %}{% if favorite_ids %} <span class="text-xs font-medium text-stone-400">{{ favorite_ids|length }}</span>{% endif %}</a>
+    </nav>
+
+    {% if tab == "favorites" %}
+    {% include "radar/partials/_favorites.html" %}
+    {% else %}
+    <form id="radar-filters" method="get" action="{% url 'radar:shopee' workspace_id=workspace_id %}"
+          hx-get="{% url 'radar:shopee' workspace_id=workspace_id %}" hx-target="#radar-offers" hx-swap="outerHTML"
+          hx-push-url="true" hx-trigger="submit, change" hx-indicator="#radar-loading"
+          x-data="{ quick: '{{ filters.quick|escapejs }}', advanced: false, active: {{ advanced_count }} }">
+
+
+        <section class="min-w-0">
+            <div class="bg-white rounded-xl border border-stone-200 p-4 mb-4">
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <div class="sm:w-56 sm:flex-none">
+                        <select id="radar-category" name="category" aria-label="{% translate 'Niche' %}" class="form-input-styled text-sm">
+                            <option value="">{% translate "All niches" %}</option>
+                            {% for cid, label in categories %}
+                            <option value="{{ cid }}" {% if filters.category_id == cid %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="relative flex flex-1 min-w-0 gap-2">
+                        <input type="search" name="q" value="{{ filters.keyword }}" maxlength="100"
+                               placeholder="{% translate 'Search offers on Shopee' %}" aria-label="{% translate 'Search offers on Shopee' %}"
+                               class="form-input-styled flex-1 min-w-0 text-sm">
+                        <div class="sm:relative flex-none" @click.outside="advanced = false" @keydown.escape.window="advanced = false">
+                        <button type="button" @click="advanced = !advanced" :aria-expanded="advanced" aria-controls="radar-advanced"
+                                title="{% translate 'Advanced filters' %}" aria-label="{% translate 'Advanced filters' %}"
+                                :class="advanced ? 'border-orange-300 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-500 hover:text-stone-700 hover:border-stone-300'"
+                                class="relative h-full w-11 rounded-xl border-[1.5px] bg-white flex items-center justify-center transition-colors cursor-pointer">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5h18l-7 8.25V19l-4 1.5v-7.75L3 4.5z"/></svg>
+                            <span x-show="active" x-text="active" x-cloak class="absolute -top-1.5 -right-1.5 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-orange-500 text-white text-[0.625rem] font-semibold leading-[1.125rem] text-center">{{ advanced_count }}</span>
+                        </button>
+                            <div id="radar-advanced" x-show="advanced" x-cloak x-transition.opacity.duration.150ms
+                                 @change="active = [...$el.querySelectorAll('input')].filter(i => i.value !== '').length"
+                                 class="absolute inset-x-0 sm:left-auto sm:right-0 top-full mt-2 z-30 sm:w-[22rem] bg-white rounded-xl border border-stone-200 shadow-xl p-4">
+                                <p class="text-sm font-semibold text-stone-800 mb-3">{% translate "Advanced filters" %}</p>
+                                <div class="grid grid-cols-2 gap-3 text-sm">
+
+                        <label class="block">
+                            <span class="text-xs text-stone-500">{% translate "Min. price (R$)" %}</span>
+                            <input type="number" name="min_price" min="0" step="0.01" value="{{ filters.min_price|default_if_none:'' }}" class="form-input-styled w-full text-sm mt-1">
+                        </label>
+                        <label class="block">
+                            <span class="text-xs text-stone-500">{% translate "Max. price (R$)" %}</span>
+                            <input type="number" name="max_price" min="0" step="0.01" value="{{ filters.max_price|default_if_none:'' }}" class="form-input-styled w-full text-sm mt-1">
+                        </label>
+                    <label class="block">
+                        <span class="text-xs text-stone-500">{% translate "Min. commission (%)" %}</span>
+                        <input type="number" name="min_commission" min="0" max="100" step="0.5" value="{{ filters.min_commission_pct|default_if_none:'' }}" class="form-input-styled w-full text-sm mt-1">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs text-stone-500">{% translate "Min. discount (%)" %}</span>
+                        <input type="number" name="min_discount" min="0" max="100" value="{{ filters.min_discount|default_if_none:'' }}" class="form-input-styled w-full text-sm mt-1">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs text-stone-500">{% translate "Min. rating" %}</span>
+                        <input type="number" name="min_rating" min="0" max="5" step="0.1" value="{{ filters.min_rating|default_if_none:'' }}" class="form-input-styled w-full text-sm mt-1">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs text-stone-500">{% translate "Min. sold" %}</span>
+                        <input type="number" name="min_sales" min="0" value="{{ filters.min_sales|default_if_none:'' }}" class="form-input-styled w-full text-sm mt-1">
+                    </label>
+                                </div>
+                                <div class="mt-4 flex items-center justify-between gap-3">
+                                    <p class="text-xs text-stone-400">{% translate "Applied to the offers already loaded." %}</p>
+                                    <a href="{% url 'radar:shopee' workspace_id=workspace_id %}" class="flex-none text-xs font-semibold text-stone-500 hover:text-stone-700">{% translate "Clear filters" %}</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-none"><button type="submit" class="btn-brand">{% translate "Search" %}</button></div>
+                    </div>
+                </div>
+
+
+            </div>
+
+            {% include "radar/partials/_offers.html" %}
+        </section>
+    </form>
+    {% endif %}
+
+    {% include "radar/partials/_share_dialog.html" %}
+</div>
+{% include "approvals/partials/_toasts.html" %}
+{% include "tasks/partials/_styles.html" %}
+{% include "tasks/partials/_request_arts_host.html" %}
+{% endblock %}

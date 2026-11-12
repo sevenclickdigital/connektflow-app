@@ -1,7 +1,8 @@
 """Template filters/tags for the analytics page.
 
 Three jobs:
-  - format metric values (counts → 1.2k / 3.4M, percent → 4.6%, minutes → 46.3h)
+  - format metric values (counts → 1.2k / 3.4M, percent → 4.6%, minutes → 46.3h,
+    currency → R$ 1.234,56)
   - format delta badges (signed, no zero sign)
   - render an inline-SVG sparkline from a daily series
 """
@@ -9,6 +10,7 @@ Three jobs:
 from __future__ import annotations
 
 from django import template
+from django.utils import formats
 from django.utils.safestring import mark_safe
 
 register = template.Library()
@@ -25,6 +27,9 @@ def fmt_metric(value, kind: str = "count") -> str:
         return "0"
     if kind == "percent":
         return f"{v:.1f}%"
+    if kind == "currency":
+        # Amounts in BRL, the only currency a source reports in today.
+        return "R$\u00a0" + formats.number_format(round(v, 2), 2, use_l10n=True, force_grouping=True)
     if kind == "minutes":
         # minutes → "Xh" or "X.Ym" depending on magnitude
         if v >= 60:

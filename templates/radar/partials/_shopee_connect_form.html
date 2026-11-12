@@ -1,0 +1,53 @@
+{% comment %}
+Shopee Affiliates connect form. Rendered inside the source card's modal
+(in_modal: submits with hx-post and swaps itself, success answers HX-Redirect)
+and by the full page radar/shopee_connect.html (plain POST).
+{% endcomment %}
+{% load i18n %}
+<form method="post" action="{% url 'radar:connect_shopee' workspace_id=workspace_id %}" class="space-y-5"
+      {% if in_modal %}hx-post="{% url 'radar:connect_shopee' workspace_id=workspace_id %}" hx-target="this" hx-swap="outerHTML"{% endif %}
+      x-data="{ busy: false }" @submit="busy = true" @htmx:after-request.camel="busy = false">
+    {% csrf_token %}
+
+    {% if in_modal %}
+    <p class="text-sm text-stone-500">{% translate "Use the App ID and Secret of your application in the Shopee affiliate Open API panel. Offers you share carry your affiliate link." %}</p>
+    {% endif %}
+
+    {% if form.non_field_errors %}
+    <div class="alert-error text-sm" role="alert">{{ form.non_field_errors|join:" " }}</div>
+    {% endif %}
+
+    <div>
+        <label for="id_app_id" class="block text-sm font-semibold text-stone-700 mb-1.5">{% translate "App ID" %}</label>
+        <input type="text" inputmode="numeric" id="id_app_id" name="app_id" value="{{ form.app_id.value|default:'' }}" required autocomplete="off"
+               class="form-input-styled w-full{% if form.app_id.errors %} is-error{% endif %}">
+        {% for error in form.app_id.errors %}<p class="text-xs text-red-600 mt-1.5">{{ error }}</p>{% endfor %}
+    </div>
+    <div>
+        <label for="id_secret" class="block text-sm font-semibold text-stone-700 mb-1.5">{% translate "Secret" %}</label>
+        <input type="password" id="id_secret" name="secret" required autocomplete="off"
+               class="form-input-styled w-full{% if form.secret.errors %} is-error{% endif %}">
+        {% for error in form.secret.errors %}<p class="text-xs text-red-600 mt-1.5">{{ error }}</p>{% endfor %}
+    </div>
+
+    <div class="p-3.5 bg-stone-50 rounded-xl border border-stone-100">
+        <div class="flex gap-2.5">
+            <svg class="w-4 h-4 text-stone-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <p class="text-xs text-stone-600">{% translate "The Secret works like a password to your affiliate account. It is stored encrypted, used only by our server to sign requests to Shopee, and never shown again." %}</p>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-3 pt-1">
+        <div class="flex-none">
+            <button type="submit" class="btn-brand" :disabled="busy">
+                <span x-show="!busy">{% translate "Connect" %}</span>
+                <span x-show="busy" x-cloak>{% translate "Checking with Shopee…" %}</span>
+            </button>
+        </div>
+        {% if in_modal %}
+        <button type="button" @click="$dispatch('close-source-modal')" class="px-4 py-2.5 text-sm font-semibold text-stone-600 hover:text-stone-800 transition-colors cursor-pointer">{% translate "Cancel" %}</button>
+        {% else %}
+        <a href="{% url 'social_accounts:connect' workspace_id=workspace_id %}" class="px-4 py-2.5 text-sm font-semibold text-stone-600 hover:text-stone-800 transition-colors">{% translate "Cancel" %}</a>
+        {% endif %}
+    </div>
+</form>

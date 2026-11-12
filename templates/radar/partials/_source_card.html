@@ -1,0 +1,96 @@
+{% comment %}
+One opportunity source, in the same card shape as the Platforms grid.
+Shared by Platforms → Connect (action="connect"), Social Accounts and the Radar
+index (action="open").
+Usage: {% include "radar/partials/_source_card.html" with card=card action="open" can_connect=True %}
+A connected source shows as an account row like a social platform's, and the
+foot of the card has Disconnect (for whoever ``can_connect``). A workspace has at
+most one connection per source, so there is never a "connect another".
+``return_to`` ("connect" or "radar") is where disconnecting lands.
+{% endcomment %}
+{% load i18n %}
+<div class="relative h-full flex flex-col bg-white rounded-xl border border-stone-200 p-5 transition-all duration-200"
+     x-data="{ connectOpen: false }" @close-source-modal.window="connectOpen = false">
+    <div class="flex items-start gap-4">
+        <div class="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-orange-50 text-orange-600">
+            {% include "social_accounts/partials/_platform_icon.html" with platform=card.source.key size="5" %}
+        </div>
+        <div class="flex-1 min-w-0">
+            <h3 class="text-sm font-semibold text-stone-900">{{ card.source.label }}</h3>
+            <p class="text-xs text-stone-400 mt-0.5">{{ card.source.description }}</p>
+        </div>
+    </div>
+
+    {% if card.connection %}
+    <ul class="mt-4">
+        <li class="flex items-center gap-2.5 rounded-lg bg-stone-50 pl-3 pr-1.5 py-2">
+            <div class="w-8 h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
+                {% include "social_accounts/partials/_platform_icon.html" with platform=card.source.key size="4" %}
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-stone-800 truncate">{% blocktranslate with label=card.connection.account_label %}App ID {{ label }}{% endblocktranslate %}</p>
+                <p class="text-[11px] text-stone-400 truncate">{% blocktranslate with date=card.connection.created_at|date:"SHORT_DATE_FORMAT" %}Connected on {{ date }}{% endblocktranslate %}</p>
+            </div>
+            {% include "social_accounts/partials/_status_badge.html" with status=card.connection.status error=card.connection.last_error %}
+        </li>
+    </ul>
+    {% endif %}
+
+    <div class="mt-auto pt-4 flex gap-2">
+        {% if action == "connect" and card.connection and card.connection.status != "error" %}
+        {% elif action == "open" and card.connection %}
+        <a href="{{ card.open_url }}" class="flex-1 min-w-0 inline-flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded-full hover:bg-orange-100 hover:border-orange-300 transition-all duration-200">
+            {% translate "Open" %}
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+        {% elif can_connect %}
+        <a href="{{ card.connect_url }}" hx-get="{{ card.connect_url }}" hx-target="#source-connect-body-{{ card.source.key }}"
+           @click="connectOpen = true"
+           class="flex-1 min-w-0 inline-flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded-full hover:bg-orange-100 hover:border-orange-300 transition-all duration-200">
+            {% if card.connection %}{% translate "Reconnect" %}{% else %}{% translate "Connect" %}{% endif %}
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+
+        {% comment %}
+        Connect modal, same shape as api_keys/_issue_modal.html. The form is
+        fetched into the body on click (hx-get above), so this partial needs no
+        knowledge of which fields a source asks for.
+        {% endcomment %}
+        <template x-teleport="body">
+            <div x-show="connectOpen" x-cloak x-transition.opacity
+                 @keydown.escape.window="connectOpen = false"
+                 class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40">
+                <div @click.outside="connectOpen = false" x-show="connectOpen" x-transition
+                     class="w-full max-w-lg bg-white rounded-2xl shadow-xl flex flex-col max-h-[90vh]"
+                     role="dialog" aria-modal="true" aria-labelledby="source-connect-title-{{ card.source.key }}">
+                    <div class="flex items-center justify-between gap-3 px-6 pt-6 pb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                                {% include "social_accounts/partials/_platform_icon.html" with platform=card.source.key size="5" %}
+                            </div>
+                            <h3 id="source-connect-title-{{ card.source.key }}" class="text-lg font-semibold text-stone-900">
+                                {% blocktranslate with source=card.source.label %}Connect {{ source }}{% endblocktranslate %}
+                            </h3>
+                        </div>
+                        <button type="button" @click="connectOpen = false" class="p-1 text-stone-400 hover:text-stone-600 cursor-pointer" aria-label="{% translate 'Close' %}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div id="source-connect-body-{{ card.source.key }}" class="px-6 pb-6 overflow-y-auto">
+                        <p class="text-sm text-stone-400">{% translate "Loading…" %}</p>
+                    </div>
+                </div>
+            </div>
+        </template>
+        {% elif not card.connection %}
+        <span class="w-full inline-flex items-center justify-center px-4 py-2 text-xs font-semibold text-stone-400 bg-stone-100 rounded-full">
+            {% translate "Ask a workspace admin to connect it" %}
+        </span>
+        {% endif %}
+        {% if card.connection and can_connect %}
+        {% url 'radar:disconnect' workspace_id=card.connection.workspace_id connection_id=card.connection.id as disconnect_url %}
+        {% translate "This removes the App ID and Secret from BrightBean. Favorites, and the tasks and posts made from offers, stay." as consequence %}
+        {% include "social_accounts/partials/_disconnect_button.html" with action_url=disconnect_url name=card.source.label consequence=consequence return_to=return_to %}
+        {% endif %}
+    </div>
+</div>

@@ -71,6 +71,7 @@ LOCAL_APPS = [
     "apps.composer",
     "apps.calendar",
     "apps.tasks",
+    "apps.radar",
     "apps.publisher",
     "apps.notifications",
     "apps.inbox",

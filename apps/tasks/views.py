@@ -6,7 +6,8 @@ import contextlib
 import functools
 import json
 import uuid
-from datetime import timedelta
+import zoneinfo
+from datetime import datetime, timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -56,6 +57,13 @@ def _render_card(request, task, *, changed=True, focus_new_item=False):
     items = list(task.checklist.all())
     task.checklist_done = sum(1 for item in items if item.is_done)
     task.has_publishable_art = False
+    post = task.post
+    when = (post.scheduled_at or post.proposed_publish_at) if post else None
+    # Formatted here, in the workspace's zone (as the composer shows it): the
+    # template's date filter would convert to the request's zone instead.
+    local = when.astimezone(_workspace_tz(request.workspace)) if when else None
+    task.post_date_input = local.strftime("%Y-%m-%dT%H:%M") if local else ""
+    task.post_date_display = local.strftime("%d/%m/%Y %H:%M") if local else ""
     for item in items:
         fmt = creative_formats.get(item.format_key) if item.is_art else None
         item.ratio_ok = True
@@ -82,6 +90,19 @@ def _render_card(request, task, *, changed=True, focus_new_item=False):
     if changed:
         response["HX-Trigger"] = BOARD_CHANGED
     return response
+
+
+def _workspace_tz(workspace):
+    return zoneinfo.ZoneInfo(workspace.effective_timezone or "UTC")
+
+
+def _parse_local_datetime(value: str, workspace):
+    """A ``datetime-local`` value (workspace time) as an aware datetime; blank or invalid → None."""
+    try:
+        naive = datetime.strptime(value.strip(), "%Y-%m-%dT%H:%M")
+    except ValueError:
+        return None
+    return naive.replace(tzinfo=_workspace_tz(workspace))
 
 
 _PLACEHOLDER = "00000000-0000-0000-0000-000000000000"
@@ -218,6 +239,8 @@ def task_update(request, workspace_id, task_id):
         fields.append("due_date")
     if fields:
         task.save(update_fields=[*fields, "updated_at"])
+    if "publish_at" in request.POST:
+        services.propose_post_date(task, _parse_local_datetime(request.POST["publish_at"], workspace))
     if "assignees_sent" in request.POST:
         users = services.resolve_assignees(workspace, request.POST.getlist("assignees"))
         services.set_assignees(task, users, request.user)
@@ -367,7 +390,6 @@ def column_reorder(request, workspace_id):
 def request_arts(request, workspace_id):
     """Pick the formats a piece of content needs; creates one task with an item per format."""
     from apps.composer.models import Idea
-    from apps.social_accounts.models import SocialAccount
 
     workspace = request.workspace
     idea = None
@@ -375,7 +397,6 @@ def request_arts(request, workspace_id):
     if idea_id and _valid_uuid(idea_id):
         idea = get_object_or_404(Idea, id=idea_id, workspace=workspace)
     task_settings = services.art_settings(workspace)
-    members = services.assignable_members(workspace)
 
     if request.method == "POST":
         format_keys = request.POST.getlist("formats")
@@ -423,13 +444,46 @@ def request_arts(request, workspace_id):
             "due_date": due.isoformat() if due else "",
         }
 
+    return render_art_request_form(
+        request,
+        form=form,
+        selected=selected,
+        chosen_assignees=chosen_assignees,
+        error=error,
+        idea=idea,
+    )
+
+
+def render_art_request_form(
+    request,
+    *,
+    form,
+    selected=(),
+    chosen_assignees=None,
+    error="",
+    idea=None,
+    action_url="",
+    hidden=None,
+    source_note="",
+):
+    """The art request form, in the modal (htmx) or as its own page.
+
+    Other apps reuse it with ``action_url`` (where it posts instead of
+    ``tasks:request_arts``), ``hidden`` (name → value pairs posted along) and
+    ``source_note`` (the "From …" line); see ``apps.radar.views.offer_art_request``.
+    ``chosen_assignees=None`` preselects the workspace's default art assignee.
+    """
+    from apps.social_accounts.models import PlatformVisibility, SocialAccount
+
+    workspace = request.workspace
+    if chosen_assignees is None:
+        task_settings = services.art_settings(workspace)
+        chosen_assignees = {str(task_settings.art_assignee_id)} if task_settings.art_assignee_id else set()
     accounts = list(
         SocialAccount.objects.for_workspace(workspace.id)
         .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
         .order_by("platform", "account_name")
     )
-    from apps.social_accounts.models import PlatformVisibility
-
     visible = [value for value, _label in PlatformVisibility.visible_choices()]
     groups = creative_formats.catalogue(accounts, visible)
     # In the modal (htmx) only the form is swapped in, and an invalid form is
@@ -441,12 +495,15 @@ def request_arts(request, workspace_id):
             "workspace": workspace,
             "idea": idea,
             "groups": groups,
-            "selected": selected,
-            "members": members,
+            "selected": set(selected),
+            "members": services.assignable_members(workspace),
             "chosen_assignees": chosen_assignees,
             "form": form,
             "error": error,
             "first_tab": groups[0]["network"].key if groups else "",
+            "action_url": action_url,
+            "hidden": (hidden or {}).items(),
+            "source_note": source_note,
         },
         status=400 if error and not request.htmx else 200,
     )

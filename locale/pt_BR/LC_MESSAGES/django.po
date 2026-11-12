@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: BrightBean Studio\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 18:30+0000\n"
+"POT-Creation-Date: 2026-11-12 22:06+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -302,8 +302,8 @@ msgstr "Brightbean Studio — %(gb)s GB de armazenamento extra para %(name)s"
 
 #: apps/billing/models.py:68 apps/billing/models.py:218
 #: apps/composer/models.py:501 apps/composer/models.py:882
-#: apps/notifications/models.py:40 templates/automations/log.html:71
-#: templates/billing/staff_console.html:125
+#: apps/notifications/models.py:40 apps/radar/reports.py:53
+#: templates/automations/log.html:71 templates/billing/staff_console.html:125
 #: templates/billing/staff_subscriptions.html:198
 msgid "Pending"
 msgstr "Pendente"
@@ -858,7 +858,7 @@ msgstr "Movida para “%(column)s”."
 msgid "Select"
 msgstr "Selecionar"
 
-#: apps/composer/builtin_templates.py:12
+#: apps/composer/builtin_templates.py:12 apps/radar/reports.py:190
 #: templates/analytics/_post_table.html:18
 #: templates/billing/staff_subscriptions.html:152
 #: templates/calendar/partials/publish_approvals.html:22
@@ -866,6 +866,7 @@ msgstr "Selecionar"
 #: templates/inbox/feed.html:138 templates/media_library/library_index.html:180
 #: templates/media_library/shared_library.html:72
 #: templates/notifications/history.html:77
+#: templates/radar/partials/_offers.html:15
 msgid "All"
 msgstr "Todos"
 
@@ -1032,22 +1033,22 @@ msgstr "Hashtag"
 msgid "Mention"
 msgstr "Menção"
 
-#: apps/composer/models.py:180 apps/composer/views.py:3357
-#: templates/base.html:262 templates/composer/create_landing.html:1121
+#: apps/composer/models.py:180 apps/composer/views.py:3358
+#: templates/base.html:262 templates/composer/create_landing.html:1036
 #: templates/inbox/feed.html:150
 msgid "Unassigned"
 msgstr "Sem responsável"
 
-#: apps/composer/models.py:181 apps/composer/views.py:3357
+#: apps/composer/models.py:181 apps/composer/views.py:3358
 msgid "To Do"
 msgstr "A fazer"
 
-#: apps/composer/models.py:182 apps/composer/views.py:3357
+#: apps/composer/models.py:182 apps/composer/views.py:3358
 msgid "In Progress"
 msgstr "Em andamento"
 
-#: apps/composer/models.py:183 apps/composer/views.py:3357
-#: apps/tasks/services.py:31 templates/media_library/library_index.html:276
+#: apps/composer/models.py:183 apps/composer/views.py:3358
+#: apps/tasks/services.py:33 templates/media_library/library_index.html:276
 #: templates/notifications/unsubscribed.html:12
 msgid "Done"
 msgstr "Pronto"
@@ -1089,11 +1090,11 @@ msgstr "Publicado"
 msgid "Processing"
 msgstr "Processando"
 
-#: apps/composer/models.py:884
+#: apps/composer/models.py:884 apps/radar/reports.py:52
 msgid "Completed"
 msgstr "Concluído"
 
-#: apps/composer/services.py:441
+#: apps/composer/services.py:466
 #, python-format
 msgid ""
 "%(platform)s can only publish videos. Add a video to this post before "
@@ -1102,7 +1103,7 @@ msgstr ""
 "O %(platform)s só publica vídeos. Adicione um vídeo a esta publicação antes "
 "de agendá-la."
 
-#: apps/composer/services.py:445
+#: apps/composer/services.py:470
 #, python-format
 msgid ""
 "%(platform)s needs an image or a video. Add one to this post before "
@@ -1111,23 +1112,23 @@ msgstr ""
 "O %(platform)s precisa de uma imagem ou um vídeo. Adicione um a esta "
 "publicação antes de agendá-la."
 
-#: apps/composer/services.py:467 templates/composer/compose.html:2703
+#: apps/composer/services.py:492 templates/composer/compose.html:2703
 #: templates/composer/partials/_preview_vertical.html:101
 msgid "A Story needs exactly one photo or one video."
 msgstr "Um Story precisa de exatamente uma foto ou um vídeo."
 
-#: apps/composer/services.py:469 templates/composer/compose.html:2704
+#: apps/composer/services.py:494 templates/composer/compose.html:2704
 #: templates/composer/partials/_preview_vertical.html:101
 msgid "A Reel needs exactly one video."
 msgstr "Um Reel precisa de exatamente um vídeo."
 
-#: apps/composer/services.py:470 templates/composer/compose.html:2705
+#: apps/composer/services.py:495 templates/composer/compose.html:2705
 #: templates/composer/partials/_preview_vertical.html:16
 #: templates/composer/partials/_preview_vertical.html:22
 msgid "A profile photo needs exactly one image."
 msgstr "Uma foto do perfil precisa de exatamente uma imagem."
 
-#: apps/composer/services.py:562
+#: apps/composer/services.py:587
 msgid ""
 "Pinterest needs a board for every pin. Choose one for this post in the "
 "composer before scheduling it."
@@ -1135,13 +1136,13 @@ msgstr ""
 "O Pinterest precisa de uma pasta para cada pin. Escolha uma para esta "
 "publicação no editor antes de agendá-la."
 
-#: apps/composer/services.py:605
+#: apps/composer/services.py:630
 #, python-format
 msgid "This post is scheduled as %(format)s on %(platform)s. %(reason)s"
 msgstr ""
 "Esta publicação está agendada como %(format)s no %(platform)s. %(reason)s"
 
-#: apps/composer/services.py:616
+#: apps/composer/services.py:641
 #, python-format
 msgid ""
 "This post is scheduled to %(platform)s, which needs a video on it. Keep one "
@@ -1151,7 +1152,7 @@ msgstr ""
 "nela. Mantenha um na publicação ou cancele primeiro o agendamento no "
 "%(platform)s."
 
-#: apps/composer/services.py:621
+#: apps/composer/services.py:646
 #, python-format
 msgid ""
 "This post is scheduled to %(platform)s, which needs an image or a video on "
@@ -1191,7 +1192,7 @@ msgstr[0] "O %(platforms)s só publica vídeos."
 msgstr[1] "%(platforms)s só publicam vídeos."
 
 #: apps/composer/views.py:655 apps/composer/views.py:664
-#: apps/composer/views.py:4570 templates/composer/compose.html:1354
+#: apps/composer/views.py:4571 templates/composer/compose.html:1354
 msgid "and"
 msgstr "e"
 
@@ -1247,7 +1248,7 @@ msgid "Feed"
 msgstr "Feed"
 
 #: apps/composer/views.py:2031 apps/composer/views.py:2880
-#: apps/composer/views.py:3673
+#: apps/composer/views.py:3674
 msgid "No file provided"
 msgstr "Nenhum arquivo enviado"
 
@@ -1326,11 +1327,11 @@ msgstr "Esta publicação já foi publicada e não pode ser editada."
 msgid "Marked as published. Thank you!"
 msgstr "Marcado como publicado. Obrigado!"
 
-#: apps/composer/views.py:3366
+#: apps/composer/views.py:3367
 msgid "This is a place to plan ✍️ your content"
 msgstr "Este é o lugar para planejar ✍️ seu conteúdo"
 
-#: apps/composer/views.py:3368
+#: apps/composer/views.py:3369
 msgid ""
 "Save your Ideas before converting them into posts. Brainstorm, plan ahead, "
 "and keep everything organized in one place."
@@ -1338,32 +1339,32 @@ msgstr ""
 "Salve suas ideias antes de transformá-las em publicações. Tenha ideias, "
 "planeje com antecedência e mantenha tudo organizado em um só lugar."
 
-#: apps/composer/views.py:3584 apps/tasks/views.py:502
+#: apps/composer/views.py:3585 apps/tasks/views.py:559
 msgid "Storage quota exceeded. Free up space or upgrade your plan."
 msgstr ""
 "Cota de armazenamento excedida. Libere espaço ou faça upgrade do seu plano."
 
-#: apps/composer/views.py:4031
+#: apps/composer/views.py:4032
 msgid "Name is required."
 msgstr "O nome é obrigatório."
 
-#: apps/composer/views.py:4060
+#: apps/composer/views.py:4061
 msgid "Column must be empty before deleting."
 msgstr "A coluna precisa estar vazia antes de ser excluída."
 
-#: apps/composer/views.py:4295
+#: apps/composer/views.py:4296
 msgid "CSV file too large (max 5 MB)."
 msgstr "Arquivo CSV muito grande (máx. 5 MB)."
 
-#: apps/composer/views.py:4305
+#: apps/composer/views.py:4306
 msgid "CSV file is empty."
 msgstr "O arquivo CSV está vazio."
 
-#: apps/composer/views.py:4610
+#: apps/composer/views.py:4611
 msgid "Tag name is required."
 msgstr "O nome da tag é obrigatório."
 
-#: apps/composer/views.py:4613
+#: apps/composer/views.py:4614
 msgid "Unknown tag kind."
 msgstr "Tipo de etiqueta desconhecido."
 
@@ -1463,6 +1464,7 @@ msgstr "Não lidas"
 #: templates/calendar/partials/week_grid.html:49
 #: templates/calendar/partials/week_grid.html:60
 #: templates/inbox/partials/_filter_bar.html:52
+#: templates/radar/partials/_source_card.html:51
 msgid "Open"
 msgstr "Abrir"
 
@@ -1532,7 +1534,7 @@ msgstr "Imagem"
 
 #: apps/media_library/models.py:83 apps/tasks/creative_formats.py:98
 #: apps/tasks/creative_formats.py:100
-#: templates/tasks/partials/_request_arts_form.html:66
+#: templates/tasks/partials/_request_arts_form.html:69
 msgid "Video"
 msgstr "Vídeo"
 
@@ -1717,6 +1719,439 @@ msgstr ""
 "Esta publicação deve ser feita manualmente. Abra no celular para baixar a "
 "mídia e copiar a legenda, depois publique no app do %(platform)s."
 
+#: apps/radar/forms.py:11 templates/radar/partials/_shopee_connect_form.html:21
+msgid "App ID"
+msgstr "App ID"
+
+#: apps/radar/forms.py:13
+msgid "The App ID is the number shown in the Shopee affiliate Open API panel."
+msgstr ""
+"O App ID é o número exibido no painel da Open API de afiliados da Shopee."
+
+#: apps/radar/forms.py:15 templates/radar/partials/_shopee_connect_form.html:27
+msgid "Secret"
+msgstr "Secret"
+
+#: apps/radar/models.py:20 apps/radar/sources.py:32
+#: templates/radar/shopee.html:3 templates/radar/shopee.html:44
+#: templates/radar/shopee.html:55
+msgid "Shopee Affiliates"
+msgstr "Shopee Afiliados"
+
+#: apps/radar/models.py:23 apps/social_accounts/models.py:36
+#: templates/onboarding/connection_page.html:123
+#: templates/social_accounts/partials/_status_badge.html:9
+msgid "Connected"
+msgstr "Conectada"
+
+#: apps/radar/models.py:24 apps/social_accounts/models.py:39
+#: templates/social_accounts/partials/_status_badge.html:24
+msgid "Error"
+msgstr "Erro"
+
+#: apps/radar/reports.py:44 templates/analytics/_shopee_orders.html:29
+msgid "Commission"
+msgstr "Comissão"
+
+#: apps/radar/reports.py:45 templates/analytics/_shopee_page.html:97
+msgid "Orders"
+msgstr "Pedidos"
+
+#: apps/radar/reports.py:46
+msgid "Sales"
+msgstr "Vendas"
+
+#: apps/radar/reports.py:47
+msgid "Items sold"
+msgstr "Itens vendidos"
+
+#: apps/radar/reports.py:54
+msgid "Cancelled"
+msgstr "Cancelado"
+
+#: apps/radar/reports.py:62
+msgid "Shopee Video"
+msgstr "Shopee Vídeo"
+
+#: apps/radar/reports.py:63
+msgid "Websites"
+msgstr "Sites"
+
+#: apps/radar/reports.py:64
+msgid "Others"
+msgstr "Outros"
+
+#: apps/radar/reports.py:130 templates/approvals/partials/_approval_row.html:47
+#: templates/approvals/partials/_approval_row.html:77
+#: templates/approvals/version_diff.html:49
+#: templates/automations/partials/_test_result.html:60
+#: templates/client_portal/_client_card.html:43
+msgid "Unknown"
+msgstr "Desconhecido"
+
+#: apps/radar/services.py:44
+msgid "Beauty & personal care"
+msgstr "Beleza e cuidados pessoais"
+
+#: apps/radar/services.py:45
+msgid "Health"
+msgstr "Saúde"
+
+#: apps/radar/services.py:46
+msgid "Home & kitchen"
+msgstr "Casa e cozinha"
+
+#: apps/radar/services.py:47
+msgid "Home appliances"
+msgstr "Eletrodomésticos"
+
+#: apps/radar/services.py:48
+msgid "Mobile & accessories"
+msgstr "Celulares e acessórios"
+
+#: apps/radar/services.py:49
+msgid "Computers"
+msgstr "Informática"
+
+#: apps/radar/services.py:50
+msgid "Cameras & security"
+msgstr "Câmeras e segurança"
+
+#: apps/radar/services.py:51
+msgid "Games"
+msgstr "Games"
+
+#: apps/radar/services.py:52
+msgid "Women's fashion"
+msgstr "Moda feminina"
+
+#: apps/radar/services.py:53
+msgid "Men's fashion"
+msgstr "Moda masculina"
+
+#: apps/radar/services.py:54
+msgid "Kids' fashion"
+msgstr "Moda infantil"
+
+#: apps/radar/services.py:55
+msgid "Shoes"
+msgstr "Calçados"
+
+#: apps/radar/services.py:56
+msgid "Bags & backpacks"
+msgstr "Bolsas e mochilas"
+
+#: apps/radar/services.py:57
+msgid "Fashion accessories"
+msgstr "Acessórios de moda"
+
+#: apps/radar/services.py:58
+msgid "Luggage & travel"
+msgstr "Bagagem e viagem"
+
+#: apps/radar/services.py:59
+msgid "Mom & baby"
+msgstr "Mãe e bebê"
+
+#: apps/radar/services.py:60
+msgid "Pets"
+msgstr "Pet shop"
+
+#: apps/radar/services.py:61
+msgid "Sports & outdoors"
+msgstr "Esporte e lazer"
+
+#: apps/radar/services.py:62
+msgid "Food & drinks"
+msgstr "Alimentos e bebidas"
+
+#: apps/radar/services.py:63
+msgid "Hobbies & crafts"
+msgstr "Hobbies e artesanato"
+
+#: apps/radar/services.py:64
+msgid "Books"
+msgstr "Livros"
+
+#: apps/radar/services.py:65
+msgid "Stationery & office"
+msgstr "Papelaria e escritório"
+
+#: apps/radar/services.py:66
+msgid "Car accessories"
+msgstr "Acessórios automotivos"
+
+#: apps/radar/services.py:67
+msgid "Automotive"
+msgstr "Automotivo (geral)"
+
+#: apps/radar/services.py:68
+msgid "Motorcycles & accessories"
+msgstr "Motos e acessórios"
+
+#: apps/radar/services.py:69
+msgid "Services & others"
+msgstr "Serviços e outros"
+
+#: apps/radar/services.py:73
+msgid "Highest commission (R$)"
+msgstr "Maior comissão (R$)"
+
+#: apps/radar/services.py:74
+msgid "Highest commission (%)"
+msgstr "Maior comissão (%)"
+
+#: apps/radar/services.py:75
+msgid "Biggest discount"
+msgstr "Maior desconto"
+
+#: apps/radar/services.py:76 apps/radar/services.py:132
+msgid "Best selling"
+msgstr "Mais vendidos"
+
+#: apps/radar/services.py:77
+msgid "Best rated"
+msgstr "Melhor avaliação"
+
+#: apps/radar/services.py:78
+msgid "Lowest price"
+msgstr "Menor preço"
+
+#: apps/radar/services.py:79
+msgid "Highest price"
+msgstr "Maior preço"
+
+#: apps/radar/services.py:115
+msgid "Direct"
+msgstr "Direto"
+
+#: apps/radar/services.py:115
+msgid "Full offer, with a price notice"
+msgstr "Oferta completa, com aviso de preço"
+
+#: apps/radar/services.py:116
+msgid "Urgency"
+msgstr "Urgência"
+
+#: apps/radar/services.py:116
+msgid "Stronger call, for groups"
+msgstr "Chamada mais forte, para grupos"
+
+#: apps/radar/services.py:117
+msgid "Simple"
+msgstr "Simples"
+
+#: apps/radar/services.py:117
+msgid "Short, just the essentials"
+msgstr "Curto, só o essencial"
+
+#: apps/radar/services.py:130
+msgid "On sale"
+msgstr "Em promoção"
+
+#: apps/radar/services.py:131
+msgid "Top rated"
+msgstr "Bem avaliados"
+
+#: apps/radar/services.py:133
+msgid "Highest commission"
+msgstr "Maior comissão"
+
+#: apps/radar/services.py:134
+msgid "Up to R$ 20"
+msgstr "Até R$ 20"
+
+#: apps/radar/services.py:135
+msgid "Up to R$ 50"
+msgstr "Até R$ 50"
+
+#: apps/radar/services.py:136
+msgid "Up to R$ 100"
+msgstr "Até R$ 100"
+
+#: apps/radar/services.py:414
+#, python-format
+msgid "Commission %(pct)s%% · ~%(amount)s"
+msgstr "Comissão %(pct)s%% · ~%(amount)s"
+
+#: apps/radar/services.py:427 apps/radar/services.py:603
+#, python-format
+msgid "%(pct)s%% OFF"
+msgstr "%(pct)s%% OFF"
+
+#: apps/radar/services.py:437 apps/radar/services.py:605
+#, python-format
+msgid "%(count)s sold"
+msgid_plural "%(count)s sold"
+msgstr[0] "%(count)s vendido"
+msgstr[1] "%(count)s vendidos"
+
+#: apps/radar/services.py:449
+#, python-format
+msgid "Affiliate link: %(link)s"
+msgstr "Link de afiliado: %(link)s"
+
+#: apps/radar/services.py:450
+#, python-format
+msgid "Product page: %(link)s"
+msgstr "Página do produto: %(link)s"
+
+#: apps/radar/services.py:480
+#, python-format
+msgid "Post offer: %(name)s"
+msgstr "Publicar oferta: %(name)s"
+
+#: apps/radar/services.py:482
+msgid "Product image (copy in the media library)"
+msgstr "Imagem do produto (cópia na galeria)"
+
+#: apps/radar/services.py:514
+msgid ""
+"Shopee refused the App ID or Secret. Reconnect Shopee Affiliates in "
+"Platforms."
+msgstr ""
+"A Shopee recusou o App ID ou o Secret. Reconecte a Shopee Afiliados em "
+"Plataformas."
+
+#: apps/radar/services.py:516
+msgid "Shopee is limiting requests right now. Wait a minute and try again."
+msgstr ""
+"A Shopee está limitando as consultas agora. Aguarde um minuto e tente de "
+"novo."
+
+#: apps/radar/services.py:519
+msgid ""
+"This affiliate account has no access to the Shopee Open API. Check its "
+"status in the Shopee affiliate panel."
+msgstr ""
+"Esta conta de afiliado não tem acesso à Open API da Shopee. Verifique a "
+"situação dela no painel de afiliados da Shopee."
+
+#: apps/radar/services.py:521
+msgid "Shopee could not answer right now. Try again in a moment."
+msgstr "A Shopee não conseguiu responder agora. Tente novamente em instantes."
+
+#: apps/radar/services.py:543
+#, python-format
+msgid "🛒 %(count)s sold"
+msgstr "🛒 %(count)s vendidos"
+
+#: apps/radar/services.py:556
+msgid "🔥 SHOPEE DEAL!"
+msgstr "🔥 OFERTA SHOPEE!"
+
+#: apps/radar/services.py:557
+#, python-format
+msgid "💰 For %(price)s"
+msgstr "💰 Por %(price)s"
+
+#: apps/radar/services.py:558
+#, python-format
+msgid "🛍️ Check it out: %(link)s"
+msgstr "🛍️ Confira: %(link)s"
+
+#: apps/radar/services.py:559
+msgid "⚠️ Price and availability may change."
+msgstr "⚠️ Preço e disponibilidade podem mudar."
+
+#: apps/radar/services.py:562
+msgid "🚨 LOOK AT THIS DEAL!"
+msgstr "🚨 OLHA ESSA OFERTA!"
+
+#: apps/radar/services.py:563
+#, python-format
+msgid "🔥 Only %(price)s"
+msgstr "🔥 Por apenas %(price)s"
+
+#: apps/radar/services.py:564
+#, python-format
+msgid ""
+"Grab it while it lasts 👇\n"
+"%(link)s"
+msgstr ""
+"Aproveite enquanto durar 👇\n"
+"%(link)s"
+
+#: apps/radar/services.py:568
+#, python-format
+msgid ""
+"On Shopee 👇\n"
+"%(link)s"
+msgstr ""
+"Na Shopee 👇\n"
+"%(link)s"
+
+#: apps/radar/sources.py:33
+msgid "Products with commission to share"
+msgstr "Produtos com comissão para divulgar"
+
+#: apps/radar/views.py:69
+msgid ""
+"Shopee refused this App ID and Secret. Copy them again from the affiliate "
+"panel."
+msgstr ""
+"A Shopee recusou este App ID e Secret. Copie-os de novo no painel de "
+"afiliados."
+
+#: apps/radar/views.py:74
+msgid "Shopee Affiliates connected."
+msgstr "Shopee Afiliados conectada."
+
+#: apps/radar/views.py:93
+#, python-format
+msgid "%(source)s disconnected."
+msgstr "%(source)s desconectada."
+
+#: apps/radar/views.py:108 apps/radar/views.py:156
+msgid "Connect Shopee Affiliates to see offers."
+msgstr "Conecte a Shopee Afiliados para ver as ofertas."
+
+#: apps/radar/views.py:228
+#, python-format
+msgid "From the Shopee offer “%(name)s”"
+msgstr "Da oferta da Shopee “%(name)s”"
+
+#: apps/radar/views.py:234 apps/tasks/views.py:441
+#, python-format
+msgid "Arts: %(title)s"
+msgstr "Artes: %(title)s"
+
+#: apps/radar/views.py:252 apps/tasks/views.py:406
+msgid "Give the request a title."
+msgstr "Dê um título à solicitação."
+
+#: apps/radar/views.py:254 apps/tasks/views.py:408
+msgid "Choose at least one format."
+msgstr "Escolha pelo menos um formato."
+
+#: apps/radar/views.py:274
+msgid "Task created with the product image and a draft post."
+msgstr "Tarefa criada com a imagem do produto e um rascunho de publicação."
+
+#: apps/radar/views.py:334
+msgid "This offer is no longer loaded"
+msgstr "Esta oferta não está mais carregada"
+
+#: apps/radar/views.py:335
+msgid "Reload the offers and try again."
+msgstr "Recarregue as ofertas e tente de novo."
+
+#: apps/radar/views.py:346
+msgid "Media storage is full"
+msgstr "O armazenamento de mídia está cheio"
+
+#: apps/radar/views.py:346
+msgid "Free up space in the media library to copy the product image."
+msgstr "Libere espaço na galeria para copiar a imagem do produto."
+
+#: apps/radar/views.py:349 apps/radar/views.py:350
+msgid "Could not copy the product image"
+msgstr "Não foi possível copiar a imagem do produto"
+
+#: apps/radar/views.py:350
+msgid "Shopee sent an image the media library does not accept."
+msgstr "A Shopee enviou uma imagem que a galeria não aceita."
+
 #: apps/social_accounts/models.py:28
 msgid "Not checked"
 msgstr "Não verificado"
@@ -1741,12 +2176,6 @@ msgstr "Requer atenção do operador"
 msgid "Temporary failure"
 msgstr "Falha temporária"
 
-#: apps/social_accounts/models.py:36
-#: templates/onboarding/connection_page.html:123
-#: templates/social_accounts/partials/_status_badge.html:9
-msgid "Connected"
-msgstr "Conectada"
-
 #: apps/social_accounts/models.py:37
 #: templates/social_accounts/partials/_status_badge.html:14
 msgid "Token Expiring"
@@ -1756,11 +2185,6 @@ msgstr "Token expirando"
 #: templates/social_accounts/partials/_status_badge.html:19
 msgid "Disconnected"
 msgstr "Desconectada"
-
-#: apps/social_accounts/models.py:39
-#: templates/social_accounts/partials/_status_badge.html:24
-msgid "Error"
-msgstr "Erro"
 
 #: apps/social_accounts/models.py:504
 #, python-format
@@ -1777,11 +2201,11 @@ msgstr "%(platform)s Reels"
 msgid "%(platform)s photo"
 msgstr "%(platform)s · Foto"
 
-#: apps/social_accounts/views.py:241
+#: apps/social_accounts/views.py:261
 msgid "This platform is not available."
 msgstr "Esta plataforma não está disponível."
 
-#: apps/social_accounts/views.py:247
+#: apps/social_accounts/views.py:267
 #, python-format
 msgid ""
 "Platform credentials for %(platform)s are not configured. Please contact "
@@ -1790,28 +2214,28 @@ msgstr ""
 "As credenciais da plataforma %(platform)s não estão configuradas. Fale com o "
 "administrador."
 
-#: apps/social_accounts/views.py:303
+#: apps/social_accounts/views.py:323
 #, python-format
 msgid "OAuth error: %(error)s"
 msgstr "Erro de OAuth: %(error)s"
 
-#: apps/social_accounts/views.py:314
+#: apps/social_accounts/views.py:334
 msgid "Missing authorization code or state parameter."
 msgstr "Código de autorização ou parâmetro de estado ausente."
 
-#: apps/social_accounts/views.py:321
+#: apps/social_accounts/views.py:341
 msgid "Invalid or expired OAuth state. Please try again."
 msgstr "Estado de OAuth inválido ou expirado. Tente novamente."
 
-#: apps/social_accounts/views.py:327
+#: apps/social_accounts/views.py:347
 msgid "OAuth session mismatch. Please try again."
 msgstr "A sessão de OAuth não confere. Tente novamente."
 
-#: apps/social_accounts/views.py:332
+#: apps/social_accounts/views.py:352
 msgid "Platform mismatch in OAuth callback."
 msgstr "A plataforma não confere no retorno do OAuth."
 
-#: apps/social_accounts/views.py:409
+#: apps/social_accounts/views.py:429
 msgid ""
 "No LinkedIn Company Pages were found for your account. Only Company Pages "
 "you administer can be connected — personal profiles connect via the LinkedIn "
@@ -1825,7 +2249,7 @@ msgstr ""
 "proprietário dela para conceder acesso de Admin em LinkedIn → Admin tools → "
 "Manage admins e conecte novamente."
 
-#: apps/social_accounts/views.py:418
+#: apps/social_accounts/views.py:438
 msgid ""
 "No Google Business locations were found for your account. Only verified "
 "locations can be connected. If you expected to see one, check that it is "
@@ -1837,7 +2261,7 @@ msgstr ""
 "confirme que ela está verificada e que esta conta do Google tem acesso a ela "
 "em Google Business Profile → Businesses e conecte novamente."
 
-#: apps/social_accounts/views.py:427
+#: apps/social_accounts/views.py:447
 msgid ""
 "No Instagram Business accounts were found for your account. Only Instagram "
 "Business or Creator accounts linked to a Facebook Page can be connected "
@@ -1849,7 +2273,7 @@ msgstr ""
 "uma página do Facebook. Se você esperava ver uma conta, confirme que ela "
 "está vinculada a uma página que você administra e conecte novamente."
 
-#: apps/social_accounts/views.py:434
+#: apps/social_accounts/views.py:454
 msgid ""
 "No Facebook Pages were found for your account. Only Pages can be connected — "
 "personal profiles are not supported by the Facebook API. If you expected to "
@@ -1862,24 +2286,24 @@ msgstr ""
 "remover o app em Configurações do Facebook → Integrações comerciais, depois "
 "conecte novamente."
 
-#: apps/social_accounts/views.py:456
+#: apps/social_accounts/views.py:476
 #, python-format
 msgid "Connected %(name)s successfully."
 msgstr "%(name)s conectada com sucesso."
 
-#: apps/social_accounts/views.py:476
+#: apps/social_accounts/views.py:496
 msgid "Failed to connect account. Please try again."
 msgstr "Não foi possível conectar a conta. Tente novamente."
 
-#: apps/social_accounts/views.py:492
+#: apps/social_accounts/views.py:512
 msgid "No accounts to select. Please start over."
 msgstr "Nenhuma conta para selecionar. Comece de novo."
 
-#: apps/social_accounts/views.py:519
+#: apps/social_accounts/views.py:539
 msgid "Please select at least one account."
 msgstr "Selecione ao menos uma conta."
 
-#: apps/social_accounts/views.py:537
+#: apps/social_accounts/views.py:557
 #, python-format
 msgid ""
 "Could not connect %(name)s: your Facebook access cannot create content for "
@@ -1888,7 +2312,7 @@ msgstr ""
 "Não foi possível conectar %(name)s: seu acesso no Facebook não permite criar "
 "conteúdo para esta página."
 
-#: apps/social_accounts/views.py:545
+#: apps/social_accounts/views.py:565
 #, python-format
 msgid ""
 "Could not connect %(name)s: the platform did not provide an account token."
@@ -1896,86 +2320,86 @@ msgstr ""
 "Não foi possível conectar %(name)s: a plataforma não forneceu um token de "
 "conta."
 
-#: apps/social_accounts/views.py:582
+#: apps/social_accounts/views.py:602
 #, python-format
 msgid "Could not connect %(name)s: %(reason)s"
 msgstr "Não foi possível conectar %(name)s: %(reason)s"
 
-#: apps/social_accounts/views.py:591
+#: apps/social_accounts/views.py:611
 #, python-format
 msgid "Connected: %(names)s"
 msgstr "Conectadas: %(names)s"
 
-#: apps/social_accounts/views.py:616
+#: apps/social_accounts/views.py:636
 msgid "Handle and app password are required."
 msgstr "Usuário e senha de app são obrigatórios."
 
-#: apps/social_accounts/views.py:637
+#: apps/social_accounts/views.py:657
 #, python-format
 msgid "Connected %(name)s on Bluesky."
 msgstr "%(name)s conectada no Bluesky."
 
-#: apps/social_accounts/views.py:652
+#: apps/social_accounts/views.py:672
 msgid "Failed to connect Bluesky account. Check your handle and app password."
 msgstr ""
 "Não foi possível conectar a conta do Bluesky. Confira o usuário e a senha de "
 "app."
 
-#: apps/social_accounts/views.py:681
+#: apps/social_accounts/views.py:701
 msgid "A DEV.to API key is required."
 msgstr "A chave de API do DEV.to é obrigatória."
 
-#: apps/social_accounts/views.py:697
+#: apps/social_accounts/views.py:717
 #, python-format
 msgid "Connected %(name)s on DEV.to."
 msgstr "%(name)s conectada no DEV.to."
 
-#: apps/social_accounts/views.py:703
+#: apps/social_accounts/views.py:723
 msgid "Failed to connect DEV.to account. Check your API key."
 msgstr "Não foi possível conectar a conta do DEV.to. Confira sua chave de API."
 
-#: apps/social_accounts/views.py:728
+#: apps/social_accounts/views.py:748
 msgid "Instance URL is required."
 msgstr "A URL da instância é obrigatória."
 
-#: apps/social_accounts/views.py:737
+#: apps/social_accounts/views.py:757
 msgid "Invalid instance URL. Private or reserved addresses are not allowed."
 msgstr ""
 "URL de instância inválida. Endereços privados ou reservados não são "
 "permitidos."
 
-#: apps/social_accounts/views.py:770
+#: apps/social_accounts/views.py:790
 #, python-format
 msgid "Failed to register with %(url)s. Check the URL."
 msgstr "Não foi possível registrar em %(url)s. Confira a URL."
 
-#: apps/social_accounts/views.py:874
+#: apps/social_accounts/views.py:894
 #, python-format
 msgid "Reconnect %(label)s first — its connection isn't healthy."
 msgstr "Reconecte %(label)s primeiro — a conexão não está saudável."
 
-#: apps/social_accounts/views.py:890
+#: apps/social_accounts/views.py:910
 #, python-format
 msgid "Real-time updates are back on for %(label)s."
 msgstr "As atualizações em tempo real voltaram a funcionar para %(label)s."
 
-#: apps/social_accounts/views.py:892
+#: apps/social_accounts/views.py:912
 msgid "Couldn't set up real-time updates. Please try again."
 msgstr ""
 "Não foi possível ativar as atualizações em tempo real. Tente novamente."
 
-#: apps/social_accounts/views.py:921
+#: apps/social_accounts/views.py:941
 #, python-format
 msgid "Disconnected %(name)s. YouTube data was deleted immediately."
 msgstr ""
 "%(name)s desconectada. Os dados do YouTube foram excluídos imediatamente."
 
-#: apps/social_accounts/views.py:968
+#: apps/social_accounts/views.py:988
 #, python-format
 msgid "Disconnected %(name)s."
 msgstr "%(name)s desconectada."
 
-#: apps/social_accounts/views.py:1129
+#: apps/social_accounts/views.py:1160
 #, python-format
 msgid ""
 "This workspace already has a %(platform)s account. Disconnect it before "
@@ -2063,105 +2487,92 @@ msgstr "Média"
 msgid "High"
 msgstr "Alta"
 
-#: apps/tasks/services.py:28
+#: apps/tasks/services.py:30
 msgid "To do"
 msgstr "A fazer"
 
-#: apps/tasks/services.py:29
+#: apps/tasks/services.py:31
 msgid "In progress"
 msgstr "Em produção"
 
-#: apps/tasks/services.py:30
+#: apps/tasks/services.py:32
 msgid "In review"
 msgstr "Em revisão"
 
-#: apps/tasks/services.py:218
+#: apps/tasks/services.py:248
 #, python-format
 msgid "New task: %(title)s"
 msgstr "Nova tarefa: %(title)s"
 
-#: apps/tasks/services.py:219
+#: apps/tasks/services.py:249
 #, python-format
 msgid "%(who)s made you responsible for this task."
 msgstr "%(who)s colocou você como responsável por esta tarefa."
 
-#: apps/tasks/services.py:232
+#: apps/tasks/services.py:262
 #, python-format
 msgid "Arts ready for review: %(title)s"
 msgstr "Artes prontas para revisão: %(title)s"
 
-#: apps/tasks/services.py:233
+#: apps/tasks/services.py:263
 msgid "Every art on the checklist was delivered."
 msgstr "Todas as artes da checklist foram entregues."
 
-#: apps/tasks/services.py:259
+#: apps/tasks/services.py:289
 #, python-format
 msgid "Due tomorrow: %(title)s"
 msgstr "Prazo amanhã: %(title)s"
 
-#: apps/tasks/views.py:103
+#: apps/tasks/views.py:124
 msgid "The task could not be moved. Try again."
 msgstr "Não foi possível mover a tarefa. Tente novamente."
 
-#: apps/tasks/views.py:158
+#: apps/tasks/views.py:179
 msgid "Give the task a title."
 msgstr "Dê um título à tarefa."
 
-#: apps/tasks/views.py:239
+#: apps/tasks/views.py:262
 msgid "Task deleted."
 msgstr "Tarefa excluída."
 
-#: apps/tasks/views.py:303
+#: apps/tasks/views.py:326
 msgid "Give the column a name."
 msgstr "Dê um nome à coluna."
 
-#: apps/tasks/views.py:330
+#: apps/tasks/views.py:353
 msgid "Move the tasks out of this column before deleting it."
 msgstr "Mova as tarefas desta coluna antes de excluí-la."
 
-#: apps/tasks/views.py:332
+#: apps/tasks/views.py:355
 msgid "The board needs at least one column."
 msgstr "O quadro precisa de pelo menos uma coluna."
 
-#: apps/tasks/views.py:385
-msgid "Give the request a title."
-msgstr "Dê um título à solicitação."
-
-#: apps/tasks/views.py:387
-msgid "Choose at least one format."
-msgstr "Escolha pelo menos um formato."
-
-#: apps/tasks/views.py:420
-#, python-format
-msgid "Arts: %(title)s"
-msgstr "Artes: %(title)s"
-
-#: apps/tasks/views.py:468
+#: apps/tasks/views.py:525
 msgid "Art request settings saved."
 msgstr "Configurações de artes salvas."
 
-#: apps/tasks/views.py:492
+#: apps/tasks/views.py:549
 msgid "Choose the file of the art."
 msgstr "Escolha o arquivo da arte."
 
-#: apps/tasks/views.py:497 apps/tasks/views.py:501 apps/tasks/views.py:505
+#: apps/tasks/views.py:554 apps/tasks/views.py:558 apps/tasks/views.py:562
 msgid "The art was not uploaded."
 msgstr "A arte não foi enviada."
 
-#: apps/tasks/views.py:524
+#: apps/tasks/views.py:581
 msgid "The art's proportions don't match the format"
 msgstr "A proporção da arte não bate com o formato"
 
-#: apps/tasks/views.py:525
+#: apps/tasks/views.py:582
 #, python-format
 msgid "Expected %(w)s × %(h)s, received %(rw)s × %(rh)s."
 msgstr "Esperado %(w)s × %(h)s, recebido %(rw)s × %(rh)s."
 
-#: apps/tasks/views.py:544
+#: apps/tasks/views.py:601
 msgid "There is no delivered art to publish."
 msgstr "Não há arte entregue para publicar."
 
-#: apps/tasks/views.py:545
+#: apps/tasks/views.py:602
 msgid ""
 "Deliver a publishable format for an account connected to this workspace."
 msgstr ""
@@ -2210,11 +2621,11 @@ msgstr "Modo de fluxo de aprovação inválido."
 msgid "Approval workflow updated."
 msgstr "Fluxo de aprovação atualizado."
 
-#: config/settings/base.py:237
+#: config/settings/base.py:238
 msgid "Português (Brasil)"
 msgstr "Português (Brasil)"
 
-#: config/settings/base.py:238
+#: config/settings/base.py:239
 msgid "English (US)"
 msgstr "Inglês (EUA)"
 
@@ -2417,8 +2828,8 @@ msgstr "Entrar com %(provider)s"
 
 #: templates/account/login.html:65 templates/account/signup.html:65
 #: templates/allauth/elements/hr.html:2
-#: templates/composer/create_landing.html:719
-#: templates/composer/create_landing.html:924
+#: templates/composer/create_landing.html:634
+#: templates/composer/create_landing.html:839
 #: templates/members/accept_invite.html:132
 msgid "or"
 msgstr "ou"
@@ -2449,7 +2860,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/approvals/partials/_approval_row.html:148
 #: templates/automations/flow_builder.html:903
 #: templates/automations/flow_new.html:153 templates/automations/form.html:392
-#: templates/base.html:650 templates/base.html:674 templates/base.html:1552
+#: templates/base.html:650 templates/base.html:674 templates/base.html:1558
 #: templates/calendar/calendar.html:471
 #: templates/calendar/partials/_delete_post_modal.html:42
 #: templates/calendar/partials/event_form.html:86
@@ -2461,9 +2872,9 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/composer/compose.html:1859 templates/composer/compose.html:2270
 #: templates/composer/compose.html:2435 templates/composer/compose.html:2511
 #: templates/composer/compose.html:2586
-#: templates/composer/create_landing.html:504
-#: templates/composer/create_landing.html:999
-#: templates/composer/create_landing.html:1035
+#: templates/composer/create_landing.html:419
+#: templates/composer/create_landing.html:914
+#: templates/composer/create_landing.html:950
 #: templates/composer/partials/feeds_tab.html:105
 #: templates/composer/partials/feeds_tab.html:196
 #: templates/composer/partials/kanban_board.html:21
@@ -2481,11 +2892,13 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/onboarding/connection_page.html:261
 #: templates/organizations/settings.html:136
 #: templates/organizations/settings.html:212
+#: templates/radar/partials/_shopee_connect_form.html:48
+#: templates/radar/partials/_shopee_connect_form.html:50
 #: templates/social_accounts/account_select.html:87
 #: templates/social_accounts/bluesky_connect.html:50
 #: templates/social_accounts/devto_connect.html:43
 #: templates/social_accounts/mastodon_connect.html:48
-#: templates/social_accounts/partials/_account_card.html:84
+#: templates/social_accounts/partials/_disconnect_confirm.html:47
 #: templates/social_accounts/partials/_posting_slots_grid.html:87
 #: templates/social_accounts/partials/_posting_slots_grid.html:121
 #: templates/tasks/partials/_board.html:21
@@ -2540,7 +2953,8 @@ msgid "Didn't receive the email?"
 msgstr "Não recebeu o e-mail?"
 
 #: templates/account/password_reset_done.html:35
-#: templates/social_accounts/partials/_account_card.html:183
+#: templates/analytics/_shopee_page.html:16
+#: templates/social_accounts/partials/_account_card.html:137
 msgid "Try again"
 msgstr "Tentar novamente"
 
@@ -2705,7 +3119,7 @@ msgstr ""
 "Crie um workspace para começar a agendar publicações, gerenciar conteúdo e "
 "colaborar com sua equipe."
 
-#: templates/accounts/dashboard.html:55 templates/base.html:1547
+#: templates/accounts/dashboard.html:55 templates/base.html:1553
 #: templates/workspaces/list.html:65
 msgid "Workspace name"
 msgstr "Nome do workspace"
@@ -2876,6 +3290,7 @@ msgid "Engagement rate"
 msgstr "Taxa de engajamento"
 
 #: templates/analytics/_engagement_card.html:7
+#: templates/analytics/_shopee_status_card.html:8
 msgid "Calculated by BrightBean"
 msgstr "Calculado pela BrightBean"
 
@@ -2894,6 +3309,7 @@ msgstr "Estimado pela BrightBean"
 
 #: templates/analytics/_hero_chart.html:6
 #: templates/analytics/_post_table.html:9
+#: templates/analytics/_shopee_orders.html:7
 #, python-format
 msgid "last %(days)s days"
 msgstr "últimos %(days)s dias"
@@ -2979,9 +3395,11 @@ msgstr ""
 "A plataforma recusou nossa chamada de análises por falta de permissão. "
 "Reconecte para conceder as novas permissões."
 
-#: templates/analytics/_page.html:16 templates/base.html:809
+#: templates/analytics/_page.html:16 templates/base.html:815
+#: templates/radar/partials/_source_card.html:58
+#: templates/social_accounts/connect.html:102
 #: templates/social_accounts/partials/_account_card.html:44
-#: templates/social_accounts/partials/_account_card.html:160
+#: templates/social_accounts/partials/_account_card.html:114
 msgid "Reconnect"
 msgstr "Reconectar"
 
@@ -2991,7 +3409,8 @@ msgstr "Todas as publicações"
 
 #: templates/analytics/_page_header.html:6 templates/analytics/index.html:4
 #: templates/analytics/no_accounts.html:4
-#: templates/analytics/no_accounts.html:10 templates/base.html:739
+#: templates/analytics/no_accounts.html:10 templates/analytics/shopee.html:4
+#: templates/base.html:745
 msgid "Analytics"
 msgstr "Análises"
 
@@ -3000,43 +3419,54 @@ msgstr "Análises"
 msgid "Performance across your connected channels."
 msgstr "Desempenho dos seus canais conectados."
 
-#: templates/analytics/_page_header.html:35
+#: templates/analytics/_page_header.html:21
+#: templates/analytics/_page_header.html:84
+#: templates/radar/partials/_source_card.html:31 templates/radar/shopee.html:45
+#, python-format
+msgid "App ID %(label)s"
+msgstr "App ID %(label)s"
+
+#: templates/analytics/_page_header.html:43
 #: templates/api_keys/_key_row.html:138
 #: templates/api_keys/_workspace_options.html:11
 msgid "Connected accounts"
 msgstr "Contas conectadas"
 
-#: templates/analytics/_page_header.html:51
+#: templates/analytics/_page_header.html:59
 #: templates/intelligence/_benchmark_channel_result.html:11
 #: templates/social_accounts/account_select.html:74
 #: templates/social_accounts/partials/_account_card.html:33
 msgid "subscribers"
 msgstr "inscritos"
 
-#: templates/analytics/_page_header.html:51
+#: templates/analytics/_page_header.html:59
 #: templates/social_accounts/account_select.html:74
 #: templates/social_accounts/partials/_account_card.html:33
 msgid "followers"
 msgstr "seguidores"
 
-#: templates/analytics/_page_header.html:61
+#: templates/analytics/_page_header.html:69
 msgid "No data"
 msgstr "Sem dados"
 
-#: templates/analytics/_page_header.html:75
+#: templates/analytics/_page_header.html:77
+msgid "Affiliate sales"
+msgstr "Vendas de afiliado"
+
+#: templates/analytics/_page_header.html:99
 #: templates/composer/compose.html:2654
 msgid "Followers"
 msgstr "Seguidores"
 
-#: templates/analytics/_page_header.html:83
+#: templates/analytics/_page_header.html:107
 msgid "New subscribers"
 msgstr "Novos inscritos"
 
-#: templates/analytics/_page_header.html:83
+#: templates/analytics/_page_header.html:107
 msgid "New followers"
 msgstr "Novos seguidores"
 
-#: templates/analytics/_page_header.html:86
+#: templates/analytics/_page_header.html:110
 msgid "Calculated by BrightBean from the change in follower totals"
 msgstr "Calculado pelo BrightBean a partir da variação no total de seguidores"
 
@@ -3078,6 +3508,7 @@ msgid "All time"
 msgstr "Todo o período"
 
 #: templates/analytics/_post_table.html:58
+#: templates/analytics/_shopee_orders.html:25
 #: templates/calendar/partials/list_view.html:13
 #: templates/composer/compose.html:2000
 msgid "Date"
@@ -3088,14 +3519,144 @@ msgid "No posts match these filters."
 msgstr "Nenhuma publicação corresponde a estes filtros."
 
 #: templates/analytics/_post_table.html:109
+#: templates/analytics/_shopee_orders.html:62
 #, python-format
 msgid "%(page_from)s–%(page_to)s of %(total)s"
 msgstr "%(page_from)s–%(page_to)s de %(total)s"
 
 #: templates/analytics/_post_table.html:121
+#: templates/analytics/_shopee_orders.html:73
 #, python-format
 msgid "Page %(page)s of %(total_pages)s"
 msgstr "Página %(page)s de %(total_pages)s"
+
+#: templates/analytics/_shopee_orders.html:6
+msgid "order"
+msgid_plural "orders"
+msgstr[0] "pedido"
+msgstr[1] "pedidos"
+
+#: templates/analytics/_shopee_orders.html:24
+#: templates/composer/compose.html:1456 templates/layouts/admin_shell.html:86
+msgid "Product"
+msgstr "Produto"
+
+#: templates/analytics/_shopee_orders.html:26
+msgid "Source"
+msgstr "Origem"
+
+#: templates/analytics/_shopee_orders.html:27
+#: templates/automations/staff_template_list.html:73
+#: templates/billing/staff_console.html:69
+#: templates/billing/staff_subscriptions.html:149
+#: templates/billing/staff_subscriptions.html:172
+#: templates/billing/workspace_billing.html:53
+#: templates/calendar/partials/list_view.html:12
+#: templates/calendar/partials/publish_sent.html:15
+#: templates/intelligence/billing_settings.html:38
+#: templates/notifications/history.html:65
+msgid "Status"
+msgstr "Status"
+
+#: templates/analytics/_shopee_orders.html:28
+msgid "Order value"
+msgstr "Valor do pedido"
+
+#: templates/analytics/_shopee_orders.html:40
+#, python-format
+msgid "+%(counter)s item"
+msgid_plural "+%(counter)s items"
+msgstr[0] "+%(counter)s item"
+msgstr[1] "+%(counter)s itens"
+
+#: templates/analytics/_shopee_orders.html:52
+msgid "No orders match these filters."
+msgstr "Nenhum pedido corresponde a estes filtros."
+
+#: templates/analytics/_shopee_orders.html:68
+msgid "Previous page"
+msgstr "Página anterior"
+
+#: templates/analytics/_shopee_orders.html:77
+msgid "Next page"
+msgstr "Próxima página"
+
+#: templates/analytics/_shopee_page.html:13
+msgid "Shopee did not send the report"
+msgstr "A Shopee não enviou o relatório"
+
+#: templates/analytics/_shopee_page.html:24
+msgid "No sales through your links yet"
+msgstr "Ainda não há vendas pelos seus links"
+
+#: templates/analytics/_shopee_page.html:26
+#, python-format
+msgid ""
+"Shopee reports the orders of the last %(max_days)s days. When someone buys "
+"through one of your affiliate links, the order and its commission show up "
+"here."
+msgstr ""
+"A Shopee informa os pedidos dos últimos %(max_days)s dias. Quando alguém "
+"comprar por um dos seus links de afiliado, o pedido e a comissão aparecem "
+"aqui."
+
+#: templates/analytics/_shopee_page.html:28
+msgid "Find offers to share"
+msgstr "Encontrar ofertas para divulgar"
+
+#: templates/analytics/_shopee_page.html:42
+msgid ""
+"Commission, orders and sales include pending orders and leave out cancelled "
+"ones; Shopee confirms the commission when the order is completed."
+msgstr ""
+"Comissão, pedidos e vendas incluem os pedidos pendentes e deixam de fora os "
+"cancelados; a Shopee confirma a comissão quando o pedido é concluído."
+
+#: templates/analytics/_shopee_page.html:43
+#, python-format
+msgid ""
+"Shopee only reports the last %(max_days)s days, so this range has no "
+"previous period to compare."
+msgstr ""
+"A Shopee só informa os últimos %(max_days)s dias, então este intervalo não "
+"tem período anterior para comparar."
+
+#: templates/analytics/_shopee_page.html:44
+msgid ""
+"Shopee sent more orders than this page reads at once; the oldest ones are "
+"missing."
+msgstr ""
+"A Shopee enviou mais pedidos do que esta página lê de uma vez; os mais "
+"antigos ficaram de fora."
+
+#: templates/analytics/_shopee_page.html:55
+msgid "Top products"
+msgstr "Produtos que mais renderam"
+
+#: templates/analytics/_shopee_page.html:63
+#: templates/analytics/_shopee_page.html:82
+#, python-format
+msgid "%(counter)s order"
+msgid_plural "%(counter)s orders"
+msgstr[0] "%(counter)s pedido"
+msgstr[1] "%(counter)s pedidos"
+
+#: templates/analytics/_shopee_page.html:68
+#: templates/analytics/_shopee_page.html:89
+msgid "No sales in this period."
+msgstr "Nenhuma venda neste período."
+
+#: templates/analytics/_shopee_page.html:75
+msgid "Where sales came from"
+msgstr "De onde vieram as vendas"
+
+#: templates/analytics/_shopee_status_card.html:7
+msgid "Commission per order"
+msgstr "Comissão por pedido"
+
+#: templates/analytics/_shopee_status_card.html:12
+msgid "Commission divided by orders, cancelled orders left out."
+msgstr "Comissão dividida pelos pedidos, sem contar os cancelados."
 
 #: templates/analytics/_stat_card.html:9
 #, python-format
@@ -3126,7 +3687,7 @@ msgstr ""
 "desempenho de cada publicação — e, se você já conectou alguma antes, confira "
 "a página Canais: uma conta que precisa ser reconectada não aparece aqui."
 
-#: templates/analytics/no_accounts.html:24 templates/base.html:768
+#: templates/analytics/no_accounts.html:24 templates/base.html:774
 msgid "Connect a channel"
 msgstr "Conectar um canal"
 
@@ -3421,14 +3982,6 @@ msgid "(no caption)"
 msgstr "(sem legenda)"
 
 #: templates/approvals/partials/_approval_row.html:47
-#: templates/approvals/partials/_approval_row.html:77
-#: templates/approvals/version_diff.html:49
-#: templates/automations/partials/_test_result.html:60
-#: templates/client_portal/_client_card.html:43
-msgid "Unknown"
-msgstr "Desconhecido"
-
-#: templates/approvals/partials/_approval_row.html:47
 #: templates/approvals/version_diff.html:49
 #: templates/client_portal/_client_card.html:43
 #: templates/composer/drafts_list.html:37
@@ -3605,12 +4158,12 @@ msgstr "Nenhum histórico de versões disponível"
 
 #: templates/automations/flow_builder.html:4
 #: templates/automations/flow_builder.html:258
-#: templates/composer/create_landing.html:431
+#: templates/composer/create_landing.html:346
 msgid "Templates"
 msgstr "Modelos"
 
 #: templates/automations/flow_builder.html:4
-#: templates/automations/staff_template_list.html:25 templates/base.html:977
+#: templates/automations/staff_template_list.html:25 templates/base.html:983
 #: templates/billing/staff_console.html:40
 #: templates/billing/staff_impersonations.html:19
 #: templates/billing/staff_plans.html:25
@@ -3660,7 +4213,7 @@ msgstr "Detalhes do modelo"
 msgid "Automation settings"
 msgstr "Configurações da automação"
 
-#: templates/automations/flow_builder.html:204 templates/base.html:941
+#: templates/automations/flow_builder.html:204 templates/base.html:947
 #: templates/composer/partials/_media_thumb_actions.html:10
 #: templates/layouts/settings.html:10
 #: templates/organizations/partials/workspace_card.html:35
@@ -3700,7 +4253,7 @@ msgstr "Salvando…"
 #: templates/composer/categories.html:44 templates/composer/categories.html:90
 #: templates/members/partials/member_row.html:74
 #: templates/social_accounts/partials/_posting_slots_grid.html:82
-#: templates/tasks/board.html:46
+#: templates/tasks/board.html:50
 msgid "Save"
 msgstr "Salvar"
 
@@ -3744,8 +4297,8 @@ msgstr ""
 #: templates/calendar/partials/_delete_post_modal.html:59
 #: templates/calendar/partials/_post_actions_menu.html:35
 #: templates/composer/compose.html:1896 templates/composer/compose.html:2669
-#: templates/composer/create_landing.html:935
-#: templates/composer/create_landing.html:1015
+#: templates/composer/create_landing.html:850
+#: templates/composer/create_landing.html:930
 #: templates/composer/partials/_media_thumb_actions.html:24
 #: templates/inbox/saved_replies.html:51
 #: templates/media_library/_asset_detail_panel.html:74
@@ -3753,6 +4306,7 @@ msgstr ""
 #: templates/media_library/_folder_tree.html:87
 #: templates/media_library/_folder_tree.html:99
 #: templates/media_library/_shared_asset_card.html:79
+#: templates/tasks/partials/_task_modal.html:146
 msgid "Delete"
 msgstr "Excluir"
 
@@ -3989,8 +4543,7 @@ msgid "Someone who comments five times still hears from you once."
 msgstr "Quem comentar cinco vezes recebe resposta uma vez só."
 
 #: templates/automations/flow_builder.html:891
-#: templates/automations/form.html:358 templates/tasks/board.html:21
-#: templates/tasks/partials/_task_modal.html:89
+#: templates/automations/form.html:358 templates/tasks/board.html:22
 msgid "Priority"
 msgstr "Prioridade"
 
@@ -4009,7 +4562,7 @@ msgstr "Buscar imagens…"
 
 #: templates/automations/flow_builder.html:956
 #: templates/composer/compose.html:2648
-#: templates/tasks/partials/_task_modal.html:179
+#: templates/tasks/partials/_task_modal.html:208
 msgid "Uploading…"
 msgstr "Enviando…"
 
@@ -4024,6 +4577,7 @@ msgstr "Enviar"
 #: templates/automations/flow_builder.html:1050
 #: templates/calendar/partials/publish_approvals.html:110
 #: templates/calendar/partials/publish_calendar_shell.html:132
+#: templates/radar/partials/_source_card.html:89
 msgid "Loading…"
 msgstr "Carregando…"
 
@@ -4062,7 +4616,6 @@ msgid "steps"
 msgstr "etapas"
 
 #: templates/automations/flow_builder.html:1140
-#: templates/tasks/partials/_task_modal.html:28
 msgid "Description"
 msgstr "Descrição"
 
@@ -4233,6 +4786,7 @@ msgid "Connect a Facebook or Instagram account to automate replies."
 msgstr "Conecte uma conta do Facebook ou Instagram para automatizar respostas."
 
 #: templates/automations/flow_new.html:153 templates/inbox/feed.html:205
+#: templates/radar/shopee_connect.html:9
 #: templates/social_accounts/bluesky_connect.html:10
 #: templates/social_accounts/devto_connect.html:10
 #: templates/social_accounts/mastodon_connect.html:10
@@ -4507,7 +5061,7 @@ msgid "Create rule"
 msgstr "Criar regra"
 
 #: templates/automations/list.html:4 templates/automations/list.html:23
-#: templates/base.html:726
+#: templates/base.html:732
 msgid "Automations"
 msgstr "Automações"
 
@@ -4873,18 +5427,6 @@ msgstr[1] "%(counter)s modelos estão visíveis para os clientes."
 msgid "Template"
 msgstr "Modelo"
 
-#: templates/automations/staff_template_list.html:73
-#: templates/billing/staff_console.html:69
-#: templates/billing/staff_subscriptions.html:149
-#: templates/billing/staff_subscriptions.html:172
-#: templates/billing/workspace_billing.html:53
-#: templates/calendar/partials/list_view.html:12
-#: templates/calendar/partials/publish_sent.html:15
-#: templates/intelligence/billing_settings.html:38
-#: templates/notifications/history.html:65
-msgid "Status"
-msgstr "Status"
-
 #: templates/automations/staff_template_list.html:74
 msgid "Position"
 msgstr "Posição"
@@ -4928,15 +5470,15 @@ msgstr "Selecionar data…"
 msgid "Select time…"
 msgstr "Selecionar horário…"
 
-#: templates/base.html:260 templates/composer/create_landing.html:1124
+#: templates/base.html:260 templates/composer/create_landing.html:1039
 msgid "Security token missing. Please reload the page."
 msgstr "Token de segurança ausente. Recarregue a página."
 
-#: templates/base.html:261 templates/composer/create_landing.html:1128
+#: templates/base.html:261 templates/composer/create_landing.html:1043
 msgid "Could not save the idea. Please try again."
 msgstr "Não foi possível salvar a ideia. Tente novamente."
 
-#: templates/base.html:263 templates/composer/create_landing.html:1137
+#: templates/base.html:263 templates/composer/create_landing.html:1052
 msgid "One of the files failed to upload. Please try again."
 msgstr "Falha ao enviar um dos arquivos. Tente novamente."
 
@@ -4944,7 +5486,7 @@ msgstr "Falha ao enviar um dos arquivos. Tente novamente."
 msgid "No workspaces"
 msgstr "Nenhum workspace"
 
-#: templates/base.html:400 templates/base.html:1544
+#: templates/base.html:400 templates/base.html:1550
 msgid "Create workspace"
 msgstr "Criar workspace"
 
@@ -4960,7 +5502,7 @@ msgstr "Novo"
 msgid "Publish content to a channel"
 msgstr "Publicar conteúdo em um canal"
 
-#: templates/base.html:467 templates/tasks/partials/_task_card.html:33
+#: templates/base.html:467 templates/tasks/partials/_task_card.html:43
 msgid "Idea"
 msgstr "Ideia"
 
@@ -4971,53 +5513,55 @@ msgstr "Registrar uma ideia de conteúdo"
 #: templates/base.html:481 templates/billing/staff_console.html:205
 #: templates/calendar/partials/publish_calendar_shell.html:129
 #: templates/composer/compose.html:2201 templates/composer/compose.html:2238
-#: templates/composer/create_landing.html:581
-#: templates/composer/create_landing.html:783
-#: templates/composer/create_landing.html:1056
+#: templates/composer/create_landing.html:496
+#: templates/composer/create_landing.html:698
+#: templates/composer/create_landing.html:971
 #: templates/composer/partials/_media_thumb_actions.html:26
-#: templates/tasks/partials/_request_arts_host.html:15
+#: templates/radar/partials/_share_dialog.html:18
+#: templates/radar/partials/_source_card.html:84
+#: templates/tasks/partials/_request_arts_host.html:17
 #: templates/tasks/partials/_task_modal.html:5
 msgid "Close"
 msgstr "Fechar"
 
 #: templates/base.html:496 templates/base.html:700
-#: templates/composer/create_landing.html:598
+#: templates/composer/create_landing.html:513
 msgid "Create Idea"
 msgstr "Criar ideia"
 
 #: templates/base.html:521
 #: templates/calendar/partials/publish_calendar_shell.html:90
 #: templates/composer/compose.html:1045 templates/composer/compose.html:1740
-#: templates/composer/create_landing.html:454
-#: templates/composer/create_landing.html:623
-#: templates/composer/create_landing.html:825
+#: templates/composer/create_landing.html:369
+#: templates/composer/create_landing.html:538
+#: templates/composer/create_landing.html:740
 #: templates/media_library/_asset_detail_panel.html:159
 #: templates/organizations/cross_calendar.html:201
 msgid "Tags"
 msgstr "Tags"
 
 #: templates/base.html:531 templates/composer/compose.html:1777
-#: templates/composer/create_landing.html:634
-#: templates/composer/create_landing.html:836
+#: templates/composer/create_landing.html:549
+#: templates/composer/create_landing.html:751
 msgid "Search or create tag..."
 msgstr "Buscar ou criar etiqueta..."
 
 #: templates/base.html:542 templates/composer/compose.html:1809
-#: templates/composer/create_landing.html:646
-#: templates/composer/create_landing.html:848
+#: templates/composer/create_landing.html:561
+#: templates/composer/create_landing.html:763
 msgid "No tags yet. Type to create one."
 msgstr "Nenhuma etiqueta ainda. Digite para criar uma."
 
-#: templates/base.html:549 templates/base.html:681 templates/base.html:1556
+#: templates/base.html:549 templates/base.html:681 templates/base.html:1562
 #: templates/calendar/queues.html:63 templates/composer/compose.html:481
 #: templates/composer/compose.html:1796 templates/composer/compose.html:1804
 #: templates/composer/compose.html:1866
 #: templates/composer/create_landing.html:4
-#: templates/composer/create_landing.html:409
-#: templates/composer/create_landing.html:511
-#: templates/composer/create_landing.html:654
-#: templates/composer/create_landing.html:856
-#: templates/composer/create_landing.html:1042
+#: templates/composer/create_landing.html:324
+#: templates/composer/create_landing.html:426
+#: templates/composer/create_landing.html:569
+#: templates/composer/create_landing.html:771
+#: templates/composer/create_landing.html:957
 #: templates/inbox/partials/_saved_reply_form.html:21
 #: templates/workspaces/list.html:71
 msgid "Create"
@@ -5025,47 +5569,47 @@ msgstr "Criar"
 
 #: templates/base.html:557 templates/base.html:666
 #: templates/composer/compose.html:1816 templates/composer/compose.html:1826
-#: templates/composer/create_landing.html:487
-#: templates/composer/create_landing.html:496
-#: templates/composer/create_landing.html:662
-#: templates/composer/create_landing.html:864
-#: templates/composer/create_landing.html:1027
+#: templates/composer/create_landing.html:402
+#: templates/composer/create_landing.html:411
+#: templates/composer/create_landing.html:577
+#: templates/composer/create_landing.html:779
+#: templates/composer/create_landing.html:942
 msgid "Create new tag"
 msgstr "Criar nova tag"
 
-#: templates/base.html:581 templates/composer/create_landing.html:686
-#: templates/composer/create_landing.html:890
+#: templates/base.html:581 templates/composer/create_landing.html:601
+#: templates/composer/create_landing.html:805
 msgid "Give your idea a title"
 msgstr "Dê um título à sua ideia"
 
-#: templates/base.html:582 templates/composer/create_landing.html:692
-#: templates/composer/create_landing.html:896
+#: templates/base.html:582 templates/composer/create_landing.html:607
+#: templates/composer/create_landing.html:811
 msgid "Let it flow... or"
 msgstr "Deixe fluir... ou"
 
 #: templates/base.html:593 templates/composer/compose.html:486
 #: templates/composer/compose.html:2170
-#: templates/composer/create_landing.html:703
-#: templates/composer/create_landing.html:908
+#: templates/composer/create_landing.html:618
+#: templates/composer/create_landing.html:823
 msgid "Preview"
 msgstr "Prévia"
 
 #: templates/base.html:595
 #: templates/client_portal/admin/partials/client_row.html:54
 #: templates/composer/compose.html:945 templates/composer/compose.html:1515
-#: templates/composer/create_landing.html:705
-#: templates/composer/create_landing.html:910
+#: templates/composer/create_landing.html:620
+#: templates/composer/create_landing.html:825
 #: templates/composer/partials/feeds_tab.html:93
 msgid "Remove"
 msgstr "Remover"
 
-#: templates/base.html:607 templates/composer/create_landing.html:717
-#: templates/composer/create_landing.html:922
+#: templates/base.html:607 templates/composer/create_landing.html:632
+#: templates/composer/create_landing.html:837
 msgid "Drag &amp; drop"
 msgstr "Arraste e solte"
 
-#: templates/base.html:608 templates/composer/create_landing.html:718
-#: templates/composer/create_landing.html:923
+#: templates/base.html:608 templates/composer/create_landing.html:633
+#: templates/composer/create_landing.html:838
 msgid "Add another file"
 msgstr "Adicionar outro arquivo"
 
@@ -5078,22 +5622,22 @@ msgstr ""
 "arquivo</strong>"
 
 #: templates/base.html:619 templates/composer/compose.html:797
-#: templates/composer/create_landing.html:729
+#: templates/composer/create_landing.html:644
 msgid "Emoji"
 msgstr "Emoji"
 
-#: templates/base.html:628 templates/composer/create_landing.html:738
+#: templates/base.html:628 templates/composer/create_landing.html:653
 msgid "Search emoji..."
 msgstr "Buscar emoji..."
 
-#: templates/base.html:657 templates/composer/create_landing.html:769
-#: templates/composer/create_landing.html:955
+#: templates/base.html:657 templates/composer/create_landing.html:684
+#: templates/composer/create_landing.html:870
 msgid "Save Idea"
 msgstr "Salvar ideia"
 
 #: templates/base.html:670 templates/composer/compose.html:1830
-#: templates/composer/create_landing.html:500
-#: templates/composer/create_landing.html:1031
+#: templates/composer/create_landing.html:415
+#: templates/composer/create_landing.html:946
 msgid "Tag name..."
 msgstr "Nome da etiqueta..."
 
@@ -5110,69 +5654,74 @@ msgstr "Publicar"
 msgid "Tasks"
 msgstr "Tarefas"
 
-#: templates/base.html:710
+#: templates/base.html:711 templates/radar/index.html:3
+#: templates/radar/index.html:7 templates/radar/shopee.html:37
+msgid "Radar"
+msgstr "Radar"
+
+#: templates/base.html:716
 msgid "Social Inbox"
 msgstr "Caixa de entrada"
 
-#: templates/base.html:722 templates/media_library/library_index.html:12
+#: templates/base.html:728 templates/media_library/library_index.html:12
 msgid "Gallery"
 msgstr "Galeria"
 
-#: templates/base.html:732 templates/notifications/history.html:4
+#: templates/base.html:738 templates/notifications/history.html:4
 #: templates/notifications/history.html:12
 #: templates/notifications/partials/drawer.html:5
 msgid "Notifications"
 msgstr "Notificações"
 
-#: templates/base.html:757 templates/intelligence/playground.html:4
+#: templates/base.html:763 templates/intelligence/playground.html:4
 #: templates/intelligence/playground.html:9
 msgid "Intelligence"
 msgstr "Inteligência"
 
-#: templates/base.html:765
+#: templates/base.html:771
 #: templates/calendar/partials/publish_calendar_shell.html:87
 #: templates/calendar/partials/publish_list_shell.html:34
 #: templates/organizations/cross_calendar.html:189
 msgid "Channels"
 msgstr "Canais"
 
-#: templates/base.html:773
+#: templates/base.html:779
 #, python-format
 msgid "%(counter)s upcoming post"
 msgid_plural "%(counter)s upcoming posts"
 msgstr[0] "%(counter)s publicação agendada"
 msgstr[1] "%(counter)s publicações agendadas"
 
-#: templates/base.html:808
+#: templates/base.html:814
 #, python-format
 msgid "Reconnect %(name)s"
 msgstr "Reconectar %(name)s"
 
-#: templates/base.html:832
+#: templates/base.html:838
 msgid "More channels"
 msgstr "Mais canais"
 
-#: templates/base.html:876
+#: templates/base.html:882
 msgid "Collapse sidebar"
 msgstr "Recolher barra lateral"
 
-#: templates/base.html:884
+#: templates/base.html:890
 msgid "Expand sidebar"
 msgstr "Expandir barra lateral"
 
-#: templates/base.html:931
+#: templates/base.html:937
 msgid "Manage Team"
 msgstr "Gerenciar equipe"
 
-#: templates/base.html:995
+#: templates/base.html:1001
 msgid "Language"
 msgstr "Idioma"
 
-#: templates/base.html:1009 templates/client_portal/portal_base.html:67
+#: templates/base.html:1015 templates/client_portal/portal_base.html:67
 msgid "Log out"
 msgstr "Sair"
 
-#: templates/base.html:1022
+#: templates/base.html:1028
 msgid "Toggle menu"
 msgstr "Alternar menu"
 
@@ -6209,7 +6758,7 @@ msgstr "Adicionar evento personalizado"
 #: templates/calendar/partials/event_form.html:18
 #: templates/composer/compose.html:655 templates/composer/compose.html:2630
 #: templates/inbox/partials/_saved_reply_form.html:8
-#: templates/tasks/partials/_request_arts_form.html:83
+#: templates/tasks/partials/_request_arts_form.html:88
 msgid "Title"
 msgstr "Título"
 
@@ -6287,8 +6836,8 @@ msgstr "Crie sua primeira publicação para vê-la no calendário"
 #: templates/calendar/partials/list_view.html:71
 #: templates/calendar/partials/publish_drafts.html:103
 #: templates/calendar/partials/publish_queue.html:121
-#: templates/composer/create_landing.html:762
-#: templates/composer/create_landing.html:948
+#: templates/composer/create_landing.html:677
+#: templates/composer/create_landing.html:863
 #: templates/composer/drafts_list.html:67
 msgid "Create Post"
 msgstr "Criar publicação"
@@ -6307,7 +6856,7 @@ msgstr "Ver todos os rascunhos"
 #: templates/social_accounts/partials/_posting_slots_grid.html:116
 #: templates/tasks/partials/_board.html:20
 #: templates/tasks/partials/_column.html:57
-#: templates/tasks/partials/_task_modal.html:201
+#: templates/tasks/partials/_task_modal.html:242
 msgid "Add"
 msgstr "Adicionar"
 
@@ -6367,7 +6916,7 @@ msgid "The post could not be moved. Try again."
 msgstr "Não foi possível mover a publicação. Tente novamente."
 
 #: templates/calendar/partials/publish_board_shell.html:39
-#: templates/tasks/partials/_task_modal.html:49
+#: templates/tasks/partials/_task_modal.html:130
 msgid "No caption"
 msgstr "Sem legenda"
 
@@ -6427,6 +6976,7 @@ msgstr "Fuso horário"
 
 #
 #: templates/calendar/partials/publish_calendar_shell.html:111
+#: templates/radar/partials/_share_dialog.html:106
 msgid "Schedule post"
 msgstr "Agendar post"
 
@@ -6540,7 +7090,7 @@ msgstr "Horários de publicação"
 
 #: templates/calendar/posting_slots.html:5
 #: templates/calendar/posting_slots.html:10
-#: templates/social_accounts/partials/_account_card.html:196
+#: templates/social_accounts/partials/_account_card.html:150
 msgid "Posting Schedule"
 msgstr "Agenda de publicação"
 
@@ -7151,7 +7701,7 @@ msgid "Save Template"
 msgstr "Salvar modelo"
 
 #: templates/composer/compose.html:713
-#: templates/composer/create_landing.html:1091
+#: templates/composer/create_landing.html:1006
 #: templates/composer/templates_list.html:55
 msgid "Use Template"
 msgstr "Usar modelo"
@@ -7492,10 +8042,6 @@ msgstr "Fachada"
 msgid "Interior"
 msgstr "Interior"
 
-#: templates/composer/compose.html:1456 templates/layouts/admin_shell.html:86
-msgid "Product"
-msgstr "Produto"
-
 #: templates/composer/compose.html:1457
 msgid "At work"
 msgstr "No trabalho"
@@ -7761,7 +8307,7 @@ msgstr "Fotos gratuitas em alta resolução &middot; adicione uma ou várias"
 msgid "Search free high-resolution photos…"
 msgstr "Buscar fotos gratuitas em alta resolução…"
 
-#: templates/composer/compose.html:2394
+#: templates/composer/compose.html:2394 templates/radar/shopee.html:131
 msgid "Search"
 msgstr "Buscar"
 
@@ -7851,7 +8397,7 @@ msgstr "Arraste e solte uma miniatura"
 msgid "Posting to @{name}"
 msgstr "Publicando em @{name}"
 
-#: templates/composer/compose.html:2652 templates/tasks/board.html:15
+#: templates/composer/compose.html:2652 templates/tasks/board.html:16
 msgid "Everyone"
 msgstr "Todos"
 
@@ -7911,7 +8457,7 @@ msgid "Use this frame"
 msgstr "Usar este quadro"
 
 #: templates/composer/compose.html:2668
-#: templates/composer/create_landing.html:1016
+#: templates/composer/create_landing.html:931
 msgid "Deleting…"
 msgstr "Excluindo…"
 
@@ -8052,57 +8598,57 @@ msgstr ""
 "Este corte vale só para {format}; os outros formatos continuam com a imagem "
 "original."
 
-#: templates/composer/create_landing.html:416
+#: templates/composer/create_landing.html:331
 #: templates/composer/partials/kanban_column.html:58
 msgid "New Idea"
 msgstr "Nova ideia"
 
-#: templates/composer/create_landing.html:427
+#: templates/composer/create_landing.html:342
 msgid "Ideas"
 msgstr "Ideias"
 
-#: templates/composer/create_landing.html:435
+#: templates/composer/create_landing.html:350
 msgid "Feeds"
 msgstr "Feeds"
 
-#: templates/composer/create_landing.html:464
+#: templates/composer/create_landing.html:379
 msgid "Search tags..."
 msgstr "Buscar etiquetas..."
 
-#: templates/composer/create_landing.html:476
+#: templates/composer/create_landing.html:391
 msgid "No tags yet"
 msgstr "Nenhuma etiqueta ainda"
 
-#: templates/composer/create_landing.html:479
+#: templates/composer/create_landing.html:394
 msgid "No matching tags"
 msgstr "Nenhuma etiqueta encontrada"
 
-#: templates/composer/create_landing.html:689
-#: templates/composer/create_landing.html:893
+#: templates/composer/create_landing.html:604
+#: templates/composer/create_landing.html:808
 msgid "Content date"
 msgstr "Data do conteúdo"
 
-#: templates/composer/create_landing.html:719
-#: templates/composer/create_landing.html:924
+#: templates/composer/create_landing.html:634
+#: templates/composer/create_landing.html:839
 msgid "select a file"
 msgstr "selecione um arquivo"
 
-#: templates/composer/create_landing.html:800
+#: templates/composer/create_landing.html:715
 msgid "Edit Idea"
 msgstr "Editar ideia"
 
-#: templates/composer/create_landing.html:941 templates/tasks/board.html:52
-#: templates/tasks/partials/_request_arts_form.html:18
-#: templates/tasks/partials/_request_arts_host.html:13
+#: templates/composer/create_landing.html:856 templates/tasks/board.html:56
+#: templates/tasks/partials/_request_arts_form.html:21
+#: templates/tasks/partials/_request_arts_host.html:15
 #: templates/tasks/request_arts.html:8
 msgid "Request arts"
 msgstr "Solicitar artes"
 
-#: templates/composer/create_landing.html:993
+#: templates/composer/create_landing.html:908
 msgid "Delete idea?"
 msgstr "Excluir ideia?"
 
-#: templates/composer/create_landing.html:994
+#: templates/composer/create_landing.html:909
 msgid ""
 "This action cannot be undone. The idea and all associated data will be "
 "permanently removed."
@@ -8110,73 +8656,73 @@ msgstr ""
 "Esta ação não pode ser desfeita. A ideia e todos os dados associados serão "
 "removidos permanentemente."
 
-#: templates/composer/create_landing.html:1084
+#: templates/composer/create_landing.html:999
 msgid "Copy to clipboard"
 msgstr "Copiar"
 
-#: templates/composer/create_landing.html:1099
+#: templates/composer/create_landing.html:1014
 msgid "By"
 msgstr "Por"
 
-#: templates/composer/create_landing.html:1100
+#: templates/composer/create_landing.html:1015
 msgid "Brightbean"
 msgstr "Brightbean"
 
-#: templates/composer/create_landing.html:1102
-#: templates/composer/create_landing.html:1109
+#: templates/composer/create_landing.html:1017
+#: templates/composer/create_landing.html:1024
 msgid "&bull;"
 msgstr "&bull;"
 
-#: templates/composer/create_landing.html:1122
+#: templates/composer/create_landing.html:1037
 msgid "Request validation failed."
 msgstr "Falha na validação da solicitação."
 
-#: templates/composer/create_landing.html:1123
+#: templates/composer/create_landing.html:1038
 msgid "Request failed."
 msgstr "Falha na solicitação."
 
-#: templates/composer/create_landing.html:1125
+#: templates/composer/create_landing.html:1040
 msgid "Idea form is missing."
 msgstr "O formulário da ideia não foi encontrado."
 
-#: templates/composer/create_landing.html:1126
+#: templates/composer/create_landing.html:1041
 msgid "Idea form action is missing."
 msgstr "A ação do formulário da ideia não foi encontrada."
 
-#: templates/composer/create_landing.html:1127
+#: templates/composer/create_landing.html:1042
 msgid "Could not refresh board."
 msgstr "Não foi possível atualizar o quadro."
 
-#: templates/composer/create_landing.html:1129
+#: templates/composer/create_landing.html:1044
 msgid "Could not save the idea before creating a post."
 msgstr "Não foi possível salvar a ideia antes de criar a publicação."
 
-#: templates/composer/create_landing.html:1130
+#: templates/composer/create_landing.html:1045
 msgid "Could not open the composer for this idea."
 msgstr "Não foi possível abrir o editor para esta ideia."
 
-#: templates/composer/create_landing.html:1131
+#: templates/composer/create_landing.html:1046
 msgid "Could not create a post from this idea. Please try again."
 msgstr ""
 "Não foi possível criar uma publicação a partir desta ideia. Tente novamente."
 
-#: templates/composer/create_landing.html:1132
+#: templates/composer/create_landing.html:1047
 msgid "Idea is missing."
 msgstr "A ideia não foi encontrada."
 
-#: templates/composer/create_landing.html:1133
+#: templates/composer/create_landing.html:1048
 msgid "Could not create a post from this idea."
 msgstr "Não foi possível criar uma publicação a partir desta ideia."
 
-#: templates/composer/create_landing.html:1134
+#: templates/composer/create_landing.html:1049
 msgid "Could not delete the idea. Please try again."
 msgstr "Não foi possível excluir a ideia. Tente novamente."
 
-#: templates/composer/create_landing.html:1135
+#: templates/composer/create_landing.html:1050
 msgid "Could not create column. Please try again."
 msgstr "Não foi possível criar a coluna. Tente novamente."
 
-#: templates/composer/create_landing.html:1136
+#: templates/composer/create_landing.html:1051
 msgid "Could not delete column. Please try again."
 msgstr "Não foi possível excluir a coluna. Tente novamente."
 
@@ -8263,7 +8809,8 @@ msgstr "Marcado como publicado."
 #: templates/composer/manual_publish.html:31
 #: templates/media_library/_asset_detail_panel.html:59
 #: templates/media_library/_asset_detail_panel.html:66
-#: templates/tasks/partials/_task_modal.html:168
+#: templates/tasks/partials/_task_modal.html:197
+#: templates/tasks/partials/_task_modal.html:221
 msgid "Download"
 msgstr "Baixar"
 
@@ -8709,6 +9256,7 @@ msgid "All media"
 msgstr "Todas as mídias"
 
 #: templates/composer/partials/media_picker.html:147
+#: templates/radar/shopee.html:59
 msgid "Favorites"
 msgstr "Favoritas"
 
@@ -9123,6 +9671,7 @@ msgstr ""
 #: templates/intelligence/_benchmark_video_result.html:50
 #: templates/intelligence/_benchmark_video_result.html:181
 #: templates/intelligence/_panel_research_content_gaps.html:19
+#: templates/radar/shopee.html:75
 msgid "Niche"
 msgstr "Nicho"
 
@@ -11064,7 +11613,7 @@ msgstr "Marcar todas como lidas"
 msgid "Read"
 msgstr "Lidas"
 
-#: templates/notifications/history.html:87
+#: templates/notifications/history.html:87 templates/radar/shopee.html:127
 msgid "Clear filters"
 msgstr "Limpar filtros"
 
@@ -11355,7 +11904,9 @@ msgstr "Posts, fotos e vídeo"
 #: templates/onboarding/connection_page.html:226
 #: templates/onboarding/connection_page.html:267
 #: templates/onboarding/connection_page.html:289
-#: templates/social_accounts/connect.html:76
+#: templates/radar/partials/_shopee_connect_form.html:43
+#: templates/radar/partials/_source_card.html:58
+#: templates/social_accounts/connect.html:102
 msgid "Connect"
 msgstr "Conectar"
 
@@ -11772,6 +12323,258 @@ msgstr "Abrir no YouTube"
 msgid "Open YouTube"
 msgstr "Abrir o YouTube"
 
+#: templates/radar/index.html:8
+msgid "Find products and offers worth sharing on the platforms you connected."
+msgstr ""
+"Encontre produtos e ofertas para divulgar nas plataformas que você conectou."
+
+#: templates/radar/partials/_favorite_button.html:10
+#: templates/radar/partials/_favorite_button.html:11
+msgid "Remove from favorites"
+msgstr "Remover dos favoritos"
+
+#: templates/radar/partials/_favorite_button.html:10
+#: templates/radar/partials/_favorite_button.html:11
+msgid "Save to favorites"
+msgstr "Salvar nos favoritos"
+
+#: templates/radar/partials/_favorites.html:9
+msgid ""
+"Offers you starred, as they were when saved. Open them on Shopee to check "
+"the current price."
+msgstr ""
+"Ofertas que você favoritou, como estavam quando foram salvas. Abra na Shopee "
+"para conferir o preço atual."
+
+#: templates/radar/partials/_favorites.html:18
+msgid "No favorite offers yet"
+msgstr "Nenhuma oferta favorita ainda"
+
+#: templates/radar/partials/_favorites.html:19
+msgid ""
+"Tap the star on an offer to keep it here, even after Shopee stops listing it."
+msgstr ""
+"Toque na estrela de uma oferta para guardá-la aqui, mesmo depois que a "
+"Shopee deixar de listá-la."
+
+#: templates/radar/partials/_offer_card.html:12
+#, python-format
+msgid "Commission %(pct)s%%"
+msgstr "Comissão %(pct)s%%"
+
+#: templates/radar/partials/_offer_card.html:28
+#, python-format
+msgid "%(counter)s sold"
+msgid_plural "%(counter)s sold"
+msgstr[0] "%(counter)s vendido"
+msgstr[1] "%(counter)s vendidos"
+
+#: templates/radar/partials/_offer_card.html:32
+#, python-format
+msgid "Saved on %(date)s · prices may have changed"
+msgstr "Salva em %(date)s · os preços podem ter mudado"
+
+#: templates/radar/partials/_offer_card.html:35
+msgid "You earn"
+msgstr "Você ganha"
+
+#: templates/radar/partials/_offer_card.html:38
+#: templates/radar/partials/_share_dialog.html:17
+msgid "Share offer"
+msgstr "Criar oferta"
+
+#: templates/radar/partials/_offers.html:12
+msgid "Shortcuts"
+msgstr "Atalhos"
+
+#: templates/radar/partials/_offers.html:27
+#, python-format
+msgid "%(counter)s offer shown of %(loaded)s loaded"
+msgid_plural "%(counter)s offers shown of %(loaded)s loaded"
+msgstr[0] "%(counter)s oferta exibida de %(loaded)s carregadas"
+msgstr[1] "%(counter)s ofertas exibidas de %(loaded)s carregadas"
+
+#: templates/radar/partials/_offers.html:31
+msgid "Sort by"
+msgstr "Ordenar por"
+
+#: templates/radar/partials/_offers.html:34
+msgid "This shortcut sets its own order."
+msgstr "Este atalho define a própria ordem."
+
+#: templates/radar/partials/_offers.html:40
+msgid "Loading offers…"
+msgstr "Carregando ofertas…"
+
+#: templates/radar/partials/_offers.html:56
+msgid "No offers match these filters"
+msgstr "Nenhuma oferta corresponde a estes filtros"
+
+#: templates/radar/partials/_offers.html:57
+msgid "Loosen a filter or load more offers."
+msgstr "Afrouxe um filtro ou carregue mais ofertas."
+
+#: templates/radar/partials/_offers.html:66
+msgid "Load more offers"
+msgstr "Carregar mais ofertas"
+
+#: templates/radar/partials/_share_dialog.html:47
+msgid "Product videos"
+msgstr "Vídeos do produto"
+
+#: templates/radar/partials/_share_dialog.html:48
+msgid "Find videos of similar products to repost or to get ideas."
+msgstr "Encontre vídeos de produtos parecidos para repostar ou tirar ideias."
+
+#: templates/radar/partials/_share_dialog.html:56
+msgid "Video search"
+msgstr "Busca de vídeos"
+
+#: templates/radar/partials/_share_dialog.html:71
+msgid ""
+"Search copied. If the app opens without it, paste it into the app's search "
+"bar."
+msgstr "Busca copiada. Se o app abrir sem ela, cole na barra de busca do app."
+
+#: templates/radar/partials/_share_dialog.html:76
+msgid "Choose the message template"
+msgstr "Escolha o modelo da mensagem"
+
+#: templates/radar/partials/_share_dialog.html:91
+msgid "Message preview"
+msgstr "Prévia da mensagem"
+
+#: templates/radar/partials/_share_dialog.html:92
+msgid "Offer text"
+msgstr "Texto da oferta"
+
+#: templates/radar/partials/_share_dialog.html:94
+msgid "You can edit the text before creating a task or scheduling."
+msgstr "Você pode editar o texto antes de criar a tarefa ou agendar."
+
+#: templates/radar/partials/_share_dialog.html:102
+msgid "Create task"
+msgstr "Criar tarefa"
+
+#: templates/radar/partials/_share_dialog.html:112
+msgid "Open on Shopee"
+msgstr "Abrir na Shopee"
+
+#: templates/radar/partials/_share_dialog.html:114
+msgid ""
+"Create task and Schedule post copy the first product image to the media "
+"library."
+msgstr ""
+"Criar tarefa e Agendar post copiam a primeira imagem do produto para a "
+"galeria."
+
+#: templates/radar/partials/_shopee_connect_form.html:13
+#: templates/radar/shopee_connect.html:17
+msgid ""
+"Use the App ID and Secret of your application in the Shopee affiliate Open "
+"API panel. Offers you share carry your affiliate link."
+msgstr ""
+"Use o App ID e o Secret da sua aplicação no painel da Open API de afiliados "
+"da Shopee. As ofertas que você divulgar levam o seu link de afiliado."
+
+#: templates/radar/partials/_shopee_connect_form.html:36
+msgid ""
+"The Secret works like a password to your affiliate account. It is stored "
+"encrypted, used only by our server to sign requests to Shopee, and never "
+"shown again."
+msgstr ""
+"O Secret funciona como uma senha da sua conta de afiliado. Ele é guardado "
+"criptografado, usado só pelo nosso servidor para assinar as consultas à "
+"Shopee e nunca mais é exibido."
+
+#: templates/radar/partials/_shopee_connect_form.html:44
+msgid "Checking with Shopee…"
+msgstr "Verificando com a Shopee…"
+
+#: templates/radar/partials/_source_card.html:32
+#: templates/social_accounts/connect.html:83
+#, python-format
+msgid "Connected on %(date)s"
+msgstr "Conectada em %(date)s"
+
+#: templates/radar/partials/_source_card.html:36
+#: templates/social_accounts/connect.html:87
+#: templates/social_accounts/partials/_account_card.html:50
+#: templates/social_accounts/partials/_disconnect_confirm.html:60
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: templates/radar/partials/_source_card.html:40
+msgid ""
+"This removes the App ID and Secret from BrightBean. Favorites, and the tasks "
+"and posts made from offers, stay."
+msgstr ""
+"Isso remove o App ID e o Secret do BrightBean. Os favoritos e as tarefas e "
+"publicações criadas a partir de ofertas continuam."
+
+#: templates/radar/partials/_source_card.html:81
+#, python-format
+msgid "Connect %(source)s"
+msgstr "Conectar %(source)s"
+
+#: templates/radar/partials/_source_card.html:96
+msgid "Ask a workspace admin to connect it"
+msgstr "Peça a um administrador do workspace para conectar"
+
+#: templates/radar/shopee.html:51
+msgid "Commissions and orders"
+msgstr "Comissões e pedidos"
+
+#: templates/radar/shopee.html:57
+msgid "Offers"
+msgstr "Ofertas"
+
+#: templates/radar/shopee.html:76
+msgid "All niches"
+msgstr "Todos os nichos"
+
+#: templates/radar/shopee.html:84
+msgid "Search offers on Shopee"
+msgstr "Buscar ofertas na Shopee"
+
+#: templates/radar/shopee.html:88 templates/radar/shopee.html:97
+msgid "Advanced filters"
+msgstr "Filtros avançados"
+
+#: templates/radar/shopee.html:101
+msgid "Min. price (R$)"
+msgstr "Preço mín. (R$)"
+
+#: templates/radar/shopee.html:105
+msgid "Max. price (R$)"
+msgstr "Preço máx. (R$)"
+
+#: templates/radar/shopee.html:109
+#, python-format
+msgid "Min. commission (%%)"
+msgstr "Comissão mín. (%%)"
+
+#: templates/radar/shopee.html:113
+#, python-format
+msgid "Min. discount (%%)"
+msgstr "Desconto mín. (%%)"
+
+#: templates/radar/shopee.html:117
+msgid "Min. rating"
+msgstr "Avaliação mín."
+
+#: templates/radar/shopee.html:121
+msgid "Min. sold"
+msgstr "Vendidos mín."
+
+#: templates/radar/shopee.html:126
+msgid "Applied to the offers already loaded."
+msgstr "Aplicados às ofertas já carregadas."
+
+#: templates/radar/shopee_connect.html:3 templates/radar/shopee_connect.html:15
+msgid "Connect Shopee Affiliates"
+msgstr "Conectar Shopee Afiliados"
+
 #: templates/settings_manager/index.html:7
 msgid "Settings management coming soon."
 msgstr "Gerenciamento de configurações em breve."
@@ -11886,13 +12689,30 @@ msgstr "Entrar com o Instagram · sem precisar do Facebook"
 msgid "Articles & posts"
 msgstr "Artigos e publicações"
 
-#: templates/social_accounts/connect.html:83
+#: templates/social_accounts/connect.html:102
+msgid "Connect another account"
+msgstr "Conectar outra conta"
+
+#: templates/social_accounts/connect.html:109
 msgid "Not Configured"
 msgstr "Não configurada"
 
-#: templates/social_accounts/connect.html:89
+#: templates/social_accounts/connect.html:115
 msgid "Platform credentials not configured. Contact your administrator."
 msgstr "Credenciais da plataforma não configuradas. Fale com o administrador."
+
+#: templates/social_accounts/connect.html:125
+#: templates/social_accounts/list.html:52
+msgid "Opportunities"
+msgstr "Oportunidades"
+
+#: templates/social_accounts/connect.html:126
+msgid ""
+"Sources of products and offers to share. They appear in the Radar, not in "
+"the composer."
+msgstr ""
+"Fontes de produtos e ofertas para divulgar. Elas aparecem no Radar, não no "
+"editor de publicações."
 
 #: templates/social_accounts/devto_connect.html:3
 #: templates/social_accounts/devto_connect.html:16
@@ -11967,6 +12787,10 @@ msgstr ""
 msgid "Connect Your First Account"
 msgstr "Conecte sua primeira conta"
 
+#: templates/social_accounts/list.html:53
+msgid "Sources connected to the Radar."
+msgstr "Fontes conectadas ao Radar."
+
 #: templates/social_accounts/mastodon_connect.html:18
 msgid ""
 "Mastodon is federated, enter your profile URL to begin the connection "
@@ -11996,21 +12820,73 @@ msgstr ""
 msgid "Continue to Mastodon"
 msgstr "Continuar para o Mastodon"
 
-#: templates/social_accounts/partials/_account_card.html:50
-#: templates/social_accounts/partials/_account_card.html:96
-msgid "Disconnect"
-msgstr "Desconectar"
+#: templates/social_accounts/partials/_account_card.html:69
+msgid "Some features are unavailable."
+msgstr "Alguns recursos estão indisponíveis."
 
-#: templates/social_accounts/partials/_account_card.html:57
+#: templates/social_accounts/partials/_account_card.html:70
+#, python-format
+msgid ""
+"This account was connected without %(scopes)s. Anything relying on them will "
+"fail until the permission is granted — reconnect to try again."
+msgstr ""
+"Esta conta foi conectada sem %(scopes)s. Tudo o que depende disso vai falhar "
+"até a permissão ser concedida — reconecte para tentar de novo."
+
+#: templates/social_accounts/partials/_account_card.html:76
+msgid ""
+"Instagram DM access is unavailable for this connection. Contact your "
+"administrator to enable it."
+msgstr ""
+"O acesso a DMs do Instagram está indisponível nesta conexão. Fale com o "
+"administrador para habilitá-lo."
+
+#: templates/social_accounts/partials/_account_card.html:78
+msgid ""
+"DMs unavailable: grant messaging access on the linked Facebook Page, then "
+"reconnect this account."
+msgstr ""
+"DMs indisponíveis: conceda acesso a mensagens na página do Facebook "
+"vinculada e reconecte esta conta."
+
+#: templates/social_accounts/partials/_account_card.html:106
+msgid "Some real-time inbox updates are unavailable."
+msgstr ""
+"Algumas atualizações em tempo real da caixa de entrada não estão disponíveis."
+
+#: templates/social_accounts/partials/_account_card.html:107
+msgid "We couldn't set up real-time updates for this account."
+msgstr ""
+"Não conseguimos configurar as atualizações em tempo real para esta conta."
+
+#: templates/social_accounts/partials/_account_card.html:108
+msgid ""
+"Activity with the required permissions can still arrive through polling."
+msgstr ""
+"A atividade com as permissões necessárias ainda pode chegar por "
+"sincronização periódica."
+
+#: templates/social_accounts/partials/_account_card.html:137
+msgid "Trying…"
+msgstr "Tentando…"
+
+#: templates/social_accounts/partials/_account_card.html:151
+msgid ""
+"Set recurring time slots for when queued posts are automatically published."
+msgstr ""
+"Defina horários recorrentes para a publicação automática das publicações em "
+"fila."
+
+#: templates/social_accounts/partials/_disconnect_confirm.html:16
 #, python-format
 msgid "Disconnect <strong>%(name)s</strong>?"
 msgstr "Desconectar <strong>%(name)s</strong>?"
 
-#: templates/social_accounts/partials/_account_card.html:69
+#: templates/social_accounts/partials/_disconnect_confirm.html:31
 msgid "This revokes BrightBean's access to the account."
 msgstr "Isto revoga o acesso da BrightBean à conta."
 
-#: templates/social_accounts/partials/_account_card.html:71
+#: templates/social_accounts/partials/_disconnect_confirm.html:33
 msgid ""
 "This removes the account from BrightBean only. To revoke our access "
 "entirely, remove BrightBean in Facebook › Settings › Apps and Websites."
@@ -12018,7 +12894,7 @@ msgstr ""
 "Isto remove a conta apenas da BrightBean. Para revogar nosso acesso por "
 "completo, remova a BrightBean em Facebook › Configurações › Apps e sites."
 
-#: templates/social_accounts/partials/_account_card.html:73
+#: templates/social_accounts/partials/_disconnect_confirm.html:35
 #, python-format
 msgid ""
 "This removes the account from BrightBean only. To revoke our access "
@@ -12027,7 +12903,7 @@ msgstr ""
 "Isto remove a conta apenas da BrightBean. Para revogar nosso acesso por "
 "completo, remova a BrightBean nas configurações de %(platform)s."
 
-#: templates/social_accounts/partials/_account_card.html:78
+#: templates/social_accounts/partials/_disconnect_confirm.html:40
 msgid ""
 "YouTube data, analytics and copied comments are deleted immediately, "
 "including notification copies. Your original uploads and posts shared with "
@@ -12037,7 +12913,7 @@ msgstr ""
 "imediatamente, incluindo as cópias em notificações. Seus envios originais e "
 "as publicações compartilhadas com outros canais permanecem."
 
-#: templates/social_accounts/partials/_account_card.html:80
+#: templates/social_accounts/partials/_disconnect_confirm.html:42
 msgid ""
 "Its analytics, inbox messages and posts made only for it are deleted from "
 "BrightBean. Posts shared with other channels stay."
@@ -12046,66 +12922,9 @@ msgstr ""
 "para ela são excluídas da BrightBean. As publicações compartilhadas com "
 "outros canais permanecem."
 
-#: templates/social_accounts/partials/_account_card.html:96
+#: templates/social_accounts/partials/_disconnect_confirm.html:60
 msgid "Disconnecting…"
 msgstr "Desconectando…"
-
-#: templates/social_accounts/partials/_account_card.html:115
-msgid "Some features are unavailable."
-msgstr "Alguns recursos estão indisponíveis."
-
-#: templates/social_accounts/partials/_account_card.html:116
-#, python-format
-msgid ""
-"This account was connected without %(scopes)s. Anything relying on them will "
-"fail until the permission is granted — reconnect to try again."
-msgstr ""
-"Esta conta foi conectada sem %(scopes)s. Tudo o que depende disso vai falhar "
-"até a permissão ser concedida — reconecte para tentar de novo."
-
-#: templates/social_accounts/partials/_account_card.html:122
-msgid ""
-"Instagram DM access is unavailable for this connection. Contact your "
-"administrator to enable it."
-msgstr ""
-"O acesso a DMs do Instagram está indisponível nesta conexão. Fale com o "
-"administrador para habilitá-lo."
-
-#: templates/social_accounts/partials/_account_card.html:124
-msgid ""
-"DMs unavailable: grant messaging access on the linked Facebook Page, then "
-"reconnect this account."
-msgstr ""
-"DMs indisponíveis: conceda acesso a mensagens na página do Facebook "
-"vinculada e reconecte esta conta."
-
-#: templates/social_accounts/partials/_account_card.html:152
-msgid "Some real-time inbox updates are unavailable."
-msgstr ""
-"Algumas atualizações em tempo real da caixa de entrada não estão disponíveis."
-
-#: templates/social_accounts/partials/_account_card.html:153
-msgid "We couldn't set up real-time updates for this account."
-msgstr ""
-"Não conseguimos configurar as atualizações em tempo real para esta conta."
-
-#: templates/social_accounts/partials/_account_card.html:154
-msgid ""
-"Activity with the required permissions can still arrive through polling."
-msgstr ""
-"A atividade com as permissões necessárias ainda pode chegar por "
-"sincronização periódica."
-
-#: templates/social_accounts/partials/_account_card.html:183
-msgid "Trying…"
-msgstr "Tentando…"
-
-#: templates/social_accounts/partials/_account_card.html:197
-msgid ""
-"Set recurring time slots for when queued posts are automatically published."
-msgstr ""
-"Defina horários recorrentes para a publicação automática das publicações em "
-"fila."
 
 #: templates/social_accounts/partials/_posting_slots_grid.html:30
 #, python-format
@@ -12129,37 +12948,38 @@ msgstr "Remover horário"
 msgid "Add time slot"
 msgstr "Adicionar horário"
 
-#: templates/tasks/board.html:14
-#: templates/tasks/partials/_request_arts_form.html:101
-#: templates/tasks/partials/_task_modal.html:63
+#: templates/tasks/board.html:15
+#: templates/tasks/partials/_request_arts_form.html:106
+#: templates/tasks/partials/_request_arts_form.html:117
+#: templates/tasks/partials/_task_modal.html:33
 msgid "Responsible"
 msgstr "Responsáveis"
 
-#: templates/tasks/board.html:16
+#: templates/tasks/board.html:17
 msgid "My tasks"
 msgstr "Minhas tarefas"
 
-#: templates/tasks/board.html:22
+#: templates/tasks/board.html:23
 msgid "Any priority"
 msgstr "Qualquer prioridade"
 
-#: templates/tasks/board.html:31
+#: templates/tasks/board.html:32 templates/tasks/board.html:38
 msgid "Art settings"
 msgstr "Configurações de artes"
 
-#: templates/tasks/board.html:36
+#: templates/tasks/board.html:40
 msgid "Art requests go to"
 msgstr "Solicitações de artes vão para"
 
-#: templates/tasks/board.html:38
+#: templates/tasks/board.html:42
 msgid "Nobody by default"
 msgstr "Ninguém por padrão"
 
-#: templates/tasks/board.html:43
+#: templates/tasks/board.html:47
 msgid "Due this many days before the content date"
 msgstr "Prazo: quantos dias antes da data do conteúdo"
 
-#: templates/tasks/board.html:68
+#: templates/tasks/board.html:72
 msgid "Task"
 msgstr "Tarefa"
 
@@ -12192,11 +13012,12 @@ msgid "Add task"
 msgstr "Adicionar tarefa"
 
 #: templates/tasks/partials/_column.html:54
-#: templates/tasks/partials/_task_modal.html:14
+#: templates/tasks/partials/_task_modal.html:72
+#: templates/tasks/partials/_task_modal.html:73
 msgid "Task title"
 msgstr "Título da tarefa"
 
-#: templates/tasks/partials/_request_arts_form.html:19
+#: templates/tasks/partials/_request_arts_form.html:22
 msgid ""
 "Choose every piece this content needs. The creative team gets one task with "
 "the exact size of each."
@@ -12204,143 +13025,125 @@ msgstr ""
 "Escolha todas as peças de que este conteúdo precisa. A equipe de criação "
 "recebe uma tarefa com o tamanho exato de cada uma."
 
-#: templates/tasks/partials/_request_arts_form.html:21
+#: templates/tasks/partials/_request_arts_form.html:24
 msgid "Networks"
 msgstr "Redes"
 
-#: templates/tasks/partials/_request_arts_form.html:42
+#: templates/tasks/partials/_request_arts_form.html:45
 #, python-format
 msgid "%(network)s · not connected"
 msgstr "%(network)s · não conectada"
 
-#: templates/tasks/partials/_request_arts_form.html:67
+#: templates/tasks/partials/_request_arts_form.html:70
 msgid "Art only"
 msgstr "Só arte"
 
-#: templates/tasks/partials/_request_arts_form.html:80
+#: templates/tasks/partials/_request_arts_form.html:83
 #, python-format
 msgid "From the idea “%(title)s”"
 msgstr "Da ideia “%(title)s”"
 
-#: templates/tasks/partials/_request_arts_form.html:87
+#: templates/tasks/partials/_request_arts_form.html:92
 msgid "Briefing"
 msgstr "Briefing"
 
-#: templates/tasks/partials/_request_arts_form.html:89
+#: templates/tasks/partials/_request_arts_form.html:94
 msgid "How the arts should be made: what they say and show"
 msgstr "Como as artes devem ser feitas: o que dizem e mostram"
 
-#: templates/tasks/partials/_request_arts_form.html:92
-#: templates/tasks/partials/_task_modal.html:41
+#: templates/tasks/partials/_request_arts_form.html:97
+#: templates/tasks/partials/_task_modal.html:122
 msgid "Post caption"
 msgstr "Legenda da publicação"
 
-#: templates/tasks/partials/_request_arts_form.html:94
-#: templates/tasks/partials/_task_modal.html:43
+#: templates/tasks/partials/_request_arts_form.html:99
+#: templates/tasks/partials/_task_modal.html:127
 msgid "The text the post goes out with"
 msgstr "O texto com que a publicação vai sair"
 
-#: templates/tasks/partials/_request_arts_form.html:97
+#: templates/tasks/partials/_request_arts_form.html:102
 #: templates/tasks/partials/_task_modal.html:82
 msgid "Due date"
 msgstr "Prazo"
 
-#: templates/tasks/partials/_request_arts_form.html:113
+#: templates/tasks/partials/_request_arts_form.html:132
 msgid "Choose the formats"
 msgstr "Escolha os formatos"
 
-#: templates/tasks/partials/_request_arts_form.html:115
+#: templates/tasks/partials/_request_arts_form.html:134
 msgid "Create task for the creative team"
 msgstr "Criar tarefa para a criação"
 
-#: templates/tasks/partials/_task_card.html:16
+#: templates/tasks/partials/_task_card.html:26
 msgid "Checklist progress"
 msgstr "Progresso da checklist"
 
-#: templates/tasks/partials/_task_modal.html:22
-#, python-format
-msgid "In %(column)s"
-msgstr "Em %(column)s"
+#: templates/tasks/partials/_task_modal.html:99
+msgid "Post date"
+msgstr "Data da publicação"
 
-#: templates/tasks/partials/_task_modal.html:23
-#, python-format
-msgid "created by %(who)s on %(when)s"
-msgstr "criada por %(who)s em %(when)s"
+#: templates/tasks/partials/_task_modal.html:104
+msgid "Scheduled. Change it in the composer."
+msgstr "Agendada. Altere no editor de publicações."
 
-#: templates/tasks/partials/_task_modal.html:30
+#: templates/tasks/partials/_task_modal.html:113
 msgid "Add the details of the task…"
 msgstr "Adicione os detalhes da tarefa…"
 
-#: templates/tasks/partials/_task_modal.html:36
+#: templates/tasks/partials/_task_modal.html:116
 msgid "No description."
 msgstr "Sem descrição."
 
-#: templates/tasks/partials/_task_modal.html:54
-msgid "Column"
-msgstr "Coluna"
-
-#: templates/tasks/partials/_task_modal.html:76
-msgid "Nobody"
-msgstr "Ninguém"
-
-#: templates/tasks/partials/_task_modal.html:100
-msgid "Linked to"
-msgstr "Vinculado a"
-
-#: templates/tasks/partials/_task_modal.html:104
-msgid "Post created from these arts"
-msgstr "Publicação criada com estas artes"
-
-#: templates/tasks/partials/_task_modal.html:112
-msgid "Open the post"
-msgstr "Abrir publicação"
-
-#: templates/tasks/partials/_task_modal.html:115
-msgid "Create post with these arts"
-msgstr "Criar publicação com estas artes"
-
-#: templates/tasks/partials/_task_modal.html:116
-msgid "Each art goes to the format it was made for."
-msgstr "Cada arte vai para o formato em que foi feita."
-
-#: templates/tasks/partials/_task_modal.html:125
+#: templates/tasks/partials/_task_modal.html:146
 msgid "Delete this task? This cannot be undone."
 msgstr "Excluir esta tarefa? Isso não pode ser desfeito."
 
-#: templates/tasks/partials/_task_modal.html:125
-msgid "Delete task"
-msgstr "Excluir tarefa"
+#: templates/tasks/partials/_task_modal.html:149
+msgid "Open the post"
+msgstr "Abrir publicação"
 
-#: templates/tasks/partials/_task_modal.html:135
+#: templates/tasks/partials/_task_modal.html:152
+msgid "Each art goes to the format it was made for."
+msgstr "Cada arte vai para o formato em que foi feita."
+
+#: templates/tasks/partials/_task_modal.html:153
+msgid "Create post with these arts"
+msgstr "Criar publicação com estas artes"
+
+#: templates/tasks/partials/_task_modal.html:164
 msgid "Checklist"
 msgstr "Checklist"
 
-#: templates/tasks/partials/_task_modal.html:138
+#: templates/tasks/partials/_task_modal.html:167
 #, python-format
 msgid "%(done)s of %(total)s done"
 msgstr "%(done)s de %(total)s feitos"
 
-#: templates/tasks/partials/_task_modal.html:148
+#: templates/tasks/partials/_task_modal.html:177
 msgid "Mark as done"
 msgstr "Marcar como feito"
 
-#: templates/tasks/partials/_task_modal.html:170
+#: templates/tasks/partials/_task_modal.html:199
 msgid "Proportions differ from the format"
 msgstr "Proporção diferente do formato"
 
-#: templates/tasks/partials/_task_modal.html:178
+#: templates/tasks/partials/_task_modal.html:207
 msgid "Replace art"
 msgstr "Trocar arte"
 
-#: templates/tasks/partials/_task_modal.html:178
+#: templates/tasks/partials/_task_modal.html:207
 msgid "Deliver art"
 msgstr "Entregar arte"
 
-#: templates/tasks/partials/_task_modal.html:190
+#: templates/tasks/partials/_task_modal.html:223
+msgid "In the media library"
+msgstr "Na galeria"
+
+#: templates/tasks/partials/_task_modal.html:231
 msgid "Remove item"
 msgstr "Remover item"
 
-#: templates/tasks/partials/_task_modal.html:200
+#: templates/tasks/partials/_task_modal.html:241
 msgid "Add an item"
 msgstr "Adicionar item"
 
@@ -12545,8 +13348,60 @@ msgstr "Participações no workspace"
 msgid "Yes, delete this workspace"
 msgstr "Sim, excluir este workspace"
 
-#~ msgid "No accounts connected"
-#~ msgstr "Nenhuma conta conectada"
+#~ msgid "Click again to disconnect"
+#~ msgstr "Clique de novo para desconectar"
+
+#, python-format
+#~ msgid "Shopee Affiliates offer: %(name)s"
+#~ msgstr "Oferta da Shopee Afiliados: %(name)s"
+
+#, python-format
+#~ msgid "Price: %(price)s"
+#~ msgstr "Preço: %(price)s"
+
+#, python-format
+#~ msgid "Estimated commission: %(amount)s"
+#~ msgstr "Comissão estimada: %(amount)s"
+
+#~ msgid "Task created"
+#~ msgstr "Tarefa criada"
+
+#, python-format
+#~ msgid "“%(title)s” is on the task board with its draft post."
+#~ msgstr ""
+#~ "“%(title)s” está no quadro de tarefas, com o rascunho da publicação."
+
+#~ msgid "Copy text"
+#~ msgstr "Copiar texto"
+
+#~ msgid "Send on WhatsApp"
+#~ msgstr "Enviar no WhatsApp"
+
+#~ msgid "Filters"
+#~ msgstr "Filtros"
+
+#, python-format
+#~ msgid "In %(column)s"
+#~ msgstr "Em %(column)s"
+
+#, python-format
+#~ msgid "created by %(who)s on %(when)s"
+#~ msgstr "criada por %(who)s em %(when)s"
+
+#~ msgid "Column"
+#~ msgstr "Coluna"
+
+#~ msgid "Nobody"
+#~ msgstr "Ninguém"
+
+#~ msgid "Linked to"
+#~ msgstr "Vinculado a"
+
+#~ msgid "Post created from these arts"
+#~ msgstr "Publicação criada com estas artes"
+
+#~ msgid "Delete task"
+#~ msgstr "Excluir tarefa"
 
 #~ msgid "not connected"
 #~ msgstr "não conectada"

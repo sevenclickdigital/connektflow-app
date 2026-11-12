@@ -109,6 +109,12 @@ Consistency beats personal preference. Use this table; if a term is missing, add
 | Upload | Enviar |
 | Preview | Prévia |
 | Template | Modelo |
+| Opportunities (Radar) | Oportunidades |
+| Offer (Radar) | Oferta |
+| Commission | Comissão |
+| Affiliate | Afiliado |
+| Niche | Nicho |
+| Share offer | Criar oferta |
 | Tag | Tag |
 | Caption | Legenda |
 | Loading | Carregando |

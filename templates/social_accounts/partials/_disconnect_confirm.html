@@ -1,0 +1,63 @@
+{% load i18n %}
+{% comment %}
+The "Disconnect <account>?" confirmation popover. Include it inside an Alpine
+scope that owns ``confirmDisconnect``.
+Usage: {% include "social_accounts/partials/_disconnect_confirm.html" with account=account workspace_id=workspace_id swap=True %}
+- ``swap``: post with HTMX and replace ``#account-<id>`` (the accounts list);
+  otherwise a plain POST that reloads the page.
+- ``return_to="connect"``: come back to the connect page instead of the list.
+- ``position``: placement classes, "right-4 top-12" by default.
+- ``action_url``, ``name``, ``consequence``: for something that is not a
+  ``SocialAccount`` (an opportunity source): where to post, what to call it and
+  the one sentence saying what disconnecting removes. ``account`` is then unused.
+{% endcomment %}
+<div x-show="confirmDisconnect" x-cloak @click.away="confirmDisconnect = false"
+     class="absolute {{ position|default:'right-4 top-12' }} z-20 w-72 bg-white rounded-xl shadow-xl border border-stone-200 p-4 text-left">
+    <p class="text-sm text-stone-700 mb-2">{% if name %}{% blocktranslate %}Disconnect <strong>{{ name }}</strong>?{% endblocktranslate %}{% else %}{% blocktranslate with name=account.account_name|default:account.account_handle %}Disconnect <strong>{{ name }}</strong>?{% endblocktranslate %}{% endif %}</p>
+    {% if consequence %}
+    <p class="text-xs text-stone-500 mb-3">{{ consequence }}</p>
+    {% else %}
+    {% comment %}
+    Say what disconnect really does; the privacy policy promises it
+    and platform reviewers read this against the policy. Only claim
+    a revocation the provider performs. The Facebook-Page flows
+    drop our copy of the credentials but cannot revoke the grant,
+    because the only endpoint that would do so revokes this app for
+    the whole person and would sever their other connected accounts.
+    {% endcomment %}
+    <p class="text-xs text-stone-500 mb-2">
+        {% if account.revokes_platform_grant_on_disconnect %}
+        {% translate "This revokes BrightBean's access to the account." %}
+        {% elif account.keeps_platform_grant_on_disconnect %}
+        {% translate "This removes the account from BrightBean only. To revoke our access entirely, remove BrightBean in Facebook › Settings › Apps and Websites." %}
+        {% else %}
+        {% blocktranslate with platform=account.get_platform_display %}This removes the account from BrightBean only. To revoke our access entirely, remove BrightBean in your {{ platform }} settings.{% endblocktranslate %}
+        {% endif %}
+    </p>
+    <p class="text-xs text-stone-500 mb-3">
+        {% if account.platform == "youtube" %}
+        {% translate "YouTube data, analytics and copied comments are deleted immediately, including notification copies. Your original uploads and posts shared with other channels stay." %}
+        {% else %}
+        {% translate "Its analytics, inbox messages and posts made only for it are deleted from BrightBean. Posts shared with other channels stay." %}
+        {% endif %}
+    </p>
+    {% endif %}
+    <div class="flex gap-2 justify-end">
+        <button type="button" @click="confirmDisconnect = false" class="px-3 py-1.5 text-xs font-semibold text-stone-600 bg-stone-100 rounded-full hover:bg-stone-200 transition-colors cursor-pointer">{% translate "Cancel" %}</button>
+        <form method="post"
+              action="{% if action_url %}{{ action_url }}{% else %}{% url 'social_accounts:disconnect' workspace_id=workspace_id account_id=account.id %}{% endif %}"
+              {% if swap %}hx-post="{% url 'social_accounts:disconnect' workspace_id=workspace_id account_id=account.id %}"
+              hx-target="#account-{{ account.id }}"
+              hx-swap="outerHTML"{% endif %}
+              x-data="{ disconnecting: false }"
+              @submit="disconnecting = true"
+              @htmx:after-request.camel="disconnecting = false">
+            {% csrf_token %}
+            {% if return_to %}<input type="hidden" name="return_to" value="{{ return_to }}">{% endif %}
+            <button type="submit" :disabled="disconnecting" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-500 rounded-full hover:bg-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg x-show="disconnecting" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                <span x-text="disconnecting ? '{% translate 'Disconnecting…' %}' : '{% translate 'Disconnect' %}'">{% translate "Disconnect" %}</span>
+            </button>
+        </form>
+    </div>
+</div>

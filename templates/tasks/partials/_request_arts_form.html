@@ -3,16 +3,19 @@
 The art request form: pick a network by its accounts (the composer's round
 account tiles), tick the formats needed, brief and assign. Rendered inside the
 request modal (tasks/partials/_request_arts_host.html) and, without JS, on its
-own page. Posts back to itself; a valid request answers HX-Redirect to the board
-with the new task open.
+own page. Posts back to itself, or to ``action_url`` when another app reuses it
+(tasks.views.render_art_request_form); a valid request answers HX-Redirect to
+the board with the new task open.
 {% endcomment %}
 <div class="art-request-root" x-data="artPicker('{{ first_tab }}')" @change="recount()">
-    <form method="post" action="{% url 'tasks:request_arts' workspace_id=workspace.id %}"
-          hx-post="{% url 'tasks:request_arts' workspace_id=workspace.id %}"
+    {% if action_url %}{% firstof action_url as post_url %}{% else %}{% url 'tasks:request_arts' workspace_id=workspace.id as post_url %}{% endif %}
+    <form method="post" action="{{ post_url }}"
+          hx-post="{{ post_url }}"
           hx-target="closest .art-request-root" hx-swap="outerHTML"
           class="art-request-grid">
         {% csrf_token %}
         {% if idea %}<input type="hidden" name="idea" value="{{ idea.id }}">{% endif %}
+        {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
 
         <section class="p-5 md:p-6 min-w-0">
             <h2 class="text-lg font-semibold text-stone-900 pr-10">{% translate "Request arts" %}</h2>
@@ -78,6 +81,8 @@ with the new task open.
             {% if error %}<div class="alert-error text-sm">{{ error }}</div>{% endif %}
             {% if idea %}
             <p class="text-xs text-stone-500 pr-10">{% blocktranslate with title=idea.title %}From the idea “{{ title }}”{% endblocktranslate %}</p>
+            {% elif source_note %}
+            <p class="text-xs text-stone-500 pr-10">{{ source_note }}</p>
             {% endif %}
             <div>
                 <label class="task-field-label block" for="ra-title">{% translate "Title" %}</label>
@@ -99,14 +104,27 @@ with the new task open.
             </div>
             <div>
                 <div class="task-field-label">{% translate "Responsible" %}</div>
-                <div class="space-y-1 max-h-40 overflow-y-auto">
-                    {% for member in members %}
-                    <label class="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
-                        <input type="checkbox" name="assignees" value="{{ member.pk }}" class="bb-checkbox"
-                               {% if member.pk|stringformat:"s" in chosen_assignees %}checked{% endif %}>
-                        <span class="truncate">{{ member.display_name }}</span>
-                    </label>
-                    {% endfor %}
+                {% comment %}
+                Same picker as the task modal's "Responsible" pill. The checkboxes stay
+                in this form while the dropdown is closed, so they post with it.
+                {% endcomment %}
+                <div class="relative" x-data="{ open: false, names: [] }" @click.outside="open = false"
+                     x-init="names = [...$el.querySelectorAll('input[name=assignees]:checked')].map(i => i.dataset.name)"
+                     @change="names = [...$el.querySelectorAll('input[name=assignees]:checked')].map(i => i.dataset.name)">
+                    <button type="button" class="idea-pill-btn" @click="open = !open" :aria-expanded="open">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                        <span class="truncate" data-empty="{% translate 'Responsible' %}" x-text="names.length ? names.join(', ') : $el.dataset.empty">{% translate "Responsible" %}</span>
+                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div x-show="open" x-cloak x-transition class="idea-pill-dropdown" style="left: 0; right: auto;">
+                        {% for member in members %}
+                        <label>
+                            <input type="checkbox" name="assignees" value="{{ member.pk }}" data-name="{{ member.display_name }}" class="bb-checkbox"
+                                   {% if member.pk|stringformat:"s" in chosen_assignees %}checked{% endif %}>
+                            <span class="truncate">{{ member.display_name }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
             <button type="submit" class="btn-brand w-full justify-center" :disabled="picked < 1">

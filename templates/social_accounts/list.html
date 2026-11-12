@@ -46,5 +46,17 @@
         </a>
     </div>
     {% endif %}
+
+    {% if opportunity_cards %}
+    <div class="mt-10 mb-4">
+        <h2 class="text-base font-semibold text-stone-900">{% translate "Opportunities" %}</h2>
+        <p class="text-sm text-stone-500 mt-1">{% translate "Sources connected to the Radar." %}</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {% for card in opportunity_cards %}
+        {% include "radar/partials/_source_card.html" with card=card action="open" can_connect=True %}
+        {% endfor %}
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

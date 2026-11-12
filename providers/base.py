@@ -40,7 +40,109 @@ REQUEST_TIMEOUT = 30.0
 INTERRUPTED_WAIT_MESSAGE = "Publishing was interrupted by a restart while the platform was still processing the media."
 
 
-class SocialProvider(ABC):
+class HttpProvider(ABC):
+    """HTTP plumbing shared by every platform client.
+
+    Social providers and non-publishing sources (``providers.shopee_affiliate``)
+    both go through :meth:`_request`, so a platform failure always arrives as
+    the same :mod:`providers.exceptions` hierarchy whatever kind of client made
+    the call.
+    """
+
+    @property
+    @abstractmethod
+    def platform_name(self) -> str:
+        """Human-readable platform name, used in error messages."""
+
+    def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        access_token: str | None = None,
+        headers: dict | None = None,
+        params: dict | None = None,
+        json: dict | None = None,
+        data: dict | bytes | Iterable[bytes] | IO[bytes] | None = None,
+        files: dict | None = None,
+        timeout: float = REQUEST_TIMEOUT,
+    ) -> httpx.Response:
+        """Make an HTTP request with standard error handling.
+
+        Raises APIError on 4xx/5xx, RateLimitError on 429.
+        """
+        req_headers = {}
+        if access_token:
+            req_headers["Authorization"] = f"Bearer {access_token}"
+        if headers:
+            req_headers.update(headers)
+
+        with httpx.Client(timeout=timeout) as client:
+            # httpx uses `content` for a request body, `data` for form mappings.
+            # A file object or byte iterator goes to `content` too, and httpx
+            # streams it rather than materializing it — which is the only way a
+            # 60 MB video upload doesn't cost 60 MB of RSS. httpx derives
+            # Content-Length from a real file object, and an explicit
+            # Content-Length passed by the caller still wins (so no stray
+            # Transfer-Encoding: chunked on APIs that reject it, like TikTok's).
+            request_kwargs: dict = {
+                "headers": req_headers,
+                "params": params,
+                "json": json,
+                "files": files,
+            }
+            if isinstance(data, dict) or data is None:
+                request_kwargs["data"] = data
+            else:
+                request_kwargs["content"] = data
+            response = client.request(method, url, **request_kwargs)
+
+        if response.status_code >= 400:
+            raise self._error_for_response(response)
+
+        return response
+
+    def _error_for_response(self, response: httpx.Response) -> ProviderError:
+        """Map an error response to the exception this provider wants raised.
+
+        Overriding this is how a provider teaches the stack to tell its error
+        shapes apart — a Google 403 spent on quota is a different fact from a
+        403 refused on scope, and only the provider can read the difference out
+        of the body.
+
+        Contract an override MUST preserve, because
+        ``apps.social_accounts.error_messages`` and the publish engine's retry
+        gates route on it: HTTP 429 raises a :class:`RateLimitError`, and every
+        other 4xx/5xx raises an :class:`APIError` carrying ``status_code``.
+        Anything reclassified has to stay a subclass of one of those two.
+        """
+        if response.status_code == 429:
+            retry_after = response.headers.get("Retry-After")
+            logger.error("%s API request was rate limited (HTTP 429)", self.platform_name)
+            return RateLimitError(
+                f"Rate limit exceeded for {self.platform_name}: {response.text[:500]}",
+                retry_after=int(retry_after) if retry_after else None,
+                platform=self.platform_name,
+                raw_response=self._safe_json(response),
+            )
+
+        return APIError(
+            f"{self.platform_name} API error {response.status_code}: {response.text[:500]}",
+            status_code=response.status_code,
+            platform=self.platform_name,
+            raw_response=self._safe_json(response),
+        )
+
+    @staticmethod
+    def _safe_json(response: httpx.Response) -> dict:
+        """Try to parse response as JSON, return empty dict on failure."""
+        try:
+            return response.json()
+        except Exception:
+            return {}
+
+
+class SocialProvider(HttpProvider):
     """Abstract base class that all social platform providers must implement.
 
     Each provider is instantiated with app-level credentials (client_id,
@@ -450,58 +552,6 @@ class SocialProvider(ABC):
         except Exception:
             return False
 
-    # ------------------------------------------------------------------
-    # HTTP helper
-    # ------------------------------------------------------------------
-
-    def _request(
-        self,
-        method: str,
-        url: str,
-        *,
-        access_token: str | None = None,
-        headers: dict | None = None,
-        params: dict | None = None,
-        json: dict | None = None,
-        data: dict | bytes | Iterable[bytes] | IO[bytes] | None = None,
-        files: dict | None = None,
-        timeout: float = REQUEST_TIMEOUT,
-    ) -> httpx.Response:
-        """Make an HTTP request with standard error handling.
-
-        Raises APIError on 4xx/5xx, RateLimitError on 429.
-        """
-        req_headers = {}
-        if access_token:
-            req_headers["Authorization"] = f"Bearer {access_token}"
-        if headers:
-            req_headers.update(headers)
-
-        with httpx.Client(timeout=timeout) as client:
-            # httpx uses `content` for a request body, `data` for form mappings.
-            # A file object or byte iterator goes to `content` too, and httpx
-            # streams it rather than materializing it — which is the only way a
-            # 60 MB video upload doesn't cost 60 MB of RSS. httpx derives
-            # Content-Length from a real file object, and an explicit
-            # Content-Length passed by the caller still wins (so no stray
-            # Transfer-Encoding: chunked on APIs that reject it, like TikTok's).
-            request_kwargs: dict = {
-                "headers": req_headers,
-                "params": params,
-                "json": json,
-                "files": files,
-            }
-            if isinstance(data, dict) or data is None:
-                request_kwargs["data"] = data
-            else:
-                request_kwargs["content"] = data
-            response = client.request(method, url, **request_kwargs)
-
-        if response.status_code >= 400:
-            raise self._error_for_response(response)
-
-        return response
-
     def _poll_until(
         self,
         check: Callable[[], bool],
@@ -530,42 +580,3 @@ class SocialProvider(ABC):
             if time.monotonic() >= deadline:
                 raise on_timeout()
             time.sleep(interval)
-
-    def _error_for_response(self, response: httpx.Response) -> ProviderError:
-        """Map an error response to the exception this provider wants raised.
-
-        Overriding this is how a provider teaches the stack to tell its error
-        shapes apart — a Google 403 spent on quota is a different fact from a
-        403 refused on scope, and only the provider can read the difference out
-        of the body.
-
-        Contract an override MUST preserve, because
-        ``apps.social_accounts.error_messages`` and the publish engine's retry
-        gates route on it: HTTP 429 raises a :class:`RateLimitError`, and every
-        other 4xx/5xx raises an :class:`APIError` carrying ``status_code``.
-        Anything reclassified has to stay a subclass of one of those two.
-        """
-        if response.status_code == 429:
-            retry_after = response.headers.get("Retry-After")
-            logger.error("%s API request was rate limited (HTTP 429)", self.platform_name)
-            return RateLimitError(
-                f"Rate limit exceeded for {self.platform_name}: {response.text[:500]}",
-                retry_after=int(retry_after) if retry_after else None,
-                platform=self.platform_name,
-                raw_response=self._safe_json(response),
-            )
-
-        return APIError(
-            f"{self.platform_name} API error {response.status_code}: {response.text[:500]}",
-            status_code=response.status_code,
-            platform=self.platform_name,
-            raw_response=self._safe_json(response),
-        )
-
-    @staticmethod
-    def _safe_json(response: httpx.Response) -> dict:
-        """Try to parse response as JSON, return empty dict on failure."""
-        try:
-            return response.json()
-        except Exception:
-            return {}

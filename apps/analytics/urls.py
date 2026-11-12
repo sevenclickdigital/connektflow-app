@@ -13,6 +13,7 @@ urlpatterns = [
     path("<uuid:account_id>/history/", views.history_offer, name="history_offer"),
     path("<uuid:account_id>/history/import/", views.history_import_view, name="history_import"),
     path("", views.analytics_index, name="index"),
+    path("shopee/<uuid:connection_id>/", views.shopee_report, name="shopee"),
     path("post/<uuid:post_id>/", views.post_detail, name="post_detail"),
     path("<uuid:account_id>/", views.analytics_account, name="account"),
 ]
