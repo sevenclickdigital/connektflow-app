@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{% translate "Tasks" %} - {{ workspace.name }} - Brightbean{% endblock %}
+
+{% block extra_head %}
+{% include "tasks/partials/_styles.html" %}
+{% endblock %}
+
+{% block page_header %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4 lg:mb-[25px]">
+    <h1 class="text-xl sm:text-2xl font-semibold text-stone-900" style="letter-spacing: -0.01em;">{% translate "Tasks" %}</h1>
+    <form method="get" class="flex flex-wrap items-center gap-2" x-data @change="$el.requestSubmit()">
+        <select name="assignee" class="bb-select text-sm" aria-label="{% translate 'Responsible' %}">
+            <option value="">{% translate "Everyone" %}</option>
+            <option value="me" {% if active_assignee == "me" %}selected{% endif %}>{% translate "My tasks" %}</option>
+            {% for member in members %}
+            <option value="{{ member.pk }}" {% if active_assignee == member.pk|stringformat:"s" %}selected{% endif %}>{{ member.display_name }}</option>
+            {% endfor %}
+        </select>
+        <select name="priority" class="bb-select text-sm" aria-label="{% translate 'Priority' %}">
+            <option value="">{% translate "Any priority" %}</option>
+            {% for value, label in priorities %}
+            <option value="{{ value }}" {% if active_priority == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    <div class="flex items-center gap-2">
+        {% if can_manage %}
+        <div class="relative" x-data="{ open: false }">
+            <button type="button" class="btn-neutral text-sm px-3 py-2" @click="open = !open" :aria-expanded="open">{% translate "Art settings" %}</button>
+            <form x-show="open" x-cloak @click.outside="open = false"
+                  hx-post="{% url 'tasks:art_settings' workspace_id=workspace.id %}" hx-swap="none" @htmx:after-request="open = false"
+                  class="absolute right-0 top-full mt-2 z-30 w-72 bg-white rounded-xl shadow-lg ring-1 ring-stone-200 p-4 space-y-3">
+                <div>
+                    <label class="task-field-label block" for="art-assignee">{% translate "Art requests go to" %}</label>
+                    <select id="art-assignee" name="art_assignee" class="bb-select w-full text-sm">
+                        <option value="">{% translate "Nobody by default" %}</option>
+                        {% for member in members %}<option value="{{ member.pk }}" {% if member.pk == art_settings.art_assignee_id %}selected{% endif %}>{{ member.display_name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="task-field-label block" for="art-lead">{% translate "Due this many days before the content date" %}</label>
+                    <input id="art-lead" type="number" name="art_lead_days" min="0" max="60" value="{{ art_settings.art_lead_days }}" class="form-input-styled w-full text-sm">
+                </div>
+                <button type="submit" class="btn-brand w-full justify-center text-sm">{% translate "Save" %}</button>
+            </form>
+        </div>
+        {% endif %}
+        {% if can_edit %}
+        <button type="button" class="btn-brand text-sm px-4 py-2"
+                x-data @click="$dispatch('open-art-request', { url: '{% url 'tasks:request_arts' workspace_id=workspace.id %}' })">{% translate "Request arts" %}</button>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div x-data="taskBoard()" @keydown.escape.window="closeTask()">
+    <div id="task-board" class="task-board"
+         hx-get="{{ request.get_full_path }}"
+         hx-trigger="tasksChanged from:body"
+         hx-swap="innerHTML">
+        {% include "tasks/partials/_board.html" %}
+    </div>
+
+    <div class="task-modal-backdrop" x-show="taskOpen" x-cloak @click.self="closeTask()">
+        <div class="task-modal" role="dialog" aria-modal="true" aria-label="{% translate 'Task' %}">
+            <div id="task-modal-body"></div>
+        </div>
+    </div>
+</div>
+
+{% include "tasks/partials/_request_arts_host.html" %}
+{% include "approvals/partials/_toasts.html" %}
+{{ task_board_config|json_script:"task-board-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ request.csp_nonce }}">
+function taskBoard() {
+    var cfg = JSON.parse(document.getElementById('task-board-config').textContent);
+    function urlFor(template, id) { return template.replace(cfg.placeholder, id); }
+    function csrf() {
+        var el = document.querySelector('[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
+    }
+    return {
+        taskOpen: false,
+        dragId: null,
+
+        init() {
+            var self = this;
+            document.body.addEventListener('closeTask', function () { self.closeTask(); });
+            if (cfg.openTask) this.openTask(cfg.openTask);
+        },
+
+        openTask(id) {
+            if (this.dragId) return;
+            var body = document.getElementById('task-modal-body');
+            body.innerHTML = '';
+            this.taskOpen = true;
+            htmx.ajax('GET', urlFor(cfg.detailUrl, id), { target: '#task-modal-body', swap: 'innerHTML' });
+        },
+
+        closeTask() {
+            this.taskOpen = false;
+            document.getElementById('task-modal-body').innerHTML = '';
+        },
+
+        dragStart(event, id) {
+            if (!cfg.canEdit) { event.preventDefault(); return; }
+            this.dragId = id;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', id);
+            event.currentTarget.classList.add('is-dragging');
+        },
+
+        dragEnd(event) {
+            event.currentTarget.classList.remove('is-dragging');
+            document.querySelectorAll('.task-drop.is-over').forEach(function (el) { el.classList.remove('is-over'); });
+            var self = this;
+            // Cleared after the click that may follow a drop, so it doesn't open the card.
+            setTimeout(function () { self.dragId = null; }, 0);
+        },
+
+        dragOver(event) {
+            if (!this.dragId) return;
+            event.preventDefault();
+            var zone = event.currentTarget;
+            zone.classList.add('is-over');
+            var card = document.querySelector('.task-card[data-task-id="' + this.dragId + '"]');
+            if (!card) return;
+            var after = Array.from(zone.querySelectorAll('.task-card:not(.is-dragging)')).find(function (c) {
+                var box = c.getBoundingClientRect();
+                return event.clientY < box.top + box.height / 2;
+            });
+            if (after) { if (after !== card.nextSibling) zone.insertBefore(card, after); }
+            else if (zone.lastElementChild !== card) zone.appendChild(card);
+        },
+
+        dragLeave(event) {
+            if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('is-over');
+        },
+
+        drop(event, columnId) {
+            event.preventDefault();
+            var zone = event.currentTarget;
+            zone.classList.remove('is-over');
+            var id = this.dragId;
+            if (!id) return;
+            var cards = Array.from(zone.querySelectorAll('.task-card'));
+            var body = new FormData();
+            body.append('column', columnId);
+            body.append('position', String(cards.findIndex(function (c) { return c.dataset.taskId === id; })));
+            fetch(urlFor(cfg.moveUrl, id), { method: 'POST', body: body, headers: { 'X-CSRFToken': csrf() } })
+                .then(function (r) { if (!r.ok) throw new Error(String(r.status)); })
+                .catch(function () {
+                    document.body.dispatchEvent(new CustomEvent('showToast', { detail: { tone: 'error', title: cfg.labels.moveFailed } }));
+                })
+                .finally(function () { htmx.trigger(document.body, 'tasksChanged'); });
+        },
+
+        moveColumn(columnId, step) {
+            var ids = Array.from(document.querySelectorAll('.task-column[data-column-id]')).map(function (c) { return c.dataset.columnId; });
+            var from = ids.indexOf(columnId);
+            var to = from + step;
+            if (from < 0 || to < 0 || to >= ids.length) return;
+            ids.splice(to, 0, ids.splice(from, 1)[0]);
+            fetch(cfg.reorderUrl, {
+                method: 'POST',
+                body: JSON.stringify({ order: ids }),
+                headers: { 'X-CSRFToken': csrf(), 'Content-Type': 'application/json' },
+            }).finally(function () { htmx.trigger(document.body, 'tasksChanged'); });
+        },
+    };
+}
+</script>
+{% endblock %}

@@ -8,7 +8,7 @@ Toolbar: nav arrows + period + Today + view dropdown | right: filter dropdowns.
      x-data="{ ...calendarApp(), showEventForm: false, viewOpen: false }"
      @calendar-refresh.window="htmx.trigger('#calendar-content', 'refresh')"
      hx-trigger="calendarRefresh from:body"
-     hx-get="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=calendar&view={{ view_type }}&date={{ target_date|date:'Y-m-d' }}{% if show_holidays %}&holidays=1{% endif %}"
+     hx-get="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=calendar&view={{ view_type }}&date={{ target_date|date:'Y-m-d' }}"
      hx-target="#calendar-content"
      hx-swap="innerHTML">
 
@@ -72,6 +72,14 @@ Toolbar: nav arrows + period + Today + view dropdown | right: filter dropdowns.
 
         <!-- Right side: filter dropdowns -->
         <div class="cal-filters-scroll flex items-center gap-2 ml-auto overflow-x-auto flex-nowrap" style="-webkit-overflow-scrolling: touch; scrollbar-width: none;">
+            {% if can_create_posts %}
+            <button type="button" hx-post="{% url 'calendar:special_dates_toggle' workspace_id=workspace.id %}" hx-swap="none"
+                    aria-pressed="{{ show_holidays|yesno:'true,false' }}"
+                    title="{% translate 'Show Brazilian holidays and commercial dates' %}"
+                    class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md border transition-all duration-150 {% if show_holidays %}border-amber-300 bg-amber-50 text-amber-700{% else %}border-stone-200 text-stone-500 hover:bg-stone-50{% endif %}">
+                🎉 {% translate "Special dates" %}
+            </button>
+            {% endif %}
             <!-- Status filter -->
             {% ui_select model="calendarFilters.status" options=status_choices onchange="reloadCalendar()" placeholder=_("All Posts") icon="status" %}
 

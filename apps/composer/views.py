@@ -22,6 +22,7 @@ from django.http import FileResponse, Http404, HttpResponse, JsonResponse, Strea
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.utils.html import format_html, strip_tags
 from django.utils.text import get_text_list
 from django.utils.translation import gettext as _
@@ -40,7 +41,7 @@ from apps.media_library.quotas import StorageQuotaExceededError
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
 from apps.publisher.manual_delivery import NOTIFY_DELIVERY, is_notify_delivery
-from apps.social_accounts.models import SocialAccount
+from apps.social_accounts.models import PlatformVisibility, SocialAccount
 from apps.workspaces.models import Workspace
 from providers import is_video_only, requires_media
 from providers.google_business import PROFILE_PHOTO_CATEGORIES
@@ -1108,6 +1109,20 @@ def compose(request, workspace_id, post_id=None):
         "post": post,
         "form": form,
         "social_accounts": social_accounts,
+        # Every channel on offer, connected or not; not while scoped to one account.
+        "unconnected_channels": (
+            []
+            if account_filter
+            else PlatformVisibility.unconnected_choices(
+                SocialAccount.objects.for_workspace(workspace.id)
+                .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
+                .values_list("platform", flat=True)
+            )
+        ),
+        "can_connect_channels": bool(
+            request.workspace_membership
+            and request.workspace_membership.effective_permissions.get("manage_social_accounts")
+        ),
         "selected_account_ids": [str(aid) for aid in selected_account_ids],
         "selected_formats": selected_formats,
         "format_extras": format_extras,
@@ -3321,6 +3336,16 @@ def clone_post_view(request, workspace_id, post_id):
 # ---------------------------------------------------------------------------
 
 
+def _workspace_event(workspace, event_id):
+    """The workspace's calendar event with this id, or None (never another workspace's)."""
+    from apps.calendar.models import CustomCalendarEvent
+
+    try:
+        return CustomCalendarEvent.objects.for_workspace(workspace.id).filter(id=uuid.UUID(str(event_id))).first()
+    except (TypeError, ValueError):
+        return None
+
+
 def _idea_columns(workspace, tag=None):
     """Build Kanban columns from IdeaGroup for a workspace, optionally filtered by tag."""
     groups = IdeaGroup.objects.for_workspace(workspace.id).order_by("position", "created_at")
@@ -3350,7 +3375,7 @@ def _idea_columns(workspace, tag=None):
 
     ideas_qs = (
         Idea.objects.for_workspace(workspace.id)
-        .select_related("author", "media_asset")
+        .select_related("author", "media_asset", "calendar_event")
         .prefetch_related("media_attachments__media_asset")
         .order_by("position", "-created_at")
     )
@@ -3620,8 +3645,10 @@ def create_landing(request, workspace_id):
     columns, all_tags = _idea_columns(workspace, tag)
 
     feeds = Feed.objects.for_workspace(workspace.id)
+    from apps.calendar.services import upcoming_dates
 
     context = {
+        "upcoming_dates": upcoming_dates(workspace, timezone.localdate()),
         "workspace": workspace,
         "tab": tab,
         "columns": columns,
@@ -3712,6 +3739,8 @@ def idea_create(request, workspace_id):
             group=group,
             status=Idea.Status.UNASSIGNED,
             media_asset_id=media_asset_ids[0] if media_asset_ids else None,
+            target_date=parse_date(request.POST.get("target_date") or "") or None,
+            calendar_event=_workspace_event(workspace, request.POST.get("calendar_event")),
         )
 
         if has_multi_media_payload or media_asset_ids:
@@ -3755,6 +3784,8 @@ def idea_edit(request, workspace_id, idea_id):
     idea.title = request.POST.get("title", idea.title).strip()
     idea.description = request.POST.get("description", idea.description).strip()
     idea.tags = parse_and_truncate_tag_string(request.POST.get("tags", ""))
+    if "target_date" in request.POST:
+        idea.target_date = parse_date(request.POST["target_date"] or "") or None
 
     group_id = request.POST.get("group", "").strip()
     if group_id:
@@ -3778,7 +3809,7 @@ def idea_edit(request, workspace_id, idea_id):
     media_asset_ids = _normalize_media_asset_ids(media_asset_ids)
 
     with transaction.atomic():
-        idea.save(update_fields=["title", "description", "tags", "group", "updated_at"])
+        idea.save(update_fields=["title", "description", "tags", "group", "target_date", "updated_at"])
 
         if has_multi_media_payload:
             _sync_idea_media_attachments(idea, workspace, media_asset_ids)

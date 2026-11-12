@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
+from apps.common.htmx import toast_response
 from apps.common.validators import is_valid_hex_color
 from apps.composer.models import ContentCategory, PlatformPost, Post
 from apps.members.decorators import require_permission
@@ -23,7 +24,15 @@ from apps.workspaces.models import Workspace
 
 from .holidays import get_holidays_for_range
 from .models import CustomCalendarEvent, PostingSlot, Queue, QueueEntry
-from .services import day_label, drop_queue_entry_unless_scheduled, month_label, week_label, weekday_names
+from .services import (
+    day_label,
+    drop_queue_entry_unless_scheduled,
+    events_by_date,
+    month_label,
+    special_dates_enabled,
+    week_label,
+    weekday_names,
+)
 
 # Common timezones for the publish page timezone dropdown
 COMMON_TIMEZONES = [
@@ -725,7 +734,7 @@ def calendar_view(request, workspace_id):
         "tags": request.GET.getlist("tag"),
     }
 
-    show_holidays = request.GET.get("holidays") == "1"
+    show_holidays = special_dates_enabled(workspace)
 
     # Publish page context (channels, tags, timezone dropdowns)
     publish_ctx = _get_publish_context(workspace, request)
@@ -763,6 +772,10 @@ def calendar_view(request, workspace_id):
         "active_filters": active_filters,
         "status_choices": Post.Status.choices,
         "show_holidays": show_holidays,
+        "event_recurrence_choices": CustomCalendarEvent.Recurrence.choices,
+        "can_create_posts": bool(
+            request.workspace_membership and request.workspace_membership.effective_permissions.get("create_posts")
+        ),
         "is_today_in_view": is_today_in_view,
         **publish_ctx,
     }
@@ -777,8 +790,15 @@ def calendar_view(request, workspace_id):
 
     # HTMX partial: switching between list and calendar mode
     # Only intercept when the toggle buttons explicitly request a mode switch
+    if mode == "board":
+        from . import status_board
+
+        context["status_board"] = status_board.board_columns(workspace)
+
     is_htmx = getattr(request, "htmx", False)
     if is_htmx and request.GET.get("_switch_mode"):
+        if mode == "board":
+            return render(request, "calendar/partials/publish_board_shell.html", context)
         if mode == "list":
             return render(request, "calendar/partials/publish_list_shell.html", context)
         else:
@@ -786,6 +806,9 @@ def calendar_view(request, workspace_id):
             # We still need the calendar data populated in context first.
             _populate_calendar_context(request, workspace, view_type, target_date, context)
             return render(request, "calendar/partials/publish_calendar_shell.html", context)
+
+    if mode == "board":
+        return render(request, "calendar/calendar.html", context)
 
     # Full page or calendar HTMX partial (sub-view switching within calendar)
     if mode == "calendar":
@@ -876,11 +899,7 @@ def _month_view_data(request, workspace, target_date, context):
         holidays_by_date = get_holidays_for_range(weeks[0][0], weeks[-1][6])
 
     # Custom calendar events
-    custom_events = (
-        CustomCalendarEvent.objects.for_workspace(workspace.id)
-        .filter(start_date__lte=weeks[-1][6], end_date__gte=weeks[0][0])
-        .order_by("start_date")
-    )
+    events_by_day = events_by_date(workspace, weeks[0][0], weeks[-1][6])
 
     # Build weeks data
     from django.utils import timezone as _tz
@@ -892,7 +911,7 @@ def _month_view_data(request, workspace, target_date, context):
         for day in week:
             day_posts = posts_by_date.get(day, [])
             day_holidays = holidays_by_date.get(day.isoformat(), [])
-            day_events = [e for e in custom_events if e.start_date <= day <= e.end_date]
+            day_events = events_by_day.get(day, [])
             week_data.append(
                 {
                     "date": day,
@@ -1317,6 +1336,24 @@ def _bulk_save_platform_posts(rows):
     )
 
 
+def _send_back_to_draft(pps) -> list:
+    """Unschedule: back to draft and drop the time. Returns the rows that changed.
+
+    The caller syncs their queue entries and parent posts.
+    """
+    changed = []
+    for pp in pps:
+        if pp.status in PlatformPost.PROTECTED_STATUSES or pp.status == "draft":
+            continue
+        if not pp.can_transition_to("draft"):
+            continue
+        pp.scheduled_at = None
+        pp.transition_to("draft")
+        changed.append(pp)
+    _bulk_save_platform_posts(changed)
+    return changed
+
+
 def _sync_queue_entries(touched):
     """Keep queue mirrors in step with rows a bulk action just changed.
 
@@ -1428,19 +1465,10 @@ def bulk_platform_action(request, workspace_id):
             PlatformPost.objects.filter(id__in=[pp.id for pp in deletable]).delete()
             count = len(deletable)
         elif action == "draft":
-            # Unschedule: back to draft and drop the time.
-            changed = []
-            for pp in pps:
-                if pp.status in PlatformPost.PROTECTED_STATUSES or pp.status == "draft":
-                    continue
-                if not pp.can_transition_to("draft"):
-                    continue
-                pp.scheduled_at = None
-                pp.transition_to("draft")
-                changed.append(pp)
+            changed = _send_back_to_draft(pps)
+            for pp in changed:
                 affected.add(pp.post_id)
                 touched.append((pp, None))
-            _bulk_save_platform_posts(changed)
             count = len(changed)
         else:
             # Publish now. Rows on the same channel are staggered a minute apart
@@ -1882,6 +1910,10 @@ def event_create(request, workspace_id):
     if end < start:
         end = start
 
+    recurrence = request.POST.get("recurrence", CustomCalendarEvent.Recurrence.NONE)
+    if recurrence not in CustomCalendarEvent.Recurrence.values:
+        recurrence = CustomCalendarEvent.Recurrence.NONE
+
     CustomCalendarEvent.objects.create(
         workspace=workspace,
         title=title,
@@ -1889,6 +1921,7 @@ def event_create(request, workspace_id):
         start_date=start,
         end_date=end,
         color=color,
+        recurrence=recurrence,
         created_by=request.user,
     )
 
@@ -1922,6 +1955,8 @@ def event_edit(request, workspace_id, event_id):
     if end_str:
         with contextlib.suppress(ValueError, TypeError):
             event.end_date = date.fromisoformat(end_str)
+    if request.POST.get("recurrence") in CustomCalendarEvent.Recurrence.values:
+        event.recurrence = request.POST["recurrence"]
 
     event.save()
 
@@ -1942,3 +1977,79 @@ def event_delete(request, workspace_id, event_id):
     if request.htmx:
         return HttpResponse(status=204, headers={"HX-Trigger": "calendarRefresh"})
     return JsonResponse({"deleted": True})
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def special_dates_toggle(request, workspace_id):
+    """Show or hide the holidays and commercial dates for the whole workspace."""
+    from apps.settings_manager.models import WorkspaceSetting
+
+    from .services import SPECIAL_DATES_SETTING
+
+    workspace = _get_workspace(request, workspace_id)
+    WorkspaceSetting.objects.update_or_create(
+        workspace=workspace, key=SPECIAL_DATES_SETTING, defaults={"value": not special_dates_enabled(workspace)}
+    )
+    return HttpResponse(status=204, headers={"HX-Refresh": "true"})
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def status_board_move(request, workspace_id, platform_post_id):
+    """Drop a card of the status board on a column; runs the service for that move."""
+    from django.db import transaction
+
+    from apps.approvals.services import approve_post, submit_for_review
+    from apps.composer.services import require_publishable, sync_post_scheduled_at
+
+    from . import status_board
+
+    workspace = _get_workspace(request, workspace_id)
+    pp = get_object_or_404(
+        PlatformPost.objects.select_related("post", "social_account"), id=platform_post_id, post__workspace=workspace
+    )
+    target = status_board.column(request.POST.get("column"))
+    perms = request.workspace_membership.effective_permissions
+    try:
+        if target is None:
+            raise status_board.MoveRefusedError(_("Unknown column."))
+        status_board.check_move(pp, target, perms, request.user)
+        if pp.status in target.statuses:
+            return HttpResponse(status=204)
+        if target.key == "scheduled":
+            require_publishable(pp)
+    except (status_board.MoveRefusedError, ValueError) as exc:
+        return toast_response(
+            tone="error", title=_("The post was not moved."), body=str(exc), events={"statusBoardChanged": True}
+        )
+
+    if target.key == "review":
+        submit_for_review(pp, request.user, workspace)
+    elif target.key == "approved":
+        approve_post(pp, request.user, workspace)
+    elif target.key == "draft":
+        with transaction.atomic():
+            _send_back_to_draft([pp])
+            _sync_queue_entries([(pp, None)])
+            sync_post_scheduled_at(pp.post)
+    else:
+        with transaction.atomic():
+            if pp.status == PlatformPost.Status.FAILED:
+                pp.publish_error = ""
+                pp.retry_count = 0
+                pp.next_retry_at = None
+                pp.platform_post_id = ""
+            pp.scheduled_at = pp.scheduled_at or pp.post.scheduled_at
+            pp.transition_to("scheduled")
+            _bulk_save_platform_posts([pp])
+            sync_post_scheduled_at(pp.post)
+    pp.refresh_from_db(fields=["status"])
+    return toast_response(
+        tone="success",
+        title=_("Moved to “%(column)s”.") % {"column": target.label},
+        body=pp.get_status_display() if pp.status not in target.statuses else "",
+        events={"statusBoardChanged": True},
+    )

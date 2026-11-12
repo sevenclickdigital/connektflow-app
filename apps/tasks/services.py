@@ -1,0 +1,419 @@
+"""Business rules of the task board. Views parse input and call these."""
+
+from __future__ import annotations
+
+from django.conf import settings
+from django.db import transaction
+from django.db.models import Count, Max, Prefetch, Q
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.translation import gettext as _
+from django.utils.translation import override
+
+from apps.members.models import WorkspaceMembership
+
+from .models import Task, TaskChecklistItem, TaskColumn
+
+
+def ensure_columns(workspace) -> list[TaskColumn]:
+    """The board's columns, seeding the default four the first time.
+
+    Column names are data (users rename them), so they are written in the
+    language of whoever opens the board first, like the idea board's groups.
+    """
+    columns = list(TaskColumn.objects.for_workspace(workspace.id))
+    if columns:
+        return columns
+    defaults = [
+        (_("To do"), False, False),
+        (_("In progress"), False, False),
+        (_("In review"), True, False),
+        (_("Done"), False, True),
+    ]
+    return [
+        TaskColumn.objects.create(workspace=workspace, name=name, position=pos, is_review=review, is_done=done)
+        for pos, (name, review, done) in enumerate(defaults)
+    ]
+
+
+def assignable_members(workspace):
+    """Users who can be made responsible for a task: members who can create content."""
+    memberships = (
+        WorkspaceMembership.objects.filter(workspace=workspace, user__is_active=True)
+        .select_related("user", "custom_role")
+        .order_by("user__name", "user__email")
+    )
+    return [m.user for m in memberships if m.effective_permissions.get("create_posts")]
+
+
+def resolve_assignees(workspace, raw_ids) -> list:
+    """Keep only ids of users who may be assigned in this workspace."""
+    wanted = {str(i) for i in raw_ids if i}
+    return [u for u in assignable_members(workspace) if str(u.pk) in wanted]
+
+
+def board_columns(workspace, *, assignee_id=None, priority=None):
+    """Columns with their (filtered) tasks, checklist progress and assignees, in two queries."""
+    columns = ensure_columns(workspace)
+    tasks = (
+        Task.objects.for_workspace(workspace.id)
+        .select_related("idea")
+        .prefetch_related("assignees")
+        .annotate(
+            items_total=Count("checklist", distinct=True),
+            items_done=Count("checklist", filter=Q(checklist__is_done=True), distinct=True),
+        )
+        .order_by("position", "-created_at")
+    )
+    if assignee_id:
+        tasks = tasks.filter(assignees__id=assignee_id)
+    if priority in Task.Priority.values:
+        tasks = tasks.filter(priority=priority)
+
+    by_column: dict = {c.id: [] for c in columns}
+    for task in tasks:
+        by_column.setdefault(task.column_id, []).append(task)
+    for column in columns:
+        column.task_list = by_column.get(column.id, [])
+    return columns
+
+
+def task_detail_queryset(workspace):
+    return (
+        Task.objects.for_workspace(workspace.id)
+        .select_related("column", "idea", "post", "calendar_event", "created_by")
+        .prefetch_related(
+            "assignees",
+            Prefetch("checklist", queryset=TaskChecklistItem.objects.select_related("media_asset", "done_by")),
+        )
+    )
+
+
+def _next_position(column) -> int:
+    top = Task.objects.filter(column=column).aggregate(top=Max("position"))["top"]
+    return 0 if top is None else top + 1
+
+
+@transaction.atomic
+def create_task(
+    workspace,
+    actor,
+    *,
+    title,
+    column=None,
+    description="",
+    post_caption="",
+    priority=Task.Priority.MEDIUM,
+    due_date=None,
+    assignees=(),
+    idea=None,
+    calendar_event=None,
+    items=(),
+) -> Task:
+    """Create a task at the bottom of ``column`` (the first column by default).
+
+    ``items`` are dicts of ``TaskChecklistItem`` fields, in order.
+    """
+    column = column or ensure_columns(workspace)[0]
+    task = Task.objects.create(
+        workspace=workspace,
+        column=column,
+        position=_next_position(column),
+        title=title[:255],
+        description=description,
+        post_caption=post_caption,
+        priority=priority,
+        due_date=due_date,
+        created_by=actor,
+        idea=idea,
+        calendar_event=calendar_event,
+        completed_at=timezone.now() if column.is_done else None,
+    )
+    TaskChecklistItem.objects.bulk_create(
+        [TaskChecklistItem(task=task, position=pos, **item) for pos, item in enumerate(items)]
+    )
+    if assignees:
+        task.assignees.set(assignees)
+        transaction.on_commit(lambda: notify_assigned(task, assignees, actor))
+    return task
+
+
+def set_assignees(task, users, actor) -> None:
+    """Replace who is responsible; only the newly added people are notified."""
+    before = set(task.assignees.values_list("pk", flat=True))
+    task.assignees.set(users)
+    added = [u for u in users if u.pk not in before]
+    if added:
+        notify_assigned(task, added, actor)
+
+
+@transaction.atomic
+def move_task(task, column, position, actor) -> None:
+    """Put ``task`` at ``position`` of ``column`` and renumber that column."""
+    moved_column = task.column_id != column.id
+    siblings = list(Task.objects.filter(column=column).exclude(pk=task.pk).order_by("position", "-created_at"))
+    position = max(0, min(position, len(siblings)))
+    siblings.insert(position, task)
+    for index, sibling in enumerate(siblings):
+        sibling.position = index
+    task.column = column
+    if moved_column:
+        task.completed_at = timezone.now() if column.is_done else None
+    Task.objects.bulk_update([t for t in siblings if t.pk != task.pk], ["position"])
+    task.save(update_fields=["column", "position", "completed_at", "updated_at"])
+
+
+def set_item_done(item, done, actor) -> None:
+    item.is_done = done
+    item.done_by = actor if done else None
+    item.done_at = timezone.now() if done else None
+    item.save(update_fields=["is_done", "done_by", "done_at"])
+    if done:
+        advance_to_review(item.task, actor)
+
+
+def advance_to_review(task, actor) -> bool:
+    """Send an art task to the review column once every art on it is delivered.
+
+    Only art tasks move by themselves, and only forward: a task already in
+    review or done stays where it is. Returns whether it moved.
+    """
+    items = list(task.checklist.all())
+    arts = [i for i in items if i.is_art]
+    if not arts or not all(i.is_done for i in items):
+        return False
+    if task.column.is_review or task.column.is_done:
+        return False
+    review = TaskColumn.objects.for_workspace(task.workspace_id).filter(is_review=True).first()
+    if review is None:
+        return False
+    move_task(task, review, _next_position(review), actor)
+    if task.created_by_id and task.created_by != actor:
+        notify_ready_for_review(task)
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+
+
+def task_url(task) -> str:
+    path = reverse("tasks:board", kwargs={"workspace_id": task.workspace_id})
+    return f"{settings.APP_URL.rstrip('/')}{path}?task={task.pk}"
+
+
+def notify_assigned(task, users, actor) -> None:
+    from apps.notifications.engine import notify
+    from apps.notifications.models import EventType
+
+    who = actor.display_name if actor else ""
+    for user in users:
+        if actor and user.pk == actor.pk:
+            continue
+        with override(settings.LANGUAGE_CODE):
+            notify(
+                user,
+                EventType.TASK_ASSIGNED,
+                title=_("New task: %(title)s") % {"title": task.title},
+                body=_("%(who)s made you responsible for this task.") % {"who": who} if who else "",
+                data={"action_url": task_url(task), "task_id": str(task.pk), "workspace_id": str(task.workspace_id)},
+            )
+
+
+def notify_ready_for_review(task) -> None:
+    from apps.notifications.engine import notify
+    from apps.notifications.models import EventType
+
+    with override(settings.LANGUAGE_CODE):
+        notify(
+            task.created_by,
+            EventType.TASK_READY_FOR_REVIEW,
+            title=_("Arts ready for review: %(title)s") % {"title": task.title},
+            body=_("Every art on the checklist was delivered."),
+            data={"action_url": task_url(task), "task_id": str(task.pk), "workspace_id": str(task.workspace_id)},
+        )
+
+
+def send_due_reminders(today=None) -> int:
+    """Remind the people responsible for open tasks due tomorrow. Once per due date."""
+    from datetime import timedelta
+
+    from apps.notifications.engine import notify
+    from apps.notifications.models import EventType
+
+    today = today or timezone.localdate()
+    tomorrow = today + timedelta(days=1)
+    due = (
+        Task.objects.filter(due_date=tomorrow, completed_at__isnull=True)
+        .exclude(due_reminder_sent_on=tomorrow)
+        .prefetch_related("assignees")
+    )
+    sent = 0
+    for task in due:
+        with override(settings.LANGUAGE_CODE):
+            for user in task.assignees.all():
+                notify(
+                    user,
+                    EventType.TASK_DUE_SOON,
+                    title=_("Due tomorrow: %(title)s") % {"title": task.title},
+                    data={"action_url": task_url(task), "task_id": str(task.pk)},
+                )
+                sent += 1
+        task.due_reminder_sent_on = tomorrow
+        task.save(update_fields=["due_reminder_sent_on"])
+    return sent
+
+
+# ---------------------------------------------------------------------------
+# Art requests
+# ---------------------------------------------------------------------------
+
+
+def art_settings(workspace):
+    from .models import TaskSettings
+
+    task_settings, _created = TaskSettings.objects.get_or_create(workspace=workspace)
+    return task_settings
+
+
+def request_arts(
+    workspace,
+    actor,
+    *,
+    title,
+    format_keys,
+    description="",
+    post_caption="",
+    assignees=(),
+    due_date=None,
+    idea=None,
+) -> Task:
+    """One task whose checklist has an item per requested format, in catalogue order.
+
+    Unknown keys are dropped; at least one known format is required.
+    """
+    from . import creative_formats
+
+    wanted = set(format_keys)
+    formats = [f for f in creative_formats.FORMATS if f.key in wanted]
+    if not formats:
+        raise ValueError("No known format requested")
+    if not assignees:
+        default = art_settings(workspace).art_assignee
+        if default and default in assignable_members(workspace):
+            assignees = [default]
+    return create_task(
+        workspace,
+        actor,
+        title=title,
+        description=description,
+        post_caption=post_caption,
+        due_date=due_date,
+        assignees=list(assignees),
+        idea=idea,
+        calendar_event=idea.calendar_event if idea else None,
+        items=[
+            {
+                "text": creative_formats.checklist_text(f),
+                "format_key": f.key,
+                "width": f.width,
+                "height": f.height,
+            }
+            for f in formats
+        ],
+    )
+
+
+def deliver_art(item, asset, actor) -> bool:
+    """Attach the delivered file to an art item and tick it.
+
+    Returns whether the file's proportions match the format's. A mismatch is
+    reported, never refused: the designer may have a reason (a safe-area
+    variant), and the reviewer sees the warning on the card.
+    """
+    from . import creative_formats
+
+    item.media_asset = asset
+    item.is_done = True
+    item.done_by = actor
+    item.done_at = timezone.now()
+    item.save(update_fields=["media_asset", "is_done", "done_by", "done_at"])
+    advance_to_review(item.task, actor)
+    return creative_formats.ratio_matches(item.width or 0, item.height or 0, asset.width, asset.height)
+
+
+class NothingToPublishError(Exception):
+    """The task has no delivered art that this workspace's accounts can publish."""
+
+
+@transaction.atomic
+def create_post_from_task(task, actor):
+    """A draft post with each delivered art in the format it was made for.
+
+    It goes out with the task's ``post_caption``; the briefing (``description``)
+    is for the designers and never becomes the caption. The first delivered feed art is the post's media; every other delivered
+    art stands in for it on its own format (a Story, a Reel, another network's
+    feed) through the same per-format media the composer's crop uses. Formats
+    the account can't publish and art-only pieces are left out.
+    """
+    from apps.composer.models import PlatformPost, Post, PostMedia
+    from apps.social_accounts.models import SocialAccount
+
+    from . import creative_formats
+
+    delivered = []
+    for item in task.checklist.select_related("media_asset").order_by("position"):
+        fmt = creative_formats.get(item.format_key)
+        if fmt and fmt.is_publishable and item.media_asset_id:
+            delivered.append((fmt, item.media_asset))
+    if not delivered:
+        raise NothingToPublishError
+
+    accounts = list(
+        SocialAccount.objects.for_workspace(task.workspace_id).filter(
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED
+        )
+    )
+    # (account, publish format) → art, first art per pair in checklist order.
+    plan: dict = {}
+    for fmt, asset in delivered:
+        for account in accounts:
+            if (
+                account.platform in creative_formats.network(fmt.network).platforms
+                and fmt.publish_format in account.formats
+            ):
+                plan.setdefault((account, fmt.publish_format), asset)
+    if not plan:
+        raise NothingToPublishError
+
+    primary = next((a for f, a in delivered if f.publish_format == "default"), delivered[0][1])
+    idea = task.idea
+    post = Post.objects.create(
+        workspace=task.workspace,
+        author=actor,
+        title=(idea.title if idea else task.title)[:255],
+        caption=task.post_caption,
+        tags=list(idea.tags or []) if idea else [],
+    )
+    PostMedia.objects.create(post=post, media_asset=primary, position=0)
+
+    rows = []
+    for (account, publish_format), asset in plan.items():
+        own_media = None
+        if asset.pk != primary.pk and asset.derived_from_id in (None, primary.pk):
+            if asset.derived_from_id is None:
+                asset.derived_from = primary
+                asset.save(update_fields=["derived_from", "updated_at"])
+            own_media = [str(asset.pk)]
+        rows.append(
+            PlatformPost(post=post, social_account=account, format=publish_format, platform_specific_media=own_media)
+        )
+    PlatformPost.objects.bulk_create(rows)
+
+    task.post = post
+    task.save(update_fields=["post", "updated_at"])
+    if idea and idea.post_id is None:
+        idea.post = post
+        idea.save(update_fields=["post", "updated_at"])
+    return post

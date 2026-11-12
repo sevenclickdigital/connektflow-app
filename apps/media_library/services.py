@@ -791,7 +791,7 @@ ORPHANED_MEDIA_MIN_AGE_DAYS = 14
 def sweep_orphaned_media(
     *, min_age_days=ORPHANED_MEDIA_MIN_AGE_DAYS, batch_size=100, dry_run=False, log=None, should_continue=None
 ):
-    """Detect and delete media assets not referenced by any post, idea, or template.
+    """Detect and delete media assets not referenced by any post, idea, task art, or template.
 
     Orphans are ``MediaAsset`` rows older than ``min_age_days`` that no foreign
     key or JSON field points at. Shared by the ``cleanup_orphaned_media``
@@ -869,11 +869,16 @@ def sweep_orphaned_media(
 def _fk_referenced_asset_ids():
     """Collect all asset IDs referenced via foreign keys."""
     from apps.composer.models import Idea, IdeaMedia, PostMedia
+    from apps.tasks.models import TaskChecklistItem
 
     referenced = set()
     referenced.update(PostMedia.objects.values_list("media_asset_id", flat=True))
     referenced.update(IdeaMedia.objects.values_list("media_asset_id", flat=True))
     referenced.update(Idea.objects.filter(media_asset__isnull=False).values_list("media_asset_id", flat=True))
+    # Arts delivered on a task's checklist, which may not be in any post yet.
+    referenced.update(
+        TaskChecklistItem.objects.filter(media_asset__isnull=False).values_list("media_asset_id", flat=True)
+    )
     return referenced
 
 

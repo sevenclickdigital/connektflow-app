@@ -40,7 +40,7 @@
 
     <div class="flex items-center justify-between mb-3">
         <div class="text-sm text-stone-500">
-            {% blocktranslate count counter=total_event_count %}{{ counter }} recent event{% plural %}{{ counter }} recent events{% endblocktranslate %}
+            {% blocktranslate count counter=total_event_count|default:0 %}{{ counter }} recent event{% plural %}{{ counter }} recent events{% endblocktranslate %}
         </div>
         <div class="text-xs text-stone-400">
             {% if last_refreshed_at %}{% blocktranslate with time=last_refreshed_at|timesince %}Last refreshed {{ time }} ago{% endblocktranslate %}{% endif %}
@@ -161,8 +161,10 @@
 
         <h3 class="text-lg font-semibold text-stone-800 mb-2">{% translate "Add RSS Feed" %}</h3>
         <p class="text-sm text-stone-500 mb-4">
-            {% translate "RSS URLs are links to automatically get updates from a blog or news site.
-            The link is usually made up of the website's domain name, followed by \"/feed\" or \"/rss\"." %}
+            {% blocktranslate trimmed %}
+            RSS URLs are links to automatically get updates from a blog or news site.
+            The link is usually made up of the website's domain name, followed by "/feed" or "/rss".
+            {% endblocktranslate %}
         </p>
 
         {% if add_error %}

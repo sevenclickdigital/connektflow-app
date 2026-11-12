@@ -10,6 +10,8 @@ urlpatterns = [
     # Drag-and-drop reschedule
     path("reschedule/", views.reschedule_post, name="reschedule"),
     path("post-card/<uuid:platform_post_id>/", views.post_card, name="post_card"),
+    path("special-dates/toggle/", views.special_dates_toggle, name="special_dates_toggle"),
+    path("status-board/<uuid:platform_post_id>/move/", views.status_board_move, name="status_board_move"),
     # Bulk selection actions (floating bar): draft / delete / publish
     path("bulk-action/", views.bulk_platform_action, name="bulk_platform_action"),
     # Posting slots

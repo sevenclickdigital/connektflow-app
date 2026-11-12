@@ -798,3 +798,39 @@ span.flatpickr-weekday {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Round account tile with its platform badge: the composer's account × format
+   picker and the art request's network picker. */
+.target-tile {
+    position: relative; width: 44px; height: 44px; border-radius: 9999px;
+    padding: 2px; border: 2px solid transparent; background: #FFFFFF;
+    cursor: pointer; user-select: none; flex-shrink: 0;
+    transition: border-color 150ms cubic-bezier(0.16, 1, 0.3, 1), opacity 150ms ease, filter 150ms ease;
+    opacity: 0.45; filter: grayscale(1);
+}
+.target-tile:hover { opacity: 0.8; filter: grayscale(0.3); }
+.target-tile.selected { opacity: 1; filter: none; border-color: #F97316; }
+.target-tile:focus-visible { outline: 2px solid #F97316; outline-offset: 2px; }
+.target-tile .target-badge {
+    position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px;
+    border-radius: 9999px; background: #FFFFFF; display: flex;
+    align-items: center; justify-content: center; box-shadow: 0 0 0 1px #E7E5E4;
+}
+.target-tile .target-format {
+    position: absolute; left: -3px; bottom: -3px; width: 18px; height: 18px;
+    border-radius: 9999px; background: #1C1917; color: #FFFFFF; display: flex;
+    align-items: center; justify-content: center;
+}
+.target-tile .target-tip {
+    position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%);
+    padding: 4px 8px; border-radius: 6px; background: #1C1917; color: #FFFFFF;
+    font-size: 11px; font-weight: 500; white-space: nowrap; pointer-events: none;
+    opacity: 0; transition: opacity 120ms ease; z-index: 30;
+}
+.target-tile:hover .target-tip, .target-tile:focus-visible .target-tip { opacity: 1; }
+.target-group + .target-group { border-left: 1px solid #E7E5E4; padding-left: 10px; }
+.target-tile .target-icon {
+    width: 100%; height: 100%; border-radius: 9999px; background: #F5F5F4; color: #78716C;
+    display: flex; align-items: center; justify-content: center;
+}
+.target-tile .target-count { background: #F97316; font-size: 10px; font-weight: 700; }

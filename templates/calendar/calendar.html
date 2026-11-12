@@ -28,6 +28,15 @@
                 <svg class="w-3.5 h-3.5 inline -mt-px mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 {% translate "Calendar" %}
             </button>
+            <button class="view-btn{% if mode == 'board' %} active{% endif %}" :class="{ active: activeMode === 'board' }"
+                    @click="activeMode = 'board'"
+                    hx-get="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=board&_switch_mode=1"
+                    hx-target="#publish-body"
+                    hx-swap="innerHTML"
+                    hx-push-url="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=board">
+                <svg class="w-3.5 h-3.5 inline -mt-px mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="4" height="8" rx="1"/></svg>
+                {% translate "Board" %}
+            </button>
         </div>
 
     </div>
@@ -383,6 +392,26 @@
 
     /* Play slideUp only on HTMX-swapped tab content, not initial server render */
     .tab-slide-in { animation: slideUp 200ms cubic-bezier(0.16,1,0.3,1) both; }
+
+    /* Board mode: one column per workflow stage. */
+    .sb-board { display: flex; gap: 12px; overflow-x: auto; padding: 4px 0 16px; align-items: flex-start; flex: 1 1 auto; }
+    .sb-column { flex: 0 0 250px; background: #F5F5F4; border-radius: 14px; display: flex; flex-direction: column; max-height: calc(100vh - 200px); transition: box-shadow .12s ease, opacity .12s ease; }
+    .sb-column.is-over { box-shadow: 0 0 0 2px #F97316 inset; }
+    .sb-board.is-dragging .sb-column.is-locked { opacity: .45; }
+    .sb-column-head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px; }
+    .sb-column-head h2 { font-size: 13px; font-weight: 700; color: #292524; }
+    .sb-count { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 9999px; background: white; color: #78716C; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
+    .sb-dot { width: 8px; height: 8px; border-radius: 9999px; background: #A8A29E; }
+    .sb-tone-amber .sb-dot { background: #F59E0B; } .sb-tone-teal .sb-dot { background: #14B8A6; }
+    .sb-tone-blue .sb-dot { background: #3B82F6; } .sb-tone-green .sb-dot { background: #22C55E; } .sb-tone-red .sb-dot { background: #EF4444; }
+    .sb-cards { overflow-y: auto; padding: 0 8px 8px; display: flex; flex-direction: column; gap: 8px; min-height: 48px; }
+    .sb-card { display: flex; flex-direction: column; gap: 6px; background: white; border: 1px solid #E7E5E4; border-radius: 10px; padding: 9px 10px; color: inherit; text-decoration: none; user-select: none; }
+    .sb-card:hover { border-color: #D6D3D1; box-shadow: 0 3px 10px rgba(28,25,23,.08); }
+    .sb-card.is-dragging { opacity: .4; }
+    .sb-card .chip-platform { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; color: white; }
+    .sb-caption { font-size: 12px; color: #44403C; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .sb-status { font-weight: 600; color: #78716C; }
+    .sb-empty { font-size: 11.5px; color: #A8A29E; text-align: center; padding: 10px 0; }
 </style>
 {% endblock %}
 
@@ -390,6 +419,8 @@
 <div id="publish-body" class="flex-1 flex flex-col min-h-0">
     {% if mode == 'list' %}
         {% include "calendar/partials/publish_list_shell.html" %}
+    {% elif mode == 'board' %}
+        {% include "calendar/partials/publish_board_shell.html" %}
     {% else %}
         {% include "calendar/partials/publish_calendar_shell.html" %}
     {% endif %}
@@ -516,6 +547,55 @@ function bulkBar() {
         },
     };
 }
+function statusBoard() {
+    return {
+        dragId: null,
+        start(event, id) {
+            this.dragId = id;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', id);
+            event.currentTarget.classList.add('is-dragging');
+            this.$root.querySelector('.sb-board').classList.add('is-dragging');
+        },
+        end(event) {
+            event.currentTarget.classList.remove('is-dragging');
+            this.$root.querySelector('.sb-board').classList.remove('is-dragging');
+            this.$root.querySelectorAll('.sb-column.is-over').forEach(function (c) { c.classList.remove('is-over'); });
+            this.dragId = null;
+        },
+        over(event, accepts) {
+            if (!this.dragId || !accepts) return;
+            event.preventDefault();
+            event.currentTarget.classList.add('is-over');
+        },
+        leave(event) {
+            if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('is-over');
+        },
+        drop(event, column) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('is-over');
+            var id = this.dragId;
+            if (!id) return;
+            var root = this.$root;
+            var body = new FormData();
+            body.append('column', column);
+            var csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+            fetch(root.dataset.moveUrl.replace('00000000-0000-0000-0000-000000000000', id), {
+                method: 'POST', body: body, headers: { 'X-CSRFToken': csrf ? csrf.value : '', 'HX-Request': 'true' },
+            }).then(function (response) {
+                var trigger = response.headers.get('HX-Trigger');
+                if (!trigger) { if (!response.ok) throw new Error(String(response.status)); return; }
+                var events = JSON.parse(trigger);
+                Object.keys(events).forEach(function (name) {
+                    document.body.dispatchEvent(new CustomEvent(name, { detail: events[name], bubbles: true }));
+                });
+            }).catch(function () {
+                document.body.dispatchEvent(new CustomEvent('showToast', { detail: { tone: 'error', title: root.dataset.moveFailed } }));
+            });
+        },
+    };
+}
+
 function calendarApp() {
     return {
         activeView: '{{ view_type }}',
@@ -540,7 +620,6 @@ function calendarApp() {
             this.calendarFilters.channels.forEach(c => params.append('channel', c));
             if (this.calendarFilters.tag) params.set('tag', this.calendarFilters.tag);
             if (this.calendarFilters.tz) params.set('tz', this.calendarFilters.tz);
-            {% if show_holidays %}params.set('holidays', '1');{% endif %}
             const url = '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString();
             htmx.ajax('GET', url, {target: '#calendar-content', swap: 'innerHTML'});
         },

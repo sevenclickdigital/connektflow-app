@@ -173,8 +173,15 @@ class RecurrenceRule(models.Model):
 class CustomCalendarEvent(models.Model):
     """Custom event on the workspace calendar (e.g., product launch, campaign start).
 
-    Displayed as full-width colored bars spanning start_date to end_date.
+    Displayed as full-width colored bars spanning start_date to end_date. A
+    repeating event keeps its first occurrence in start/end and is expanded
+    per visible period by :meth:`occurrences`; no row is stored per repetition.
     """
+
+    class Recurrence(models.TextChoices):
+        NONE = "none", _("Does not repeat")
+        MONTHLY = "monthly", _("Every month")
+        YEARLY = "yearly", _("Every year")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     workspace = models.ForeignKey(
@@ -198,6 +205,9 @@ class CustomCalendarEvent(models.Model):
         null=True,
         blank=True,
     )
+    recurrence = models.CharField(
+        max_length=10, choices=Recurrence.choices, default=Recurrence.NONE, db_default=Recurrence.NONE
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -210,3 +220,35 @@ class CustomCalendarEvent(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.start_date} – {self.end_date})"
+
+    def occurrences(self, start, end) -> list[tuple]:
+        """``(first_day, last_day)`` of each occurrence that overlaps ``start``–``end``.
+
+        A monthly event on the 31st falls on the last day of shorter months; a
+        yearly one on 29 February falls on the 28th in common years.
+        """
+        length = self.end_date - self.start_date
+        if self.recurrence == self.Recurrence.NONE:
+            return [(self.start_date, self.end_date)] if self.start_date <= end and self.end_date >= start else []
+
+        step = 1 if self.recurrence == self.Recurrence.MONTHLY else 12
+        found = []
+        # Jump close to ``start``, a year early so an occurrence that began
+        # before it but runs into it is still found.
+        months_from_first = (start.year - self.start_date.year) * 12 + start.month - self.start_date.month
+        index = max(0, (months_from_first - 12) // step)
+        while True:
+            first = _shift_months(self.start_date, index * step)
+            if first > end:
+                return found
+            if first + length >= start:
+                found.append((first, first + length))
+            index += 1
+
+
+def _shift_months(day, months):
+    import calendar as _calendar
+
+    month_index = day.month - 1 + months
+    year, month = day.year + month_index // 12, month_index % 12 + 1
+    return day.replace(year=year, month=month, day=min(day.day, _calendar.monthrange(year, month)[1]))

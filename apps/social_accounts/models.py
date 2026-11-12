@@ -656,6 +656,24 @@ class PlatformVisibility(models.Model):
         hidden = set(cls.objects.filter(is_visible=False).values_list("platform", flat=True))
         return [(value, label) for value, label in PlatformCredential.Platform.choices if value not in hidden]
 
+    # Platforms that connect the same network through another route; one of
+    # them connected means the network is.
+    SAME_NETWORK = {"instagram_login": "instagram"}
+
+    @classmethod
+    def unconnected_choices(cls, connected_platforms) -> list[tuple[str, str]]:
+        """Visible platforms whose network has no connected account yet.
+
+        Shown after the connected accounts wherever channels are picked (the
+        composer, the art request), so every channel on offer is visible.
+        """
+        connected = {cls.SAME_NETWORK.get(p, p) for p in connected_platforms}
+        return [
+            (value, label)
+            for value, label in cls.visible_choices()
+            if cls.SAME_NETWORK.get(value, value) not in connected
+        ]
+
 
 class AnalyticsPlatformConfig(models.Model):
     """Site-wide toggle controlling which platforms are enabled for the

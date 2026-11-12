@@ -1,0 +1,44 @@
+{% load i18n %}
+<article class="task-card{% if column.is_done %} is-complete{% endif %}" data-task-id="{{ task.id }}"
+         {% if can_edit %}draggable="true" @dragstart="dragStart($event, '{{ task.id }}')" @dragend="dragEnd($event)"{% endif %}
+         @click="openTask('{{ task.id }}')">
+    <div class="flex items-start justify-between gap-2">
+        <h3 class="task-card-title text-[13px] font-semibold text-stone-800 leading-snug break-words">{{ task.title }}</h3>
+        {% if task.priority != "medium" %}
+        <span class="task-pill task-pill--{{ task.priority }} flex-shrink-0">{{ task.get_priority_display }}</span>
+        {% endif %}
+    </div>
+
+    {% if task.items_total %}
+    <div class="mt-2 flex items-center gap-2">
+        <div class="task-progress flex-1{% if task.items_done == task.items_total %} is-full{% endif %}"
+             role="progressbar" aria-valuemin="0" aria-valuemax="{{ task.items_total }}" aria-valuenow="{{ task.items_done }}"
+             aria-label="{% translate 'Checklist progress' %}">
+            <span style="width: {% widthratio task.items_done task.items_total 100 %}%;"></span>
+        </div>
+        <span class="text-[11px] font-semibold text-stone-500 tabular-nums">{{ task.items_done }}/{{ task.items_total }}</span>
+    </div>
+    {% endif %}
+
+    {% if task.due_date or task.idea_id or task.assignees.all %}
+    <div class="mt-2 flex items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1">
+            {% if task.due_date %}
+            <span class="task-pill {% if not column.is_done and task.due_date < today %}task-pill--overdue{% else %}task-pill--due{% endif %}">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                {{ task.due_date|date:"d/m" }}
+            </span>
+            {% endif %}
+            {% if task.idea_id %}
+            <span class="task-pill task-pill--art" title="{{ task.idea.title }}">{% translate "Idea" %}</span>
+            {% endif %}
+        </div>
+        <div class="flex items-center">
+            {% for user in task.assignees.all|slice:":3" %}
+            <span class="task-avatar" title="{{ user.display_name }}">{{ user.display_name|make_list|first|upper }}</span>
+            {% endfor %}
+            {% if task.assignees.all|length > 3 %}<span class="task-avatar">+{{ task.assignees.all|length|add:"-3" }}</span>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+</article>

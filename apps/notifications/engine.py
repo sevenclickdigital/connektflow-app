@@ -134,6 +134,9 @@ DEFAULT_CHANNELS: dict[str, dict[str, bool]] = {
     EventType.APPROVAL_HOLD_REQUESTED: {Channel.IN_APP: True, Channel.EMAIL: True},
     EventType.CLIENT_CONNECTED_ACCOUNTS: {Channel.IN_APP: True, Channel.EMAIL: True},
     EventType.MANUAL_PUBLISH_DUE: {Channel.IN_APP: True, Channel.EMAIL: True},
+    EventType.TASK_ASSIGNED: {Channel.IN_APP: True, Channel.EMAIL: True},
+    EventType.TASK_DUE_SOON: {Channel.IN_APP: True, Channel.EMAIL: True},
+    EventType.TASK_READY_FOR_REVIEW: {Channel.IN_APP: True, Channel.EMAIL: False},
 }
 
 # Event types considered non-critical (suppressed during quiet hours).

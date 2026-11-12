@@ -55,35 +55,6 @@
     }
 
     /* Platform account checkbox pill - compact for header row */
-    /* Account × format picker: one round tile per format of each account. */
-    .target-tile {
-        position: relative; width: 44px; height: 44px; border-radius: 9999px;
-        padding: 2px; border: 2px solid transparent; background: #FFFFFF;
-        cursor: pointer; user-select: none; flex-shrink: 0;
-        transition: border-color 150ms cubic-bezier(0.16, 1, 0.3, 1), opacity 150ms ease, filter 150ms ease;
-        opacity: 0.45; filter: grayscale(1);
-    }
-    .target-tile:hover { opacity: 0.8; filter: grayscale(0.3); }
-    .target-tile.selected { opacity: 1; filter: none; border-color: #F97316; }
-    .target-tile:focus-visible { outline: 2px solid #F97316; outline-offset: 2px; }
-    .target-tile .target-badge {
-        position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px;
-        border-radius: 9999px; background: #FFFFFF; display: flex;
-        align-items: center; justify-content: center; box-shadow: 0 0 0 1px #E7E5E4;
-    }
-    .target-tile .target-format {
-        position: absolute; left: -3px; bottom: -3px; width: 18px; height: 18px;
-        border-radius: 9999px; background: #1C1917; color: #FFFFFF; display: flex;
-        align-items: center; justify-content: center;
-    }
-    .target-tile .target-tip {
-        position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%);
-        padding: 4px 8px; border-radius: 6px; background: #1C1917; color: #FFFFFF;
-        font-size: 11px; font-weight: 500; white-space: nowrap; pointer-events: none;
-        opacity: 0; transition: opacity 120ms ease; z-index: 30;
-    }
-    .target-tile:hover .target-tip, .target-tile:focus-visible .target-tip { opacity: 1; }
-    .target-group + .target-group { border-left: 1px solid #E7E5E4; padding-left: 10px; }
 
     /* Platform icon circles */
     .platform-icon {
@@ -572,26 +543,27 @@
                                 :aria-pressed="hasFormat('{{ account.id }}', '{{ option.format }}') ? 'true' : 'false'"
                                 aria-label="{{ option.label }}"
                                 @click="toggleFormat('{{ account.id }}', '{{ option.format }}')">
-                            {% if account.avatar_url %}
-                            <img src="{{ account.avatar_url }}" alt="" class="w-full h-full rounded-full object-cover">
-                            {% else %}
-                            <span class="w-full h-full rounded-full bg-stone-100 flex items-center justify-center text-stone-400">
-                                {% if account.platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}{% endif %}
-                            </span>
-                            {% endif %}
-                            <span class="target-badge">
-                                {% if account.platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}{% endif %}
-                            </span>
-                            {% if option.format != "default" %}
-                            <span class="target-format">{% include "partials/_format_icon.html" with format=option.format %}</span>
-                            {% endif %}
-                            <span class="target-tip">{{ option.label }}</span>
+                            {% include "partials/_channel_tile.html" with platform=account.platform account=account tip=option.label format=option.format %}
                         </button>
                         {% endfor %}
                     </div>
-                    {% empty %}
-                    <span class="text-xs text-stone-400">{% translate "No accounts connected" %}</span>
                     {% endfor %}
+                    {% if unconnected_channels %}
+                    <div class="target-group flex items-center gap-2">
+                        {% for platform, label in unconnected_channels %}
+                        {% blocktranslate asvar connect_tip %}Connect {{ label }}{% endblocktranslate %}
+                        {% if can_connect_channels %}
+                        <a href="{% url 'social_accounts:connect' workspace_id=workspace.id %}" target="_blank" rel="noopener" class="target-tile" aria-label="{{ connect_tip }}">
+                            {% include "partials/_channel_tile.html" with platform=platform tip=connect_tip %}
+                        </a>
+                        {% else %}
+                        <span class="target-tile" aria-label="{{ label }}">
+                            {% include "partials/_channel_tile.html" with platform=platform tip=label %}
+                        </span>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
 
                 {% if failed_platform_posts %}

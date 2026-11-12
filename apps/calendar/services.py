@@ -579,3 +579,71 @@ def repair_future_published_scheduled_at(*, workspace_id=None, apply=True):
         "queue_entry_count": queue_entry_count,
         "applied": bool(apply and rows),
     }
+
+
+# ---------------------------------------------------------------------------
+# Custom events and special dates
+# ---------------------------------------------------------------------------
+
+SPECIAL_DATES_SETTING = "calendar.show_special_dates"
+
+
+def events_by_date(workspace, start, end) -> dict:
+    """``{day: [event, ...]}`` for every day an event (or a repetition of one) covers.
+
+    Each listed event is a copy whose ``start_date``/``end_date`` are those of
+    the occurrence, so templates don't need to know about recurrence.
+    """
+    import copy
+
+    from django.db.models import Q
+
+    from .models import CustomCalendarEvent
+
+    events = (
+        CustomCalendarEvent.objects.for_workspace(workspace.id)
+        .filter(start_date__lte=end)
+        .filter(Q(end_date__gte=start) | ~Q(recurrence=CustomCalendarEvent.Recurrence.NONE))
+        .order_by("start_date")
+    )
+    by_day: dict = {}
+    for event in events:
+        for first, last in event.occurrences(start, end):
+            occurrence = copy.copy(event)
+            occurrence.start_date, occurrence.end_date = first, last
+            day = max(first, start)
+            while day <= min(last, end):
+                by_day.setdefault(day, []).append(occurrence)
+                day += timedelta(days=1)
+    return by_day
+
+
+def special_dates_enabled(workspace) -> bool:
+    from apps.settings_manager.helpers import get_setting
+
+    return bool(get_setting(workspace.id, SPECIAL_DATES_SETTING, workspace_org_id=workspace.organization_id))
+
+
+def upcoming_dates(workspace, start, days=60) -> list[dict]:
+    """Special dates (when shown) and the workspace's own events from ``start``, by date.
+
+    ``[{"date", "days", "name", "emoji", "event"}]``: ``days`` from ``start``;
+    ``event`` is the ``CustomCalendarEvent`` for the workspace's own dates, else None.
+    """
+    from .holidays import special_dates_between
+
+    end = start + timedelta(days=days)
+    entries = []
+    if special_dates_enabled(workspace):
+        entries.extend({**d, "event": None} for d in special_dates_between(start, end))
+    seen = set()
+    for _day, events in sorted(events_by_date(workspace, start, end).items()):
+        for event in events:
+            key = (event.pk, event.start_date)
+            if key in seen:
+                continue
+            seen.add(key)
+            entries.append({"date": max(event.start_date, start), "name": event.title, "emoji": "", "event": event})
+    for entry in entries:
+        entry["days"] = (entry["date"] - start).days
+    return sorted(entries, key=lambda e: e["date"])

@@ -70,6 +70,7 @@ LOCAL_APPS = [
     "apps.media_library",
     "apps.composer",
     "apps.calendar",
+    "apps.tasks",
     "apps.publisher",
     "apps.notifications",
     "apps.inbox",

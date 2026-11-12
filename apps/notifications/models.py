@@ -25,6 +25,9 @@ class EventType(models.TextChoices):
     APPROVAL_HOLD_REQUESTED = "approval_hold_requested", _("Client requested a hold")
     CLIENT_CONNECTED_ACCOUNTS = "client_connected_accounts", _("Client connected accounts")
     MANUAL_PUBLISH_DUE = "manual_publish_due", _("Time to publish manually")
+    TASK_ASSIGNED = "task_assigned", _("Task assigned to you")
+    TASK_DUE_SOON = "task_due_soon", _("Task due soon")
+    TASK_READY_FOR_REVIEW = "task_ready_for_review", _("Arts delivered for review")
 
 
 class Channel(models.TextChoices):

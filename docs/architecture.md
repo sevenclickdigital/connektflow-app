@@ -49,7 +49,8 @@ docker-compose.dokploy.yml                         # production
 | `credentials` | `PlatformCredential` (per-org app credentials) and credential resolution |
 | `social_accounts` | OAuth connect flows, `SocialAccount`, health checks, webhook subscription, YouTube compliance |
 | `composer` | `Post` / `PlatformPost`, ideas, templates, tags, CSV import, feeds |
-| `calendar` | Calendar views, posting slots, queues, recurrence rules, custom events |
+| `calendar` | Calendar views, posting slots, queues, recurrence rules, custom events, special dates, status board |
+| `tasks` | Team task board, checklists, art requests by creative format |
 | `publisher` | Publishing engine (`engine.py`), `PublishLog`, rate-limit state |
 | `media_library` | Assets, folders, versions, direct-to-S3 uploads, thumbnails, quotas |
 | `approvals` | Approval workflow, post comments, reminders |
@@ -143,6 +144,7 @@ Status belongs to `PlatformPost`, which is one row per post, account and format 
 | `expire_courtesies` | daily | `apps/billing/apps.py` |
 | `purge_email_counters` | daily | `apps/common/apps.py` |
 | `clear_expired_sessions` | daily | `apps/accounts/apps.py` |
+| `send_task_due_reminders` | hourly | `apps/tasks/apps.py` |
 | `intelligence_reconcile` | 6 h (only relevant when Intelligence is enabled) | `apps/intelligence/apps.py` |
 
 One-off `@background` jobs include media processing (`apps/media_library/tasks.py`), automation runs (`apps/automations/tasks.run_automation_for_message`), first comments and analytics backfills.
@@ -233,7 +235,7 @@ STORAGE_BACKEND=s3     →  storages.backends.s3boto3.S3Boto3Storage (S3_* env v
 - Only the prefixes in `PUBLIC_MEDIA_PREFIXES` (`config/urls.py`) are publicly routed: `media_library/`, `avatars/`, `workspaces/icons/`. This is an allowlist, so any new `upload_to` prefix is private by default. `comment_attachments/` is excluded on purpose (internal comments) and is served by `apps.approvals.views.comment_attachment` behind a membership check.
 - Uploads are stored with an extension derived from the sniffed MIME type (`apps/common/validators.storage_filename`), not from the client's filename.
 
-**Processing** (`apps/media_library/tasks.py`, `services.py`): on upload, metadata is extracted and a thumbnail is generated with Pillow or FFmpeg. The image editor and video trim produce `MediaAssetVersion`s. Limits are set in `base.py`: 20 MB per image, 30 MP decoded, 1 GB per video, 5-minute FFmpeg timeout. `MEDIA_LIBRARY_MAX_CONCURRENT_TRANSCODES` is defined but nothing reads it. A daily sweep removes orphaned media.
+**Processing** (`apps/media_library/tasks.py`, `services.py`): on upload, metadata is extracted and a thumbnail is generated with Pillow or FFmpeg. The image editor and video trim produce `MediaAssetVersion`s. Limits are set in `base.py`: 20 MB per image, 30 MP decoded, 1 GB per video, 5-minute FFmpeg timeout. `MEDIA_LIBRARY_MAX_CONCURRENT_TRANSCODES` is defined but nothing reads it. A daily sweep removes orphaned media (assets no post, idea, task art or template references).
 
 ---
 

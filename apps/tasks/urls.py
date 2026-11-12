@@ -1,0 +1,25 @@
+from django.urls import path
+
+from . import views
+
+app_name = "tasks"
+
+urlpatterns = [
+    path("", views.board, name="board"),
+    path("create/", views.task_create, name="task_create"),
+    path("request-arts/", views.request_arts, name="request_arts"),
+    path("art-settings/", views.art_settings, name="art_settings"),
+    path("<uuid:task_id>/", views.task_detail, name="task_detail"),
+    path("<uuid:task_id>/update/", views.task_update, name="task_update"),
+    path("<uuid:task_id>/move/", views.task_move, name="task_move"),
+    path("<uuid:task_id>/delete/", views.task_delete, name="task_delete"),
+    path("<uuid:task_id>/create-post/", views.task_create_post, name="task_create_post"),
+    path("<uuid:task_id>/items/add/", views.item_add, name="item_add"),
+    path("<uuid:task_id>/items/<uuid:item_id>/deliver/", views.item_deliver, name="item_deliver"),
+    path("<uuid:task_id>/items/<uuid:item_id>/toggle/", views.item_toggle, name="item_toggle"),
+    path("<uuid:task_id>/items/<uuid:item_id>/delete/", views.item_delete, name="item_delete"),
+    path("columns/create/", views.column_create, name="column_create"),
+    path("columns/reorder/", views.column_reorder, name="column_reorder"),
+    path("columns/<uuid:column_id>/rename/", views.column_rename, name="column_rename"),
+    path("columns/<uuid:column_id>/delete/", views.column_delete, name="column_delete"),
+]

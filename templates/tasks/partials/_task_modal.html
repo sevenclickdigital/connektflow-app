@@ -1,0 +1,207 @@
+{% load i18n %}
+{% url 'tasks:task_update' workspace_id=workspace.id task_id=task.id as update_url %}
+<div class="task-modal-grid">
+    <button type="button" @click="closeTask()" class="task-modal-close w-8 h-8 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 flex items-center justify-center"
+            aria-label="{% translate 'Close' %}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+
+    {# Left: what the task is and who does it by when #}
+    <div class="task-modal-main p-5 md:p-6 space-y-5">
+        <div>
+            <div class="flex items-start gap-3">
+                {% if can_edit %}
+                <input name="title" value="{{ task.title }}" maxlength="255" aria-label="{% translate 'Task title' %}"
+                       hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body"
+                       class="flex-1 min-w-0 text-lg font-semibold text-stone-900 bg-transparent border border-transparent hover:border-stone-200 focus:border-orange-400 focus:outline-none rounded-lg px-2 py-1 -mx-2">
+                {% else %}
+                <h2 class="flex-1 text-lg font-semibold text-stone-900">{{ task.title }}</h2>
+                {% endif %}
+            </div>
+            <p class="text-xs text-stone-400 mt-1">
+                {% blocktranslate with column=task.column.name %}In {{ column }}{% endblocktranslate %}
+                {% if task.created_by %} · {% blocktranslate with who=task.created_by.display_name when=task.created_at|date:"d/m/Y" %}created by {{ who }} on {{ when }}{% endblocktranslate %}{% endif %}
+            </p>
+        </div>
+
+        <div>
+            <div class="task-field-label">{% translate "Description" %}</div>
+            {% if can_edit %}
+            <textarea name="description" rows="4" placeholder="{% translate 'Add the details of the task…' %}"
+                      hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body"
+                      class="form-input-styled w-full text-sm">{{ task.description }}</textarea>
+            {% elif task.description %}
+            <p class="text-sm text-stone-700 whitespace-pre-line">{{ task.description }}</p>
+            {% else %}
+            <p class="text-sm text-stone-400">{% translate "No description." %}</p>
+            {% endif %}
+        </div>
+
+        <div>
+            <div class="task-field-label">{% translate "Post caption" %}</div>
+            {% if can_edit %}
+            <textarea name="post_caption" rows="4" placeholder="{% translate 'The text the post goes out with' %}"
+                      hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body"
+                      class="form-input-styled w-full text-sm">{{ task.post_caption }}</textarea>
+            {% elif task.post_caption %}
+            <p class="text-sm text-stone-700 whitespace-pre-line">{{ task.post_caption }}</p>
+            {% else %}
+            <p class="text-sm text-stone-400">{% translate "No caption" %}</p>
+            {% endif %}
+        </div>
+
+        <div>
+            <div class="task-field-label">{% translate "Column" %}</div>
+            {% if can_edit %}
+            <select name="column" class="bb-select w-full text-sm" hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body">
+                {% for column in columns %}<option value="{{ column.id }}" {% if column.id == task.column_id %}selected{% endif %}>{{ column.name }}</option>{% endfor %}
+            </select>
+            {% else %}<p class="text-sm text-stone-700">{{ task.column.name }}</p>{% endif %}
+        </div>
+
+        <div>
+            <div class="task-field-label">{% translate "Responsible" %}</div>
+            {% if can_edit %}
+            <form hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body" class="space-y-1 max-h-44 overflow-y-auto">
+                <input type="hidden" name="assignees_sent" value="1">
+                {% for member in members %}
+                <label class="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+                    <input type="checkbox" name="assignees" value="{{ member.pk }}" class="bb-checkbox"
+                           {% if member in task.assignees.all %}checked{% endif %}>
+                    <span class="truncate">{{ member.display_name }}</span>
+                </label>
+                {% endfor %}
+            </form>
+            {% else %}
+            <p class="text-sm text-stone-700">{% for user in task.assignees.all %}{{ user.display_name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-stone-400">{% translate "Nobody" %}</span>{% endfor %}</p>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <div class="task-field-label">{% translate "Due date" %}</div>
+                {% if can_edit %}
+                <input type="date" name="due_date" value="{{ task.due_date|date:'Y-m-d' }}" class="form-input-styled w-full text-sm"
+                       hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body">
+                {% else %}<p class="text-sm text-stone-700">{{ task.due_date|date:"d/m/Y"|default:"—" }}</p>{% endif %}
+            </div>
+            <div>
+                <div class="task-field-label">{% translate "Priority" %}</div>
+                {% if can_edit %}
+                <select name="priority" class="bb-select w-full text-sm" hx-post="{{ update_url }}" hx-trigger="change" hx-target="#task-modal-body">
+                    {% for value, label in priorities %}<option value="{{ value }}" {% if value == task.priority %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+                {% else %}<p class="text-sm text-stone-700">{{ task.get_priority_display }}</p>{% endif %}
+            </div>
+        </div>
+
+        {% if task.idea or task.post or task.calendar_event %}
+        <div>
+            <div class="task-field-label">{% translate "Linked to" %}</div>
+            <ul class="space-y-1 text-sm">
+                {% if task.idea %}<li class="text-stone-700">💡 {{ task.idea.title }}</li>{% endif %}
+                {% if task.calendar_event %}<li class="text-stone-700">📅 {{ task.calendar_event.title }}</li>{% endif %}
+                {% if task.post %}<li><a class="text-orange-600 hover:underline" href="{% url 'composer:compose_edit' workspace_id=workspace.id post_id=task.post_id %}">{% translate "Post created from these arts" %}</a></li>{% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if task.has_publishable_art and can_edit %}
+        <div>
+            {% if task.post %}
+            <a href="{% url 'composer:compose_edit' workspace_id=workspace.id post_id=task.post_id %}" class="btn-brand w-full justify-center text-sm">{% translate "Open the post" %}</a>
+            {% else %}
+            <button type="button" class="btn-brand w-full justify-center text-sm"
+                    hx-post="{% url 'tasks:task_create_post' workspace_id=workspace.id task_id=task.id %}" hx-swap="none">{% translate "Create post with these arts" %}</button>
+            <p class="text-[11px] text-stone-400 mt-1.5">{% translate "Each art goes to the format it was made for." %}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if can_edit %}
+        <div class="pt-2 border-t border-stone-200">
+            <button type="button" class="btn-danger-soft text-xs px-3 py-1.5"
+                    hx-post="{% url 'tasks:task_delete' workspace_id=workspace.id task_id=task.id %}" hx-swap="none"
+                    hx-confirm="{% translate 'Delete this task? This cannot be undone.' %}">{% translate "Delete task" %}</button>
+        </div>
+        {% endif %}
+    </div>
+
+    {# Right: the checklist #}
+    <aside class="task-modal-side p-5 md:p-6">
+        {% with items=task.checklist.all %}
+        <div>
+            <div class="flex items-center justify-between gap-3 mb-2 pr-10">
+                <div class="task-field-label mb-0">{% translate "Checklist" %}</div>
+                {% if items %}
+                <span class="text-[11px] font-semibold text-stone-500 tabular-nums">
+                    {% blocktranslate with done=task.checklist_done total=items|length %}{{ done }} of {{ total }} done{% endblocktranslate %}
+                </span>
+                {% endif %}
+            </div>
+            <ul class="space-y-1">
+                {% for item in items %}
+                <li class="group flex items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-stone-50 -mx-2">
+                    {% if can_edit %}
+                    <button type="button" class="task-check mt-0.5{% if item.is_done %} is-on{% endif %}"
+                            hx-post="{% url 'tasks:item_toggle' workspace_id=workspace.id task_id=task.id item_id=item.id %}" hx-target="#task-modal-body"
+                            aria-pressed="{{ item.is_done|yesno:'true,false' }}" aria-label="{% translate 'Mark as done' %}">
+                    {% else %}
+                    <span class="task-check mt-0.5{% if item.is_done %} is-on{% endif %}">
+                    {% endif %}
+                        {% if item.is_done %}<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>{% endif %}
+                    {% if can_edit %}</button>{% else %}</span>{% endif %}
+                    <div class="flex-1 min-w-0">
+                        <span class="text-sm {% if item.is_done %}text-stone-400 line-through{% else %}text-stone-800{% endif %}">{{ item.text }}</span>
+                        {% if item.is_art %}
+                        <span class="task-pill task-pill--art ml-1">{{ item.width }} × {{ item.height }}</span>
+                        <div class="mt-1.5 flex flex-wrap items-center gap-2">
+                            {% if item.media_asset and item.media_asset.file %}
+                            <a href="{{ item.media_asset.file.url }}" target="_blank" rel="noopener" class="block w-14 h-14 rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200 flex-shrink-0">
+                                {% if item.media_asset.media_type == "video" %}
+                                <video src="{{ item.media_asset.file.url }}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>
+                                {% else %}
+                                <img src="{% if item.media_asset.thumbnail %}{{ item.media_asset.thumbnail.url }}{% else %}{{ item.media_asset.file.url }}{% endif %}" alt="{{ item.text }}" class="w-full h-full object-cover">
+                                {% endif %}
+                            </a>
+                            <div class="text-[11.5px] leading-tight">
+                                <a href="{{ item.media_asset.file.url }}" download class="font-semibold text-stone-700 hover:text-orange-600">{% translate "Download" %}</a>
+                                {% if item.media_asset.width %}<div class="text-stone-400 tabular-nums">{{ item.media_asset.width }} × {{ item.media_asset.height }}</div>{% endif %}
+                                {% if not item.ratio_ok %}<div class="text-amber-600 font-semibold">{% translate "Proportions differ from the format" %}</div>{% endif %}
+                            </div>
+                            {% endif %}
+                            {% if can_upload %}
+                            <form hx-post="{% url 'tasks:item_deliver' workspace_id=workspace.id task_id=task.id item_id=item.id %}" hx-target="#task-modal-body"
+                                  hx-encoding="multipart/form-data" hx-trigger="change" hx-indicator="this">
+                                <label class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11.5px] font-semibold cursor-pointer bg-white ring-1 ring-stone-200 text-stone-600 hover:ring-orange-300 hover:text-orange-700">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/><path d="M12 4v12"/><path d="M7 9l5-5 5 5"/></svg>
+                                    <span class="task-up-idle">{% if item.media_asset %}{% translate "Replace art" %}{% else %}{% translate "Deliver art" %}{% endif %}</span>
+                                    <span class="task-up-busy">{% translate "Uploading…" %}</span>
+                                    <input type="file" name="file" accept="image/*,video/*" class="sr-only">
+                                </label>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if can_edit %}
+                    <button type="button" class="opacity-0 group-hover:opacity-100 focus:opacity-100 text-stone-400 hover:text-red-600 flex-shrink-0"
+                            hx-post="{% url 'tasks:item_delete' workspace_id=workspace.id task_id=task.id item_id=item.id %}" hx-target="#task-modal-body"
+                            aria-label="{% translate 'Remove item' %}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% if can_edit %}
+            <form class="mt-2 flex gap-2" hx-post="{% url 'tasks:item_add' workspace_id=workspace.id task_id=task.id %}" hx-target="#task-modal-body">
+                <input name="text" maxlength="255" required autocomplete="off" {% if focus_new_item %}autofocus{% endif %}
+                       placeholder="{% translate 'Add an item' %}" class="form-input-styled flex-1 text-sm">
+                <button type="submit" class="btn-neutral text-xs px-3">{% translate "Add" %}</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endwith %}
+    </aside>
+</div>

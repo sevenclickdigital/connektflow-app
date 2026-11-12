@@ -139,10 +139,7 @@ class Tag(models.Model):
         """
         if not tag_names:
             return ""
-        by_name = {
-            t.name: t
-            for t in cls.objects.for_workspace(workspace_id).filter(name__in=tag_names)
-        }
+        by_name = {t.name: t for t in cls.objects.for_workspace(workspace_id).filter(name__in=tag_names)}
         rendered = []
         for name in tag_names:
             tag = by_name.get(name)
@@ -226,6 +223,17 @@ class Idea(models.Model):
         related_name="ideas",
     )
     position = models.PositiveIntegerField(default=0)
+
+    # The day the content is for (a special date, a launch). Art requests made
+    # from the idea are due a few days before it.
+    target_date = models.DateField(null=True, blank=True)
+    calendar_event = models.ForeignKey(
+        "calendar.CustomCalendarEvent",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ideas",
+    )
 
     # Optional link to a Post (when idea is converted)
     post = models.OneToOneField(
@@ -728,11 +736,7 @@ class PlatformPost(models.Model):
         everything downstream — the character count, the limit check, the
         preview — is measuring the text that actually goes out.
         """
-        base = (
-            self.platform_specific_caption
-            if self.platform_specific_caption is not None
-            else self.post.caption
-        )
+        base = self.platform_specific_caption if self.platform_specific_caption is not None else self.post.caption
         suffix = Tag.publishable_suffix(self.post.workspace_id, self.post.tags)
         if not suffix:
             return base
