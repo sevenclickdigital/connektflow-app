@@ -953,7 +953,9 @@ def disconnect(request, workspace_id, account_id):
     orphan_post_ids = list(
         PlatformPost.objects.filter(social_account=account)
         .values("post_id")
-        .annotate(total_platforms=Count("post__platform_posts"))
+        # Distinct accounts, not rows: a post's Feed and Story on this one
+        # account are two rows and still nothing else to keep it alive.
+        .annotate(total_platforms=Count("post__platform_posts__social_account", distinct=True))
         .filter(total_platforms=1)
         .values_list("post_id", flat=True)
     )

@@ -18,6 +18,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import pgettext_lazy
 
 from apps.common.managers import WorkspaceScopedManager
 from apps.common.validators import validate_hex_color
@@ -472,6 +473,21 @@ class PlatformPost(models.Model):
         "published": set(),  # terminal
     }
 
+    class Format(models.TextChoices):
+        """What this row publishes on its account.
+
+        One post can go to several formats of the same account at once (a Feed
+        post and a Story), and each is its own published object with its own
+        status, platform id, retries and metrics — hence one row per format.
+        ``DEFAULT`` is whatever the platform publishes normally (a feed post, a
+        video, a pin); its exact shape is inferred from the media.
+        """
+
+        DEFAULT = "default", _("Post")
+        STORY = "story", pgettext_lazy("publishing format", "Story")
+        REEL = "reel", _("Reels")
+        PROFILE_PHOTO = "profile_photo", _("Photo")
+
     class FirstCommentStatus(models.TextChoices):
         NONE = "none", _("Not requested")
         PENDING = "pending", _("Pending")
@@ -503,6 +519,12 @@ class PlatformPost(models.Model):
         "social_accounts.SocialAccount",
         on_delete=models.CASCADE,
         related_name="platform_posts",
+    )
+    format = models.CharField(
+        max_length=20,
+        choices=Format.choices,
+        default=Format.DEFAULT,
+        db_default=Format.DEFAULT,
     )
 
     # Per-platform overrides (null = use base post values)
@@ -586,7 +608,12 @@ class PlatformPost(models.Model):
 
     class Meta:
         db_table = "composer_platform_post"
-        unique_together = [("post", "social_account")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["post", "social_account", "format"],
+                name="uniq_pp_post_account_format",
+            ),
+        ]
         indexes = [
             models.Index(
                 fields=["status", "scheduled_at"],
@@ -595,7 +622,18 @@ class PlatformPost(models.Model):
         ]
 
     def __str__(self):
-        return f"PlatformPost({self.social_account.platform}): {self.status}"
+        return f"PlatformPost({self.social_account.platform}/{self.format}): {self.status}"
+
+    @property
+    def is_story(self):
+        return self.format == self.Format.STORY
+
+    @property
+    def format_label(self):
+        """The format as the user reads it, or "" for the platform's ordinary post."""
+        if self.format == self.Format.DEFAULT:
+            return ""
+        return self.get_format_display()
 
     @property
     def delivered_by_notification(self):

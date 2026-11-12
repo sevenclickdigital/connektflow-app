@@ -42,6 +42,34 @@ class PostType(enum.Enum):
     PROFILE_PHOTO = "profile_photo"
 
 
+# The PlatformPost formats that pin a post type, keyed by format value. The
+# default format has none: its post type is inferred from the media.
+FORMAT_POST_TYPES = {
+    "story": PostType.STORY,
+    "reel": PostType.REEL,
+    "profile_photo": PostType.PROFILE_PHOTO,
+}
+
+
+def media_fits_post_type(post_type: PostType, media_count: int, first_media_type: str | None) -> bool:
+    """Whether attachments shaped like this can be published as ``post_type``.
+
+    Only post types that name a media shape are checked; TEXT, LINK, PIN and the
+    rest say nothing about attachments and always fit.
+    """
+    if post_type is PostType.REEL:
+        # Every Reels API takes exactly one video.
+        return media_count == 1 and first_media_type == "video"
+    if post_type is PostType.VIDEO:
+        return first_media_type == "video"
+    if post_type is PostType.STORY:
+        # A Story is one photo or one video, never text or a set.
+        return media_count == 1 and first_media_type in ("image", "video")
+    if post_type is PostType.PROFILE_PHOTO:
+        return media_count == 1 and first_media_type == "image"
+    return True
+
+
 class MediaType(enum.Enum):
     JPEG = "jpeg"
     PNG = "png"

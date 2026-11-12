@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
@@ -798,16 +798,24 @@ def processing_status(request, workspace_id, asset_id):
         pk=asset_id,
     )
 
-    if request.htmx and asset.processing_status == MediaAsset.ProcessingStatus.COMPLETED:
-        # Return the completed asset card to replace the placeholder
-        return render(
-            request,
-            "media_library/_asset_card.html",
-            {
-                "asset": asset,
-                "workspace": workspace,
-            },
-        )
+    if request.htmx:
+        # The card polls this with hx-swap="outerHTML", so whatever comes back
+        # replaces it: the finished card once processing has settled (the
+        # failed card carries no poller either), and nothing at all — 204, which
+        # htmx doesn't swap — while it is still running.
+        if asset.processing_status in (
+            MediaAsset.ProcessingStatus.COMPLETED,
+            MediaAsset.ProcessingStatus.FAILED,
+        ):
+            return render(
+                request,
+                "media_library/_asset_card.html",
+                {
+                    "asset": asset,
+                    "workspace": workspace,
+                },
+            )
+        return HttpResponse(status=204)
 
     return JsonResponse(
         {

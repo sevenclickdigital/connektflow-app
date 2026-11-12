@@ -22,7 +22,7 @@ from django.http import FileResponse, Http404, HttpResponse, JsonResponse, Strea
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
-from django.utils.html import strip_tags
+from django.utils.html import format_html, strip_tags
 from django.utils.text import get_text_list
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy, ngettext
@@ -62,9 +62,12 @@ from .models import (
     Tag,
 )
 from .services import (
+    format_blocker,
+    format_media_replacements,
     media_blocker,
     media_change_blocker,
     post_media_types,
+    post_ordered_media_types,
     publish_blocker,
     require_publishable,
     usable_media_types,
@@ -100,11 +103,10 @@ def _facebook_grid_context(media_items):
         "fb_grid_overflow": max(0, len(media_items) - FACEBOOK_GRID_MAX_TILES),
     }
 
+
 # Shown when every posting slot within the lookahead horizon is already taken.
 # Lazy: this is evaluated at import, before a request has picked the language.
-_QUEUE_FULL_MSG = gettext_lazy(
-    "No open posting slot within the scheduling horizon — add posting slots or free one up."
-)
+_QUEUE_FULL_MSG = gettext_lazy("No open posting slot within the scheduling horizon — add posting slots or free one up.")
 
 
 def _get_workspace(request, workspace_id):
@@ -154,21 +156,58 @@ def _get_account_scope(request):
     return scope
 
 
-def _remove_deselected_platform_posts(request, post, selected_ids):
+def _remove_deselected_platform_posts(request, post, targets):
     """Delete PlatformPosts the user deselected in the composer form.
+
+    ``targets`` maps each selected account id to the formats chosen for it; a
+    row whose account or format is not among them was deselected.
 
     When the composer was opened scoped to a single account
     (``?account=`` → hidden ``account_scope`` input), the form only renders
-    that account, so ``selected_ids`` is NOT the complete desired set —
+    that account, so ``targets`` is NOT the complete desired set —
     restrict deletion to the scoped account to keep siblings intact.
     Published/publishing rows are never deleted by deselection (explicit
     post deletion remains the user's call — see PlatformPost.PROTECTED_STATUSES).
     """
-    qs = post.platform_posts.exclude(social_account_id__in=selected_ids)
+    qs = post.platform_posts.exclude(status__in=PlatformPost.PROTECTED_STATUSES)
     scope = _get_account_scope(request)
     if scope:
         qs = qs.filter(social_account_id=scope)
-    qs.exclude(status__in=PlatformPost.PROTECTED_STATUSES).delete()
+    stale = [
+        pp.pk
+        for pp in qs.only("id", "social_account_id", "format")
+        if pp.format not in targets.get(str(pp.social_account_id), ())
+    ]
+    if stale:
+        PlatformPost.objects.filter(pk__in=stale).delete()
+
+
+def _selected_targets(request, post, accounts):
+    """``{account_id: [format, ...]}`` for the selected ``accounts``.
+
+    The composer posts ``selected_targets`` as ``"<account>:<format>,..."``.
+    A format the account's platform doesn't offer is dropped, and an account
+    left with none publishes its ordinary post. Saves that don't come from the
+    composer's picker (no ``selected_targets`` field) keep the formats each
+    account already has on the post.
+    """
+    raw = request.POST.get("selected_targets")
+    chosen: dict[str, list[str]] = {}
+    if raw is None:
+        if post is not None and not post._state.adding:
+            for acc_id, fmt in post.platform_posts.values_list("social_account_id", "format"):
+                chosen.setdefault(str(acc_id), []).append(fmt)
+    else:
+        for item in raw.split(","):
+            acc_id, _sep, fmt = item.strip().partition(":")
+            if acc_id and fmt and fmt not in chosen.get(acc_id, []):
+                chosen.setdefault(acc_id, []).append(fmt)
+    targets = {}
+    for account in accounts:
+        acc_id = str(account.id)
+        formats = [f for f in account.formats if f in chosen.get(acc_id, [])]
+        targets[acc_id] = formats or [PlatformPost.Format.DEFAULT]
+    return targets
 
 
 def _scoped_platform_post_ids(request, post):
@@ -309,22 +348,33 @@ def _apply_facebook_feed_extras(request, extra, acc_id):
         extra.pop("feeling_object_id", None)
 
 
-def _first_media_types(post):
-    """Media types of the first two attachments: enough to tell "exactly one" apart."""
-    return list(post.media_attachments.values_list("media_asset__media_type", flat=True)[:2])
+# post_type hints that name a format. The row's ``format`` says this now, so
+# a leftover hint is dropped whenever the composer saves the row.
+_FORMAT_HINTS = ("story", "reel", "profile_photo")
 
 
-def _fits_story(media_types):
-    """A Story is exactly one photo or one video."""
-    return len(media_types) == 1 and media_types[0] in ("image", "video")
+def _apply_format_extras(request, pp, acc_id):
+    """Record the per-format choices the composer offers on ``pp``.
 
-
-def _apply_delivery_choice(extra, choice):
-    """Store "notify me to publish manually" only alongside a Story it can apply to."""
-    if choice == "story_notify" and extra.get("post_type") == "story":
+    A Story can be delivered by notifying someone to post it by hand; a
+    Google Business photo has a gallery category. Only applied when the save
+    comes from the composer's picker, which renders those controls.
+    """
+    if "selected_targets" not in request.POST:
+        return
+    extra = {**(pp.platform_extra or {})}
+    if extra.get("post_type") in _FORMAT_HINTS:
+        extra.pop("post_type")
+    if pp.format == PlatformPost.Format.STORY and request.POST.get(f"story_delivery_{acc_id}") == NOTIFY_DELIVERY:
         extra["delivery"] = NOTIFY_DELIVERY
     else:
         extra.pop("delivery", None)
+    if pp.format == PlatformPost.Format.PROFILE_PHOTO:
+        category = request.POST.get(f"gbp_photo_category_{acc_id}", "").strip()
+        extra["photo_category"] = category if category in PROFILE_PHOTO_CATEGORIES else "ADDITIONAL"
+    else:
+        extra.pop("photo_category", None)
+    pp.platform_extra = extra
 
 
 def _sync_platform_posts(request, post, workspace, initial_status=None):
@@ -336,157 +386,120 @@ def _sync_platform_posts(request, post, workspace, initial_status=None):
     ``_transition_post_children`` separately if you want to move them.
     """
     selected_ids = _parse_selected_account_ids(request.POST.get("selected_accounts", ""))
-    _remove_deselected_platform_posts(request, post, selected_ids)
-    for acc_id in selected_ids:
-        try:
-            account = SocialAccount.objects.get(id=acc_id, workspace=workspace)
-        except SocialAccount.DoesNotExist:
-            continue
-        defaults = {}
-        if initial_status:
-            defaults["status"] = initial_status
-        pp, _created = PlatformPost.objects.get_or_create(
-            post=post,
-            social_account=account,
-            defaults=defaults,
-        )
-        override_title = request.POST.get(f"override_title_{acc_id}", "").strip()
-        override_caption = request.POST.get(f"override_caption_{acc_id}", "").strip()
-        override_comment = request.POST.get(f"override_comment_{acc_id}", "").strip()
-        pp.platform_specific_title = override_title if override_title else None
-        pp.platform_specific_caption = override_caption if override_caption else None
-        pp.platform_specific_first_comment = override_comment if override_comment else None
+    accounts = list(SocialAccount.objects.filter(id__in=selected_ids, workspace=workspace))
+    targets = _selected_targets(request, post, accounts)
+    _remove_deselected_platform_posts(request, post, targets)
+    for account in accounts:
+        for fmt in targets[str(account.id)]:
+            _sync_platform_post(request, post, account, fmt, initial_status)
 
-        # Per-platform extras
-        if account.platform == "facebook":
-            # Two independent markers, because the two halves are rendered in
-            # different places and either can be absent from a given save:
-            #
-            #   facebook_panel_*  the Reel selector, rendered for every
-            #                     selected Facebook account
-            #   facebook_custom_* place and feeling, in the customize card the
-            #                     user opens on demand
-            #
-            # Each half only touches its own keys when its marker arrives, so a
-            # save that renders one cannot wipe what the other stored.
-            extra = {**(pp.platform_extra or {})}
-            if f"facebook_panel_{acc_id}" in request.POST:
-                # The Reel selector itself is omitted when the attachment set is
-                # not exactly one video. Clearing an earlier choice in that case
-                # is what stops removing or replacing media from leaving a stale
-                # Reel hint that sends a text or image post to Facebook's Reel
-                # endpoint.
-                facebook_post_type = request.POST.get(f"facebook_post_type_{acc_id}", "").strip()
-                media_types = _first_media_types(post)
-                has_exactly_one_video = media_types == ["video"]
-                if facebook_post_type == "reel" and has_exactly_one_video:
-                    extra["post_type"] = "reel"
-                elif facebook_post_type in ("story", "story_notify") and _fits_story(media_types):
-                    extra["post_type"] = "story"
-                else:
-                    # Only the deviation from the default is worth storing. A
-                    # lone video already infers PostType.VIDEO at publish time,
-                    # so a "video" hint restates what the media says and can
-                    # only go wrong: if the attachment is later swapped for an
-                    # image through the media endpoints, the hint would still
-                    # route it to Facebook's video endpoint. Choosing regular
-                    # video therefore clears the hint rather than recording it.
-                    extra.pop("post_type", None)
-                _apply_delivery_choice(extra, facebook_post_type)
-            _apply_facebook_feed_extras(request, extra, acc_id)
-            pp.platform_extra = extra
 
-        elif account.platform in ("instagram", "instagram_login"):
-            # Same rule as the Facebook selector: the panel marker says the
-            # selector was rendered, so a save without it leaves the hint alone,
-            # and a hint the attachments no longer fit is cleared.
-            if f"instagram_panel_{acc_id}" in request.POST:
-                extra = {**(pp.platform_extra or {})}
-                instagram_post_type = request.POST.get(f"instagram_post_type_{acc_id}", "").strip()
-                if instagram_post_type in ("story", "story_notify") and _fits_story(_first_media_types(post)):
-                    extra["post_type"] = "story"
-                else:
-                    extra.pop("post_type", None)
-                _apply_delivery_choice(extra, instagram_post_type)
-                pp.platform_extra = extra
+def _target_field(data, name, acc_id, fmt):
+    """A composer field set per format (``<name>_<account>_<format>``).
 
-        elif account.platform == "google_business":
-            if f"gbp_panel_{acc_id}" in request.POST:
-                extra = {**(pp.platform_extra or {})}
-                wants_photo = request.POST.get(f"gbp_post_type_{acc_id}", "").strip() == "profile_photo"
-                if wants_photo and _first_media_types(post) == ["image"]:
-                    extra["post_type"] = "profile_photo"
-                    category = request.POST.get(f"gbp_photo_category_{acc_id}", "").strip()
-                    extra["photo_category"] = category if category in PROFILE_PHOTO_CATEGORIES else "ADDITIONAL"
-                else:
-                    extra.pop("post_type", None)
-                    extra.pop("photo_category", None)
-                pp.platform_extra = extra
+    The composer's "Customize" chips are per format, so each format of an
+    account can carry its own caption. Falls back to the account-wide
+    ``<name>_<account>`` that other callers still send.
+    """
+    key = f"{name}_{acc_id}_{fmt}"
+    if key in data:
+        return data.get(key, "")
+    return data.get(f"{name}_{acc_id}", "")
 
-        elif account.platform == "youtube":
-            tags_list = parse_and_truncate_youtube_tag_string(request.POST.get(f"yt_tags_{acc_id}", ""))
-            privacy_status = request.POST.get(f"yt_privacy_status_{acc_id}", "public")
-            if privacy_status not in ("public", "unlisted", "private"):
-                privacy_status = "public"
-            thumb_id = request.POST.get(f"yt_thumbnail_asset_id_{acc_id}", "").strip() or None
-            pp.platform_extra = {
-                "privacy_status": privacy_status,
-                "self_declared_made_for_kids": request.POST.get(f"yt_made_for_kids_{acc_id}") == "true",
-                "tags": tags_list,
-                "thumbnail_asset_id": thumb_id,
-            }
 
-        elif account.platform == "pinterest":
-            board_id = request.POST.get(f"pin_board_id_{acc_id}", "").strip()
-            if not board_id:
-                board_id = (pp.platform_extra or {}).get("board_id") or None
-            pp.platform_extra = {
-                "board_id": board_id,
-                "link_url": request.POST.get(f"pin_link_url_{acc_id}", "").strip() or None,
-                "alt_text": request.POST.get(f"pin_alt_text_{acc_id}", "").strip() or None,
-                "tag_products": request.POST.get(f"pin_tag_products_{acc_id}", "").strip() or None,
-                "allow_comments": request.POST.get(f"pin_allow_comments_{acc_id}") == "true",
-                "show_similar_products": request.POST.get(f"pin_show_similar_{acc_id}") == "true",
-                "cover_image_asset_id": request.POST.get(f"pin_cover_image_asset_id_{acc_id}", "").strip() or None,
-            }
+def _sync_platform_post(request, post, account, fmt, initial_status):
+    """Create or update the row publishing ``post`` as ``fmt`` on ``account``."""
+    acc_id = str(account.id)
+    defaults = {}
+    if initial_status:
+        defaults["status"] = initial_status
+    pp, _created = PlatformPost.objects.get_or_create(
+        post=post,
+        social_account=account,
+        format=fmt,
+        defaults=defaults,
+    )
+    override_title = _target_field(request.POST, "override_title", acc_id, fmt).strip()
+    override_caption = _target_field(request.POST, "override_caption", acc_id, fmt).strip()
+    override_comment = _target_field(request.POST, "override_comment", acc_id, fmt).strip()
+    pp.platform_specific_title = override_title if override_title else None
+    pp.platform_specific_caption = override_caption if override_caption else None
+    pp.platform_specific_first_comment = override_comment if override_comment else None
 
-        elif account.platform == "tiktok" and f"tiktok_privacy_level_{acc_id}" in request.POST:
-            # Only rebuild extras when the TikTok panel was part of the form,
-            # so non-composer saves can't wipe a previously chosen privacy level.
-            privacy = request.POST.get(f"tiktok_privacy_level_{acc_id}", "").strip()
-            if privacy not in TIKTOK_PRIVACY_LEVELS:
-                # An empty/invalid submit (required-validation bypassed) must
-                # not wipe a previously saved choice.
-                privacy = (pp.platform_extra or {}).get("privacy_level", "")
-            # Comment / Duet / Stitch are independent interaction settings —
-            # TikTok's UX guidelines require a separate toggle per interaction,
-            # each greyed out on its own when the creator disabled it.
-            extra = {
-                "disable_comment": request.POST.get(f"tiktok_allow_comment_{acc_id}") != "true",
-                "disable_duet": request.POST.get(f"tiktok_allow_duet_{acc_id}") != "true",
-                "disable_stitch": request.POST.get(f"tiktok_allow_stitch_{acc_id}") != "true",
-                "brand_organic_toggle": request.POST.get(f"tiktok_brand_organic_{acc_id}") == "true",
-                "brand_content_toggle": request.POST.get(f"tiktok_brand_content_{acc_id}") == "true",
-                "is_aigc": request.POST.get(f"tiktok_is_aigc_{acc_id}") == "true",
-            }
-            if privacy:
-                extra["privacy_level"] = privacy
-            # Cover frame timestamp from the composer's frame picker; omitted
-            # when blank/invalid so TikTok falls back to the first frame.
-            # Parse with int() rather than str.isdigit() — isdigit() accepts
-            # non-ASCII digits (e.g. "²", "١٢") that int() then rejects with an
-            # unhandled ValueError.
-            cover_ms = request.POST.get(f"tiktok_video_cover_timestamp_ms_{acc_id}", "").strip()
-            if cover_ms:
-                try:
-                    cover_ms_val = int(cover_ms)
-                except ValueError:
-                    cover_ms_val = -1
-                if cover_ms_val >= 0:
-                    extra["video_cover_timestamp_ms"] = cover_ms_val
-            pp.platform_extra = extra
+    # Per-platform extras
+    if account.platform == "facebook":
+        # Place and feeling live in the customize card the user opens on
+        # demand; see _apply_facebook_feed_extras for why it has its own
+        # marker.
+        extra = {**(pp.platform_extra or {})}
+        _apply_facebook_feed_extras(request, extra, acc_id)
+        pp.platform_extra = extra
 
-        pp.save()
+    elif account.platform == "youtube":
+        tags_list = parse_and_truncate_youtube_tag_string(request.POST.get(f"yt_tags_{acc_id}", ""))
+        privacy_status = request.POST.get(f"yt_privacy_status_{acc_id}", "public")
+        if privacy_status not in ("public", "unlisted", "private"):
+            privacy_status = "public"
+        thumb_id = request.POST.get(f"yt_thumbnail_asset_id_{acc_id}", "").strip() or None
+        pp.platform_extra = {
+            "privacy_status": privacy_status,
+            "self_declared_made_for_kids": request.POST.get(f"yt_made_for_kids_{acc_id}") == "true",
+            "tags": tags_list,
+            "thumbnail_asset_id": thumb_id,
+        }
+
+    elif account.platform == "pinterest":
+        board_id = request.POST.get(f"pin_board_id_{acc_id}", "").strip()
+        if not board_id:
+            board_id = (pp.platform_extra or {}).get("board_id") or None
+        pp.platform_extra = {
+            "board_id": board_id,
+            "link_url": request.POST.get(f"pin_link_url_{acc_id}", "").strip() or None,
+            "alt_text": request.POST.get(f"pin_alt_text_{acc_id}", "").strip() or None,
+            "tag_products": request.POST.get(f"pin_tag_products_{acc_id}", "").strip() or None,
+            "allow_comments": request.POST.get(f"pin_allow_comments_{acc_id}") == "true",
+            "show_similar_products": request.POST.get(f"pin_show_similar_{acc_id}") == "true",
+            "cover_image_asset_id": request.POST.get(f"pin_cover_image_asset_id_{acc_id}", "").strip() or None,
+        }
+
+    elif account.platform == "tiktok" and f"tiktok_privacy_level_{acc_id}" in request.POST:
+        # Only rebuild extras when the TikTok panel was part of the form,
+        # so non-composer saves can't wipe a previously chosen privacy level.
+        privacy = request.POST.get(f"tiktok_privacy_level_{acc_id}", "").strip()
+        if privacy not in TIKTOK_PRIVACY_LEVELS:
+            # An empty/invalid submit (required-validation bypassed) must
+            # not wipe a previously saved choice.
+            privacy = (pp.platform_extra or {}).get("privacy_level", "")
+        # Comment / Duet / Stitch are independent interaction settings —
+        # TikTok's UX guidelines require a separate toggle per interaction,
+        # each greyed out on its own when the creator disabled it.
+        extra = {
+            "disable_comment": request.POST.get(f"tiktok_allow_comment_{acc_id}") != "true",
+            "disable_duet": request.POST.get(f"tiktok_allow_duet_{acc_id}") != "true",
+            "disable_stitch": request.POST.get(f"tiktok_allow_stitch_{acc_id}") != "true",
+            "brand_organic_toggle": request.POST.get(f"tiktok_brand_organic_{acc_id}") == "true",
+            "brand_content_toggle": request.POST.get(f"tiktok_brand_content_{acc_id}") == "true",
+            "is_aigc": request.POST.get(f"tiktok_is_aigc_{acc_id}") == "true",
+        }
+        if privacy:
+            extra["privacy_level"] = privacy
+        # Cover frame timestamp from the composer's frame picker; omitted
+        # when blank/invalid so TikTok falls back to the first frame.
+        # Parse with int() rather than str.isdigit() — isdigit() accepts
+        # non-ASCII digits (e.g. "²", "١٢") that int() then rejects with an
+        # unhandled ValueError.
+        cover_ms = request.POST.get(f"tiktok_video_cover_timestamp_ms_{acc_id}", "").strip()
+        if cover_ms:
+            try:
+                cover_ms_val = int(cover_ms)
+            except ValueError:
+                cover_ms_val = -1
+            if cover_ms_val >= 0:
+                extra["video_cover_timestamp_ms"] = cover_ms_val
+        pp.platform_extra = extra
+
+    _apply_format_extras(request, pp, acc_id)
+    pp.save()
 
 
 def _validate_pinterest_board_selection(request, post, workspace):
@@ -508,7 +521,12 @@ def _validate_pinterest_board_selection(request, post, workspace):
             )
         if not board_id:
             return JsonResponse(
-                {"errors": {"pinterest_board": _("Select a Pinterest board for %(account)s.") % {"account": account.account_name}}},
+                {
+                    "errors": {
+                        "pinterest_board": _("Select a Pinterest board for %(account)s.")
+                        % {"account": account.account_name}
+                    }
+                },
                 status=400,
             )
     return None
@@ -537,6 +555,65 @@ def _composer_media_types(request, post, workspace) -> set[str]:
         pending_ids = request.session.get(f"pending_media_{workspace.id}", [])
         media_types |= usable_media_types(MediaAsset.objects.filter(id__in=pending_ids, workspace=workspace))
     return media_types
+
+
+def _composer_ordered_media_types(request, post, workspace) -> list[str]:
+    """``post_ordered_media_types`` plus the uploads waiting to be attached."""
+    if not post._state.adding:
+        return post_ordered_media_types(post)
+    pending_ids = request.session.get(f"pending_media_{workspace.id}", [])
+    by_id = {
+        str(asset.id): asset.media_type
+        for asset in MediaAsset.objects.filter(id__in=pending_ids, workspace=workspace).exclude(file="")
+    }
+    return [by_id[str(i)] for i in pending_ids if str(i) in by_id][:2]
+
+
+def _validate_formats(request, post, workspace, action):
+    """Refuse to schedule a post whose chosen formats the media can't be published as.
+
+    Drafts are let through: the format is picked before the media, so a draft
+    may still be waiting for it; the composer shows the mismatch meanwhile.
+    """
+    if action not in _PUBLISH_COMMITTING_ACTIONS:
+        return None
+    selected_ids = _parse_selected_account_ids(request.POST.get("selected_accounts", ""))
+    if not selected_ids or "selected_targets" not in request.POST:
+        return None
+    accounts = list(SocialAccount.objects.filter(id__in=selected_ids, workspace=workspace))
+    targets = _selected_targets(request, post, accounts)
+    if all(formats == [PlatformPost.Format.DEFAULT] for formats in targets.values()):
+        return None
+    media = _composer_ordered_media_types(request, post, workspace)
+    for account in accounts:
+        formats = targets[str(account.id)]
+        for fmt in formats:
+            reason = format_blocker(fmt, media)
+            if reason:
+                return JsonResponse(
+                    {"errors": {"media": f"{account.account_name}: {reason}"}},
+                    status=400,
+                )
+        # Instagram publishes a lone video in the feed as a Reel, so choosing
+        # both would publish the same Reel twice.
+        if (
+            account.platform in ("instagram", "instagram_login")
+            and {"default", "reel"} <= set(formats)
+            and media == ["video"]
+        ):
+            return JsonResponse(
+                {
+                    "errors": {
+                        "media": _(
+                            "%(account)s: Instagram publishes a single video in the feed as a Reel. "
+                            "Choose Feed or Reels, not both."
+                        )
+                        % {"account": account.account_name}
+                    }
+                },
+                status=400,
+            )
+    return None
 
 
 def _validate_required_media(request, post, workspace, action):
@@ -624,6 +701,7 @@ def _save_version(post, user):
             {
                 "social_account_id": str(pp.social_account_id),
                 "platform": pp.social_account.platform,
+                "format": pp.format,
                 "title_override": pp.platform_specific_title,
                 "caption_override": pp.platform_specific_caption,
                 "first_comment_override": pp.platform_specific_first_comment,
@@ -730,11 +808,6 @@ def compose(request, workspace_id, post_id=None):
     if account_filter and not _is_valid_uuid(account_filter):
         account_filter = ""
 
-    # True when the Schedule Post panel is pre-filled from a draft's *proposed*
-    # time rather than a committed schedule — the composer uses this to keep the
-    # primary action as "Save Draft" instead of arming "schedule for real".
-    schedule_prefill_is_proposed = False
-
     # Load existing post or prepare a blank one
     if post_id:
         post = get_object_or_404(Post, id=post_id, workspace=workspace)
@@ -755,16 +828,39 @@ def compose(request, workspace_id, post_id=None):
             local_dt = prefill_dt.astimezone(tz)
             form.initial["scheduled_date"] = local_dt.strftime("%Y-%m-%d")
             form.initial["scheduled_time"] = local_dt.strftime("%H:%M")
-            schedule_prefill_is_proposed = post.scheduled_at is None
         # One fetch serves selected ids, extras, and the status checks below.
         platform_post_list = list(post.platform_posts.select_related("social_account"))
+        selected_formats: dict[str, list[str]] = {}
+        format_extras: dict[str, dict] = {}
+        format_media: dict[str, dict] = {}
         # Matched strictly: the scoped form renders and selects only this account,
         # so an unmatched ?account= must select nothing. The read-only gate below
         # reuses the same match but falls back to every child — see _gated_children.
         scoped_platform_posts = _match_scope(platform_post_list, account_filter)
-        selected_account_ids = [pp.social_account_id for pp in scoped_platform_posts]
+        selected_account_ids = list(dict.fromkeys(pp.social_account_id for pp in scoped_platform_posts))
         media_attachments = post.media_attachments.select_related("media_asset").all()
-        platform_extras = {str(pp.social_account_id): (pp.platform_extra or {}) for pp in platform_post_list}
+        # Account-level settings (overrides, YouTube, Pinterest, TikTok, place)
+        # are written to every format of the account alike; the default row,
+        # when there is one, is the canonical copy.
+        platform_extras = {}
+        for pp in sorted(platform_post_list, key=lambda p: p.format != PlatformPost.Format.DEFAULT):
+            platform_extras.setdefault(str(pp.social_account_id), pp.platform_extra or {})
+        replacements = format_media_replacements(scoped_platform_posts)
+        for pp in scoped_platform_posts:
+            for source_id, asset in replacements.get(pp.pk, {}).items():
+                format_media.setdefault(f"{pp.social_account_id}:{pp.format}", {})[str(source_id)] = {
+                    "id": str(asset.id),
+                    "url": asset.file.url,
+                    "width": asset.width,
+                    "height": asset.height,
+                }
+        for pp in scoped_platform_posts:
+            selected_formats.setdefault(str(pp.social_account_id), []).append(pp.format)
+            extra = pp.platform_extra or {}
+            if pp.is_story and is_notify_delivery(extra):
+                format_extras.setdefault(str(pp.social_account_id), {})["story_delivery"] = NOTIFY_DELIVERY
+            if pp.format == PlatformPost.Format.PROFILE_PHOTO and extra.get("photo_category"):
+                format_extras.setdefault(str(pp.social_account_id), {})["photo_category"] = extra["photo_category"]
         template_data = None
     else:
         post = None
@@ -794,6 +890,9 @@ def compose(request, workspace_id, post_id=None):
         platform_post_list = []
         scoped_platform_posts = []
         selected_account_ids = []
+        selected_formats = {}
+        format_extras = {}
+        format_media = {}
         media_attachments = []
         platform_extras = {}
 
@@ -836,6 +935,9 @@ def compose(request, workspace_id, post_id=None):
         cfg["supports_automation"] = acc.platform in COMMENT_PLATFORMS
         char_limits[str(acc.id)] = {
             "platform": acc.platform,
+            # "Facebook", "Facebook Stories"…: with one account per platform
+            # the channel name says which chip is which.
+            "format_labels": {option["format"]: option["label"] for option in acc.format_options()},
             "limit": acc.char_limit,
             # Each of these costs two characters once the provider escapes it,
             # so the live counter can charge for them as the user types.
@@ -861,13 +963,14 @@ def compose(request, workspace_id, post_id=None):
 
             flows = {
                 flow.platform_post_id: flow
-                for flow in PostAutomation.objects.filter(
-                    platform_post__in=[pp.id for pp in platform_post_list]
-                )
+                for flow in PostAutomation.objects.filter(platform_post__in=[pp.id for pp in platform_post_list])
             }
         for pp in platform_post_list:
+            # A Story has no comment thread to automate.
+            if pp.is_story:
+                continue
             flow = flows.get(pp.id)
-            automation_targets[str(pp.social_account_id)] = {
+            automation_targets[f"{pp.social_account_id}:{pp.format}"] = {
                 "platform_post_id": str(pp.id),
                 "status": flow.status if flow else "",
                 "status_label": flow.get_status_display() if flow else "",
@@ -1006,6 +1109,11 @@ def compose(request, workspace_id, post_id=None):
         "form": form,
         "social_accounts": social_accounts,
         "selected_account_ids": [str(aid) for aid in selected_account_ids],
+        "selected_formats": selected_formats,
+        "format_extras": format_extras,
+        # {"<account>:<format>": {source asset id: {id, url, width, height}}}:
+        # the crops a format publishes instead of the attachment.
+        "format_media": format_media,
         "platform_extras": platform_extras,
         "media_attachments": media_attachments,
         "media_items": media_items,
@@ -1018,7 +1126,6 @@ def compose(request, workspace_id, post_id=None):
         "can_approve": can_approve,
         "can_view_internal_notes": can_view_internal_notes,
         "is_edit": post is not None,
-        "schedule_prefill_is_proposed": schedule_prefill_is_proposed,
         "post_is_scheduled": post_is_scheduled,
         "post_is_readonly": post_is_readonly,
         "live_siblings": live_siblings,
@@ -1269,7 +1376,9 @@ def save_post(request, workspace_id, post_id=None):
     if pinterest_board_error is not None:
         return pinterest_board_error
 
-    media_error = _validate_required_media(request, post, workspace, action)
+    media_error = _validate_required_media(request, post, workspace, action) or _validate_formats(
+        request, post, workspace, action
+    )
     if media_error is not None:
         return media_error
 
@@ -1587,6 +1696,16 @@ def transition_platform_post(request, workspace_id, post_id, platform_post_id):
     return JsonResponse({"ok": True, "status": pp.status, "platform_post_id": str(pp.id)})
 
 
+def _workspace_now(workspace):
+    """The current time in the workspace's timezone, as the user reads the clock."""
+    import zoneinfo
+
+    try:
+        return timezone.now().astimezone(zoneinfo.ZoneInfo(workspace.effective_timezone or "UTC"))
+    except (zoneinfo.ZoneInfoNotFoundError, ValueError):
+        return timezone.now()
+
+
 @login_required
 @require_permission("create_posts")
 @require_POST
@@ -1613,7 +1732,9 @@ def autosave(request, workspace_id, post_id=None):
         # indicator markup on purpose — the response swaps into #autosave-status,
         # so a 4xx here would fire the global error toast on every tick.
         if _is_readonly_write(request, post):
-            return HttpResponse('<span class="text-xs text-gray-400">Read-only — not saved</span>')
+            return HttpResponse(
+                format_html('<span class="text-xs text-gray-400">{}</span>', _("Read-only — not saved"))
+            )
         orig_content = _base_content_snapshot(post)
     else:
         # Check if a previous autosave already created a draft for this session
@@ -1636,6 +1757,19 @@ def autosave(request, workspace_id, post_id=None):
 
     post.tags = parse_and_truncate_tag_string(request.POST.get("tags", ""))
 
+    # Opening the composer and walking away must not leave an empty draft
+    # behind: a new post is only created once there is something to keep.
+    if is_new and not (
+        post.title.strip()
+        or post.caption.strip()
+        or post.first_comment.strip()
+        or post.internal_notes.strip()
+        or post.tags
+        or _parse_selected_account_ids(request.POST.get("selected_accounts", ""))
+        or request.session.get(f"pending_media_{workspace.id}")
+    ):
+        return HttpResponse(format_html('<span class="text-xs text-gray-400">{}</span>', _("Nothing to save yet")))
+
     post.save()
 
     # Attach pending session media when creating a new post
@@ -1646,12 +1780,12 @@ def autosave(request, workspace_id, post_id=None):
 
     # Sync platform selections
     selected_ids = _parse_selected_account_ids(request.POST.get("selected_accounts", ""))
-    _remove_deselected_platform_posts(request, post, selected_ids)
-    for acc_id in selected_ids:
-        PlatformPost.objects.get_or_create(
-            post=post,
-            social_account_id=acc_id,
-        )
+    accounts = list(SocialAccount.objects.filter(id__in=selected_ids, workspace=workspace))
+    targets = _selected_targets(request, post, accounts)
+    _remove_deselected_platform_posts(request, post, targets)
+    for account in accounts:
+        for fmt in targets[str(account.id)]:
+            PlatformPost.objects.get_or_create(post=post, social_account=account, format=fmt)
 
     # Option A: an autosave that changed an approved post's content reverts it to
     # pending_review so edited content can't publish without a fresh review.
@@ -1659,7 +1793,10 @@ def autosave(request, workspace_id, post_id=None):
         _revert_approved_to_review(post)
 
     return HttpResponse(
-        f'<span class="text-xs text-gray-400">Saved {timezone.now().strftime("%H:%M")}</span>',
+        format_html(
+            '<span class="text-xs text-gray-400">{}</span>',
+            _("Saved %(time)s") % {"time": _workspace_now(workspace).strftime("%H:%M")},
+        ),
         headers={"HX-Trigger": json.dumps({"autosaved": {"postId": str(post.id), "isNew": is_new}})},
     )
 
@@ -1681,9 +1818,7 @@ def preview(request, workspace_id):
     # The published tags ride along at the end of the caption, so the preview
     # has to show them — and count them against the limit — the same way
     # PostTarget.effective_caption will when the post goes out.
-    tag_suffix = Tag.publishable_suffix(
-        workspace.id, parse_and_truncate_tag_string(request.POST.get("tags", ""))
-    )
+    tag_suffix = Tag.publishable_suffix(workspace.id, parse_and_truncate_tag_string(request.POST.get("tags", "")))
 
     def _with_tags(text):
         if not tag_suffix:
@@ -1698,29 +1833,44 @@ def preview(request, workspace_id):
             workspace=workspace,
         ).order_by("platform")
         for account in accounts:
-            override_title_key = f"override_title_{account.id}"
-            override_key = f"override_caption_{account.id}"
-            effective_title = request.POST.get(override_title_key, "") or title
-            effective_caption = _with_tags(request.POST.get(override_key, "") or caption)
-            char_limit = account.char_limit
-            # Counted after escaping, so the badge matches what gets published.
-            char_count = account.caption_wire_length(effective_caption)
+            labels = {option["format"]: option["label"] for option in account.format_options()}
             field_config = account.field_config
-            previews.append(
-                {
-                    "account": account,
-                    "title": effective_title,
-                    "caption": effective_caption,
-                    "first_comment": first_comment,
-                    "char_count": char_count,
-                    "char_limit": char_limit,
-                    "is_over_limit": char_count > char_limit,
-                    "truncated_caption": effective_caption[:char_limit]
-                    if len(effective_caption) > char_limit
-                    else effective_caption,
-                    "needs_title": field_config["needs_title"],
-                }
-            )
+            char_limit = account.char_limit
+            slides = []
+            # One slide per chosen format, each with that format's own
+            # customization.
+            for fmt in _selected_targets(request, None, [account])[str(account.id)]:
+                effective_title = _target_field(request.POST, "override_title", account.id, fmt) or title
+                effective_caption = _with_tags(
+                    _target_field(request.POST, "override_caption", account.id, fmt) or caption
+                )
+                # Counted after escaping, so the badge matches what gets published.
+                char_count = account.caption_wire_length(effective_caption)
+                slides.append(
+                    {
+                        "account": account,
+                        "format": fmt,
+                        "label": labels.get(fmt, account.get_platform_display()),
+                        "format_label": (
+                            PlatformPost.Format(fmt).label
+                            if fmt != PlatformPost.Format.DEFAULT
+                            else _("Feed")
+                            if "story" in account.formats
+                            else PlatformPost.Format.DEFAULT.label
+                        ),
+                        "title": effective_title,
+                        "caption": effective_caption,
+                        "first_comment": first_comment,
+                        "char_count": char_count,
+                        "char_limit": char_limit,
+                        "is_over_limit": char_count > char_limit,
+                        "truncated_caption": effective_caption[:char_limit]
+                        if len(effective_caption) > char_limit
+                        else effective_caption,
+                        "needs_title": field_config["needs_title"],
+                    }
+                )
+            previews.append({"account": account, "slides": slides})
 
     # Gather media for preview - check pending session media or post attachments
     from apps.media_library.models import MediaAsset
@@ -1728,13 +1878,31 @@ def preview(request, workspace_id):
     media_items = []
     post_id_str = request.POST.get("_autosave_post_id", "")
 
+    post_obj = None
+    attachment_asset_ids = []
     if post_id_str:
         try:
             post_obj = Post.objects.get(id=post_id_str, workspace=workspace)
             for att in post_obj.media_attachments.select_related("media_asset").all():
                 media_items.append(_preview_media_item(att.media_asset))
+                attachment_asset_ids.append(att.media_asset_id)
         except Post.DoesNotExist:
             pass
+
+    # A format with its own crops (a 9:16 copy for the Story) shows them on
+    # its slide; every other slide shows the post's media.
+    if post_obj is not None and previews:
+        rows = list(post_obj.platform_posts.all())
+        replacements = format_media_replacements(rows)
+        row_for = {(pp.social_account_id, pp.format): pp.pk for pp in rows}
+        for preview in previews:
+            for slide in preview["slides"]:
+                swaps = replacements.get(row_for.get((slide["account"].id, slide["format"])), {})
+                if swaps:
+                    slide["media_items"] = [
+                        _preview_media_item(swaps[asset_id]) if asset_id in swaps else item
+                        for asset_id, item in zip(attachment_asset_ids, media_items, strict=True)
+                    ]
 
     if not media_items:
         # Check session pending media
@@ -1800,10 +1968,13 @@ def media_picker(request, workspace_id, post_id=None):
     if request.headers.get("HX-Target") == "picker-asset-grid":
         return render(request, "media_library/_asset_grid.html", context)
 
+    from apps.billing.storage_usage import storage_status
+
     context["folders"] = MediaFolder.objects.filter(
         workspace=workspace,
         parent_folder__isnull=True,
     ).prefetch_related("subfolders__subfolders")
+    context["storage"] = storage_status(workspace)
     return render(request, "composer/partials/media_picker.html", context)
 
 
@@ -2235,7 +2406,9 @@ def unsplash_import(request, workspace_id, post_id=None):
     if not isinstance(photos, list) or not photos:
         return JsonResponse({"error": _("No photos selected")}, status=400)
     if len(photos) > UNSPLASH_MAX_IMPORT:
-        return JsonResponse({"error": _("Select at most %(count)s photos per import.") % {"count": UNSPLASH_MAX_IMPORT}}, status=400)
+        return JsonResponse(
+            {"error": _("Select at most %(count)s photos per import.") % {"count": UNSPLASH_MAX_IMPORT}}, status=400
+        )
 
     from django.core.files.base import ContentFile
 
@@ -2759,20 +2932,11 @@ def remove_media(request, workspace_id, post_id, media_id):
     """Remove a media attachment from a post."""
     workspace = _get_workspace(request, workspace_id)
     post = get_object_or_404(Post, id=post_id, workspace=workspace)
-    attachment = PostMedia.objects.filter(id=media_id, post=post).first()
-    if attachment is not None:
-        # Taking the last video off a post already scheduled to TikTok, or the
-        # last image off a pin, would leave it queued to fail. Plain text,
-        # because the global htmx error toast shows the body as-is and a 4xx
-        # doesn't swap.
-        reason = media_change_blocker(post, media_types_after=post_media_types(post, excluding=attachment))
-        if reason:
-            return HttpResponse(reason, status=400, content_type="text/plain")
-    PostMedia.objects.filter(id=media_id, post=post).delete()
+    return _remove_attachment(request, workspace, post, PostMedia.objects.filter(id=media_id, post=post).first())
 
-    # Option A: changing media on an approved post sends it back for re-approval.
-    _revert_approved_to_review(post)
 
+def _post_media_list_response(request, workspace, post):
+    """The post's thumbnails, re-rendered, with the preview told to refresh."""
     response = render(
         request,
         "composer/partials/media_list.html",
@@ -2784,6 +2948,44 @@ def remove_media(request, workspace_id, post_id, media_id):
     )
     response["HX-Trigger"] = "previewUpdate"
     return response
+
+
+def _remove_attachment(request, workspace, post, attachment):
+    if attachment is not None:
+        # Taking the last video off a post already scheduled to TikTok, or the
+        # last image off a pin, would leave it queued to fail. Plain text,
+        # because the global htmx error toast shows the body as-is and a 4xx
+        # doesn't swap.
+        reason = media_change_blocker(
+            post,
+            media_types_after=post_media_types(post, excluding=attachment),
+            ordered_media_types_after=post_ordered_media_types(post, excluding=attachment),
+        )
+        if reason:
+            return HttpResponse(reason, status=400, content_type="text/plain")
+        attachment.delete()
+
+    # Option A: changing media on an approved post sends it back for re-approval.
+    _revert_approved_to_review(post)
+    return _post_media_list_response(request, workspace, post)
+
+
+def _autosaved_attachment(request, workspace, asset_id):
+    """The attachment a "pending" thumbnail now stands for, or ``None``.
+
+    The first autosave creates the post and moves the session's pending media
+    onto it, but the thumbnails already on screen keep their pending-media
+    URLs. Those requests carry the autosaved post id, so the asset can still be
+    found — as an attachment of that post, in this workspace.
+    """
+    post_id = request.POST.get("_autosave_post_id", "").strip()
+    if not _is_valid_uuid(post_id):
+        return None
+    return (
+        PostMedia.objects.select_related("post", "media_asset")
+        .filter(post_id=post_id, post__workspace=workspace, media_asset_id=asset_id)
+        .first()
+    )
 
 
 @login_required
@@ -2798,6 +3000,10 @@ def remove_pending_media(request, workspace_id, asset_id):
     session_key = f"pending_media_{workspace.id}"
     pending = request.session.get(session_key, [])
     asset_id_str = str(asset_id)
+    if asset_id_str not in pending:
+        attachment = _autosaved_attachment(request, workspace, asset_id)
+        if attachment is not None:
+            return _remove_attachment(request, workspace, attachment.post, attachment)
     if asset_id_str in pending:
         pending.remove(asset_id_str)
         request.session[session_key] = pending
@@ -2817,6 +3023,150 @@ def remove_pending_media(request, workspace_id, asset_id):
             "pending_assets": pending_assets,
             "workspace": workspace,
         },
+    )
+    response["HX-Trigger"] = "previewUpdate"
+    return response
+
+
+def _crop_box(request):
+    """The crop box posted by the composer's image editor, in source pixels, or ``None``."""
+    try:
+        box = {key: int(round(float(request.POST[key]))) for key in ("x", "y", "width", "height")}
+    except (KeyError, TypeError, ValueError):
+        return None
+    return box
+
+
+def _crop_asset(request, workspace, asset):
+    """Crop ``asset`` into a new asset, or an error response to return as-is.
+
+    Plain-text 400s: the composer shows the body of a failed htmx request in
+    its error toast, and a 4xx doesn't swap the thumbnails.
+    """
+    from apps.media_library.models import MediaAsset
+    from apps.media_library.services import ImageTooLargeError, crop_into_new_asset
+
+    if asset.media_type != MediaAsset.MediaType.IMAGE:
+        return None, HttpResponse(_("Only images can be cropped."), status=400, content_type="text/plain")
+    box = _crop_box(request)
+    if box is None:
+        return None, HttpResponse(_("Choose the area to keep."), status=400, content_type="text/plain")
+    try:
+        cropped = crop_into_new_asset(asset, workspace=workspace, uploaded_by=request.user, **box)
+    except (StorageQuotaExceededError, WorkspaceStorageExceededError) as exc:
+        return None, _quota_error_response(exc)
+    except ValueError:
+        return None, HttpResponse(
+            _("The area to keep must be inside the image."), status=400, content_type="text/plain"
+        )
+    except ImageTooLargeError:
+        return None, HttpResponse(_("This image is too large to edit."), status=400, content_type="text/plain")
+    return cropped, None
+
+
+@login_required
+@require_POST
+def crop_media(request, workspace_id, post_id, media_id):
+    """Replace one attachment of a saved post with a cropped copy of its image."""
+    workspace = _get_workspace(request, workspace_id)
+    post = get_object_or_404(Post, id=post_id, workspace=workspace)
+    if _is_readonly_write(request, post):
+        return HttpResponse(
+            _("This post has already published and can't be edited."), status=400, content_type="text/plain"
+        )
+    attachment = get_object_or_404(PostMedia.objects.select_related("media_asset"), id=media_id, post=post)
+    return _crop_attachment(request, workspace, post, attachment)
+
+
+def _crop_attachment(request, workspace, post, attachment):
+    cropped, error = _crop_asset(request, workspace, attachment.media_asset)
+    if error is not None:
+        return error
+    attachment.media_asset = cropped
+    attachment.save(update_fields=["media_asset"])
+
+    # Option A: changing media on an approved post sends it back for re-approval.
+    _revert_approved_to_review(post)
+    return _post_media_list_response(request, workspace, post)
+
+
+@login_required
+@require_POST
+def crop_format_media(request, workspace_id, post_id):
+    """Crop one attachment for a single format of an account, leaving the others as they are.
+
+    ``target`` is ``"<account>:<format>"`` and ``asset_id`` the attachment's
+    image. The copy is listed on that format's rows (``set_format_crop``), so
+    a Story can go out in 9:16 while the feed keeps the original. Answers JSON
+    describing the copy, for the composer to show it in that format.
+    """
+    from apps.composer.services import set_format_crop
+
+    workspace = _get_workspace(request, workspace_id)
+    post = get_object_or_404(Post, id=post_id, workspace=workspace)
+    acc_id, _sep, fmt = request.POST.get("target", "").partition(":")
+    asset_id = request.POST.get("asset_id", "")
+    if not (_is_valid_uuid(acc_id) and _is_valid_uuid(asset_id)):
+        raise Http404
+    attachment = get_object_or_404(PostMedia.objects.select_related("media_asset"), post=post, media_asset_id=asset_id)
+    rows = list(
+        post.platform_posts.filter(social_account_id=acc_id, social_account__workspace=workspace, format=fmt).exclude(
+            status__in=PlatformPost.PROTECTED_STATUSES
+        )
+    )
+    if not rows:
+        raise Http404
+
+    cropped, error = _crop_asset(request, workspace, attachment.media_asset)
+    if error is not None:
+        return error
+    set_format_crop(rows, cropped)
+    _revert_approved_to_review(post)
+    return JsonResponse(
+        {
+            "target": f"{acc_id}:{fmt}",
+            "source": str(attachment.media_asset_id),
+            "asset": {
+                "id": str(cropped.id),
+                "url": cropped.file.url,
+                "width": cropped.width,
+                "height": cropped.height,
+            },
+        }
+    )
+
+
+@login_required
+@require_POST
+def crop_pending_media(request, workspace_id, asset_id):
+    """Replace one not-yet-saved upload with a cropped copy, keeping its place."""
+    from apps.media_library.models import MediaAsset
+
+    workspace = _get_workspace(request, workspace_id)
+    session_key = f"pending_media_{workspace.id}"
+    pending = request.session.get(session_key, [])
+    if str(asset_id) not in pending:
+        attachment = _autosaved_attachment(request, workspace, asset_id)
+        if attachment is None:
+            raise Http404
+        if _is_readonly_write(request, attachment.post):
+            return HttpResponse(
+                _("This post has already published and can't be edited."), status=400, content_type="text/plain"
+            )
+        return _crop_attachment(request, workspace, attachment.post, attachment)
+    asset = get_object_or_404(MediaAsset, id=asset_id, workspace=workspace)
+
+    cropped, error = _crop_asset(request, workspace, asset)
+    if error is not None:
+        return error
+    pending[pending.index(str(asset_id))] = str(cropped.id)
+    request.session[session_key] = pending
+
+    by_id = {str(a.id): a for a in MediaAsset.objects.filter(id__in=pending, workspace=workspace)}
+    response = render(
+        request,
+        "composer/partials/media_list_pending.html",
+        {"pending_assets": [by_id[i] for i in pending if i in by_id], "workspace": workspace},
     )
     response["HX-Trigger"] = "previewUpdate"
     return response
@@ -2905,18 +3255,27 @@ def drafts_list(request, workspace_id):
 def post_delete(request, workspace_id, post_id):
     """Delete a post or a single platform post via HTMX.
 
-    When an ``account`` query parameter is provided, only the PlatformPost for
-    that social account is removed.  If it was the last PlatformPost the parent
-    Post is deleted as well.  Without the parameter the entire Post (and all
-    its PlatformPosts) is deleted.
+    ``platform_post`` removes that one row (one format of one account);
+    ``account`` removes every format the post has on that account. If no
+    PlatformPost remains the parent Post is deleted as well. Without either
+    parameter the entire Post (and all its PlatformPosts) is deleted.
     """
     workspace = _get_workspace(request, workspace_id)
     post = get_object_or_404(Post, id=post_id, workspace=workspace)
 
+    platform_post_id = request.GET.get("platform_post") or request.POST.get("platform_post")
     account_id = request.GET.get("account") or request.POST.get("account")
-    if account_id:
-        pp = get_object_or_404(PlatformPost, post=post, social_account_id=account_id)
-        pp.delete()
+    if platform_post_id or account_id:
+        if (platform_post_id and not _is_valid_uuid(platform_post_id)) or (
+            account_id and not _is_valid_uuid(account_id)
+        ):
+            raise Http404
+        rows = post.platform_posts.filter(
+            **({"id": platform_post_id} if platform_post_id else {"social_account_id": account_id})
+        )
+        if not rows.exists():
+            raise Http404
+        rows.delete()
         # If no platform posts remain, clean up the parent post too.
         if not post.platform_posts.exists():
             post.delete()
@@ -4150,6 +4509,7 @@ def csv_confirm_import(request, workspace_id):
                             _pp, created = PlatformPost.objects.get_or_create(
                                 post=post,
                                 social_account=acc,
+                                format=PlatformPost.Format.DEFAULT,
                                 defaults={
                                     "status": status,
                                     "scheduled_at": post.scheduled_at,
@@ -4220,14 +4580,10 @@ def tag_create(request, workspace_id):
     kind = request.POST.get("kind", Tag.Kind.INTERNAL)
     if kind not in Tag.Kind.values:
         return JsonResponse({"error": _("Unknown tag kind.")}, status=400)
-    tag, created = Tag.objects.get_or_create(
-        workspace=workspace, name=name, defaults={"kind": kind}
-    )
+    tag, created = Tag.objects.get_or_create(workspace=workspace, name=name, defaults={"kind": kind})
     # An existing tag keeps its kind: the dropdown reaches here for tags that
     # are merely being reused, and that must not rewrite how they publish.
-    return JsonResponse(
-        {"id": str(tag.id), "name": tag.name, "kind": tag.kind, "created": created}
-    )
+    return JsonResponse({"id": str(tag.id), "name": tag.name, "kind": tag.kind, "created": created})
 
 
 # ── Feeds ──────────────────────────────────────────────────────────────────

@@ -428,7 +428,7 @@
             <!-- + New CTA -->
             {% if request.workspace %}
             <div class="sidebar-new-wrap px-3 pt-2 pb-1" :class="sidebarCollapsed && 'px-2'"
-                 x-data="sidebarNewMenu()">
+                 x-data="sidebarNewMenu()" @open-create-idea.window="openCreateModal()">
                 <div class="relative">
                     <button @click="newMenuOpen = !newMenuOpen"
                             class="btn-brand w-full flex items-center justify-center gap-1.5 text-sm py-2 cursor-pointer"

@@ -193,7 +193,7 @@ class ProposedPublishAtSaveTests(TestCase):
         self.assertEqual(post.scheduled_at, when)
         self.assertTrue(post.platform_posts.filter(status="scheduled").exists())
 
-    def test_edit_prefills_proposed_and_sets_flag(self):
+    def test_edit_prefills_the_proposed_time(self):
         post = create_post(
             workspace=self.ws,
             social_account=self.sa,
@@ -206,11 +206,9 @@ class ProposedPublishAtSaveTests(TestCase):
             reverse("composer:compose_edit", kwargs={"workspace_id": self.ws.id, "post_id": post.id})
         )
         self.assertEqual(resp.status_code, 200)
-        self.assertTrue(resp.context["schedule_prefill_is_proposed"])
         self.assertFalse(resp.context["post_is_scheduled"])
         body = resp.content.decode("utf-8")
         self.assertIn('value="2027-09-01"', body)
-        self.assertIn("prefillIsProposed = true", body)
 
     def test_drafts_list_renders_proposed_badge(self):
         post = create_post(
@@ -398,3 +396,48 @@ class ProposedPublishAtSaveTests(TestCase):
         pp = post.platform_posts.get(social_account=self.sa)
         self.assertIsNotNone(pp.scheduled_at)
         self.assertLess(pp.scheduled_at, timezone.now() + timedelta(days=3))
+
+
+class ProposedDraftOnCalendarTests(TestCase):
+    """A draft with a proposed time sits on that day; one with no date is listed above the month."""
+
+    setUp = ProposedPublishAtSaveTests.setUp
+
+    def _month(self):
+        return self.client.get(
+            reverse("calendar:calendar", kwargs={"workspace_id": self.ws.id}),
+            {"view": "month", "date": "2027-09-01", "mode": "calendar"},
+        )
+
+    def test_a_proposed_draft_is_placed_on_its_day(self):
+        post = create_post(
+            workspace=self.ws,
+            social_account=self.sa,
+            caption="proposed",
+            status="draft",
+            proposed_publish_at=PROPOSED_LOCAL,
+            author=self.user,
+        )
+
+        weeks = self._month().context["calendar_weeks"]
+
+        day = next(d for week in weeks for d in week if d["date"] == PROPOSED_LOCAL.date())
+        self.assertIn(post.id, [pp.post_id for pp in day["posts"]])
+
+    def test_an_undated_draft_is_listed_above_the_month(self):
+        dated = create_post(
+            workspace=self.ws,
+            social_account=self.sa,
+            caption="dated",
+            status="draft",
+            proposed_publish_at=PROPOSED_LOCAL,
+            author=self.user,
+        )
+        undated = create_post(
+            workspace=self.ws, social_account=self.sa, caption="undated", status="draft", author=self.user
+        )
+
+        drafts = list(self._month().context["unscheduled_drafts"])
+
+        self.assertIn(undated, drafts)
+        self.assertNotIn(dated, drafts)

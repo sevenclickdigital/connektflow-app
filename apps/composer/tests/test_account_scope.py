@@ -290,275 +290,191 @@ class TikTokExtrasSyncTests(AccountScopeTestsBase):
         self.assertEqual(self.tt_pp.platform_extra, {"privacy_level": "SELF_ONLY"})
 
 
-class FacebookVideoSettingsTests(AccountScopeTestsBase):
-    def setUp(self):
-        super().setUp()
-        self.facebook = SocialAccount.objects.create(
-            workspace=self.workspace,
-            platform="facebook",
-            account_platform_id="fb-page-1",
-            account_name="Facebook Page",
-            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-        )
-        self.facebook_pp = PlatformPost.objects.create(
-            post=self.post,
-            social_account=self.facebook,
-            status=PlatformPost.Status.DRAFT,
-        )
-        self.video = MediaAsset.objects.create(
-            organization=self.org,
-            workspace=self.workspace,
-            uploaded_by=self.user,
-            file="test/facebook-reel.mp4",
-            filename="facebook-reel.mp4",
-            media_type=MediaAsset.MediaType.VIDEO,
-            mime_type="video/mp4",
-        )
-        PostMedia.objects.create(post=self.post, media_asset=self.video)
-
-    def _facebook_payload(self, post_type=None):
-        """A composer submit for the Facebook account.
-
-        The hidden ``facebook_panel_<id>`` marker is what the composer renders
-        for every selected Facebook account, video attached or not; the select
-        itself is only submitted when exactly one video is attached.
-        """
-        account_id = str(self.facebook.id)
-        fields = {f"facebook_panel_{account_id}": "1"}
-        if post_type is not None:
-            fields[f"facebook_post_type_{account_id}"] = post_type
-        return self._payload(
-            selected_accounts=account_id,
-            account_scope=account_id,
-            **fields,
-        )
-
-    def test_facebook_reel_choice_round_trips_into_platform_extra(self):
-        response = self.client.post(self.save_url, data=self._facebook_payload("reel"))
-
-        self.assertIn(response.status_code, (200, 204, 302))
-        self.facebook_pp.refresh_from_db()
-        self.assertEqual(self.facebook_pp.platform_extra["post_type"], "reel")
-
-    def test_choosing_regular_video_clears_the_hint_rather_than_recording_it(self):
-        """A lone video already infers VIDEO, so the hint would only restate it.
-
-        Recording it could only go wrong: swap the attachment for an image
-        through the media endpoints and a stored "video" would still route the
-        image to Facebook's video endpoint.
-        """
-        self.facebook_pp.platform_extra = {"post_type": "reel", "audience": "public"}
-        self.facebook_pp.save(update_fields=["platform_extra"])
-
-        response = self.client.post(self.save_url, data=self._facebook_payload("video"))
-
-        self.assertIn(response.status_code, (200, 204, 302))
-        self.facebook_pp.refresh_from_db()
-        self.assertEqual(self.facebook_pp.platform_extra, {"audience": "public"})
-
-    def test_facebook_reel_choice_is_cleared_when_video_is_removed(self):
-        self.facebook_pp.platform_extra = {"post_type": "reel", "audience": "public"}
-        self.facebook_pp.save(update_fields=["platform_extra"])
-        self.post.media_attachments.all().delete()
-
-        response = self.client.post(self.save_url, data=self._facebook_payload())
-
-        self.assertIn(response.status_code, (200, 204, 302))
-        self.facebook_pp.refresh_from_db()
-        self.assertEqual(self.facebook_pp.platform_extra, {"audience": "public"})
-
-    def test_a_save_without_the_panel_leaves_the_choice_untouched(self):
-        """A save that never rendered the panel must not rewrite its extras.
-
-        Same guarantee the TikTok branch spells out: only the form that showed
-        the control may change what the control controls.
-        """
-        self.facebook_pp.platform_extra = {"post_type": "reel"}
-        self.facebook_pp.save(update_fields=["platform_extra"])
-        account_id = str(self.facebook.id)
-
-        response = self.client.post(
-            self.save_url,
-            data=self._payload(selected_accounts=account_id, account_scope=account_id),
-        )
-
-        self.assertIn(response.status_code, (200, 204, 302))
-        self.facebook_pp.refresh_from_db()
-        self.assertEqual(self.facebook_pp.platform_extra, {"post_type": "reel"})
-
-    def test_facebook_reel_choice_is_rejected_for_multiple_attachments(self):
-        image = MediaAsset.objects.create(
-            organization=self.org,
-            workspace=self.workspace,
-            uploaded_by=self.user,
-            file="test/facebook-image.jpg",
-            filename="facebook-image.jpg",
-            media_type=MediaAsset.MediaType.IMAGE,
-            mime_type="image/jpeg",
-        )
-        PostMedia.objects.create(post=self.post, media_asset=image, position=1)
-
-        response = self.client.post(self.save_url, data=self._facebook_payload("reel"))
-
-        self.assertIn(response.status_code, (200, 204, 302))
-        self.facebook_pp.refresh_from_db()
-        self.assertNotIn("post_type", self.facebook_pp.platform_extra)
-
-
-class StorySettingsTests(AccountScopeTestsBase):
-    """The "Publish as Story" choice for Facebook and Instagram accounts."""
+class FormatTargetsTests(AccountScopeTestsBase):
+    """One post going out as several formats (Feed, Story, Reels…) of one account."""
 
     def setUp(self):
         super().setUp()
-        self.facebook = SocialAccount.objects.create(
-            workspace=self.workspace,
-            platform="facebook",
-            account_platform_id="fb-page-story",
-            account_name="Facebook Page",
-            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-        )
         self.instagram = SocialAccount.objects.create(
             workspace=self.workspace,
             platform="instagram",
-            account_platform_id="ig-story",
+            account_platform_id="ig-formats",
             account_name="Instagram",
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,
         )
-        self.facebook_pp = PlatformPost.objects.create(
-            post=self.post, social_account=self.facebook, status=PlatformPost.Status.DRAFT
-        )
-        self.instagram_pp = PlatformPost.objects.create(
-            post=self.post, social_account=self.instagram, status=PlatformPost.Status.DRAFT
-        )
-        self.image = self._asset("story.jpg", MediaAsset.MediaType.IMAGE, "image/jpeg")
-        PostMedia.objects.create(post=self.post, media_asset=self.image)
-
-    def _asset(self, name, media_type, mime):
-        return MediaAsset.objects.create(
-            organization=self.org,
-            workspace=self.workspace,
-            uploaded_by=self.user,
-            file=f"test/{name}",
-            filename=name,
-            media_type=media_type,
-            mime_type=mime,
-        )
-
-    def _story_payload(self, facebook_choice="story", instagram_choice="story"):
-        fb, ig = str(self.facebook.id), str(self.instagram.id)
-        return self._payload(
-            selected_accounts=f"{fb},{ig}",
-            account_scope="",
-            **{
-                f"facebook_panel_{fb}": "1",
-                f"facebook_post_type_{fb}": facebook_choice,
-                f"instagram_panel_{ig}": "1",
-                f"instagram_post_type_{ig}": instagram_choice,
-            },
-        )
-
-    def test_story_choice_round_trips_for_a_single_photo(self):
-        response = self.client.post(self.save_url, data=self._story_payload())
-
-        self.assertIn(response.status_code, (200, 204, 302))
-        self.facebook_pp.refresh_from_db()
-        self.instagram_pp.refresh_from_db()
-        self.assertEqual(self.facebook_pp.platform_extra["post_type"], "story")
-        self.assertEqual(self.instagram_pp.platform_extra["post_type"], "story")
-
-    def test_story_choice_is_refused_for_more_than_one_attachment(self):
-        second = self._asset("second.jpg", MediaAsset.MediaType.IMAGE, "image/jpeg")
-        PostMedia.objects.create(post=self.post, media_asset=second, position=1)
-
-        self.client.post(self.save_url, data=self._story_payload())
-
-        self.facebook_pp.refresh_from_db()
-        self.instagram_pp.refresh_from_db()
-        self.assertNotIn("post_type", self.facebook_pp.platform_extra)
-        self.assertNotIn("post_type", self.instagram_pp.platform_extra)
-
-    def test_notified_story_stores_the_delivery_and_plain_story_clears_it(self):
-        self.client.post(self.save_url, data=self._story_payload(instagram_choice="story_notify"))
-        self.instagram_pp.refresh_from_db()
-        self.assertEqual(self.instagram_pp.platform_extra, {"post_type": "story", "delivery": "notify"})
-
-        self.client.post(self.save_url, data=self._story_payload(instagram_choice="story"))
-        self.instagram_pp.refresh_from_db()
-        self.assertEqual(self.instagram_pp.platform_extra, {"post_type": "story"})
-
-    def test_notified_delivery_is_refused_when_the_media_cannot_be_a_story(self):
-        second = self._asset("second.jpg", MediaAsset.MediaType.IMAGE, "image/jpeg")
-        PostMedia.objects.create(post=self.post, media_asset=second, position=1)
-
-        self.client.post(self.save_url, data=self._story_payload(facebook_choice="story_notify"))
-
-        self.facebook_pp.refresh_from_db()
-        self.assertNotIn("delivery", self.facebook_pp.platform_extra)
-
-    def test_choosing_feed_clears_an_earlier_story_choice(self):
-        self.instagram_pp.platform_extra = {"post_type": "story"}
-        self.instagram_pp.save(update_fields=["platform_extra"])
-
-        self.client.post(self.save_url, data=self._story_payload(instagram_choice=""))
-
-        self.instagram_pp.refresh_from_db()
-        self.assertEqual(self.instagram_pp.platform_extra, {})
-
-
-class GoogleBusinessPhotoSettingsTests(AccountScopeTestsBase):
-    """The "Profile photo" choice for Google Business accounts."""
-
-    def setUp(self):
-        super().setUp()
         self.gbp = SocialAccount.objects.create(
             workspace=self.workspace,
             platform="google_business",
-            account_platform_id="locations/11",
+            account_platform_id="accounts/1/locations/11",
             account_name="Store",
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,
         )
-        self.gbp_pp = PlatformPost.objects.create(
-            post=self.post, social_account=self.gbp, status=PlatformPost.Status.DRAFT
-        )
-        image = MediaAsset.objects.create(
-            organization=self.org,
-            workspace=self.workspace,
-            uploaded_by=self.user,
-            file="test/front.jpg",
-            filename="front.jpg",
-            media_type=MediaAsset.MediaType.IMAGE,
-            mime_type="image/jpeg",
-        )
-        PostMedia.objects.create(post=self.post, media_asset=image)
+        self.image = self._attach(MediaAsset.MediaType.IMAGE, "story.jpg", post=self.post)
 
-    def _gbp_payload(self, choice, category="EXTERIOR"):
-        acc = str(self.gbp.id)
+    def _targets_payload(self, account, *formats, **fields):
+        acc = str(account.id)
         return self._payload(
             selected_accounts=acc,
             account_scope=acc,
-            **{f"gbp_panel_{acc}": "1", f"gbp_post_type_{acc}": choice, f"gbp_photo_category_{acc}": category},
+            selected_targets=",".join(f"{acc}:{fmt}" for fmt in formats),
+            **fields,
         )
 
-    def test_profile_photo_choice_and_category_round_trip(self):
-        self.client.post(self.save_url, data=self._gbp_payload("profile_photo"))
+    def _formats(self, account):
+        return set(self.post.platform_posts.filter(social_account=account).values_list("format", flat=True))
 
-        self.gbp_pp.refresh_from_db()
-        self.assertEqual(self.gbp_pp.platform_extra, {"post_type": "profile_photo", "photo_category": "EXTERIOR"})
+    def test_one_account_gets_a_row_per_chosen_format(self):
+        response = self.client.post(self.save_url, data=self._targets_payload(self.instagram, "default", "story"))
 
-    def test_an_unknown_category_is_stored_as_additional(self):
-        self.client.post(self.save_url, data=self._gbp_payload("profile_photo", category="COVER"))
+        self.assertIn(response.status_code, (200, 204, 302))
+        self.assertEqual(self._formats(self.instagram), {"default", "story"})
 
-        self.gbp_pp.refresh_from_db()
-        self.assertEqual(self.gbp_pp.platform_extra["photo_category"], "ADDITIONAL")
+    def test_dropping_a_format_deletes_only_that_row(self):
+        self.client.post(self.save_url, data=self._targets_payload(self.instagram, "default", "story"))
+        feed = self.post.platform_posts.get(social_account=self.instagram, format="default")
 
-    def test_choosing_post_clears_the_photo_choice(self):
-        self.gbp_pp.platform_extra = {"post_type": "profile_photo", "photo_category": "MENU"}
-        self.gbp_pp.save(update_fields=["platform_extra"])
+        self.client.post(self.save_url, data=self._targets_payload(self.instagram, "default"))
 
-        self.client.post(self.save_url, data=self._gbp_payload(""))
+        self.assertEqual(self._formats(self.instagram), {"default"})
+        self.assertTrue(PlatformPost.objects.filter(pk=feed.pk).exists())
 
-        self.gbp_pp.refresh_from_db()
-        self.assertEqual(self.gbp_pp.platform_extra, {})
+    def test_a_published_format_survives_being_deselected(self):
+        PlatformPost.objects.create(post=self.post, social_account=self.instagram, format="default")
+        PlatformPost.objects.create(
+            post=self.post,
+            social_account=self.instagram,
+            format="story",
+            status=PlatformPost.Status.PUBLISHED,
+            published_at=timezone.now(),
+        )
+
+        self.client.post(self.save_url, data=self._targets_payload(self.instagram, "default"))
+
+        self.assertEqual(self._formats(self.instagram), {"default", "story"})
+
+    def test_a_format_the_platform_does_not_offer_falls_back_to_the_ordinary_post(self):
+        self.client.post(self.save_url, data=self._targets_payload(self.gbp, "story"))
+
+        self.assertEqual(self._formats(self.gbp), {"default"})
+
+    def test_a_save_without_targets_keeps_the_formats_the_account_has(self):
+        PlatformPost.objects.create(post=self.post, social_account=self.instagram, format="story")
+        acc = str(self.instagram.id)
+
+        self.client.post(self.save_url, data=self._payload(selected_accounts=acc, account_scope=acc))
+
+        self.assertEqual(self._formats(self.instagram), {"story"})
+
+    def test_each_format_keeps_its_own_caption(self):
+        acc = str(self.instagram.id)
+        self.client.post(
+            self.save_url,
+            data=self._targets_payload(
+                self.instagram, "default", "story", **{f"override_caption_{acc}_story": "Only the Story"}
+            ),
+        )
+
+        rows = dict(
+            self.post.platform_posts.filter(social_account=self.instagram).values_list(
+                "format", "platform_specific_caption"
+            )
+        )
+        self.assertEqual(rows, {"default": None, "story": "Only the Story"})
+
+    def test_notified_delivery_is_stored_on_the_story_row_only(self):
+        acc = str(self.instagram.id)
+        self.client.post(
+            self.save_url,
+            data=self._targets_payload(self.instagram, "default", "story", **{f"story_delivery_{acc}": "notify"}),
+        )
+
+        story = self.post.platform_posts.get(social_account=self.instagram, format="story")
+        feed = self.post.platform_posts.get(social_account=self.instagram, format="default")
+        self.assertEqual(story.platform_extra.get("delivery"), "notify")
+        self.assertNotIn("delivery", feed.platform_extra)
+
+        self.client.post(self.save_url, data=self._targets_payload(self.instagram, "story"))
+        story.refresh_from_db()
+        self.assertNotIn("delivery", story.platform_extra)
+
+    def test_a_leftover_format_hint_is_dropped_from_the_row(self):
+        pp = PlatformPost.objects.create(
+            post=self.post, social_account=self.instagram, platform_extra={"post_type": "story", "audience": "x"}
+        )
+
+        self.client.post(self.save_url, data=self._targets_payload(self.instagram, "default"))
+
+        pp.refresh_from_db()
+        self.assertEqual(pp.platform_extra, {"audience": "x"})
+
+    def test_profile_photo_row_keeps_its_category(self):
+        acc = str(self.gbp.id)
+        self.client.post(
+            self.save_url,
+            data=self._targets_payload(self.gbp, "profile_photo", **{f"gbp_photo_category_{acc}": "EXTERIOR"}),
+        )
+        photo = self.post.platform_posts.get(social_account=self.gbp, format="profile_photo")
+        self.assertEqual(photo.platform_extra["photo_category"], "EXTERIOR")
+
+        self.client.post(
+            self.save_url,
+            data=self._targets_payload(self.gbp, "profile_photo", **{f"gbp_photo_category_{acc}": "COVER"}),
+        )
+        photo.refresh_from_db()
+        self.assertEqual(photo.platform_extra["photo_category"], "ADDITIONAL")
+
+    def test_a_draft_may_wait_for_the_media_its_format_needs(self):
+        self.post.media_attachments.all().delete()
+
+        response = self.client.post(self.save_url, data=self._targets_payload(self.instagram, "story"))
+
+        self.assertIn(response.status_code, (200, 204, 302))
+        self.assertEqual(self._formats(self.instagram), {"story"})
+
+    def test_scheduling_a_format_the_media_cannot_fit_is_refused(self):
+        self._attach(MediaAsset.MediaType.IMAGE, "second.jpg", post=self.post)
+
+        response = self.client.post(
+            self.save_url, data=self._targets_payload(self.instagram, "story", action="schedule")
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Story needs exactly one photo or one video", response.json()["errors"]["media"])
+        self.assertEqual(self._formats(self.instagram), set())
+
+    def test_instagram_feed_and_reels_on_one_video_is_refused(self):
+        self.post.media_attachments.all().delete()
+        self._attach(MediaAsset.MediaType.VIDEO, "clip.mp4", post=self.post)
+
+        response = self.client.post(
+            self.save_url, data=self._targets_payload(self.instagram, "default", "reel", action="schedule")
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Choose Feed or Reels", response.json()["errors"]["media"])
+
+    def test_autosave_writes_one_row_per_format_and_ignores_foreign_accounts(self):
+        other_ws = Workspace.objects.create(organization=self.org, name="Other")
+        foreign = SocialAccount.objects.create(
+            workspace=other_ws,
+            platform="instagram",
+            account_platform_id="ig-foreign",
+            account_name="Foreign",
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+        acc = str(self.instagram.id)
+
+        self.client.post(
+            self.autosave_url,
+            data=self._payload(
+                selected_accounts=f"{acc},{foreign.id}",
+                account_scope="",
+                selected_targets=f"{acc}:default,{acc}:reel",
+            ),
+        )
+
+        self.assertEqual(self._formats(self.instagram), {"default", "reel"})
+        self.assertFalse(PlatformPost.objects.filter(social_account=foreign).exists())
 
 
 class PinterestBoardSelectionTests(AccountScopeTestsBase):

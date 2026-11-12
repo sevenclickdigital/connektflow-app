@@ -9,6 +9,7 @@ urlpatterns = [
     path("", views.calendar_view, name="calendar"),
     # Drag-and-drop reschedule
     path("reschedule/", views.reschedule_post, name="reschedule"),
+    path("post-card/<uuid:platform_post_id>/", views.post_card, name="post_card"),
     # Bulk selection actions (floating bar): draft / delete / publish
     path("bulk-action/", views.bulk_platform_action, name="bulk_platform_action"),
     # Posting slots

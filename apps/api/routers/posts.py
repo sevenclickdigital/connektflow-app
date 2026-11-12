@@ -348,7 +348,11 @@ def update(request, post_id: uuid.UUID, payload: UpdatePostRequest):
         # media, would leave it queued to fail after the schedule route had
         # checked it.
         reason = media_change_blocker(
-            post, media_types_after=usable_media_types(resolved_assets[mid] for mid in wanted_media)
+            post,
+            media_types_after=usable_media_types(resolved_assets[mid] for mid in wanted_media),
+            ordered_media_types_after=[
+                resolved_assets[mid].media_type for mid in wanted_media if resolved_assets[mid].file
+            ],
         )
         if reason:
             raise HttpError(422, reason)

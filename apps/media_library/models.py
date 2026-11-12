@@ -167,6 +167,17 @@ class MediaAsset(models.Model):
         related_name="+",
     )
 
+    # The asset this one was cut from by the composer's crop. A post format
+    # that publishes its own crop (PlatformPost.platform_specific_media) uses it
+    # in place of the attachment holding this source.
+    derived_from = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="derivatives",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

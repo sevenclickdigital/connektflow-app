@@ -446,8 +446,18 @@ class SocialAccount(models.Model):
         "bluesky": {
             "supports_first_comment": False,
         },
+        "facebook": {
+            "formats": ["default", "story", "reel"],
+        },
+        "instagram": {
+            "formats": ["default", "story", "reel"],
+        },
+        "instagram_login": {
+            "formats": ["default", "story", "reel"],
+        },
         "google_business": {
             "supports_first_comment": False,
+            "formats": ["default", "profile_photo"],
         },
         "x": {
             "supports_first_comment": False,
@@ -468,12 +478,34 @@ class SocialAccount(models.Model):
         "caption_label": "Caption",
         "supports_first_comment": True,
         "advanced_fields": [],
+        # PlatformPost formats one post can go out as on this account. A post
+        # may take several at once; each becomes its own PlatformPost.
+        "formats": ["default"],
     }
 
     @property
     def field_config(self) -> dict:
         """Return field configuration for this platform."""
         return {**self.PLATFORM_FIELD_DEFAULTS, **self.PLATFORM_FIELD_CONFIG.get(self.platform, {})}
+
+    @property
+    def formats(self) -> list[str]:
+        return self.field_config["formats"]
+
+    def format_options(self) -> list[dict]:
+        """``[{"format", "label"}]`` for the composer's picker, in display order.
+
+        The label names what the user gets ("Instagram Stories"); the ordinary
+        post is just the platform's name.
+        """
+        platform = self.get_platform_display()
+        labels = {
+            "default": platform,
+            "story": _("%(platform)s Stories") % {"platform": platform},
+            "reel": _("%(platform)s Reels") % {"platform": platform},
+            "profile_photo": _("%(platform)s photo") % {"platform": platform},
+        }
+        return [{"format": fmt, "label": str(labels[fmt])} for fmt in self.formats]
 
     @property
     def keeps_platform_grant_on_disconnect(self) -> bool:

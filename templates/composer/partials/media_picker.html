@@ -184,43 +184,51 @@ rules have to arrive with it.
     </div>
   </div>
 
-  <!-- ── Footer: selection count + insert ─────────────────────── -->
+  <!-- ── Footer: disk meter, selection count + insert ─────────── -->
   {% comment %}
   Always on screen, never scrolling away: the complaint this replaces was
   having to scroll back up after reaching the end of the list.
   {% endcomment %}
   <div class="flex items-center justify-between gap-3 px-4 sm:px-6 py-3 border-t shrink-0"
        style="border-color: var(--surface-2, #F5F5F4); background: var(--surface-1, #FAFAF9);">
-    <div class="flex items-center gap-3 min-w-0">
-      <span class="text-sm" style="color: var(--text-secondary, #57534E);"
-            x-text="picked.length === 0
-                    ? '{% translate "No media selected" %}'
-                    : picked.length === 1
-                      ? '{% translate "1 selected" %}'
-                      : picked.length + ' {% translate "selected" %}'"></span>
-      <button type="button" x-show="picked.length > 0" @click="picked = []"
-              class="text-xs font-medium underline cursor-pointer"
-              style="color: var(--text-tertiary, #78716C);">
-        {% translate "Clear" %}
-      </button>
+    {% comment %}Refetched with the picker after an upload, so the figure follows what was just added.{% endcomment %}
+    <div id="picker-storage-meter" class="min-w-0"
+         hx-get="{{ request.path }}" hx-trigger="uploadsComplete from:body" hx-select="#picker-storage-meter" hx-swap="outerHTML">
+      {% include "billing/_storage_meter.html" %}
     </div>
 
-    <div class="flex items-center gap-2">
-      <button type="button" @click="showMediaPicker = false"
-              class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors cursor-pointer"
-              style="border-color: var(--border, #E7E5E4); color: var(--text-secondary, #57534E);">
-        {% translate "Cancel" %}
-      </button>
-      <button type="button"
-              :disabled="picked.length === 0"
-              :class="picked.length === 0 && 'opacity-40 cursor-not-allowed'"
-              class="px-5 py-2 text-sm font-semibold text-white rounded-lg transition-colors cursor-pointer"
-              style="background: var(--primary-600, #EA580C);"
-              @click="insert('{{ insert_url }}')">
-        <span x-text="picked.length > 1
-                      ? '{% translate "Insert" %} (' + picked.length + ')'
-                      : '{% translate "Insert" %}'"></span>
-      </button>
+    <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+      <div class="hidden sm:flex items-center gap-3 min-w-0">
+        <span class="text-sm" style="color: var(--text-secondary, #57534E);"
+              x-text="picked.length === 0
+                      ? '{% translate "No media selected" %}'
+                      : picked.length === 1
+                        ? '{% translate "1 selected" %}'
+                        : picked.length + ' {% translate "selected" %}'"></span>
+        <button type="button" x-show="picked.length > 0" @click="picked = []"
+                class="text-xs font-medium underline cursor-pointer"
+                style="color: var(--text-tertiary, #78716C);">
+          {% translate "Clear" %}
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button type="button" @click="showMediaPicker = false"
+                class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors cursor-pointer"
+                style="border-color: var(--border, #E7E5E4); color: var(--text-secondary, #57534E);">
+          {% translate "Cancel" %}
+        </button>
+        <button type="button"
+                :disabled="picked.length === 0"
+                :class="picked.length === 0 && 'opacity-40 cursor-not-allowed'"
+                class="px-5 py-2 text-sm font-semibold text-white rounded-lg transition-colors cursor-pointer"
+                style="background: var(--primary-600, #EA580C);"
+                @click="insert('{{ insert_url }}')">
+          <span x-text="picked.length > 1
+                        ? '{% translate "Insert" %} (' + picked.length + ')'
+                        : '{% translate "Insert" %}'"></span>
+        </button>
+      </div>
     </div>
   </div>
 </div>

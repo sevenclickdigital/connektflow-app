@@ -23,7 +23,7 @@ from apps.workspaces.models import Workspace
 
 from .holidays import get_holidays_for_range
 from .models import CustomCalendarEvent, PostingSlot, Queue, QueueEntry
-from .services import day_label, month_label, week_label, weekday_names
+from .services import day_label, drop_queue_entry_unless_scheduled, month_label, week_label, weekday_names
 
 # Common timezones for the publish page timezone dropdown
 COMMON_TIMEZONES = [
@@ -176,7 +176,9 @@ def _get_filtered_platform_posts(workspace, request):
     """Return a PlatformPost queryset filtered by calendar query params.
 
     Each row carries an ``effective_at`` annotation that falls back to
-    ``post.scheduled_at`` when the PlatformPost has no per-platform override.
+    ``post.scheduled_at`` when the PlatformPost has no per-platform override,
+    and then to the draft's ``proposed_publish_at``, so a draft created for a
+    day (the calendar's "+") shows on that day.
     """
     from django.db.models.functions import Coalesce
 
@@ -187,7 +189,7 @@ def _get_filtered_platform_posts(workspace, request):
         # would fire its own media_attachments + media_asset queries (N+1) on
         # every month/week/day render.
         .prefetch_related("post__media_attachments__media_asset")
-        .annotate(effective_at=Coalesce("scheduled_at", "post__scheduled_at"))
+        .annotate(effective_at=Coalesce("scheduled_at", "post__scheduled_at", "post__proposed_publish_at"))
     )
 
     # Status filter — editorial status now lives on the PlatformPost itself,
@@ -822,6 +824,10 @@ def _render_calendar_partial(request, workspace, view_type, target_date, context
     return _month_view(request, workspace, target_date, context)
 
 
+# Chips a month-view day shows before collapsing the rest into "+N more".
+MONTH_DAY_CHIPS = 4
+
+
 def _month_view_data(request, workspace, target_date, context):
     """Populate context with month view data (no rendering)."""
     import zoneinfo
@@ -845,12 +851,14 @@ def _month_view_data(request, workspace, target_date, context):
         .order_by("effective_at")
     )
 
-    # Also include drafts without scheduled_at for the current month
+    # Drafts with no date at all — neither scheduled nor proposed — have no day
+    # to sit on, so the month view lists them above the grid.
     drafts = (
         _get_filtered_posts(workspace, request)
         .filter(
             platform_posts__status="draft",
             scheduled_at__isnull=True,
+            proposed_publish_at__isnull=True,
         )
         .distinct()
         .order_by("-updated_at")[:10]
@@ -891,9 +899,9 @@ def _month_view_data(request, workspace, target_date, context):
                     "is_current_month": day.month == month,
                     "is_today": day == today,
                     "is_past": day < today,
-                    "posts": day_posts[:3],
+                    "posts": day_posts[:MONTH_DAY_CHIPS],
                     "total_posts": len(day_posts),
-                    "overflow": max(0, len(day_posts) - 3),
+                    "overflow": max(0, len(day_posts) - MONTH_DAY_CHIPS),
                     "holidays": day_holidays,
                     "events": day_events,
                 }
@@ -1139,6 +1147,51 @@ def publish_tab_sent(request, workspace_id):
 
 
 @login_required
+def post_card(request, workspace_id, platform_post_id):
+    """The card a calendar chip opens: the post as it goes out, its dates and what can be done with it."""
+    from apps.automations.matching import COMMENT_PLATFORMS
+    from apps.composer.services import apply_format_media
+
+    workspace = _get_workspace(request, workspace_id)
+    pp = get_object_or_404(
+        PlatformPost.objects.select_related("post", "post__author", "social_account"),
+        id=platform_post_id,
+        post__workspace=workspace,
+    )
+    attachments = apply_format_media(pp, list(pp.post.media_attachments.select_related("media_asset")))
+
+    account = pp.social_account
+    platform = account.get_platform_display()
+    if pp.format == PlatformPost.Format.DEFAULT:
+        type_label = _("%(platform)s post") % {"platform": platform}
+    else:
+        type_label = next(
+            (opt["label"] for opt in account.format_options() if opt["format"] == pp.format),
+            f"{platform} {pp.get_format_display()}",
+        )
+
+    membership = request.workspace_membership
+    perms = membership.effective_permissions if membership else {}
+    return render(
+        request,
+        "calendar/partials/_post_card.html",
+        {
+            "workspace": workspace,
+            "pp": pp,
+            "account": account,
+            "media": attachments[0].media_asset if attachments else None,
+            "media_count": len(attachments),
+            "type_label": type_label,
+            "display_timezone": _coerce_timezone(request.GET.get("tz"), workspace.effective_timezone),
+            "can_clone": perms.get("create_posts", False),
+            "can_automate": (
+                perms.get("use_inbox", False) and account.platform in COMMENT_PLATFORMS and not pp.is_story
+            ),
+        },
+    )
+
+
+@login_required
 @require_POST
 def reschedule_post(request, workspace_id):
     """HTMX endpoint for drag-and-drop rescheduling of a single PlatformPost."""
@@ -1284,7 +1337,7 @@ def _sync_queue_entries(touched):
             move.setdefault(slot, []).append((pp.post_id, pp.social_account_id))
 
     for post_id, account_id in drop:
-        QueueEntry.objects.filter(post_id=post_id, queue__social_account_id=account_id).delete()
+        drop_queue_entry_unless_scheduled(post_id, account_id)
     for slot, pairs in move.items():
         for post_id, account_id in pairs:
             QueueEntry.objects.filter(post_id=post_id, queue__social_account_id=account_id).update(

@@ -295,6 +295,9 @@ class PlatformPostSummary(Schema):
     id: uuid.UUID
     social_account_id: uuid.UUID
     platform: str
+    # "default", "story", "reel" or "profile_photo"; one post can list the
+    # same account once per format.
+    format: str = "default"
     status: str
     scheduled_at: dt.datetime | None
     published_at: dt.datetime | None
@@ -311,6 +314,7 @@ class PlatformPostSummary(Schema):
             id=pp.id,
             social_account_id=pp.social_account_id,
             platform=pp.social_account.platform,
+            format=pp.format,
             status=pp.status,
             scheduled_at=pp.scheduled_at,
             published_at=pp.published_at,

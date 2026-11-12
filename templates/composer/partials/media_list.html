@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Media attachments list - rendered as sortable thumbnails.
 Context: media_attachments, post, workspace.
@@ -9,7 +10,10 @@ data-media-id is the PostMedia id, which is what the save's media_order
 field names. Dragging a thumbnail rewrites that field; the order is only
 persisted when the post is saved.
 {% endcomment %}
-<div class="media-thumb" data-media-id="{{ attachment.id }}">
+<div class="media-thumb" data-media-id="{{ attachment.id }}" x-data="{ menu: false }"
+     data-kind="{{ attachment.media_asset.media_type }}" data-asset-id="{{ attachment.media_asset.id }}" data-full-url="{{ attachment.media_asset.file.url }}"
+     data-name="{{ attachment.media_asset.filename }}" data-width="{{ attachment.media_asset.width|default:'' }}" data-height="{{ attachment.media_asset.height|default:'' }}"
+     {% if post %}data-crop-url="{% url 'composer:crop_media' workspace_id=workspace.id post_id=post.id media_id=attachment.id %}"{% endif %}>
     {% if attachment.media_asset.is_video %}
     <video src="{{ attachment.media_asset.file.url }}#t=0.5" data-asset-id="{{ attachment.media_asset.id }}" class="w-full h-full object-cover" muted preload="metadata"></video>
     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -26,17 +30,11 @@ persisted when the post is saved.
         <svg class="w-5 h-5 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
     </div>
     {% endif %}
-    <span class="drag-grip" aria-hidden="true">
-        <svg class="w-2.5 h-2.5" viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="3" r="1.3"/><circle cx="10" cy="3" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="13" r="1.3"/><circle cx="10" cy="13" r="1.3"/></svg>
-    </span>
     <span class="order-badge">{{ forloop.counter }}</span>
     {% if post %}
-    <button type="button" class="remove-btn"
-            hx-post="{% url 'composer:remove_media' workspace_id=workspace.id post_id=post.id media_id=attachment.id %}"
-            hx-target="#media-list"
-            hx-swap="innerHTML">
-        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
-    </button>
+    {% url 'composer:remove_media' workspace_id=workspace.id post_id=post.id media_id=attachment.id as remove_url %}
+    {% url 'composer:crop_media' workspace_id=workspace.id post_id=post.id media_id=attachment.id as crop_url %}
+    {% include "composer/partials/_media_thumb_actions.html" with asset=attachment.media_asset %}
     {% endif %}
 </div>
 {% empty %}

@@ -239,8 +239,12 @@ class ResolvePostTypeFacebookReelTest(SimpleTestCase):
         kwargs.setdefault("first_media_type", "video")
         return PublishEngine._resolve_post_type(**kwargs)
 
-    def test_reel_hint_wins_over_the_media_type_fallback(self):
-        self.assertEqual(self._resolve(platform_extra={"post_type": "reel"}), PostType.REEL)
+    def test_the_reel_format_wins_over_the_media_type_fallback(self):
+        self.assertEqual(self._resolve(format="reel"), PostType.REEL)
+
+    def test_a_reel_hint_on_an_ordinary_row_is_a_leftover(self):
+        """The Reel is its own row now; honouring the hint would publish it twice."""
+        self.assertEqual(self._resolve(platform_extra={"post_type": "reel"}), PostType.VIDEO)
 
     def test_explicit_video_hint_keeps_the_regular_page_upload(self):
         self.assertEqual(self._resolve(platform_extra={"post_type": "video"}), PostType.VIDEO)
@@ -757,12 +761,13 @@ class ResolvePostTypeFromMediaTypeTest(SimpleTestCase):
     ``ResolvePostTypeTest``, which silently shadowed the ten tests above.
     """
 
-    def _resolve(self, platform, first_media_type="video", media_count=1, extra=None):
+    def _resolve(self, platform, first_media_type="video", media_count=1, extra=None, format="default"):
         return PublishEngine._resolve_post_type(
             platform=platform,
             platform_extra=extra or {},
             media_count=media_count,
             first_media_type=first_media_type,
+            format=format,
         )
 
     def test_a_lone_video_on_instagram_is_a_reel(self):
@@ -784,30 +789,31 @@ class ResolvePostTypeFromMediaTypeTest(SimpleTestCase):
     def test_multi_media_still_wins_over_the_reel_rule(self):
         self.assertEqual(self._resolve("instagram_login", media_count=2), PostType.CAROUSEL)
 
-    def test_an_explicit_hint_still_wins(self):
-        self.assertEqual(
-            self._resolve("instagram_login", extra={"post_type": "story"}),
-            PostType.STORY,
-        )
+    def test_the_row_format_wins(self):
+        self.assertEqual(self._resolve("instagram_login", format="story"), PostType.STORY)
 
-    def test_a_story_hint_holds_for_one_photo_or_one_video(self):
+    def test_a_story_row_is_a_story_for_one_photo_or_one_video(self):
         for platform in ("facebook", "instagram"):
             for media_type in ("image", "video"):
                 with self.subTest(platform=platform, media_type=media_type):
                     self.assertEqual(
-                        self._resolve(platform, first_media_type=media_type, extra={"post_type": "story"}),
+                        self._resolve(platform, first_media_type=media_type, format="story"),
                         PostType.STORY,
                     )
 
-    def test_a_profile_photo_hint_needs_exactly_one_image(self):
-        extra = {"post_type": "profile_photo"}
+    def test_a_profile_photo_row_is_a_profile_photo(self):
         self.assertEqual(
-            self._resolve("google_business", first_media_type="image", extra=extra), PostType.PROFILE_PHOTO
+            self._resolve("google_business", first_media_type="image", format="profile_photo"),
+            PostType.PROFILE_PHOTO,
         )
-        self.assertEqual(self._resolve("google_business", first_media_type="video", extra=extra), PostType.VIDEO)
-        self.assertEqual(
-            self._resolve("google_business", media_count=0, first_media_type=None, extra=extra), PostType.TEXT
-        )
+
+    def test_format_hints_on_an_ordinary_row_are_leftovers(self):
+        for hint, platform in (("story", "instagram"), ("profile_photo", "google_business")):
+            with self.subTest(hint=hint):
+                self.assertEqual(
+                    self._resolve(platform, first_media_type="image", extra={"post_type": hint}),
+                    PostType.IMAGE,
+                )
 
     def test_a_stale_story_hint_is_ignored(self):
         """Media removed after the hint was saved must not reach a Stories endpoint."""

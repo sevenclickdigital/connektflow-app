@@ -709,6 +709,56 @@ def apply_image_edits(file_path_or_file, operations):
         return ContentFile(buffer.getvalue(), name=f"edited.{ext}"), img.size
 
 
+def crop_into_new_asset(asset, *, workspace, x, y, width, height, uploaded_by, derived_from=None):
+    """A new image asset holding ``asset`` cropped to the given pixel box.
+
+    The source asset is left untouched: it may be used by other posts, and the
+    user may want the uncropped image back. The copy lands in ``workspace``
+    (a shared org asset has none of its own), in the source's folder when the
+    source lives there, with the same alt text, title and tags, and goes
+    through ``create_asset``, so it is sniffed and counted against the storage
+    quotas like any upload.
+
+    ``derived_from`` records the original the copy stands in for (defaults to
+    ``asset``); see ``MediaAsset.derived_from``.
+
+    Raises ``ValueError`` for a box outside the image and ``ImageTooLargeError``
+    for an image too large to edit; quota errors propagate from ``create_asset``.
+    """
+    with open_image(asset.file) as src:
+        image_width, image_height = src.size
+    if x < 0 or y < 0 or width <= 0 or height <= 0 or x + width > image_width or y + height > image_height:
+        raise ValueError("Crop box outside the image.")
+
+    edited, (new_width, new_height) = apply_image_edits(
+        asset.file, {"crop": {"x": x, "y": y, "width": width, "height": height}}
+    )
+    stem = os.path.splitext(asset.filename or "image")[0]
+    edited.name = f"{stem}-{new_width}x{new_height}{os.path.splitext(edited.name)[1]}"
+
+    cropped = create_asset(
+        workspace.organization,
+        workspace,
+        edited,
+        uploaded_by,
+        folder=asset.folder if asset.workspace_id == workspace.id else None,
+        alt_text=asset.alt_text,
+        title=asset.title,
+        tags=asset.tags,
+    )
+    cropped.width = new_width
+    cropped.height = new_height
+    cropped.derived_from = derived_from or asset
+    cropped.save(update_fields=["width", "height", "derived_from"])
+
+    # Like every other upload: thumbnail, metadata, and the pending status
+    # cleared. Left pending, the library polls the card forever.
+    from .tasks import process_media_asset
+
+    process_media_asset(str(cropped.id))
+    return cropped
+
+
 def trim_video(input_path, output_path, start_seconds, end_seconds):
     """Trim a video using ffmpeg."""
     timeout = getattr(settings, "MEDIA_LIBRARY_FFMPEG_TIMEOUT", 300)

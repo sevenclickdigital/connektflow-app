@@ -132,6 +132,7 @@ def generate_recurring_posts():
                         PlatformPost(
                             post=new_post,
                             social_account=pp.social_account,
+                            format=pp.format,
                             platform_specific_caption=pp.platform_specific_caption,
                             platform_specific_first_comment=pp.platform_specific_first_comment,
                             platform_specific_media=pp.platform_specific_media,

@@ -112,7 +112,7 @@ Server-rendered HTML. The only build step is Tailwind. In development it runs as
 3. Failures retry with exponential backoff. The first comment is posted `PUBLISHER_FIRST_COMMENT_DELAY` seconds (default 120) after go-live.
 4. `confirm_pending_publishes` (every 60 s) asks the platform about posts it accepted but is still processing (for example, TikTok transcoding). It also gives up on stale rows (`PUBLISHER_STALE_PUBLISHING_TIMEOUT`, `PUBLISHER_PUBLISH_CONFIRM_TIMEOUT`, `PUBLISHER_UNCONFIRMED_TIMEOUT`). Those end as visible failures and are never retried silently.
 
-Status belongs to `PlatformPost`. `Post.status` is an aggregate. Media goes out in one of two ways. For platforms that fetch server-side (Instagram, Threads, Facebook, Pinterest, Google Business, dev.to), the engine sends the absolute URL `APP_URL + asset.file.url`. Otherwise it downloads the file to a temp path and uploads it (`apps/media_library/storage.download_to_path`). There is no pre-publish transcoding step. Files are published as stored.
+Status belongs to `PlatformPost`, which is one row per post, account and format (Story, Reels… are their own rows). `Post.status` is an aggregate. Media goes out in one of two ways. For platforms that fetch server-side (Instagram, Threads, Facebook, Pinterest, Google Business, dev.to), the engine sends the absolute URL `APP_URL + asset.file.url`. Otherwise it downloads the file to a temp path and uploads it (`apps/media_library/storage.download_to_path`). There is no pre-publish transcoding step. Files are published as stored.
 
 ---
 

@@ -7,6 +7,7 @@
 {% comment %}Header is rendered inside the content block to avoid overlap with the -m-6 layout{% endcomment %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'js/vendor/cropper.min.css' %}">
 <style>
     /* ── Composer-specific overrides ──────────────────────────── */
     /* Remove parent padding/overflow so the composer can fill the full area */
@@ -33,6 +34,9 @@
             flex-shrink: 0;
             transform: none; transition: none;
             box-shadow: none;
+            /* A flex item keeps its z-index even when static: the drawer's 58
+               would put the preview above the action bar. */
+            z-index: 1;
         }
     }
     /* A wide screen can spare more: the preview renders a real post, and the
@@ -51,31 +55,35 @@
     }
 
     /* Platform account checkbox pill - compact for header row */
-    .acct-pill {
-        display: flex; align-items: center; gap: 6px;
-        padding: 5px 10px; border-radius: 9999px;
-        border: 1.5px solid #E7E5E4;
-        background: #FFFFFF;
-        cursor: pointer; user-select: none;
-        transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
-        white-space: nowrap;
+    /* Account × format picker: one round tile per format of each account. */
+    .target-tile {
+        position: relative; width: 44px; height: 44px; border-radius: 9999px;
+        padding: 2px; border: 2px solid transparent; background: #FFFFFF;
+        cursor: pointer; user-select: none; flex-shrink: 0;
+        transition: border-color 150ms cubic-bezier(0.16, 1, 0.3, 1), opacity 150ms ease, filter 150ms ease;
+        opacity: 0.45; filter: grayscale(1);
     }
-    .acct-pill:hover { border-color: #D6D3D1; background: #FAFAF9; }
-    .acct-pill.selected {
-        border-color: #F97316; background: #FFF7ED;
-        box-shadow: 0 0 0 3px rgba(249,115,22,0.08);
+    .target-tile:hover { opacity: 0.8; filter: grayscale(0.3); }
+    .target-tile.selected { opacity: 1; filter: none; border-color: #F97316; }
+    .target-tile:focus-visible { outline: 2px solid #F97316; outline-offset: 2px; }
+    .target-tile .target-badge {
+        position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px;
+        border-radius: 9999px; background: #FFFFFF; display: flex;
+        align-items: center; justify-content: center; box-shadow: 0 0 0 1px #E7E5E4;
     }
-    .acct-pill .checkmark {
-        width: 16px; height: 16px; border-radius: 4px;
-        border: 1.5px solid #D6D3D1; flex-shrink: 0;
-        display: flex; align-items: center; justify-content: center;
-        transition: all 150ms ease;
+    .target-tile .target-format {
+        position: absolute; left: -3px; bottom: -3px; width: 18px; height: 18px;
+        border-radius: 9999px; background: #1C1917; color: #FFFFFF; display: flex;
+        align-items: center; justify-content: center;
     }
-    .acct-pill.selected .checkmark {
-        background: #F97316; border-color: #F97316;
+    .target-tile .target-tip {
+        position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%);
+        padding: 4px 8px; border-radius: 6px; background: #1C1917; color: #FFFFFF;
+        font-size: 11px; font-weight: 500; white-space: nowrap; pointer-events: none;
+        opacity: 0; transition: opacity 120ms ease; z-index: 30;
     }
-    .acct-pill.selected .checkmark svg { display: block; }
-    .acct-pill .checkmark svg { display: none; }
+    .target-tile:hover .target-tip, .target-tile:focus-visible .target-tip { opacity: 1; }
+    .target-group + .target-group { border-left: 1px solid #E7E5E4; padding-left: 10px; }
 
     /* Platform icon circles */
     .platform-icon {
@@ -156,7 +164,7 @@
         box-shadow: 0 0 0 3px rgba(249,115,22,0.1);
     }
 
-    /* Media dropzone - square tile, first in the media row */
+    /* "Add" tile - square, always last in the media row; opens the media library and takes dropped files */
     .media-dropzone-inline {
         width: 96px; height: 96px;
         border: 1.5px dashed #D6D3D1;
@@ -175,7 +183,7 @@
         background: #FFF7ED;
     }
 
-    /* Unsplash icon button next to the dropzone - bare logo mark, no tile */
+    /* Unsplash icon button after the "Add" tile - bare logo mark, no tile */
     .media-unsplash-btn {
         height: 96px;
         padding: 0 6px;
@@ -265,17 +273,34 @@
 
     /* Lift the grip and the badge on hover, so the row reads as sortable
        before the user tries it. */
-    .media-thumb .drag-grip {
-        position: absolute; top: 4px; left: 4px;
-        width: 18px; height: 18px; border-radius: 5px;
-        background: rgba(0,0,0,0.55); color: white;
-        display: flex; align-items: center; justify-content: center;
+    /* Thumbnail controls: settings + move, bottom-right; the menu covers the thumbnail */
+    .media-thumb .thumb-actions {
+        position: absolute; right: 4px; bottom: 4px; z-index: 3;
+        display: flex; flex-direction: column; gap: 3px;
         opacity: 0; transition: opacity 150ms ease;
-        pointer-events: none; z-index: 2;
     }
-    .media-thumb:hover .drag-grip { opacity: 1; }
-    .media-thumb.dragging .drag-grip { opacity: 1; }
-    #media-list .media-thumb:only-of-type .drag-grip { display: none; }
+    .media-thumb:hover .thumb-actions,
+    .media-thumb:focus-within .thumb-actions { opacity: 1; }
+    @media (hover: none) { .media-thumb .thumb-actions { opacity: 1; } }
+    .media-thumb .thumb-action {
+        width: 24px; height: 24px; border-radius: 6px;
+        display: flex; align-items: center; justify-content: center;
+        background: #FED7AA; color: #EA580C; border: none; cursor: pointer;
+    }
+    .media-thumb .thumb-action:hover { background: #FDBA74; }
+    .media-thumb .thumb-move { cursor: grab; }
+    #media-list .media-thumb:only-of-type .thumb-move { display: none; }
+    .media-thumb .thumb-menu {
+        position: absolute; inset: 0; z-index: 4;
+        display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+        background: #F5F5F4; border-radius: 8px; overflow: hidden;
+    }
+    .media-thumb .thumb-menu > * { border: 0.5px solid #D6D3D1; }
+    .media-thumb .thumb-menu-item {
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+        font-size: 10px; font-weight: 600; color: #44403C; background: transparent; cursor: pointer;
+    }
+    .media-thumb .thumb-menu-item:hover { background: #E7E5E4; }
 
     /* ── Emoji picker ──────────────────────────────────────────────── */
     .emoji-panel {
@@ -413,17 +438,30 @@
         border-color: transparent;
     }
 
-    /* Action bar */
+    /* Action bar: pinned to the bottom of the panels and spanning both the
+       editor and the preview. It stays inside the form (htmx only tracks the
+       clicked submit button for buttons inside it), so it is positioned
+       against .composer-panels and both columns leave room for it. */
+    .composer-panels { position: relative; --action-bar-h: 64px; }
+    @media (min-width: 640px) { .composer-panels { --action-bar-h: 76px; } }
+    /* The bar lives in the editor column, whose entrance animation makes it a
+       stacking context: lift the whole column (a flex item, so z-index needs no
+       position, which would make it the bar's containing block) above the preview so the part
+       of the bar under the preview isn't painted over. The mobile preview
+       drawer (z-index 58) still opens above it. */
+    .composer-panels .panel-center { padding-bottom: var(--action-bar-h); z-index: 2; }
+    @media (min-width: 1024px) { .composer-panels .panel-right { padding-bottom: var(--action-bar-h); } }
     .action-bar {
+        position: absolute; left: 0; right: 0; bottom: 0;
+        height: var(--action-bar-h);
         background: #FFFFFF;
         border-top: 1px solid #E7E5E4;
-        padding: 12px 16px;
+        padding: 0 16px;
         display: flex; align-items: center; gap: 6px;
-        position: relative;
         z-index: 51;
     }
     @media (min-width: 640px) {
-        .action-bar { padding: 20px 24px; gap: 8px; }
+        .action-bar { padding: 0 24px; gap: 8px; }
     }
 
     /* Subtle entrance animation - uses 'both' but resets transform at 100% to avoid
@@ -458,6 +496,7 @@
 {% block content %}
 <div class="composer-main flex flex-col flex-1"
      x-data="composerApp()"
+     @crop-media.window="openCrop($event.detail)"
      @keydown.meta.s.prevent="saveDraft()"
      @keydown.ctrl.s.prevent="saveDraft()">
 
@@ -480,7 +519,7 @@
     </div>
 
     <!-- Panels -->
-    <div class="flex flex-1 min-h-0">
+    <div class="composer-panels flex flex-1 min-h-0">
 
     <!-- Left panel removed - platforms moved to header, media moved to caption area -->
 
@@ -492,10 +531,13 @@
               hx-post="{% if post %}{% url 'composer:save_post_edit' workspace_id=workspace.id post_id=post.id %}{% else %}{% url 'composer:save_post' workspace_id=workspace.id %}{% endif %}"
               hx-swap="none"
               @htmx:after-request="onFormSaved($event)"
+              @htmx:send-error="onFormSendError($event)"
+              @click="rememberAction($event)"
               {# onFormSaved renders every failure inline, JSON or not, so the global toast would duplicate it. Element-scoped: nested controls (Clone, template picker) keep theirs. #}
               data-no-error-toast
               class="flex flex-col flex-1 min-h-0">
             <input type="hidden" name="selected_accounts" :value="selectedAccounts.join(',')">
+            <input type="hidden" name="selected_targets" :value="selectedTargets()">
             {% if account_scope %}
             <!-- Composer opened scoped to one account (?account=) — save endpoints
                  must not delete/transition platform posts outside this scope. -->
@@ -513,29 +555,40 @@
                 {% endcomment %}
                 {% if billing_storage %}{% include "billing/_storage_warning.html" %}{% endif %}
 
-                <!-- Platform account pills -->
-                <div class="flex items-center gap-2 flex-wrap">
+                {% comment %}
+                Where the post goes: one tile per format of each account
+                (Instagram, Instagram Stories, Instagram Reels…). Several formats
+                of one account can be chosen at once; each becomes its own
+                platform post. The choice doesn't depend on the media attached
+                yet — a format the media can't satisfy is flagged below and
+                refused on save.
+                {% endcomment %}
+                <div class="flex items-center gap-2.5 flex-wrap" role="group" aria-label="{% translate 'Where to publish' %}">
                     {% for account in social_accounts %}
-                    <label class="acct-pill"
-                           :class="{ 'selected': selectedAccounts.includes('{{ account.id }}') }"
-                           @click="toggleAccount('{{ account.id }}')">
-                        <span class="checkmark">
-                            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                        </span>
-                        <div class="relative flex-shrink-0">
+                    <div class="target-group flex items-center gap-2">
+                        {% for option in account.format_options %}
+                        <button type="button" class="target-tile"
+                                :class="{ 'selected': hasFormat('{{ account.id }}', '{{ option.format }}') }"
+                                :aria-pressed="hasFormat('{{ account.id }}', '{{ option.format }}') ? 'true' : 'false'"
+                                aria-label="{{ option.label }}"
+                                @click="toggleFormat('{{ account.id }}', '{{ option.format }}')">
                             {% if account.avatar_url %}
-                            <img src="{{ account.avatar_url }}" alt="{{ account.account_name|default:account.account_handle }}" class="w-7 h-7 rounded-full object-cover">
+                            <img src="{{ account.avatar_url }}" alt="" class="w-full h-full rounded-full object-cover">
                             {% else %}
-                            <div class="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center text-stone-400">
+                            <span class="w-full h-full rounded-full bg-stone-100 flex items-center justify-center text-stone-400">
                                 {% if account.platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}{% endif %}
-                            </div>
+                            </span>
                             {% endif %}
-                            <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                            <span class="target-badge">
                                 {% if account.platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}{% endif %}
-                            </div>
-                        </div>
-                        <span class="text-sm font-medium text-stone-700 truncate">{{ account.account_name|default:account.account_handle }}</span>
-                    </label>
+                            </span>
+                            {% if option.format != "default" %}
+                            <span class="target-format">{% include "partials/_format_icon.html" with format=option.format %}</span>
+                            {% endif %}
+                            <span class="target-tip">{{ option.label }}</span>
+                        </button>
+                        {% endfor %}
+                    </div>
                     {% empty %}
                     <span class="text-xs text-stone-400">{% translate "No accounts connected" %}</span>
                     {% endfor %}
@@ -550,7 +603,7 @@
                     </div>
                     {% for pp in failed_platform_posts %}
                     <p class="text-xs text-red-600 pl-5.5">
-                        <span class="font-semibold">{{ pp.social_account.account_name|default:pp.social_account.account_handle }}:</span>
+                        <span class="font-semibold">{{ pp.social_account.account_name|default:pp.social_account.account_handle }}{% if pp.format_label %} · {{ pp.format_label }}{% endif %}:</span>
                         {{ pp.publish_error }}
                     </p>
                     {% endfor %}
@@ -577,7 +630,7 @@
                     </div>
                     {% for pp in failed_first_comments %}
                     <p class="text-xs text-amber-700 pl-5.5">
-                        <span class="font-semibold">{{ pp.social_account.account_name|default:pp.social_account.account_handle }}:</span>
+                        <span class="font-semibold">{{ pp.social_account.account_name|default:pp.social_account.account_handle }}{% if pp.format_label %} · {{ pp.format_label }}{% endif %}:</span>
                         {{ pp.first_comment_error|default:_("The first comment couldn't be added. Add it manually on the post.") }}
                     </p>
                     {% endfor %}
@@ -615,7 +668,7 @@
                     <svg class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
                     <p class="text-xs text-amber-700">
                         {% blocktranslate %}Already published on{% endblocktranslate %}
-                        <span class="font-semibold">{% for pp in live_siblings %}{{ pp.social_account.account_name|default:pp.social_account.account_handle }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>.
+                        <span class="font-semibold">{% for pp in live_siblings %}{{ pp.social_account.account_name|default:pp.social_account.account_handle }}{% if pp.format_label %} ({{ pp.format_label }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</span>.
                         {% translate "Shared fields like the caption are used by that post too — editing them here changes its record." %}
                     </p>
                 </div>
@@ -706,25 +759,8 @@
                                   @input="debouncedPreviewUpdate()"
                                   rows="7">{{ form.caption.value|default:"" }}</textarea>
 
-                        <!-- Media row: dropzone tile + Unsplash tile + attached thumbnails -->
+                        <!-- Media row: attached thumbnails, then the "Add" tile and Unsplash -->
                         <div class="flex flex-wrap items-start gap-2 px-4 pb-3">
-                            <input type="file" x-ref="fileInput" class="hidden" multiple
-                                   accept="image/*,video/*"
-                                   @change="handleFileSelect($event)">
-                            <div class="media-dropzone-inline"
-                                 @dragover.prevent="$el.classList.add('dragover')"
-                                 @dragleave="$el.classList.remove('dragover')"
-                                 @drop.prevent="handleFileDrop($event); $el.classList.remove('dragover')"
-                                 @click="$refs.fileInput.click()">
-                                <svg class="w-6 h-6 text-stone-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                <span class="text-[11px] text-stone-400 leading-tight">{% translate "Drag & drop or" %} <span class="text-orange-500 font-medium">{% translate "select files" %}</span></span>
-                            </div>
-                            {% if unsplash_enabled %}
-                            <button type="button" class="media-unsplash-btn" title="{% translate 'Search Unsplash' %}"
-                                    @click="openUnsplashModal()">
-                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 6.75V0h9v6.75h-9zm9 3.75H24V24H0V10.5h7.5v6.75h9V10.5z"/></svg>
-                            </button>
-                            {% endif %}
                             {% comment %}
                             display:contents keeps appended thumbs flowing in this row.
                             The drag handlers reorder children here; mediaOrder below
@@ -738,6 +774,25 @@
                                     {% include "composer/partials/media_list_pending.html" %}
                                 {% endif %}
                             </div>
+                            {% comment %}
+                            Last in the row so new media lands where the tile was. Opens
+                            the media library, which also uploads; files dropped here
+                            still upload straight away.
+                            {% endcomment %}
+                            <button type="button" class="media-dropzone-inline"
+                                    @dragover.prevent="$el.classList.add('dragover')"
+                                    @dragleave="$el.classList.remove('dragover')"
+                                    @drop.prevent="handleFileDrop($event); $el.classList.remove('dragover')"
+                                    @click="showMediaPicker = true">
+                                <svg class="w-6 h-6 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                <span class="text-[12px] text-stone-500 leading-tight">{% translate "Add" %}</span>
+                            </button>
+                            {% if unsplash_enabled %}
+                            <button type="button" class="media-unsplash-btn" title="{% translate 'Search Unsplash' %}"
+                                    @click="openUnsplashModal()">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 6.75V0h9v6.75h-9zm9 3.75H24V24H0V10.5h7.5v6.75h9V10.5z"/></svg>
+                            </button>
+                            {% endif %}
                         </div>
                         {% comment %}
                         The carousel order, as the thumbnails are currently arranged.
@@ -746,14 +801,9 @@
                         {% endcomment %}
                         <input type="hidden" name="media_order" x-ref="mediaOrder">
 
-                        <!-- Bottom bar: media library + emoji + char counter -->
+                        <!-- Bottom bar: emoji + char counter (the media library opens from the "Add" tile) -->
                         <div class="flex items-center justify-between px-4 py-2 border-t border-stone-100">
                             <div class="flex items-center gap-3">
-                                <button type="button" @click="showMediaPicker = true"
-                                        class="text-xs font-medium text-stone-400 hover:text-orange-600 transition-colors flex items-center gap-1.5 cursor-pointer">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                                    {% translate "Media Library" %}
-                                </button>
                                 {% comment %}
                                 Emoji is plain text in the caption, so unlike the
                                 Facebook-only place and feeling pickers this one
@@ -778,131 +828,6 @@
                     </div>
                 </div>
 
-                {% comment %}
-                Publishing format for Facebook and Instagram. Separate from the
-                customize card below (which carries place and feeling) because
-                this one is about the attachment, not about styling the post: it
-                appears whenever exactly one photo or video is attached, so that
-                removing or replacing the media can clear a stale Reel or Story
-                hint.
-                {% endcomment %}
-                <template x-for="accId in selectedAccounts" :key="'facebook-video-settings-' + accId">
-                    <div x-show="charLimits[accId]?.platform === 'facebook' && hasSingleMediaAttached"
-                         x-data="{ facebookPostType: platformExtras[accId]?.delivery === 'notify' ? 'story_notify' : (platformExtras[accId]?.post_type || '') }"
-                         class="border border-stone-200 rounded-xl bg-white p-4 space-y-3">
-                        {% comment %}
-                        Marks the panel as present in the submit even when no media is
-                        attached, so a save can clear a stale hint but a non-composer
-                        save can never wipe extras it never rendered.
-                        {% endcomment %}
-                        <input type="hidden" :name="'facebook_panel_' + accId" value="1"
-                               :disabled="charLimits[accId]?.platform !== 'facebook'">
-                        <div class="flex items-center gap-2">
-                            <span class="platform-icon w-5 h-5 rounded-[5px] flex items-center justify-center"
-                                  :class="'pi-' + (charLimits[accId]?.platform || '')"
-                                  x-html="platformIconSvg(charLimits[accId]?.platform || '')"></span>
-                            <span class="text-xs font-semibold text-stone-600">
-                                <span x-text="charLimits[accId]?.name"></span> — {% translate "Publishing format" %}
-                            </span>
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-1">{% translate "Publish as" %}</label>
-                            <select :name="'facebook_post_type_' + accId"
-                                    x-model="facebookPostType"
-                                    :disabled="charLimits[accId]?.platform !== 'facebook' || !hasSingleMediaAttached"
-                                    class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
-                                <option value="" x-text="hasSingleVideoAttached ? $el.dataset.video : $el.dataset.feed"
-                                        data-video="{% translate 'Regular Page video' %}"
-                                        data-feed="{% translate 'Feed post' %}"></option>
-                                <option value="reel" :disabled="!hasSingleVideoAttached" x-show="hasSingleVideoAttached">{% translate "Facebook Reel" %}</option>
-                                <option value="story">{% translate "Story" context "publishing format" %}</option>
-                                <option value="story_notify">{% translate "Story — notify me to publish manually" %}</option>
-                            </select>
-                            <p class="text-[11px] text-stone-400 mt-1" x-show="facebookPostType === 'reel'">{% translate "Reels use Facebook's dedicated vertical-video flow and must be 3-90 seconds. Regular Page video suits long-form and landscape uploads." %}</p>
-                            <p class="text-[11px] text-stone-400 mt-1" x-show="facebookPostType === 'story_notify'">{% translate "Nothing is sent to the platform. At the scheduled time you get an e-mail and a notification with the media to download and the caption to copy, so you can publish from the app with music, stickers or polls." %}</p>
-                            <p class="text-[11px] text-stone-400 mt-1" x-show="facebookPostType === 'story'">{% translate "Stories disappear after 24 hours and are published without the caption. Use a vertical photo or video (9:16)." %}</p>
-                        </div>
-                    </div>
-                </template>
-
-                <template x-for="accId in selectedAccounts" :key="'instagram-format-settings-' + accId">
-                    <div x-show="['instagram', 'instagram_login'].includes(charLimits[accId]?.platform) && hasSingleMediaAttached"
-                         x-data="{ instagramPostType: platformExtras[accId]?.post_type === 'story' ? (platformExtras[accId]?.delivery === 'notify' ? 'story_notify' : 'story') : '' }"
-                         class="border border-stone-200 rounded-xl bg-white p-4 space-y-3">
-                        <input type="hidden" :name="'instagram_panel_' + accId" value="1"
-                               :disabled="!['instagram', 'instagram_login'].includes(charLimits[accId]?.platform)">
-                        <div class="flex items-center gap-2">
-                            <span class="platform-icon w-5 h-5 rounded-[5px] flex items-center justify-center"
-                                  :class="'pi-' + (charLimits[accId]?.platform || '')"
-                                  x-html="platformIconSvg(charLimits[accId]?.platform || '')"></span>
-                            <span class="text-xs font-semibold text-stone-600">
-                                <span x-text="charLimits[accId]?.name"></span> — {% translate "Publishing format" %}
-                            </span>
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-1">{% translate "Publish as" %}</label>
-                            <select :name="'instagram_post_type_' + accId"
-                                    x-model="instagramPostType"
-                                    :disabled="!['instagram', 'instagram_login'].includes(charLimits[accId]?.platform) || !hasSingleMediaAttached"
-                                    class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
-                                <option value="" x-text="hasSingleVideoAttached ? $el.dataset.reel : $el.dataset.feed"
-                                        data-reel="{% translate 'Reel' %}"
-                                        data-feed="{% translate 'Feed post' %}"></option>
-                                <option value="story">{% translate "Story" context "publishing format" %}</option>
-                                <option value="story_notify">{% translate "Story — notify me to publish manually" %}</option>
-                            </select>
-                            <p class="text-[11px] text-stone-400 mt-1" x-show="instagramPostType === 'story_notify'">{% translate "Nothing is sent to the platform. At the scheduled time you get an e-mail and a notification with the media to download and the caption to copy, so you can publish from the app with music, stickers or polls." %}</p>
-                            <p class="text-[11px] text-stone-400 mt-1" x-show="instagramPostType === 'story'">{% translate "Stories disappear after 24 hours and are published without the caption. Use a vertical photo or video (9:16)." %}</p>
-                        </div>
-                    </div>
-                </template>
-
-                <template x-for="accId in selectedAccounts" :key="'gbp-format-settings-' + accId">
-                    <div x-show="charLimits[accId]?.platform === 'google_business' && hasSingleMediaAttached && !hasSingleVideoAttached"
-                         x-data="{ gbpPostType: platformExtras[accId]?.post_type === 'profile_photo' ? 'profile_photo' : '',
-                                   gbpCategory: platformExtras[accId]?.photo_category || 'ADDITIONAL' }"
-                         class="border border-stone-200 rounded-xl bg-white p-4 space-y-3">
-                        <input type="hidden" :name="'gbp_panel_' + accId" value="1"
-                               :disabled="charLimits[accId]?.platform !== 'google_business'">
-                        <div class="flex items-center gap-2">
-                            <span class="platform-icon w-5 h-5 rounded-[5px] flex items-center justify-center"
-                                  :class="'pi-' + (charLimits[accId]?.platform || '')"
-                                  x-html="platformIconSvg(charLimits[accId]?.platform || '')"></span>
-                            <span class="text-xs font-semibold text-stone-600">
-                                <span x-text="charLimits[accId]?.name"></span> — {% translate "Publishing format" %}
-                            </span>
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-1">{% translate "Publish as" %}</label>
-                            <select :name="'gbp_post_type_' + accId"
-                                    x-model="gbpPostType"
-                                    :disabled="charLimits[accId]?.platform !== 'google_business' || !hasSingleMediaAttached || hasSingleVideoAttached"
-                                    class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
-                                <option value="">{% translate "Post" context "google business" %}</option>
-                                <option value="profile_photo">{% translate "Profile photo" %}</option>
-                            </select>
-                            <p class="text-[11px] text-stone-400 mt-1" x-show="gbpPostType === 'profile_photo'">{% translate "Adds the image to the photos on your Business Profile instead of creating a post. The caption becomes the photo description." %}</p>
-                        </div>
-                        <div x-show="gbpPostType === 'profile_photo'">
-                            <label class="block text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-1">{% translate "Photo category" %}</label>
-                            <select :name="'gbp_photo_category_' + accId"
-                                    x-model="gbpCategory"
-                                    :disabled="gbpPostType !== 'profile_photo'"
-                                    class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
-                                <option value="ADDITIONAL">{% translate "Additional" %}</option>
-                                <option value="EXTERIOR">{% translate "Exterior" %}</option>
-                                <option value="INTERIOR">{% translate "Interior" %}</option>
-                                <option value="PRODUCT">{% translate "Product" %}</option>
-                                <option value="AT_WORK">{% translate "At work" %}</option>
-                                <option value="FOOD_AND_DRINK">{% translate "Food and drink" %}</option>
-                                <option value="MENU">{% translate "Menu" %}</option>
-                                <option value="COMMON_AREA">{% translate "Common area" %}</option>
-                                <option value="ROOMS">{% translate "Rooms" %}</option>
-                                <option value="TEAMS">{% translate "Team" context "google business photo" %}</option>
-                            </select>
-                        </div>
-                    </div>
-                </template>
 
                 <!-- Pinterest settings (auto-visible when any Pinterest account is selected) -->
                 <template x-for="accId in selectedAccounts" :key="'pin-settings-' + accId">
@@ -921,7 +846,7 @@
                             <span class="platform-icon w-5 h-5 rounded-[5px] flex items-center justify-center"
                                   :class="'pi-' + (charLimits[accId]?.platform || '')"
                                   x-html="platformIconSvg(charLimits[accId]?.platform || '')"></span>
-                            <span class="text-xs font-semibold text-stone-600" x-text="charLimits[accId]?.name + ' - Pin Settings'"></span>
+                            <span class="text-xs font-semibold text-stone-600" x-text="targetLabel(accId, 'default') + ' - Pin Settings'"></span>
                         </div>
                         <p x-show="!hasMediaAttached" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
                             <span class="font-semibold">{% translate "Pinterest needs an image or a video." %}</span>
@@ -1054,7 +979,7 @@
                          class="border border-stone-200 rounded-xl bg-white p-4 space-y-3">
                         <div class="flex items-center gap-2">
                             <a :href="charLimits[accId]?.youtube_url || 'https://www.youtube.com/'" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-stone-600 underline underline-offset-2">{% translate "YouTube" %}</a>
-                            <span class="text-xs font-semibold text-stone-600" x-text="charLimits[accId]?.name + ' - Video Settings'"></span>
+                            <span class="text-xs font-semibold text-stone-600" x-text="targetLabel(accId, 'default') + ' - Video Settings'"></span>
                         </div>
                         <p x-show="!hasVideoAttached" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
                             <span class="font-semibold">{% translate "YouTube only publishes videos." %}</span>
@@ -1223,7 +1148,7 @@
                             <span class="platform-icon w-5 h-5 rounded-[5px] flex items-center justify-center"
                                   :class="'pi-' + (charLimits[accId]?.platform || '')"
                                   x-html="platformIconSvg(charLimits[accId]?.platform || '')"></span>
-                            <span class="text-xs font-semibold text-stone-600" x-text="charLimits[accId]?.name + ' - Post Settings'"></span>
+                            <span class="text-xs font-semibold text-stone-600" x-text="targetLabel(accId, 'default') + ' - Post Settings'"></span>
                             <span class="ml-auto text-[11px] text-stone-400" x-show="tt?.creator_nickname" x-text="cLabel('posting-to').replace('{name}', tt?.creator_nickname || '')"></span>
                         </div>
                         <p x-show="!hasVideoAttached" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
@@ -1458,21 +1383,18 @@
                     </div>
                 </template>
 
-                <!-- Override toggle buttons -->
+                <!-- Override toggle buttons: one per chosen format of each account -->
                 <div class="flex flex-wrap gap-1.5" x-show="selectedAccounts.length > 0">
-                    <template x-for="accId in selectedAccounts" :key="'toggle-' + accId">
+                    <template x-for="t in selectedTargetList()" :key="'toggle-' + t.key">
                         <button type="button"
                                 class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer"
-                                :class="overrides[accId] ? 'border-orange-200 bg-orange-50 text-orange-700' : 'border-stone-200 bg-white text-stone-400 hover:text-stone-600 hover:border-stone-300'"
-                                @click="overrides[accId] = !overrides[accId]; $nextTick(() => triggerPreviewUpdate())"
-                                x-show="!overrides[accId]">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                            {% comment %}
-                            The account name rather than the platform slug: with
-                            two Facebook Pages selected, "Customize facebook"
-                            twice says nothing about which chip is which.
-                            {% endcomment %}
-                            <span x-text="cLabel('customize') + ' ' + (charLimits[accId]?.name || '')"></span>
+                                :class="(formatMismatch(t.fmt) || ratioIssues(t.accId, t.fmt).length) ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-stone-200 bg-white text-stone-400 hover:text-stone-600 hover:border-stone-300'"
+                                :title="formatMismatch(t.fmt)"
+                                @click="overrides[t.key] = true; $nextTick(() => triggerPreviewUpdate())"
+                                x-show="!overrides[t.key]">
+                            <svg x-show="!formatMismatch(t.fmt) && !ratioIssues(t.accId, t.fmt).length" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            <svg x-show="formatMismatch(t.fmt) || ratioIssues(t.accId, t.fmt).length" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                            <span x-text="cLabel('customize') + ' ' + targetLabel(t.accId, t.fmt)"></span>
                         </button>
                     </template>
                 </div>
@@ -1488,33 +1410,86 @@
                 carries its own hidden marker so the save can tell "left blank"
                 (clear it) from "not rendered" (leave it alone).
                 {% endcomment %}
-                <template x-for="accId in selectedAccounts" :key="'override-' + accId">
+                <template x-for="t in selectedTargetList()" :key="'override-' + t.key">
                     <div class="border border-stone-200 rounded-xl bg-white p-4"
-                         x-show="overrides[accId]" x-transition
+                         x-show="overrides[t.key] || false" x-transition
                          x-data="{
-                             placeId: platformExtras[accId]?.place_id || '',
-                             placeName: platformExtras[accId]?.place_name || '',
+                             accId: t.accId,
+                             placeId: platformExtras[t.accId]?.place_id || '',
+                             placeName: platformExtras[t.accId]?.place_name || '',
                              placeQuery: '',
                              placeResults: [],
                              placeSearching: false,
                              placeTimer: null,
-                             feeling: platformExtras[accId]?.feeling_object_id || '',
+                             feeling: platformExtras[t.accId]?.feeling_object_id || '',
+                             storyDelivery: formatExtras[t.accId]?.story_delivery || '',
+                             gbpCategory: formatExtras[t.accId]?.photo_category || 'ADDITIONAL',
                          }">
                         <div class="flex items-center gap-2 mb-3">
                             <span class="platform-icon w-5 h-5 rounded-[5px] flex items-center justify-center"
-                                  :class="'pi-' + (charLimits[accId]?.platform || '')"
-                                  x-html="platformIconSvg(charLimits[accId]?.platform || '')"></span>
+                                  :class="'pi-' + (charLimits[t.accId]?.platform || '')"
+                                  x-html="platformIconSvg(charLimits[t.accId]?.platform || '')"></span>
                             <span class="text-xs font-semibold text-stone-600">
-                                <span x-text="charLimits[accId]?.name"></span> — {% translate "Customization" %}
+                                <span x-text="targetLabel(t.accId, t.fmt)"></span> — {% translate "Customization" %}
                             </span>
-                            <button type="button" class="ml-auto text-xs text-red-400 hover:text-red-500 cursor-pointer" @click="overrides[accId] = false; $nextTick(() => triggerPreviewUpdate())">{% translate "Remove override" %}</button>
+                            <button type="button" class="ml-auto text-xs text-red-400 hover:text-red-500 cursor-pointer" @click="$el.closest('.rounded-xl').querySelectorAll('[name^=override_]').forEach(field => field.value = ''); overrides[t.key] = false; $nextTick(() => triggerPreviewUpdate())">{% translate "Remove override" %}</button>
                         </div>
+
+                        <p x-show="formatMismatch(t.fmt)" class="text-[11px] font-medium text-amber-700 mb-3" x-text="formatMismatch(t.fmt)"></p>
+
+                        <div x-show="ratioIssues(t.accId, t.fmt).length > 0" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+                            <p class="text-[12px] font-semibold text-amber-800" x-text="ratioIssueText(t.accId, t.fmt)"></p>
+                            <p class="text-[11px] text-amber-700 mt-0.5">{% translate "The post may go out with black bars or be cropped by the platform. Adjust the crop of these media." %}</p>
+                            <button type="button" @click="openRatioFix(t.accId, t.fmt)"
+                                    class="mt-2 px-3 py-1 rounded-full border border-orange-300 text-orange-600 text-xs font-semibold hover:bg-orange-50 cursor-pointer">{% translate "Adjust" %}</button>
+                        </div>
+
+                        {% comment %}
+                        Story options. Rendered (hidden) even while the card is
+                        closed: the save reads them on every submit, and a
+                        missing field would clear the choice.
+                        {% endcomment %}
+                        <template x-if="t.fmt === 'story'">
+                            <div class="mb-3 space-y-1">
+                                <label class="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+                                    <input type="checkbox" class="rounded border-stone-300 text-orange-500 focus:ring-orange-200"
+                                           :checked="storyDelivery === 'notify'"
+                                           @change="storyDelivery = $event.target.checked ? 'notify' : ''">
+                                    {% translate "Notify me to publish the Story by hand" %}
+                                </label>
+                                <input type="hidden" :name="'story_delivery_' + t.accId" :value="storyDelivery">
+                                <p class="text-[11px] text-stone-400" x-show="storyDelivery === 'notify'">{% translate "Nothing is sent to the platform. At the scheduled time you get an e-mail and a notification with the media to download and the caption to copy, so you can publish from the app with music, stickers or polls." %}</p>
+                                <p class="text-[11px] text-stone-400" x-show="storyDelivery !== 'notify'">{% translate "Stories disappear after 24 hours and are published without the caption. Use a vertical photo or video (9:16)." %}</p>
+                            </div>
+                        </template>
+
+                        <template x-if="t.fmt === 'profile_photo'">
+                            <div class="mb-3">
+                                <label class="block text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-1">{% translate "Photo category" %}</label>
+                                <select :name="'gbp_photo_category_' + t.accId"
+                                        x-model="gbpCategory"
+                                        class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
+                                    <option value="ADDITIONAL">{% translate "Additional" %}</option>
+                                    <option value="EXTERIOR">{% translate "Exterior" %}</option>
+                                    <option value="INTERIOR">{% translate "Interior" %}</option>
+                                    <option value="PRODUCT">{% translate "Product" %}</option>
+                                    <option value="AT_WORK">{% translate "At work" %}</option>
+                                    <option value="FOOD_AND_DRINK">{% translate "Food and drink" %}</option>
+                                    <option value="MENU">{% translate "Menu" %}</option>
+                                    <option value="COMMON_AREA">{% translate "Common area" %}</option>
+                                    <option value="ROOMS">{% translate "Rooms" %}</option>
+                                    <option value="TEAMS">{% translate "Team" context "google business photo" %}</option>
+                                </select>
+                                <p class="text-[11px] text-stone-400 mt-1">{% translate "Adds the image to the photos on your Business Profile instead of creating a post. The caption becomes the photo description." %}</p>
+                            </div>
+                        </template>
+
                         <!-- Title override (only for platforms that need it) -->
                         <template x-if="charLimits[accId]?.needs_title">
                             <div class="mb-3">
                                 <label class="block text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-1"
                                        x-text="(charLimits[accId]?.title_label || cLabel('title')) + ' — ' + cLabel('override-suffix')"></label>
-                                <input type="text" :name="'override_title_' + accId"
+                                <input type="text" :name="'override_title_' + accId + '_' + t.fmt"
                                        class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all"
                                        :placeholder="cLabel('own-title')"
                                        @input="debouncedPreviewUpdate()"
@@ -1528,7 +1503,7 @@
                         caption does — otherwise the panel keeps showing the
                         global text while this channel is being customized.
                         {% endcomment %}
-                        <textarea :name="'override_caption_' + accId"
+                        <textarea :name="'override_caption_' + accId + '_' + t.fmt"
                                   class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all resize-none"
                                   style="font-family: system-ui, -apple-system, sans-serif;"
                                   :placeholder="cLabel('own-caption')"
@@ -1540,7 +1515,7 @@
                         these fields were on screen, so an empty place field
                         means "remove it" rather than "never asked".
                         {% endcomment %}
-                        <template x-if="charLimits[accId]?.platform === 'facebook'">
+                        <template x-if="charLimits[accId]?.platform === 'facebook' && t.fmt === 'default'">
                             <div class="mt-3 pt-3 border-t border-stone-100 space-y-3">
                                 <input type="hidden" :name="'facebook_custom_' + accId" value="1">
 
@@ -1635,7 +1610,7 @@
                                       x-html="platformIconSvg(charLimits[accId]?.platform || '')"></span>
 
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-[13px] font-medium text-stone-700 truncate" x-text="charLimits[accId]?.name"></p>
+                                    <p class="text-[13px] font-medium text-stone-700 truncate" x-text="targetLabel(accId, 'default')"></p>
                                     {% comment %}
                                     status_label is already translated (the Status
                                     choices are marked), so it stands alone rather
@@ -1972,33 +1947,36 @@
                 {% endif %}
 
                 {% if not post_is_readonly %}
-                <!-- Publish split-button -->
+                {% comment %}
+                Schedule: a menu of the ways to give the post a time — a date
+                and time of its own, or a slot in the account's queue. Every
+                option is a real submit button (name="action"), so the save
+                knows which one was chosen.
+                {% endcomment %}
                 <div class="relative inline-flex flex-shrink-0" id="publish-anchor">
-                    <!-- Mode selector (left) -->
                     <button type="button" id="publish-mode-btn"
                             :disabled="selectedAccounts.length === 0"
                             :class="selectedAccounts.length === 0 && 'opacity-50 cursor-not-allowed'"
-                            class="inline-flex items-center gap-1.5 pl-2 sm:pl-3 pr-1.5 sm:pr-2 py-2 text-sm font-semibold text-orange-700 bg-orange-100 rounded-l-lg hover:bg-orange-200 border border-orange-200 border-r-0 transition-all duration-150 cursor-pointer">
-                        <svg id="publish-mode-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span id="publish-mode-label" class="hidden sm:inline">{% translate "Next available" %}</span>
+                            class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-semibold text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 border border-orange-200 transition-all duration-150 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span class="hidden sm:inline">{% translate "Schedule" %}</span>
                         <svg class="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                     </button>
-                    <!-- Action button (right) -->
-                    <button type="submit" id="publish-action-btn" name="action" value="add_to_queue"
-                            :disabled="selectedAccounts.length === 0"
-                            :class="selectedAccounts.length === 0 && 'opacity-50 cursor-not-allowed'"
-                            class="inline-flex items-center gap-1.5 pl-3 sm:pl-4 pr-3 sm:pr-5 py-2 text-sm font-semibold text-white bg-orange-500 rounded-r-lg hover:bg-orange-600 border border-orange-500 hover:border-orange-600 shadow-sm transition-all duration-150 cursor-pointer">
-                        <span id="publish-action-label">{% translate "Add to Queue" %}</span>
-                    </button>
 
-                    <!-- Mode popover - positioned above -->
                     <div id="publish-popover" class="hidden absolute bottom-full right-0 mb-2 w-72 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-stone-200/80" style="z-index: 50;">
-                            <!-- Main menu -->
                             <div id="publish-menu" class="p-1.5">
-                                <!-- Next Available -->
-                                <button type="button" data-mode="add_to_queue" data-label="{% translate 'Next available' %}" data-action-label="{% translate 'Add to Queue' %}"
-                                        data-icon="clock"
-                                        class="publish-mode-option w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-stone-50 transition-colors text-left cursor-pointer">
+                                <button type="button" id="publish-schedule-btn"
+                                        class="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-stone-50 transition-colors text-left cursor-pointer">
+                                    <div class="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-semibold text-stone-800">{% translate "Set Date and Time" %}</div>
+                                        <div class="text-xs text-stone-400 mt-0.5">{% translate "Choose a specific time" %}</div>
+                                    </div>
+                                </button>
+                                <button type="submit" name="action" value="add_to_queue"
+                                        class="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-stone-50 transition-colors text-left cursor-pointer">
                                     <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5">
                                         <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                     </div>
@@ -2007,44 +1985,14 @@
                                         <div class="text-xs text-stone-400 mt-0.5">{% translate "Place in next available slot" %}</div>
                                     </div>
                                 </button>
-
-                                <!-- Prioritise -->
-                                <button type="button" data-mode="add_to_queue_priority" data-label="{% translate 'Prioritise' %}" data-action-label="{% translate 'Prioritise' %}"
-                                        data-icon="priority"
-                                        class="publish-mode-option w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-stone-50 transition-colors text-left cursor-pointer">
+                                <button type="submit" name="action" value="add_to_queue_priority"
+                                        class="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-stone-50 transition-colors text-left cursor-pointer">
                                     <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 mt-0.5">
                                         <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg>
                                     </div>
                                     <div>
                                         <div class="text-sm font-semibold text-stone-800">{% translate "Prioritise" %}</div>
                                         <div class="text-xs text-stone-400 mt-0.5">{% translate "Add to top of queue" %}</div>
-                                    </div>
-                                </button>
-
-                                <!-- Now -->
-                                <button type="button" data-mode="publish_now" data-label="{% translate 'Now' %}" data-action-label="{% translate 'Publish Now' %}"
-                                        data-icon="play"
-                                        class="publish-mode-option w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-stone-50 transition-colors text-left cursor-pointer">
-                                    <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3l14 9-14 9V3z"/></svg>
-                                    </div>
-                                    <div>
-                                        <div class="text-sm font-semibold text-stone-800">{% translate "Now" %}</div>
-                                        <div class="text-xs text-stone-400 mt-0.5">{% translate "Publish immediately" %}</div>
-                                    </div>
-                                </button>
-
-                                <!-- Set Date and Time -->
-                                <button type="button" data-mode="schedule" data-label="{% translate 'Schedule' %}" data-action-label="{% translate 'Schedule Post' %}"
-                                        data-icon="calendar"
-                                        class="publish-mode-option w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-stone-50 transition-colors text-left cursor-pointer"
-                                        id="publish-schedule-btn">
-                                    <div class="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        <svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                    </div>
-                                    <div>
-                                        <div class="text-sm font-semibold text-stone-800">{% translate "Set Date and Time" %}</div>
-                                        <div class="text-xs text-stone-400 mt-0.5">{% translate "Choose a specific time" %}</div>
                                     </div>
                                 </button>
                             </div>
@@ -2081,12 +2029,21 @@
                                 </p>
                                 {% endif %}
 
-                                <button type="button" id="publish-schedule-confirm" class="mt-4 w-full py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors cursor-pointer">
+                                <button type="submit" name="action" value="schedule" id="publish-schedule-confirm" class="mt-4 w-full py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors cursor-pointer">
                                     {% translate "Set Schedule" %}
                                 </button>
                             </div>
                     </div>
                 </div>
+
+                <!-- Publish now -->
+                <button type="submit" name="action" value="publish_now" id="publish-now-btn"
+                        :disabled="selectedAccounts.length === 0"
+                        :class="selectedAccounts.length === 0 && 'opacity-50 cursor-not-allowed'"
+                        class="inline-flex items-center gap-1.5 px-3 sm:px-5 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 border border-orange-500 hover:border-orange-600 shadow-sm transition-all duration-150 cursor-pointer flex-shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+                    {% translate "Publish now" %}
+                </button>
 
                 <!-- Hidden fields for queue actions -->
                 <input type="hidden" name="queue_id" value="">
@@ -2197,7 +2154,7 @@
         <input type="hidden" name="_autosave_post_id" :value="autosavedPostId" form="composer-form">
         <div id="autosave-trigger"
              hx-post="{% if post %}{% url 'composer:autosave_edit' workspace_id=workspace.id post_id=post.id %}{% else %}{% url 'composer:autosave' workspace_id=workspace.id %}{% endif %}"
-             hx-trigger="every 30s"
+             hx-trigger="every 30s, autosaveNow"
              hx-target="#autosave-status"
              hx-include="#composer-form"
              hx-swap="innerHTML"
@@ -2244,6 +2201,90 @@
     </div>
 
     </div><!-- /panels -->
+
+    <!-- Media to adjust: the images a format's ratio warning points at -->
+    <div x-show="ratioFix.open" x-cloak class="fixed inset-0 z-[70] flex items-center justify-center"
+         @keydown.escape.window="ratioFix.open = false">
+        <div class="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" @click="ratioFix.open = false"></div>
+        <div class="relative bg-white rounded-2xl shadow-xl border border-stone-200 flex flex-col overflow-hidden" style="width: calc(100vw - 1rem); max-width: 480px; max-height: 80vh;">
+            <div class="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+                <h2 class="text-base font-semibold text-stone-900">{% translate "Media to adjust" %}</h2>
+                <button type="button" @click="ratioFix.open = false" aria-label="{% translate 'Close' %}"
+                        class="w-8 h-8 rounded-lg border border-stone-200 text-stone-400 hover:text-stone-600 flex items-center justify-center cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-5 space-y-2 overflow-y-auto">
+                <p class="text-xs text-stone-500">{% translate "Select a media to adjust it." %}</p>
+                <template x-for="item in ratioFix.items" :key="item.id">
+                    <button type="button"
+                            @click="ratioFix.open = false; openFormatCrop(item, ratioFix.target, ratioFix.preset)"
+                            class="w-full flex items-center gap-3 rounded-xl border border-orange-200 bg-orange-50/60 hover:bg-orange-50 px-3 py-2 text-left cursor-pointer">
+                        <img :src="item.shownUrl || item.url" alt="" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-sm font-semibold text-stone-800 truncate" x-text="item.name"></span>
+                            <span class="block text-[11px] text-stone-500" x-text="ratioFix.label + ' · ' + cLabel('ratio-outside')"></span>
+                        </span>
+                        <svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         IMAGE CROP MODAL — opened from a thumbnail's settings menu
+         ════════════════════════════════════════════════════════════ -->
+    {% comment %}
+    Saving makes a cropped copy of the image and swaps it into this post
+    (composer.views.crop_media); the library keeps the original.
+    {% endcomment %}
+    <div x-show="crop.open" x-cloak class="fixed inset-0 z-[70] flex items-center justify-center"
+         @keydown.escape.window="crop.open && closeCrop()">
+        <div class="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" @click="closeCrop()"></div>
+        <div class="relative bg-white rounded-2xl shadow-xl border border-stone-200 flex flex-col overflow-hidden" style="width: calc(100vw - 1rem); max-width: 720px; max-height: 92vh;">
+            <div class="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+                <h2 class="text-base font-semibold text-stone-900">{% translate "Adjust image" %}</h2>
+                <button type="button" @click="closeCrop()" aria-label="{% translate 'Close' %}"
+                        class="w-8 h-8 rounded-lg border border-stone-200 text-stone-400 hover:text-stone-600 flex items-center justify-center cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="px-5 pt-4 space-y-3 overflow-y-auto">
+                <p x-show="crop.target" class="text-xs text-stone-500"
+                   x-text="cLabel('crop-for-format').replace('{format}', crop.target ? targetLabel(crop.target.split(':')[0], crop.target.split(':')[1]) : '')"></p>
+                <div class="rounded-xl bg-orange-50 border border-orange-100 px-4 py-2.5">
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-orange-600">{% translate "Current size" %}</p>
+                    <p class="text-sm font-semibold text-stone-800 tabular-nums" x-text="crop.size"></p>
+                </div>
+                <div>
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-stone-400 mb-2">{% translate "Aspect ratio" %}</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <template x-for="preset in cropPresets" :key="preset.key">
+                            <button type="button" @click="setCropRatio(preset)"
+                                    class="rounded-lg border px-3 py-2 text-center cursor-pointer transition-colors"
+                                    :class="crop.ratio === preset.key ? 'border-orange-400 bg-orange-50' : 'border-stone-200 hover:border-stone-300'">
+                                <span class="block text-sm font-semibold text-stone-800" x-text="preset.label"></span>
+                                <span class="block text-[11px] text-stone-400" x-text="preset.hint"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+                <div class="rounded-xl overflow-hidden bg-stone-900" style="height: 360px;">
+                    <img x-ref="cropImage" alt="" class="block max-w-full" style="max-height: 360px;">
+                </div>
+                <p x-show="crop.error" class="text-xs font-medium text-red-600" x-text="crop.error"></p>
+            </div>
+            <div class="px-5 py-4 border-t border-stone-100 flex justify-end gap-2 mt-4">
+                <button type="button" @click="closeCrop()"
+                        class="px-4 py-2 rounded-full text-sm font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 cursor-pointer">{% translate "Cancel" %}</button>
+                <button type="button" @click="saveCrop()" :disabled="crop.saving"
+                        class="px-4 py-2 rounded-full text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 cursor-pointer disabled:opacity-50">
+                    <span x-text="crop.saving ? cLabel('crop-saving') : cLabel('crop-confirm')"></span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- ════════════════════════════════════════════════════════════
          MEDIA PICKER MODAL
@@ -2582,6 +2623,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/vendor/cropper.min.js' %}"></script>
 <script nonce="{{ request.csp_nonce }}">
   // Reviewer approve / request-changes return 204 + toast + approvalAction. Let the
   // toast show, then reload so the status banner and history reflect the new state.
@@ -2594,10 +2636,7 @@
 {% translate "Caption" as lbl_c_caption %}
 {% translate "Caption / Description" as lbl_c_caption_desc %}
 {% translate "Title" as lbl_c_title %}
-{% translate "Set date and time" as lbl_c_set_datetime %}
-{% translate "Schedule Post" as lbl_c_schedule_post %}
 {% translate "Schedule" as lbl_c_schedule %}
-{% translate "Publish now" as lbl_c_publish_now %}
 {% translate "Publish" as lbl_c_publish %}
 {% translate "override" as lbl_c_override_suffix %}
 {% translate "Own title for this channel…" as lbl_c_own_title %}
@@ -2652,15 +2691,52 @@
 {% translate "You cannot mix images and video. Please upload either images or a single video." as lbl_c_no_mix_upload %}
 {% translate "Please select both a date and time." as lbl_c_select_date_time %}
 {% translate "Scheduled time must be in the future." as lbl_c_time_in_future %}
+{% translate "Could not reach the server, so nothing was saved. Check your connection and try again." as lbl_c_save_unreachable %}
+{% translate "Confirm" as lbl_c_crop_confirm %}
+{% translate "Saving…" as lbl_c_crop_saving %}
+{% translate "Free" context "aspect ratio" as lbl_c_ratio_free %}
+{% translate "Square" as lbl_c_ratio_square %}
+{% translate "Stories" as lbl_c_ratio_story %}
+{% translate "Portrait 4:5" as lbl_c_ratio_portrait %}
+{% translate "Landscape 1.91:1" as lbl_c_ratio_landscape %}
+{% translate "Landscape 4:3" as lbl_c_ratio_landscape43 %}
+{% translate "Any size" as lbl_c_ratio_any %}
+{% translate "Stories (9:16)" as lbl_c_ratio_rule_story %}
+{% translate "Reels (9:16)" as lbl_c_ratio_rule_reel %}
+{% translate "Instagram feed (4:5 to 1.91:1)" as lbl_c_ratio_rule_ig_feed %}
+{% translate "1 media outside the {format} ratio" as lbl_c_ratio_issue_one %}
+{% translate "{count} media outside the {format} ratio" as lbl_c_ratio_issue_many %}
+{% translate "outside the ratio" as lbl_c_ratio_outside %}
+{% translate "This crop applies to {format} only; the other formats keep the original image." as lbl_c_crop_for_format %}
+{% translate "A Story needs exactly one photo or one video." as lbl_c_story_media %}
+{% translate "A Reel needs exactly one video." as lbl_c_reel_media %}
+{% translate "A profile photo needs exactly one image." as lbl_c_photo_media %}
 {{ lbl_c_saved|json_script:"c-saved" }}
+{{ lbl_c_save_unreachable|json_script:"c-save-unreachable" }}
+{{ lbl_c_crop_confirm|json_script:"c-crop-confirm" }}
+{{ lbl_c_crop_saving|json_script:"c-crop-saving" }}
+{{ lbl_c_ratio_free|json_script:"c-ratio-free" }}
+{{ lbl_c_ratio_square|json_script:"c-ratio-square" }}
+{{ lbl_c_ratio_story|json_script:"c-ratio-story" }}
+{{ lbl_c_ratio_portrait|json_script:"c-ratio-portrait" }}
+{{ lbl_c_ratio_landscape|json_script:"c-ratio-landscape" }}
+{{ lbl_c_ratio_landscape43|json_script:"c-ratio-landscape43" }}
+{{ lbl_c_ratio_any|json_script:"c-ratio-any" }}
+{{ lbl_c_ratio_rule_story|json_script:"c-ratio-rule-story" }}
+{{ lbl_c_ratio_rule_reel|json_script:"c-ratio-rule-reel" }}
+{{ lbl_c_ratio_rule_ig_feed|json_script:"c-ratio-rule-ig-feed" }}
+{{ lbl_c_ratio_issue_one|json_script:"c-ratio-issue-one" }}
+{{ lbl_c_ratio_issue_many|json_script:"c-ratio-issue-many" }}
+{{ lbl_c_ratio_outside|json_script:"c-ratio-outside" }}
+{{ lbl_c_crop_for_format|json_script:"c-crop-for-format" }}
+{{ lbl_c_story_media|json_script:"c-story-media" }}
+{{ lbl_c_reel_media|json_script:"c-reel-media" }}
+{{ lbl_c_photo_media|json_script:"c-photo-media" }}
 {{ lbl_c_not_saved|json_script:"c-not-saved" }}
 {{ lbl_c_caption|json_script:"c-caption" }}
 {{ lbl_c_caption_desc|json_script:"c-caption-desc" }}
 {{ lbl_c_title|json_script:"c-title" }}
-{{ lbl_c_set_datetime|json_script:"c-set-datetime" }}
-{{ lbl_c_schedule_post|json_script:"c-schedule-post" }}
 {{ lbl_c_schedule|json_script:"c-schedule" }}
-{{ lbl_c_publish_now|json_script:"c-publish-now" }}
 {{ lbl_c_publish|json_script:"c-publish" }}
 {{ lbl_c_override_suffix|json_script:"c-override-suffix" }}
 {{ lbl_c_own_title|json_script:"c-own-title" }}
@@ -2729,6 +2805,9 @@ function cLabel(id) {
 {{ char_limits|json_script:"composer-char-limits" }}
 {{ automation_targets|json_script:"composer-automation-targets" }}
 {{ platform_extras|json_script:"composer-platform-extras" }}
+{{ selected_formats|json_script:"composer-selected-formats" }}
+{{ format_extras|json_script:"composer-format-extras" }}
+{{ format_media|json_script:"composer-format-media" }}
 {{ media_items|json_script:"composer-media-items" }}
 {{ emoji_categories|json_script:"composer-emoji" }}
 <script nonce="{{ request.csp_nonce }}">
@@ -2742,6 +2821,14 @@ function composerApp() {
         overrides: {},
         advancedOpen: {},
         platformExtras: JSON.parse(document.getElementById('composer-platform-extras').textContent) || {},
+        // {accountId: [format, ...]} — which formats of each selected account
+        // the post goes out as. selectedAccounts stays the list of accounts
+        // with at least one, so every per-account panel keeps working on it.
+        selectedFormats: JSON.parse(document.getElementById('composer-selected-formats').textContent) || {},
+        formatExtras: JSON.parse(document.getElementById('composer-format-extras').textContent) || {},
+        // {"<account>:<format>": {sourceAssetId: {id, url, width, height}}}: crops
+        // a format publishes instead of the attachment (composer.views.crop_format_media).
+        formatMedia: JSON.parse(document.getElementById('composer-format-media').textContent) || {},
         // Keyed by social account id; empty for an unsaved post, because the
         // flow builder is reached per PlatformPost and those are created on
         // first save. See ``composer.views`` where this is built.
@@ -2779,6 +2866,7 @@ function composerApp() {
         hasVideoAttached: false,
         hasSingleVideoAttached: false,
         hasSingleMediaAttached: false,
+        hasSingleImageAttached: false,
         showFramePicker: false,
         framePickerAccId: null,
         framePickerMode: 'upload',
@@ -2869,7 +2957,8 @@ function composerApp() {
         // means the section is not rendered at all, the same way the first
         // comment field hides itself.
         get automationAccounts() {
-            return this.selectedAccounts.filter(id => this.charLimits[id]?.supports_automation);
+            return this.selectedAccounts.filter(id => this.charLimits[id]?.supports_automation
+                && (this.selectedFormats[id] || ['default']).some(fmt => fmt !== 'story'));
         },
         get anyPlatformSupportsAutomation() {
             return this.automationAccounts.length > 0;
@@ -2877,8 +2966,11 @@ function composerApp() {
         // A flow is edited per platform post, and those exist only after the
         // post has been saved once. Until then the section explains that rather
         // than offering a link that cannot resolve.
+        // Keyed "<account>:<format>"; a Story has no comment thread, so the
+        // account's flow lives on its first other selected format.
         automationTarget(accId) {
-            return this.automationTargets[accId] || null;
+            const fmt = (this.selectedFormats[accId] || ['default']).find(f => f !== 'story');
+            return (fmt && this.automationTargets[accId + ':' + fmt]) || null;
         },
         automationUrl(accId) {
             const target = this.automationTarget(accId);
@@ -2914,6 +3006,11 @@ function composerApp() {
         },
 
         init() {
+            // An account preselected without formats (?account=, a template)
+            // publishes its ordinary post.
+            this.selectedAccounts.forEach(id => {
+                if (!(this.selectedFormats[id] || []).length) this.selectedFormats[id] = ['default'];
+            });
             // Initialize overrides map
             this.selectedAccounts.forEach(id => {
                 this.overrides[id] = false;
@@ -2939,28 +3036,30 @@ function composerApp() {
 
             // Listen for autosaved events to capture the post ID on first save
             // This prevents duplicate drafts by reusing the same post on subsequent autosaves
+            // Once the post exists (first autosave, or a Save Draft that
+            // stays on the page), every later request must go to it rather
+            // than create another post.
+            const adoptPost = (postId) => {
+                if (!postId || this.autosavedPostId === postId) return;
+                this.autosavedPostId = postId;
+                const trigger = document.getElementById('autosave-trigger');
+                if (trigger) {
+                    trigger.setAttribute('hx-post', `/workspace/{{ workspace.id }}/compose/${postId}/autosave/`);
+                    htmx.process(trigger);
+                }
+                const form = document.getElementById('composer-form');
+                if (form) {
+                    form.setAttribute('hx-post', `/workspace/{{ workspace.id }}/compose/${postId}/save/`);
+                    htmx.process(form);
+                }
+                // Attach uploads to the post directly
+                this.uploadUrl = `/workspace/{{ workspace.id }}/compose/${postId}/upload-media/`;
+            };
             document.body.addEventListener('autosaved', (e) => {
                 const detail = e.detail || {};
-                if (detail.postId && detail.isNew) {
-                    this.autosavedPostId = detail.postId;
-                    // Update the autosave trigger URL to use the edit endpoint
-                    const trigger = document.getElementById('autosave-trigger');
-                    if (trigger) {
-                        const editUrl = `/workspace/{{ workspace.id }}/compose/${detail.postId}/autosave/`;
-                        trigger.setAttribute('hx-post', editUrl);
-                        htmx.process(trigger);
-                    }
-                    // Also update the main form's action URL
-                    const form = document.getElementById('composer-form');
-                    if (form) {
-                        const editSaveUrl = `/workspace/{{ workspace.id }}/compose/${detail.postId}/save/`;
-                        form.setAttribute('hx-post', editSaveUrl);
-                        htmx.process(form);
-                    }
-                    // Update upload URL to attach media to the post directly
-                    this.uploadUrl = `/workspace/{{ workspace.id }}/compose/${detail.postId}/upload-media/`;
-                }
+                if (detail.isNew) adoptPost(detail.postId);
             });
+            document.body.addEventListener('postSaved', (e) => adoptPost((e.detail || {}).postId));
 
             // Track whether a video is attached (enables "Choose from video").
             // #media-list mutates outside Alpine, so poll it on the events that
@@ -2973,6 +3072,25 @@ function composerApp() {
                 this.hasVideoAttached = videoCount > 0;
                 this.hasSingleVideoAttached = thumbs.length === 1 && videoCount === 1;
                 this.hasSingleMediaAttached = thumbs.length === 1;
+                this.hasSingleImageAttached = thumbs.length === 1 && videoCount === 0;
+                this.mediaInfo = thumbs.filter(t => t.dataset.mediaId).map(t => ({
+                    id: t.dataset.mediaId,
+                    assetId: t.dataset.assetId,
+                    kind: t.dataset.kind,
+                    url: t.dataset.fullUrl,
+                    cropUrl: t.dataset.cropUrl || '',
+                    name: t.dataset.name,
+                    width: parseInt(t.dataset.width, 10) || 0,
+                    height: parseInt(t.dataset.height, 10) || 0,
+                }));
+                // Older assets may not have their size stored; read it off the file.
+                this.mediaInfo.filter(m => m.kind === 'image' && !m.width).forEach(m => {
+                    const probe = new Image();
+                    probe.onload = () => {
+                        this.mediaInfo = this.mediaInfo.map(x => x.id === m.id ? { ...x, width: probe.naturalWidth, height: probe.naturalHeight } : x);
+                    };
+                    probe.src = m.url;
+                });
             };
             this.$nextTick(syncVideoAttached);
             // Seed media_order from the thumbnails as rendered, so a save that
@@ -2990,13 +3108,249 @@ function composerApp() {
             });
         },
 
+        // Attached media as the thumbnails describe it (see syncVideoAttached).
+        mediaInfo: [],
+        ratioFix: { open: false, items: [], preset: 'free', label: '', target: '' },
+        // The aspect ratio a format needs, or null when any will do. Stories
+        // and Reels fill a 9:16 screen; the Instagram feed only takes
+        // 4:5 to 1.91:1 and refuses anything outside it.
+        ratioRule(accId, fmt) {
+            if (fmt === 'story') return { exact: 9 / 16, preset: 'story', label: cLabel('ratio-rule-story') };
+            if (fmt === 'reel') return { exact: 9 / 16, preset: 'story', label: cLabel('ratio-rule-reel') };
+            if (fmt === 'default' && ['instagram', 'instagram_login'].includes(this.charLimits[accId]?.platform)) {
+                return { min: 0.8, max: 1.91, preset: 'portrait', label: cLabel('ratio-rule-ig-feed') };
+            }
+            return null;
+        },
+        // Images among the attachments that don't fit the format's ratio.
+        // The attachments as this format publishes them: its own crop where it
+        // has one, the attachment otherwise.
+        formatMediaInfo(accId, fmt) {
+            const crops = this.formatMedia[accId + ':' + fmt] || {};
+            return this.mediaInfo.map(m => {
+                const crop = crops[m.assetId];
+                return crop ? { ...m, cropped: true, width: crop.width, height: crop.height, shownUrl: crop.url } : m;
+            });
+        },
+        ratioIssues(accId, fmt) {
+            const rule = this.ratioRule(accId, fmt);
+            if (!rule) return [];
+            return this.formatMediaInfo(accId, fmt).filter(m => {
+                if (m.kind !== 'image' || !m.width || !m.height) return false;
+                const ratio = m.width / m.height;
+                if (rule.exact) return Math.abs(ratio - rule.exact) / rule.exact > 0.02;
+                return ratio < rule.min - 0.01 || ratio > rule.max + 0.01;
+            });
+        },
+        ratioIssueText(accId, fmt) {
+            const count = this.ratioIssues(accId, fmt).length;
+            const template = count === 1 ? cLabel('ratio-issue-one') : cLabel('ratio-issue-many');
+            return template.replace('{count}', count).replace('{format}', this.ratioRule(accId, fmt)?.label || '');
+        },
+        // Crops made from here apply to this format only; the post's other
+        // formats keep the attachment as it is.
+        openRatioFix(accId, fmt) {
+            const rule = this.ratioRule(accId, fmt);
+            const items = this.ratioIssues(accId, fmt);
+            const target = accId + ':' + fmt;
+            if (items.length === 1) {
+                this.openFormatCrop(items[0], target, rule.preset);
+                return;
+            }
+            this.ratioFix = { open: true, items, preset: rule.preset, label: rule.label, target };
+        },
+        openFormatCrop(item, target, preset) {
+            this.openCrop({ url: item.url, assetId: item.assetId, target, ratio: preset });
+        },
+        // Runs the autosave now and resolves once it has answered, so the post
+        // and the rows of the formats just picked exist on the server.
+        autosaveNow() {
+            return new Promise((resolve, reject) => {
+                const trigger = document.getElementById('autosave-trigger');
+                if (!trigger) { reject(new Error(cLabel('generic-error'))); return; }
+                const done = (e) => {
+                    if (e.detail.elt !== trigger) return;
+                    document.body.removeEventListener('htmx:afterRequest', done);
+                    if (e.detail.successful && this.autosavedPostId) resolve();
+                    else reject(new Error(cLabel('generic-error')));
+                };
+                document.body.addEventListener('htmx:afterRequest', done);
+                htmx.trigger(trigger, 'autosaveNow');
+            });
+        },
+
+        // Image editor (crop-media from a thumbnail's settings menu).
+        crop: { open: false, url: '', cropUrl: '', assetId: '', target: '', size: '', ratio: 'free', saving: false, error: '' },
+        cropper: null,
+        get cropPresets() {
+            return [
+                { key: 'free', ratio: NaN, label: cLabel('ratio-free'), hint: cLabel('ratio-any') },
+                { key: 'square', ratio: 1, label: cLabel('ratio-square'), hint: '1080 × 1080' },
+                { key: 'story', ratio: 9 / 16, label: cLabel('ratio-story'), hint: '1080 × 1920' },
+                { key: 'portrait', ratio: 4 / 5, label: cLabel('ratio-portrait'), hint: '1080 × 1350' },
+                { key: 'landscape', ratio: 1.91, label: cLabel('ratio-landscape'), hint: '1080 × 566' },
+                { key: 'landscape43', ratio: 4 / 3, label: cLabel('ratio-landscape43'), hint: '1080 × 810' },
+            ];
+        },
+        // detail: { url, cropUrl, ratio? } crops the attachment for the whole
+        // post; { url, assetId, target, ratio? } crops it for one format only.
+        // ratio preselects a preset (e.g. 'story').
+        openCrop(detail) {
+            this.crop = {
+                open: true, url: detail.url, cropUrl: detail.cropUrl || '', assetId: detail.assetId || '',
+                target: detail.target || '', size: '', ratio: detail.ratio || 'free', saving: false, error: '',
+            };
+            this.$nextTick(() => {
+                const img = this.$refs.cropImage;
+                if (this.cropper) { this.cropper.destroy(); this.cropper = null; }
+                img.onload = () => {
+                    this.crop.size = img.naturalWidth + ' × ' + img.naturalHeight + ' · ' + this.ratioName(img.naturalWidth, img.naturalHeight);
+                    const preset = this.cropPresets.find(p => p.key === this.crop.ratio);
+                    this.cropper = new Cropper(img, {
+                        viewMode: 1,
+                        autoCropArea: 1,
+                        aspectRatio: preset ? preset.ratio : NaN,
+                        background: true,
+                    });
+                };
+                img.src = detail.url;
+            });
+        },
+        ratioName(w, h) {
+            const gcd = (a, b) => b ? gcd(b, a % b) : a;
+            const d = gcd(w, h) || 1;
+            return (w / d) + ':' + (h / d);
+        },
+        setCropRatio(preset) {
+            this.crop.ratio = preset.key;
+            if (this.cropper) this.cropper.setAspectRatio(preset.ratio);
+        },
+        closeCrop() {
+            if (this.cropper) { this.cropper.destroy(); this.cropper = null; }
+            this.crop.open = false;
+        },
+        saveCrop() {
+            if (!this.cropper || this.crop.saving) return;
+            if (this.crop.target) { this.saveFormatCrop(); return; }
+            const data = this.cropper.getData(true);
+            this.crop.saving = true;
+            this.crop.error = '';
+            // The autosaved post id lets a thumbnail still carrying its
+            // pending-media URL be found on the post the autosave created.
+            const body = new URLSearchParams({ x: data.x, y: data.y, width: data.width, height: data.height, _autosave_post_id: this.autosavedPostId || '' });
+            fetch(this.crop.cropUrl, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body,
+            }).then(async (response) => {
+                const text = await response.text();
+                if (!response.ok) {
+                    // Our refusals are plain text; anything else (an error page)
+                    // is not something to show the user.
+                    const plain = (response.headers.get('Content-Type') || '').startsWith('text/plain');
+                    throw new Error(plain && text ? text : cLabel('generic-error'));
+                }
+                const list = document.getElementById('media-list');
+                list.innerHTML = text;
+                htmx.process(list);
+                // Same follow-up as an htmx swap of the thumbnails: re-read the
+                // media flags and the carousel order.
+                list.dispatchEvent(new CustomEvent('htmx:afterSwap', { bubbles: true }));
+                this.triggerPreviewUpdate();
+                this.closeCrop();
+            }).catch((err) => {
+                this.crop.error = err.message;
+            }).finally(() => { this.crop.saving = false; });
+        },
+
+        async saveFormatCrop() {
+            const data = this.cropper.getData(true);
+            this.crop.saving = true;
+            this.crop.error = '';
+            try {
+                await this.autosaveNow();
+                const body = new URLSearchParams({
+                    x: data.x, y: data.y, width: data.width, height: data.height,
+                    asset_id: this.crop.assetId, target: this.crop.target,
+                });
+                const response = await fetch(`/workspace/{{ workspace.id }}/compose/${this.autosavedPostId}/crop-format-media/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body,
+                });
+                if (!response.ok) {
+                    const plain = (response.headers.get('Content-Type') || '').startsWith('text/plain');
+                    const text = await response.text();
+                    throw new Error(plain && text ? text : cLabel('generic-error'));
+                }
+                const result = await response.json();
+                this.formatMedia = {
+                    ...this.formatMedia,
+                    [result.target]: { ...(this.formatMedia[result.target] || {}), [result.source]: result.asset },
+                };
+                this.triggerPreviewUpdate();
+                this.closeCrop();
+            } catch (err) {
+                this.crop.error = err.message;
+            } finally {
+                this.crop.saving = false;
+            }
+        },
+
+        hasFormat(accId, fmt) {
+            return (this.selectedFormats[accId] || []).includes(fmt);
+        },
+        // Picks or drops one format of an account. The account itself is
+        // selected while it has any format, through toggleAccount so its
+        // per-account panels set up and tear down as before.
+        toggleFormat(accId, fmt) {
+            const current = this.selectedFormats[accId] || [];
+            const next = current.includes(fmt) ? current.filter(f => f !== fmt) : [...current, fmt];
+            this.selectedFormats = { ...this.selectedFormats, [accId]: next };
+            if ((next.length > 0) !== this.selectedAccounts.includes(accId)) {
+                this.toggleAccount(accId);
+            } else {
+                this.$nextTick(() => this.triggerPreviewUpdate());
+            }
+        },
+        // One entry per chosen format of each selected account, in picker order.
+        // Accounts no longer connected aren't rendered (no charLimits entry),
+        // so they get no chip either.
+        selectedTargetList() {
+            return this.selectedAccounts.filter(accId => this.charLimits[accId]).flatMap(accId => {
+                const chosen = this.selectedFormats[accId] || ['default'];
+                const order = Object.keys(this.charLimits[accId]?.format_labels || { default: '' });
+                return order.filter(fmt => chosen.includes(fmt)).map(fmt => ({ accId, fmt, key: accId + ':' + fmt }));
+            });
+        },
+        targetLabel(accId, fmt) {
+            return this.charLimits[accId]?.format_labels?.[fmt] || this.charLimits[accId]?.name || '';
+        },
+        selectedTargets() {
+            return this.selectedAccounts
+                .flatMap(accId => (this.selectedFormats[accId] || ['default']).map(fmt => accId + ':' + fmt))
+                .join(',');
+        },
+        // Why the attached media can't go out as ``fmt``, or ''. Mirrors
+        // composer.services.format_blocker, which has the final say on save.
+        formatMismatch(fmt) {
+            if (fmt === 'story' && !this.hasSingleMediaAttached) return cLabel('story-media');
+            if (fmt === 'reel' && !this.hasSingleVideoAttached) return cLabel('reel-media');
+            if (fmt === 'profile_photo' && !this.hasSingleImageAttached) return cLabel('photo-media');
+            return '';
+        },
+
         toggleAccount(id) {
             const idx = this.selectedAccounts.indexOf(id);
             if (idx > -1) {
                 this.selectedAccounts.splice(idx, 1);
                 delete this.overrides[id];
                 delete this.advancedOpen[id];
+                this.selectedFormats = { ...this.selectedFormats, [id]: [] };
             } else {
+                if (!(this.selectedFormats[id] || []).length) {
+                    this.selectedFormats = { ...this.selectedFormats, [id]: ['default'] };
+                }
                 this.selectedAccounts.push(id);
                 this.overrides[id] = false;
                 this.advancedOpen[id] = false;
@@ -3429,7 +3783,23 @@ function composerApp() {
             }
         },
 
+        // The action of the submit button last clicked (save_draft, schedule,
+        // publish_now…), so the response handler knows what was asked for.
+        lastAction: '',
+        rememberAction(event) {
+            const button = event.target.closest('button[name="action"]');
+            if (button) this.lastAction = button.value;
+        },
+        // The request never reached the server (offline, server restarting):
+        // say so instead of leaving the click looking ignored.
+        onFormSendError(event) {
+            if (event.detail.elt !== event.currentTarget) return;
+            this.formError = cLabel('save-unreachable');
+            setTimeout(() => { this.formError = ''; }, 6000);
+        },
+
         saveDraft() {
+            this.lastAction = 'save_draft';
             const form = document.getElementById('composer-form');
             const actionInput = document.createElement('input');
             actionInput.type = 'hidden';
@@ -3446,7 +3816,7 @@ function composerApp() {
             if (event.detail.elt !== event.currentTarget) return;
             const xhr = event.detail.xhr;
             if (event.detail.successful) {
-                const action = document.getElementById('publish-action-btn')?.value;
+                const action = this.lastAction;
                 if (action === 'schedule' || action === 'publish_now' || action === 'add_to_queue' || action === 'add_to_queue_priority') {
                     // Redirect to calendar after scheduling/publishing/queuing
                     window.location.href = '{% url "calendar:calendar" workspace_id=workspace.id %}';
@@ -3525,8 +3895,8 @@ function composerApp() {
         drag: null,
 
         onMediaPointerDown(event) {
-            // Left button only, and never from the remove button.
-            if (event.button !== 0 || event.target.closest('.remove-btn')) return;
+            // Left button only, and never from the remove, settings or menu buttons.
+            if (event.button !== 0 || event.target.closest('.remove-btn, .thumb-actions button, .thumb-menu')) return;
             const thumb = event.target.closest('.media-thumb');
             if (!thumb || !thumb.dataset.mediaId) return;
             const list = document.getElementById('media-list');
@@ -3682,14 +4052,6 @@ function composerApp() {
             const files = event.dataTransfer.files;
             if (files.length > 0) {
                 this.processFiles(Array.from(files));
-            }
-        },
-
-        handleFileSelect(event) {
-            const files = event.target.files;
-            if (files.length > 0) {
-                this.processFiles(Array.from(files));
-                event.target.value = '';
             }
         },
 
@@ -3856,61 +4218,31 @@ function composerApp() {
 (function() {
     const anchor = document.getElementById('publish-anchor');
     const modeBtn = document.getElementById('publish-mode-btn');
-    const modeLabel = document.getElementById('publish-mode-label');
-    const modeIcon = document.getElementById('publish-mode-icon');
-    const actionBtn = document.getElementById('publish-action-btn');
-    const actionLabel = document.getElementById('publish-action-label');
     const popover = document.getElementById('publish-popover');
     const menu = document.getElementById('publish-menu');
     const scheduleView = document.getElementById('publish-schedule-view');
+    const scheduleBtn = document.getElementById('publish-schedule-btn');
     const backBtn = document.getElementById('publish-schedule-back');
     const scheduleConfirm = document.getElementById('publish-schedule-confirm');
     if (!modeBtn || !popover) return;
-
-    // Icon SVG paths by key
-    const icons = {
-        play: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3l14 9-14 9V3z"/>',
-        clock: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>',
-        priority: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/>',
-        calendar: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>',
-    };
 
     function showPopover() { popover.classList.remove('hidden'); }
     function hidePopover() { popover.classList.add('hidden'); showMenu(); }
     function showMenu() { menu.classList.remove('hidden'); scheduleView.classList.add('hidden'); }
     function showSchedule() { menu.classList.add('hidden'); scheduleView.classList.remove('hidden'); }
 
-    function setMode(mode, label, actionLabelText, iconKey) {
-        modeLabel.textContent = label;
-        actionLabel.textContent = actionLabelText;
-        actionBtn.value = mode;
-        if (icons[iconKey]) {
-            modeIcon.innerHTML = icons[iconKey];
-        }
-    }
-
-    // Toggle popover on mode button click
     modeBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         popover.classList.contains('hidden') ? showPopover() : hidePopover();
     });
 
-    // Mode option clicks
-    document.querySelectorAll('.publish-mode-option').forEach(function(opt) {
-        opt.addEventListener('click', function(e) {
+    if (scheduleBtn) {
+        scheduleBtn.addEventListener('click', function(e) {
             e.stopPropagation();
-            var mode = opt.dataset.mode;
-            // Schedule option shows the sub-view instead of immediately selecting
-            if (mode === 'schedule') {
-                showSchedule();
-                return;
-            }
-            setMode(mode, opt.dataset.label, opt.dataset.actionLabel, opt.dataset.icon);
-            hidePopover();
+            showSchedule();
         });
-    });
+    }
 
-    // Schedule sub-view: back button
     if (backBtn) {
         backBtn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -3918,25 +4250,26 @@ function composerApp() {
         });
     }
 
-    // Schedule sub-view: confirm button sets mode to schedule and closes
+    // "Set Schedule" submits the form with action=schedule, but only for a
+    // date and time in the future; otherwise it stops here and says why.
     if (scheduleConfirm) {
         scheduleConfirm.addEventListener('click', function(e) {
-            e.stopPropagation();
             var errEl = document.getElementById('schedule-error');
             var dateVal = document.querySelector('input[name="scheduled_date"]').value;
             var timeVal = document.querySelector('input[name="scheduled_time"]').value;
+            var problem = '';
             if (!dateVal || !timeVal) {
-                if (errEl) { errEl.textContent = cLabel('select-date-time'); errEl.classList.remove('hidden'); }
-                return;
+                problem = cLabel('select-date-time');
+            } else if (new Date(dateVal + 'T' + timeVal) <= new Date()) {
+                problem = cLabel('time-in-future');
             }
-            // Check if the selected datetime is in the past
-            var selected = new Date(dateVal + 'T' + timeVal);
-            if (selected <= new Date()) {
-                if (errEl) { errEl.textContent = cLabel('time-in-future'); errEl.classList.remove('hidden'); }
+            if (problem) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (errEl) { errEl.textContent = problem; errEl.classList.remove('hidden'); }
                 return;
             }
             if (errEl) { errEl.classList.add('hidden'); }
-            setMode('schedule', cLabel('set-datetime'), cLabel('schedule-post'), 'calendar');
             hidePopover();
         });
     }
@@ -3954,18 +4287,6 @@ function composerApp() {
             hidePopover();
         }
     });
-
-    // If the composer was opened with a prefilled scheduled date/time
-    // (e.g. from the calendar "+" CTA, or editing a scheduled post),
-    // auto-switch to Schedule mode. A draft that only carries a *proposed*
-    // time must NOT arm real-schedule mode — its primary action stays Save
-    // Draft, which persists the panel value as proposed_publish_at.
-    var prefillIsProposed = {{ schedule_prefill_is_proposed|yesno:"true,false" }};
-    var schedDateInput = document.querySelector('input[name="scheduled_date"]');
-    var schedTimeInput = document.querySelector('input[name="scheduled_time"]');
-    if (schedDateInput && schedDateInput.value && schedTimeInput && schedTimeInput.value && !prefillIsProposed) {
-        setMode('schedule', cLabel('set-datetime'), cLabel('schedule-post'), 'calendar');
-    }
 })();
 </script>
 {% endblock %}

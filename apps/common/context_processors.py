@@ -44,9 +44,11 @@ def sidebar_context(request):
             SocialAccount.objects.for_workspace(workspace.id)
             .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
             .annotate(
+                # Posts, not rows: a Feed post and its Story count once.
                 queued_post_count=Count(
-                    "platform_posts",
+                    "platform_posts__post",
                     filter=Q(platform_posts__status=PlatformPost.Status.SCHEDULED),
+                    distinct=True,
                 )
             )
             .order_by("platform", "account_name")

@@ -1,0 +1,8 @@
+{% load i18n %}
+{% comment %}
+Small inline tag naming a PlatformPost's format (Story, Reels, Photo) next to
+its account. Renders nothing for the ordinary post, so lists only grow a tag
+where one post has gone out in more than one shape.
+Expects: pp (a PlatformPost).
+{% endcomment %}
+{% if pp.format_label %}<span class="inline-flex items-center gap-0.5 text-[9px] font-semibold uppercase tracking-wide opacity-70 flex-shrink-0">{% include "partials/_format_icon.html" with format=pp.format %}{{ pp.format_label }}</span>{% endif %}

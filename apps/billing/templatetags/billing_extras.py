@@ -79,6 +79,27 @@ def gb(num_bytes):
 
 
 @register.filter
+def storage_size(num_bytes):
+    """Bytes with their unit, in the same decimal units as the quota: ``25 MB``, ``1,2 GB``.
+
+    For figures that may be small (what is used, what is left), where ``gb``
+    would round a few megabytes down to "0".
+    """
+    try:
+        num_bytes = int(num_bytes)
+    except (TypeError, ValueError):
+        return ""
+    unit, value = (
+        ("GB", Decimal(num_bytes) / BYTES_PER_GB)
+        if num_bytes >= BYTES_PER_GB
+        else ("MB", Decimal(num_bytes) / 1_000_000)
+    )
+    value = value.quantize(Decimal("0.1"))
+    places = 0 if value >= 10 or value == value.to_integral_value() else 1
+    return f"{number_format(value.quantize(Decimal(1).scaleb(-places)), decimal_pos=places, use_l10n=True)} {unit}"
+
+
+@register.filter
 def meter_percent(value):
     """A percentage clamped to 0–100 for a CSS width.
 

@@ -1,14 +1,14 @@
 {% load i18n %}
 {% comment %}
 Delete-post confirmation modal for the Publish list tabs.
-Listens for the `open-delete-modal` window event (detail: postId, accountId),
+Listens for the `open-delete-modal` window event (detail: postId, accountId, platformPostId),
 POSTs to composer:post_delete, then dispatches `post-deleted` so that
 publishList().reloadTab() in calendar.html refreshes the active tab (no full reload).
 Include once per tab partial that renders `_post_actions_menu.html`.
 Expects context: workspace, csrf_token.
 {% endcomment %}
-<div x-data="{ showDeleteModal: false, deletePostId: null, deleteAccountId: null, deleting: false }" style="display: contents;"
-     @open-delete-modal.window="showDeleteModal = true; deletePostId = $event.detail.postId; deleteAccountId = $event.detail.accountId || null">
+<div x-data="{ showDeleteModal: false, deletePostId: null, deleteAccountId: null, deletePlatformPostId: null, deleting: false }" style="display: contents;"
+     @open-delete-modal.window="showDeleteModal = true; deletePostId = $event.detail.postId; deleteAccountId = $event.detail.accountId || null; deletePlatformPostId = $event.detail.platformPostId || null">
     <template x-teleport="body">
         <div x-show="showDeleteModal" class="fixed inset-0 z-[60] flex items-center justify-center"
              @keydown.escape.window="showDeleteModal = false"
@@ -44,7 +44,7 @@ Expects context: workspace, csrf_token.
                     <button :disabled="deleting"
                             @click="
                                 deleting = true;
-                                const acctParam = deleteAccountId ? '?account=' + deleteAccountId : '';
+                                const acctParam = deletePlatformPostId ? '?platform_post=' + deletePlatformPostId : (deleteAccountId ? '?account=' + deleteAccountId : '');
                                 fetch('/workspace/{{ workspace.id }}/compose/' + deletePostId + '/delete/' + acctParam, {
                                     method: 'POST',
                                     headers: { 'X-CSRFToken': '{{ csrf_token }}' }

@@ -25,7 +25,7 @@ from apps.social_accounts.models import SocialAccount
 from apps.workspaces.models import Workspace
 
 # Distinguishing substrings for the action-bar controls under test.
-PUBLISH_BTN = 'id="publish-action-btn"'
+PUBLISH_BTN = 'id="publish-now-btn"'
 PUBLISH_ANCHOR = 'id="publish-anchor"'
 SAVE_DRAFT_BTN = 'value="save_draft"'
 SUBMIT_BTN = 'value="submit_for_approval"'

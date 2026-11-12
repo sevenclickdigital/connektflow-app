@@ -285,18 +285,16 @@ def transition_platform_post(
             if platform_post.scheduled_at is not None:
                 platform_post.scheduled_at = None
                 update_fields.add("scheduled_at")
-            # A drafted child is no longer queued — drop its QueueEntry so the
-            # slot frees as a gap. Covers cancel / unschedule paths that would
-            # otherwise orphan the row with a stale assigned_slot_datetime.
-            from apps.calendar.models import QueueEntry
-
-            QueueEntry.objects.filter(
-                post=platform_post.post,
-                queue__social_account=platform_post.social_account,
-            ).delete()
         elif target_status == "published":
             update_fields.add("published_at")  # set by transition_to
         platform_post.save(update_fields=list(update_fields))
+        if target_status == "draft":
+            # A drafted child is no longer queued — drop its QueueEntry so the
+            # slot frees as a gap. Covers cancel / unschedule paths that would
+            # otherwise orphan the row with a stale assigned_slot_datetime.
+            from apps.calendar.services import drop_queue_entry_unless_scheduled
+
+            drop_queue_entry_unless_scheduled(platform_post.post_id, platform_post.social_account_id)
 
     sync_post_scheduled_at(platform_post.post)
     return platform_post
@@ -334,6 +332,7 @@ def clone_post(post, *, author=None):
                     PlatformPost(
                         post=new_post,
                         social_account=pp.social_account,
+                        format=pp.format,
                         status="draft",
                         platform_specific_title=pp.platform_specific_title,
                         platform_specific_caption=pp.platform_specific_caption,
@@ -449,7 +448,99 @@ def media_blocker(social_account, *, media_types) -> str:
     return ""
 
 
-def publish_blocker(social_account, *, media_types, platform_extra: dict | None = None) -> str:
+def format_blocker(format: str, ordered_media_types) -> str:
+    """Why media in this order can't be published as ``format``, or "".
+
+    ``ordered_media_types`` is the type of each usable attachment by position;
+    only the first two matter. The default format accepts anything here — what
+    a platform needs from it is ``media_blocker``'s business.
+    """
+    from providers.types import FORMAT_POST_TYPES, media_fits_post_type
+
+    post_type = FORMAT_POST_TYPES.get(format)
+    if post_type is None:
+        return ""
+    types = list(ordered_media_types)
+    if media_fits_post_type(post_type, len(types), types[0] if types else None):
+        return ""
+    if format == "story":
+        return _("A Story needs exactly one photo or one video.")
+    if format == "reel":
+        return _("A Reel needs exactly one video.")
+    return _("A profile photo needs exactly one image.")
+
+
+def post_ordered_media_types(post, *, excluding=None) -> list[str]:
+    """The type of each usable attachment of ``post``, by position (first two only)."""
+    attachments = _usable_attachments().filter(post_id=post.pk)
+    if excluding is not None:
+        attachments = attachments.exclude(pk=excluding.pk)
+    return list(attachments.order_by("position").values_list("media_asset__media_type", flat=True)[:2])
+
+
+def format_media_replacements(platform_posts):
+    """``{platform_post_id: {source_asset_id: MediaAsset}}`` for rows with their own crops.
+
+    A format can publish its own crop of an attachment (a 9:16 copy for the
+    Story while the feed keeps the original). The row lists those copies in
+    ``platform_specific_media``; each names, through ``derived_from``, the
+    attachment it replaces. A copy whose source is no longer attached simply
+    matches nothing. One query for all the rows given.
+    """
+    from apps.media_library.models import MediaAsset
+
+    wanted = {pp.pk: [str(i) for i in (pp.platform_specific_media or [])] for pp in platform_posts}
+    all_ids = {i for ids in wanted.values() for i in ids}
+    if not all_ids:
+        return {}
+    assets = {str(a.pk): a for a in MediaAsset.objects.filter(pk__in=all_ids, derived_from__isnull=False)}
+    return {
+        pk: {assets[i].derived_from_id: assets[i] for i in ids if i in assets}
+        for pk, ids in wanted.items()
+        if any(i in assets for i in ids)
+    }
+
+
+def apply_format_media(platform_post, attachments):
+    """``attachments`` (PostMedia, in order) with this row's own crops swapped in.
+
+    Swaps the ``media_asset`` on the in-memory objects only; nothing is saved.
+    """
+    replacements = format_media_replacements([platform_post]).get(platform_post.pk, {})
+    for pm in attachments:
+        if pm.media_asset_id in replacements:
+            pm.media_asset = replacements[pm.media_asset_id]
+    return attachments
+
+
+def set_format_crop(platform_posts, cropped):
+    """Make ``cropped`` the crop these rows publish in place of its source.
+
+    Replaces any earlier crop of the same source; crops of other attachments
+    are kept.
+    """
+    from apps.media_library.models import MediaAsset
+
+    for pp in platform_posts:
+        current = [str(i) for i in (pp.platform_specific_media or [])]
+        same_source = {
+            str(i)
+            for i in MediaAsset.objects.filter(pk__in=current, derived_from_id=cropped.derived_from_id).values_list(
+                "pk", flat=True
+            )
+        }
+        pp.platform_specific_media = [i for i in current if i not in same_source] + [str(cropped.pk)]
+        pp.save(update_fields=["platform_specific_media", "updated_at"])
+
+
+def publish_blocker(
+    social_account,
+    *,
+    media_types,
+    platform_extra: dict | None = None,
+    format: str = "default",
+    ordered_media_types=None,
+) -> str:
     """Why a post can't publish to ``social_account`` as it stands, or "".
 
     The one statement of this rule. The publisher checks it before calling a
@@ -462,6 +553,10 @@ def publish_blocker(social_account, *, media_types, platform_extra: dict | None 
     reason = media_blocker(social_account, media_types=media_types)
     if reason:
         return reason
+    if ordered_media_types is not None:
+        reason = format_blocker(format, ordered_media_types)
+        if reason:
+            return reason
     if social_account.platform == "pinterest" and not (platform_extra or {}).get("board_id"):
         return _(
             "Pinterest needs a board for every pin. Choose one for this post in the composer before scheduling it."
@@ -481,12 +576,16 @@ def require_publishable(platform_post, *, media_types=None) -> None:
         platform_post.social_account,
         media_types=media_types,
         platform_extra=platform_post.platform_extra,
+        format=platform_post.format,
+        ordered_media_types=(
+            post_ordered_media_types(platform_post.post) if platform_post.format != "default" else None
+        ),
     )
     if reason:
         raise ValueError(reason)
 
 
-def media_change_blocker(post, *, media_types_after) -> str:
+def media_change_blocker(post, *, media_types_after, ordered_media_types_after=None) -> str:
     """Why a media change would strand a scheduled row, or "".
 
     Scheduling checks the post as it stood then; this stops the media a
@@ -500,6 +599,14 @@ def media_change_blocker(post, *, media_types_after) -> str:
 
     children = post.platform_posts.filter(status=PlatformPost.Status.SCHEDULED).select_related("social_account")
     for child in children:
+        if child.format != PlatformPost.Format.DEFAULT and ordered_media_types_after is not None:
+            reason = format_blocker(child.format, ordered_media_types_after)
+            if reason:
+                return _("This post is scheduled as %(format)s on %(platform)s. %(reason)s") % {
+                    "format": child.get_format_display(),
+                    "platform": child.social_account.get_platform_display(),
+                    "reason": reason,
+                }
         if media_blocker(child.social_account, media_types=media_types_after):
             platform = child.social_account.get_platform_display()
             # Two whole sentences rather than one with a slot for the media

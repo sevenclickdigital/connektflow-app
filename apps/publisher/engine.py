@@ -34,7 +34,7 @@ from django.utils import timezone
 from apps.common.db import in_worker_thread, release_idle_connection
 from apps.common.worker import SHUTDOWN_REQUESTED
 from apps.composer.models import PlatformPost
-from apps.composer.services import publish_blocker, usable_media_types
+from apps.composer.services import apply_format_media, publish_blocker, usable_media_types
 from apps.credentials.models import resolve_platform_credentials
 from apps.media_library.storage import download_to_path
 from apps.social_accounts.error_messages import (
@@ -51,7 +51,7 @@ from apps.social_accounts.error_messages import (
 )
 from providers import VIDEO_POST_TYPES, get_provider
 from providers.exceptions import ProviderError, PublishError, RateLimitError
-from providers.types import PostType, PublishContent, PublishState
+from providers.types import FORMAT_POST_TYPES, PostType, PublishContent, PublishState, media_fits_post_type
 
 from .manual_delivery import deliver_by_notification, is_notify_delivery
 from .models import PublishLog, RateLimitState
@@ -596,7 +596,7 @@ class PublishEngine:
         if not platform_post.effective_first_comment:
             return
         # Stories have no comment thread to post into.
-        if (platform_post.platform_extra or {}).get("post_type") == "story":
+        if platform_post.is_story:
             return
         if platform_post.first_comment_status in (
             PlatformPost.FirstCommentStatus.PENDING,
@@ -750,12 +750,9 @@ class PublishEngine:
         must never propagate into a retry (which would double-post).
         """
         try:
-            from apps.calendar.models import QueueEntry
+            from apps.calendar.services import drop_queue_entry_unless_scheduled
 
-            QueueEntry.objects.filter(
-                post_id=platform_post.post_id,
-                queue__social_account_id=platform_post.social_account_id,
-            ).delete()
+            drop_queue_entry_unless_scheduled(platform_post.post_id, platform_post.social_account_id)
         except Exception:
             logger.warning(
                 "Failed to drop QueueEntry for published PlatformPost %s",
@@ -781,7 +778,10 @@ class PublishEngine:
 
         account = platform_post.social_account
         platform = account.platform
-        attachments = list(platform_post.post.media_attachments.select_related("media_asset").order_by("position"))
+        attachments = apply_format_media(
+            platform_post,
+            list(platform_post.post.media_attachments.select_related("media_asset").order_by("position")),
+        )
 
         # Every scheduled row passes through here, however it was scheduled, so
         # this is where a post the platform can only refuse is stopped for
@@ -792,6 +792,8 @@ class PublishEngine:
             account,
             media_types=usable_media_types(pm.media_asset for pm in attachments),
             platform_extra=platform_post.platform_extra,
+            format=platform_post.format,
+            ordered_media_types=[pm.media_asset.media_type for pm in attachments if pm.media_asset.file],
         )
         if blocker:
             raise PublishError(blocker, platform=account.get_platform_display(), retryable=False)
@@ -924,6 +926,7 @@ class PublishEngine:
                 # demote every Instagram/Threads carousel to a single post.
                 media_count=usable_attachments,
                 first_media_type=first_media_type,
+                format=platform_post.format,
             )
 
             content = PublishContent(
@@ -979,24 +982,9 @@ class PublishEngine:
         are added and removed by endpoints that persist on their own (composer
         remove_media, the media picker), so it can outlive the media it
         described. Trusting it then routes the post to an endpoint its
-        attachments do not fit: a Reels or video endpoint handed an image, or a
-        video endpoint handed nothing at all.
-
-        Only hints that name a media shape are checked. TEXT, LINK, PIN and the
-        rest say nothing about attachments and are left to their callers.
+        attachments do not fit.
         """
-        if hint is PostType.REEL:
-            # Every Reels API takes exactly one video.
-            return media_count == 1 and first_media_type == "video"
-        if hint is PostType.VIDEO:
-            # _publish_video posts media_urls[0] to the video endpoint as-is.
-            return first_media_type == "video"
-        if hint is PostType.STORY:
-            # A Story is one photo or one video, never text or a set.
-            return media_count == 1 and first_media_type in ("image", "video")
-        if hint is PostType.PROFILE_PHOTO:
-            return media_count == 1 and first_media_type == "image"
-        return True
+        return media_fits_post_type(hint, media_count, first_media_type)
 
     @staticmethod
     def _resolve_post_type(
@@ -1004,18 +992,29 @@ class PublishEngine:
         platform_extra: dict,
         media_count: int,
         first_media_type: str | None,
+        format: str = "default",
     ) -> PostType:
         """Derive the correct PostType from context.
 
         Priority:
+        0. The row's format (Story, Reels, profile photo). It is what the user
+           chose for this row, so it is never second-guessed here: the caller
+           has already refused a format the media doesn't fit.
         1. Explicit hint in platform_extra (validated against PostType enum,
-           and against the media actually attached right now)
+           and against the media actually attached right now). Hints naming a
+           format are ignored: on a default row they are leftovers, and
+           honouring one would publish a second Story next to the Story row.
         2. Platform defaults (Pinterest → PIN)
         3. Multi-media on carousel-capable platforms → CAROUSEL
         4. Fallback: video → VIDEO (REEL on Instagram), image → IMAGE, else → TEXT
         """
+        if format in FORMAT_POST_TYPES:
+            return FORMAT_POST_TYPES[format]
+
         # 1. Explicit post_type hint from platform_extra
         hint = platform_extra.get("post_type")
+        if hint in FORMAT_POST_TYPES:
+            hint = None
         if hint:
             valid_values = {pt.value for pt in PostType}
             if hint not in valid_values:
@@ -1151,6 +1150,8 @@ class PublishEngine:
             if not author:
                 return
             platform = platform_post.social_account.get_platform_display()
+            if platform_post.format_label:
+                platform = f"{platform} ({platform_post.format_label})"
             notify(
                 author,
                 EventType.POST_FAILED,

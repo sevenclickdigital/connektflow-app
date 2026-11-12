@@ -166,8 +166,57 @@ def _next_available_slot(social_account, *, exclude_pp_ids=(), after=None):
 
 
 def _platform_post_for(post, social_account):
-    """The post's PlatformPost child on this channel (or ``None``)."""
-    return post.platform_posts.filter(social_account=social_account).first()
+    """The post's representative PlatformPost on this channel (or ``None``).
+
+    A post can go out in several formats on one account (a Feed post and a
+    Story); they share the account's queue slot, so the queue works on one row
+    and ``_write_slot`` carries the slot to the others. The row returned is a
+    movable one when there is any, so it reads as protected only when every
+    format already published.
+    """
+    from apps.composer.models import PlatformPost
+
+    rows = list(post.platform_posts.filter(social_account=social_account))
+    if not rows:
+        return None
+    rows.sort(key=lambda p: (p.status in PlatformPost.PROTECTED_STATUSES, p.format != PlatformPost.Format.DEFAULT))
+    return rows[0]
+
+
+def _movable_formats(pp):
+    """``pp`` and the other formats of its post on the same account that may still move."""
+    from apps.composer.models import PlatformPost
+
+    if pp is None:
+        return PlatformPost.objects.none()
+    return PlatformPost.objects.filter(post_id=pp.post_id, social_account_id=pp.social_account_id).exclude(
+        status__in=PlatformPost.PROTECTED_STATUSES
+    )
+
+
+def _slot_holder_ids(pp):
+    """Rows to leave out of occupancy while re-slotting ``pp``: all its movable formats."""
+    if pp is None:
+        return []
+    return [pp.id, *_movable_formats(pp).exclude(id=pp.id).values_list("id", flat=True)]
+
+
+def drop_queue_entry_unless_scheduled(post_id, social_account_id):
+    """Free the account's queue slot for this post, unless another format still needs it.
+
+    Call once the row that left the schedule (published, drafted, deleted) has
+    been saved: a post's formats on one account share one QueueEntry, so it
+    goes only when none of them is still ``scheduled``.
+    """
+    from apps.composer.models import PlatformPost
+
+    if PlatformPost.objects.filter(
+        post_id=post_id,
+        social_account_id=social_account_id,
+        status=PlatformPost.Status.SCHEDULED,
+    ).exists():
+        return
+    QueueEntry.objects.filter(post_id=post_id, queue__social_account_id=social_account_id).delete()
 
 
 def _is_protected(pp):
@@ -210,6 +259,7 @@ def _write_slot(entry, pp, slot_dt):
     if pp is not None:
         pp.scheduled_at = slot_dt
         pp.save(update_fields=["scheduled_at", "updated_at"])
+        _movable_formats(pp).exclude(id=pp.id).update(scheduled_at=slot_dt, updated_at=timezone.now())
         sync_post_scheduled_at(pp.post)
 
 
@@ -231,7 +281,7 @@ def add_post_next_available(post, queue):
         # (mirrors the guard in prioritize/reorder; protects the reslot endpoint).
         if _is_protected(pp):
             return queue.entries.filter(post=post).first()
-        exclude = [pp.id] if pp is not None else []
+        exclude = _slot_holder_ids(pp)
         slot_dt = _next_available_slot(queue.social_account, exclude_pp_ids=exclude)
         if slot_dt is None:
             raise QueueFullError(f"Queue {queue.id} has no open slot within the scheduling horizon.")
@@ -281,9 +331,9 @@ def prioritize(post, queue):
         if target not in movable_dts:
             # If a foreign/fixed post (manual schedule, clone, other queue) holds
             # slot 0, we cannot preempt it — degrade to the next genuine gap.
-            occupied = _occupied_datetimes(queue.social_account, exclude_pp_ids=[pp.id] if pp else [])
+            occupied = _occupied_datetimes(queue.social_account, exclude_pp_ids=_slot_holder_ids(pp))
             if target in occupied:
-                free = _next_available_slot(queue.social_account, exclude_pp_ids=[pp.id] if pp else [])
+                free = _next_available_slot(queue.social_account, exclude_pp_ids=_slot_holder_ids(pp))
                 if free is None:
                     raise QueueFullError(f"Queue {queue.id} has no open slot within the scheduling horizon.")
                 _write_slot(entry, pp, free)
@@ -301,9 +351,7 @@ def prioritize(post, queue):
         mover_old_dts = {dt for _, _, dt in movable if dt in index_of}
         # Datetimes that must stay free: everything occupied on this channel
         # except the movers we are about to relocate (their slots are vacated).
-        avoid_dts = (
-            _occupied_datetimes(queue.social_account, exclude_pp_ids=[pp.id] if pp is not None else []) - mover_old_dts
-        )
+        avoid_dts = _occupied_datetimes(queue.social_account, exclude_pp_ids=_slot_holder_ids(pp)) - mover_old_dts
 
         assigned_idx = {0}  # slot 0 is reserved for the prioritized post
         # Descending so a destination is always vacated before it is written.
@@ -344,8 +392,10 @@ def remove_from_queue(entry):
         # Clear the schedule for any non-protected child (scheduled OR failed),
         # not just 'scheduled', so a removed failed post stops rendering on the
         # calendar at its past attempt time. Published/publishing stay (history).
-        if pp is not None and not _is_protected(pp) and pp.can_transition_to("draft"):
-            transition_platform_post(pp, "draft")
+        if pp is not None and not _is_protected(pp):
+            for row in _movable_formats(pp):
+                if row.can_transition_to("draft"):
+                    transition_platform_post(row, "draft")
         entry.delete()
         sync_post_scheduled_at(post)
 

@@ -51,6 +51,11 @@
     @media (min-width: 768px) {
         .cal-day { min-height: 130px; padding: 8px; }
     }
+    /* Month view fills the height the screen gives it: weeks share it equally and
+       never shrink below the cell's min-height; past that, the area scrolls. */
+    #calendar-content > * { flex-shrink: 0; }
+    .cal-month, .cal-month-grid, .cal-month-inner { flex: 1 0 auto; display: flex; flex-direction: column; }
+    .cal-week { flex: 1 0 0; }
     .cal-day:hover { background: #FAFAF9; }
     .cal-day.past { background: #F5F5F4; }
     .cal-day.past:hover { background: #EEEEEC; }
@@ -79,6 +84,43 @@
     }
     .post-chip:hover { transform: translateX(1px); }
     .post-chip .chip-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Month view: one dense line per post, so a day shows more of them. */
+    .post-chip--compact {
+        gap: 4px; padding: 1px 5px 1px 3px; margin-bottom: 1px;
+        font-size: 10.5px; line-height: 16px; border-radius: 5px;
+    }
+    .post-chip--compact .chip-platform {
+        width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0;
+        display: inline-flex; align-items: center; justify-content: center; color: white;
+    }
+    .post-chip--compact .chip-time {
+        flex-shrink: 0; margin-left: auto; font-weight: 700;
+        font-variant-numeric: tabular-nums; opacity: .85;
+    }
+    .post-chip--compact .cal-select-box { width: 12px; height: 12px; }
+    .post-chip.is-card-open { box-shadow: 0 0 0 2px #F97316; }
+
+    /* Add menu of a day cell and the card a chip opens — both float over the grid. */
+    .cal-float {
+        position: fixed; z-index: 65; background: white; border-radius: 12px;
+        border: 1px solid #E7E5E4; box-shadow: 0 12px 32px rgba(28,25,23,.18);
+    }
+    .cal-add-menu { width: 200px; padding: 6px; }
+    .cal-add-menu-item {
+        display: flex; align-items: center; gap: 10px; width: 100%;
+        padding: 8px 10px; border-radius: 8px; font-size: 13px; color: #44403C;
+        text-align: left; text-decoration: none; cursor: pointer; background: none; border: none;
+    }
+    .cal-add-menu-item:hover { background: #F5F5F4; color: #1C1917; }
+    .cal-add-menu-item svg { width: 16px; height: 16px; color: #78716C; flex-shrink: 0; }
+    .cal-post-card { width: min(600px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow-y: auto; }
+    .cal-post-card-grid { display: grid; grid-template-columns: 1fr; }
+    .cal-post-card-side { border-top: 1px solid #E7E5E4; }
+    @media (min-width: 640px) {
+        .cal-post-card-grid { grid-template-columns: 1.2fr 1fr; }
+        .cal-post-card-side { border-top: 0; border-left: 1px solid #E7E5E4; }
+    }
 
     /* Status colors */
     .status-draft      { background: #F5F5F4; color: #57534E; border: 1px solid #E7E5E4; }
@@ -522,6 +564,18 @@ function calendarApp() {
                     e.stopPropagation();
                 }
             }, true);
+            // A floating card or menu would stay behind while what it points at scrolls away.
+            document.addEventListener('scroll', (e) => {
+                if (e.target.closest && e.target.closest('.cal-float')) return;
+                this.closePostCard();
+                this.addMenu.open = false;
+            }, true);
+            document.body.addEventListener('htmx:beforeSwap', (e) => {
+                if (e.detail.target && e.detail.target.id === 'calendar-content') {
+                    this.closePostCard();
+                    this.addMenu.open = false;
+                }
+            });
         },
 
         // Sortable instances bound to cells an HTMX swap threw away. They hold
@@ -582,6 +636,76 @@ function calendarApp() {
             });
         },
 
+        // Add menu of a day cell: one floating menu, moved next to whichever "+" was clicked.
+        addMenu: { open: false, date: '', style: {} },
+
+        openAddMenu(button, date) {
+            this.closePostCard();
+            const r = button.getBoundingClientRect();
+            const left = Math.min(r.left, window.innerWidth - 212);
+            const top = r.bottom + 6 + 150 > window.innerHeight ? r.top - 156 : r.bottom + 6;
+            this.addMenu = { open: true, date, style: { top: top + 'px', left: Math.max(12, left) + 'px' } };
+        },
+
+        composeUrl() {
+            return '{% url "composer:compose" workspace_id=workspace.id %}?scheduled_date=' + this.addMenu.date + '&scheduled_time=09:00';
+        },
+
+        addDate() {
+            const date = this.addMenu.date;
+            this.addMenu.open = false;
+            const form = this.$refs.eventForm && this.$refs.eventForm.querySelector('form');
+            if (!form) return;
+            form.reset();
+            form.elements.start_date.value = date;
+            form.elements.end_date.value = date;
+            this.showEventForm = true;
+            this.$nextTick(() => form.elements.title.focus());
+        },
+
+        addIdea() {
+            this.addMenu.open = false;
+            window.dispatchEvent(new CustomEvent('open-create-idea'));
+        },
+
+        // The card a chip opens. Loaded on demand, placed beside the chip.
+        postCard: { open: false, style: {}, chip: null },
+
+        openPostCard(e, chip) {
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            if (this._draggingChip) return;
+            if (this.postCard.chip === chip && this.postCard.open) { this.closePostCard(); return; }
+            this.closePostCard();
+            this.addMenu.open = false;
+            chip.classList.add('is-card-open');
+            this.postCard = { open: true, style: this._cardStyle(chip, 420), chip };
+            const body = document.getElementById('cal-post-card-body');
+            body.innerHTML = '<div class="p-8 text-center text-xs text-stone-400">' + body.dataset.loading + '</div>';
+            const url = chip.dataset.cardUrl + '?tz=' + encodeURIComponent(this.calendarFilters.tz || '');
+            htmx.ajax('GET', url, { target: body, swap: 'innerHTML' }).then(() => {
+                if (this.postCard.chip === chip) {
+                    this.postCard.style = this._cardStyle(chip, body.parentElement.offsetHeight);
+                }
+            });
+        },
+
+        closePostCard() {
+            if (this.postCard.chip) this.postCard.chip.classList.remove('is-card-open');
+            this.postCard = { open: false, style: {}, chip: null };
+        },
+
+        // Right of the chip when it fits, else left of it; kept inside the viewport.
+        _cardStyle(chip, height) {
+            const r = chip.getBoundingClientRect();
+            const width = Math.min(600, window.innerWidth - 24);
+            let left = r.right + 8;
+            if (left + width > window.innerWidth - 12) left = r.left - width - 8;
+            left = Math.max(12, Math.min(left, window.innerWidth - width - 12));
+            const top = Math.max(12, Math.min(r.top, window.innerHeight - height - 12));
+            return { top: top + 'px', left: left + 'px' };
+        },
+
         rescheduleChip(platformPostId, newDatetime) {
             // newDatetime is the target cell's workspace-tz wall date/time (see
             // _cell_compose_params); reschedule_post interprets the naive value
@@ -612,7 +736,7 @@ function calendarApp() {
                 }
                 // Re-render on success too. SortableJS drops the chip at the
                 // cursor's index, so the target cell is left out of time order
-                // and — in month view, which renders only the first three posts
+                // and — in month view, which renders only the first MONTH_DAY_CHIPS posts
                 // plus a "+N more" count — one chip over the cap it was
                 // rendered with. It's a partial swap of #calendar-content, not
                 // a page load.
