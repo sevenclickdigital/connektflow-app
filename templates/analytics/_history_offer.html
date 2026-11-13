@@ -46,22 +46,22 @@ result (ImportResult, only after an import ran).
 
 {% elif importable %}
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; margin-bottom: 12px;
-              border: 1px solid var(--border, #E7E5E4); border-radius: 12px; background: var(--surface-0, #FFF);">
+              border: 1px solid var(--border, #E5E7EB); border-radius: 12px; background: var(--surface-0, #FFF);">
     <div style="flex: 1; min-width: 220px;">
-      <p style="margin: 0; font-size: 0.8125rem; font-weight: 600; color: var(--text-primary, #1C1917);">
+      <p style="margin: 0; font-size: 0.8125rem; font-weight: 600; color: var(--text-primary, #0F172A);">
         {% blocktranslate count counter=importable trimmed %}
           {{ counter }} post on this channel isn't here yet
         {% plural %}
           {{ counter }} posts on this channel aren't here yet
         {% endblocktranslate %}
       </p>
-      <p style="margin: 2px 0 0; font-size: 0.75rem; color: var(--text-tertiary, #78716C);">
+      <p style="margin: 2px 0 0; font-size: 0.75rem; color: var(--text-tertiary, #64748B);">
         {% comment %}
         Says plainly that metrics follow later: the posts appear immediately
         but their numbers come from the next analytics sync, and a row of
         zeroes with no explanation reads as the import having failed.
         {% endcomment %}
-        {% translate "Posts published outside Brightbean. Import them to see them here — their metrics follow on the next sync." %}
+        {% translate "Posts published outside Automator. Import them to see them here — their metrics follow on the next sync." %}
       </p>
     </div>
     {% if can_import %}
@@ -71,7 +71,7 @@ result (ImportResult, only after an import ran).
             hx-swap="outerHTML"
             hx-disabled-elt="this"
             style="flex-shrink: 0; padding: 8px 16px; font-size: 0.8125rem; font-weight: 600; color: #FFF;
-                   background: var(--primary, #F97316); border: 0; border-radius: 9999px; cursor: pointer;">
+                   background: var(--primary, #7C3AED); border: 0; border-radius: 9999px; cursor: pointer;">
       {% translate "Import" %}
     </button>
     {% endif %}

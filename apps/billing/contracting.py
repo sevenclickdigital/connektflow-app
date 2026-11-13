@@ -118,7 +118,7 @@ def subscribe_workspace(workspace, *, client=None, email=""):
             external_reference=workspace.pk,
             # Translated: it reaches the customer, on the Asaas invoice
             # and in the charge notification emails Asaas sends.
-            description=str(_("Brightbean Studio — workspace %(name)s") % {"name": workspace.name}),
+            description=str(_("Automator — workspace %(name)s") % {"name": workspace.name}),
         )
 
     subscription_id = remote.get("id") or ""
@@ -171,8 +171,7 @@ def subscribe_storage_addon(addon, *, client=None):
             value_cents=addon.total_price_cents,
             external_reference=reference,
             description=str(
-                _("Brightbean Studio — %(gb)s GB extra storage for %(name)s")
-                % {"gb": addon.quantity, "name": workspace.name}
+                _("Automator — %(gb)s GB extra storage for %(name)s") % {"gb": addon.quantity, "name": workspace.name}
             ),
         )
 

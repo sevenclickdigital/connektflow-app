@@ -13,23 +13,23 @@ layout padding and means nothing inside a modal.
 <style>
   /* ── Media Library Tokens (inherit from brand) ── */
   .ml-dropzone {
-    border: 2px dashed var(--border, #E7E5E4);
+    border: 2px dashed var(--border, #E5E7EB);
     border-radius: var(--radius-xl, 0.75rem);
     transition: border-color var(--dur-base, 200ms) var(--ease-out, ease),
                 background var(--dur-base, 200ms) var(--ease-out, ease);
   }
   .ml-dropzone.drag-over {
-    border-color: var(--primary, #F97316);
-    background: var(--primary-soft, #FFF7ED);
+    border-color: var(--primary, #7C3AED);
+    background: var(--primary-soft, #F9F5FF);
   }
   .ml-asset-card {
     background: var(--surface-0, #FFF);
-    border: 1px solid var(--border, #E7E5E4);
+    border: 1px solid var(--border, #E5E7EB);
     border-radius: var(--radius-xl, 0.75rem);
     transition: all var(--dur-base, 200ms) var(--ease-out, ease);
   }
   .ml-asset-card:hover {
-    box-shadow: var(--shadow-lg, 0 10px 15px rgba(23,20,18,0.08));
+    box-shadow: var(--shadow-lg, 0 10px 15px rgba(15, 23, 42,0.08));
     border-color: transparent;
     transform: translateY(-2px);
   }
@@ -37,54 +37,54 @@ layout padding and means nothing inside a modal.
      choice through its own border, so it never shows two outlines at once. */
   .ml-asset-card-picked,
   .ml-asset-card-picked:hover {
-    border-color: var(--primary, #F97316);
-    box-shadow: 0 0 0 1px var(--primary, #F97316),
-                var(--shadow-md, 0 4px 6px rgba(23,20,18,0.07));
+    border-color: var(--primary, #7C3AED);
+    box-shadow: 0 0 0 1px var(--primary, #7C3AED),
+                var(--shadow-md, 0 4px 6px rgba(15, 23, 42,0.07));
   }
   .ml-folder-item {
     transition: all var(--dur-fast, 150ms) ease;
   }
-  .ml-folder-item:hover { background: var(--surface-1, #FAFAF9); }
+  .ml-folder-item:hover { background: var(--surface-1, #FAFAFF); }
   .ml-folder-item.active {
-    background: var(--primary-soft, #FFF7ED);
-    color: var(--brand-700, #C2410C);
+    background: var(--primary-soft, #F9F5FF);
+    color: var(--brand-700, #5B21B6);
     font-weight: 600;
   }
   .ml-sidebar {
     background: var(--surface-0, #FFF);
-    border-right: 1px solid var(--border, #E7E5E4);
+    border-right: 1px solid var(--border, #E5E7EB);
   }
   .ml-filter-pill {
     font-size: 0.75rem;
     font-weight: 600;
     padding: 5px 12px;
     border-radius: 9999px;
-    border: 1px solid var(--border, #E7E5E4);
+    border: 1px solid var(--border, #E5E7EB);
     background: var(--surface-0, #FFF);
-    color: var(--text-secondary, #57534E);
+    color: var(--text-secondary, #475569);
     cursor: pointer;
     transition: all var(--dur-fast, 150ms) ease;
   }
-  .ml-filter-pill:hover { border-color: var(--border-hover, #D6D3D1); }
+  .ml-filter-pill:hover { border-color: var(--border-hover, #CBD5E1); }
   .ml-filter-pill.active {
-    background: var(--primary, #F97316);
+    background: var(--primary, #7C3AED);
     color: var(--text-inverse, #FFF);
-    border-color: var(--primary, #F97316);
+    border-color: var(--primary, #7C3AED);
   }
   .ml-progress-bar {
-    background: var(--surface-2, #F5F5F4);
+    background: var(--surface-2, #F5F3FF);
     border-radius: 9999px;
     overflow: hidden;
     height: 4px;
   }
   .ml-progress-fill {
     height: 100%;
-    background: var(--primary, #F97316);
+    background: var(--primary, #7C3AED);
     border-radius: 9999px;
     transition: width 150ms ease;
   }
   .ml-detail-overlay {
-    background: rgba(23, 20, 18, 0.3);
+    background: rgba(15, 23, 42, 0.3);
     backdrop-filter: blur(4px);
   }
   .ml-type-badge {
@@ -96,14 +96,14 @@ layout padding and means nothing inside a modal.
     border-radius: var(--radius-sm, 0.25rem);
   }
   .ml-thumb-placeholder {
-    background: linear-gradient(135deg, var(--surface-2, #F5F5F4) 0%, var(--surface-1, #FAFAF9) 100%);
+    background: linear-gradient(135deg, var(--surface-2, #F5F3FF) 0%, var(--surface-1, #FAFAFF) 100%);
   }
   @keyframes ml-shimmer {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
   }
   .ml-shimmer {
-    background: linear-gradient(90deg, var(--surface-2, #F5F5F4) 25%, var(--surface-1, #FAFAF9) 50%, var(--surface-2, #F5F5F4) 75%);
+    background: linear-gradient(90deg, var(--surface-2, #F5F3FF) 25%, var(--surface-1, #FAFAFF) 50%, var(--surface-2, #F5F3FF) 75%);
     background-size: 200% 100%;
     animation: ml-shimmer 1.5s ease infinite;
   }

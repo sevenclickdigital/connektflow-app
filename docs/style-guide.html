@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BrightBean Studio - Style Guide</title>
+<title>Automator - Style Guide</title>
 <style>
 /* ─────────────────────────────────────────────────────────────
    TOKENS - copied verbatim from theme/static_src/src/styles.css (:root).
    If you change a token there, change it here too.
    ───────────────────────────────────────────────────────────── */
 :root {
-  --brand-50:  #FFF7ED; --brand-100: #FFEDD5; --brand-200: #FED7AA; --brand-300: #FDBA74; --brand-400: #FB923C;
-  --brand-500: #F97316; --brand-600: #EA580C; --brand-700: #C2410C; --brand-800: #9A3412; --brand-900: #7C2D12;
+  --brand-50:  #F9F5FF; --brand-100: #F3E8FF; --brand-200: #E9D5FF; --brand-300: #D8B4FE; --brand-400: #A855F7;
+  --brand-500: #7C3AED; --brand-600: #6D28D9; --brand-700: #5B21B6; --brand-800: #5B21B6; --brand-900: #5B21B6;
 
-  --brand-green-100: #EFF2DC; --brand-green-200: #DDE4B9; --brand-green-500: #94A43F; --brand-green-600: #7B8A33;
+  --brand-green-100: #F3E8FF; --brand-green-200: #C4B5FD; --brand-green-500: #7C3AED; --brand-green-600: #6D28D9;
 
   --brand-font-display: Georgia, 'Times New Roman', serif;
   --brand-font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -22,10 +22,10 @@
   --primary: var(--brand-500); --primary-hover: var(--brand-600); --primary-soft: var(--brand-50);
   --primary-muted: var(--brand-100); --primary-ring: var(--brand-200);
 
-  --neutral-950: #171412; --neutral-900: #1C1917; --neutral-800: #292524; --neutral-700: #44403C; --neutral-600: #57534E;
-  --neutral-500: #78716C; --neutral-400: #A8A29E; --neutral-300: #D6D3D1; --neutral-200: #E7E5E4; --neutral-100: #F5F5F4; --neutral-50: #FAFAF9;
+  --neutral-950: #0f172a; --neutral-900: #0F172A; --neutral-800: #1e293b; --neutral-700: #334155; --neutral-600: #475569;
+  --neutral-500: #64748B; --neutral-400: #94A3B8; --neutral-300: #CBD5E1; --neutral-200: #E5E7EB; --neutral-100: #F5F3FF; --neutral-50: #FAFAFF;
 
-  --surface-0: #FFFFFF; --surface-page: rgb(247, 246, 242); --surface-1: var(--neutral-50); --surface-2: var(--neutral-100);
+  --surface-0: #FFFFFF; --surface-page: #F8FAFF; --surface-1: var(--neutral-50); --surface-2: var(--neutral-100);
   --surface-3: var(--neutral-200); --border: var(--neutral-200); --border-hover: var(--neutral-300);
 
   --text-primary: var(--neutral-900); --text-secondary: var(--neutral-600); --text-tertiary: var(--neutral-500);
@@ -43,12 +43,12 @@
   --accent-rose: #F43F5E; --accent-rose-soft: #FFF1F2; --accent-amber: #F59E0B; --accent-amber-soft: #FFFBEB;
   --accent-indigo: #6366F1; --accent-indigo-soft: #EEF2FF; --accent-emerald: #10B981; --accent-emerald-soft: #ECFDF5;
 
-  --shadow-xs: 0 1px 2px rgba(23,20,18,0.05);
-  --shadow-sm: 0 1px 3px rgba(23,20,18,0.08), 0 1px 2px rgba(23,20,18,0.04);
-  --shadow-md: 0 4px 6px rgba(23,20,18,0.06), 0 2px 4px rgba(23,20,18,0.04);
-  --shadow-lg: 0 10px 15px rgba(23,20,18,0.08), 0 4px 6px rgba(23,20,18,0.04);
-  --shadow-xl: 0 20px 25px rgba(23,20,18,0.08), 0 8px 10px rgba(23,20,18,0.04);
-  --shadow-primary: 0 4px 14px rgba(249,115,22,0.28);
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42,0.05);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42,0.08), 0 1px 2px rgba(15, 23, 42,0.04);
+  --shadow-md: 0 4px 6px rgba(15, 23, 42,0.06), 0 2px 4px rgba(15, 23, 42,0.04);
+  --shadow-lg: 0 10px 15px rgba(15, 23, 42,0.08), 0 4px 6px rgba(15, 23, 42,0.04);
+  --shadow-xl: 0 20px 25px rgba(15, 23, 42,0.08), 0 8px 10px rgba(15, 23, 42,0.04);
+  --shadow-primary: 0 4px 14px rgba(124, 58, 237,0.28);
 
   --radius-sm: 0.25rem; --radius-md: 0.375rem; --radius-lg: 0.5rem; --radius-xl: 0.75rem; --radius-2xl: 1rem; --radius-full: 9999px;
 
@@ -103,7 +103,7 @@ table.tbl td.mono { color: var(--text-secondary); }
    APP COMPONENT CLASSES - copied from styles.css (same names)
    ───────────────────────────────────────────────────────────── */
 .btn-brand { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: var(--font-body); font-weight: 600; font-size: 0.875rem; padding: 0.625rem 1.5rem; border-radius: var(--radius-full); border: none; cursor: pointer; transition: all var(--dur-base) var(--ease-out); letter-spacing: 0.005em; background: var(--primary); color: var(--text-inverse); box-shadow: var(--shadow-primary); width: 100%; }
-.btn-brand:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(249,115,22,0.35); }
+.btn-brand:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124, 58, 237,0.35); }
 .btn-brand:active { transform: translateY(0); }
 .btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: var(--font-body); font-weight: 600; font-size: 0.875rem; padding: 0.625rem 1.5rem; border-radius: var(--radius-full); cursor: pointer; transition: all var(--dur-base) var(--ease-out); background: var(--surface-0); color: var(--text-primary); box-shadow: var(--shadow-xs); border: 1.5px solid var(--border); width: 100%; }
 .btn-outline:hover { background: var(--surface-1); border-color: var(--border-hover); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
@@ -139,7 +139,7 @@ table.tbl td.mono { color: var(--text-secondary); }
 
 .divider-text { display: flex; align-items: center; gap: 1rem; color: var(--text-ghost); font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
 .divider-text::before, .divider-text::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.auth-bg { background-color: var(--surface-1); background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(249,115,22,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(20,184,166,0.04), transparent); }
+.auth-bg { background-color: var(--surface-1); background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 58, 237,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(20,184,166,0.04), transparent); }
 .auth-card { background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-2xl); box-shadow: var(--shadow-lg); padding: 2.5rem; width: 100%; max-width: 420px; }
 .alert-error { background: var(--error-50); border: 1px solid rgba(239,68,68,0.2); border-radius: var(--radius-lg); padding: 0.75rem 1rem; color: var(--error-700); font-size: 0.8125rem; line-height: 1.5; }
 .alert-success { background: var(--success-50); border: 1px solid rgba(34,197,94,0.2); border-radius: var(--radius-lg); padding: 0.75rem 1rem; color: var(--success-700); font-size: 0.8125rem; line-height: 1.5; }
@@ -167,13 +167,13 @@ table.tbl td.mono { color: var(--text-secondary); }
 .a-delta.neutral { color: var(--text-tertiary); background: var(--neutral-100); }
 .a-calc-tag { flex-shrink: 0; font-size: 0.625rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-tertiary); background: var(--surface-2); border-radius: var(--radius-full); padding: 2px 7px; white-space: nowrap; }
 .a-calc-note { font-size: 0.6875rem; line-height: 1.4; color: var(--text-tertiary); }
-.cal-filter-select { padding: 6px 28px 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #57534E; background: white; border: 1px solid #E7E5E4; cursor: pointer; transition: all 150ms ease; font-family: inherit; }
-.cal-filter-select:hover { border-color: #D6D3D1; }
-.cal-filter-select:focus { outline: none; border-color: #F97316; box-shadow: 0 0 0 2px rgba(249,115,22,0.15); }
-.bb-toast { display: flex; align-items: center; gap: .625rem; padding: .625rem 1rem .625rem .75rem; border-radius: .75rem; color: #fff; box-shadow: 0 12px 30px rgba(23,20,18,.32); }
+.cal-filter-select { padding: 6px 28px 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #475569; background: white; border: 1px solid #E5E7EB; cursor: pointer; transition: all 150ms ease; font-family: inherit; }
+.cal-filter-select:hover { border-color: #CBD5E1; }
+.cal-filter-select:focus { outline: none; border-color: #7C3AED; box-shadow: 0 0 0 2px rgba(124, 58, 237,0.15); }
+.bb-toast { display: flex; align-items: center; gap: .625rem; padding: .625rem 1rem .625rem .75rem; border-radius: .75rem; color: #fff; box-shadow: 0 12px 30px rgba(15, 23, 42,.32); }
 .bb-toast-title { font-size: .8125rem; font-weight: 600; line-height: 1.2; }
-.bb-toast-body { font-size: .75rem; color: #A8A29E; line-height: 1.2; }
-.toast-saved { display: inline-block; background: #1C1917; color: white; padding: 8px 16px; border-radius: 9999px; font-size: 13px; font-weight: 500; box-shadow: 0 10px 15px rgba(23,20,18,0.2); }
+.bb-toast-body { font-size: .75rem; color: #94A3B8; line-height: 1.2; }
+.toast-saved { display: inline-block; background: #0F172A; color: white; padding: 8px 16px; border-radius: 9999px; font-size: 13px; font-weight: 500; box-shadow: 0 10px 15px rgba(15, 23, 42,0.2); }
 
 /* Tailwind-utility recreations used only by this static page */
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; font-size: 0.6875rem; font-weight: 600; border-radius: 9999px; border: 1px solid; }
@@ -181,22 +181,22 @@ table.tbl td.mono { color: var(--text-secondary); }
 .conn { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
 .conn i { width: 6px; height: 6px; border-radius: 9999px; display: inline-block; }
 .tw-btn { font-family: inherit; cursor: pointer; font-size: 14px; padding: 8px 16px; transition: background 150ms ease, border-color 150ms ease; }
-.tw-secondary { font-weight: 500; color: #57534E; background: #fff; border: 1px solid #E7E5E4; border-radius: 0.5rem; }
-.tw-secondary:hover { background: #FAFAF9; }
-.tw-neutral { font-weight: 600; color: #44403C; background: #F5F5F4; border: none; border-radius: 9999px; }
-.tw-neutral:hover { background: #E7E5E4; }
+.tw-secondary { font-weight: 500; color: #475569; background: #fff; border: 1px solid #E5E7EB; border-radius: 0.5rem; }
+.tw-secondary:hover { background: #FAFAFF; }
+.tw-neutral { font-weight: 600; color: #334155; background: #F5F3FF; border: none; border-radius: 9999px; }
+.tw-neutral:hover { background: #E5E7EB; }
 .tw-danger { font-weight: 600; color: #fff; background: #EF4444; border: none; border-radius: 9999px; }
 .tw-danger:hover { background: #DC2626; }
-.tw-icon { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 0.5rem; border: 1px solid #E7E5E4; color: #A8A29E; background: #fff; cursor: pointer; transition: all 150ms; }
-.tw-icon:hover { color: #44403C; border-color: #D6D3D1; background: #FAFAF9; }
+.tw-icon { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 0.5rem; border: 1px solid #E5E7EB; color: #94A3B8; background: #fff; cursor: pointer; transition: all 150ms; }
+.tw-icon:hover { color: #334155; border-color: #CBD5E1; background: #FAFAFF; }
 .modal-shell { position: relative; background: var(--surface-page); border-radius: var(--radius-lg); padding: 28px; display: flex; justify-content: center; overflow: hidden; }
 .modal-shell::before { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.3); }
 .modal-card { position: relative; background: #fff; width: 100%; padding: 24px; }
-.dropdown { background: #fff; border-radius: 0.5rem; box-shadow: var(--shadow-lg), 0 0 0 1px #E7E5E4; padding: 4px 0; width: 224px; }
-.dropdown .opt { display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 12px; color: #44403C; }
-.dropdown .opt:hover { background: #FAFAF9; }
-.dropdown .opt.sel { background: #FFF7ED; color: #C2410C; }
-.dropdown .opt.head { font-weight: 600; color: #EA580C; border-bottom: 1px solid #F5F5F4; }
+.dropdown { background: #fff; border-radius: 0.5rem; box-shadow: var(--shadow-lg), 0 0 0 1px #E5E7EB; padding: 4px 0; width: 224px; }
+.dropdown .opt { display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 12px; color: #334155; }
+.dropdown .opt:hover { background: #FAFAFF; }
+.dropdown .opt.sel { background: #F9F5FF; color: #5B21B6; }
+.dropdown .opt.head { font-weight: 600; color: #6D28D9; border-bottom: 1px solid #F5F3FF; }
 .pi { width: 24px; height: 24px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: 700; }
 </style>
 </head>
@@ -204,7 +204,7 @@ table.tbl td.mono { color: var(--text-secondary); }
 <div class="wrap">
 
 <header class="top">
-  <h1>BrightBean Studio - Style Guide</h1>
+  <h1>Automator - Style Guide</h1>
   <p>Reference for the tokens and UI patterns the app actually ships. Everything below is copied from the code; when they disagree, the code wins and this file should be updated.</p>
   <div class="note" style="margin-top:14px">
     <strong>Source of truth</strong>
@@ -228,7 +228,7 @@ table.tbl td.mono { color: var(--text-secondary); }
   <h2>White-label architecture</h2>
   <p class="desc">There are three token layers in <code>styles.css</code>: brand (<code>--brand-*</code>, <code>--brand-font-*</code>), then semantic (<code>--primary*</code>, <code>--surface-*</code>, <code>--text-*</code>), then component classes (<code>.btn-brand</code>, <code>.sidebar-nav-item.active</code>, ...).</p>
   <div class="note"><strong>How branding works today:</strong> tokens are static. Nothing injects <code>--brand-*</code> or <code>--primary</code> at runtime: no context processor and no inline <code>&lt;style&gt;</code> in <code>base.html</code>. To rebrand, you edit the <code>--brand-*</code> values in <code>styles.css</code> and rebuild the CSS.</div>
-  <div class="note"><strong>Per-tenant fields that exist:</strong> <code>Workspace.primary_color</code> / <code>secondary_color</code> (hex, <code>apps/workspaces/models.py</code>). Only <code>primary_color</code> is read, and only as the workspace dot colour in the cross-workspace calendar (falls back to <code>#F97316</code>). <code>Organization.logo_url</code> shows in the client portal header (<code>templates/client_portal/portal_base.html</code>). Neither one changes the app's tokens.</div>
+  <div class="note"><strong>Per-tenant fields that exist:</strong> <code>Workspace.primary_color</code> / <code>secondary_color</code> (hex, <code>apps/workspaces/models.py</code>). Only <code>primary_color</code> is read, and only as the workspace dot colour in the cross-workspace calendar (falls back to <code>#7C3AED</code>). <code>Organization.logo_url</code> shows in the client portal header (<code>templates/client_portal/portal_base.html</code>). Neither one changes the app's tokens.</div>
   <h3 class="sub">Rebrand = change only this block, then <code>npm run build</code> in theme/static_src</h3>
 <pre class="demo mono" style="white-space:pre;overflow:auto;background:var(--neutral-900);color:var(--neutral-200);border:none">--brand-50 … --brand-900     /* orange scale; --primary = 500, hover = 600, soft = 50, muted = 100, ring = 200 */
 --brand-green-100/200/500/600 /* selection controls: checkbox accent, toggle on-state */
@@ -242,46 +242,46 @@ table.tbl td.mono { color: var(--text-secondary); }
 
   <h3 class="sub">Brand (orange) - <code>--brand-*</code></h3>
   <div class="swatches">
-    <div class="swatch"><div class="c" style="background:var(--brand-50)"></div><div class="l"><b>50</b><span>#FFF7ED</span><br>primary-soft</div></div>
-    <div class="swatch"><div class="c" style="background:var(--brand-100)"></div><div class="l"><b>100</b><span>#FFEDD5</span><br>primary-muted</div></div>
-    <div class="swatch"><div class="c" style="background:var(--brand-200)"></div><div class="l"><b>200</b><span>#FED7AA</span><br>primary-ring</div></div>
-    <div class="swatch"><div class="c" style="background:var(--brand-300)"></div><div class="l"><b>300</b><span>#FDBA74</span></div></div>
-    <div class="swatch"><div class="c" style="background:var(--brand-400)"></div><div class="l"><b>400</b><span>#FB923C</span></div></div>
-    <div class="swatch"><div class="c" style="background:var(--brand-500)"></div><div class="l"><b>500</b><span>#F97316</span><br>primary</div></div>
-    <div class="swatch"><div class="c" style="background:var(--brand-600)"></div><div class="l"><b>600</b><span>#EA580C</span><br>primary-hover</div></div>
-    <div class="swatch"><div class="c" style="background:var(--brand-700)"></div><div class="l"><b>700</b><span>#C2410C</span><br>active nav text</div></div>
-    <div class="swatch"><div class="c" style="background:var(--brand-800)"></div><div class="l"><b>800</b><span>#9A3412</span></div></div>
-    <div class="swatch"><div class="c" style="background:var(--brand-900)"></div><div class="l"><b>900</b><span>#7C2D12</span></div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-50)"></div><div class="l"><b>50</b><span>#F9F5FF</span><br>primary-soft</div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-100)"></div><div class="l"><b>100</b><span>#F3E8FF</span><br>primary-muted</div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-200)"></div><div class="l"><b>200</b><span>#E9D5FF</span><br>primary-ring</div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-300)"></div><div class="l"><b>300</b><span>#D8B4FE</span></div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-400)"></div><div class="l"><b>400</b><span>#A855F7</span></div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-500)"></div><div class="l"><b>500</b><span>#7C3AED</span><br>primary</div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-600)"></div><div class="l"><b>600</b><span>#6D28D9</span><br>primary-hover</div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-700)"></div><div class="l"><b>700</b><span>#5B21B6</span><br>active nav text</div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-800)"></div><div class="l"><b>800</b><span>#5B21B6</span></div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-900)"></div><div class="l"><b>900</b><span>#5B21B6</span></div></div>
   </div>
 
   <h3 class="sub">Brand green (the bean) - <code>--brand-green-*</code>: checkboxes &amp; toggles</h3>
   <div class="swatches">
-    <div class="swatch"><div class="c" style="background:var(--brand-green-100)"></div><div class="l"><b>100</b><span>#EFF2DC</span></div></div>
-    <div class="swatch"><div class="c" style="background:var(--brand-green-200)"></div><div class="l"><b>200</b><span>#DDE4B9</span><br>focus outline</div></div>
-    <div class="swatch"><div class="c" style="background:var(--brand-green-500)"></div><div class="l"><b>500</b><span>#94A43F</span><br>checked</div></div>
-    <div class="swatch"><div class="c" style="background:var(--brand-green-600)"></div><div class="l"><b>600</b><span>#7B8A33</span></div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-green-100)"></div><div class="l"><b>100</b><span>#F3E8FF</span></div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-green-200)"></div><div class="l"><b>200</b><span>#C4B5FD</span><br>focus outline</div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-green-500)"></div><div class="l"><b>500</b><span>#7C3AED</span><br>checked</div></div>
+    <div class="swatch"><div class="c" style="background:var(--brand-green-600)"></div><div class="l"><b>600</b><span>#6D28D9</span></div></div>
   </div>
 
   <h3 class="sub">Neutrals (stone) - <code>--neutral-*</code></h3>
   <div class="swatches">
-    <div class="swatch"><div class="c" style="background:var(--neutral-950)"></div><div class="l"><b>950</b><span>#171412</span><br>shadow tint</div></div>
-    <div class="swatch"><div class="c" style="background:var(--neutral-900)"></div><div class="l"><b>900</b><span>#1C1917</span><br>text-primary</div></div>
-    <div class="swatch"><div class="c" style="background:var(--neutral-800)"></div><div class="l"><b>800</b><span>#292524</span></div></div>
-    <div class="swatch"><div class="c" style="background:var(--neutral-700)"></div><div class="l"><b>700</b><span>#44403C</span></div></div>
-    <div class="swatch"><div class="c" style="background:var(--neutral-600)"></div><div class="l"><b>600</b><span>#57534E</span><br>text-secondary</div></div>
-    <div class="swatch"><div class="c" style="background:var(--neutral-500)"></div><div class="l"><b>500</b><span>#78716C</span><br>text-tertiary</div></div>
-    <div class="swatch"><div class="c" style="background:var(--neutral-400)"></div><div class="l"><b>400</b><span>#A8A29E</span><br>text-ghost</div></div>
-    <div class="swatch"><div class="c" style="background:var(--neutral-300)"></div><div class="l"><b>300</b><span>#D6D3D1</span><br>border-hover</div></div>
-    <div class="swatch"><div class="c" style="background:var(--neutral-200)"></div><div class="l"><b>200</b><span>#E7E5E4</span><br>border, surface-3</div></div>
-    <div class="swatch"><div class="c" style="background:var(--neutral-100)"></div><div class="l"><b>100</b><span>#F5F5F4</span><br>surface-2</div></div>
-    <div class="swatch"><div class="c" style="background:var(--neutral-50)"></div><div class="l"><b>50</b><span>#FAFAF9</span><br>surface-1</div></div>
+    <div class="swatch"><div class="c" style="background:var(--neutral-950)"></div><div class="l"><b>950</b><span>#0f172a</span><br>shadow tint</div></div>
+    <div class="swatch"><div class="c" style="background:var(--neutral-900)"></div><div class="l"><b>900</b><span>#0F172A</span><br>text-primary</div></div>
+    <div class="swatch"><div class="c" style="background:var(--neutral-800)"></div><div class="l"><b>800</b><span>#1e293b</span></div></div>
+    <div class="swatch"><div class="c" style="background:var(--neutral-700)"></div><div class="l"><b>700</b><span>#334155</span></div></div>
+    <div class="swatch"><div class="c" style="background:var(--neutral-600)"></div><div class="l"><b>600</b><span>#475569</span><br>text-secondary</div></div>
+    <div class="swatch"><div class="c" style="background:var(--neutral-500)"></div><div class="l"><b>500</b><span>#64748B</span><br>text-tertiary</div></div>
+    <div class="swatch"><div class="c" style="background:var(--neutral-400)"></div><div class="l"><b>400</b><span>#94A3B8</span><br>text-ghost</div></div>
+    <div class="swatch"><div class="c" style="background:var(--neutral-300)"></div><div class="l"><b>300</b><span>#CBD5E1</span><br>border-hover</div></div>
+    <div class="swatch"><div class="c" style="background:var(--neutral-200)"></div><div class="l"><b>200</b><span>#E5E7EB</span><br>border, surface-3</div></div>
+    <div class="swatch"><div class="c" style="background:var(--neutral-100)"></div><div class="l"><b>100</b><span>#F5F3FF</span><br>surface-2</div></div>
+    <div class="swatch"><div class="c" style="background:var(--neutral-50)"></div><div class="l"><b>50</b><span>#FAFAFF</span><br>surface-1</div></div>
   </div>
 
   <h3 class="sub">Surfaces &amp; text</h3>
   <table class="tbl">
     <thead><tr><th>Token</th><th>Value</th><th>Used for</th><th></th></tr></thead>
     <tbody>
-      <tr><td class="mono">--surface-page</td><td class="mono">rgb(247, 246, 242)</td><td>App canvas behind the sidebar and the main panel (<code>base.html</code> body)</td><td><span class="sw" style="background:var(--surface-page)"></span></td></tr>
+      <tr><td class="mono">--surface-page</td><td class="mono">#F8FAFF</td><td>App canvas behind the sidebar and the main panel (<code>base.html</code> body)</td><td><span class="sw" style="background:var(--surface-page)"></span></td></tr>
       <tr><td class="mono">--surface-0</td><td class="mono">#FFFFFF</td><td>Main panel, cards, modals, inputs</td><td><span class="sw" style="background:var(--surface-0)"></span></td></tr>
       <tr><td class="mono">--surface-1</td><td class="mono">neutral-50</td><td>Auth background, client portal body, hover fills</td><td><span class="sw" style="background:var(--surface-1)"></span></td></tr>
       <tr><td class="mono">--surface-2</td><td class="mono">neutral-100</td><td>Sidebar badge, icon tiles, neutral chips</td><td><span class="sw" style="background:var(--surface-2)"></span></td></tr>
@@ -333,7 +333,7 @@ table.tbl td.mono { color: var(--text-secondary); }
     <span class="pi" style="background:#0085FF">bs</span><span class="mono">#0085FF</span>
     <span class="pi" style="background:#4285F4">gb</span><span class="mono">#4285F4</span>
     <span class="pi" style="background:#6364FF">ma</span><span class="mono">#6364FF</span>
-    <span class="mono" style="color:#57534e">YouTube = text label, no tile (brand rules)</span>
+    <span class="mono" style="color:#475569">YouTube = text label, no tile (brand rules)</span>
   </div>
 </section>
 
@@ -381,7 +381,7 @@ table.tbl td.mono { color: var(--text-secondary); }
     <div style="text-align:center"><div style="width:64px;height:64px;background:var(--primary-soft);border:1.5px solid var(--primary-ring);border-radius:var(--radius-2xl)"></div><div class="cap">2xl 16px</div></div>
     <div style="text-align:center"><div style="width:64px;height:64px;background:var(--primary-soft);border:1.5px solid var(--primary-ring);border-radius:var(--radius-full)"></div><div class="cap">full</div></div>
   </div>
-  <h3 class="sub">Shadows - <code>--shadow-*</code> (warm-black rgba(23,20,18,…))</h3>
+  <h3 class="sub">Shadows - <code>--shadow-*</code> (warm-black rgba(15, 23, 42,…))</h3>
   <div class="row" style="gap:18px;padding:8px 0 4px">
     <div style="text-align:center"><div style="width:96px;height:64px;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-xs)"></div><div class="cap">xs</div></div>
     <div style="text-align:center"><div style="width:96px;height:64px;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)"></div><div class="cap">sm</div></div>
@@ -430,10 +430,10 @@ table.tbl td.mono { color: var(--text-secondary); }
     <button class="tw-btn tw-danger">Delete</button>
     <button class="tw-icon" aria-label="Back"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
   </div>
-  <div class="cap">secondary: px-4 py-2 text-sm font-medium text-stone-600 bg-white border border-stone-200 rounded-lg hover:bg-stone-50<br>
-  neutral: px-4 py-2 text-sm font-semibold text-stone-700 bg-stone-100 rounded-full hover:bg-stone-200<br>
+  <div class="cap">secondary: px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50<br>
+  neutral: px-4 py-2 text-sm font-semibold text-neutral-800 bg-neutral-100 rounded-full hover:bg-neutral-300<br>
   danger: px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-full hover:bg-red-600<br>
-  icon: w-8 h-8 rounded-lg border border-stone-200 text-stone-400 hover:text-stone-700 hover:bg-stone-50</div>
+  icon: w-8 h-8 rounded-lg border border-neutral-300 text-neutral-500 hover:text-neutral-800 hover:bg-neutral-50</div>
   <div class="note warn" style="margin-top:12px"><strong>Cascade caveat:</strong> the component classes in <code>styles.css</code> are unlayered, but Tailwind v4 utilities live in <code>@layer utilities</code>, so the component rules win. In markup like <code>class="btn-brand px-4 py-2 text-sm"</code> (about 15 places), the utilities don't override <code>.btn-brand</code>'s padding, font-size or <code>width:100%</code>. Check in the browser before you rely on those overrides.</div>
 </section>
 
@@ -475,9 +475,9 @@ table.tbl td.mono { color: var(--text-secondary); }
     <div class="demo">
       <div class="row">
         <button class="cal-filter-select">All channels</button>
-        <button class="cal-filter-select" style="border-color:#FDBA74;color:#C2410C">2 selected</button>
+        <button class="cal-filter-select" style="border-color:#D8B4FE;color:#5B21B6">2 selected</button>
       </div>
-      <div class="cap">ui_select trigger (.cal-filter-select); active = border-orange-300 text-orange-700</div>
+      <div class="cap">ui_select trigger (.cal-filter-select); active = border-brand-300 text-brand-900</div>
     </div>
   </div>
 </section>
@@ -488,10 +488,10 @@ table.tbl td.mono { color: var(--text-secondary); }
   <p class="desc">The editorial status pill comes from one source, <code>STATUS_META</code> in <code>approval_extras.py</code>, rendered by <code>{% status_badge %}</code>: a dot plus a label, 11px semibold, with a 1px border.</p>
   <h3 class="sub">Post / approval status - {% status_badge status %}</h3>
   <div class="row">
-    <span class="pill" style="background:#F5F5F4;color:#57534E;border-color:#E7E5E4"><i style="background:#A8A29E"></i>Draft</span>
-    <span class="pill" style="background:#FFF7ED;color:#C2410C;border-color:#FED7AA"><i style="background:#F97316"></i>Pending Review</span>
-    <span class="pill" style="background:#FFF7ED;color:#C2410C;border-color:#FED7AA"><i style="background:#F97316"></i>Pending Client</span>
-    <span class="pill" style="background:#FFF7ED;color:#C2410C;border-color:#FED7AA"><i style="background:#F97316"></i>Changes Requested</span>
+    <span class="pill" style="background:#F5F3FF;color:#475569;border-color:#E5E7EB"><i style="background:#94A3B8"></i>Draft</span>
+    <span class="pill" style="background:#F9F5FF;color:#5B21B6;border-color:#E9D5FF"><i style="background:#7C3AED"></i>Pending Review</span>
+    <span class="pill" style="background:#F9F5FF;color:#5B21B6;border-color:#E9D5FF"><i style="background:#7C3AED"></i>Pending Client</span>
+    <span class="pill" style="background:#F9F5FF;color:#5B21B6;border-color:#E9D5FF"><i style="background:#7C3AED"></i>Changes Requested</span>
     <span class="pill" style="background:#F0FDFA;color:#0F766E;border-color:#99F6E4"><i style="background:#14B8A6"></i>Approved</span>
     <span class="pill" style="background:#FEF2F2;color:#B91C1C;border-color:#FECACA"><i style="background:#EF4444"></i>Rejected</span>
     <span class="pill" style="background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE"><i style="background:#3B82F6"></i>Scheduled</span>
@@ -505,7 +505,7 @@ table.tbl td.mono { color: var(--text-secondary); }
   <div class="row">
     <span class="conn" style="background:#F0FDF4;color:#15803D;box-shadow:inset 0 0 0 1px rgba(22,163,74,.1)"><i style="background:#22C55E"></i>Connected</span>
     <span class="conn" style="background:#FEFCE8;color:#A16207;box-shadow:inset 0 0 0 1px rgba(202,138,4,.1)"><i style="background:#EAB308"></i>Token Expiring</span>
-    <span class="conn" style="background:#F5F5F4;color:#57534E;box-shadow:inset 0 0 0 1px rgba(120,113,108,.1)"><i style="background:#A8A29E"></i>Disconnected</span>
+    <span class="conn" style="background:#F5F3FF;color:#475569;box-shadow:inset 0 0 0 1px rgba(120,113,108,.1)"><i style="background:#94A3B8"></i>Disconnected</span>
     <span class="conn" style="background:#FEF2F2;color:#B91C1C;box-shadow:inset 0 0 0 1px rgba(220,38,38,.1)"><i style="background:#EF4444"></i>Error</span>
   </div>
   <h3 class="sub">Analytics chips &amp; counters</h3>
@@ -524,11 +524,11 @@ table.tbl td.mono { color: var(--text-secondary); }
   <p class="desc">Containers are white with a 1px <code>stone-200</code> border and <code>rounded-xl</code>. Shadows are rare at rest and appear on hover.</p>
   <div class="grid">
     <div class="demo page">
-      <div style="background:#fff;border:1px solid #E7E5E4;border-radius:12px;padding:24px">
+      <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:24px">
         <div style="font-size:14px;font-weight:600">Workspace details</div>
         <div style="font-size:13px;color:var(--text-tertiary);margin-top:4px">Name, timezone and defaults.</div>
       </div>
-      <div class="cap">bg-white border border-stone-200 rounded-xl p-6 (settings sections)</div>
+      <div class="cap">bg-white border border-neutral-300 rounded-xl p-6 (settings sections)</div>
     </div>
     <div class="demo page">
       <div class="a-card a-card-hover" style="padding:16px;display:flex;flex-direction:column;gap:10px">
@@ -541,12 +541,12 @@ table.tbl td.mono { color: var(--text-secondary); }
       <div class="cap">.a-card.a-card-hover (analytics KPI)</div>
     </div>
     <div class="demo page">
-      <div style="background:#fff;border:1px solid #E7E5E4;border-radius:12px;padding:32px 16px;text-align:center;box-shadow:var(--shadow-xs)">
+      <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:32px 16px;text-align:center;box-shadow:var(--shadow-xs)">
         <div style="width:48px;height:48px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
           <svg width="24" height="24" style="color:var(--text-ghost)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
         </div>
-        <div style="font-size:14px;font-weight:600;color:#292524;margin-bottom:4px">No saved replies yet</div>
-        <div style="font-size:13px;color:#78716C">Create reusable response templates.</div>
+        <div style="font-size:14px;font-weight:600;color:#1e293b;margin-bottom:4px">No saved replies yet</div>
+        <div style="font-size:13px;color:#64748B">Create reusable response templates.</div>
       </div>
       <div class="cap">Empty state: rounded-xl p-12 text-center, icon tile surface-2</div>
     </div>
@@ -561,7 +561,7 @@ table.tbl td.mono { color: var(--text-secondary); }
       <button class="btn-brand">Log in</button>
     </div>
   </div>
-  <div class="cap">Login overrides .btn-brand locally with #93a240 (see Known gaps)</div>
+  <div class="cap">Login overrides .btn-brand locally with #7c3aed (see Known gaps)</div>
 </section>
 
 <!-- ═════════ FEEDBACK ═════════ -->
@@ -583,9 +583,9 @@ table.tbl td.mono { color: var(--text-secondary); }
   <div class="cap">rounded-md p-4 bg-{red|green|blue}-50 text-{red|green|blue}-800</div>
   <h3 class="sub">Action toast - approvals/partials/_toasts.html (#bb-toast-host, bottom-centre, 3.4s)</h3>
   <div class="row">
-    <div class="bb-toast" style="background:#1C1917"><span style="color:#34D399;display:flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg></span><div><div class="bb-toast-title">Post approved</div><div class="bb-toast-body">Scheduled for Mar 25, 14:00</div></div></div>
-    <div class="bb-toast" style="background:#1C1917"><span style="color:#FB923C;display:flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span><div><div class="bb-toast-title">Client notified</div></div></div>
-    <div class="bb-toast" style="background:#1C1917"><span style="color:#FBBF24;display:flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span><div><div class="bb-toast-title">Hold requested</div></div></div>
+    <div class="bb-toast" style="background:#0F172A"><span style="color:#34D399;display:flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg></span><div><div class="bb-toast-title">Post approved</div><div class="bb-toast-body">Scheduled for Mar 25, 14:00</div></div></div>
+    <div class="bb-toast" style="background:#0F172A"><span style="color:#A855F7;display:flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span><div><div class="bb-toast-title">Client notified</div></div></div>
+    <div class="bb-toast" style="background:#0F172A"><span style="color:#FBBF24;display:flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span><div><div class="bb-toast-title">Hold requested</div></div></div>
     <div class="bb-toast" style="background:#7F1D1D"><span style="color:#FCA5A5;display:flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6l12 12"/></svg></span><div><div class="bb-toast-title">Could not reschedule that post.</div></div></div>
   </div>
   <div class="cap">Tones: success / info / warn / error. Trigger: HX-Trigger {"showToast": {tone, title, body}} or a showToast CustomEvent</div>
@@ -608,28 +608,28 @@ table.tbl td.mono { color: var(--text-secondary); }
   <div class="grid">
     <div>
       <div class="modal-shell">
-        <div class="modal-card" style="max-width:384px;border-radius:16px;border:1px solid #E7E5E4;box-shadow:var(--shadow-xl)">
+        <div class="modal-card" style="max-width:384px;border-radius:16px;border:1px solid #E5E7EB;box-shadow:var(--shadow-xl)">
           <div style="text-align:center">
             <div style="width:48px;height:48px;margin:0 auto 16px;border-radius:9999px;background:#FEF2F2;display:flex;align-items:center;justify-content:center">
               <svg width="24" height="24" style="color:#EF4444" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </div>
             <div style="font-size:16px;font-weight:600;margin-bottom:4px">Delete post?</div>
-            <p style="font-size:14px;color:#78716C;margin-bottom:24px">This action cannot be undone.</p>
+            <p style="font-size:14px;color:#64748B;margin-bottom:24px">This action cannot be undone.</p>
           </div>
           <div style="display:flex;gap:12px"><button class="tw-btn tw-neutral" style="flex:1">Cancel</button><button class="tw-btn tw-danger" style="flex:1">Delete</button></div>
         </div>
       </div>
-      <div class="cap">Confirm: bg-white rounded-2xl shadow-xl border border-stone-200 p-6 max-w-sm</div>
+      <div class="cap">Confirm: bg-white rounded-2xl shadow-xl border border-neutral-300 p-6 max-w-sm</div>
     </div>
     <div>
       <div class="modal-shell">
-        <div class="modal-card" style="max-width:448px;border-radius:12px;box-shadow:var(--shadow-xl),0 0 0 1px #E7E5E4">
+        <div class="modal-card" style="max-width:448px;border-radius:12px;box-shadow:var(--shadow-xl),0 0 0 1px #E5E7EB">
           <div style="font-size:16px;font-weight:600;margin-bottom:16px">Create workspace</div>
           <input class="form-input-styled" placeholder="Workspace name" style="margin-bottom:16px">
           <div style="display:flex;justify-content:flex-end;gap:8px"><button class="tw-btn tw-secondary">Cancel</button><button class="btn-brand" style="width:auto;padding:8px 16px">Create</button></div>
         </div>
       </div>
-      <div class="cap">Form: bg-white rounded-xl shadow-xl ring-1 ring-stone-200 max-w-md p-6</div>
+      <div class="cap">Form: bg-white rounded-xl shadow-xl ring-1 ring-neutral-300 max-w-md p-6</div>
     </div>
   </div>
 </section>
@@ -661,7 +661,7 @@ table.tbl td.mono { color: var(--text-secondary); }
         <div class="opt">LinkedIn</div>
         <div class="opt">TikTok</div>
       </div>
-      <div class="cap">fixed w-56 bg-white rounded-lg shadow-lg ring-1 ring-stone-200 py-1; items text-xs px-3 py-1.5</div>
+      <div class="cap">fixed w-56 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1; items text-xs px-3 py-1.5</div>
     </div>
   </div>
 </section>
@@ -669,28 +669,28 @@ table.tbl td.mono { color: var(--text-secondary); }
 <!-- ═════════ TABLES & AVATARS ═════════ -->
 <section id="tables">
   <h2>Tables &amp; avatars</h2>
-  <div class="demo" style="padding:0;overflow:hidden;border:1px solid #E7E5E4;border-radius:12px">
+  <div class="demo" style="padding:0;overflow:hidden;border:1px solid #E5E7EB;border-radius:12px">
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       <thead style="background:var(--surface-1)"><tr>
-        <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.025em;color:#A8A29E">Post</th>
-        <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.025em;color:#A8A29E">Status</th>
-        <th style="padding:12px 16px;text-align:right;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.025em;color:#A8A29E">Reach</th>
+        <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.025em;color:#94A3B8">Post</th>
+        <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.025em;color:#94A3B8">Status</th>
+        <th style="padding:12px 16px;text-align:right;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.025em;color:#94A3B8">Reach</th>
       </tr></thead>
       <tbody>
-        <tr style="border-top:1px solid #F5F5F4"><td style="padding:12px 16px">Spring launch teaser</td><td style="padding:12px 16px"><span class="pill" style="background:#F0FDF4;color:#15803D;border-color:#BBF7D0"><i style="background:#22C55E"></i>Published</span></td><td style="padding:12px 16px;text-align:right;font-family:var(--font-mono);font-size:13px">12,847</td></tr>
-        <tr style="border-top:1px solid #F5F5F4"><td style="padding:12px 16px">Behind the scenes</td><td style="padding:12px 16px"><span class="pill" style="background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE"><i style="background:#3B82F6"></i>Scheduled</span></td><td style="padding:12px 16px;text-align:right;color:var(--text-ghost)">—</td></tr>
+        <tr style="border-top:1px solid #F5F3FF"><td style="padding:12px 16px">Spring launch teaser</td><td style="padding:12px 16px"><span class="pill" style="background:#F0FDF4;color:#15803D;border-color:#BBF7D0"><i style="background:#22C55E"></i>Published</span></td><td style="padding:12px 16px;text-align:right;font-family:var(--font-mono);font-size:13px">12,847</td></tr>
+        <tr style="border-top:1px solid #F5F3FF"><td style="padding:12px 16px">Behind the scenes</td><td style="padding:12px 16px"><span class="pill" style="background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE"><i style="background:#3B82F6"></i>Scheduled</span></td><td style="padding:12px 16px;text-align:right;color:var(--text-ghost)">—</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="cap">table w-full text-sm · th px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-stone-400 · metrics in --font-mono</div>
+  <div class="cap">table w-full text-sm · th px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 · metrics in --font-mono</div>
   <h3 class="sub">Avatars</h3>
   <div class="row">
     <div style="width:28px;height:28px;border-radius:6px;background:var(--primary);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">A</div>
     <div class="sidebar-logo-mark">B</div>
-    <div style="width:28px;height:28px;border-radius:9999px;background:#E7E5E4;color:#78716C;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">M</div>
+    <div style="width:28px;height:28px;border-radius:9999px;background:#E5E7EB;color:#64748B;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">M</div>
     <div style="width:32px;height:32px;border-radius:9999px;background:var(--primary);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">RB</div>
   </div>
-  <div class="cap">workspace: w-7 h-7 rounded-md bg primary · .sidebar-logo-mark 30px · channel fallback: rounded-full bg-stone-200 text-stone-500 · user: w-8 h-8 rounded-full</div>
+  <div class="cap">workspace: w-7 h-7 rounded-md bg primary · .sidebar-logo-mark 30px · channel fallback: rounded-full bg-neutral-300 text-neutral-600 · user: w-8 h-8 rounded-full</div>
 </section>
 
 <!-- ═════════ TAILWIND ═════════ -->
@@ -700,18 +700,18 @@ table.tbl td.mono { color: var(--text-secondary); }
   <table class="tbl">
     <thead><tr><th>Purpose</th><th>Token (rebrands)</th><th>Tailwind equivalent (fixed)</th><th></th></tr></thead>
     <tbody>
-      <tr><td>Primary fill</td><td class="mono">var(--primary)</td><td class="mono">bg-orange-500</td><td><span class="sw" style="background:var(--primary)"></span></td></tr>
-      <tr><td>Primary hover</td><td class="mono">var(--primary-hover)</td><td class="mono">bg-orange-600</td><td><span class="sw" style="background:var(--primary-hover)"></span></td></tr>
-      <tr><td>Soft / selected bg</td><td class="mono">var(--primary-soft)</td><td class="mono">bg-orange-50</td><td><span class="sw" style="background:var(--primary-soft)"></span></td></tr>
-      <tr><td>Focus ring</td><td class="mono">var(--primary-ring)</td><td class="mono">ring-orange-200</td><td><span class="sw" style="background:var(--primary-ring)"></span></td></tr>
-      <tr><td>Active text</td><td class="mono">var(--brand-700)</td><td class="mono">text-orange-700</td><td><span class="sw" style="background:var(--brand-700)"></span></td></tr>
-      <tr><td>Body text</td><td class="mono">var(--text-primary)</td><td class="mono">text-stone-900</td><td><span class="sw" style="background:var(--text-primary)"></span></td></tr>
-      <tr><td>Secondary text</td><td class="mono">var(--text-secondary)</td><td class="mono">text-stone-600</td><td><span class="sw" style="background:var(--text-secondary)"></span></td></tr>
-      <tr><td>Muted text</td><td class="mono">var(--text-tertiary)</td><td class="mono">text-stone-500</td><td><span class="sw" style="background:var(--text-tertiary)"></span></td></tr>
-      <tr><td>Ghost text</td><td class="mono">var(--text-ghost)</td><td class="mono">text-stone-400</td><td><span class="sw" style="background:var(--text-ghost)"></span></td></tr>
-      <tr><td>Border</td><td class="mono">var(--border)</td><td class="mono">border-stone-200</td><td><span class="sw" style="background:var(--border)"></span></td></tr>
+      <tr><td>Primary fill</td><td class="mono">var(--primary)</td><td class="mono">bg-brand-700</td><td><span class="sw" style="background:var(--primary)"></span></td></tr>
+      <tr><td>Primary hover</td><td class="mono">var(--primary-hover)</td><td class="mono">bg-brand-800</td><td><span class="sw" style="background:var(--primary-hover)"></span></td></tr>
+      <tr><td>Soft / selected bg</td><td class="mono">var(--primary-soft)</td><td class="mono">bg-brand-50</td><td><span class="sw" style="background:var(--primary-soft)"></span></td></tr>
+      <tr><td>Focus ring</td><td class="mono">var(--primary-ring)</td><td class="mono">ring-brand-200</td><td><span class="sw" style="background:var(--primary-ring)"></span></td></tr>
+      <tr><td>Active text</td><td class="mono">var(--brand-700)</td><td class="mono">text-brand-900</td><td><span class="sw" style="background:var(--brand-700)"></span></td></tr>
+      <tr><td>Body text</td><td class="mono">var(--text-primary)</td><td class="mono">text-neutral-950</td><td><span class="sw" style="background:var(--text-primary)"></span></td></tr>
+      <tr><td>Secondary text</td><td class="mono">var(--text-secondary)</td><td class="mono">text-neutral-700</td><td><span class="sw" style="background:var(--text-secondary)"></span></td></tr>
+      <tr><td>Muted text</td><td class="mono">var(--text-tertiary)</td><td class="mono">text-neutral-600</td><td><span class="sw" style="background:var(--text-tertiary)"></span></td></tr>
+      <tr><td>Ghost text</td><td class="mono">var(--text-ghost)</td><td class="mono">text-neutral-500</td><td><span class="sw" style="background:var(--text-ghost)"></span></td></tr>
+      <tr><td>Border</td><td class="mono">var(--border)</td><td class="mono">border-neutral-300</td><td><span class="sw" style="background:var(--border)"></span></td></tr>
       <tr><td>Card / panel</td><td class="mono">var(--surface-0)</td><td class="mono">bg-white</td><td><span class="sw" style="background:#fff"></span></td></tr>
-      <tr><td>Subtle fill</td><td class="mono">var(--surface-1)</td><td class="mono">bg-stone-50</td><td><span class="sw" style="background:var(--surface-1)"></span></td></tr>
+      <tr><td>Subtle fill</td><td class="mono">var(--surface-1)</td><td class="mono">bg-neutral-50</td><td><span class="sw" style="background:var(--surface-1)"></span></td></tr>
     </tbody>
   </table>
   <div class="cap">Tailwind v4 can reference tokens directly: bg-(--primary), text-(--text-secondary), border-(--border). Prefer those to orange-* utilities.</div>
@@ -724,14 +724,14 @@ table.tbl td.mono { color: var(--text-secondary); }
   <table class="tbl">
     <thead><tr><th>Issue</th><th>Where</th></tr></thead>
     <tbody>
-      <tr><td>The brand orange is hardcoded far more often than tokenised: ~518 <code>*-orange-*</code> utilities, 63 <code>#F97316</code> literals in 27 files, and ~29 <code>rgba(249,115,22,…)</code> (including <code>.btn-brand:hover</code> and <code>.btn-primary-lift:hover</code> in styles.css, and <code>.auth-bg</code>). Editing <code>--brand-*</code> alone does not rebrand the app.</td><td class="mono">templates/**, styles.css</td></tr>
+      <tr><td>The brand orange is hardcoded far more often than tokenised: ~518 <code>*-orange-*</code> utilities, 63 <code>#7C3AED</code> literals in 27 files, and ~29 <code>rgba(124, 58, 237,…)</code> (including <code>.btn-brand:hover</code> and <code>.btn-primary-lift:hover</code> in styles.css, and <code>.auth-bg</code>). Editing <code>--brand-*</code> alone does not rebrand the app.</td><td class="mono">templates/**, styles.css</td></tr>
       <tr><td><code>var(--brand-primary)</code> is used but never defined, so the icon and button render with no colour.</td><td class="mono">client_portal/magic_link_confirm.html</td></tr>
       <tr><td><code>--primary-rgb</code> and <code>--error-600</code> are referenced only with fallbacks and are never defined, so the fallbacks (always orange or red) are what renders.</td><td class="mono">styles.css (.btn-primary-tint, .btn-error-darker), base.html, composer/create_landing.html</td></tr>
       <tr><td><code>tailwind.config.js</code> declares <code>brand.primary/secondary</code> (indigo/violet) but is not loaded by Tailwind v4.</td><td class="mono">theme/static_src/tailwind.config.js</td></tr>
-      <tr><td>The login page overrides <code>.btn-brand</code> with <code>#93a240</code> / <code>#849139</code>, which is close to, but not equal to, <code>--brand-green-500</code> <code>#94A43F</code> / <code>-600</code> <code>#7B8A33</code>.</td><td class="mono">templates/account/login.html</td></tr>
+      <tr><td>The login page overrides <code>.btn-brand</code> with <code>#7c3aed</code> / <code>#849139</code>, which is close to, but not equal to, <code>--brand-green-500</code> <code>#7C3AED</code> / <code>-600</code> <code>#6D28D9</code>.</td><td class="mono">templates/account/login.html</td></tr>
       <tr><td>The status pills hardcode hex values, including brand orange for Pending/Changes Requested and violet <code>#7C3AED</code> (not in the palette) for Hold. The connection badge uses Tailwind green/yellow instead of the status tokens.</td><td class="mono">approval_extras.py STATUS_META, social_accounts/_status_badge.html</td></tr>
       <tr><td>The flash messages in <code>base.html</code> use <code>bg-*-50 text-*-800</code> rather than <code>.alert-*</code> (<code>-700</code> tokens), so there are two visual styles for the same message.</td><td class="mono">templates/base.html</td></tr>
-      <tr><td>Some checkboxes use <code>accent-orange-500</code>, others <code>.bb-checkbox</code> (green). <code>ui_select</code> uses <code>text-orange-500 focus:ring-orange-400</code>, which has no effect without the forms plugin.</td><td class="mono">base.html, composer/create_landing.html, components/ui_select.html</td></tr>
+      <tr><td>Some checkboxes use <code>accent-brand-700</code>, others <code>.bb-checkbox</code> (green). <code>ui_select</code> uses <code>text-brand-700 focus:ring-brand-500</code>, which has no effect without the forms plugin.</td><td class="mono">base.html, composer/create_landing.html, components/ui_select.html</td></tr>
       <tr><td><code>.pi-*</code> platform colors, <code>.cal-filter-select</code> and <code>.a-card</code> are re-declared in page <code>&lt;style&gt;</code> blocks instead of living in styles.css.</td><td class="mono">calendar.html, cross_calendar.html, composer/compose.html, analytics/index.html</td></tr>
       <tr><td><code>--ease-spring</code>, <code>--dur-slow</code>, and <code>.focus-ring</code> are defined but unused.</td><td class="mono">styles.css</td></tr>
       <tr><td>The component classes are unlayered, so Tailwind utilities on the same element (<code>btn-brand px-4 py-2</code>) don't apply. See Buttons.</td><td class="mono">styles.css</td></tr>
@@ -744,7 +744,7 @@ table.tbl td.mono { color: var(--text-secondary); }
   <h2>Guidelines</h2>
   <table class="tbl">
     <tbody>
-      <tr><td style="width:28px;color:var(--success-700);font-weight:700">✓</td><td>Reference tokens (<code>var(--primary)</code>, <code>bg-(--primary)</code>) for anything brand-coloured, not <code>orange-*</code> or <code>#F97316</code>.</td></tr>
+      <tr><td style="width:28px;color:var(--success-700);font-weight:700">✓</td><td>Reference tokens (<code>var(--primary)</code>, <code>bg-(--primary)</code>) for anything brand-coloured, not <code>orange-*</code> or <code>#7C3AED</code>.</td></tr>
       <tr><td style="color:var(--success-700);font-weight:700">✓</td><td>Use the shared classes before inventing new ones: <code>.form-input-styled</code>, <code>.bb-select</code>, <code>.bb-toggle</code>, <code>.bb-checkbox</code>, <code>.btn-brand</code>, <code>.alert-*</code>, <code>{% status_badge %}</code>, <code>{% ui_select %}</code>, and the <code>showToast</code> event.</td></tr>
       <tr><td style="color:var(--success-700);font-weight:700">✓</td><td>Keep status meaning on the fixed palette (success/warning/error/info). Selection controls use bean green.</td></tr>
       <tr><td style="color:var(--success-700);font-weight:700">✓</td><td>Neutrals are stone (warm). Don't introduce <code>gray-*</code>/<code>slate-*</code>.</td></tr>

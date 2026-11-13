@@ -238,7 +238,7 @@ Not in the original spec. It is adapted from BrightBean Chat and runs on **Faceb
 - PKCE is required and only `S256` is accepted (`validator.py`).
 
 ### Intelligence — `apps/intelligence/`
-- An optional integration with the separate BrightBean Intelligence service. It is enabled only when `INTELLIGENCE_INTERNAL_URL`, `INTELLIGENCE_PUBLIC_URL` and the related secrets are set, otherwise every Intelligence surface is hidden.
+- An optional integration with the separate BrightBean Intelligence service (third-party, run by upstream). It is enabled only when `INTELLIGENCE_INTERNAL_URL`, `INTELLIGENCE_PUBLIC_URL` and the related secrets are set, otherwise every Intelligence surface is hidden.
 - Org-scoped at `/orgs/<org_id>/intelligence/`.
   - Subscription: plan picker, checkout through Intelligence (Stripe), recovery after a closed tab, portal, billing contact. State is kept in `IntelligenceSubscription`, `StudioCheckoutAttempt` and `PendingActivation`.
   - Tools playground: score packaging, score video hook, benchmark channel or video, research content gaps, list niches.

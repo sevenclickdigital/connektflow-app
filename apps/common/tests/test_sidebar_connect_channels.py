@@ -19,7 +19,7 @@ from apps.workspaces.models import Workspace
 
 ICON_SLOT = '<div class="relative flex-shrink-0">'
 VIDEO_GLYPH = 'd="M15.75 10.5l4.72-4.72'
-PLUS_BADGE = '<div class="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-orange-500'
+PLUS_BADGE = '<div class="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-brand-700'
 
 
 class SidebarConnectChannelsTests(TestCase):

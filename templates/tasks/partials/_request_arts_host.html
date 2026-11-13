@@ -13,7 +13,7 @@ include tasks/partials/_styles.html.
      @keydown.escape.window="if (open) { open = false; $refs.body.innerHTML = ''; }">
     <div class="task-modal-backdrop" x-show="open" @click.self="open = false; $refs.body.innerHTML = ''">
         <div class="task-modal relative" style="max-width: 1120px;" role="dialog" aria-modal="true" aria-label="{% translate 'Request arts' %}">
-            <button type="button" class="task-modal-close w-8 h-8 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 flex items-center justify-center"
+            <button type="button" class="task-modal-close w-8 h-8 rounded-lg text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 flex items-center justify-center"
                     @click="open = false; $refs.body.innerHTML = ''" aria-label="{% translate 'Close' %}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
             </button>

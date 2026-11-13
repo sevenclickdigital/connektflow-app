@@ -103,7 +103,7 @@ class ContentCategoryForm(forms.ModelForm):
             "color": forms.TextInput(
                 attrs={
                     "type": "color",
-                    "class": "w-10 h-10 rounded-lg border border-stone-200 cursor-pointer p-0.5",
+                    "class": "w-10 h-10 rounded-lg border border-neutral-300 cursor-pointer p-0.5",
                 }
             ),
         }

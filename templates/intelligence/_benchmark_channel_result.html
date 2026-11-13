@@ -5,8 +5,8 @@
        moved next to the niche name + percentage below so it's visually
        attached to the thing it qualifies. {% endcomment %}
     <div class="mb-4">
-        <div class="text-base font-semibold text-stone-900 truncate">{{ channel.title }}</div>
-        <div class="mt-1 text-xs text-stone-500">
+        <div class="text-base font-semibold text-neutral-950 truncate">{{ channel.title }}</div>
+        <div class="mt-1 text-xs text-neutral-600">
             {{ channel.subscriber_count|humanize_count }} {% translate "subscribers" %}
             · {{ channel.video_count|humanize_count }} {% translate "videos" %}
             {% if channel.sample_window_days %}
@@ -16,10 +16,10 @@
     </div>
 
     {% comment %} Overall percentile + niche identity {% endcomment %}
-    <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 items-start mt-2 pt-4 border-t border-stone-100">
+    <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 items-start mt-2 pt-4 border-t border-neutral-100">
         <div>
             <div class="flex items-center">
-                <div class="text-xs uppercase tracking-wide text-stone-500">{% translate "Overall percentile" %}</div>
+                <div class="text-xs uppercase tracking-wide text-neutral-600">{% translate "Overall percentile" %}</div>
                 <span class="intel-tooltip-trigger" tabindex="0" aria-describedby="bc-overall-tooltip">
                     <span class="intel-tooltip-icon" aria-hidden="true">?</span>
                     <span id="bc-overall-tooltip" role="tooltip" class="intel-tooltip" data-align="left">
@@ -32,10 +32,10 @@
             </div>
         </div>
         <div class="text-right">
-            <div class="text-xs uppercase tracking-wide text-stone-500">{% translate "Niche" %}</div>
-            <div class="mt-1 text-sm font-medium text-stone-900">{{ niche.name }}</div>
+            <div class="text-xs uppercase tracking-wide text-neutral-600">{% translate "Niche" %}</div>
+            <div class="mt-1 text-sm font-medium text-neutral-950">{{ niche.name }}</div>
             <div class="mt-1 flex items-center gap-2 justify-end flex-wrap">
-                <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">{{ niche.slug }}</span>
+                <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600">{{ niche.slug }}</span>
                 {% comment %}
                   Single pill combining the match-strength label and the
                   raw match-score percentage. Co-locating the two makes
@@ -48,7 +48,7 @@
                 <span class="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full tabular-nums
                              {% if niche.match_strength == 'strong' %}bg-green-50 text-green-700
                              {% elif niche.match_strength == 'moderate' %}bg-amber-50 text-amber-700
-                             {% else %}bg-stone-100 text-stone-600{% endif %}">
+                             {% else %}bg-neutral-100 text-neutral-700{% endif %}">
                     {% if niche.match_strength %}
                     <span class="uppercase tracking-wide font-semibold">{{ niche.match_strength }}</span>
                     {% endif %}
@@ -67,9 +67,9 @@
       labels and bars line up vertically.
     {% endcomment %}
     {% if channel.engagement_percentiles %}
-    <div class="mt-6 pt-5 border-t border-stone-100">
+    <div class="mt-6 pt-5 border-t border-neutral-100">
         <div class="flex items-center mb-3">
-            <div class="text-xs uppercase tracking-wide text-stone-500">{% translate "Engagement vs niche distribution" %}</div>
+            <div class="text-xs uppercase tracking-wide text-neutral-600">{% translate "Engagement vs niche distribution" %}</div>
             <span class="intel-tooltip-trigger" tabindex="0" aria-describedby="bc-engagement-tooltip">
                 <span class="intel-tooltip-icon" aria-hidden="true">?</span>
                 <span id="bc-engagement-tooltip" role="tooltip" class="intel-tooltip" data-align="left">
@@ -83,45 +83,45 @@
             {% with eng=channel.engagement engp=channel.engagement_percentiles nichep=niche.engagement %}
 
             <div class="grid grid-cols-[120px_1fr_60px] items-center gap-3">
-                <div class="text-xs font-medium text-stone-700">{% translate "Views / sub" %}</div>
+                <div class="text-xs font-medium text-neutral-800">{% translate "Views / sub" %}</div>
                 <div>
-                    <div class="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                    <div class="h-1.5 rounded-full bg-neutral-100 overflow-hidden">
                         <div class="h-full rounded-full" style="width: {{ engp.view_to_sub_ratio|default:0 }}%; background: var(--primary);"></div>
                     </div>
-                    <div class="flex justify-between mt-1 text-[11px] text-stone-500 tabular-nums">
-                        <span>{% translate "You:" %} <span class="text-stone-900 font-medium">{{ eng.view_to_sub_ratio|pretty_percent }}</span></span>
+                    <div class="flex justify-between mt-1 text-[11px] text-neutral-600 tabular-nums">
+                        <span>{% translate "You:" %} <span class="text-neutral-950 font-medium">{{ eng.view_to_sub_ratio|pretty_percent }}</span></span>
                         <span>{% translate "Niche p50:" %} {{ nichep.view_to_sub_ratio.p50|pretty_percent }}</span>
                     </div>
                 </div>
-                <div class="text-xs font-mono tabular-nums text-stone-900 text-right">p{{ engp.view_to_sub_ratio }}</div>
+                <div class="text-xs font-mono tabular-nums text-neutral-950 text-right">p{{ engp.view_to_sub_ratio }}</div>
             </div>
 
             <div class="grid grid-cols-[120px_1fr_60px] items-center gap-3">
-                <div class="text-xs font-medium text-stone-700">{% translate "Likes / view" %}</div>
+                <div class="text-xs font-medium text-neutral-800">{% translate "Likes / view" %}</div>
                 <div>
-                    <div class="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                    <div class="h-1.5 rounded-full bg-neutral-100 overflow-hidden">
                         <div class="h-full rounded-full" style="width: {{ engp.like_to_view_ratio|default:0 }}%; background: var(--primary);"></div>
                     </div>
-                    <div class="flex justify-between mt-1 text-[11px] text-stone-500 tabular-nums">
-                        <span>{% translate "You:" %} <span class="text-stone-900 font-medium">{{ eng.like_to_view_ratio|pretty_percent:2 }}</span></span>
+                    <div class="flex justify-between mt-1 text-[11px] text-neutral-600 tabular-nums">
+                        <span>{% translate "You:" %} <span class="text-neutral-950 font-medium">{{ eng.like_to_view_ratio|pretty_percent:2 }}</span></span>
                         <span>{% translate "Niche p50:" %} {{ nichep.like_to_view_ratio.p50|pretty_percent:2 }}</span>
                     </div>
                 </div>
-                <div class="text-xs font-mono tabular-nums text-stone-900 text-right">p{{ engp.like_to_view_ratio }}</div>
+                <div class="text-xs font-mono tabular-nums text-neutral-950 text-right">p{{ engp.like_to_view_ratio }}</div>
             </div>
 
             <div class="grid grid-cols-[120px_1fr_60px] items-center gap-3">
-                <div class="text-xs font-medium text-stone-700">{% translate "Comments / view" %}</div>
+                <div class="text-xs font-medium text-neutral-800">{% translate "Comments / view" %}</div>
                 <div>
-                    <div class="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                    <div class="h-1.5 rounded-full bg-neutral-100 overflow-hidden">
                         <div class="h-full rounded-full" style="width: {{ engp.comment_to_view_ratio|default:0 }}%; background: var(--primary);"></div>
                     </div>
-                    <div class="flex justify-between mt-1 text-[11px] text-stone-500 tabular-nums">
-                        <span>{% translate "You:" %} <span class="text-stone-900 font-medium">{{ eng.comment_to_view_ratio|pretty_percent:2 }}</span></span>
+                    <div class="flex justify-between mt-1 text-[11px] text-neutral-600 tabular-nums">
+                        <span>{% translate "You:" %} <span class="text-neutral-950 font-medium">{{ eng.comment_to_view_ratio|pretty_percent:2 }}</span></span>
                         <span>{% translate "Niche p50:" %} {{ nichep.comment_to_view_ratio.p50|pretty_percent:2 }}</span>
                     </div>
                 </div>
-                <div class="text-xs font-mono tabular-nums text-stone-900 text-right">p{{ engp.comment_to_view_ratio }}</div>
+                <div class="text-xs font-mono tabular-nums text-neutral-950 text-right">p{{ engp.comment_to_view_ratio }}</div>
             </div>
 
             {% endwith %}
@@ -135,37 +135,37 @@
       below the typical niche channel on this dimension?"
     {% endcomment %}
     {% if channel.title_patterns and niche.title_patterns %}
-    <div class="mt-6 pt-5 border-t border-stone-100">
-        <div class="text-xs uppercase tracking-wide text-stone-500 mb-3">{% translate "Title patterns" %}</div>
+    <div class="mt-6 pt-5 border-t border-neutral-100">
+        <div class="text-xs uppercase tracking-wide text-neutral-600 mb-3">{% translate "Title patterns" %}</div>
         <div class="grid grid-cols-[1fr_auto_auto] gap-x-6 gap-y-2 text-xs">
             <div></div>
-            <div class="text-stone-500 font-medium uppercase tracking-wide text-right">{% translate "You" %}</div>
-            <div class="text-stone-500 font-medium uppercase tracking-wide text-right">{% translate "Niche" %}</div>
+            <div class="text-neutral-600 font-medium uppercase tracking-wide text-right">{% translate "You" %}</div>
+            <div class="text-neutral-600 font-medium uppercase tracking-wide text-right">{% translate "Niche" %}</div>
 
             {% with ch=channel.title_patterns nc=niche.title_patterns %}
-            <div class="text-stone-700">{% translate "Avg title length" %}</div>
-            <div class="text-right text-stone-900 font-medium tabular-nums">{{ ch.mean_length_chars|floatformat:0 }} {% translate "characters" %}</div>
-            <div class="text-right text-stone-500 tabular-nums">{{ nc.mean_length_chars|floatformat:0 }} {% translate "characters" %}</div>
+            <div class="text-neutral-800">{% translate "Avg title length" %}</div>
+            <div class="text-right text-neutral-950 font-medium tabular-nums">{{ ch.mean_length_chars|floatformat:0 }} {% translate "characters" %}</div>
+            <div class="text-right text-neutral-600 tabular-nums">{{ nc.mean_length_chars|floatformat:0 }} {% translate "characters" %}</div>
 
-            <div class="text-stone-700">{% translate "Avg word count" %}</div>
-            <div class="text-right text-stone-900 font-medium tabular-nums">{{ ch.mean_length_words|floatformat:1 }}</div>
-            <div class="text-right text-stone-500 tabular-nums">{{ nc.mean_length_words|floatformat:1 }}</div>
+            <div class="text-neutral-800">{% translate "Avg word count" %}</div>
+            <div class="text-right text-neutral-950 font-medium tabular-nums">{{ ch.mean_length_words|floatformat:1 }}</div>
+            <div class="text-right text-neutral-600 tabular-nums">{{ nc.mean_length_words|floatformat:1 }}</div>
 
-            <div class="text-stone-700">{% translate "Has a question mark" %}</div>
-            <div class="text-right text-stone-900 font-medium tabular-nums">{{ ch.share_with_question_mark|pretty_percent:0 }}</div>
-            <div class="text-right text-stone-500 tabular-nums">{{ nc.share_with_question_mark|pretty_percent:0 }}</div>
+            <div class="text-neutral-800">{% translate "Has a question mark" %}</div>
+            <div class="text-right text-neutral-950 font-medium tabular-nums">{{ ch.share_with_question_mark|pretty_percent:0 }}</div>
+            <div class="text-right text-neutral-600 tabular-nums">{{ nc.share_with_question_mark|pretty_percent:0 }}</div>
 
-            <div class="text-stone-700">{% translate "Has a number" %}</div>
-            <div class="text-right text-stone-900 font-medium tabular-nums">{{ ch.share_with_number|pretty_percent:0 }}</div>
-            <div class="text-right text-stone-500 tabular-nums">{{ nc.share_with_number|pretty_percent:0 }}</div>
+            <div class="text-neutral-800">{% translate "Has a number" %}</div>
+            <div class="text-right text-neutral-950 font-medium tabular-nums">{{ ch.share_with_number|pretty_percent:0 }}</div>
+            <div class="text-right text-neutral-600 tabular-nums">{{ nc.share_with_number|pretty_percent:0 }}</div>
 
-            <div class="text-stone-700">{% translate "Median uppercase ratio" %}</div>
-            <div class="text-right text-stone-900 font-medium tabular-nums">{{ ch.median_uppercase_ratio|pretty_percent:0 }}</div>
-            <div class="text-right text-stone-500 tabular-nums">{{ nc.median_uppercase_ratio|pretty_percent:0 }}</div>
+            <div class="text-neutral-800">{% translate "Median uppercase ratio" %}</div>
+            <div class="text-right text-neutral-950 font-medium tabular-nums">{{ ch.median_uppercase_ratio|pretty_percent:0 }}</div>
+            <div class="text-right text-neutral-600 tabular-nums">{{ nc.median_uppercase_ratio|pretty_percent:0 }}</div>
 
-            <div class="text-stone-700">{% translate "Has an emoji" %}</div>
-            <div class="text-right text-stone-900 font-medium tabular-nums">{{ ch.share_with_emoji|pretty_percent:0 }}</div>
-            <div class="text-right text-stone-500 tabular-nums">{{ nc.share_with_emoji|pretty_percent:0 }}</div>
+            <div class="text-neutral-800">{% translate "Has an emoji" %}</div>
+            <div class="text-right text-neutral-950 font-medium tabular-nums">{{ ch.share_with_emoji|pretty_percent:0 }}</div>
+            <div class="text-right text-neutral-600 tabular-nums">{{ nc.share_with_emoji|pretty_percent:0 }}</div>
             {% endwith %}
         </div>
     </div>
@@ -178,13 +178,13 @@
       trends"). Capped to the top ~12 server-side ordering.
     {% endcomment %}
     {% if niche.title_patterns.common_niche_phrases %}
-    <div class="mt-6 pt-5 border-t border-stone-100">
-        <div class="text-xs uppercase tracking-wide text-stone-500 mb-3">{% translate "Common phrases in niche" %}</div>
+    <div class="mt-6 pt-5 border-t border-neutral-100">
+        <div class="text-xs uppercase tracking-wide text-neutral-600 mb-3">{% translate "Common phrases in niche" %}</div>
         <div class="flex flex-wrap gap-1.5">
             {% for ph in niche.title_patterns.common_niche_phrases|slice:":12" %}
             <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px]
-                         {% if ph.used_by_channel %}font-medium{% else %}text-stone-700{% endif %}"
-                  style="{% if ph.used_by_channel %}background: var(--primary-soft); color: var(--primary); border: 1px solid var(--primary-muted);{% else %}background: #f5f5f4; border: 1px solid #e7e5e4;{% endif %}">
+                         {% if ph.used_by_channel %}font-medium{% else %}text-neutral-800{% endif %}"
+                  style="{% if ph.used_by_channel %}background: var(--primary-soft); color: var(--primary); border: 1px solid var(--primary-muted);{% else %}background: #f5f3ff; border: 1px solid #e5e7eb;{% endif %}">
                 {% if ph.used_by_channel %}
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 {% endif %}
@@ -194,7 +194,7 @@
             {% endfor %}
         </div>
         {% if niche.title_patterns.common_niche_phrases|length > 12 %}
-        <div class="mt-2 text-[11px] text-stone-400">
+        <div class="mt-2 text-[11px] text-neutral-500">
             + {{ niche.title_patterns.common_niche_phrases|length|add:"-12" }} {% translate "more" %}
         </div>
         {% endif %}
@@ -203,13 +203,13 @@
 
     {% comment %} Exemplar channels, peers in the niche {% endcomment %}
     {% if niche.exemplar_channels %}
-    <div class="mt-6 pt-5 border-t border-stone-100">
-        <div class="text-xs uppercase tracking-wide text-stone-500 mb-3">{% translate "Exemplar channels in this niche" %}</div>
+    <div class="mt-6 pt-5 border-t border-neutral-100">
+        <div class="text-xs uppercase tracking-wide text-neutral-600 mb-3">{% translate "Exemplar channels in this niche" %}</div>
         <ul class="space-y-1.5">
             {% for ec in niche.exemplar_channels %}
             <li class="flex items-center justify-between gap-3 text-xs">
-                <span class="text-stone-900 font-medium truncate">{{ ec.title }}</span>
-                <span class="text-stone-500 tabular-nums flex-shrink-0">{{ ec.subscriber_count|humanize_count }}</span>
+                <span class="text-neutral-950 font-medium truncate">{{ ec.title }}</span>
+                <span class="text-neutral-600 tabular-nums flex-shrink-0">{{ ec.subscriber_count|humanize_count }}</span>
             </li>
             {% endfor %}
         </ul>

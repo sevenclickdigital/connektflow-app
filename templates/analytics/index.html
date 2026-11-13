@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load analytics_extras i18n %}
 
-{% block title %}{% translate "Analytics" %} — {{ active_account.account_name }} — Brightbean{% endblock %}
+{% block title %}{% translate "Analytics" %} — {{ active_account.account_name }} — Automator{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -39,7 +39,7 @@
     .a-table tbody tr:hover { background: var(--surface-1); }
 
     /* Drawer */
-    .a-drawer-backdrop { position: fixed; inset: 0; background: rgba(23,20,18,0.32); z-index: 120; opacity: 0; pointer-events: none; transition: opacity var(--dur-base) var(--ease-out); }
+    .a-drawer-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42,0.32); z-index: 120; opacity: 0; pointer-events: none; transition: opacity var(--dur-base) var(--ease-out); }
     .a-drawer-backdrop.open { opacity: 1; pointer-events: auto; }
     .a-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 92vw); z-index: 121; background: #fff; box-shadow: var(--shadow-xl); display: flex; flex-direction: column; transform: translateX(100%); transition: transform var(--dur-base) var(--ease-out); }
     .a-drawer.open { transform: translateX(0); }

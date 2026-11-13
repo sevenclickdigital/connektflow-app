@@ -17,12 +17,12 @@ Context: previews (one per account: {account, slides}; each slide has format, la
         {% for s in p.slides %}
         <div x-show="slide === {{ forloop.counter0 }}" {% if not forloop.first %}x-cloak{% endif %}>
             <!-- Platform label + char badge -->
-            <div class="px-3.5 py-2 border-b flex items-center gap-2" style="border-color: #E7E5E4;">
+            <div class="px-3.5 py-2 border-b flex items-center gap-2" style="border-color: #E5E7EB;">
                 {% if s.account.platform != "youtube" %}{% include "partials/_platform_icon.html" with platform=s.account.platform size="sm" %}{% endif %}
-                <span class="text-[11px] font-semibold text-stone-500 flex-1 truncate">{% blocktranslate with platform=s.label %}{{ platform }} Preview{% endblocktranslate %}</span>
+                <span class="text-[11px] font-semibold text-neutral-600 flex-1 truncate">{% blocktranslate with platform=s.label %}{{ platform }} Preview{% endblocktranslate %}</span>
                 {% if s.format != "story" %}
                 <span class="text-[10px] font-semibold tabular-nums px-2 py-0.5 rounded-full
-                             {% if s.is_over_limit %}bg-red-50 text-red-600{% else %}bg-stone-100 text-stone-500{% endif %}">
+                             {% if s.is_over_limit %}bg-red-50 text-red-600{% else %}bg-neutral-100 text-neutral-600{% endif %}">
                     {{ s.char_count }}/{{ s.char_limit }}
                 </span>
                 {% endif %}
@@ -48,19 +48,19 @@ Context: previews (one per account: {account, slides}; each slide has format, la
         {% endfor %}
 
         {% if p.slides|length > 1 %}
-        <div class="flex items-center justify-between gap-2 px-3 py-2 border-t" style="border-color: #E7E5E4;">
-            <button type="button" class="w-7 h-7 rounded-full border border-stone-200 flex items-center justify-center text-stone-500 hover:bg-stone-50 disabled:opacity-30 cursor-pointer"
+        <div class="flex items-center justify-between gap-2 px-3 py-2 border-t" style="border-color: #E5E7EB;">
+            <button type="button" class="w-7 h-7 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-600 hover:bg-neutral-50 disabled:opacity-30 cursor-pointer"
                     :disabled="slide === 0" @click="slide = Math.max(0, slide - 1)" aria-label="{% translate 'Previous format' %}">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
             </button>
             <div class="flex items-center gap-1.5">
                 {% for s in p.slides %}
                 <button type="button" class="px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer transition-colors"
-                        :class="slide === {{ forloop.counter0 }} ? 'bg-orange-100 text-orange-700' : 'text-stone-400 hover:text-stone-600'"
+                        :class="slide === {{ forloop.counter0 }} ? 'bg-brand-100 text-brand-900' : 'text-neutral-500 hover:text-neutral-700'"
                         @click="slide = {{ forloop.counter0 }}">{{ s.format_label }}</button>
                 {% endfor %}
             </div>
-            <button type="button" class="w-7 h-7 rounded-full border border-stone-200 flex items-center justify-center text-stone-500 hover:bg-stone-50 disabled:opacity-30 cursor-pointer"
+            <button type="button" class="w-7 h-7 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-600 hover:bg-neutral-50 disabled:opacity-30 cursor-pointer"
                     :disabled="slide === slides - 1" @click="slide = Math.min(slides - 1, slide + 1)" aria-label="{% translate 'Next format' %}">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </button>
@@ -72,13 +72,13 @@ Context: previews (one per account: {account, slides}; each slide has format, la
 {% else %}
     <!-- Empty preview state -->
     <div class="flex flex-col items-center justify-center h-full text-center px-6 py-12">
-        <div class="w-16 h-16 rounded-2xl bg-stone-100 flex items-center justify-center mb-4"
+        <div class="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4"
              style="animation: slideUp 400ms cubic-bezier(0.16,1,0.3,1) both">
-            <svg class="w-7 h-7 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            <svg class="w-7 h-7 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
         </div>
-        <p class="text-sm font-medium text-stone-500 mb-1"
+        <p class="text-sm font-medium text-neutral-600 mb-1"
            style="animation: slideUp 400ms 80ms cubic-bezier(0.16,1,0.3,1) both">{% translate "No preview yet" %}</p>
-        <p class="text-xs text-stone-400 max-w-[200px]"
+        <p class="text-xs text-neutral-500 max-w-[200px]"
            style="animation: slideUp 400ms 140ms cubic-bezier(0.16,1,0.3,1) both">{% translate "Select a platform and start writing to see how your post will look" %}</p>
     </div>
 {% endif %}

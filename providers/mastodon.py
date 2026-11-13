@@ -11,6 +11,8 @@ from datetime import datetime
 from functools import partial
 from urllib.parse import urlencode
 
+from django.conf import settings
+
 from .base import SocialProvider
 from .exceptions import APIError, OAuthError, PublishError
 from .types import (
@@ -149,10 +151,10 @@ class MastodonProvider(SocialProvider):
             "POST",
             url,
             json={
-                "client_name": "Brightbean",
+                "client_name": "Automator",
                 "redirect_uris": redirect_uri,
                 "scopes": " ".join(self.required_scopes),
-                "website": "https://brightbean.xyz",
+                "website": settings.APP_URL,
             },
         )
         data = resp.json()

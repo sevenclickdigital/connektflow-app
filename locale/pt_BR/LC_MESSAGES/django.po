@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: BrightBean Studio\n"
+"Project-Id-Version: Automator\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 22:06+0000\n"
+"POT-Creation-Date: 2026-11-13 00:21+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -292,13 +292,13 @@ msgstr "%(name)s (cópia)"
 
 #: apps/billing/contracting.py:121
 #, python-format
-msgid "Brightbean Studio — workspace %(name)s"
-msgstr "Brightbean Studio — workspace %(name)s"
+msgid "Automator — workspace %(name)s"
+msgstr "Automator — workspace %(name)s"
 
 #: apps/billing/contracting.py:174
 #, python-format
-msgid "Brightbean Studio — %(gb)s GB extra storage for %(name)s"
-msgstr "Brightbean Studio — %(gb)s GB de armazenamento extra para %(name)s"
+msgid "Automator — %(gb)s GB extra storage for %(name)s"
+msgstr "Automator — %(gb)s GB de armazenamento extra para %(name)s"
 
 #: apps/billing/models.py:68 apps/billing/models.py:218
 #: apps/composer/models.py:501 apps/composer/models.py:882
@@ -903,8 +903,8 @@ msgid "Behind the Scenes"
 msgstr "Bastidores"
 
 #: apps/composer/curated_feeds.py:12
-msgid "Brightbean Favorites"
-msgstr "Favoritos da Brightbean"
+msgid "Automator Favorites"
+msgstr "Favoritos do Automator"
 
 #: apps/composer/curated_feeds.py:13
 msgid "Tech"
@@ -1058,7 +1058,7 @@ msgid "On Hold"
 msgstr "Em espera"
 
 #: apps/composer/models.py:494 apps/tasks/creative_formats.py:112
-#: templates/analytics/_post_table.html:50 templates/base.html:457
+#: templates/analytics/_post_table.html:50 templates/base.html:473
 msgid "Post"
 msgstr "Publicação"
 
@@ -1464,7 +1464,7 @@ msgstr "Não lidas"
 #: templates/calendar/partials/week_grid.html:49
 #: templates/calendar/partials/week_grid.html:60
 #: templates/inbox/partials/_filter_bar.html:52
-#: templates/radar/partials/_source_card.html:51
+#: templates/radar/partials/_source_card.html:43
 msgid "Open"
 msgstr "Abrir"
 
@@ -2684,9 +2684,10 @@ msgstr ""
 msgid "Accept Terms"
 msgstr "Aceitar termos"
 
-#: templates/account/accept_terms.html:21
-msgid "Brightbean logo"
-msgstr "Logo da Brightbean"
+#: templates/account/accept_terms.html:21 templates/account/login.html:24
+#: templates/account/signup.html:24
+msgid "Automator logo"
+msgstr "Logo do Automator"
 
 #: templates/account/accept_terms.html:24
 msgid "Almost there"
@@ -2700,27 +2701,27 @@ msgstr "Revise e aceite nossos termos para continuar"
 msgid "One quick step before you get started."
 msgstr "Só mais um passo antes de começar."
 
-#: templates/account/accept_terms.html:57
+#: templates/account/accept_terms.html:58
+#, python-format
 msgid ""
-"I agree to the <a href=\"https://brightbean.xyz/terms-of-service/\" "
+"I agree to the <a href=\"%(terms_url)s\" target=\"_blank\" rel=\"noopener\" "
+"class=\"font-semibold underline hover:no-underline\" style=\"color: var(--"
+"primary);\">Terms of Service</a> and <a href=\"%(privacy_url)s\" "
 "target=\"_blank\" rel=\"noopener\" class=\"font-semibold underline hover:no-"
-"underline\" style=\"color: var(--primary);\">Terms of Service</a> and <a "
-"href=\"https://brightbean.xyz/privacy-policy/\" target=\"_blank\" "
-"rel=\"noopener\" class=\"font-semibold underline hover:no-underline\" "
-"style=\"color: var(--primary);\">Privacy Policy</a>"
+"underline\" style=\"color: var(--primary);\">Privacy Policy</a>"
 msgstr ""
-"Concordo com os <a href=\"https://brightbean.xyz/terms-of-service/\" "
+"Concordo com os <a href=\"%(terms_url)s\" "
 "target=\"_blank\" rel=\"noopener\" class=\"font-semibold underline hover:no-"
 "underline\" style=\"color: var(--primary);\">Termos de Serviço</a> e a <a "
-"href=\"https://brightbean.xyz/privacy-policy/\" target=\"_blank\" "
+"href=\"%(privacy_url)s\" target=\"_blank\" "
 "rel=\"noopener\" class=\"font-semibold underline hover:no-underline\" "
 "style=\"color: var(--primary);\">Política de Privacidade</a>"
 
-#: templates/account/accept_terms.html:67
+#: templates/account/accept_terms.html:68
 msgid "Continue"
 msgstr "Continuar"
 
-#: templates/account/accept_terms.html:74 templates/account/logout.html:17
+#: templates/account/accept_terms.html:75 templates/account/logout.html:17
 msgid "Sign out"
 msgstr "Sair"
 
@@ -2732,11 +2733,11 @@ msgstr "Olá, %(user_display)s,"
 
 #: templates/account/email/email_confirmation_message.txt:3
 msgid ""
-"Please confirm this email address for your Brightbean Studio account by "
-"clicking the link below:"
+"Please confirm this email address for your Automator account by clicking the "
+"link below:"
 msgstr ""
-"Confirme este endereço de e-mail da sua conta do Brightbean Studio clicando "
-"no link abaixo:"
+"Confirme este endereço de e-mail da sua conta do Automator clicando no link "
+"abaixo:"
 
 #: templates/account/email/email_confirmation_message.txt:7
 msgid "If you didn't add this email, you can safely ignore this message."
@@ -2745,15 +2746,15 @@ msgstr ""
 
 #: templates/account/email/email_confirmation_message.txt:9
 #: templates/account/email/email_confirmation_signup_message.txt:9
-msgid "The Brightbean team"
-msgstr "Equipe Brightbean"
+msgid "The Automator team"
+msgstr "Equipe Automator"
 
 #: templates/account/email/email_confirmation_signup_message.txt:3
 msgid ""
-"Thanks for signing up for Brightbean. Please confirm your email address by "
+"Thanks for signing up for Automator. Please confirm your email address by "
 "clicking the link below:"
 msgstr ""
-"Obrigado por criar sua conta no Brightbean. Confirme seu endereço de e-mail "
+"Obrigado por criar sua conta no Automator. Confirme seu endereço de e-mail "
 "clicando no link abaixo:"
 
 #: templates/account/email/email_confirmation_signup_message.txt:7
@@ -2762,8 +2763,8 @@ msgstr "Se você não criou uma conta, pode ignorar este e-mail com segurança."
 
 #: templates/account/email/email_confirmation_signup_subject.txt:1
 #: templates/account/email/email_confirmation_subject.txt:1
-msgid "Confirm your email for Brightbean"
-msgstr "Confirme seu e-mail na Brightbean"
+msgid "Confirm your email for Automator"
+msgstr "Confirme seu e-mail no Automator"
 
 #: templates/account/email_confirm.html:4
 #: templates/account/email_confirm.html:38
@@ -2808,18 +2809,13 @@ msgstr "Voltar para o login"
 msgid "Log in"
 msgstr "Entrar"
 
-#: templates/account/login.html:24 templates/account/signup.html:24
-msgid "BrightBean Studio logo"
-msgstr "Logo do BrightBean Studio"
-
 #: templates/account/login.html:28 templates/client_portal/dashboard.html:10
 msgid "Welcome back"
 msgstr "Bem-vindo de volta"
 
 #: templates/account/login.html:31
-msgid "Log in to BrightBean Studio | Social media scheduling &amp; approvals."
-msgstr ""
-"Entrar no BrightBean Studio | Agendamento e aprovações de redes sociais."
+msgid "Log in to Automator | Social media scheduling &amp; approvals."
+msgstr "Entrar no Automator | Agendamento e aprovações de redes sociais."
 
 #: templates/account/login.html:60
 #, python-format
@@ -2860,7 +2856,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/approvals/partials/_approval_row.html:148
 #: templates/automations/flow_builder.html:903
 #: templates/automations/flow_new.html:153 templates/automations/form.html:392
-#: templates/base.html:650 templates/base.html:674 templates/base.html:1558
+#: templates/base.html:666 templates/base.html:690 templates/base.html:1572
 #: templates/calendar/calendar.html:471
 #: templates/calendar/partials/_delete_post_modal.html:42
 #: templates/calendar/partials/event_form.html:86
@@ -2928,7 +2924,7 @@ msgstr "Enviar link de redefinição"
 msgid "Remember your password?"
 msgstr "Lembrou sua senha?"
 
-#: templates/account/password_reset.html:61 templates/account/signup.html:130
+#: templates/account/password_reset.html:61 templates/account/signup.html:131
 msgid "Sign in"
 msgstr "Entrar"
 
@@ -2954,7 +2950,7 @@ msgstr "Não recebeu o e-mail?"
 
 #: templates/account/password_reset_done.html:35
 #: templates/analytics/_shopee_page.html:16
-#: templates/social_accounts/partials/_account_card.html:137
+#: templates/social_accounts/partials/_account_card.html:118
 msgid "Try again"
 msgstr "Tentar novamente"
 
@@ -3001,11 +2997,11 @@ msgstr "Crie sua conta"
 
 #: templates/account/signup.html:31
 msgid ""
-"Sign up for BrightBean Studio | Schedule posts and run approvals across 10+ "
+"Sign up for Automator | Schedule posts and run approvals across 10+ "
 "platforms."
 msgstr ""
-"Crie sua conta no BrightBean Studio | Agende publicações e faça aprovações "
-"em mais de 10 plataformas."
+"Crie sua conta no Automator | Agende publicações e faça aprovações em mais "
+"de 10 plataformas."
 
 #: templates/account/signup.html:60 templates/allauth/elements/provider.html:6
 #, python-format
@@ -3016,22 +3012,22 @@ msgstr "Continuar com %(provider)s"
 msgid "Create Account"
 msgstr "Criar conta"
 
-#: templates/account/signup.html:118
+#: templates/account/signup.html:119
+#, python-format
 msgid ""
-"By signing up, you agree to our <a href=\"https://brightbean.xyz/terms-of-"
-"service/\" class=\"underline hover:no-underline\" style=\"color: var(--text-"
-"secondary);\">Terms of Service</a> and <a href=\"https://brightbean.xyz/"
-"privacy-policy/\" class=\"underline hover:no-underline\" style=\"color: "
-"var(--text-secondary);\">Privacy Policy</a>."
+"By signing up, you agree to our <a href=\"%(terms_url)s\" class=\"underline "
+"hover:no-underline\" style=\"color: var(--text-secondary);\">Terms of "
+"Service</a> and <a href=\"%(privacy_url)s\" class=\"underline hover:no-"
+"underline\" style=\"color: var(--text-secondary);\">Privacy Policy</a>."
 msgstr ""
-"Ao criar sua conta, você concorda com nossos <a href=\"https://"
-"brightbean.xyz/terms-of-service/\" class=\"underline hover:no-underline\" "
+"Ao criar sua conta, você concorda com nossos <a href=\"%(terms_url)s\" "
+"class=\"underline hover:no-underline\" "
 "style=\"color: var(--text-secondary);\">Termos de Serviço</a> e nossa <a "
-"href=\"https://brightbean.xyz/privacy-policy/\" class=\"underline hover:no-"
+"href=\"%(privacy_url)s\" class=\"underline hover:no-"
 "underline\" style=\"color: var(--text-secondary);\">Política de Privacidade</"
 "a>."
 
-#: templates/account/signup.html:129
+#: templates/account/signup.html:130
 msgid "Already have an account?"
 msgstr "Já tem uma conta?"
 
@@ -3119,7 +3115,7 @@ msgstr ""
 "Crie um workspace para começar a agendar publicações, gerenciar conteúdo e "
 "colaborar com sua equipe."
 
-#: templates/accounts/dashboard.html:55 templates/base.html:1553
+#: templates/accounts/dashboard.html:55 templates/base.html:1567
 #: templates/workspaces/list.html:65
 msgid "Workspace name"
 msgstr "Nome do workspace"
@@ -3221,11 +3217,11 @@ msgstr "Excluir sua conta"
 
 #: templates/accounts/settings.html:147
 msgid ""
-"When you delete your account, you lose access to Brightbean Studio account "
-"services, and we permanently delete your personal data."
+"When you delete your account, you lose access to Automator account services, "
+"and we permanently delete your personal data."
 msgstr ""
-"Ao excluir sua conta, você perde o acesso aos serviços do Brightbean Studio "
-"e excluímos seus dados pessoais permanentemente."
+"Ao excluir sua conta, você perde o acesso aos serviços do Automator e "
+"excluímos seus dados pessoais permanentemente."
 
 #: templates/accounts/settings.html:154
 msgid "Delete Account"
@@ -3234,11 +3230,11 @@ msgstr "Excluir conta"
 #: templates/accounts/settings.html:181
 msgid ""
 "Are you sure you want to delete your account? This action is permanent and "
-"cannot be undone. You will lose access to all Brightbean Studio services, "
-"and your personal data will be permanently deleted."
+"cannot be undone. You will lose access to all Automator services, and your "
+"personal data will be permanently deleted."
 msgstr ""
 "Tem certeza de que deseja excluir sua conta? Esta ação é permanente e não "
-"pode ser desfeita. Você perderá o acesso a todos os serviços do Brightbean "
+"pode ser desfeita. Você perderá o acesso a todos os serviços do Automator "
 "Studio e seus dados pessoais serão excluídos permanentemente."
 
 #: templates/accounts/settings.html:198
@@ -3247,9 +3243,9 @@ msgstr "Sim, excluir minha conta"
 
 #: templates/analytics/_delta_chip.html:1
 #, python-format
-msgid "Change vs. the previous %(days)s days, calculated by BrightBean"
+msgid "Change vs. the previous %(days)s days, calculated by Automator"
 msgstr ""
-"Variação em relação aos %(days)s dias anteriores, calculada pela BrightBean"
+"Variação em relação aos %(days)s dias anteriores, calculada pelo Automator"
 
 #: templates/analytics/_empty_state.html:11
 #, python-format
@@ -3291,8 +3287,8 @@ msgstr "Taxa de engajamento"
 
 #: templates/analytics/_engagement_card.html:7
 #: templates/analytics/_shopee_status_card.html:8
-msgid "Calculated by BrightBean"
-msgstr "Calculado pela BrightBean"
+msgid "Calculated by Automator"
+msgstr "Calculado pelo Automator"
 
 #: templates/analytics/_engagement_card.html:16
 msgid "Not reported by"
@@ -3304,8 +3300,8 @@ msgstr "Ainda não há dados suficientes para calcular."
 
 #: templates/analytics/_engagement_card.html:30
 #: templates/analytics/_hero_chart.html:7
-msgid "Estimated by BrightBean"
-msgstr "Estimado pela BrightBean"
+msgid "Estimated by Automator"
+msgstr "Estimado pelo Automator"
 
 #: templates/analytics/_hero_chart.html:6
 #: templates/analytics/_post_table.html:9
@@ -3316,8 +3312,8 @@ msgstr "últimos %(days)s dias"
 
 #: templates/analytics/_hero_chart.html:7
 #, python-format
-msgid "Estimated by BrightBean from per-%(content_noun)s counts"
-msgstr "Estimado pela BrightBean a partir das contagens por %(content_noun)s"
+msgid "Estimated by Automator from per-%(content_noun)s counts"
+msgstr "Estimado pelo Automator a partir das contagens por %(content_noun)s"
 
 #: templates/analytics/_history_offer.html:31
 #, python-format
@@ -3353,11 +3349,11 @@ msgstr[1] "%(counter)s publicações deste canal ainda não estão aqui"
 
 #: templates/analytics/_history_offer.html:67
 msgid ""
-"Posts published outside Brightbean. Import them to see them here — their "
+"Posts published outside Automator. Import them to see them here — their "
 "metrics follow on the next sync."
 msgstr ""
-"Publicações feitas fora do Brightbean. Importe para vê-las aqui — as "
-"métricas chegam na próxima sincronização."
+"Publicações feitas fora do Automator. Importe para vê-las aqui — as métricas "
+"chegam na próxima sincronização."
 
 #: templates/analytics/_history_offer.html:78
 msgid "Import"
@@ -3395,11 +3391,11 @@ msgstr ""
 "A plataforma recusou nossa chamada de análises por falta de permissão. "
 "Reconecte para conceder as novas permissões."
 
-#: templates/analytics/_page.html:16 templates/base.html:815
-#: templates/radar/partials/_source_card.html:58
-#: templates/social_accounts/connect.html:102
-#: templates/social_accounts/partials/_account_card.html:44
-#: templates/social_accounts/partials/_account_card.html:114
+#: templates/analytics/_page.html:16 templates/base.html:831
+#: templates/radar/partials/_source_card.html:50
+#: templates/social_accounts/connect.html:110
+#: templates/social_accounts/partials/_account_card.html:95
+#: templates/social_accounts/partials/_account_card.html:143
 msgid "Reconnect"
 msgstr "Reconectar"
 
@@ -3410,7 +3406,7 @@ msgstr "Todas as publicações"
 #: templates/analytics/_page_header.html:6 templates/analytics/index.html:4
 #: templates/analytics/no_accounts.html:4
 #: templates/analytics/no_accounts.html:10 templates/analytics/shopee.html:4
-#: templates/base.html:745
+#: templates/base.html:761
 msgid "Analytics"
 msgstr "Análises"
 
@@ -3467,8 +3463,8 @@ msgid "New followers"
 msgstr "Novos seguidores"
 
 #: templates/analytics/_page_header.html:110
-msgid "Calculated by BrightBean from the change in follower totals"
-msgstr "Calculado pelo BrightBean a partir da variação no total de seguidores"
+msgid "Calculated by Automator from the change in follower totals"
+msgstr "Calculado pelo Automator a partir da variação no total de seguidores"
 
 #: templates/analytics/_post_detail.html:32
 msgid "Post copy"
@@ -3660,18 +3656,18 @@ msgstr "Comissão dividida pelos pedidos, sem contar os cancelados."
 
 #: templates/analytics/_stat_card.html:9
 #, python-format
-msgid "Daily average, estimated by BrightBean from per-%(noun)s counts"
+msgid "Daily average, estimated by Automator from per-%(noun)s counts"
 msgstr ""
-"Média diária, estimada pela BrightBean a partir das contagens por %(noun)s"
+"Média diária, estimada pelo Automator a partir das contagens por %(noun)s"
 
 #: templates/analytics/_stat_card.html:9
 #, python-format
-msgid "Estimated by BrightBean from per-%(noun)s counts"
-msgstr "Estimado pela BrightBean a partir das contagens por %(noun)s"
+msgid "Estimated by Automator from per-%(noun)s counts"
+msgstr "Estimado pelo Automator a partir das contagens por %(noun)s"
 
 #: templates/analytics/_stat_card.html:10
-msgid "Daily average · calculated by BrightBean"
-msgstr "Média diária · calculada pela BrightBean"
+msgid "Daily average · calculated by Automator"
+msgstr "Média diária · calculada pelo Automator"
 
 #: templates/analytics/no_accounts.html:20
 msgid "Connect an account to see analytics"
@@ -3687,7 +3683,7 @@ msgstr ""
 "desempenho de cada publicação — e, se você já conectou alguma antes, confira "
 "a página Canais: uma conta que precisa ser reconectada não aparece aqui."
 
-#: templates/analytics/no_accounts.html:24 templates/base.html:774
+#: templates/analytics/no_accounts.html:24 templates/base.html:790
 msgid "Connect a channel"
 msgstr "Conectar um canal"
 
@@ -3849,10 +3845,10 @@ msgstr "Salve este token agora."
 
 #: templates/api_keys/_token_reveal.html:27
 msgid ""
-"Brightbean does not store the plaintext token. Once you close this modal it "
+"Automator does not store the plaintext token. Once you close this modal it "
 "cannot be retrieved."
 msgstr ""
-"O Brightbean não armazena o token em texto puro. Depois que você fechar esta "
+"O Automator não armazena o token em texto puro. Depois que você fechar esta "
 "janela, não será possível recuperá-lo."
 
 #: templates/api_keys/_token_reveal.html:28
@@ -4163,7 +4159,7 @@ msgid "Templates"
 msgstr "Modelos"
 
 #: templates/automations/flow_builder.html:4
-#: templates/automations/staff_template_list.html:25 templates/base.html:983
+#: templates/automations/staff_template_list.html:25 templates/base.html:989
 #: templates/billing/staff_console.html:40
 #: templates/billing/staff_impersonations.html:19
 #: templates/billing/staff_plans.html:25
@@ -4213,7 +4209,7 @@ msgstr "Detalhes do modelo"
 msgid "Automation settings"
 msgstr "Configurações da automação"
 
-#: templates/automations/flow_builder.html:204 templates/base.html:947
+#: templates/automations/flow_builder.html:204 templates/base.html:953
 #: templates/composer/partials/_media_thumb_actions.html:10
 #: templates/layouts/settings.html:10
 #: templates/organizations/partials/workspace_card.html:35
@@ -4577,7 +4573,7 @@ msgstr "Enviar"
 #: templates/automations/flow_builder.html:1050
 #: templates/calendar/partials/publish_approvals.html:110
 #: templates/calendar/partials/publish_calendar_shell.html:132
-#: templates/radar/partials/_source_card.html:89
+#: templates/radar/partials/_source_card.html:81
 msgid "Loading…"
 msgstr "Carregando…"
 
@@ -5061,7 +5057,7 @@ msgid "Create rule"
 msgstr "Criar regra"
 
 #: templates/automations/list.html:4 templates/automations/list.html:23
-#: templates/base.html:732
+#: templates/base.html:748
 msgid "Automations"
 msgstr "Automações"
 
@@ -5482,35 +5478,43 @@ msgstr "Não foi possível salvar a ideia. Tente novamente."
 msgid "One of the files failed to upload. Please try again."
 msgstr "Falha ao enviar um dos arquivos. Tente novamente."
 
-#: templates/base.html:391
+#: templates/base.html:397
 msgid "No workspaces"
 msgstr "Nenhum workspace"
 
-#: templates/base.html:400 templates/base.html:1550
+#: templates/base.html:406 templates/base.html:1564
 msgid "Create workspace"
 msgstr "Criar workspace"
 
-#: templates/base.html:411
+#: templates/base.html:417
 msgid "Workspace settings"
 msgstr "Configurações do workspace"
 
-#: templates/base.html:439
+#: templates/base.html:440
+msgid "Expand sidebar"
+msgstr "Expandir barra lateral"
+
+#: templates/base.html:440 templates/base.html:441
+msgid "Collapse sidebar"
+msgstr "Recolher barra lateral"
+
+#: templates/base.html:455
 msgid "New"
 msgstr "Novo"
 
-#: templates/base.html:458
+#: templates/base.html:474
 msgid "Publish content to a channel"
 msgstr "Publicar conteúdo em um canal"
 
-#: templates/base.html:467 templates/tasks/partials/_task_card.html:43
+#: templates/base.html:483 templates/tasks/partials/_task_card.html:43
 msgid "Idea"
 msgstr "Ideia"
 
-#: templates/base.html:468
+#: templates/base.html:484
 msgid "Capture a content idea"
 msgstr "Registrar uma ideia de conteúdo"
 
-#: templates/base.html:481 templates/billing/staff_console.html:205
+#: templates/base.html:497 templates/billing/staff_console.html:205
 #: templates/calendar/partials/publish_calendar_shell.html:129
 #: templates/composer/compose.html:2201 templates/composer/compose.html:2238
 #: templates/composer/create_landing.html:496
@@ -5518,18 +5522,18 @@ msgstr "Registrar uma ideia de conteúdo"
 #: templates/composer/create_landing.html:971
 #: templates/composer/partials/_media_thumb_actions.html:26
 #: templates/radar/partials/_share_dialog.html:18
-#: templates/radar/partials/_source_card.html:84
+#: templates/radar/partials/_source_card.html:76
 #: templates/tasks/partials/_request_arts_host.html:17
 #: templates/tasks/partials/_task_modal.html:5
 msgid "Close"
 msgstr "Fechar"
 
-#: templates/base.html:496 templates/base.html:700
+#: templates/base.html:512 templates/base.html:716
 #: templates/composer/create_landing.html:513
 msgid "Create Idea"
 msgstr "Criar ideia"
 
-#: templates/base.html:521
+#: templates/base.html:537
 #: templates/calendar/partials/publish_calendar_shell.html:90
 #: templates/composer/compose.html:1045 templates/composer/compose.html:1740
 #: templates/composer/create_landing.html:369
@@ -5540,19 +5544,19 @@ msgstr "Criar ideia"
 msgid "Tags"
 msgstr "Tags"
 
-#: templates/base.html:531 templates/composer/compose.html:1777
+#: templates/base.html:547 templates/composer/compose.html:1777
 #: templates/composer/create_landing.html:549
 #: templates/composer/create_landing.html:751
 msgid "Search or create tag..."
 msgstr "Buscar ou criar etiqueta..."
 
-#: templates/base.html:542 templates/composer/compose.html:1809
+#: templates/base.html:558 templates/composer/compose.html:1809
 #: templates/composer/create_landing.html:561
 #: templates/composer/create_landing.html:763
 msgid "No tags yet. Type to create one."
 msgstr "Nenhuma etiqueta ainda. Digite para criar uma."
 
-#: templates/base.html:549 templates/base.html:681 templates/base.html:1562
+#: templates/base.html:565 templates/base.html:697 templates/base.html:1576
 #: templates/calendar/queues.html:63 templates/composer/compose.html:481
 #: templates/composer/compose.html:1796 templates/composer/compose.html:1804
 #: templates/composer/compose.html:1866
@@ -5567,7 +5571,7 @@ msgstr "Nenhuma etiqueta ainda. Digite para criar uma."
 msgid "Create"
 msgstr "Criar"
 
-#: templates/base.html:557 templates/base.html:666
+#: templates/base.html:573 templates/base.html:682
 #: templates/composer/compose.html:1816 templates/composer/compose.html:1826
 #: templates/composer/create_landing.html:402
 #: templates/composer/create_landing.html:411
@@ -5577,24 +5581,24 @@ msgstr "Criar"
 msgid "Create new tag"
 msgstr "Criar nova tag"
 
-#: templates/base.html:581 templates/composer/create_landing.html:601
+#: templates/base.html:597 templates/composer/create_landing.html:601
 #: templates/composer/create_landing.html:805
 msgid "Give your idea a title"
 msgstr "Dê um título à sua ideia"
 
-#: templates/base.html:582 templates/composer/create_landing.html:607
+#: templates/base.html:598 templates/composer/create_landing.html:607
 #: templates/composer/create_landing.html:811
 msgid "Let it flow... or"
 msgstr "Deixe fluir... ou"
 
-#: templates/base.html:593 templates/composer/compose.html:486
+#: templates/base.html:609 templates/composer/compose.html:486
 #: templates/composer/compose.html:2170
 #: templates/composer/create_landing.html:618
 #: templates/composer/create_landing.html:823
 msgid "Preview"
 msgstr "Prévia"
 
-#: templates/base.html:595
+#: templates/base.html:611
 #: templates/client_portal/admin/partials/client_row.html:54
 #: templates/composer/compose.html:945 templates/composer/compose.html:1515
 #: templates/composer/create_landing.html:620
@@ -5603,17 +5607,17 @@ msgstr "Prévia"
 msgid "Remove"
 msgstr "Remover"
 
-#: templates/base.html:607 templates/composer/create_landing.html:632
+#: templates/base.html:623 templates/composer/create_landing.html:632
 #: templates/composer/create_landing.html:837
 msgid "Drag &amp; drop"
 msgstr "Arraste e solte"
 
-#: templates/base.html:608 templates/composer/create_landing.html:633
+#: templates/base.html:624 templates/composer/create_landing.html:633
 #: templates/composer/create_landing.html:838
 msgid "Add another file"
 msgstr "Adicionar outro arquivo"
 
-#: templates/base.html:609
+#: templates/base.html:625
 msgid ""
 "or <strong style=\"color: var(--primary); cursor: pointer;\">select a file</"
 "strong>"
@@ -5621,27 +5625,27 @@ msgstr ""
 "ou <strong style=\"color: var(--primary); cursor: pointer;\">selecione um "
 "arquivo</strong>"
 
-#: templates/base.html:619 templates/composer/compose.html:797
+#: templates/base.html:635 templates/composer/compose.html:797
 #: templates/composer/create_landing.html:644
 msgid "Emoji"
 msgstr "Emoji"
 
-#: templates/base.html:628 templates/composer/create_landing.html:653
+#: templates/base.html:644 templates/composer/create_landing.html:653
 msgid "Search emoji..."
 msgstr "Buscar emoji..."
 
-#: templates/base.html:657 templates/composer/create_landing.html:684
+#: templates/base.html:673 templates/composer/create_landing.html:684
 #: templates/composer/create_landing.html:870
 msgid "Save Idea"
 msgstr "Salvar ideia"
 
-#: templates/base.html:670 templates/composer/compose.html:1830
+#: templates/base.html:686 templates/composer/compose.html:1830
 #: templates/composer/create_landing.html:415
 #: templates/composer/create_landing.html:946
 msgid "Tag name..."
 msgstr "Nome da etiqueta..."
 
-#: templates/base.html:696 templates/calendar/calendar.html:4
+#: templates/base.html:712 templates/calendar/calendar.html:4
 #: templates/calendar/calendar.html:8 templates/calendar/calendar.html:443
 #: templates/calendar/calendar.html:475
 #: templates/calendar/partials/publish_queue.html:97
@@ -5649,79 +5653,71 @@ msgstr "Nome da etiqueta..."
 msgid "Publish"
 msgstr "Publicar"
 
-#: templates/base.html:705 templates/tasks/board.html:4
+#: templates/base.html:721 templates/tasks/board.html:4
 #: templates/tasks/board.html:12 templates/tasks/request_arts.html:13
 msgid "Tasks"
 msgstr "Tarefas"
 
-#: templates/base.html:711 templates/radar/index.html:3
+#: templates/base.html:727 templates/radar/index.html:3
 #: templates/radar/index.html:7 templates/radar/shopee.html:37
 msgid "Radar"
 msgstr "Radar"
 
-#: templates/base.html:716
+#: templates/base.html:732
 msgid "Social Inbox"
 msgstr "Caixa de entrada"
 
-#: templates/base.html:728 templates/media_library/library_index.html:12
+#: templates/base.html:744 templates/media_library/library_index.html:12
 msgid "Gallery"
 msgstr "Galeria"
 
-#: templates/base.html:738 templates/notifications/history.html:4
+#: templates/base.html:754 templates/notifications/history.html:4
 #: templates/notifications/history.html:12
 #: templates/notifications/partials/drawer.html:5
 msgid "Notifications"
 msgstr "Notificações"
 
-#: templates/base.html:763 templates/intelligence/playground.html:4
+#: templates/base.html:779 templates/intelligence/playground.html:4
 #: templates/intelligence/playground.html:9
 msgid "Intelligence"
 msgstr "Inteligência"
 
-#: templates/base.html:771
+#: templates/base.html:787
 #: templates/calendar/partials/publish_calendar_shell.html:87
 #: templates/calendar/partials/publish_list_shell.html:34
 #: templates/organizations/cross_calendar.html:189
 msgid "Channels"
 msgstr "Canais"
 
-#: templates/base.html:779
+#: templates/base.html:795
 #, python-format
 msgid "%(counter)s upcoming post"
 msgid_plural "%(counter)s upcoming posts"
 msgstr[0] "%(counter)s publicação agendada"
 msgstr[1] "%(counter)s publicações agendadas"
 
-#: templates/base.html:814
+#: templates/base.html:830
 #, python-format
 msgid "Reconnect %(name)s"
 msgstr "Reconectar %(name)s"
 
-#: templates/base.html:838
+#: templates/base.html:854
 msgid "More channels"
 msgstr "Mais canais"
 
-#: templates/base.html:882
-msgid "Collapse sidebar"
-msgstr "Recolher barra lateral"
-
-#: templates/base.html:890
-msgid "Expand sidebar"
-msgstr "Expandir barra lateral"
-
-#: templates/base.html:937
+#: templates/base.html:943
 msgid "Manage Team"
 msgstr "Gerenciar equipe"
 
-#: templates/base.html:1001
+#: templates/base.html:1007
 msgid "Language"
 msgstr "Idioma"
 
-#: templates/base.html:1015 templates/client_portal/portal_base.html:67
+#: templates/base.html:1021 templates/client_portal/portal_base.html:67
 msgid "Log out"
 msgstr "Sair"
 
-#: templates/base.html:1028
+#: templates/base.html:1042
 msgid "Toggle menu"
 msgstr "Alternar menu"
 
@@ -7090,7 +7086,7 @@ msgstr "Horários de publicação"
 
 #: templates/calendar/posting_slots.html:5
 #: templates/calendar/posting_slots.html:10
-#: templates/social_accounts/partials/_account_card.html:150
+#: templates/social_accounts/partials/_account_card.html:131
 msgid "Posting Schedule"
 msgstr "Agenda de publicação"
 
@@ -7392,8 +7388,8 @@ msgid "No posts are waiting for your review right now"
 msgstr "Nenhuma publicação aguardando sua revisão no momento"
 
 #: templates/client_portal/approval_queue.html:48
-msgid "Powered by BrightBean · Secure approval link"
-msgstr "Desenvolvido por BrightBean · Link de aprovação seguro"
+msgid "Powered by Automator · Secure approval link"
+msgstr "Desenvolvido por Automator · Link de aprovação seguro"
 
 #: templates/client_portal/dashboard.html:13
 #, python-format
@@ -8665,8 +8661,8 @@ msgid "By"
 msgstr "Por"
 
 #: templates/composer/create_landing.html:1015
-msgid "Brightbean"
-msgstr "Brightbean"
+msgid "Automator"
+msgstr "Automator"
 
 #: templates/composer/create_landing.html:1017
 #: templates/composer/create_landing.html:1024
@@ -11378,8 +11374,8 @@ msgstr "Entrar em %(org)s"
 
 #: templates/members/accept_invite.html:90
 #, python-format
-msgid "%(inviter)s invited you to join their team on Brightbean."
-msgstr "%(inviter)s convidou você para a equipe no Brightbean."
+msgid "%(inviter)s invited you to join their team on Automator."
+msgstr "%(inviter)s convidou você para a equipe no Automator."
 
 #: templates/members/accept_invite.html:130
 msgid "Sign Up to Join"
@@ -11391,8 +11387,8 @@ msgstr "Entre para participar"
 
 #: templates/members/email/invite.html:14
 #, python-format
-msgid "Join %(org)s on Brightbean"
-msgstr "Entre em %(org)s no Brightbean"
+msgid "Join %(org)s on Automator"
+msgstr "Entre em %(org)s no Automator"
 
 #: templates/members/email/invite.html:22 templates/members/email/invite.txt:1
 msgid "Hi there,"
@@ -11422,18 +11418,18 @@ msgstr ""
 #: templates/members/email/invite.html:47
 #, python-format
 msgid ""
-"You're receiving this because someone invited you to %(org)s on Brightbean."
+"You're receiving this because someone invited you to %(org)s on Automator."
 msgstr ""
 "Você está recebendo esta mensagem porque alguém convidou você para %(org)s "
-"no Brightbean."
+"no Automator."
 
 #: templates/members/email/invite.txt:3
 #, python-format
 msgid ""
-"%(inviter)s has invited you to join %(org)s as a team member on Brightbean."
+"%(inviter)s has invited you to join %(org)s as a team member on Automator."
 msgstr ""
 "%(inviter)s convidou você para entrar em %(org)s como membro da equipe no "
-"Brightbean."
+"Automator."
 
 #: templates/members/email/invite.txt:5
 msgid "Accept the invitation by visiting the link below:"
@@ -11454,8 +11450,8 @@ msgstr ""
 "convite."
 
 #: templates/members/invite_expired.html:54
-msgid "Go to Brightbean"
-msgstr "Ir para o Brightbean"
+msgid "Go to Automator"
+msgstr "Ir para o Automator"
 
 #: templates/members/list.html:3
 msgid "Team Members - Settings"
@@ -11783,11 +11779,11 @@ msgstr "Autorizar %(name)s?"
 #: templates/oauth2_provider/authorize.html:15
 #, python-format
 msgid ""
-"%(name)s wants to connect to your BrightBean Studio workspace with the "
-"following permissions:"
+"%(name)s wants to connect to your Automator workspace with the following "
+"permissions:"
 msgstr ""
-"%(name)s quer se conectar ao seu workspace no BrightBean Studio com as "
-"seguintes permissões:"
+"%(name)s quer se conectar ao seu workspace no Automator com as seguintes "
+"permissões:"
 
 #: templates/oauth2_provider/authorize.html:42
 #: templates/oauth2_provider/base.html:7
@@ -11795,8 +11791,8 @@ msgid "Authorize"
 msgstr "Autorizar"
 
 #: templates/oauth2_provider/authorize.html:46
-msgid "You can revoke this access at any time from BrightBean Studio."
-msgstr "Você pode revogar este acesso a qualquer momento no BrightBean Studio."
+msgid "You can revoke this access at any time from Automator."
+msgstr "Você pode revogar este acesso a qualquer momento no Automator."
 
 #: templates/onboarding/connection_expired.html:30
 msgid "This link has been revoked"
@@ -11905,8 +11901,8 @@ msgstr "Posts, fotos e vídeo"
 #: templates/onboarding/connection_page.html:267
 #: templates/onboarding/connection_page.html:289
 #: templates/radar/partials/_shopee_connect_form.html:43
-#: templates/radar/partials/_source_card.html:58
-#: templates/social_accounts/connect.html:102
+#: templates/radar/partials/_source_card.html:50
+#: templates/social_accounts/connect.html:110
 msgid "Connect"
 msgstr "Conectar"
 
@@ -12300,8 +12296,8 @@ msgid "No workspaces yet."
 msgstr "Nenhum workspace ainda."
 
 #: templates/partials/_review_banner.html:30
-msgid "Enjoying BrightBean?"
-msgstr "Gostando do BrightBean?"
+msgid "Enjoying Automator?"
+msgstr "Gostando do Automator?"
 
 #: templates/partials/_review_banner.html:31
 msgid ""
@@ -12497,29 +12493,22 @@ msgstr "Verificando com a Shopee…"
 msgid "Connected on %(date)s"
 msgstr "Conectada em %(date)s"
 
-#: templates/radar/partials/_source_card.html:36
-#: templates/social_accounts/connect.html:87
-#: templates/social_accounts/partials/_account_card.html:50
-#: templates/social_accounts/partials/_disconnect_confirm.html:60
-msgid "Disconnect"
-msgstr "Desconectar"
-
-#: templates/radar/partials/_source_card.html:40
-msgid ""
-"This removes the App ID and Secret from BrightBean. Favorites, and the tasks "
-"and posts made from offers, stay."
-msgstr ""
-"Isso remove o App ID e o Secret do BrightBean. Os favoritos e as tarefas e "
-"publicações criadas a partir de ofertas continuam."
-
-#: templates/radar/partials/_source_card.html:81
+#: templates/radar/partials/_source_card.html:73
 #, python-format
 msgid "Connect %(source)s"
 msgstr "Conectar %(source)s"
 
-#: templates/radar/partials/_source_card.html:96
+#: templates/radar/partials/_source_card.html:88
 msgid "Ask a workspace admin to connect it"
 msgstr "Peça a um administrador do workspace para conectar"
+
+#: templates/radar/partials/_source_card.html:93
+msgid ""
+"This removes the App ID and Secret from Automator. Favorites, and the tasks "
+"and posts made from offers, stay."
+msgstr ""
+"Isso remove o App ID e o Secret do Automator. Os favoritos e as tarefas e "
+"publicações criadas a partir de ofertas continuam."
 
 #: templates/radar/shopee.html:51
 msgid "Commissions and orders"
@@ -12689,24 +12678,30 @@ msgstr "Entrar com o Instagram · sem precisar do Facebook"
 msgid "Articles & posts"
 msgstr "Artigos e publicações"
 
-#: templates/social_accounts/connect.html:102
+#: templates/social_accounts/connect.html:88
+#: templates/social_accounts/partials/_disconnect_button.html:12
+#: templates/social_accounts/partials/_disconnect_confirm.html:60
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: templates/social_accounts/connect.html:110
 msgid "Connect another account"
 msgstr "Conectar outra conta"
 
-#: templates/social_accounts/connect.html:109
+#: templates/social_accounts/connect.html:116
 msgid "Not Configured"
 msgstr "Não configurada"
 
-#: templates/social_accounts/connect.html:115
+#: templates/social_accounts/connect.html:125
 msgid "Platform credentials not configured. Contact your administrator."
 msgstr "Credenciais da plataforma não configuradas. Fale com o administrador."
 
-#: templates/social_accounts/connect.html:125
+#: templates/social_accounts/connect.html:135
 #: templates/social_accounts/list.html:52
 msgid "Opportunities"
 msgstr "Oportunidades"
 
-#: templates/social_accounts/connect.html:126
+#: templates/social_accounts/connect.html:136
 msgid ""
 "Sources of products and offers to share. They appear in the Radar, not in "
 "the composer."
@@ -12820,11 +12815,11 @@ msgstr ""
 msgid "Continue to Mastodon"
 msgstr "Continuar para o Mastodon"
 
-#: templates/social_accounts/partials/_account_card.html:69
+#: templates/social_accounts/partials/_account_card.html:50
 msgid "Some features are unavailable."
 msgstr "Alguns recursos estão indisponíveis."
 
-#: templates/social_accounts/partials/_account_card.html:70
+#: templates/social_accounts/partials/_account_card.html:51
 #, python-format
 msgid ""
 "This account was connected without %(scopes)s. Anything relying on them will "
@@ -12833,7 +12828,7 @@ msgstr ""
 "Esta conta foi conectada sem %(scopes)s. Tudo o que depende disso vai falhar "
 "até a permissão ser concedida — reconecte para tentar de novo."
 
-#: templates/social_accounts/partials/_account_card.html:76
+#: templates/social_accounts/partials/_account_card.html:57
 msgid ""
 "Instagram DM access is unavailable for this connection. Contact your "
 "administrator to enable it."
@@ -12841,7 +12836,7 @@ msgstr ""
 "O acesso a DMs do Instagram está indisponível nesta conexão. Fale com o "
 "administrador para habilitá-lo."
 
-#: templates/social_accounts/partials/_account_card.html:78
+#: templates/social_accounts/partials/_account_card.html:59
 msgid ""
 "DMs unavailable: grant messaging access on the linked Facebook Page, then "
 "reconnect this account."
@@ -12849,28 +12844,28 @@ msgstr ""
 "DMs indisponíveis: conceda acesso a mensagens na página do Facebook "
 "vinculada e reconecte esta conta."
 
-#: templates/social_accounts/partials/_account_card.html:106
+#: templates/social_accounts/partials/_account_card.html:87
 msgid "Some real-time inbox updates are unavailable."
 msgstr ""
 "Algumas atualizações em tempo real da caixa de entrada não estão disponíveis."
 
-#: templates/social_accounts/partials/_account_card.html:107
+#: templates/social_accounts/partials/_account_card.html:88
 msgid "We couldn't set up real-time updates for this account."
 msgstr ""
 "Não conseguimos configurar as atualizações em tempo real para esta conta."
 
-#: templates/social_accounts/partials/_account_card.html:108
+#: templates/social_accounts/partials/_account_card.html:89
 msgid ""
 "Activity with the required permissions can still arrive through polling."
 msgstr ""
 "A atividade com as permissões necessárias ainda pode chegar por "
 "sincronização periódica."
 
-#: templates/social_accounts/partials/_account_card.html:137
+#: templates/social_accounts/partials/_account_card.html:118
 msgid "Trying…"
 msgstr "Tentando…"
 
-#: templates/social_accounts/partials/_account_card.html:151
+#: templates/social_accounts/partials/_account_card.html:132
 msgid ""
 "Set recurring time slots for when queued posts are automatically published."
 msgstr ""
@@ -12883,25 +12878,25 @@ msgid "Disconnect <strong>%(name)s</strong>?"
 msgstr "Desconectar <strong>%(name)s</strong>?"
 
 #: templates/social_accounts/partials/_disconnect_confirm.html:31
-msgid "This revokes BrightBean's access to the account."
-msgstr "Isto revoga o acesso da BrightBean à conta."
+msgid "This revokes Automator's access to the account."
+msgstr "Isto revoga o acesso do Automator à conta."
 
 #: templates/social_accounts/partials/_disconnect_confirm.html:33
 msgid ""
-"This removes the account from BrightBean only. To revoke our access "
-"entirely, remove BrightBean in Facebook › Settings › Apps and Websites."
+"This removes the account from Automator only. To revoke our access entirely, "
+"remove Automator in Facebook › Settings › Apps and Websites."
 msgstr ""
-"Isto remove a conta apenas da BrightBean. Para revogar nosso acesso por "
-"completo, remova a BrightBean em Facebook › Configurações › Apps e sites."
+"Isto remove a conta apenas do Automator. Para revogar nosso acesso por "
+"completo, remova o Automator em Facebook › Configurações › Apps e sites."
 
 #: templates/social_accounts/partials/_disconnect_confirm.html:35
 #, python-format
 msgid ""
-"This removes the account from BrightBean only. To revoke our access "
-"entirely, remove BrightBean in your %(platform)s settings."
+"This removes the account from Automator only. To revoke our access entirely, "
+"remove Automator in your %(platform)s settings."
 msgstr ""
-"Isto remove a conta apenas da BrightBean. Para revogar nosso acesso por "
-"completo, remova a BrightBean nas configurações de %(platform)s."
+"Isto remove a conta apenas do Automator. Para revogar nosso acesso por "
+"completo, remova o Automator nas configurações de %(platform)s."
 
 #: templates/social_accounts/partials/_disconnect_confirm.html:40
 msgid ""
@@ -12916,10 +12911,10 @@ msgstr ""
 #: templates/social_accounts/partials/_disconnect_confirm.html:42
 msgid ""
 "Its analytics, inbox messages and posts made only for it are deleted from "
-"BrightBean. Posts shared with other channels stay."
+"Automator. Posts shared with other channels stay."
 msgstr ""
 "As análises, as mensagens da caixa de entrada e as publicações feitas só "
-"para ela são excluídas da BrightBean. As publicações compartilhadas com "
+"para ela são excluídas do Automator. As publicações compartilhadas com "
 "outros canais permanecem."
 
 #: templates/social_accounts/partials/_disconnect_confirm.html:60

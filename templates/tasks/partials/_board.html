@@ -6,11 +6,11 @@
 {% if can_edit %}
 <div class="flex-shrink-0" style="width: 260px;" x-data="{ adding: false }">
     <button type="button" x-show="!adding" @click="adding = true; $nextTick(() => $refs.colName.focus())"
-            class="flex items-center gap-2 w-full px-3 py-2.5 text-[13px] font-semibold text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-xl transition-colors">
+            class="flex items-center gap-2 w-full px-3 py-2.5 text-[13px] font-semibold text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-xl transition-colors">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         {% translate "New column" %}
     </button>
-    <form x-show="adding" x-cloak class="bg-stone-100 rounded-xl p-3"
+    <form x-show="adding" x-cloak class="bg-neutral-100 rounded-xl p-3"
           hx-post="{% url 'tasks:column_create' workspace_id=workspace.id %}" hx-swap="none"
           @htmx:after-request="adding = false; $el.reset()">
         <input x-ref="colName" name="name" type="text" maxlength="100" required
@@ -18,7 +18,7 @@
                class="form-input-styled w-full text-sm">
         <div class="flex items-center gap-2 mt-2">
             <button type="submit" class="btn-brand text-xs px-3 py-1">{% translate "Add" %}</button>
-            <button type="button" @click="adding = false" class="text-xs font-medium text-stone-500 hover:text-stone-700">{% translate "Cancel" %}</button>
+            <button type="button" @click="adding = false" class="text-xs font-medium text-neutral-600 hover:text-neutral-800">{% translate "Cancel" %}</button>
         </div>
     </form>
 </div>

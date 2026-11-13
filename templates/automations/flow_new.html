@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% translate "New rule" %} - {{ workspace.name }} - Brightbean{% endblock %}
+{% block title %}{% translate "New rule" %} - {{ workspace.name }} - Automator{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -21,8 +21,8 @@
   .flow-new-canvas {
     flex: 1;
     min-height: 0;
-    background-color: var(--surface-1, #FAFAF9);
-    background-image: radial-gradient(circle, #D6D3D1 1px, transparent 1px);
+    background-color: var(--surface-1, #FAFAFF);
+    background-image: radial-gradient(circle, #CBD5E1 1px, transparent 1px);
     background-size: 20px 20px;
   }
 </style>
@@ -41,12 +41,12 @@ builder; the rule itself is still created by the first save there.
 <div class="flow-shell" x-data="flowChooser()">
 
   <!-- Toolbar: matches the builder's, minus everything that needs a post -->
-  <div class="flex items-center gap-3 px-5 py-3 bg-white border-b border-stone-200 shrink-0">
+  <div class="flex items-center gap-3 px-5 py-3 bg-white border-b border-neutral-300 shrink-0">
     <a href="{% url 'automations:list' workspace_id=workspace.id %}"
-       class="text-stone-400 hover:text-stone-600 transition-colors shrink-0">
+       class="text-neutral-500 hover:text-neutral-700 transition-colors shrink-0">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </a>
-    <h1 class="text-sm font-semibold text-stone-900">{% translate "New rule" %}</h1>
+    <h1 class="text-sm font-semibold text-neutral-950">{% translate "New rule" %}</h1>
   </div>
 
   <div class="flow-new-canvas relative">
@@ -58,18 +58,18 @@ builder; the rule itself is still created by the first save there.
     <div class="absolute inset-0 flex items-start justify-center overflow-y-auto p-4 sm:p-8"
          style="background: rgba(28, 25, 23, 0.25); backdrop-filter: blur(3px);">
 
-      <div class="w-full max-w-2xl bg-white rounded-2xl border border-stone-200 overflow-hidden my-auto"
-           style="box-shadow: var(--shadow-xl, 0 20px 25px rgba(23,20,18,0.12));">
+      <div class="w-full max-w-2xl bg-white rounded-2xl border border-neutral-300 overflow-hidden my-auto"
+           style="box-shadow: var(--shadow-xl, 0 20px 25px rgba(15, 23, 42,0.12));">
 
         <!-- Step heading -->
-        <div class="px-6 py-4 border-b border-stone-100">
-          <p class="text-[11px] font-bold uppercase tracking-wider text-orange-600">
+        <div class="px-6 py-4 border-b border-neutral-100">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-brand-800">
             {% blocktranslate asvar step_label with step="__STEP__" %}Step {{ step }} of 3{% endblocktranslate %}
             <span data-label="{{ step_label }}" x-text="$el.dataset.label.replace('__STEP__', step)"></span>
           </p>
-          <h2 class="text-base font-semibold text-stone-900 mt-0.5"
+          <h2 class="text-base font-semibold text-neutral-950 mt-0.5"
               x-text="stepTitle()"></h2>
-          <p class="text-[13px] text-stone-500 mt-0.5" x-text="stepHint()"></p>
+          <p class="text-[13px] text-neutral-600 mt-0.5" x-text="stepHint()"></p>
         </div>
 
         <!-- ── Step 1: channel ───────────────────────────────────────── -->
@@ -83,28 +83,28 @@ builder; the rule itself is still created by the first save there.
           <button type="button"
                   {% if entry.can_automate %}
                   @click="pickChannel('{{ entry.account.id }}', '{{ entry.account.account_name|escapejs }}')"
-                  class="w-full flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:border-orange-300 hover:bg-orange-50/40 transition-colors text-left cursor-pointer"
+                  class="w-full flex items-center gap-3 p-3 rounded-xl border border-neutral-300 hover:border-brand-300 hover:bg-brand-50/40 transition-colors text-left cursor-pointer"
                   {% else %}
                   disabled
-                  class="w-full flex items-center gap-3 p-3 rounded-xl border border-stone-200 text-left opacity-55 cursor-not-allowed"
+                  class="w-full flex items-center gap-3 p-3 rounded-xl border border-neutral-300 text-left opacity-55 cursor-not-allowed"
                   {% endif %}>
-            <div class="w-9 h-9 rounded-lg bg-stone-100 flex items-center justify-center shrink-0 text-[11px] font-bold text-stone-500 uppercase">
+            <div class="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0 text-[11px] font-bold text-neutral-600 uppercase">
               {{ entry.account.platform|slice:":2" }}
             </div>
             <div class="min-w-0 flex-1">
-              <p class="text-sm font-medium text-stone-900 truncate">{{ entry.account.account_name }}</p>
-              <p class="text-[12px] text-stone-500 truncate">
+              <p class="text-sm font-medium text-neutral-950 truncate">{{ entry.account.account_name }}</p>
+              <p class="text-[12px] text-neutral-600 truncate">
                 {{ entry.account.get_platform_display }}{% if entry.reason %} · {{ entry.reason }}{% endif %}
               </p>
             </div>
             {% if entry.can_automate %}
-            <svg class="w-4 h-4 text-stone-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <svg class="w-4 h-4 text-neutral-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             {% endif %}
           </button>
           {% empty %}
           <div class="py-10 text-center">
-            <p class="text-sm font-medium text-stone-600">{% translate "No channels connected yet" %}</p>
-            <p class="text-[13px] text-stone-500 mt-1">{% translate "Connect a Facebook or Instagram account to automate replies." %}</p>
+            <p class="text-sm font-medium text-neutral-700">{% translate "No channels connected yet" %}</p>
+            <p class="text-[13px] text-neutral-600 mt-1">{% translate "Connect a Facebook or Instagram account to automate replies." %}</p>
           </div>
           {% endfor %}
         </div>
@@ -121,11 +121,11 @@ builder; the rule itself is still created by the first save there.
                     @click="pickKind(option.value)"
                     class="w-full flex items-start gap-3 p-3 rounded-xl border transition-colors text-left cursor-pointer"
                     :class="kind === option.value
-                            ? 'border-orange-400 bg-orange-50/50'
-                            : 'border-stone-200 hover:border-orange-300 hover:bg-orange-50/30'">
+                            ? 'border-brand-500 bg-brand-50/50'
+                            : 'border-neutral-300 hover:border-brand-300 hover:bg-brand-50/30'">
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-stone-900" x-text="option.label"></p>
-                <p class="text-[12px] text-stone-500 mt-0.5" x-text="option.hint"></p>
+                <p class="text-sm font-medium text-neutral-950" x-text="option.label"></p>
+                <p class="text-[12px] text-neutral-600 mt-0.5" x-text="option.hint"></p>
               </div>
             </button>
           </template>
@@ -134,20 +134,20 @@ builder; the rule itself is still created by the first save there.
         <!-- ── Step 3: which posts ───────────────────────────────────── -->
         <div x-show="step === 3" x-cloak class="max-h-[55vh] overflow-y-auto">
           <div id="flow-new-posts" class="p-4 sm:p-5">
-            <div class="flex items-center justify-center py-12 text-stone-400">
+            <div class="flex items-center justify-center py-12 text-neutral-500">
               <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
             </div>
           </div>
         </div>
 
         <!-- Footer -->
-        <div class="flex items-center justify-between gap-3 px-5 py-3 border-t border-stone-100 bg-stone-50">
+        <div class="flex items-center justify-between gap-3 px-5 py-3 border-t border-neutral-100 bg-neutral-50">
           <button type="button"
                   @click="step === 1 ? window.location.assign('{% url 'automations:list' workspace_id=workspace.id %}') : back()"
-                  class="px-4 py-2 text-[13px] font-medium text-stone-600 rounded-lg border border-stone-200 bg-white hover:border-stone-300 transition-colors cursor-pointer">
+                  class="px-4 py-2 text-[13px] font-medium text-neutral-700 rounded-lg border border-neutral-300 bg-white hover:border-neutral-400 transition-colors cursor-pointer">
             <span x-text="step === 1 ? '{% translate "Cancel" %}' : '{% translate "Back" %}'"></span>
           </button>
-          <p class="text-[12px] text-stone-400 truncate" x-text="trail()"></p>
+          <p class="text-[12px] text-neutral-500 truncate" x-text="trail()"></p>
         </div>
 
       </div>

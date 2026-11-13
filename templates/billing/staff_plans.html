@@ -22,14 +22,14 @@ services.parse_price_value, not here — a template that multiplies is how
 a plan ends up at 10 MB.
 {% endcomment %}
 
-{% block title %}{% translate "Plan and prices" %} - {% translate "Administration" %} - Brightbean{% endblock %}
+{% block title %}{% translate "Plan and prices" %} - {% translate "Administration" %} - Automator{% endblock %}
 
 {% block page_header %}
 <div class="mb-4 lg:mb-[25px]">
-  <h1 class="text-xl sm:text-2xl font-semibold text-stone-900" style="letter-spacing: -0.01em;">
+  <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950" style="letter-spacing: -0.01em;">
     {% translate "Plan and prices" %}
   </h1>
-  <p class="text-sm text-stone-500 mt-1">
+  <p class="text-sm text-neutral-600 mt-1">
     {% translate "One plan per workspace, charged monthly. Extra disk is sold as an add-on." %}
   </p>
 </div>
@@ -39,15 +39,15 @@ a plan ends up at 10 MB.
 <div class="space-y-6">
 
   {# ── The price list, editable ── #}
-  <section class="rounded-xl border border-stone-200 bg-white overflow-hidden">
-    <div class="px-5 py-4 border-b border-stone-100">
-      <h2 class="text-base font-semibold text-stone-900">{% translate "Prices" %}</h2>
-      <p class="text-xs text-stone-500 mt-0.5">
+  <section class="rounded-xl border border-neutral-300 bg-white overflow-hidden">
+    <div class="px-5 py-4 border-b border-neutral-100">
+      <h2 class="text-base font-semibold text-neutral-950">{% translate "Prices" %}</h2>
+      <p class="text-xs text-neutral-600 mt-0.5">
         {% translate "List prices, read only when a subscription or an add-on is contracted. Changing one never re-prices a customer who already bought." %}
       </p>
     </div>
 
-    <form method="post" action="{% url 'billing_staff:update_prices' %}" class="divide-y divide-stone-100">
+    <form method="post" action="{% url 'billing_staff:update_prices' %}" class="divide-y divide-neutral-100">
       {% csrf_token %}
 
       {% comment %}
@@ -64,16 +64,16 @@ a plan ends up at 10 MB.
       {% endcomment %}
       <div class="px-5 py-4 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
-          <label for="workspace_price_brl" class="block text-sm font-medium text-stone-900">
+          <label for="workspace_price_brl" class="block text-sm font-medium text-neutral-950">
             {% translate "Price per workspace" %}
           </label>
           {# "not exempt" rather than "not a courtesy": the same reading #}
           {# that made the quota field on Customers look like #}
           {# provisioning applies to the word "courtesy" on its own. #}
-          <p class="text-xs text-stone-500 mt-0.5">{% translate "Billed monthly, for each workspace that is not exempt from charges." %}</p>
+          <p class="text-xs text-neutral-600 mt-0.5">{% translate "Billed monthly, for each workspace that is not exempt from charges." %}</p>
           {% with entry=prices.workspace_price_cents %}
           {% if entry.is_configured %}
-          <p class="text-[11px] text-stone-400 mt-1">
+          <p class="text-[11px] text-neutral-500 mt-1">
             {% if entry.updated_by %}
             {% blocktranslate with who=entry.updated_by.email when=entry.updated_at|date:"SHORT_DATETIME_FORMAT" %}Last changed by {{ who }} on {{ when }}.{% endblocktranslate %}
             {% else %}
@@ -81,13 +81,13 @@ a plan ends up at 10 MB.
             {% endif %}
           </p>
           {% else %}
-          <p class="text-[11px] text-stone-400 mt-1">{% translate "Nobody has set this yet — it is the value this installation was deployed with." %}</p>
+          <p class="text-[11px] text-neutral-500 mt-1">{% translate "Nobody has set this yet — it is the value this installation was deployed with." %}</p>
           {% endif %}
           {% endwith %}
         </div>
         <div class="whitespace-nowrap">
           <div class="relative" x-data="brlField()">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-500 pointer-events-none">R$</span>
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-600 pointer-events-none">R$</span>
             <input type="text" id="workspace_price_brl" name="workspace_price_brl"
                    inputmode="decimal" required autocomplete="off"
                    value="{{ price_form.workspace_price_brl|brl_input }}"
@@ -101,13 +101,13 @@ a plan ends up at 10 MB.
       {# somebody ships a 10 MB plan. Converted in services. #}
       <div class="px-5 py-4 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
-          <label for="base_storage_gb" class="block text-sm font-medium text-stone-900">
+          <label for="base_storage_gb" class="block text-sm font-medium text-neutral-950">
             {% translate "Disk included" %}
           </label>
-          <p class="text-xs text-stone-500 mt-0.5">{% translate "Space every workspace gets with its subscription." %}</p>
+          <p class="text-xs text-neutral-600 mt-0.5">{% translate "Space every workspace gets with its subscription." %}</p>
           {% with entry=prices.base_storage_bytes %}
           {% if entry.is_configured %}
-          <p class="text-[11px] text-stone-400 mt-1">
+          <p class="text-[11px] text-neutral-500 mt-1">
             {% if entry.updated_by %}
             {% blocktranslate with who=entry.updated_by.email when=entry.updated_at|date:"SHORT_DATETIME_FORMAT" %}Last changed by {{ who }} on {{ when }}.{% endblocktranslate %}
             {% else %}
@@ -115,7 +115,7 @@ a plan ends up at 10 MB.
             {% endif %}
           </p>
           {% else %}
-          <p class="text-[11px] text-stone-400 mt-1">{% translate "Nobody has set this yet — it is the value this installation was deployed with." %}</p>
+          <p class="text-[11px] text-neutral-500 mt-1">{% translate "Nobody has set this yet — it is the value this installation was deployed with." %}</p>
           {% endif %}
           {% endwith %}
         </div>
@@ -123,19 +123,19 @@ a plan ends up at 10 MB.
           <input type="number" id="base_storage_gb" name="base_storage_gb"
                  min="0" step="1" required value="{{ price_form.base_storage_gb }}"
                  class="form-input-styled w-32 tabular-nums text-right">
-          <span class="text-xs text-stone-500">{% translate "GB" %}</span>
+          <span class="text-xs text-neutral-600">{% translate "GB" %}</span>
         </div>
       </div>
 
       <div class="px-5 py-4 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
-          <label for="storage_price_per_gb_brl" class="block text-sm font-medium text-stone-900">
+          <label for="storage_price_per_gb_brl" class="block text-sm font-medium text-neutral-950">
             {% translate "Price per extra GB" %}
           </label>
-          <p class="text-xs text-stone-500 mt-0.5">{% translate "Add-on price, charged monthly on top of the workspace." %}</p>
+          <p class="text-xs text-neutral-600 mt-0.5">{% translate "Add-on price, charged monthly on top of the workspace." %}</p>
           {% with entry=prices.storage_price_per_gb_cents %}
           {% if entry.is_configured %}
-          <p class="text-[11px] text-stone-400 mt-1">
+          <p class="text-[11px] text-neutral-500 mt-1">
             {% if entry.updated_by %}
             {% blocktranslate with who=entry.updated_by.email when=entry.updated_at|date:"SHORT_DATETIME_FORMAT" %}Last changed by {{ who }} on {{ when }}.{% endblocktranslate %}
             {% else %}
@@ -151,7 +151,7 @@ a plan ends up at 10 MB.
         </div>
         <div class="whitespace-nowrap">
           <div class="relative" x-data="brlField()">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-500 pointer-events-none">R$</span>
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-600 pointer-events-none">R$</span>
             <input type="text" id="storage_price_per_gb_brl" name="storage_price_per_gb_brl"
                    inputmode="decimal" required autocomplete="off"
                    value="{{ price_form.storage_price_per_gb_brl|brl_input }}"
@@ -161,8 +161,8 @@ a plan ends up at 10 MB.
         </div>
       </div>
 
-      <div class="px-5 py-4 bg-stone-50 flex flex-wrap items-center justify-between gap-3">
-        <p class="text-xs text-stone-500 max-w-xl">
+      <div class="px-5 py-4 bg-neutral-50 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-xs text-neutral-600 max-w-xl">
           {% translate "Changing a price affects only subscriptions and add-ons contracted afterwards. Everyone who already bought keeps the price they bought at — nobody is re-priced." %}
         </p>
         <button type="submit"
@@ -173,17 +173,17 @@ a plan ends up at 10 MB.
       </div>
     </form>
 
-    <dl class="divide-y divide-stone-100 border-t border-stone-100">
+    <dl class="divide-y divide-neutral-100 border-t border-neutral-100">
       <div class="px-5 py-4 flex items-baseline justify-between gap-4">
         <div>
-          <dt class="text-sm font-medium text-stone-900">{% translate "Disk limit enforced" %}</dt>
-          <dd class="text-xs text-stone-500 mt-0.5">{% translate "Whether an upload that would exceed the contracted space is refused." %}</dd>
+          <dt class="text-sm font-medium text-neutral-950">{% translate "Disk limit enforced" %}</dt>
+          <dd class="text-xs text-neutral-600 mt-0.5">{% translate "Whether an upload that would exceed the contracted space is refused." %}</dd>
         </div>
         <div class="whitespace-nowrap">
           {% if storage_quota_enabled %}
           <span class="inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full bg-green-50 text-green-700">{% translate "Yes" %}</span>
           {% else %}
-          <span class="inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full bg-stone-100 text-stone-600">{% translate "No" %}</span>
+          <span class="inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full bg-neutral-100 text-neutral-700">{% translate "No" %}</span>
           {% endif %}
         </div>
       </div>
@@ -196,8 +196,8 @@ a plan ends up at 10 MB.
       {% endcomment %}
       <div class="px-5 py-4 flex items-baseline justify-between gap-4">
         <div>
-          <dt class="text-sm font-medium text-stone-900">{% translate "Payment provider" %}</dt>
-          <dd class="text-xs text-stone-500 mt-0.5">
+          <dt class="text-sm font-medium text-neutral-950">{% translate "Payment provider" %}</dt>
+          <dd class="text-xs text-neutral-600 mt-0.5">
             {% if gateway_configured %}
             {% translate "Charges are created at the provider when a customer contracts." %}
             {% else %}
@@ -226,7 +226,7 @@ a plan ends up at 10 MB.
     {# Scoped to the two rows above it now, not to the prices: those ARE #}
     {# set on this screen. Saying otherwise under an editable form would #}
     {# be the screen contradicting itself. #}
-    <p class="px-5 py-3 bg-stone-50 border-t border-stone-100 text-xs text-stone-500">
+    <p class="px-5 py-3 bg-neutral-50 border-t border-neutral-100 text-xs text-neutral-600">
       {% translate "These last two are set on the installation, not on this screen." %}
     </p>
   </section>
@@ -245,19 +245,19 @@ a plan ends up at 10 MB.
   rather than as the setting's number, which nobody had chosen.
   {% endcomment %}
   {% if price_changes %}
-  <section class="rounded-xl border border-stone-200 bg-white overflow-hidden">
-    <div class="px-5 py-4 border-b border-stone-100">
-      <h2 class="text-base font-semibold text-stone-900">{% translate "Price history" %}</h2>
-      <p class="text-xs text-stone-500 mt-0.5">
+  <section class="rounded-xl border border-neutral-300 bg-white overflow-hidden">
+    <div class="px-5 py-4 border-b border-neutral-100">
+      <h2 class="text-base font-semibold text-neutral-950">{% translate "Price history" %}</h2>
+      <p class="text-xs text-neutral-600 mt-0.5">
         {% translate "The most recent changes to the list above. Nothing here changed anyone's existing bill." %}
       </p>
     </div>
-    <ul class="divide-y divide-stone-100">
+    <ul class="divide-y divide-neutral-100">
       {% for change in price_changes %}
       <li class="px-5 py-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div class="min-w-0">
-          <p class="text-sm text-stone-900">{{ change.get_key_display }}</p>
-          <p class="text-xs text-stone-500 tabular-nums">
+          <p class="text-sm text-neutral-950">{{ change.get_key_display }}</p>
+          <p class="text-xs text-neutral-600 tabular-nums">
             {# ``is_first_setting`` rather than testing previous_value #}
             {# here: templates have no None literal, and truthiness would #}
             {# read a stored 0 — a real previous price — as "there was #}
@@ -269,7 +269,7 @@ a plan ends up at 10 MB.
             {% endif %}
           </p>
         </div>
-        <div class="text-xs text-stone-500 whitespace-nowrap">
+        <div class="text-xs text-neutral-600 whitespace-nowrap">
           {% if change.changed_by_email %}
           {% blocktranslate with who=change.changed_by_email when=change.created_at|date:"SHORT_DATETIME_FORMAT" %}{{ who }} on {{ when }}{% endblocktranslate %}
           {% else %}

@@ -11,19 +11,19 @@ media_count, type_label, display_timezone, can_clone, can_automate.
         <div class="flex items-center gap-2.5 mb-3 min-w-0">
             <div class="relative flex-shrink-0">
                 {% if account.avatar_url %}
-                <img src="{{ account.avatar_url }}" alt="" class="w-9 h-9 rounded-full object-cover ring-1 ring-stone-200">
+                <img src="{{ account.avatar_url }}" alt="" class="w-9 h-9 rounded-full object-cover ring-1 ring-neutral-300">
                 {% else %}
-                <div class="w-9 h-9 rounded-full bg-stone-200 flex items-center justify-center text-xs font-bold text-stone-600">{{ account.account_name|make_list|first|upper }}</div>
+                <div class="w-9 h-9 rounded-full bg-neutral-300 flex items-center justify-center text-xs font-bold text-neutral-700">{{ account.account_name|make_list|first|upper }}</div>
                 {% endif %}
                 <span class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-white ring-2 ring-white pi-{{ account.platform }}">
                     {% include "social_accounts/partials/_platform_icon.html" with platform=account.platform size="2.5" %}
                 </span>
             </div>
-            <span class="text-sm font-semibold text-stone-800 truncate">{{ account.account_name|default:account.account_handle }}</span>
+            <span class="text-sm font-semibold text-neutral-900 truncate">{{ account.account_name|default:account.account_handle }}</span>
         </div>
 
         {% if media %}
-        <div class="relative rounded-lg overflow-hidden bg-stone-100" style="aspect-ratio: {% if pp.format == 'story' or pp.format == 'reel' %}9/16; max-height: 320px; margin: 0 auto{% else %}1/1{% endif %};">
+        <div class="relative rounded-lg overflow-hidden bg-neutral-100" style="aspect-ratio: {% if pp.format == 'story' or pp.format == 'reel' %}9/16; max-height: 320px; margin: 0 auto{% else %}1/1{% endif %};">
             {% if media.is_video %}
             <video src="{{ media.file.url }}#t=0.5" class="absolute inset-0 w-full h-full object-cover" muted preload="metadata"></video>
             {% else %}
@@ -36,14 +36,14 @@ media_count, type_label, display_timezone, can_clone, can_automate.
         {% endif %}
 
         {% with caption=pp.effective_caption %}
-        <p class="text-xs text-stone-600 whitespace-pre-wrap break-words {% if media %}mt-3{% endif %}" style="display: -webkit-box; -webkit-line-clamp: {% if media %}3{% else %}10{% endif %}; -webkit-box-orient: vertical; overflow: hidden;">{% if caption %}{{ caption }}{% else %}<span class="italic text-stone-400">{% translate "(no caption)" %}</span>{% endif %}</p>
+        <p class="text-xs text-neutral-700 whitespace-pre-wrap break-words {% if media %}mt-3{% endif %}" style="display: -webkit-box; -webkit-line-clamp: {% if media %}3{% else %}10{% endif %}; -webkit-box-orient: vertical; overflow: hidden;">{% if caption %}{{ caption }}{% else %}<span class="italic text-neutral-500">{% translate "(no caption)" %}</span>{% endif %}</p>
         {% endwith %}
     </div>
 
     <div class="cal-post-card-side">
         <div class="p-4">
-            <h3 class="text-sm font-semibold text-stone-900 mb-2.5">{% translate "Post details" %}</h3>
-            <ul class="space-y-2 text-xs text-stone-500">
+            <h3 class="text-sm font-semibold text-neutral-950 mb-2.5">{% translate "Post details" %}</h3>
+            <ul class="space-y-2 text-xs text-neutral-600">
                 <li class="flex items-center gap-2">
                     <span class="w-4 h-4 rounded-full flex items-center justify-center text-white flex-shrink-0 pi-{{ account.platform }}">
                         {% include "social_accounts/partials/_platform_icon.html" with platform=account.platform size="2.5" %}
@@ -51,8 +51,8 @@ media_count, type_label, display_timezone, can_clone, can_automate.
                     {{ type_label }}
                 </li>
                 <li class="flex items-start gap-2">
-                    <svg class="w-4 h-4 flex-shrink-0 text-stone-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                    <span>{% translate "Created on" %}<br><span class="text-stone-700">{{ pp.post.created_at|date:"SHORT_DATE_FORMAT" }} - {{ pp.post.created_at|time:"H:i" }}</span></span>
+                    <svg class="w-4 h-4 flex-shrink-0 text-neutral-500" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                    <span>{% translate "Created on" %}<br><span class="text-neutral-800">{{ pp.post.created_at|date:"SHORT_DATE_FORMAT" }} - {{ pp.post.created_at|time:"H:i" }}</span></span>
                 </li>
                 {% if pp.status == "published" and pp.published_at %}
                 <li class="flex items-start gap-2 text-green-700">
@@ -63,8 +63,8 @@ media_count, type_label, display_timezone, can_clone, can_automate.
                 {% with when=pp.scheduled_at|default:pp.post.scheduled_at|default:pp.post.proposed_publish_at %}
                 {% if when %}
                 <li class="flex items-start gap-2">
-                    <svg class="w-4 h-4 flex-shrink-0 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>{% if pp.status == "draft" %}{% translate "Planned for" %}{% else %}{% translate "Scheduled for" %}{% endif %}<br><span class="text-stone-700">{{ when|date:"SHORT_DATE_FORMAT" }} - {{ when|time:"H:i" }}</span></span>
+                    <svg class="w-4 h-4 flex-shrink-0 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>{% if pp.status == "draft" %}{% translate "Planned for" %}{% else %}{% translate "Scheduled for" %}{% endif %}<br><span class="text-neutral-800">{{ when|date:"SHORT_DATE_FORMAT" }} - {{ when|time:"H:i" }}</span></span>
                 </li>
                 {% endif %}
                 {% endwith %}
@@ -78,8 +78,8 @@ media_count, type_label, display_timezone, can_clone, can_automate.
             </ul>
         </div>
 
-        <div class="p-4 border-t border-stone-200">
-            <h3 class="text-sm font-semibold text-stone-900 mb-2.5">{% translate "Actions" %}</h3>
+        <div class="p-4 border-t border-neutral-300">
+            <h3 class="text-sm font-semibold text-neutral-950 mb-2.5">{% translate "Actions" %}</h3>
             <div class="flex flex-col gap-2">
                 <a href="{% url 'composer:compose_edit' workspace_id=workspace.id post_id=pp.post_id %}?account={{ account.id }}"
                    class="btn-brand text-xs py-2 px-3 inline-flex items-center justify-center gap-1.5">

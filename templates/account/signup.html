@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% load static i18n allauth account socialaccount %}
 
-{% block title %}{% translate "Sign up" %} · BrightBean Studio{% endblock %}
+{% block title %}{% translate "Sign up" %} · Automator{% endblock %}
 
 {% block auth_content %}
 <style>
   .auth-card .btn-brand {
-    background-color: #93a240;
+    background-color: #7c3aed;
     box-shadow: 0 4px 14px rgba(147, 162, 64, 0.28);
   }
   .auth-card .btn-brand:hover {
@@ -21,14 +21,14 @@
     <!-- Logo & Header -->
     <div class="text-center mb-8">
         <div class="inline-flex items-center justify-center w-12 h-12 mb-4">
-            <img src="{% static 'img/brightbean-studio-logo.webp' %}" alt="{% translate 'BrightBean Studio logo' %}" class="w-12 h-12 object-contain">
+            <img src="{% static 'img/automator-symbol.webp' %}" alt="{% translate 'Automator logo' %}" class="w-12 h-12 object-contain">
         </div>
-        <span class="block text-[11px] font-semibold uppercase tracking-widest mb-2" style="color: #93a240;">BrightBean · Studio</span>
+        <span class="block text-[11px] font-semibold uppercase tracking-widest mb-2" style="color: #7c3aed;">Automator</span>
         <h1 class="text-2xl font-bold tracking-tight" style="color: var(--text-primary);">
             {% translate "Create your account" %}
         </h1>
         <p class="text-sm mt-1" style="color: var(--text-secondary);">
-            {% translate "Sign up for BrightBean Studio | Schedule posts and run approvals across 10+ platforms." %}
+            {% translate "Sign up for Automator | Schedule posts and run approvals across 10+ platforms." %}
         </p>
     </div>
 
@@ -115,11 +115,12 @@
         {% endif %}
 
         <p class="text-xs text-center mt-5" style="color: var(--text-tertiary); line-height: 1.5;">
+            {% url "terms_of_service" as terms_url %}{% url "privacy_policy" as privacy_url %}
             {% blocktranslate trimmed %}
             By signing up, you agree to our
-            <a href="https://brightbean.xyz/terms-of-service/" class="underline hover:no-underline" style="color: var(--text-secondary);">Terms of Service</a>
+            <a href="{{ terms_url }}" class="underline hover:no-underline" style="color: var(--text-secondary);">Terms of Service</a>
             and
-            <a href="https://brightbean.xyz/privacy-policy/" class="underline hover:no-underline" style="color: var(--text-secondary);">Privacy Policy</a>.
+            <a href="{{ privacy_url }}" class="underline hover:no-underline" style="color: var(--text-secondary);">Privacy Policy</a>.
             {% endblocktranslate %}
         </p>
     </div>

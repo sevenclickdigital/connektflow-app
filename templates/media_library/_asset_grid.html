@@ -33,10 +33,10 @@ library's alone — picking happens on thumbnails.
 
 {% if not picker_mode %}
 <div x-show="viewMode === 'list'" x-cloak>
-  <div class="rounded-xl border overflow-hidden" style="border-color: var(--border, #E7E5E4); background: var(--surface-0, #FFF);">
+  <div class="rounded-xl border overflow-hidden" style="border-color: var(--border, #E5E7EB); background: var(--surface-0, #FFF);">
     <!-- List header -->
     <div class="grid grid-cols-12 gap-3 px-4 py-2 text-xs font-bold uppercase tracking-wider border-b"
-         style="color: var(--text-tertiary, #78716C); border-color: var(--surface-2, #F5F5F4); background: var(--surface-1, #FAFAF9);">
+         style="color: var(--text-tertiary, #64748B); border-color: var(--surface-2, #F5F3FF); background: var(--surface-1, #FAFAFF);">
       <div class="col-span-5">{% translate "Name" %}</div>
       <div class="col-span-2">{% translate "Type" %}</div>
       <div class="col-span-2">{% translate "Size" %}</div>
@@ -56,7 +56,7 @@ library's alone — picking happens on thumbnails.
   {% if page.has_previous %}
   <a {% if not picker_mode %}href="?page={{ page.previous_page_number }}&q={{ query|urlencode }}&sort={{ current_sort|urlencode }}"{% endif %}
      class="px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors cursor-pointer"
-     style="border-color: var(--border, #E7E5E4); color: var(--text-secondary, #57534E);"
+     style="border-color: var(--border, #E5E7EB); color: var(--text-secondary, #475569);"
      hx-get="{{ grid_url }}?page={{ page.previous_page_number }}&q={{ query|urlencode }}&sort={{ current_sort|urlencode }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_folder %}&folder={{ current_folder }}{% endif %}{% if is_starred %}&starred=1{% endif %}"
      hx-target="{% if picker_mode %}#picker-asset-grid{% else %}#asset-grid{% endif %}"
      hx-swap="innerHTML">
@@ -64,14 +64,14 @@ library's alone — picking happens on thumbnails.
   </a>
   {% endif %}
 
-  <span class="text-xs px-3" style="color: var(--text-tertiary, #78716C);">
+  <span class="text-xs px-3" style="color: var(--text-tertiary, #64748B);">
     {% blocktranslate with number=page.number total=page.paginator.num_pages %}Page {{ number }} of {{ total }}{% endblocktranslate %}
   </span>
 
   {% if page.has_next %}
   <a {% if not picker_mode %}href="?page={{ page.next_page_number }}&q={{ query|urlencode }}&sort={{ current_sort|urlencode }}"{% endif %}
      class="px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors cursor-pointer"
-     style="border-color: var(--border, #E7E5E4); color: var(--text-secondary, #57534E);"
+     style="border-color: var(--border, #E5E7EB); color: var(--text-secondary, #475569);"
      hx-get="{{ grid_url }}?page={{ page.next_page_number }}&q={{ query|urlencode }}&sort={{ current_sort|urlencode }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_folder %}&folder={{ current_folder }}{% endif %}{% if is_starred %}&starred=1{% endif %}"
      hx-target="{% if picker_mode %}#picker-asset-grid{% else %}#asset-grid{% endif %}"
      hx-swap="innerHTML">

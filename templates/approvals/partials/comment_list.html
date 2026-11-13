@@ -10,13 +10,13 @@
         </div>
         <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-0.5">
-                <span class="text-[0.8125rem] font-semibold text-stone-800">{{ comment.author.display_name }}</span>
+                <span class="text-[0.8125rem] font-semibold text-neutral-900">{{ comment.author.display_name }}</span>
                 {% if comment.visibility == 'internal' %}
                 <span class="text-[0.625rem] font-semibold uppercase tracking-wider text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">{% translate "Internal" %}</span>
                 {% endif %}
-                <span class="text-[0.6875rem] text-stone-400 ml-auto">{% blocktranslate with time=comment.created_at|timesince %}{{ time }} ago{% endblocktranslate %}</span>
+                <span class="text-[0.6875rem] text-neutral-500 ml-auto">{% blocktranslate with time=comment.created_at|timesince %}{{ time }} ago{% endblocktranslate %}</span>
             </div>
-            <p class="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{{ comment.body }}</p>
+            <p class="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{{ comment.body }}</p>
 
             {% if comment.attachment %}
             <div class="mt-2">
@@ -24,24 +24,24 @@
                 Served by a view, not MEDIA_URL: an internal comment's attachment must not be
                 fetchable by anyone holding the URL. See PUBLIC_MEDIA_PREFIXES in config/urls.py.
                 {% endcomment %}
-                <img src="{% url 'approvals:comment_attachment' workspace_id=workspace.id post_id=post.id comment_id=comment.id %}" alt="{% translate 'Attachment' %}" class="max-w-xs rounded-lg border border-stone-200">
+                <img src="{% url 'approvals:comment_attachment' workspace_id=workspace.id post_id=post.id comment_id=comment.id %}" alt="{% translate 'Attachment' %}" class="max-w-xs rounded-lg border border-neutral-300">
             </div>
             {% endif %}
 
             <!-- Replies -->
             {% for reply in comment.replies.all %}
             {% if not reply.is_deleted %}
-            <div class="flex gap-2 mt-2 pl-2 border-l-2 border-stone-200">
+            <div class="flex gap-2 mt-2 pl-2 border-l-2 border-neutral-300">
                 <div class="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
                      style="background: var(--primary); opacity: 0.7;">
                     {{ reply.author.display_name|make_list|first|upper }}
                 </div>
                 <div>
                     <div class="flex items-center gap-1.5">
-                        <span class="text-[0.75rem] font-semibold text-stone-700">{{ reply.author.display_name }}</span>
-                        <span class="text-[0.6875rem] text-stone-400">{% blocktranslate with time=reply.created_at|timesince %}{{ time }} ago{% endblocktranslate %}</span>
+                        <span class="text-[0.75rem] font-semibold text-neutral-800">{{ reply.author.display_name }}</span>
+                        <span class="text-[0.6875rem] text-neutral-500">{% blocktranslate with time=reply.created_at|timesince %}{{ time }} ago{% endblocktranslate %}</span>
                     </div>
-                    <p class="text-[0.8125rem] text-stone-600 leading-relaxed">{{ reply.body }}</p>
+                    <p class="text-[0.8125rem] text-neutral-700 leading-relaxed">{{ reply.body }}</p>
                 </div>
             </div>
             {% endif %}
@@ -49,6 +49,6 @@
         </div>
     </div>
     {% empty %}
-    <p class="text-sm text-stone-400 text-center py-4">{% translate "No comments yet" %}</p>
+    <p class="text-sm text-neutral-500 text-center py-4">{% translate "No comments yet" %}</p>
     {% endfor %}
 </div>

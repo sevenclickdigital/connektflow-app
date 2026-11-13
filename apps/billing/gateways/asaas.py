@@ -150,7 +150,7 @@ class AsaasClient:
                     # deliberately report only method, path and status.
                     "access_token": self.api_key,
                     "Content-Type": "application/json",
-                    "User-Agent": "brightbean-studio",
+                    "User-Agent": "automator",
                 },
             )
         except httpx.HTTPError as exc:

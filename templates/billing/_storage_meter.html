@@ -9,18 +9,18 @@ Expects: storage (apps.billing.storage_usage.WorkspaceStorageStatus).
 {% if storage and storage.has_subscription %}
 <div class="min-w-0" style="width: 240px; max-width: 100%;">
     <div class="flex items-baseline justify-between gap-2 text-[11px] leading-tight">
-        <span class="truncate" style="color: var(--text-secondary, #57534E);">
+        <span class="truncate" style="color: var(--text-secondary, #475569);">
             {% blocktranslate with used=storage.used_bytes|storage_size limit=storage.limit_bytes|gb %}{{ used }} of {{ limit }} GB used{% endblocktranslate %}
         </span>
-        <span class="tabular-nums font-semibold flex-shrink-0 {% if storage.is_full %}text-red-600{% elif storage.is_near_limit %}text-amber-600{% else %}text-stone-500{% endif %}">{{ storage.percent_used|meter_percent }}%</span>
+        <span class="tabular-nums font-semibold flex-shrink-0 {% if storage.is_full %}text-red-600{% elif storage.is_near_limit %}text-amber-600{% else %}text-neutral-600{% endif %}">{{ storage.percent_used|meter_percent }}%</span>
     </div>
-    <div class="w-full rounded-full bg-stone-200 overflow-hidden" style="height: 6px; margin-top: 4px;"
+    <div class="w-full rounded-full bg-neutral-300 overflow-hidden" style="height: 6px; margin-top: 4px;"
          role="progressbar" aria-valuenow="{{ storage.percent_used|meter_percent }}" aria-valuemin="0" aria-valuemax="100"
          aria-label="{% translate 'Storage used' %}">
-        <div class="h-full rounded-full {% if storage.is_full %}bg-red-500{% elif storage.is_near_limit %}bg-amber-500{% else %}bg-orange-500{% endif %}"
+        <div class="h-full rounded-full {% if storage.is_full %}bg-red-500{% elif storage.is_near_limit %}bg-amber-500{% else %}bg-brand-700{% endif %}"
              style="width: {{ storage.percent_used|meter_percent }}%;"></div>
     </div>
-    <p class="text-[11px] leading-tight {% if storage.is_full %}text-red-600{% elif storage.is_near_limit %}text-amber-600{% else %}text-stone-400{% endif %}" style="margin-top: 4px;">
+    <p class="text-[11px] leading-tight {% if storage.is_full %}text-red-600{% elif storage.is_near_limit %}text-amber-600{% else %}text-neutral-500{% endif %}" style="margin-top: 4px;">
         {% if storage.is_full %}{% translate "No space left" %}{% else %}{% blocktranslate with left=storage.remaining_bytes|storage_size %}{{ left }} available{% endblocktranslate %}{% endif %}
     </p>
 </div>

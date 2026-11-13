@@ -32,7 +32,7 @@ def test_get_user_pages_returns_linked_instagram_business_accounts():
                             "instagram_business_account": {
                                 "id": "17841400000000000",
                                 "username": "brightbean",
-                                "name": "Brightbean",
+                                "name": "Automator",
                                 "profile_picture_url": "https://example.com/ig.jpg",
                                 "followers_count": 42,
                             },
@@ -53,7 +53,7 @@ def test_get_user_pages_returns_linked_instagram_business_accounts():
     assert accounts == [
         {
             "id": "17841400000000000",
-            "name": "Brightbean",
+            "name": "Automator",
             "handle": "brightbean",
             "access_token": "page-token",
             "category": "Creator",
@@ -94,7 +94,7 @@ def test_get_user_pages_omits_blank_page_access_token():
                             "instagram_business_account": {
                                 "id": "17841400000000000",
                                 "username": "brightbean",
-                                "name": "Brightbean",
+                                "name": "Automator",
                             },
                         },
                     ]

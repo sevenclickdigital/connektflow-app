@@ -1,10 +1,10 @@
 {% load account i18n %}{% autoescape off %}{% user_display user as user_display %}{% blocktranslate %}Hi {{ user_display }},{% endblocktranslate %}
 
-{% translate "Thanks for signing up for Brightbean. Please confirm your email address by clicking the link below:" %}
+{% translate "Thanks for signing up for Automator. Please confirm your email address by clicking the link below:" %}
 
 {{ activate_url }}
 
 {% translate "If you didn't sign up, you can safely ignore this email." %}
 
-— {% translate "The Brightbean team" %}
+— {% translate "The Automator team" %}
 {% endautoescape %}

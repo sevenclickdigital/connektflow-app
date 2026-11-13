@@ -12,22 +12,22 @@ re-reads the earlier pages from cache and returns the full, re-sorted list.
         <div class="flex flex-nowrap md:flex-wrap items-center gap-2 overflow-x-auto max-w-full pb-1 md:pb-0" role="radiogroup" aria-label="{% translate 'Shortcuts' %}">
             <label class="relative flex-none cursor-pointer">
                 <input type="radio" name="quick" value="" x-model="quick" class="sr-only peer" {% if not filters.quick %}checked{% endif %}>
-                <span class="inline-flex whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border border-stone-200 bg-white text-stone-600 hover:border-stone-300 peer-checked:bg-orange-50 peer-checked:border-orange-300 peer-checked:text-orange-700 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-300">{% translate "All" %}</span>
+                <span class="inline-flex whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400 peer-checked:bg-brand-50 peer-checked:border-brand-300 peer-checked:text-brand-900 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-300">{% translate "All" %}</span>
             </label>
             {% for quick in quick_filters %}
             <label class="relative flex-none cursor-pointer">
                 <input type="radio" name="quick" value="{{ quick.key }}" x-model="quick" class="sr-only peer" {% if filters.quick == quick.key %}checked{% endif %}>
-                <span class="inline-flex whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border border-stone-200 bg-white text-stone-600 hover:border-stone-300 peer-checked:bg-orange-50 peer-checked:border-orange-300 peer-checked:text-orange-700 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-300">{{ quick.label }}</span>
+                <span class="inline-flex whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400 peer-checked:bg-brand-50 peer-checked:border-brand-300 peer-checked:text-brand-900 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-300">{{ quick.label }}</span>
             </label>
             {% endfor %}
         </div>
         <div class="flex flex-wrap items-center gap-x-4 gap-y-1 md:justify-end md:flex-none">
             {% if results %}
-            <p class="text-xs text-stone-500" aria-live="polite">
+            <p class="text-xs text-neutral-600" aria-live="polite">
                 {% blocktranslate count counter=results.offers|length with loaded=results.loaded %}{{ counter }} offer shown of {{ loaded }} loaded{% plural %}{{ counter }} offers shown of {{ loaded }} loaded{% endblocktranslate %}
             </p>
             {% endif %}
-            <label class="flex flex-none items-center gap-2 text-sm text-stone-600 whitespace-nowrap">
+            <label class="flex flex-none items-center gap-2 text-sm text-neutral-700 whitespace-nowrap">
                 {% translate "Sort by" %}
                 <select name="sort" style="width: auto" class="form-input-styled text-sm py-1.5 disabled:opacity-60"
                         :disabled="quick !== ''" :title="quick !== '' ? $el.dataset.lockedHint : ''"
@@ -37,7 +37,7 @@ re-reads the earlier pages from cache and returns the full, re-sorted list.
                     {% endfor %}
                 </select>
             </label>
-            <span id="radar-loading" class="htmx-indicator text-xs text-stone-500">{% translate "Loading offers…" %}</span>
+            <span id="radar-loading" class="htmx-indicator text-xs text-neutral-600">{% translate "Loading offers…" %}</span>
         </div>
     </div>
 
@@ -52,9 +52,9 @@ re-reads the earlier pages from cache and returns the full, re-sorted list.
         {% endfor %}
     </div>
     {% else %}
-    <div class="text-center py-12 px-6 bg-white rounded-xl border border-stone-200">
-        <p class="text-sm font-semibold text-stone-800">{% translate "No offers match these filters" %}</p>
-        <p class="text-xs text-stone-500 mt-1">{% translate "Loosen a filter or load more offers." %}</p>
+    <div class="text-center py-12 px-6 bg-white rounded-xl border border-neutral-300">
+        <p class="text-sm font-semibold text-neutral-900">{% translate "No offers match these filters" %}</p>
+        <p class="text-xs text-neutral-600 mt-1">{% translate "Loosen a filter or load more offers." %}</p>
     </div>
     {% endif %}
 

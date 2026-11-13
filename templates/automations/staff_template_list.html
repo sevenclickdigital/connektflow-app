@@ -22,15 +22,15 @@ apps.billing.views). Nothing here is an access control; it only decides
 what is drawn.
 {% endcomment %}
 
-{% block title %}{% translate "Flow templates" %} - {% translate "Administration" %} - Brightbean{% endblock %}
+{% block title %}{% translate "Flow templates" %} - {% translate "Administration" %} - Automator{% endblock %}
 
 {% block page_header %}
 <div class="mb-4 lg:mb-[25px] flex items-start justify-between gap-4">
   <div>
-    <h1 class="text-xl sm:text-2xl font-semibold text-stone-900" style="letter-spacing: -0.01em;">
+    <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950" style="letter-spacing: -0.01em;">
       {% translate "Flow templates" %}
     </h1>
-    <p class="text-sm text-stone-500 mt-1">
+    <p class="text-sm text-neutral-600 mt-1">
       {% translate "Ready-made automations customers can start from. Published ones appear in the flow builder." %}
     </p>
   </div>
@@ -45,9 +45,9 @@ what is drawn.
     {% csrf_token %}
     <input type="text" name="name" required maxlength="120"
            placeholder="{% translate 'Name the new template' %}"
-           class="w-56 px-3 py-2 text-sm rounded-lg border border-stone-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-400 outline-none">
+           class="w-56 px-3 py-2 text-sm rounded-lg border border-neutral-300 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none">
     <button type="submit"
-            class="px-3.5 py-2 text-sm font-medium rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors cursor-pointer whitespace-nowrap">
+            class="px-3.5 py-2 text-sm font-medium rounded-lg bg-brand-700 text-white hover:bg-brand-800 transition-colors cursor-pointer whitespace-nowrap">
       {% translate "New template" %}
     </button>
   </form>
@@ -55,10 +55,10 @@ what is drawn.
 {% endblock %}
 
 {% block content %}
-<section class="rounded-xl border border-stone-200 bg-white overflow-hidden">
-  <div class="px-5 py-4 border-b border-stone-100">
-    <h2 class="text-base font-semibold text-stone-900">{% translate "The shelf" %}</h2>
-    <p class="text-xs text-stone-500 mt-0.5">
+<section class="rounded-xl border border-neutral-300 bg-white overflow-hidden">
+  <div class="px-5 py-4 border-b border-neutral-100">
+    <h2 class="text-base font-semibold text-neutral-950">{% translate "The shelf" %}</h2>
+    <p class="text-xs text-neutral-600 mt-0.5">
       {% blocktranslate count counter=published_count %}{{ counter }} template is visible to customers.{% plural %}{{ counter }} templates are visible to customers.{% endblocktranslate %}
     </p>
   </div>
@@ -67,31 +67,31 @@ what is drawn.
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
-        <tr class="border-b border-stone-100 bg-stone-50">
-          <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-stone-400">{% translate "Template" %}</th>
-          <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-stone-400">{% translate "Status" %}</th>
-          <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-stone-400">{% translate "Position" %}</th>
-          <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-stone-400">{% translate "Updated" %}</th>
-          <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-stone-400">{% translate "Actions" %}</th>
+        <tr class="border-b border-neutral-100 bg-neutral-50">
+          <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Template" %}</th>
+          <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Status" %}</th>
+          <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Position" %}</th>
+          <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Updated" %}</th>
+          <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Actions" %}</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-stone-100">
+      <tbody class="divide-y divide-neutral-100">
         {% for template in templates %}
-        <tr class="hover:bg-stone-50/60">
+        <tr class="hover:bg-neutral-50/60">
           <td class="px-4 py-3">
             <a href="{% url 'automations_staff:template_edit' template_id=template.id %}"
                class="flex items-center gap-3 min-w-0 group">
-              <div class="w-14 h-10 rounded-lg overflow-hidden bg-stone-100 flex items-center justify-center shrink-0 border border-stone-200">
+              <div class="w-14 h-10 rounded-lg overflow-hidden bg-neutral-100 flex items-center justify-center shrink-0 border border-neutral-300">
                 {% if template.thumbnail %}
                 <img src="{{ template.thumbnail.url }}" alt="" class="w-full h-full object-cover">
                 {% else %}
-                <svg class="w-4 h-4 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                <svg class="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 {% endif %}
               </div>
               <div class="min-w-0">
-                <p class="font-medium text-stone-900 truncate group-hover:text-orange-700 transition-colors">{{ template.name }}</p>
+                <p class="font-medium text-neutral-950 truncate group-hover:text-brand-900 transition-colors">{{ template.name }}</p>
                 {% if template.description %}
-                <p class="text-xs text-stone-500 truncate">{{ template.description }}</p>
+                <p class="text-xs text-neutral-600 truncate">{{ template.description }}</p>
                 {% endif %}
               </div>
             </a>
@@ -99,25 +99,25 @@ what is drawn.
 
           <td class="px-4 py-3">
             <span class="inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-full
-                         {% if template.is_published %}bg-green-50 text-green-700{% else %}bg-stone-100 text-stone-600{% endif %}">
+                         {% if template.is_published %}bg-green-50 text-green-700{% else %}bg-neutral-100 text-neutral-700{% endif %}">
               {% if template.is_published %}{% translate "On the shelf" %}{% else %}{% translate "Draft" %}{% endif %}
             </span>
           </td>
 
-          <td class="px-4 py-3 text-right tabular-nums text-stone-600">{{ template.position }}</td>
-          <td class="px-4 py-3 text-stone-500 whitespace-nowrap">{{ template.updated_at|date:"d/m/Y H:i" }}</td>
+          <td class="px-4 py-3 text-right tabular-nums text-neutral-700">{{ template.position }}</td>
+          <td class="px-4 py-3 text-neutral-600 whitespace-nowrap">{{ template.updated_at|date:"d/m/Y H:i" }}</td>
 
           <td class="px-4 py-3">
             <div class="flex items-center justify-end gap-1.5">
               <a href="{% url 'automations_staff:template_edit' template_id=template.id %}"
-                 class="px-2.5 py-1.5 text-[13px] font-medium text-stone-600 rounded-lg border border-stone-200 hover:border-stone-300 hover:text-stone-800 transition-colors whitespace-nowrap">
+                 class="px-2.5 py-1.5 text-[13px] font-medium text-neutral-700 rounded-lg border border-neutral-300 hover:border-neutral-400 hover:text-neutral-900 transition-colors whitespace-nowrap">
                 {% translate "Edit" %}
               </a>
 
               <form method="post" action="{% url 'automations_staff:template_duplicate' template_id=template.id %}">
                 {% csrf_token %}
                 <button type="submit"
-                        class="px-2.5 py-1.5 text-[13px] text-stone-500 rounded-lg hover:bg-stone-100 hover:text-stone-700 transition-colors cursor-pointer whitespace-nowrap">
+                        class="px-2.5 py-1.5 text-[13px] text-neutral-600 rounded-lg hover:bg-neutral-100 hover:text-neutral-800 transition-colors cursor-pointer whitespace-nowrap">
                   {% translate "Duplicate" %}
                 </button>
               </form>
@@ -146,11 +146,11 @@ what is drawn.
   </div>
   {% else %}
   <div class="py-14 text-center">
-    <div class="w-11 h-11 rounded-xl bg-stone-100 mx-auto flex items-center justify-center">
-      <svg class="w-5 h-5 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <div class="w-11 h-11 rounded-xl bg-neutral-100 mx-auto flex items-center justify-center">
+      <svg class="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     </div>
-    <p class="text-sm font-medium text-stone-600 mt-3">{% translate "No templates yet" %}</p>
-    <p class="text-[13px] text-stone-500 mt-1">
+    <p class="text-sm font-medium text-neutral-700 mt-3">{% translate "No templates yet" %}</p>
+    <p class="text-[13px] text-neutral-600 mt-1">
       {% translate "Name one above to start drawing it on the canvas." %}
     </p>
   </div>

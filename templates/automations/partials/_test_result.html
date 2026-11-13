@@ -16,10 +16,10 @@ this panel could mislead.
 {% endcomment %}
 <div class="mt-4">
     <!-- It sends nothing. Said first, and said plainly. -->
-    <div class="flex items-start gap-2 px-3.5 py-2.5 rounded-lg bg-stone-50 border border-stone-200 mb-3">
-        <svg class="w-4 h-4 text-stone-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        <p class="text-[12px] text-stone-600 leading-relaxed">
-            <span class="font-semibold text-stone-700">{% translate "This is a preview. Nothing was sent." %}</span>
+    <div class="flex items-start gap-2 px-3.5 py-2.5 rounded-lg bg-neutral-50 border border-neutral-300 mb-3">
+        <svg class="w-4 h-4 text-neutral-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <p class="text-[12px] text-neutral-700 leading-relaxed">
+            <span class="font-semibold text-neutral-800">{% translate "This is a preview. Nothing was sent." %}</span>
             {% blocktranslate count counter=sample_size %}It replays the rule against the {{ counter }} most recent comment already in your inbox — no replies and no DMs were posted, and nobody was notified.{% plural %}It replays the rule against the {{ counter }} most recent comments already in your inbox — no replies and no DMs were posted, and nobody was notified.{% endblocktranslate %}
         </p>
     </div>
@@ -45,35 +45,35 @@ this panel could mislead.
     {% endif %}
 
     <!-- Result -->
-    <div class="bg-white border border-stone-200 rounded-xl overflow-hidden" style="box-shadow: var(--shadow-xs);">
-        <div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
-            <p class="text-[13px] font-semibold text-stone-800">
+    <div class="bg-white border border-neutral-300 rounded-xl overflow-hidden" style="box-shadow: var(--shadow-xs);">
+        <div class="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
+            <p class="text-[13px] font-semibold text-neutral-900">
                 {% blocktranslate with matched=matched_count count counter=sample_size %}{{ matched }} of {{ counter }} recent comment would match{% plural %}{{ matched }} of {{ counter }} recent comments would match{% endblocktranslate %}
             </p>
         </div>
 
         {% if matched_messages %}
-        <div class="divide-y divide-stone-100">
+        <div class="divide-y divide-neutral-100">
             {% for message in matched_messages %}
             <div class="px-4 py-3">
                 <div class="flex items-center gap-2 mb-1">
-                    <span class="text-[12px] font-semibold text-stone-700">{{ message.sender_name|default:_("Unknown") }}</span>
-                    <span class="text-[11px] text-stone-400">{{ message.social_account.account_name }}</span>
-                    <span class="text-[11px] text-stone-400">&middot; {{ message.received_at|date:"j M, H:i" }}</span>
+                    <span class="text-[12px] font-semibold text-neutral-800">{{ message.sender_name|default:_("Unknown") }}</span>
+                    <span class="text-[11px] text-neutral-500">{{ message.social_account.account_name }}</span>
+                    <span class="text-[11px] text-neutral-500">&middot; {{ message.received_at|date:"j M, H:i" }}</span>
                 </div>
                 {# No |safe. Platform-supplied body, truncated for the preview. #}
-                <p class="text-[13px] text-stone-600 leading-relaxed">{{ message.body|truncatechars:120 }}</p>
+                <p class="text-[13px] text-neutral-700 leading-relaxed">{{ message.body|truncatechars:120 }}</p>
             </div>
             {% endfor %}
         </div>
         {% elif sample_size == 0 %}
         <div class="px-4 py-8 text-center">
-            <p class="text-[13px] text-stone-500">{% translate "There are no comments in this workspace's inbox yet, so there is nothing to preview against." %}</p>
+            <p class="text-[13px] text-neutral-600">{% translate "There are no comments in this workspace's inbox yet, so there is nothing to preview against." %}</p>
         </div>
         {% else %}
         <div class="px-4 py-8 text-center">
-            <p class="text-[13px] text-stone-500">{% blocktranslate count counter=sample_size %}None of the {{ counter }} most recent comment matches this rule.{% plural %}None of the {{ counter }} most recent comments match this rule.{% endblocktranslate %}</p>
-            <p class="text-[12px] text-stone-400 mt-1">{% translate "Check the keyword match types, the post scope, and the exclude list — exclude wins over include." %}</p>
+            <p class="text-[13px] text-neutral-600">{% blocktranslate count counter=sample_size %}None of the {{ counter }} most recent comment matches this rule.{% plural %}None of the {{ counter }} most recent comments match this rule.{% endblocktranslate %}</p>
+            <p class="text-[12px] text-neutral-500 mt-1">{% translate "Check the keyword match types, the post scope, and the exclude list — exclude wins over include." %}</p>
         </div>
         {% endif %}
     </div>

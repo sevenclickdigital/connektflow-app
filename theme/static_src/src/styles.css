@@ -13,113 +13,161 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Brand Tokens - BrightBean Orange */
-  --brand-50:  #FFF7ED;
-  --brand-100: #FFEDD5;
-  --brand-200: #FED7AA;
-  --brand-300: #FDBA74;
-  --brand-400: #FB923C;
-  --brand-500: #F97316;
-  --brand-600: #EA580C;
-  --brand-700: #C2410C;
-  --brand-800: #9A3412;
-  --brand-900: #7C2D12;
+  /* Brand scale (violet) — the guide's "Paleta Principal" */
+  --brand-50:  #F9F5FF;
+  --brand-100: #F3E8FF;
+  --brand-200: #E9D5FF;
+  --brand-300: #D8B4FE;
+  --brand-400: #C084FC;
+  --brand-500: #A855F7;
+  --brand-600: #9333EA;
+  --brand-700: #7C3AED;
+  --brand-800: #6D28D9;
+  --brand-900: #5B21B6;
 
-  /* Brand Tokens - BrightBean Green (the bean in the logo) — used for
-     selection controls (checkboxes, toggle switches) */
-  --brand-green-100: #EFF2DC;
-  --brand-green-200: #DDE4B9;
-  --brand-green-500: #94A43F;
-  --brand-green-600: #7B8A33;
+  /* Primary roles */
+  --primary:       var(--brand-700);   /* buttons, active tabs, links, focus */
+  --primary-hover: var(--brand-800);
+  --primary-soft:  var(--brand-100);   /* soft buttons, active chip bg, icon tiles */
+  --primary-muted: var(--brand-200);
+  --primary-ring:  #C4B5FD;            /* focus ring, outline button border */
 
-  --brand-font-display: Georgia, 'Times New Roman', serif;
-  --brand-font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --brand-font-mono: ui-monospace, SFMono-Regular, 'Cascadia Code', 'Consolas', monospace;
+  /* Neutral scale — the guide's "Cores Neutras" (50–200 violet-tinted, 300+ slate) */
+  --neutral-950: #0F172A;
+  --neutral-900: #1E293B;
+  --neutral-800: #334155;
+  --neutral-700: #475569;
+  --neutral-600: #64748B;
+  --neutral-500: #94A3B8;
+  --neutral-400: #CBD5E1;
+  --neutral-300: #E5E7EB;
+  --neutral-200: #EDE9FE;
+  --neutral-100: #F5F3FF;
+  --neutral-50:  #FAFAFF;
 
-  /* Semantic Tokens */
-  --primary:       var(--brand-500);
-  --primary-hover: var(--brand-600);
-  --primary-soft:  var(--brand-50);
-  --primary-muted: var(--brand-100);
-  --primary-ring:  var(--brand-200);
-
-  /* Neutrals - warm stone */
-  --neutral-950: #171412;
-  --neutral-900: #1C1917;
-  --neutral-800: #292524;
-  --neutral-700: #44403C;
-  --neutral-600: #57534E;
-  --neutral-500: #78716C;
-  --neutral-400: #A8A29E;
-  --neutral-300: #D6D3D1;
-  --neutral-200: #E7E5E4;
-  --neutral-100: #F5F5F4;
-  --neutral-50:  #FAFAF9;
-
-  /* Surfaces */
-  --surface-0: #FFFFFF;
-  --surface-page: rgb(247, 246, 242);
-  --surface-1: var(--neutral-50);
-  --surface-2: var(--neutral-100);
-  --surface-3: var(--neutral-200);
-  --border:    var(--neutral-200);
-  --border-hover: var(--neutral-300);
+  /* Surfaces and borders */
+  --surface-page: #F8FAFF;             /* page background; content sits directly on it */
+  --surface-sidebar: var(--neutral-100); /* sidebar background, one step darker than the page */
+  --surface-0:    #FFFFFF;             /* cards, inputs, dropdowns */
+  --surface-1:    var(--neutral-50);   /* card header, table header, tab container */
+  --surface-2:    var(--neutral-100);
+  --surface-3:    var(--neutral-200);
+  --border:       var(--neutral-300);
+  --border-hover: var(--neutral-400);
 
   /* Text */
-  --text-primary:   var(--neutral-900);
+  --text-primary:   var(--neutral-950);
   --text-secondary: var(--neutral-600);
-  --text-tertiary:  var(--neutral-500);
+  --text-tertiary:  var(--neutral-500); /* the guide's --text-muted */
   --text-ghost:     var(--neutral-400);
   --text-inverse:   #FFFFFF;
 
-  /* Illustrations */
-  --color-illustration-border: var(--neutral-200);
+  /* Illustrations (empty states) */
+  --color-illustration-border: var(--neutral-300);
   --color-illustration-card: #FFFFFF;
   --color-illustration-element: var(--neutral-200);
   --color-illustration-secondary-element: var(--neutral-100);
-  --color-illustration-accent: var(--brand-500);
+  --color-illustration-accent: var(--primary);
 
-  /* Status */
-  --success-500: #22C55E; --success-50: #F0FDF4; --success-700: #15803D;
-  --warning-500: #EAB308; --warning-50: #FEFCE8; --warning-700: #A16207;
+  /* Semantic — the guide's "Cores Semânticas"; *-700 derived for text on soft bg */
+  --success-500: #22C55E; --success-50: #ECFDF5; --success-700: #15803D;
+  --warning-500: #F59E0B; --warning-50: #FFFBEB; --warning-700: #B45309;
   --error-500:   #EF4444; --error-50:   #FEF2F2; --error-700:   #B91C1C;
   --info-500:    #3B82F6; --info-50:    #EFF6FF; --info-700:    #1D4ED8;
 
-  /* Accent palette */
-  --accent-teal:    #14B8A6; --accent-teal-soft:    #F0FDFA;
-  --accent-sky:     #0EA5E9; --accent-sky-soft:     #F0F9FF;
-  --accent-rose:    #F43F5E; --accent-rose-soft:    #FFF1F2;
-  --accent-amber:   #F59E0B; --accent-amber-soft:   #FFFBEB;
+  /* Accents — the guide's "Cores de Destaque" (charts, tags, platform tints) */
+  --accent-sky:     #0EA5E9; --accent-sky-soft:     #E0F2FE;
+  --accent-teal:    #14B8A6; --accent-teal-soft:    #CCFBF1;
+  --accent-rose:    #F43F5E; --accent-rose-soft:    #FFE4E6;
   --accent-indigo:  #6366F1; --accent-indigo-soft:  #EEF2FF;
-  --accent-emerald: #10B981; --accent-emerald-soft: #ECFDF5;
+  --accent-amber:   #F59E0B; --accent-amber-soft:   #F9F5FF;
+  --accent-emerald: #10B981; --accent-emerald-soft: #ECFDF5; /* not on the guide; kept for existing classes */
 
-  /* Shadows */
-  --shadow-xs:  0 1px 2px rgba(23,20,18,0.05);
-  --shadow-sm:  0 1px 3px rgba(23,20,18,0.08), 0 1px 2px rgba(23,20,18,0.04);
-  --shadow-md:  0 4px 6px rgba(23,20,18,0.06), 0 2px 4px rgba(23,20,18,0.04);
-  --shadow-lg:  0 10px 15px rgba(23,20,18,0.08), 0 4px 6px rgba(23,20,18,0.04);
-  --shadow-xl:  0 20px 25px rgba(23,20,18,0.08), 0 8px 10px rgba(23,20,18,0.04);
-  --shadow-primary: 0 4px 14px rgba(249,115,22,0.28);
+  /* Shadows — the guide's card shadow is --shadow-md; the rest keep its violet tint */
+  --shadow-xs:  0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(124, 58, 237, 0.04);
+  --shadow-md:  0 1px 3px rgba(0, 0, 0, 0.06), 0 6px 20px rgba(124, 58, 237, 0.08);
+  --shadow-lg:  0 2px 6px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(124, 58, 237, 0.10);
+  --shadow-xl:  0 4px 10px rgba(0, 0, 0, 0.05), 0 20px 40px rgba(124, 58, 237, 0.12);
+  --shadow-primary: 0 4px 14px rgba(124, 58, 237, 0.28);
 
-  /* Radii */
-  --radius-sm:   0.25rem;
-  --radius-md:   0.375rem;
-  --radius-lg:   0.5rem;
-  --radius-xl:   0.75rem;
-  --radius-2xl:  1rem;
-  --radius-full: 9999px;
+  /* Radius — cards 12px (guide); controls 8px; pills full */
+  --radius-sm:   0.25rem;   /* 4px  — checkboxes, tiny tags */
+  --radius-md:   0.5rem;    /* 8px  — buttons, inputs, selects, chips */
+  --radius-lg:   0.75rem;   /* 12px — cards, stat cards, dropdowns, modals */
+  --radius-xl:   1rem;      /* 16px — large panels, auth card */
+  --radius-2xl:  1.25rem;   /* 20px — hero/illustration containers */
+  --radius-full: 9999px;    /* status pills, filter tabs, avatars */
 
-  /* Transitions */
+  /* Motion (unchanged — not covered by the guide) */
   --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --dur-fast:    150ms;
   --dur-base:    200ms;
   --dur-slow:    350ms;
 
-  /* Fonts */
-  --font-display: var(--brand-font-display);
+  /* Typography — Inter everywhere (no serif display face) */
+  --brand-font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --brand-font-mono: ui-monospace, SFMono-Regular, 'Cascadia Code', 'Consolas', monospace;
+  --font-display: var(--brand-font-body);
   --font-body:    var(--brand-font-body);
   --font-mono:    var(--brand-font-mono);
+
+  /* Type scale — the guide's "Tipografia" table */
+  --text-page-title:    600 1.5rem/1.25 var(--font-body);   /* 24px */
+  --text-section-title: 600 1.125rem/1.3 var(--font-body);  /* 18px */
+  --text-card-title:    500 1rem/1.4 var(--font-body);      /* 16px */
+  --text-body:          400 0.875rem/1.5 var(--font-body);  /* 14px */
+  --text-aux:           400 0.75rem/1.4 var(--font-body);   /* 12px */
+  --text-label:         500 0.75rem/1.4 var(--font-body);   /* 12px — tags, pills, table headers */
+}
+
+/* Inter, self-hosted (variable weight 100–900). No external font request:
+   CSP font-src is 'self' and nothing is sent to a third party. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../../fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../../fonts/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Expose the tokens as Tailwind colours, so templates write bg-brand-700 /
+   text-neutral-600 and a token change reaches every utility. The neutral
+   numbering follows the tokens, not Tailwind's stock scale: borders are
+   neutral-300, secondary text neutral-600, tertiary text neutral-500. */
+@theme inline {
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+  --color-neutral-950: var(--neutral-950);
+  --font-sans: var(--font-body);
 }
 
 /* Base */
@@ -132,7 +180,7 @@ body {
 .auth-bg {
   background-color: var(--surface-1);
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(249,115,22,0.08), transparent),
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 58, 237,0.08), transparent),
     radial-gradient(ellipse 60% 40% at 100% 100%, rgba(20,184,166,0.04), transparent);
 }
 
@@ -272,7 +320,7 @@ img.sidebar-logo-mark {
 .btn-primary-lift:hover {
   background: var(--primary-hover) !important;
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(249,115,22,0.35);
+  box-shadow: 0 6px 20px rgba(124, 58, 237,0.35);
 }
 
 .card-hover-lift {
@@ -288,7 +336,7 @@ img.sidebar-logo-mark {
   background: var(--surface-1) !important;
 }
 .btn-surface-2:hover {
-  background: var(--surface-2, #F5F5F4) !important;
+  background: var(--surface-2, #F5F3FF) !important;
 }
 
 .btn-error-darker {
@@ -342,7 +390,7 @@ img.sidebar-logo-mark {
   transition: background var(--dur-fast) ease;
 }
 .btn-primary-tint:hover {
-  background: rgba(var(--primary-rgb, 249, 115, 22), 0.2) !important;
+  background: color-mix(in srgb, var(--primary) 20%, transparent) !important;
 }
 
 .input-focus {
@@ -424,7 +472,7 @@ img.sidebar-logo-mark {
 .btn-brand:hover {
   background: var(--primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(249,115,22,0.35);
+  box-shadow: 0 6px 20px rgba(124, 58, 237,0.35);
 }
 .btn-brand:active {
   transform: translateY(0);
@@ -730,10 +778,10 @@ span.flatpickr-weekday {
    restyle them and browsers fall back to their default blue).
    ═══════════════════════════════════════════════════════════════ */
 .bb-checkbox {
-  accent-color: var(--brand-green-500);
+  accent-color: var(--primary);
 }
 .bb-checkbox:focus-visible {
-  outline: 2px solid var(--brand-green-200);
+  outline: 2px solid var(--primary-ring);
   outline-offset: 1px;
 }
 
@@ -785,13 +833,13 @@ span.flatpickr-weekday {
   transition: transform 0.15s ease;
 }
 .bb-toggle input:checked + .bb-toggle-track {
-  background: var(--brand-green-500);
+  background: var(--primary);
 }
 .bb-toggle input:checked + .bb-toggle-track::after {
   transform: translateX(16px);
 }
 .bb-toggle input:focus-visible + .bb-toggle-track {
-  outline: 2px solid var(--brand-green-200);
+  outline: 2px solid var(--primary-ring);
   outline-offset: 1px;
 }
 .bb-toggle input:disabled + .bb-toggle-track {
@@ -809,40 +857,40 @@ span.flatpickr-weekday {
     opacity: 0.45; filter: grayscale(1);
 }
 .target-tile:hover { opacity: 0.8; filter: grayscale(0.3); }
-.target-tile.selected { opacity: 1; filter: none; border-color: #F97316; }
-.target-tile:focus-visible { outline: 2px solid #F97316; outline-offset: 2px; }
+.target-tile.selected { opacity: 1; filter: none; border-color: #7C3AED; }
+.target-tile:focus-visible { outline: 2px solid #7C3AED; outline-offset: 2px; }
 .target-tile .target-badge {
     position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px;
     border-radius: 9999px; background: #FFFFFF; display: flex;
-    align-items: center; justify-content: center; box-shadow: 0 0 0 1px #E7E5E4;
+    align-items: center; justify-content: center; box-shadow: 0 0 0 1px #E5E7EB;
 }
 .target-tile .target-format {
     position: absolute; left: -3px; bottom: -3px; width: 18px; height: 18px;
-    border-radius: 9999px; background: #1C1917; color: #FFFFFF; display: flex;
+    border-radius: 9999px; background: #0F172A; color: #FFFFFF; display: flex;
     align-items: center; justify-content: center;
 }
 .target-tile .target-tip {
     position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%);
-    padding: 4px 8px; border-radius: 6px; background: #1C1917; color: #FFFFFF;
+    padding: 4px 8px; border-radius: 6px; background: #0F172A; color: #FFFFFF;
     font-size: 11px; font-weight: 500; white-space: nowrap; pointer-events: none;
     opacity: 0; transition: opacity 120ms ease; z-index: 30;
 }
 .target-tile:hover .target-tip, .target-tile:focus-visible .target-tip { opacity: 1; }
-.target-group + .target-group { border-left: 1px solid #E7E5E4; padding-left: 10px; }
+.target-group + .target-group { border-left: 1px solid #E5E7EB; padding-left: 10px; }
 .target-tile .target-icon {
-    width: 100%; height: 100%; border-radius: 9999px; background: #F5F5F4; color: #78716C;
+    width: 100%; height: 100%; border-radius: 9999px; background: #F5F3FF; color: #64748B;
     display: flex; align-items: center; justify-content: center;
 }
-.target-tile .target-count { background: #F97316; font-size: 10px; font-weight: 700; }
+.target-tile .target-count { background: #7C3AED; font-size: 10px; font-weight: 700; }
 
 /* Modal form pieces shared by the idea modal and the task card: borderless
    title and text, a small labelled date row, and pill dropdowns. */
 .idea-date-row {
     display: inline-flex; align-items: center; gap: 6px; margin: -4px 0 12px;
-    font-size: 12px; font-weight: 600; color: var(--text-secondary, #57534E);
+    font-size: 12px; font-weight: 600; color: var(--text-secondary, #475569);
 }
 .idea-date-row input {
-    border: 1px solid var(--neutral-200, #E7E5E4); border-radius: 8px; padding: 2px 6px;
+    border: 1px solid var(--neutral-200, #E5E7EB); border-radius: 8px; padding: 2px 6px;
     font-size: 12px; color: var(--text-primary); background: white;
 }
 input.idea-title-input {

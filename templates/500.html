@@ -18,16 +18,16 @@ template with an empty context if that view itself fails.
 {% endcomment %}
 {% if request_id %}
 <div style="margin-top: 1.5rem; padding: 0.875rem 1rem; border-radius: 0.5rem;
-            background: var(--surface-2, #F5F5F4);">
+            background: var(--surface-2, #F5F3FF);">
   <p style="margin: 0; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
-            letter-spacing: 0.06em; color: var(--text-tertiary, #78716C);">
+            letter-spacing: 0.06em; color: var(--text-tertiary, #64748B);">
     {% translate "Reference code" %}
   </p>
   <p style="margin: 0.25rem 0 0; font-size: 0.9375rem; font-weight: 600;
             font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-            color: var(--text-primary, #1C1917);">{{ request_id }}</p>
+            color: var(--text-primary, #0F172A);">{{ request_id }}</p>
   <p style="margin: 0.5rem 0 0; font-size: 0.8125rem; line-height: 1.5;
-            color: var(--text-secondary, #57534E);">
+            color: var(--text-secondary, #475569);">
     {% translate "Pass this code to support and we can find exactly what failed." %}
   </p>
 </div>

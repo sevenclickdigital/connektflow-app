@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 from django.utils.translation import gettext_lazy as _
 
 FEED_CATEGORIES = [
-    {"slug": "brightbean-favorites", "label": _("Brightbean Favorites")},
+    {"slug": "brightbean-favorites", "label": _("Automator Favorites")},
     {"slug": "tech", "label": _("Tech")},
     {"slug": "news", "label": _("News")},
     {"slug": "business", "label": _("Business")},

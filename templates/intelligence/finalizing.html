@@ -3,9 +3,9 @@
 {% block page_title %}{% translate "Finalizing…" %}{% endblock %}
 {% block content %}
 <div class="max-w-xl mx-auto py-16 px-4 text-center">
-  <div class="mx-auto mb-6 w-12 h-12 rounded-full border-4 border-orange-200 border-t-orange-600 animate-spin"></div>
-  <h1 class="text-xl font-semibold text-stone-900 mb-2">{% translate "Setting up your Intelligence access…" %}</h1>
-  <p class="text-sm text-stone-600 mb-6">
+  <div class="mx-auto mb-6 w-12 h-12 rounded-full border-4 border-brand-200 border-t-brand-800 animate-spin"></div>
+  <h1 class="text-xl font-semibold text-neutral-950 mb-2">{% translate "Setting up your Intelligence access…" %}</h1>
+  <p class="text-sm text-neutral-700 mb-6">
     {% translate "Stripe confirmed your payment. We're finishing the handshake with the billing service, this usually takes a few seconds." %}
   </p>
 
@@ -13,7 +13,7 @@
        hx-get="{% url 'intelligence_global:finalizing-status' %}"
        hx-trigger="load, every 2s"
        hx-swap="outerHTML"
-       class="text-xs text-stone-400">
+       class="text-xs text-neutral-500">
     {% translate "Checking…" %}
   </div>
 </div>

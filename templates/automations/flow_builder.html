@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% if template_mode %}{{ flow_template.name }} - {% translate "Templates" %} - {% translate "Administration" %}{% else %}{% translate "Flow builder" %} - {{ workspace.name }}{% endif %} - Brightbean{% endblock %}
+{% block title %}{% if template_mode %}{{ flow_template.name }} - {% translate "Templates" %} - {% translate "Administration" %}{% else %}{% translate "Flow builder" %} - {{ workspace.name }}{% endif %} - Automator{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -61,7 +61,7 @@ any zoom level.
      :class="{ 'is-gesturing': dragging || panning || linking }">
 
     <!-- Toolbar ------------------------------------------------------------ -->
-    <div class="flex items-center gap-3 px-5 py-3 bg-white border-b border-stone-200 shrink-0">
+    <div class="flex items-center gap-3 px-5 py-3 bg-white border-b border-neutral-300 shrink-0">
         {% comment %}
         Back goes where this canvas was opened from, and in template mode that
         is the operator's shelf rather than a post that does not exist. Every
@@ -69,7 +69,7 @@ any zoom level.
         ``template_views.template_edit`` for why the two modes share one file.
         {% endcomment %}
         <a href="{% if template_mode %}{% url 'automations_staff:template_list' %}{% else %}{% url 'composer:compose_edit' workspace_id=workspace.id post_id=platform_post.post_id %}?account={{ platform_post.social_account_id }}{% endif %}"
-           class="text-stone-400 hover:text-stone-600 transition-colors shrink-0">
+           class="text-neutral-500 hover:text-neutral-700 transition-colors shrink-0">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </a>
 
@@ -80,22 +80,22 @@ any zoom level.
         operator does have — "which template am I editing?" — is this.
         {% endcomment %}
         <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-9 h-9 rounded-lg overflow-hidden bg-stone-100 flex items-center justify-center shrink-0">
+            <div class="w-9 h-9 rounded-lg overflow-hidden bg-neutral-100 flex items-center justify-center shrink-0">
                 {% if flow_template.thumbnail %}
                 <img src="{{ flow_template.thumbnail.url }}" alt="" class="w-full h-full object-cover">
                 {% else %}
-                <svg class="w-4 h-4 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                <svg class="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 {% endif %}
             </div>
             <div class="min-w-0">
-                <h2 class="text-sm font-semibold text-stone-900 tracking-tight truncate">{{ flow_template.name }}</h2>
-                <p class="text-xs text-stone-500 truncate">{% translate "Flow template" %}</p>
+                <h2 class="text-sm font-semibold text-neutral-950 tracking-tight truncate">{{ flow_template.name }}</h2>
+                <p class="text-xs text-neutral-600 truncate">{% translate "Flow template" %}</p>
             </div>
         </div>
 
         <div class="ml-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shrink-0
-                    {% if flow_template.is_published %}bg-green-50 text-green-700 border border-green-200{% else %}bg-stone-100 text-stone-500 border border-stone-200{% endif %}">
-            <span class="w-1.5 h-1.5 rounded-full {% if flow_template.is_published %}bg-green-500{% else %}bg-stone-400{% endif %}"></span>
+                    {% if flow_template.is_published %}bg-green-50 text-green-700 border border-green-200{% else %}bg-neutral-100 text-neutral-600 border border-neutral-300{% endif %}">
+            <span class="w-1.5 h-1.5 rounded-full {% if flow_template.is_published %}bg-green-500{% else %}bg-neutral-500{% endif %}"></span>
             {% if flow_template.is_published %}{% translate "On the shelf" %}{% else %}{% translate "Draft" %}{% endif %}
         </div>
         {% else %}
@@ -108,7 +108,7 @@ any zoom level.
         {% endcomment %}
         <div class="flex items-center gap-2.5 min-w-0">
             {% if post_preview.thumbnail %}
-            <div class="relative w-9 h-9 rounded-lg overflow-hidden bg-stone-100 shrink-0">
+            <div class="relative w-9 h-9 rounded-lg overflow-hidden bg-neutral-100 shrink-0">
                 <img src="{{ post_preview.thumbnail }}" alt="" class="w-full h-full object-cover">
                 {% if post_preview.media_count > 1 %}
                 <span class="absolute bottom-0 right-0 bg-black/60 text-white text-[8px] font-bold px-1 rounded-tl">
@@ -117,16 +117,16 @@ any zoom level.
                 {% endif %}
             </div>
             {% else %}
-            <div class="w-9 h-9 rounded-lg bg-stone-100 flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>
+            <div class="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>
             </div>
             {% endif %}
 
             <div class="min-w-0">
-                <h2 class="text-sm font-semibold text-stone-900 tracking-tight truncate">
+                <h2 class="text-sm font-semibold text-neutral-950 tracking-tight truncate">
                     {{ post_preview.snippet|default:_("Flow builder") }}
                 </h2>
-                <p class="text-xs text-stone-500 truncate flex items-center gap-1.5">
+                <p class="text-xs text-neutral-600 truncate flex items-center gap-1.5">
                     <span class="w-3.5 h-3.5 inline-flex items-center justify-center shrink-0">
                         {% include "partials/_platform_icon.html" with platform=platform_post.social_account.platform size="sm" %}
                     </span>
@@ -140,7 +140,7 @@ any zoom level.
                     {% if post_preview.permalink %}
                     &middot;
                     <a href="{{ post_preview.permalink }}" target="_blank" rel="noopener noreferrer"
-                       class="text-orange-600 hover:text-orange-700 hover:underline shrink-0">{% translate "View post" %}</a>
+                       class="text-brand-800 hover:text-brand-900 hover:underline shrink-0">{% translate "View post" %}</a>
                     {% endif %}
                 </p>
             </div>
@@ -151,13 +151,13 @@ any zoom level.
              :class="{
                 'bg-green-50 text-green-700 border border-green-200': status === 'active',
                 'bg-amber-50 text-amber-700 border border-amber-200': status === 'pending',
-                'bg-stone-100 text-stone-500 border border-stone-200': status === 'paused' || !status
+                'bg-neutral-100 text-neutral-600 border border-neutral-300': status === 'paused' || !status
              }">
             <span class="w-1.5 h-1.5 rounded-full"
                   :class="{
                     'bg-green-500': status === 'active',
                     'bg-amber-500': status === 'pending',
-                    'bg-stone-400': status === 'paused' || !status
+                    'bg-neutral-500': status === 'paused' || !status
                   }"></span>
             <span x-text="statusLabel || '{% translate "Not set up" %}'"></span>
         </div>
@@ -172,7 +172,7 @@ any zoom level.
         they are set once, and the canvas is where the attention belongs.
         {% endcomment %}
         <button type="button" @click="detailsOpen = true"
-                class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] text-stone-500 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer shrink-0">
+                class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 transition-colors cursor-pointer shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
             <span class="hidden lg:inline">{% translate "Template details" %}</span>
         </button>
@@ -191,7 +191,7 @@ any zoom level.
         {% endcomment %}
         {% if can_manage and not template_mode %}
         <button type="button" @click="settingsOpen = true"
-                class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] text-stone-500 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer shrink-0"
+                class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 transition-colors cursor-pointer shrink-0"
                 title="{% translate 'Automation settings' %}">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 3.6 1.65 1.65 0 0010 2.09V2a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.14.31.4.56.72.68H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
             <span class="hidden lg:inline">{% translate "Settings" %}</span>
@@ -203,16 +203,16 @@ any zoom level.
         discoverable and neither works on a trackpad-only machine without a
         keyboard reflex — so the mode is also a control you can see.
         {% endcomment %}
-        <div class="flex items-center gap-0.5 p-0.5 rounded-lg bg-stone-100 shrink-0 mr-1">
+        <div class="flex items-center gap-0.5 p-0.5 rounded-lg bg-neutral-100 shrink-0 mr-1">
             <button type="button" @click="tool = 'select'"
                     class="p-1.5 rounded-md transition-colors cursor-pointer"
-                    :class="tool === 'select' ? 'bg-white text-stone-700 shadow-sm' : 'text-stone-400 hover:text-stone-600'"
+                    :class="tool === 'select' ? 'bg-white text-neutral-800 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'"
                     title="{% translate 'Select' %}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linejoin="round"><path d="M3 2l7.5 18 2.4-7.1L20 10.5z"/></svg>
             </button>
             <button type="button" @click="tool = 'pan'"
                     class="p-1.5 rounded-md transition-colors cursor-pointer"
-                    :class="tool === 'pan' ? 'bg-white text-stone-700 shadow-sm' : 'text-stone-400 hover:text-stone-600'"
+                    :class="tool === 'pan' ? 'bg-white text-neutral-800 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'"
                     title="{% translate 'Move the canvas (or hold space)' %}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 114 0v6a8 8 0 01-8 8h-2a8 8 0 01-8-8v-1a2 2 0 114 0"/></svg>
             </button>
@@ -221,20 +221,20 @@ any zoom level.
         <!-- Zoom -->
         <div class="flex items-center gap-1 shrink-0">
             <button type="button" @click="zoomBy(-0.1)"
-                    class="p-1.5 rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors cursor-pointer" title="{% translate 'Zoom out' %}">
+                    class="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer" title="{% translate 'Zoom out' %}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
-            <span class="text-xs text-stone-400 tabular-nums w-10 text-center" x-text="Math.round(zoom * 100) + '%'"></span>
+            <span class="text-xs text-neutral-500 tabular-nums w-10 text-center" x-text="Math.round(zoom * 100) + '%'"></span>
             <button type="button" @click="zoomBy(0.1)"
-                    class="p-1.5 rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors cursor-pointer" title="{% translate 'Zoom in' %}">
+                    class="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer" title="{% translate 'Zoom in' %}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
             <button type="button" @click="fitView()"
-                    class="ml-1 px-2 py-1 text-xs text-stone-500 hover:text-stone-700 rounded-lg hover:bg-stone-100 transition-colors cursor-pointer">{% translate "Fit" %}</button>
+                    class="ml-1 px-2 py-1 text-xs text-neutral-600 hover:text-neutral-800 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer">{% translate "Fit" %}</button>
         </div>
 
         {% if can_manage %}
-        <div class="w-px h-6 bg-stone-200 mx-1 shrink-0"></div>
+        <div class="w-px h-6 bg-neutral-300 mx-1 shrink-0"></div>
 
         {% comment %}
         "Start from a template". Only on a real flow: the shelf is what this
@@ -243,7 +243,7 @@ any zoom level.
         {% endcomment %}
         {% if not template_mode %}
         <button type="button" @click="openTemplates()"
-                class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-stone-600 border border-stone-200 bg-white hover:border-stone-300 hover:text-stone-800 transition-colors cursor-pointer shrink-0"
+                class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-neutral-700 border border-neutral-300 bg-white hover:border-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer shrink-0"
                 title="{% translate 'Start from a ready-made flow' %}">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
             <span class="hidden lg:inline">{% translate "Templates" %}</span>
@@ -252,7 +252,7 @@ any zoom level.
 
         <button type="button" @click="save(false)" :disabled="saving"
                 class="px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors cursor-pointer disabled:opacity-50 shrink-0
-                       {% if template_mode %}border-transparent bg-orange-500 text-white hover:bg-orange-600{% else %}border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-stone-800{% endif %}">
+                       {% if template_mode %}border-transparent bg-brand-700 text-white hover:bg-brand-800{% else %}border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400 hover:text-neutral-900{% endif %}">
             <span x-text="saving ? '{% translate "Saving…" %}' : '{% translate "Save" %}'"></span>
         </button>
 
@@ -265,8 +265,8 @@ any zoom level.
         <button type="button" @click="status === 'active' ? toggle() : save(true)" :disabled="saving"
                 class="px-3.5 py-1.5 text-sm font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50 shrink-0"
                 :class="status === 'active'
-                    ? 'bg-stone-100 text-stone-700 hover:bg-stone-200'
-                    : 'bg-orange-500 text-white hover:bg-orange-600'">
+                    ? 'bg-neutral-100 text-neutral-800 hover:bg-neutral-300'
+                    : 'bg-brand-700 text-white hover:bg-brand-800'">
             <span x-text="status === 'active' ? '{% translate "Pause" %}' : '{% translate "Turn on" %}'"></span>
         </button>
         {% endif %}
@@ -275,11 +275,11 @@ any zoom level.
 
     <!-- Banners ------------------------------------------------------------ -->
     {% if template_mode %}
-    <div class="px-5 py-2.5 bg-stone-100 border-b border-stone-200 text-[13px] text-stone-600 shrink-0">
+    <div class="px-5 py-2.5 bg-neutral-100 border-b border-neutral-300 text-[13px] text-neutral-700 shrink-0">
         {% translate "This is a template. It answers no post and sends nothing — it is the starting canvas a customer gets when they pick it." %}
     </div>
     {% elif not supports_automation %}
-    <div class="px-5 py-2.5 bg-stone-100 border-b border-stone-200 text-[13px] text-stone-600 shrink-0">
+    <div class="px-5 py-2.5 bg-neutral-100 border-b border-neutral-300 text-[13px] text-neutral-700 shrink-0">
         {% blocktranslate with platform=platform_post.social_account.platform %}Comment automations run on Instagram and Facebook only. This account is <strong>{{ platform }}</strong>, so this flow cannot run.{% endblocktranslate %}
     </div>
     {% elif not has_platform_id %}
@@ -334,7 +334,7 @@ any zoom level.
          an Alpine ``:style`` does not merge — Alpine overwrites the attribute,
          which silently dropped the dot grid the moment the canvas was panned.
          {% endcomment %}
-         :style="`background-image: radial-gradient(#d6d3d1 1px, transparent 1px);
+         :style="`background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
                   background-size: ${22 * zoom}px ${22 * zoom}px;
                   background-position: ${pan.x}px ${pan.y}px`">
 
@@ -414,13 +414,13 @@ any zoom level.
             <template x-for="node in nodes" :key="node.id">
                 <div data-node :id="'node-' + node.id"
                      class="absolute w-72 rounded-2xl bg-white shadow-sm transition-shadow pointer-events-auto"
-                     :class="selected === node.id ? 'border-2 border-orange-400 shadow-md' : 'border border-stone-200'"
+                     :class="selected === node.id ? 'border-2 border-brand-500 shadow-md' : 'border border-neutral-300'"
                      :style="`left: ${node.x}px; top: ${node.y}px;`"
                      @mousedown.stop="startDrag(node, $event)"
                      @click.stop="selected = node.id">
 
                     <!-- Header -->
-                    <div class="flex items-center gap-2 px-3.5 py-2.5 border-b border-stone-100">
+                    <div class="flex items-center gap-2 px-3.5 py-2.5 border-b border-neutral-100">
                         <span class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
                               :class="nodeMeta(node.type).chip">
                             <span x-html="nodeMeta(node.type).icon"></span>
@@ -429,14 +429,14 @@ any zoom level.
                             <p class="text-[10px] font-semibold uppercase tracking-wider"
                                :class="nodeMeta(node.type).label"
                                x-text="nodeMeta(node.type).kicker"></p>
-                            <p class="text-[13px] font-semibold text-stone-800 truncate" x-text="nodeMeta(node.type).title"></p>
+                            <p class="text-[13px] font-semibold text-neutral-900 truncate" x-text="nodeMeta(node.type).title"></p>
                         </div>
                         <!-- The trigger is the entry point; removing it leaves a flow
                              nothing can start, which the compiler warns about. It is
                              simpler to refuse here. -->
                         <button type="button" x-show="node.type !== 'trigger_comment'"
                                 @click.stop="removeNode(node.id)"
-                                class="text-stone-300 hover:text-red-500 transition-colors cursor-pointer shrink-0">
+                                class="text-neutral-400 hover:text-red-500 transition-colors cursor-pointer shrink-0">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         </button>
                     </div>
@@ -447,29 +447,29 @@ any zoom level.
                         <!-- Trigger: keywords + match mode + top-level rule -->
                         <template x-if="node.type === 'trigger_comment'">
                             <div class="space-y-2.5">
-                                <p class="text-xs text-stone-500 leading-relaxed">
-                                    {% blocktranslate %}Runs when someone comments on <strong class="text-stone-700">this post</strong>.{% endblocktranslate %}
+                                <p class="text-xs text-neutral-600 leading-relaxed">
+                                    {% blocktranslate %}Runs when someone comments on <strong class="text-neutral-800">this post</strong>.{% endblocktranslate %}
                                 </p>
 
                                 {# Include list: what makes the flow fire. #}
                                 <div>
-                                    <p class="text-[10px] font-semibold uppercase tracking-wider text-stone-400 mb-1.5">
+                                    <p class="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5">
                                         {% translate "Comment includes" %}
                                     </p>
                                     <div class="flex flex-wrap gap-1.5" x-show="(node.data.keywords || []).length">
                                         <template x-for="(kw, i) in (node.data.keywords || [])" :key="'kw-' + i">
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-50 border border-orange-200 text-[11px] text-orange-700">
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-50 border border-brand-200 text-[11px] text-brand-900">
                                                 <span x-text="kw"></span>
                                                 <button type="button" @click="node.data.keywords.splice(i, 1)"
-                                                        class="text-orange-400 hover:text-orange-600 cursor-pointer">&times;</button>
+                                                        class="text-brand-500 hover:text-brand-800 cursor-pointer">&times;</button>
                                             </span>
                                         </template>
                                     </div>
                                     <input type="text" placeholder="{% translate 'Add a keyword, then press Enter' %}"
                                            @keydown.enter.prevent="addKeyword(node, $event.target)"
                                            @keydown.stop
-                                           class="w-full mt-1.5 text-[13px] px-2.5 py-1.5 rounded-lg border border-stone-200 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
-                                    <p class="text-[11px] text-stone-400 leading-relaxed mt-1" x-show="!(node.data.keywords || []).length">
+                                           class="w-full mt-1.5 text-[13px] px-2.5 py-1.5 rounded-lg border border-neutral-300 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                    <p class="text-[11px] text-neutral-500 leading-relaxed mt-1" x-show="!(node.data.keywords || []).length">
                                         {% blocktranslate %}No keyword means <strong>every</strong> comment on this post fires the flow.{% endblocktranslate %}
                                     </p>
                                 </div>
@@ -484,44 +484,44 @@ any zoom level.
                                 the account-wide rule editor.
                                 {% endcomment %}
                                 <div x-show="showExclude(node) || (node.data.exclude_keywords || []).length">
-                                    <p class="text-[10px] font-semibold uppercase tracking-wider text-stone-400 mb-1.5">
+                                    <p class="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5">
                                         {% translate "But not if it includes" %}
                                     </p>
                                     <div class="flex flex-wrap gap-1.5" x-show="(node.data.exclude_keywords || []).length">
                                         <template x-for="(kw, i) in (node.data.exclude_keywords || [])" :key="'ex-' + i">
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-[11px] text-stone-600">
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 border border-neutral-300 text-[11px] text-neutral-700">
                                                 <span x-text="kw"></span>
                                                 <button type="button" @click="node.data.exclude_keywords.splice(i, 1)"
-                                                        class="text-stone-400 hover:text-red-500 cursor-pointer">&times;</button>
+                                                        class="text-neutral-500 hover:text-red-500 cursor-pointer">&times;</button>
                                             </span>
                                         </template>
                                     </div>
                                     <input type="text" placeholder="{% translate 'Word that blocks the flow…' %}"
                                            @keydown.enter.prevent="addKeyword(node, $event.target, 'exclude_keywords')"
                                            @keydown.stop
-                                           class="w-full mt-1.5 text-[13px] px-2.5 py-1.5 rounded-lg border border-stone-200 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
+                                           class="w-full mt-1.5 text-[13px] px-2.5 py-1.5 rounded-lg border border-neutral-300 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
                                 </div>
                                 <button type="button" @click="revealExclude(node)"
                                         x-show="!showExclude(node) && !(node.data.exclude_keywords || []).length"
-                                        class="text-[11px] text-stone-400 hover:text-stone-600 transition-colors cursor-pointer">
+                                        class="text-[11px] text-neutral-500 hover:text-neutral-700 transition-colors cursor-pointer">
                                     + {% translate "Add words that block the flow" %}
                                 </button>
 
                                 <div>
-                                    <p class="text-[10px] font-semibold uppercase tracking-wider text-stone-400 mb-1.5">
+                                    <p class="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5">
                                         {% translate "How to match" %}
                                     </p>
                                     <select x-model="node.data.match_mode" @mousedown.stop
-                                            class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white text-stone-600 outline-none focus:border-orange-500 transition-all">
+                                            class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-neutral-300 bg-white text-neutral-700 outline-none focus:border-brand-700 transition-all">
                                         {% for value, label in keyword_mode_choices %}
                                         <option value="{{ value }}">{{ label }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
 
-                                <label class="flex items-center gap-2 text-[11px] text-stone-500 cursor-pointer">
+                                <label class="flex items-center gap-2 text-[11px] text-neutral-600 cursor-pointer">
                                     <input type="checkbox" x-model="node.data.top_level_only"
-                                           class="rounded border-stone-300 text-orange-500 focus:ring-orange-200">
+                                           class="rounded border-neutral-400 text-brand-700 focus:ring-brand-200">
                                     {% translate "Ignore replies to other comments" %}
                                 </label>
                             </div>
@@ -544,12 +544,12 @@ any zoom level.
                                     <div class="space-y-1.5">
                                         {# Chosen image, shown rather than described. #}
                                         <template x-if="node.data.image_url">
-                                            <div class="relative rounded-lg overflow-hidden border border-stone-200 bg-stone-50">
+                                            <div class="relative rounded-lg overflow-hidden border border-neutral-300 bg-neutral-50">
                                                 <img :src="node.data.image_url" alt=""
                                                      class="w-full h-24 object-cover"
                                                      @error="$el.style.display = 'none'">
                                                 <button type="button" @click="node.data.image_url = ''"
-                                                        class="absolute top-1 right-1 w-5 h-5 rounded-full bg-white/90 border border-stone-200 text-stone-500 hover:text-red-500 flex items-center justify-center transition-colors cursor-pointer"
+                                                        class="absolute top-1 right-1 w-5 h-5 rounded-full bg-white/90 border border-neutral-300 text-neutral-600 hover:text-red-500 flex items-center justify-center transition-colors cursor-pointer"
                                                         title="{% translate 'Remove the image' %}">
                                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                                 </button>
@@ -571,7 +571,7 @@ any zoom level.
                                         {% endcomment %}
                                         <input type="url" x-model="node.data.image_url" @keydown.stop
                                                placeholder="{% translate 'https://… the card image' %}"
-                                               class="w-full text-[12px] px-2.5 py-2 rounded-lg border border-stone-200 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
+                                               class="w-full text-[12px] px-2.5 py-2 rounded-lg border border-neutral-300 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
                                         {% else %}
                                         {% comment %}
                                         No URL field. It was a second way to do
@@ -584,7 +584,7 @@ any zoom level.
                                         an upload.
                                         {% endcomment %}
                                         <button type="button" @click="openMediaPicker(node)"
-                                                class="w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-dashed border-stone-300 text-[12px] text-stone-500 hover:text-stone-700 hover:border-stone-400 transition-colors cursor-pointer">
+                                                class="w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-dashed border-neutral-400 text-[12px] text-neutral-600 hover:text-neutral-800 hover:border-neutral-500 transition-colors cursor-pointer">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                                             <span x-text="node.data.image_url ? '{% translate "Change image" %}' : '{% translate "Choose an image" %}'"></span>
                                         </button>
@@ -600,11 +600,11 @@ any zoom level.
                                               : (node.type === 'send_card'
                                                   ? '{% translate "The card title…" %}'
                                                   : '{% translate "The public reply under their comment…" %}')"
-                                          class="w-full text-[13px] px-2.5 py-2 rounded-lg border border-stone-200 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all resize-none"></textarea>
-                                <p class="text-[10px] text-stone-400">
-                                    <button type="button" @click="insertToken(node, '{sender_name}')" class="hover:text-orange-500 cursor-pointer underline decoration-dotted">{sender_name}</button>
+                                          class="w-full text-[13px] px-2.5 py-2 rounded-lg border border-neutral-300 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all resize-none"></textarea>
+                                <p class="text-[10px] text-neutral-500">
+                                    <button type="button" @click="insertToken(node, '{sender_name}')" class="hover:text-brand-700 cursor-pointer underline decoration-dotted">{sender_name}</button>
                                     &middot;
-                                    <button type="button" @click="insertToken(node, '{account_name}')" class="hover:text-orange-500 cursor-pointer underline decoration-dotted">{account_name}</button>
+                                    <button type="button" @click="insertToken(node, '{account_name}')" class="hover:text-brand-700 cursor-pointer underline decoration-dotted">{account_name}</button>
                                 </p>
 
                                 {% comment %}
@@ -616,25 +616,25 @@ any zoom level.
                                 <template x-if="node.type !== 'reply_comment'">
                                     <div class="space-y-1.5 pt-1">
                                         <template x-for="(btn, bi) in (node.data.buttons || [])" :key="'btn-' + bi">
-                                            <div class="rounded-lg border border-stone-200 bg-stone-50 p-2 space-y-1.5">
+                                            <div class="rounded-lg border border-neutral-300 bg-neutral-50 p-2 space-y-1.5">
                                                 <div class="flex items-center gap-1.5">
                                                     <select x-model="btn.type" @mousedown.stop
-                                                            class="text-[11px] px-1.5 py-1 rounded border border-stone-200 bg-white text-stone-600 outline-none focus:border-orange-500">
+                                                            class="text-[11px] px-1.5 py-1 rounded border border-neutral-300 bg-white text-neutral-700 outline-none focus:border-brand-700">
                                                         <option value="url">{% translate "Open a link" %}</option>
                                                         <option value="reply">{% translate "Continue the flow" %}</option>
                                                     </select>
                                                     <button type="button" @click="node.data.buttons.splice(bi, 1)"
-                                                            class="ml-auto text-stone-300 hover:text-red-500 transition-colors cursor-pointer">
+                                                            class="ml-auto text-neutral-400 hover:text-red-500 transition-colors cursor-pointer">
                                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                                     </button>
                                                 </div>
                                                 <input type="text" x-model="btn.title" @keydown.stop maxlength="20"
                                                        placeholder="{% translate 'Button label (max 20)' %}"
-                                                       class="w-full text-[12px] px-2 py-1 rounded border border-stone-200 outline-none focus:border-orange-500">
+                                                       class="w-full text-[12px] px-2 py-1 rounded border border-neutral-300 outline-none focus:border-brand-700">
                                                 <template x-if="btn.type === 'url'">
                                                     <input type="text" x-model="btn.url" @keydown.stop
                                                            placeholder="https://…"
-                                                           class="w-full text-[12px] px-2 py-1 rounded border border-stone-200 outline-none focus:border-orange-500">
+                                                           class="w-full text-[12px] px-2 py-1 rounded border border-neutral-300 outline-none focus:border-brand-700">
                                                 </template>
                                                 {% comment %}
                                                 A reply button continues the flow,
@@ -645,7 +645,7 @@ any zoom level.
                                                 person who taps it.
                                                 {% endcomment %}
                                                 <template x-if="btn.type === 'reply'">
-                                                    <p class="text-[10px] text-stone-400 leading-relaxed">
+                                                    <p class="text-[10px] text-neutral-500 leading-relaxed">
                                                         {% translate "Connect this node to the next step — that's where the flow goes when they tap." %}
                                                     </p>
                                                 </template>
@@ -653,7 +653,7 @@ any zoom level.
                                         </template>
                                         <button type="button" @click="addButton(node)"
                                                 x-show="(node.data.buttons || []).length < 3"
-                                                class="w-full text-[11px] py-1 rounded-lg border border-dashed border-stone-300 text-stone-400 hover:text-stone-600 hover:border-stone-400 transition-colors cursor-pointer">
+                                                class="w-full text-[11px] py-1 rounded-lg border border-dashed border-neutral-400 text-neutral-500 hover:text-neutral-700 hover:border-neutral-500 transition-colors cursor-pointer">
                                             + {% translate "Button" %}
                                         </button>
                                     </div>
@@ -665,7 +665,7 @@ any zoom level.
                         <template x-if="node.type === 'condition'">
                             <div class="space-y-1.5">
                                 <select x-model="node.data.field" @change="onConditionField(node)" @mousedown.stop
-                                        class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white text-stone-600 outline-none focus:border-orange-500">
+                                        class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-neutral-300 bg-white text-neutral-700 outline-none focus:border-brand-700">
                                     <optgroup label="{% translate 'What they wrote' %}">
                                         <option value="comment_text">{% translate "The comment text" %}</option>
                                         <option value="sender_name">{% translate "The person's name" %}</option>
@@ -681,7 +681,7 @@ any zoom level.
                                 {# Text fields: the original operators. #}
                                 <select x-model="node.data.operator" @mousedown.stop
                                         x-show="!isProfileField(node.data.field)"
-                                        class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white text-stone-600 outline-none focus:border-orange-500">
+                                        class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-neutral-300 bg-white text-neutral-700 outline-none focus:border-brand-700">
                                     <option value="contains">{% translate "Contains" %}</option>
                                     <option value="not_contains">{% translate "Does not contain" %}</option>
                                     <option value="equals">{% translate "Is exactly" %}</option>
@@ -692,14 +692,14 @@ any zoom level.
                                 {# Yes/no fields need no value box — "follows us: yes" is complete. #}
                                 <select x-model="node.data.operator" @mousedown.stop
                                         x-show="isBooleanField(node.data.field)"
-                                        class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white text-stone-600 outline-none focus:border-orange-500">
+                                        class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-neutral-300 bg-white text-neutral-700 outline-none focus:border-brand-700">
                                     <option value="is_true">{% translate "Yes" %}</option>
                                     <option value="is_false">{% translate "No" %}</option>
                                 </select>
 
                                 <select x-model="node.data.operator" @mousedown.stop
                                         x-show="node.data.field === 'follower_count'"
-                                        class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white text-stone-600 outline-none focus:border-orange-500">
+                                        class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-neutral-300 bg-white text-neutral-700 outline-none focus:border-brand-700">
                                     <option value="greater_than">{% translate "Is more than" %}</option>
                                     <option value="less_than">{% translate "Is less than" %}</option>
                                     <option value="equals">{% translate "Is exactly" %}</option>
@@ -708,12 +708,12 @@ any zoom level.
                                 <input type="text" x-model="node.data.value" @keydown.stop
                                        x-show="!isProfileField(node.data.field) && !['is_empty', 'is_not_empty'].includes(node.data.operator)"
                                        placeholder="{% translate 'Word to look for…' %}"
-                                       class="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-stone-200 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
+                                       class="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-neutral-300 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
 
                                 <input type="number" x-model="node.data.value" @keydown.stop min="0"
                                        x-show="node.data.field === 'follower_count'"
                                        placeholder="1000"
-                                       class="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-stone-200 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
+                                       class="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-neutral-300 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
 
                                 {% comment %}
                                 The consent rule, stated where it bites. Meta
@@ -728,7 +728,7 @@ any zoom level.
                                     {% translate "Put this after a button: the platform only answers once the person has replied to you." %}
                                 </p>
 
-                                <p class="text-[10px] text-stone-400 leading-relaxed">
+                                <p class="text-[10px] text-neutral-500 leading-relaxed">
                                     {% translate "Two outputs: the top port is yes, the bottom is no." %}
                                 </p>
                             </div>
@@ -740,7 +740,7 @@ any zoom level.
         this notice appearing under a step that does in fact run.
         {% endcomment %}
                         <template x-if="!executable.includes(node.type)">
-                            <p class="text-[11px] text-stone-400 leading-relaxed">
+                            <p class="text-[11px] text-neutral-500 leading-relaxed">
                                 {% translate "Saved with the flow, but this step doesn't run yet." %}
                             </p>
                         </template>
@@ -758,9 +758,9 @@ any zoom level.
                             <div class="absolute -right-2 top-1/3 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-green-400 hover:border-green-600 cursor-crosshair transition-colors"
                                  @mousedown.stop.prevent="startLink(node, $event, 'true')"></div>
                             <span class="absolute -right-9 top-1/3 -translate-y-1/2 text-[9px] font-semibold text-green-600">{% translate "YES" %}</span>
-                            <div class="absolute -right-2 top-2/3 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-stone-300 hover:border-stone-500 cursor-crosshair transition-colors"
+                            <div class="absolute -right-2 top-2/3 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-neutral-400 hover:border-neutral-600 cursor-crosshair transition-colors"
                                  @mousedown.stop.prevent="startLink(node, $event, 'false')"></div>
-                            <span class="absolute -right-8 top-2/3 -translate-y-1/2 text-[9px] font-semibold text-stone-400">{% translate "NO" %}</span>
+                            <span class="absolute -right-8 top-2/3 -translate-y-1/2 text-[9px] font-semibold text-neutral-500">{% translate "NO" %}</span>
                         </div>
                     </template>
 
@@ -772,7 +772,7 @@ any zoom level.
                     <template x-if="node.type !== 'condition' && replyButtonCount(node) > 0">
                         <div>
                             <template x-for="(btn, bi) in replyButtons(node)" :key="'port-' + bi">
-                                <div class="absolute -right-2 w-4 h-4 rounded-full bg-white border-2 border-orange-300 hover:border-orange-500 cursor-crosshair transition-colors"
+                                <div class="absolute -right-2 w-4 h-4 rounded-full bg-white border-2 border-brand-300 hover:border-brand-700 cursor-crosshair transition-colors"
                                      :style="`top: ${(bi + 1) * 100 / (replyButtonCount(node) + 1)}%; transform: translateY(-50%);`"
                                      @mousedown.stop.prevent="startLink(node, $event, String(btn.index))"></div>
                             </template>
@@ -780,7 +780,7 @@ any zoom level.
                     </template>
 
                     <template x-if="node.type !== 'condition' && replyButtonCount(node) === 0">
-                        <div class="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-stone-300 hover:border-orange-500 cursor-crosshair transition-colors"
+                        <div class="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-neutral-400 hover:border-brand-700 cursor-crosshair transition-colors"
                              @mousedown.stop.prevent="startLink(node, $event)"></div>
                     </template>
                     {% comment %}
@@ -791,8 +791,8 @@ any zoom level.
                     first and ``onUp`` runs after; both are idempotent.
                     {% endcomment %}
                     <div x-show="node.type !== 'trigger_comment'"
-                         class="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-stone-300"
-                         :class="linking ? 'border-orange-400' : ''"
+                         class="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-neutral-400"
+                         :class="linking ? 'border-brand-500' : ''"
                          @mouseup="finishLink(node)"></div>
                 </div>
             </template>
@@ -807,38 +807,38 @@ any zoom level.
         {% if can_manage and not template_mode %}
         <div x-show="settingsOpen" x-cloak
              @keydown.escape.window="settingsOpen = false"
-             class="absolute inset-0 z-30 flex items-center justify-center bg-stone-900/20 p-4">
+             class="absolute inset-0 z-30 flex items-center justify-center bg-neutral-950/20 p-4">
             <div @click.outside="settingsOpen = false"
-                 class="w-full max-w-sm bg-white rounded-2xl border border-stone-200 shadow-xl p-5 space-y-4">
+                 class="w-full max-w-sm bg-white rounded-2xl border border-neutral-300 shadow-xl p-5 space-y-4">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-sm font-semibold text-stone-900">{% translate "Automation settings" %}</h3>
+                    <h3 class="text-sm font-semibold text-neutral-950">{% translate "Automation settings" %}</h3>
                     <button type="button" @click="settingsOpen = false"
-                            class="text-stone-400 hover:text-stone-600 transition-colors cursor-pointer">
+                            class="text-neutral-500 hover:text-neutral-700 transition-colors cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                 </div>
 
                 {# What this automation is called in the automations list. #}
                 <div>
-                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-stone-400 mb-1.5">
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5">
                         {% translate "Name" %}
                     </label>
                     <input type="text" x-model="settings.name" maxlength="200"
                            placeholder="{% translate 'e.g. Send the guide' %}"
-                           class="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-stone-200 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
-                    <p class="text-[11px] text-stone-400 mt-1 leading-relaxed">
+                           class="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-neutral-300 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                    <p class="text-[11px] text-neutral-500 mt-1 leading-relaxed">
                         {% translate "How this automation appears in your list." %}
                     </p>
                 </div>
 
                 <div>
-                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-stone-400 mb-1.5">
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5">
                         {% translate "Replies per hour" %}
                     </label>
                     <input type="number" min="0" max="{{ max_per_hour_ceiling }}" x-model.number="settings.max_per_hour"
-                           class="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-stone-200 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
+                           class="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-neutral-300 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
                     {# Zero is a real setting, not an empty box — say what it does. #}
-                    <p class="text-[11px] text-stone-400 mt-1 leading-relaxed">
+                    <p class="text-[11px] text-neutral-500 mt-1 leading-relaxed">
                         {% translate "A ceiling, so one busy post cannot turn into a flood. Zero stops this flow sending at all." %}
                     </p>
                 </div>
@@ -846,10 +846,10 @@ any zoom level.
                 <div>
                     <label class="flex items-start gap-2 cursor-pointer">
                         <input type="checkbox" x-model="settings.once_per_sender_per_post"
-                               class="mt-0.5 rounded border-stone-300 text-orange-500 focus:ring-orange-200">
+                               class="mt-0.5 rounded border-neutral-400 text-brand-700 focus:ring-brand-200">
                         <span>
-                            <span class="block text-[13px] text-stone-700">{% translate "One reply per person, per post" %}</span>
-                            <span class="block text-[11px] text-stone-400 leading-relaxed">
+                            <span class="block text-[13px] text-neutral-800">{% translate "One reply per person, per post" %}</span>
+                            <span class="block text-[11px] text-neutral-500 leading-relaxed">
                                 {% translate "Someone who comments five times still hears from you once." %}
                             </span>
                         </span>
@@ -857,23 +857,23 @@ any zoom level.
                 </div>
 
                 <div>
-                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-stone-400 mb-1.5">
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5">
                         {% translate "Priority" %}
                     </label>
                     <input type="number" min="0" max="{{ max_priority }}" x-model.number="settings.priority"
-                           class="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-stone-200 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
-                    <p class="text-[11px] text-stone-400 mt-1 leading-relaxed">
+                           class="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-neutral-300 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                    <p class="text-[11px] text-neutral-500 mt-1 leading-relaxed">
                         {% translate "When several automations match one comment, the lowest number answers." %}
                     </p>
                 </div>
 
                 <div class="flex items-center justify-end gap-2 pt-1">
                     <button type="button" @click="settingsOpen = false"
-                            class="px-3 py-1.5 text-[13px] text-stone-500 hover:text-stone-700 transition-colors cursor-pointer">
+                            class="px-3 py-1.5 text-[13px] text-neutral-600 hover:text-neutral-800 transition-colors cursor-pointer">
                         {% translate "Cancel" %}
                     </button>
                     <button type="button" @click="saveSettings()" :disabled="saving"
-                            class="px-3.5 py-1.5 text-[13px] font-medium rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors cursor-pointer disabled:opacity-50">
+                            class="px-3.5 py-1.5 text-[13px] font-medium rounded-lg bg-brand-700 text-white hover:bg-brand-800 transition-colors cursor-pointer disabled:opacity-50">
                         <span x-text="saving ? '{% translate "Saving…" %}' : '{% translate "Save" %}'"></span>
                     </button>
                 </div>
@@ -893,32 +893,32 @@ any zoom level.
         {% if can_manage and not template_mode %}
         <div x-show="mediaPickerOpen" x-cloak
              @keydown.escape.window="mediaPickerOpen = false"
-             class="absolute inset-0 z-30 flex items-center justify-center bg-stone-900/20 p-4">
+             class="absolute inset-0 z-30 flex items-center justify-center bg-neutral-950/20 p-4">
             {% comment %}
             Sized like the library page rather than like a dropdown: choosing
             an image is a visual task, and a three-column strip makes you scroll
             past most of what you own to find it.
             {% endcomment %}
             <div @click.outside="mediaPickerOpen = false"
-                 class="w-full max-w-3xl h-[80%] bg-white rounded-2xl border border-stone-200 shadow-xl flex flex-col">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-stone-100 shrink-0">
-                    <h3 class="text-sm font-semibold text-stone-900">{% translate "Media library" %}</h3>
+                 class="w-full max-w-3xl h-[80%] bg-white rounded-2xl border border-neutral-300 shadow-xl flex flex-col">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-100 shrink-0">
+                    <h3 class="text-sm font-semibold text-neutral-950">{% translate "Media library" %}</h3>
                     <button type="button" @click="mediaPickerOpen = false"
-                            class="text-stone-400 hover:text-stone-600 transition-colors cursor-pointer">
+                            class="text-neutral-500 hover:text-neutral-700 transition-colors cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                 </div>
 
-                <div class="flex items-center gap-2 px-5 py-3 border-b border-stone-100 shrink-0">
+                <div class="flex items-center gap-2 px-5 py-3 border-b border-neutral-100 shrink-0">
                     <div class="relative flex-1">
-                        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                         <input type="text" x-model="mediaQuery" @input.debounce.300ms="loadMedia()"
                                placeholder="{% translate 'Search images…' %}"
-                               class="w-full text-[13px] pl-8 pr-2.5 py-1.5 rounded-lg border border-stone-200 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
+                               class="w-full text-[13px] pl-8 pr-2.5 py-1.5 rounded-lg border border-neutral-300 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
                     </div>
 
                     {# Upload without leaving the flow: the image you want is often the one you have not uploaded yet. #}
-                    <label class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500 text-white text-[13px] font-medium hover:bg-orange-600 transition-colors cursor-pointer"
+                    <label class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-700 text-white text-[13px] font-medium hover:bg-brand-800 transition-colors cursor-pointer"
                            :class="mediaUploading ? 'opacity-60 pointer-events-none' : ''">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         <span x-text="mediaUploading ? '{% translate "Uploading…" %}' : '{% translate "Upload" %}'"></span>
@@ -936,13 +936,13 @@ any zoom level.
                 ``flow_views._sibling_workspace``.
                 {% endcomment %}
                 <div x-show="mediaWorkspaces.length > 1" x-cloak
-                     class="flex items-center gap-1 px-5 py-2 border-b border-stone-100 shrink-0 overflow-x-auto">
+                     class="flex items-center gap-1 px-5 py-2 border-b border-neutral-100 shrink-0 overflow-x-auto">
                     <template x-for="ws in mediaWorkspaces" :key="ws.id">
                         <button type="button" @click="mediaSource = ws.id; loadMedia()"
                                 class="shrink-0 px-2.5 py-1 rounded-full text-[12px] font-medium border transition-colors cursor-pointer whitespace-nowrap"
                                 :class="mediaSource === ws.id
-                                    ? 'bg-orange-500 text-white border-orange-500'
-                                    : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300'"
+                                    ? 'bg-brand-700 text-white border-brand-700'
+                                    : 'bg-white text-neutral-700 border-neutral-300 hover:border-neutral-400'"
                                 x-text="ws.name"></button>
                     </template>
                 </div>
@@ -950,24 +950,24 @@ any zoom level.
                 <div x-show="mediaError" x-cloak class="px-5 py-2 bg-red-50 border-b border-red-100 text-[12px] text-red-700 shrink-0" x-text="mediaError"></div>
 
                 <div class="flex-1 overflow-y-auto p-5">
-                    <div x-show="mediaLoading" class="py-10 text-center text-[13px] text-stone-400">
+                    <div x-show="mediaLoading" class="py-10 text-center text-[13px] text-neutral-500">
                         {% translate "Loading…" %}
                     </div>
 
                     {# Empty reads differently depending on why. #}
                     <div x-show="!mediaLoading && !mediaItems.length" class="py-16 text-center">
-                        <div class="w-14 h-14 mx-auto rounded-2xl bg-orange-50 flex items-center justify-center mb-3">
-                            <svg class="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                        <div class="w-14 h-14 mx-auto rounded-2xl bg-brand-50 flex items-center justify-center mb-3">
+                            <svg class="w-6 h-6 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                         </div>
-                        <p class="text-[13px] font-medium text-stone-600" x-text="mediaQuery ? '{% translate "No image matches that name." %}' : '{% translate "No images in the library yet." %}'"></p>
-                        <p class="text-[12px] text-stone-400 mt-1" x-show="!mediaQuery">{% translate "Use Upload above to add one." %}</p>
+                        <p class="text-[13px] font-medium text-neutral-700" x-text="mediaQuery ? '{% translate "No image matches that name." %}' : '{% translate "No images in the library yet." %}'"></p>
+                        <p class="text-[12px] text-neutral-500 mt-1" x-show="!mediaQuery">{% translate "Use Upload above to add one." %}</p>
                     </div>
 
                     <div x-show="!mediaLoading && mediaItems.length" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <template x-for="item in mediaItems" :key="item.id">
                             <button type="button" @click="chooseMedia(item)"
                                     class="group relative aspect-square rounded-xl overflow-hidden border-2 transition-colors cursor-pointer"
-                                    :class="(mediaTarget && mediaTarget.data.image_url === item.url) ? 'border-orange-500' : 'border-stone-200 hover:border-orange-400'">
+                                    :class="(mediaTarget && mediaTarget.data.image_url === item.url) ? 'border-brand-700' : 'border-neutral-300 hover:border-brand-500'">
                                 <img :src="item.thumbnail || item.url" :alt="item.title"
                                      class="w-full h-full object-cover" loading="lazy">
                                 <span class="absolute inset-x-0 bottom-0 px-1.5 py-1 bg-black/55 text-white text-[10px] truncate text-left"
@@ -996,23 +996,23 @@ any zoom level.
         {% endcomment %}
         <div x-show="templatesOpen" x-cloak
              @keydown.escape.window="templatesOpen = false"
-             class="absolute inset-0 z-30 flex items-start justify-center bg-stone-900/20 p-4 overflow-y-auto">
+             class="absolute inset-0 z-30 flex items-start justify-center bg-neutral-950/20 p-4 overflow-y-auto">
             <div @click.outside="templatesOpen = false"
-                 class="w-full max-w-3xl bg-white rounded-2xl border border-stone-200 shadow-xl my-auto overflow-hidden">
+                 class="w-full max-w-3xl bg-white rounded-2xl border border-neutral-300 shadow-xl my-auto overflow-hidden">
 
-                <div class="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
                     <div>
-                        <h3 class="text-sm font-semibold text-stone-900">{% translate "Start from a template" %}</h3>
-                        <p class="text-[12px] text-stone-500 mt-0.5">{% translate "Ready-made flows you can edit afterwards." %}</p>
+                        <h3 class="text-sm font-semibold text-neutral-950">{% translate "Start from a template" %}</h3>
+                        <p class="text-[12px] text-neutral-600 mt-0.5">{% translate "Ready-made flows you can edit afterwards." %}</p>
                     </div>
                     <button type="button" @click="templatesOpen = false"
-                            class="text-stone-400 hover:text-stone-600 transition-colors cursor-pointer">
+                            class="text-neutral-500 hover:text-neutral-700 transition-colors cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                 </div>
 
                 <div class="p-5 max-h-[60vh] overflow-y-auto">
-                    <div x-show="templatesLoading" class="py-12 text-center text-[13px] text-stone-400">
+                    <div x-show="templatesLoading" class="py-12 text-center text-[13px] text-neutral-500">
                         {% translate "Loading…" %}
                     </div>
 
@@ -1027,16 +1027,16 @@ any zoom level.
                     {% endcomment %}
                     <div x-show="!templatesLoading && !templatesError && templates.length === 0" x-cloak
                          class="py-12 text-center">
-                        <p class="text-sm font-medium text-stone-600">{% translate "No templates yet" %}</p>
-                        <p class="text-[13px] text-stone-500 mt-1">{% translate "Ready-made flows will appear here once they are published." %}</p>
+                        <p class="text-sm font-medium text-neutral-700">{% translate "No templates yet" %}</p>
+                        <p class="text-[13px] text-neutral-600 mt-1">{% translate "Ready-made flows will appear here once they are published." %}</p>
                     </div>
 
                     <div x-show="!templatesLoading && templates.length > 0" x-cloak
                          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         <template x-for="item in templates" :key="item.id">
                             <button type="button" @click="applyTemplate(item)"
-                                    class="group text-left rounded-xl border border-stone-200 overflow-hidden hover:border-orange-300 hover:shadow-md transition-all cursor-pointer">
-                                <div class="aspect-[4/3] bg-stone-100 relative overflow-hidden">
+                                    class="group text-left rounded-xl border border-neutral-300 overflow-hidden hover:border-brand-300 hover:shadow-md transition-all cursor-pointer">
+                                <div class="aspect-[4/3] bg-neutral-100 relative overflow-hidden">
                                     <img x-show="item.thumbnail" :src="item.thumbnail" alt=""
                                          class="w-full h-full object-cover">
                                     {% comment %}
@@ -1047,15 +1047,15 @@ any zoom level.
                                     placeholder.
                                     {% endcomment %}
                                     <div x-show="!item.thumbnail" class="absolute inset-0 flex items-center justify-center">
-                                        <svg class="w-8 h-8 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                                        <svg class="w-8 h-8 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                                     </div>
                                     <span class="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-medium"
                                           x-text="item.node_count + ' {% translate "steps" %}'"></span>
                                 </div>
                                 <div class="p-3">
-                                    <p class="text-[13px] font-semibold text-stone-900 truncate group-hover:text-orange-700 transition-colors"
+                                    <p class="text-[13px] font-semibold text-neutral-950 truncate group-hover:text-brand-900 transition-colors"
                                        x-text="item.name"></p>
-                                    <p x-show="item.description" class="text-[12px] text-stone-500 truncate mt-0.5"
+                                    <p x-show="item.description" class="text-[12px] text-neutral-600 truncate mt-0.5"
                                        x-text="item.description"></p>
                                 </div>
                             </button>
@@ -1077,70 +1077,70 @@ any zoom level.
         {% endcomment %}
         <div x-show="detailsOpen" x-cloak
              @keydown.escape.window="detailsOpen = false"
-             class="absolute inset-0 z-30 flex items-start justify-center bg-stone-900/20 p-4 overflow-y-auto">
+             class="absolute inset-0 z-30 flex items-start justify-center bg-neutral-950/20 p-4 overflow-y-auto">
             <form method="post" enctype="multipart/form-data"
                   action="{% url 'automations_staff:template_details' template_id=flow_template.id %}"
                   @click.outside="detailsOpen = false"
-                  class="w-full max-w-md bg-white rounded-2xl border border-stone-200 shadow-xl my-auto overflow-hidden">
+                  class="w-full max-w-md bg-white rounded-2xl border border-neutral-300 shadow-xl my-auto overflow-hidden">
                 {% csrf_token %}
 
-                <div class="flex items-center justify-between px-5 py-4 border-b border-stone-100">
-                    <h3 class="text-sm font-semibold text-stone-900">{% translate "Template details" %}</h3>
+                <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+                    <h3 class="text-sm font-semibold text-neutral-950">{% translate "Template details" %}</h3>
                     <button type="button" @click="detailsOpen = false"
-                            class="text-stone-400 hover:text-stone-600 transition-colors cursor-pointer">
+                            class="text-neutral-500 hover:text-neutral-700 transition-colors cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                 </div>
 
                 <div class="p-5 space-y-4">
                     <div>
-                        <label for="tpl-name" class="block text-[12px] font-medium text-stone-600 mb-1">{% translate "Name" %}</label>
+                        <label for="tpl-name" class="block text-[12px] font-medium text-neutral-700 mb-1">{% translate "Name" %}</label>
                         <input id="tpl-name" type="text" name="name" value="{{ flow_template.name }}" maxlength="120" required
-                               class="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-400 outline-none">
+                               class="w-full px-3 py-2 text-sm rounded-lg border border-neutral-300 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none">
                     </div>
 
                     <div>
-                        <label for="tpl-description" class="block text-[12px] font-medium text-stone-600 mb-1">{% translate "Description" %}</label>
+                        <label for="tpl-description" class="block text-[12px] font-medium text-neutral-700 mb-1">{% translate "Description" %}</label>
                         <input id="tpl-description" type="text" name="description" value="{{ flow_template.description }}" maxlength="240"
                                placeholder="{% translate 'One line, shown under the name' %}"
-                               class="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-400 outline-none">
+                               class="w-full px-3 py-2 text-sm rounded-lg border border-neutral-300 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none">
                     </div>
 
                     <div>
-                        <span class="block text-[12px] font-medium text-stone-600 mb-1">{% translate "Thumbnail" %}</span>
+                        <span class="block text-[12px] font-medium text-neutral-700 mb-1">{% translate "Thumbnail" %}</span>
                         {% if flow_template.thumbnail %}
                         <div class="flex items-center gap-3 mb-2">
                             <img src="{{ flow_template.thumbnail.url }}" alt=""
-                                 class="w-20 h-15 object-cover rounded-lg border border-stone-200">
-                            <label class="flex items-center gap-1.5 text-[12px] text-stone-500 cursor-pointer">
-                                <input type="checkbox" name="remove_thumbnail" class="rounded border-stone-300 text-orange-500 focus:ring-orange-400">
+                                 class="w-20 h-15 object-cover rounded-lg border border-neutral-300">
+                            <label class="flex items-center gap-1.5 text-[12px] text-neutral-600 cursor-pointer">
+                                <input type="checkbox" name="remove_thumbnail" class="rounded border-neutral-400 text-brand-700 focus:ring-brand-500">
                                 {% translate "Remove it" %}
                             </label>
                         </div>
                         {% endif %}
                         <input type="file" name="thumbnail" accept="image/png,image/jpeg,image/webp,image/gif"
-                               class="w-full text-[12px] text-stone-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-stone-200 file:text-[12px] file:bg-white file:text-stone-600 file:cursor-pointer">
-                        <p class="text-[11px] text-stone-400 mt-1">{% translate "PNG, JPEG, WebP or GIF, under 4 MB. A screenshot of the flow works well." %}</p>
+                               class="w-full text-[12px] text-neutral-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-neutral-300 file:text-[12px] file:bg-white file:text-neutral-700 file:cursor-pointer">
+                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "PNG, JPEG, WebP or GIF, under 4 MB. A screenshot of the flow works well." %}</p>
                     </div>
 
                     <div>
-                        <label for="tpl-position" class="block text-[12px] font-medium text-stone-600 mb-1">{% translate "Position on the shelf" %}</label>
+                        <label for="tpl-position" class="block text-[12px] font-medium text-neutral-700 mb-1">{% translate "Position on the shelf" %}</label>
                         <input id="tpl-position" type="number" name="position" value="{{ flow_template.position }}"
-                               class="w-24 px-3 py-2 text-sm rounded-lg border border-stone-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-400 outline-none">
-                        <p class="text-[11px] text-stone-400 mt-1">{% translate "Lowest first." %}</p>
+                               class="w-24 px-3 py-2 text-sm rounded-lg border border-neutral-300 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none">
+                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "Lowest first." %}</p>
                     </div>
 
-                    <label class="flex items-start gap-2.5 p-3 rounded-xl border border-stone-200 cursor-pointer hover:border-stone-300 transition-colors">
+                    <label class="flex items-start gap-2.5 p-3 rounded-xl border border-neutral-300 cursor-pointer hover:border-neutral-400 transition-colors">
                         <input type="checkbox" name="is_published" {% if flow_template.is_published %}checked{% endif %}
-                               class="mt-0.5 rounded border-stone-300 text-orange-500 focus:ring-orange-400">
+                               class="mt-0.5 rounded border-neutral-400 text-brand-700 focus:ring-brand-500">
                         <span>
-                            <span class="block text-[13px] font-medium text-stone-800">{% translate "Show it to customers" %}</span>
-                            <span class="block text-[12px] text-stone-500">{% translate "Unpublished templates stay editable here and appear in nobody's picker." %}</span>
+                            <span class="block text-[13px] font-medium text-neutral-900">{% translate "Show it to customers" %}</span>
+                            <span class="block text-[12px] text-neutral-600">{% translate "Unpublished templates stay editable here and appear in nobody's picker." %}</span>
                         </span>
                     </label>
                 </div>
 
-                <div class="flex items-center justify-between gap-2 px-5 py-4 border-t border-stone-100 bg-stone-50">
+                <div class="flex items-center justify-between gap-2 px-5 py-4 border-t border-neutral-100 bg-neutral-50">
                     {% comment %}
                     The canvas and these fields save separately, and somebody
                     who drew three nodes and then opened this dialog would lose
@@ -1148,9 +1148,9 @@ any zoom level.
                     two writes together, which would mean posting the graph
                     through a multipart form.
                     {% endcomment %}
-                    <p class="text-[11px] text-stone-400">{% translate "Save the canvas first — this reloads the page." %}</p>
+                    <p class="text-[11px] text-neutral-500">{% translate "Save the canvas first — this reloads the page." %}</p>
                     <button type="submit"
-                            class="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors cursor-pointer shrink-0">
+                            class="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-brand-700 text-white hover:bg-brand-800 transition-colors cursor-pointer shrink-0">
                         {% translate "Save details" %}
                     </button>
                 </div>
@@ -1160,26 +1160,26 @@ any zoom level.
 
         <!-- Add-step palette --------------------------------------------- -->
         {% if can_manage %}
-        <div class="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2 py-2 rounded-2xl bg-white border border-stone-200 shadow-lg"
+        <div class="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2 py-2 rounded-2xl bg-white border border-neutral-300 shadow-lg"
              @mousedown.stop>
-            <span class="px-2 text-[11px] font-semibold text-stone-400 uppercase tracking-wider">{% translate "Add step" %}</span>
+            <span class="px-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">{% translate "Add step" %}</span>
             <button type="button" @click="addNode('reply_comment')"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] text-stone-600 whitespace-nowrap hover:bg-stone-100 transition-colors cursor-pointer">
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] text-neutral-700 whitespace-nowrap hover:bg-neutral-100 transition-colors cursor-pointer">
                 <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
                 {% translate "Reply to comment" %}
             </button>
             <button type="button" @click="addNode('send_dm')"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] text-stone-600 whitespace-nowrap hover:bg-stone-100 transition-colors cursor-pointer">
-                <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] text-neutral-700 whitespace-nowrap hover:bg-neutral-100 transition-colors cursor-pointer">
+                <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 {% translate "Send a DM" %}
             </button>
             <button type="button" @click="addNode('send_card')"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] text-stone-600 whitespace-nowrap hover:bg-stone-100 transition-colors cursor-pointer">
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] text-neutral-700 whitespace-nowrap hover:bg-neutral-100 transition-colors cursor-pointer">
                 <svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>
                 {% translate "Card with image" %}
             </button>
             <button type="button" @click="addNode('condition')"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] text-stone-600 whitespace-nowrap hover:bg-stone-100 transition-colors cursor-pointer">
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] text-neutral-700 whitespace-nowrap hover:bg-neutral-100 transition-colors cursor-pointer">
                 <svg class="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9v1a5 5 0 01-5 5H9"/></svg>
                 {% translate "Condition" %}
             </button>
@@ -1408,8 +1408,8 @@ function flowBuilder() {
                 send_dm: {
                     kicker: fbLabel('then-send'),
                     title: fbLabel('dm-title'),
-                    chip: 'bg-orange-50 text-orange-600',
-                    label: 'text-orange-600',
+                    chip: 'bg-brand-50 text-brand-800',
+                    label: 'text-brand-800',
                     icon: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
                 },
                 send_card: {
@@ -1430,8 +1430,8 @@ function flowBuilder() {
             return map[type] || {
                 kicker: fbLabel('step'),
                 title: type,
-                chip: 'bg-stone-100 text-stone-500',
-                label: 'text-stone-400',
+                chip: 'bg-neutral-100 text-neutral-600',
+                label: 'text-neutral-500',
                 icon: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>',
             };
         },
@@ -1813,14 +1813,14 @@ function flowBuilder() {
                 // has a destructive button attached to it.
                 const hot = index === picked || index === hovered;
                 paths.push(
-                    `<path d="${d}" fill="none" stroke="${hot ? '#ef4444' : '#a8a29e'}"` +
+                    `<path d="${d}" fill="none" stroke="${hot ? '#ef4444' : '#94a3b8'}"` +
                     ` stroke-width="${index === picked ? 3.5 : hot ? 3 : 2}"` +
                     ` style="pointer-events: none;"></path>`
                 );
             });
             if (linking) {
                 const d = this.pendingPath(linking, cursor, nodes, heights);
-                if (d) paths.push(`<path d="${d}" fill="none" stroke="#f97316" stroke-width="2" stroke-dasharray="5 4" style="pointer-events: none;" />`);
+                if (d) paths.push(`<path d="${d}" fill="none" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5 4" style="pointer-events: none;" />`);
             }
             return paths.join('');
         },

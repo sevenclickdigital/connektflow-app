@@ -1,4 +1,4 @@
-# BrightBean Studio (Seven Click fork)
+# Automator (Seven Click fork of BrightBean Studio)
 
 Social media management platform: compose, schedule, approve, publish, inbox, analytics and comment automations across 13 platforms, multi-workspace, with billing per workspace. Fork of the open-source BrightBean Studio, run by one developer.
 
@@ -15,6 +15,7 @@ Social media management platform: compose, schedule, approve, publish, inbox, an
 - `docs/architecture.md`: how the codebase is put together today (tenancy, worker, publishing, inbox/webhooks, automations, billing, API/MCP/OAuth, storage, i18n, security, deploy). Read the section of the subsystem you touch.
 - `docs/features.md`: what each feature does and where it lives in the code.
 - `docs/style-guide.html`: design tokens and the component classes that already exist.
+- `docs/automator-redesign.md`: the rename to Automator and the new layout — naming rules, which `brightbean` identifiers must stay, colour class names, what is migrated and what is next.
 - `docs/meta-analytics-manual-tests.md`, `docs/youtube-compliance-rollout.md`: operational checklists.
 
 When the code and a doc disagree, the code is right — fix the doc in the same change.
@@ -41,6 +42,7 @@ When the code and a doc disagree, the code is right — fix the doc in the same 
 - Function-based views, explicit `@require_POST` / `require_http_methods` on mutations.
 - HTMX actions that change state answer `204` + `HX-Trigger` (`showToast` with `tone`, refresh events) — see `apps/approvals/views.py` and its tests. Use `request.htmx` to choose partial vs full page.
 - Partials live in `templates/<app>/partials/_name.html`; shared pieces in `templates/components/` and `templates/partials/`.
+- Colours come from the tokens, exposed to Tailwind as `brand-*` (primary is `brand-700`) and `neutral-*` (border `neutral-300`, secondary text `neutral-600`). Never `orange-*`, `stone-*` or their hex values — see `docs/automator-redesign.md` §2.
 - Styles come from the tokens and component classes in `theme/static_src/src/styles.css` (`btn-*`, `.alert-*`, status pills…). Check `docs/style-guide.html` before inventing a class. After CSS/template class changes, the Tailwind watcher or `npm run build` in `theme/static_src` must run.
 - Alpine: pointer gestures that must not select text use `preventDefault`, not `.stop` (which only stops Alpine propagation).
 - Skill: `django-templates`.

@@ -3,7 +3,7 @@ name: pytest-project
 description: "Use when writing, fixing or running tests in this project: what deserves a test, PostgreSQL test setup, fixtures, mocking providers and external services, HTMX/HX-Trigger assertions, migration tests over seeded data, and how to run only the tests of the area changed."
 ---
 
-# Tests in BrightBean
+# Tests in Automator
 
 ## Setup
 

@@ -16,14 +16,14 @@ the foreign keys, because the whole point of those columns is that the
 trail survives a deleted account.
 {% endcomment %}
 
-{% block title %}{% translate "Access log" %} - {% translate "Administration" %} - Brightbean{% endblock %}
+{% block title %}{% translate "Access log" %} - {% translate "Administration" %} - Automator{% endblock %}
 
 {% block page_header %}
 <div class="mb-4 lg:mb-[25px]">
-  <h1 class="text-xl sm:text-2xl font-semibold text-stone-900" style="letter-spacing: -0.01em;">
+  <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950" style="letter-spacing: -0.01em;">
     {% translate "Access log" %}
   </h1>
-  <p class="text-sm text-stone-500 mt-1">
+  <p class="text-sm text-neutral-600 mt-1">
     {% blocktranslate with limit=limit %}Every time an operator signed in as a customer for support. The {{ limit }} most recent.{% endblocktranslate %}
   </p>
 </div>
@@ -43,47 +43,47 @@ trail survives a deleted account.
   </div>
   {% endif %}
 
-  <section class="rounded-xl border border-stone-200 bg-white overflow-hidden">
+  <section class="rounded-xl border border-neutral-300 bg-white overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-stone-100 bg-stone-50">
-            <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-stone-400">{% translate "Operator" %}</th>
-            <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-stone-400">{% translate "Account used" %}</th>
-            <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-stone-400">{% translate "Started" %}</th>
-            <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-stone-400">{% translate "Ended" %}</th>
-            <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-stone-400">{% translate "Origin" %}</th>
+          <tr class="border-b border-neutral-100 bg-neutral-50">
+            <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Operator" %}</th>
+            <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Account used" %}</th>
+            <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Started" %}</th>
+            <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Ended" %}</th>
+            <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Origin" %}</th>
           </tr>
         </thead>
         <tbody>
           {% for session in sessions %}
-          <tr class="{% if not forloop.last %}border-b border-stone-100{% endif %}">
-            <td class="px-5 py-3 text-stone-900">
+          <tr class="{% if not forloop.last %}border-b border-neutral-100{% endif %}">
+            <td class="px-5 py-3 text-neutral-950">
               {{ session.impersonator_email }}
               {% if not session.impersonator_id %}
               {# The account is gone; the snapshot is all that is left. #}
-              <span class="block text-[11px] text-stone-400">{% translate "Account deleted" %}</span>
+              <span class="block text-[11px] text-neutral-500">{% translate "Account deleted" %}</span>
               {% endif %}
             </td>
-            <td class="px-5 py-3 text-stone-700">
+            <td class="px-5 py-3 text-neutral-800">
               {{ session.impersonated_email }}
               {% if not session.impersonated_id %}
-              <span class="block text-[11px] text-stone-400">{% translate "Account deleted" %}</span>
+              <span class="block text-[11px] text-neutral-500">{% translate "Account deleted" %}</span>
               {% endif %}
             </td>
-            <td class="px-5 py-3 text-stone-500 whitespace-nowrap tabular-nums">{{ session.started_at|date:"SHORT_DATETIME_FORMAT" }}</td>
+            <td class="px-5 py-3 text-neutral-600 whitespace-nowrap tabular-nums">{{ session.started_at|date:"SHORT_DATETIME_FORMAT" }}</td>
             <td class="px-5 py-3 whitespace-nowrap">
               {% if session.ended_at %}
-              <span class="text-stone-500 tabular-nums">{{ session.ended_at|date:"SHORT_DATETIME_FORMAT" }}</span>
+              <span class="text-neutral-600 tabular-nums">{{ session.ended_at|date:"SHORT_DATETIME_FORMAT" }}</span>
               {% else %}
               <span class="inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full bg-amber-50 text-amber-700">{% translate "Still open" %}</span>
               {% endif %}
             </td>
-            <td class="px-5 py-3 text-stone-400 tabular-nums whitespace-nowrap">{{ session.ip_address|default:"—" }}</td>
+            <td class="px-5 py-3 text-neutral-500 tabular-nums whitespace-nowrap">{{ session.ip_address|default:"—" }}</td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5" class="px-5 py-6 text-sm text-stone-400">
+            <td colspan="5" class="px-5 py-6 text-sm text-neutral-500">
               {% translate "No operator has signed in as a customer yet." %}
             </td>
           </tr>
@@ -93,7 +93,7 @@ trail survives a deleted account.
     </div>
   </section>
 
-  <p class="text-xs text-stone-500">
+  <p class="text-xs text-neutral-600">
     {% translate "Read-only. A takeover is started from Customers and ended by the operator who started it." %}
   </p>
 

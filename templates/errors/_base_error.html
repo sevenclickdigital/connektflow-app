@@ -17,7 +17,7 @@ Blocks: code, title, message, extra (optional, for the 500's reference id).
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}{% endblock %} · Brightbean</title>
+  <title>{% block title %}{% endblock %} · Automator</title>
   {% comment %}
   No {% static %} and no stylesheet link anywhere on these pages. Under
   ManifestStaticFilesStorage a tag whose file is missing from the manifest
@@ -28,24 +28,24 @@ Blocks: code, title, message, extra (optional, for the 500's reference id).
   {% endcomment %}
 </head>
 <body style="margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-             padding: 3rem 1rem; background: var(--surface-1, #FAFAF9);
+             padding: 3rem 1rem; background: var(--surface-1, #FAFAFF);
              font-family: var(--font-body, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif);">
 
   <main style="width: 100%; max-width: 30rem; text-align: center;">
 
     <!-- Status code -->
     <p style="margin: 0; font-size: 3.75rem; line-height: 1; font-weight: 800; letter-spacing: -0.03em;
-              color: var(--primary, #F97316);">
+              color: var(--primary, #7C3AED);">
       {% block code %}{% endblock %}
     </p>
 
     <h1 style="margin: 1.25rem 0 0; font-size: 1.5rem; line-height: 1.25; font-weight: 700;
-               color: var(--text-primary, #1C1917);">
+               color: var(--text-primary, #0F172A);">
       {% block heading %}{% endblock %}
     </h1>
 
     <p style="margin: 0.75rem 0 0; font-size: 0.9375rem; line-height: 1.6;
-              color: var(--text-secondary, #57534E);">
+              color: var(--text-secondary, #475569);">
       {% block message %}{% endblock %}
     </p>
 
@@ -60,7 +60,7 @@ Blocks: code, title, message, extra (optional, for the 500's reference id).
       <a href="/"
          style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.5rem;
                 font-size: 0.875rem; font-weight: 600; text-decoration: none; border-radius: 0.5rem;
-                color: #FFFFFF; background: var(--primary, #F97316);">
+                color: #FFFFFF; background: var(--primary, #7C3AED);">
         {% translate "Back to start" %}
       </a>
     </div>

@@ -2,26 +2,26 @@
 {% load i18n %}
 <html>
 <head><meta charset="UTF-8"></head>
-<body style="margin:0; padding:0; font-family: system-ui, -apple-system, sans-serif; background: #FAFAF9;">
+<body style="margin:0; padding:0; font-family: system-ui, -apple-system, sans-serif; background: #FAFAFF;">
     <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 20px;">
         <tr>
             <td align="center">
-                <table width="520" cellpadding="0" cellspacing="0" style="background: #FFFFFF; border-radius: 12px; border: 1px solid #E7E5E4; overflow: hidden;">
+                <table width="520" cellpadding="0" cellspacing="0" style="background: #FFFFFF; border-radius: 12px; border: 1px solid #E5E7EB; overflow: hidden;">
                     <!-- Header -->
                     <tr>
                         <td style="padding: 32px 32px 0 32px;">
-                            <p style="font-size: 15px; font-weight: 700; color: #1C1917; margin: 0;">
-                                {% blocktranslate with org=org_name %}Join {{ org }} on Brightbean{% endblocktranslate %}
+                            <p style="font-size: 15px; font-weight: 700; color: #0F172A; margin: 0;">
+                                {% blocktranslate with org=org_name %}Join {{ org }} on Automator{% endblocktranslate %}
                             </p>
                         </td>
                     </tr>
                     <!-- Body -->
                     <tr>
                         <td style="padding: 24px 32px 32px 32px;">
-                            <p style="font-size: 15px; color: #44403C; line-height: 1.6; margin: 0 0 8px 0;">
+                            <p style="font-size: 15px; color: #334155; line-height: 1.6; margin: 0 0 8px 0;">
                                 {% translate "Hi there," %}
                             </p>
-                            <p style="font-size: 15px; color: #44403C; line-height: 1.6; margin: 0 0 24px 0;">
+                            <p style="font-size: 15px; color: #334155; line-height: 1.6; margin: 0 0 24px 0;">
                                 {% blocktranslate with inviter=invited_by.display_name org=org_name %}{{ inviter }} has invited you to join <strong>{{ org }}</strong> as a team member. Click the button below to accept the invitation and get started.{% endblocktranslate %}
                             </p>
                             <!-- CTA Button -->
@@ -29,22 +29,22 @@
                                 <tr>
                                     <td align="center">
                                         <a href="{{ accept_url }}"
-                                           style="display: inline-block; padding: 12px 32px; background: #F97316; color: #FFFFFF; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 9999px;">
+                                           style="display: inline-block; padding: 12px 32px; background: #7C3AED; color: #FFFFFF; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 9999px;">
                                             {% translate "Accept Invitation" %}
                                         </a>
                                     </td>
                                 </tr>
                             </table>
-                            <p style="font-size: 13px; color: #A8A29E; line-height: 1.6; margin: 24px 0 0 0;">
+                            <p style="font-size: 13px; color: #94A3B8; line-height: 1.6; margin: 24px 0 0 0;">
                                 {% translate "This invitation expires in 7 days. If it expires, ask your team admin for a new one." %}
                             </p>
                         </td>
                     </tr>
                     <!-- Footer -->
                     <tr>
-                        <td style="padding: 16px 32px; border-top: 1px solid #E7E5E4;">
-                            <p style="font-size: 12px; color: #A8A29E; margin: 0;">
-                                {% blocktranslate with org=org_name %}You're receiving this because someone invited you to {{ org }} on Brightbean.{% endblocktranslate %}
+                        <td style="padding: 16px 32px; border-top: 1px solid #E5E7EB;">
+                            <p style="font-size: 12px; color: #94A3B8; margin: 0;">
+                                {% blocktranslate with org=org_name %}You're receiving this because someone invited you to {{ org }} on Automator.{% endblocktranslate %}
                             </p>
                         </td>
                     </tr>

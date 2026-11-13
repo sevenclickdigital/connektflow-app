@@ -3,15 +3,15 @@
 {% block page_title %}{% translate "Not authorized" %}{% endblock %}
 {% block content %}
 <div class="max-w-xl mx-auto py-16 px-4 text-center">
-  <h1 class="text-xl font-semibold text-stone-900 mb-2">{% translate "This deployment isn't authorized" %}</h1>
-  <p class="text-sm text-stone-600 mb-6">
+  <h1 class="text-xl font-semibold text-neutral-950 mb-2">{% translate "This deployment isn't authorized" %}</h1>
+  <p class="text-sm text-neutral-700 mb-6">
     {% translate "This Studio deployment is not registered for the hosted Intelligence integration. If you're a fork operator running your own Stripe and Intelligence stack, you need to register your deployment first." %}
   </p>
-  <p class="text-sm text-stone-600">
+  <p class="text-sm text-neutral-700">
     {# The address is interpolated rather than written inside the string: gettext #}
     {# warns about embedded addresses because a translator can typo one, and a #}
     {# support address that reaches nobody is worse than an untranslated line. #}
-    {% blocktranslate with link='<a href="mailto:support@brightbean.xyz" class="text-orange-600 hover:text-orange-700">support@brightbean.xyz</a>' %}Contact {{ link }} for details.{% endblocktranslate %}
+    {% blocktranslate with link='<a href="mailto:support@brightbean.xyz" class="text-brand-800 hover:text-brand-900">support@brightbean.xyz</a>' %}Contact {{ link }} for details.{% endblocktranslate %}
   </p>
 </div>
 {% endblock %}

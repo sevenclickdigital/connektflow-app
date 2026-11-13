@@ -61,7 +61,7 @@ docker-compose.dokploy.yml                         # production
 | `analytics` | Account and post metrics, history import |
 | `notifications` | In-app, email and webhook notifications, digests |
 | `billing` | Per-workspace subscription via Asaas, storage add-ons, staff console |
-| `intelligence` | Optional client for the hosted BrightBean Intelligence SaaS |
+| `intelligence` | Optional client for the hosted BrightBean Intelligence SaaS (third-party, run by upstream) |
 | `api_keys` | `bb_studio_` keys, audit log, hourly usage |
 | `api` | Agent REST API (`/api/v1/`) |
 | `mcp` | MCP tools and Streamable-HTTP transport (`/api/v1/mcp`) |
@@ -209,7 +209,7 @@ Other inbound webhooks: `/webhooks/resend/` (Svix-signed bounces/suppressions â†
 
 ## 12. Intelligence (optional)
 
-`apps/intelligence/` connects Studio to the hosted BrightBean Intelligence SaaS. It is turned on only when all five of `INTELLIGENCE_INTERNAL_URL`, `INTELLIGENCE_PUBLIC_URL`, `STUDIO_DEPLOYMENT_ID`, `STUDIO_SHARED_SECRET` and `STUDIO_BASE_URL` are set (`INTELLIGENCE_ENABLED`). Its URLs (`/orgs/<id>/intelligence/`, `/intelligence/`) are mounted only in that case. The app is always installed so migrations stay consistent. `services/client.py` has two clients. One makes HMAC-signed calls to `/internal/v1/` (provisioning, billing, eligibility), with nonces and idempotency keys. The other calls the public `/v1/` tools with a per-org `bb_` bearer key. Subscription checkout uses Stripe, run by Intelligence. The boot sequence refuses non-https URLs except loopback.
+`apps/intelligence/` connects Studio to the hosted BrightBean Intelligence SaaS (third-party, run by upstream). It is turned on only when all five of `INTELLIGENCE_INTERNAL_URL`, `INTELLIGENCE_PUBLIC_URL`, `STUDIO_DEPLOYMENT_ID`, `STUDIO_SHARED_SECRET` and `STUDIO_BASE_URL` are set (`INTELLIGENCE_ENABLED`). Its URLs (`/orgs/<id>/intelligence/`, `/intelligence/`) are mounted only in that case. The app is always installed so migrations stay consistent. `services/client.py` has two clients. One makes HMAC-signed calls to `/internal/v1/` (provisioning, billing, eligibility), with nonces and idempotency keys. The other calls the public `/v1/` tools with a per-org `bb_` bearer key. Subscription checkout uses Stripe, run by Intelligence. The boot sequence refuses non-https URLs except loopback.
 
 ---
 

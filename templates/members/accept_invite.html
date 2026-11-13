@@ -7,13 +7,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% blocktranslate with org=invitation.organization.name %}Join {{ org }}{% endblocktranslate %} - Brightbean</title>
+    <title>{% blocktranslate with org=invitation.organization.name %}Join {{ org }}{% endblocktranslate %} - Automator</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: system-ui, -apple-system, sans-serif;
-            background: #FAFAF9;
-            color: #1C1917;
+            background: #FAFAFF;
+            color: #0F172A;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -22,37 +22,37 @@
         }
         .card {
             background: #FFFFFF;
-            border: 1px solid #E7E5E4;
+            border: 1px solid #E5E7EB;
             border-radius: 16px;
             padding: 40px;
             max-width: 440px;
             width: 100%;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
-        .logo { font-size: 18px; font-weight: 800; color: #F97316; margin-bottom: 24px; letter-spacing: -0.02em; }
-        h1 { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #1C1917; }
-        .subtitle { font-size: 15px; color: #78716C; line-height: 1.6; margin-bottom: 24px; }
+        .logo { font-size: 18px; font-weight: 800; color: #7C3AED; margin-bottom: 24px; letter-spacing: -0.02em; }
+        h1 { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #0F172A; }
+        .subtitle { font-size: 15px; color: #64748B; line-height: 1.6; margin-bottom: 24px; }
         .info-box {
-            background: #FAFAF9;
-            border: 1px solid #E7E5E4;
+            background: #FAFAFF;
+            border: 1px solid #E5E7EB;
             border-radius: 10px;
             padding: 16px;
             margin-bottom: 24px;
         }
-        .info-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #A8A29E; margin-bottom: 8px; }
-        .info-value { font-size: 14px; color: #1C1917; }
+        .info-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #94A3B8; margin-bottom: 8px; }
+        .info-value { font-size: 14px; color: #0F172A; }
         .workspace-list { list-style: none; }
         .workspace-list li {
             font-size: 14px;
-            color: #44403C;
+            color: #334155;
             padding: 4px 0;
             display: flex;
             justify-content: space-between;
         }
         .workspace-list li .role {
             font-size: 12px;
-            background: #F5F5F4;
-            color: #78716C;
+            background: #F5F3FF;
+            color: #64748B;
             padding: 2px 8px;
             border-radius: 9999px;
         }
@@ -70,24 +70,24 @@
             transition: opacity 0.15s;
         }
         .btn:hover { opacity: 0.9; }
-        .btn-primary { background: #F97316; color: #FFFFFF; }
-        .btn-secondary { background: #F5F5F4; color: #1C1917; margin-top: 8px; }
+        .btn-primary { background: #7C3AED; color: #FFFFFF; }
+        .btn-secondary { background: #F5F3FF; color: #0F172A; margin-top: 8px; }
         .error { color: #DC2626; font-size: 14px; margin-bottom: 16px; }
         .or-divider {
             text-align: center;
             font-size: 13px;
-            color: #A8A29E;
+            color: #94A3B8;
             margin: 12px 0;
         }
     </style>
 </head>
 <body>
     <div class="card">
-        <div class="logo">Brightbean</div>
+        <div class="logo">Automator</div>
 
         <h1>{% blocktranslate with org=invitation.organization.name %}Join {{ org }}{% endblocktranslate %}</h1>
         <p class="subtitle">
-            {% blocktranslate with inviter=invitation.invited_by.display_name %}{{ inviter }} invited you to join their team on Brightbean.{% endblocktranslate %}
+            {% blocktranslate with inviter=invitation.invited_by.display_name %}{{ inviter }} invited you to join their team on Automator.{% endblocktranslate %}
         </p>
 
         {% if error %}

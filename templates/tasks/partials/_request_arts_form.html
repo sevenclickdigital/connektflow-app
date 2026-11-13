@@ -18,8 +18,8 @@ the board with the new task open.
         {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
 
         <section class="p-5 md:p-6 min-w-0">
-            <h2 class="text-lg font-semibold text-stone-900 pr-10">{% translate "Request arts" %}</h2>
-            <p class="text-sm text-stone-500 mt-0.5">{% translate "Choose every piece this content needs. The creative team gets one task with the exact size of each." %}</p>
+            <h2 class="text-lg font-semibold text-neutral-950 pr-10">{% translate "Request arts" %}</h2>
+            <p class="text-sm text-neutral-600 mt-0.5">{% translate "Choose every piece this content needs. The creative team gets one task with the exact size of each." %}</p>
 
             <div class="flex items-center gap-2.5 flex-wrap mt-5 pb-3" role="tablist" aria-label="{% translate 'Networks' %}">
                 {% for group in groups %}
@@ -53,7 +53,7 @@ the board with the new task open.
 
             {% for group in groups %}
             <div data-network="{{ group.network.key }}" x-show="tab === '{{ group.network.key }}'" {% if group.network.key != first_tab %}x-cloak{% endif %}>
-                <p class="text-xs font-semibold text-stone-500 mt-2 mb-2">{{ group.network.label }}</p>
+                <p class="text-xs font-semibold text-neutral-600 mt-2 mb-2">{{ group.network.label }}</p>
                 <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
                     {% for fmt in group.formats %}
                     <label class="art-format">
@@ -63,8 +63,8 @@ the board with the new task open.
                             <span class="art-shape" style="aspect-ratio: {{ fmt.width }} / {{ fmt.height }}; {% if fmt.width >= fmt.height %}width: 78%;{% else %}height: 80px;{% endif %}"></span>
                         </span>
                         <span>
-                            <span class="block text-[13px] font-semibold text-stone-800">{{ fmt.label }}</span>
-                            <span class="block text-[11.5px] text-stone-500 tabular-nums">{{ fmt.width }} × {{ fmt.height }} px · {{ fmt.ratio_label }}</span>
+                            <span class="block text-[13px] font-semibold text-neutral-900">{{ fmt.label }}</span>
+                            <span class="block text-[11.5px] text-neutral-600 tabular-nums">{{ fmt.width }} × {{ fmt.height }} px · {{ fmt.ratio_label }}</span>
                             <span class="mt-1 flex flex-wrap gap-1">
                                 {% if fmt.media == "video" %}<span class="task-pill task-pill--due">{% translate "Video" %}</span>{% endif %}
                                 {% if not fmt.is_publishable %}<span class="task-pill task-pill--art">{% translate "Art only" %}</span>{% endif %}
@@ -80,9 +80,9 @@ the board with the new task open.
         <aside class="art-request-side p-5 md:p-6 space-y-4">
             {% if error %}<div class="alert-error text-sm">{{ error }}</div>{% endif %}
             {% if idea %}
-            <p class="text-xs text-stone-500 pr-10">{% blocktranslate with title=idea.title %}From the idea “{{ title }}”{% endblocktranslate %}</p>
+            <p class="text-xs text-neutral-600 pr-10">{% blocktranslate with title=idea.title %}From the idea “{{ title }}”{% endblocktranslate %}</p>
             {% elif source_note %}
-            <p class="text-xs text-stone-500 pr-10">{{ source_note }}</p>
+            <p class="text-xs text-neutral-600 pr-10">{{ source_note }}</p>
             {% endif %}
             <div>
                 <label class="task-field-label block" for="ra-title">{% translate "Title" %}</label>

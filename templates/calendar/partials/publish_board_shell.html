@@ -33,16 +33,16 @@ Expects: status_board (apps.calendar.status_board.board_columns), workspace.
                         <span class="chip-platform pi-{{ pp.social_account.platform }}">
                             {% include "social_accounts/partials/_platform_icon.html" with platform=pp.social_account.platform size="2.5" %}
                         </span>
-                        <span class="text-[11.5px] font-semibold text-stone-700 truncate">{{ pp.social_account.account_name }}</span>
-                        {% if pp.format_label %}<span class="flex-shrink-0 text-stone-400" title="{{ pp.format_label }}">{% include "partials/_format_icon.html" with format=pp.format %}</span>{% endif %}
+                        <span class="text-[11.5px] font-semibold text-neutral-800 truncate">{{ pp.social_account.account_name }}</span>
+                        {% if pp.format_label %}<span class="flex-shrink-0 text-neutral-500" title="{{ pp.format_label }}">{% include "partials/_format_icon.html" with format=pp.format %}</span>{% endif %}
                     </div>
                     <p class="sb-caption">{{ pp.post.caption_snippet|default:pp.post.title|default:_("No caption") }}</p>
                     <div class="flex items-center justify-between gap-2 text-[10.5px]">
                         <span class="sb-status">{{ pp.get_status_display }}</span>
                         {% if pp.status == "published" and pp.published_at %}
-                        <span class="text-stone-400 tabular-nums">{{ pp.published_at|date:"d/m H:i" }}</span>
+                        <span class="text-neutral-500 tabular-nums">{{ pp.published_at|date:"d/m H:i" }}</span>
                         {% elif pp.effective_at %}
-                        <span class="text-stone-400 tabular-nums">{{ pp.effective_at|date:"d/m H:i" }}</span>
+                        <span class="text-neutral-500 tabular-nums">{{ pp.effective_at|date:"d/m H:i" }}</span>
                         {% endif %}
                     </div>
                     {% if pp.status == "failed" and pp.publish_error %}

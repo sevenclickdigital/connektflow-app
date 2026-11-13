@@ -1,18 +1,18 @@
 {% extends "oauth2_provider/base.html" %}
 {% load i18n static %}
 
-{% block title %}{% blocktranslate with name=application.name|default:_("an app") %}Authorize {{ name }}{% endblocktranslate %} · BrightBean Studio{% endblock title %}
+{% block title %}{% blocktranslate with name=application.name|default:_("an app") %}Authorize {{ name }}{% endblocktranslate %} · Automator{% endblock title %}
 
 {% block content %}
     <div class="bb-head">
-        <img src="{% static 'img/brightbean-studio-logo.webp' %}" alt="BrightBean Studio" class="bb-logo">
-        <span class="bb-eyebrow">BrightBean · Studio</span>
+        <img src="{% static 'img/automator-symbol.webp' %}" alt="Automator" class="bb-logo">
+        <span class="bb-eyebrow">Automator</span>
     </div>
 
     <div class="bb-card">
         {% if not error %}
             <h1>{% blocktrans with name=application.name|default:_("This application") %}Authorize {{ name }}?{% endblocktrans %}</h1>
-            <p>{% blocktrans with name=application.name|default:_("This application") %}{{ name }} wants to connect to your BrightBean Studio workspace with the following permissions:{% endblocktrans %}</p>
+            <p>{% blocktrans with name=application.name|default:_("This application") %}{{ name }} wants to connect to your Automator workspace with the following permissions:{% endblocktrans %}</p>
 
             <form id="authorizationForm" method="post">
                 {% csrf_token %}
@@ -42,7 +42,7 @@
                 </div>
             </form>
 
-            <p class="bb-foot">{% trans "You can revoke this access at any time from BrightBean Studio." %}</p>
+            <p class="bb-foot">{% trans "You can revoke this access at any time from Automator." %}</p>
         {% else %}
             <h1>{% trans "Something went wrong" %}</h1>
             <p>{{ error.error }}</p>
