@@ -114,6 +114,30 @@ def test_the_workspace_can_hide_the_special_dates(workspace, owner_client):
     assert all(e["event"] for e in upcoming_dates(workspace, date(2026, 5, 1)))
 
 
+def test_the_workspace_can_hide_its_own_events_from_the_calendar(workspace, owner_client):
+    from apps.calendar.services import custom_events_enabled
+
+    _event(workspace, date(2026, 11, 20), title="Campaign start")
+    url = reverse("calendar:calendar", kwargs={"workspace_id": workspace.id})
+    month = {"mode": "calendar", "view": "month", "date": "2026-11-01"}
+
+    def shown(response):
+        return [e.title for week in response.context["calendar_weeks"] for day in week for e in day["events"]]
+
+    assert custom_events_enabled(workspace)
+    assert "Campaign start" in shown(owner_client.get(url, month))
+
+    owner_client.post(reverse("calendar:custom_events_toggle", kwargs={"workspace_id": workspace.id}))
+
+    assert not custom_events_enabled(workspace)
+    response = owner_client.get(url, month)
+    assert shown(response) == []
+    holidays_only = response.context["month_summary"]["special_dates"]
+    owner_client.post(reverse("calendar:special_dates_toggle", kwargs={"workspace_id": workspace.id}))
+    assert holidays_only > 0
+    assert owner_client.get(url, month).context["month_summary"]["special_dates"] == 0
+
+
 def test_an_idea_keeps_its_date_and_only_its_own_workspaces_event(workspace, owner_client):
     other = Workspace.objects.create(organization=workspace.organization, name="Other")
     foreign = _event(other, date(2026, 5, 10))
@@ -124,3 +148,123 @@ def test_an_idea_keeps_its_date_and_only_its_own_workspaces_event(workspace, own
     idea = Idea.objects.get(title="Gift guide")
     assert idea.target_date == date(2026, 5, 10)
     assert idea.calendar_event is None
+
+
+def test_the_add_date_modal_gets_a_toast_and_closes_only_once_saved(workspace, owner_client):
+    import json
+
+    url = reverse("calendar:event_create", kwargs={"workspace_id": workspace.id})
+    data = {"title": "", "start_date": "2026-11-20", "end_date": "2026-11-20", "color": "#7C3AED"}
+
+    refused = owner_client.post(url, data, HTTP_HX_REQUEST="true")
+    refused_events = json.loads(refused["HX-Trigger"])
+    assert refused_events["showToast"]["tone"] == "error"
+    assert "event-saved" not in refused_events
+    assert not CustomCalendarEvent.objects.filter(workspace=workspace).exists()
+
+    saved = owner_client.post(url, {**data, "title": "Campaign start"}, HTTP_HX_REQUEST="true")
+    saved_events = json.loads(saved["HX-Trigger"])
+    assert saved_events["showToast"]["tone"] == "success"
+    assert saved_events["event-saved"] and saved_events["calendarRefresh"]
+    assert CustomCalendarEvent.objects.get(workspace=workspace).title == "Campaign start"
+
+
+def test_a_campaign_is_edited_and_deleted_from_its_modal(workspace, owner_client):
+    import json
+
+    campaign = _event(workspace, date(2026, 11, 20), title="Campaign start")
+    kwargs = {"workspace_id": workspace.id, "event_id": campaign.id}
+    data = {"title": "Black Friday", "start_date": "2026-11-27", "end_date": "2026-11-29", "color": "#EF4444"}
+
+    edited = owner_client.post(reverse("calendar:event_edit", kwargs=kwargs), data, HTTP_HX_REQUEST="true")
+    assert json.loads(edited["HX-Trigger"])["event-saved"]
+    campaign.refresh_from_db()
+    assert (campaign.title, campaign.start_date, campaign.end_date, campaign.color) == (
+        "Black Friday",
+        date(2026, 11, 27),
+        date(2026, 11, 29),
+        "#EF4444",
+    )
+
+    deleted = owner_client.post(reverse("calendar:event_delete", kwargs=kwargs), HTTP_HX_REQUEST="true")
+    assert json.loads(deleted["HX-Trigger"])["calendarRefresh"]
+    assert not CustomCalendarEvent.objects.filter(id=campaign.id).exists()
+
+
+def test_another_workspaces_campaign_cannot_be_edited_or_deleted(workspace, owner_client):
+    other = Workspace.objects.create(organization=workspace.organization, name="Other")
+    foreign = _event(other, date(2026, 11, 20), title="Theirs")
+    kwargs = {"workspace_id": workspace.id, "event_id": foreign.id}
+
+    assert owner_client.post(reverse("calendar:event_edit", kwargs=kwargs), {"title": "Mine"}).status_code == 404
+    assert owner_client.post(reverse("calendar:event_delete", kwargs=kwargs)).status_code == 404
+    foreign.refresh_from_db()
+    assert foreign.title == "Theirs"
+
+
+def test_the_drafts_button_hides_drafts_from_the_calendar(workspace, owner_client):
+    from datetime import datetime
+
+    from apps.calendar.services import drafts_shown
+    from apps.composer.models import PlatformPost, Post
+    from apps.social_accounts.models import SocialAccount
+
+    account = SocialAccount.objects.create(
+        workspace=workspace,
+        platform="instagram",
+        account_platform_id="ig",
+        account_name="ig",
+        connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+    )
+    when = timezone.make_aware(datetime(2026, 11, 20, 12, 0))
+    draft = PlatformPost.objects.create(
+        post=Post.objects.create(workspace=workspace, caption="draft"),
+        social_account=account,
+        status="draft",
+        scheduled_at=when,
+    )
+    scheduled = PlatformPost.objects.create(
+        post=Post.objects.create(workspace=workspace, caption="scheduled"),
+        social_account=account,
+        status="scheduled",
+        scheduled_at=when,
+    )
+    url = reverse("calendar:calendar", kwargs={"workspace_id": workspace.id})
+    month = {"mode": "calendar", "view": "month", "date": "2026-11-01"}
+
+    def shown():
+        weeks = owner_client.get(url, month).context["calendar_weeks"]
+        return {pp.id for week in weeks for day in week for pp in day["posts"]}
+
+    assert drafts_shown(workspace)
+    assert shown() == {draft.id, scheduled.id}
+
+    owner_client.post(reverse("calendar:drafts_toggle", kwargs={"workspace_id": workspace.id}))
+
+    assert not drafts_shown(workspace)
+    assert shown() == {scheduled.id}
+
+
+def test_a_draft_with_no_date_shows_on_the_day_it_was_created(workspace, owner_client):
+    from apps.composer.models import PlatformPost, Post
+    from apps.social_accounts.models import SocialAccount
+
+    account = SocialAccount.objects.create(
+        workspace=workspace,
+        platform="instagram",
+        account_platform_id="ig",
+        account_name="ig",
+        connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+    )
+    draft = PlatformPost.objects.create(
+        post=Post.objects.create(workspace=workspace, caption="no date"), social_account=account, status="draft"
+    )
+    created = draft.post.created_at.date()
+    url = reverse("calendar:calendar", kwargs={"workspace_id": workspace.id})
+
+    weeks = owner_client.get(url, {"mode": "calendar", "view": "month", "date": created.isoformat()}).context[
+        "calendar_weeks"
+    ]
+
+    day = next(d for week in weeks for d in week if d["date"] == created)
+    assert draft.id in [pp.id for pp in day["posts"]]

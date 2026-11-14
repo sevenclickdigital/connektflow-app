@@ -9,6 +9,14 @@
 <link rel="stylesheet" href="{% static 'js/vendor/cropper.min.css' %}">
 <style>
     /* ── Composer-specific overrides ──────────────────────────── */
+    /* Schedule popover: the inline calendar takes the popover's width. */
+    .composer-schedule-calendar .flatpickr-calendar.inline { width: 100%; box-shadow: none; border: 1px solid var(--border); border-radius: 12px; }
+    .composer-schedule-calendar .flatpickr-days, .composer-schedule-calendar .dayContainer { width: 100%; min-width: 0; max-width: none; }
+    .composer-schedule-calendar .flatpickr-day { max-width: none; }
+    .composer-schedule-calendar .flatpickr-day.selected,
+    .composer-schedule-calendar .flatpickr-day.selected:hover { background: var(--primary); border-color: var(--primary); color: #fff; }
+    /* flatpickr shows the field it writes to; the calendar is the only control. */
+    #schedule-date { display: none !important; }
     /* The panels scroll on their own, not the page; main keeps its standard padding */
     main:has(.composer-main) { overflow: hidden !important; }
     main:has(.composer-main) > div { overflow: hidden !important; }
@@ -124,16 +132,6 @@
     .preview-tab:hover { border-color: var(--brand-200); }
     .preview-tab.is-on { background: var(--brand-50); border-color: var(--brand-500); color: var(--brand-800); font-weight: 600; }
     .preview-tab.is-sm { flex-basis: 5rem; padding: 4px 8px; font-size: 0.8125rem; }
-    /* Format strip under the card: a thumbnail of each format's media */
-    .preview-thumb {
-        flex: 0 0 6.25rem; display: flex; flex-direction: column; align-items: center; gap: 6px;
-        padding: 8px; border-radius: 12px; cursor: pointer;
-        background: #FFFFFF; border: 1px solid var(--neutral-200); color: var(--neutral-700);
-        transition: border-color 150ms ease, background-color 150ms ease;
-    }
-    .preview-thumb:hover { border-color: var(--brand-200); }
-    .preview-thumb.is-on { background: var(--brand-50); border-color: var(--brand-500); color: var(--brand-800); font-weight: 600; }
-    .preview-thumb-frame { height: 64px; display: flex; align-items: center; justify-content: center; }
     .preview-arrow {
         width: 30px; height: 30px; border-radius: 9999px; cursor: pointer;
         display: inline-flex; align-items: center; justify-content: center;
@@ -1926,10 +1924,11 @@
 
                 {% if not post_is_readonly %}
                 {% comment %}
-                Schedule: a menu of the ways to give the post a time — a date
-                and time of its own, or a slot in the account's queue. Every
-                option is a real submit button (name="action"), so the save
-                knows which one was chosen.
+                Schedule: the button opens the date and time the post goes out. The
+                date comes prefilled from the calendar day the post was started on
+                (?scheduled_date=); the inline calendar changes it. "Set Schedule"
+                submits action=schedule, which the server refuses without a date and
+                time in the future.
                 {% endcomment %}
                 <div class="relative inline-flex flex-shrink-0" id="publish-anchor">
                     <button type="button" id="publish-mode-btn"
@@ -1938,79 +1937,79 @@
                             class="inline-flex items-center gap-2 px-3 sm:px-5 py-2.5 text-sm font-semibold text-brand-800 bg-brand-100 rounded-xl hover:bg-brand-200 transition-all duration-150 cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                         <span class="hidden sm:inline">{% translate "Schedule" %}</span>
-                        <svg class="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                     </button>
 
-                    <div id="publish-popover" class="hidden absolute bottom-full right-0 mb-2 w-72 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-neutral-300/80" style="z-index: 50;">
-                            <div id="publish-menu" class="p-1.5">
-                                <button type="button" id="publish-schedule-btn"
-                                        class="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-neutral-50 transition-colors text-left cursor-pointer">
-                                    <div class="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        <svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                    </div>
-                                    <div>
-                                        <div class="text-sm font-semibold text-neutral-900">{% translate "Set Date and Time" %}</div>
-                                        <div class="text-xs text-neutral-500 mt-0.5">{% translate "Choose a specific time" %}</div>
-                                    </div>
-                                </button>
-                                <button type="submit" name="action" value="add_to_queue"
-                                        class="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-neutral-50 transition-colors text-left cursor-pointer">
-                                    <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    </div>
-                                    <div>
-                                        <div class="text-sm font-semibold text-neutral-900">{% translate "Next Available" %}</div>
-                                        <div class="text-xs text-neutral-500 mt-0.5">{% translate "Place in next available slot" %}</div>
-                                    </div>
-                                </button>
-                                <button type="submit" name="action" value="add_to_queue_priority"
-                                        class="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-neutral-50 transition-colors text-left cursor-pointer">
-                                    <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg>
-                                    </div>
-                                    <div>
-                                        <div class="text-sm font-semibold text-neutral-900">{% translate "Prioritise" %}</div>
-                                        <div class="text-xs text-neutral-500 mt-0.5">{% translate "Add to top of queue" %}</div>
-                                    </div>
-                                </button>
+                    <div id="publish-popover" class="hidden absolute bottom-full right-0 mb-2 w-[340px] max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-neutral-300/80 p-4" style="z-index: 50;">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-semibold text-neutral-900">{% translate "Schedule Post" %}</span>
+                            <span class="text-xs text-neutral-500 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                {{ workspace.effective_timezone }}
+                            </span>
+                        </div>
+
+                        <input type="hidden" name="scheduled_date" id="schedule-date" value="{{ form.scheduled_date.value|default:'' }}">
+                        <div id="schedule-calendar" class="composer-schedule-calendar"></div>
+
+                        {% comment %}
+                        Time, 24h: typed (14:30, 1430, 9 → 09:00 on leaving the field) or picked
+                        from the list of quarter hours that opens below it, scrolled to the
+                        current choice.
+                        {% endcomment %}
+                        <div class="mt-3 relative"
+                             x-data="{
+                                open: false,
+                                slots: Array.from({ length: 96 }, (_, i) => String(Math.floor(i / 4)).padStart(2, '0') + ':' + String((i % 4) * 15).padStart(2, '0')),
+                                show() {
+                                    this.open = true;
+                                    this.$nextTick(() => this.scrollToChoice());
+                                },
+                                // Centre the list on the chosen time (or the next quarter hour).
+                                scrollToChoice() {
+                                    const list = this.$refs.list;
+                                    const v = this.$refs.time.value;
+                                    const near = this.slots.find((t) => t >= v) || this.slots[0];
+                                    const row = list.querySelector('[data-slot=&quot;' + near + '&quot;]');
+                                    if (row) list.scrollTop = row.offsetTop - list.clientHeight / 2 + row.offsetHeight / 2;
+                                },
+                                pick(t) { this.$refs.time.value = t; this.open = false; },
+                                tidy() {
+                                    const digits = this.$refs.time.value.replace(/\D/g, '');
+                                    if (!digits) return;
+                                    const h = digits.length <= 2 ? digits : digits.slice(0, digits.length - 2);
+                                    const m = digits.length <= 2 ? '00' : digits.slice(-2);
+                                    if (Number(h) < 24 && Number(m) < 60) this.$refs.time.value = h.padStart(2, '0') + ':' + m.padStart(2, '0');
+                                },
+                             }"
+                             @click.outside="open = false" @keydown.escape.stop="open = false">
+                            <label for="schedule-time" class="block text-xs font-medium text-neutral-600 mb-1">{% translate "Time" %}</label>
+                            <input type="text" name="scheduled_time" id="schedule-time" x-ref="time" inputmode="numeric" autocomplete="off"
+                                   maxlength="5" placeholder="09:00" value="{{ form.scheduled_time.value|default:'' }}"
+                                   class="form-input-styled tabular-nums" @focus="show()" @click="show()" @blur="tidy()"
+                                   @keydown.enter.prevent="tidy(); open = false">
+                            {% comment %}Shown through a class, not x-show: x-show reveals on a later tick, so the list could not be scrolled to the choice yet.{% endcomment %}
+                            <div x-ref="list" x-cloak :class="!open && 'hidden'"
+                                 class="absolute left-0 right-0 bottom-full mb-1 max-h-48 overflow-y-auto bg-white rounded-lg border border-neutral-300 shadow-lg py-1 z-10">
+                                <template x-for="t in slots" :key="t">
+                                    <button type="button" :data-slot="t" @mousedown.prevent="pick(t)"
+                                            class="w-full text-left px-3 py-1.5 text-sm tabular-nums hover:bg-brand-50"
+                                            :class="$refs.time.value === t ? 'bg-brand-50 text-brand-800 font-semibold' : 'text-neutral-700'"
+                                            x-text="t"></button>
+                                </template>
                             </div>
+                        </div>
 
-                            <!-- Schedule sub-view -->
-                            <div id="publish-schedule-view" class="hidden p-4">
-                                <div class="flex items-center gap-2 mb-4">
-                                    <button type="button" id="publish-schedule-back" class="w-6 h-6 rounded-md hover:bg-neutral-100 flex items-center justify-center transition-colors">
-                                        <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                                    </button>
-                                    <span class="text-sm font-semibold text-neutral-900">{% translate "Schedule Post" %}</span>
-                                </div>
+                        <div id="schedule-error" class="hidden text-xs text-red-500 mt-2"></div>
 
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="block text-xs font-medium text-neutral-600 mb-1">{% translate "Date" %}</label>
-                                        <input type="date" name="scheduled_date" class="form-datetime" value="{{ form.scheduled_date.value|default:'' }}">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-medium text-neutral-600 mb-1">{% translate "Time" %}</label>
-                                        <input type="time" name="scheduled_time" class="form-datetime" value="{{ form.scheduled_time.value|default:'' }}">
-                                    </div>
-                                    <div class="text-xs text-neutral-500 flex items-center gap-1">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                        {% blocktranslate with tz=workspace.effective_timezone %}Timezone: {{ tz }}{% endblocktranslate %}
-                                    </div>
-                                </div>
+                        {% if not post_is_scheduled %}
+                        <p class="mt-3 text-xs text-neutral-500 leading-relaxed">
+                            {% blocktranslate %}Saving as a draft keeps this as a <span class="font-medium text-neutral-600">proposed</span> time. Use <span class="font-medium text-neutral-600">Set Schedule</span> to publish at this time.{% endblocktranslate %}
+                        </p>
+                        {% endif %}
 
-                                <div id="schedule-error" class="hidden text-xs text-red-500 mt-1"></div>
-
-                                {% if not post_is_scheduled %}
-                                <p class="mt-3 text-xs text-neutral-500 leading-relaxed">
-                                    {% blocktranslate %}Saving as a draft keeps this as a <span class="font-medium text-neutral-600">proposed</span> time. Use <span class="font-medium text-neutral-600">Set Schedule</span> to publish at this time.{% endblocktranslate %}
-                                </p>
-                                {% endif %}
-
-                                <button type="submit" name="action" value="schedule" id="publish-schedule-confirm" class="mt-4 w-full py-2 text-sm font-semibold text-white bg-brand-700 rounded-lg hover:bg-brand-800 transition-colors cursor-pointer">
-                                    {% translate "Set Schedule" %}
-                                </button>
-                            </div>
+                        <button type="submit" name="action" value="schedule" id="publish-schedule-confirm" class="mt-4 w-full py-2 text-sm font-semibold text-white bg-brand-700 rounded-lg hover:bg-brand-800 transition-colors cursor-pointer">
+                            {% translate "Set Schedule" %}
+                        </button>
                     </div>
                 </div>
 
@@ -2023,9 +2022,6 @@
                     {% translate "Publish now" %}
                 </button>
 
-                <!-- Hidden fields for queue actions -->
-                <input type="hidden" name="queue_id" value="">
-                <input type="hidden" name="queue_priority" value="">
                 {% endif %}
             </div>
         </form>
@@ -2607,6 +2603,8 @@
 
 {% block extra_js %}
 <script src="{% static 'js/vendor/cropper.min.js' %}"></script>
+{% comment %}Portuguese month and weekday names for the schedule calendar (same flatpickr version as base.html).{% endcomment %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/pt.js"></script>
 <script nonce="{{ request.csp_nonce }}">
   // Reviewer approve / request-changes return 204 + toast + approvalAction. Let the
   // toast show, then reload so the status banner and history reflect the new state.
@@ -3808,8 +3806,8 @@ function composerApp() {
             const xhr = event.detail.xhr;
             if (event.detail.successful) {
                 const action = this.lastAction;
-                if (action === 'schedule' || action === 'publish_now' || action === 'add_to_queue' || action === 'add_to_queue_priority') {
-                    // Redirect to calendar after scheduling/publishing/queuing
+                if (action === 'schedule' || action === 'publish_now') {
+                    // Redirect to calendar after scheduling/publishing
                     window.location.href = '{% url "calendar:calendar" workspace_id=workspace.id %}';
                     return;
                 }
@@ -4191,48 +4189,47 @@ function composerApp() {
     };
 }
 
-/* ── Publish Split-Button (vanilla JS) ────────────────────────── */
+/* ── Schedule popover (vanilla JS) ─────────────────────────────── */
 (function() {
     const anchor = document.getElementById('publish-anchor');
     const modeBtn = document.getElementById('publish-mode-btn');
     const popover = document.getElementById('publish-popover');
-    const menu = document.getElementById('publish-menu');
-    const scheduleView = document.getElementById('publish-schedule-view');
-    const scheduleBtn = document.getElementById('publish-schedule-btn');
-    const backBtn = document.getElementById('publish-schedule-back');
+    const dateInput = document.getElementById('schedule-date');
     const scheduleConfirm = document.getElementById('publish-schedule-confirm');
     if (!modeBtn || !popover) return;
 
-    function showPopover() { popover.classList.remove('hidden'); }
-    function hidePopover() { popover.classList.add('hidden'); showMenu(); }
-    function showMenu() { menu.classList.remove('hidden'); scheduleView.classList.add('hidden'); }
-    function showSchedule() { menu.classList.add('hidden'); scheduleView.classList.remove('hidden'); }
+    // The day is picked on a calendar drawn inside the popover; it writes the
+    // hidden scheduled_date field. Built on first open, in the page's language.
+    let calendar = null;
+    function buildCalendar() {
+        if (calendar || typeof flatpickr === 'undefined') return;
+        const lang = document.documentElement.lang || '';
+        const locale = (lang.startsWith('pt') && flatpickr.l10ns && flatpickr.l10ns.pt) ? 'pt' : 'default';
+        calendar = flatpickr(dateInput, {
+            inline: true,
+            appendTo: document.getElementById('schedule-calendar'),
+            dateFormat: 'Y-m-d',
+            minDate: 'today',
+            defaultDate: dateInput.value || null,
+            locale: locale,
+            disableMobile: true,
+        });
+    }
+
+    function showPopover() { buildCalendar(); popover.classList.remove('hidden'); }
+    function hidePopover() { popover.classList.add('hidden'); }
 
     modeBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         popover.classList.contains('hidden') ? showPopover() : hidePopover();
     });
 
-    if (scheduleBtn) {
-        scheduleBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            showSchedule();
-        });
-    }
-
-    if (backBtn) {
-        backBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            showMenu();
-        });
-    }
-
     // "Set Schedule" submits the form with action=schedule, but only for a
     // date and time in the future; otherwise it stops here and says why.
     if (scheduleConfirm) {
         scheduleConfirm.addEventListener('click', function(e) {
             var errEl = document.getElementById('schedule-error');
-            var dateVal = document.querySelector('input[name="scheduled_date"]').value;
+            var dateVal = dateInput.value;
             var timeVal = document.querySelector('input[name="scheduled_time"]').value;
             var problem = '';
             if (!dateVal || !timeVal) {

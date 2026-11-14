@@ -214,6 +214,18 @@ class TestConnect:
         assert SECRET.encode() not in response.content
         assert "https://connect.facebook.net" in response["Content-Security-Policy-Report-Only"]
 
+    def test_the_popup_asks_for_the_current_signup_version_without_business_app_numbers(
+        self, manager_client, workspace
+    ):
+        from providers.whatsapp import EMBEDDED_SIGNUP_VERSION
+
+        response = manager_client.get(reverse("social_accounts:list", kwargs={"workspace_id": workspace.id}))
+
+        body = response.content.decode()
+        assert f'"signup_version": "{EMBEDDED_SIGNUP_VERSION}"' in body
+        assert "name: 'whatsapp_business_app_onboarding', enabled: false" in body
+        assert "sessionInfoVersion" not in body
+
     def test_a_number_outside_the_authorized_account_is_refused(self, manager_client, workspace):
         with (
             patch.object(WhatsAppProvider, "exchange_code", return_value=MagicMock(access_token="t", expires_in=None)),

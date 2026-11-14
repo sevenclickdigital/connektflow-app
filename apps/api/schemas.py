@@ -782,7 +782,7 @@ class InboxReplyEligibilityResponse(Schema):
 
 
 class InboxMessageResponse(Schema):
-    """An inbound comment / mention / DM / review in the unified inbox."""
+    """An inbound comment / mention / tag / DM / review in the unified inbox."""
 
     id: uuid.UUID
     workspace_id: uuid.UUID

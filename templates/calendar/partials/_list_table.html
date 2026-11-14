@@ -1,0 +1,34 @@
+{% load i18n %}
+{% comment %}
+Card of the Publish list tabs: column header, then the rows. With day_groups the rows
+come under a collapsible heading per day; without, platform_posts are listed flat.
+Expects: day_groups ([{"day", "rows"}], views._group_by_day) or platform_posts, tab,
+plus what _list_row.html needs.
+{% endcomment %}
+<div class="a-card overflow-hidden">
+    <div class="pl-grid pl-head">
+        <span></span>
+        <span>{% translate "Publication" %}</span>
+        <span class="pl-col-channel">{% translate "Channel" %}</span>
+        <span class="pl-col-format">{% translate "Format" %}</span>
+        <span class="pl-col-date">{% translate "Date and time" %}</span>
+        <span class="pl-col-status">{% translate "Status" %}</span>
+        <span></span>
+    </div>
+    {% if day_groups %}
+    {% for group in day_groups %}
+    <section class="pl-group" x-data="{ open: true }">
+        <button type="button" class="pl-group-head" @click="open = !open" :aria-expanded="open">
+            <svg class="w-4 h-4 text-neutral-600 transition-transform" :class="open || '-rotate-90'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            {% if group.day %}{{ group.day|date:"l"|capfirst }}, {{ group.day|date:"MONTH_DAY_FORMAT" }}{% else %}{% translate "No date" %}{% endif %}
+            <span class="cal-day-count">{% blocktranslate count counter=group.rows|length %}{{ counter }} post{% plural %}{{ counter }} posts{% endblocktranslate %}</span>
+        </button>
+        <div x-show="open">
+            {% for pp in group.rows %}{% include "calendar/partials/_list_row.html" %}{% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+    {% else %}
+    {% for pp in platform_posts %}{% include "calendar/partials/_list_row.html" %}{% endfor %}
+    {% endif %}
+</div>

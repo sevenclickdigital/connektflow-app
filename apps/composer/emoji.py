@@ -42,10 +42,7 @@ _FEELING_LABELS = {
 
 def facebook_feeling_choices() -> list[dict]:
     """The feeling picker's options, translated for the active language."""
-    return [
-        {"id": feeling_id, "label": _(_FEELING_LABELS.get(label, label))}
-        for feeling_id, label in FEELINGS
-    ]
+    return [{"id": feeling_id, "label": _(_FEELING_LABELS.get(label, label))} for feeling_id, label in FEELINGS]
 
 
 # (key, label, ((char, search keywords), ...))

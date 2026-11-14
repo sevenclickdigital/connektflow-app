@@ -111,6 +111,7 @@ def test_instagram_poll_continuation_survives_a_fresh_worker(connected_account, 
     def factory(platform, credentials):
         instance = InstagramProvider(credentials)
         instance._fetch_media_comments = MagicMock(return_value=[])
+        instance._fetch_tagged_media = MagicMock(return_value=[])
         if comments_fail:
             instance._fetch_media_comments.side_effect = APIError("comment grant rejected", status_code=403)
         instance._request = MagicMock(side_effect=request)

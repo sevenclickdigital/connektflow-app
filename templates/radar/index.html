@@ -13,6 +13,29 @@
         {% for card in cards %}
         {% include "radar/partials/_source_card.html" with card=card action="open" can_connect=request.workspace_membership.effective_permissions.manage_social_accounts return_to="radar" connect_href=social_accounts_url %}
         {% endfor %}
+        <div class="relative h-full flex flex-col bg-white rounded-xl border border-neutral-300 p-5">
+            <div class="flex items-start gap-4">
+                <div class="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-brand-50 text-brand-800">
+                    {% include "social_accounts/partials/_platform_icon.html" with platform="instagram" size="5" %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-sm font-semibold text-neutral-950">{% translate "Instagram research" %}</h3>
+                    <p class="text-xs text-neutral-500 mt-0.5">{% translate "Competitor profiles and hashtags" %}</p>
+                </div>
+            </div>
+            <div class="mt-auto pt-4">
+                {% if has_instagram %}
+                <a href="{% url 'radar:instagram' workspace_id=workspace_id %}" class="w-full inline-flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-semibold text-brand-800 bg-brand-50 border border-brand-200 rounded-full hover:bg-brand-100 hover:border-brand-300 transition-all duration-200">
+                    {% translate "Open" %}
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </a>
+                {% else %}
+                <a href="{{ social_accounts_url }}" class="w-full inline-flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-semibold text-brand-800 bg-brand-50 border border-brand-200 rounded-full hover:bg-brand-100 hover:border-brand-300 transition-all duration-200">
+                    {% translate "Connect Instagram" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

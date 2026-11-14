@@ -254,16 +254,22 @@ def _whatsapp_signup_config(org_id, available_platforms):
         return None
     from apps.credentials.models import resolve_platform_credentials
     from providers.facebook import BASE_URL
+    from providers.whatsapp import EMBEDDED_SIGNUP_VERSION
 
     creds = resolve_platform_credentials("whatsapp", org_id)
     return {
         "app_id": str(creds.get("client_id") or creds.get("app_id") or ""),
         "config_id": str(creds.get("config_id") or ""),
         "version": BASE_URL.rsplit("/", 1)[-1],
+        "signup_version": EMBEDDED_SIGNUP_VERSION,
         "messages": {
             "loading": _("WhatsApp is still loading. Try again in a moment."),
             "cancelled": _("The WhatsApp connection was cancelled."),
             "no_number": _("Pick a phone number in the WhatsApp window to finish connecting."),
+            "business_app": _(
+                "Numbers in use in the WhatsApp Business app can't be connected yet. Use a number that isn't on the app."
+            ),
+            "error": _("The WhatsApp window reported an error. Try again, or check the number in WhatsApp Manager."),
         },
     }
 

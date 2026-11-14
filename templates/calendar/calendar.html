@@ -4,13 +4,14 @@
 {% block title %}{% translate "Publish" %} - {{ workspace.name }} - Automator{% endblock %}
 
 {% block page_header %}
-<div class="flex flex-wrap items-center justify-between gap-3 mb-4 lg:mb-[25px]">
-    <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Publish" %}</h1>
-
-    <div class="flex items-center gap-3">
-        <!-- List / Calendar toggle -->
-        <div class="flex items-center bg-neutral-50 rounded-full p-0.5" x-data="{ activeMode: '{{ mode|default:'calendar' }}' }">
-            <button class="view-btn{% if mode == 'list' %} active{% endif %}" :class="{ active: activeMode === 'list' }"
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "Publishing calendar" %}</h1>
+        <p class="page-description">{% translate "Plan, organize and track all your content in one place." %}</p>
+    </div>
+    <!-- List / Calendar / Board toggle -->
+    <div class="a-pill-group" x-data="{ activeMode: '{{ mode|default:'calendar' }}' }">
+            <button class="{% if mode == 'list' %}active{% endif %}" :class="{ active: activeMode === 'list' }"
                     @click="activeMode = 'list'"
                     hx-get="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=list&tab={{ active_tab|default:'queue' }}&_switch_mode=1"
                     hx-target="#publish-body"
@@ -19,7 +20,7 @@
                 <svg class="w-3.5 h-3.5 inline -mt-px mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                 {% translate "List" %}
             </button>
-            <button class="view-btn{% if mode == 'calendar' %} active{% endif %}" :class="{ active: activeMode === 'calendar' }"
+            <button class="{% if mode == 'calendar' %}active{% endif %}" :class="{ active: activeMode === 'calendar' }"
                     @click="activeMode = 'calendar'"
                     hx-get="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=calendar&view={{ view_type|default:'month' }}&_switch_mode=1"
                     hx-target="#publish-body"
@@ -28,7 +29,7 @@
                 <svg class="w-3.5 h-3.5 inline -mt-px mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 {% translate "Calendar" %}
             </button>
-            <button class="view-btn{% if mode == 'board' %} active{% endif %}" :class="{ active: activeMode === 'board' }"
+            <button class="{% if mode == 'board' %}active{% endif %}" :class="{ active: activeMode === 'board' }"
                     @click="activeMode = 'board'"
                     hx-get="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=board&_switch_mode=1"
                     hx-target="#publish-body"
@@ -37,8 +38,6 @@
                 <svg class="w-3.5 h-3.5 inline -mt-px mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="4" height="8" rx="1"/></svg>
                 {% translate "Board" %}
             </button>
-        </div>
-
     </div>
 </div>
 {% endblock %}
@@ -60,15 +59,127 @@
     @media (min-width: 768px) {
         .cal-day { min-height: 130px; padding: 8px; }
     }
-    /* Month view fills the height the screen gives it: weeks share it equally and
-       never shrink below the cell's min-height; past that, the area scrolls. */
+    /* Week and day grids keep their own height; #calendar-content scrolls them. */
     #calendar-content > * { flex-shrink: 0; }
+    /* Month view fills the space left on screen without scrolling the page: weeks share
+       the height and each cell hides the chips that don't fit (fitDayCells). */
+    #calendar-content > .cal-layout--fit { flex: 1 1 0; min-height: 0; align-items: stretch; }
+    .cal-layout--fit .cal-month { min-height: 0; }
+    .cal-layout--fit .cal-month-grid, .cal-layout--fit .cal-month-inner { flex: 1 1 0; min-height: 0; }
+    .cal-layout--fit .cal-week { flex: 1 1 0; min-height: 92px; }
+    .cal-layout--fit .cal-day { min-height: 0; overflow: hidden; padding: 6px 8px; }
+    .cal-layout--fit .cal-day .day-num { width: 24px; height: 24px; margin-bottom: 0; font-size: 12.5px; }
+    /* "+N more" sits in the cell's bottom-left corner, on the row of the hover "+";
+       a cell showing it keeps that row free (.has-more, set by fitDayCells). */
+    .cal-layout--fit .cal-see-all {
+        position: absolute; left: 8px; bottom: 8px; width: auto; margin: 0;
+        padding: 3px 10px; line-height: 16px;
+    }
+    .cal-layout--fit .cal-day.has-more { padding-bottom: 38px; }
+    .cal-layout--fit .cal-side { overflow-y: auto; }
+    .post-chip.is-overflow, .cal-see-all.is-hidden { display: none !important; }
+
+    /* Day pop-up (_day_posts.html) */
+    .modal-panel.cal-day-modal { max-width: 40rem; padding: 1.5rem; }
+    .cal-day-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 72px 130px; align-items: center; gap: 12px; padding: 10px 4px; }
+    .cal-day-head { font-size: 13px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-hover, var(--border)); }
+    .cal-day-row.is-item { cursor: pointer; border-radius: 10px; }
+    .cal-day-row.is-item:hover { background: var(--brand-50); }
+
+    /* Every view: the grid card beside the side panel (_side_panel.html). */
+    .cal-layout { flex: 1 0 auto; display: flex; gap: 1rem; align-items: flex-start; }
     .cal-month, .cal-month-grid, .cal-month-inner { flex: 1 0 auto; display: flex; flex-direction: column; }
+    /* The grid card takes the row's free width, never its content's (the undated drafts bar is wide). */
+    .cal-month, .cal-main { flex: 1 1 0%; min-width: 0; }
+    .cal-month { align-self: stretch; }
     .cal-week { flex: 1 0 0; }
+    .cal-side { display: none; width: 18rem; flex-shrink: 0; flex-direction: column; gap: 1rem; }
+    @media (min-width: 1280px) { .cal-side { display: flex; } }
+
+    .cal-campaign {
+        display: block; width: 100%; text-align: left; margin-bottom: 2px; padding: 2px 6px; border-radius: 5px;
+        color: white; font-size: 10.5px; font-weight: 600; line-height: 15px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 0;
+    }
+    button.cal-campaign { cursor: pointer; position: relative; z-index: 6; }
+    button.cal-campaign:hover { filter: brightness(1.08); box-shadow: 0 0 0 2px rgba(255, 255, 255, .6) inset; }
+    .cal-day-count {
+        font-size: 10.5px; font-weight: 600; line-height: 1; white-space: nowrap;
+        padding: 3px 7px; border-radius: 9999px;
+        background: var(--primary-soft); color: var(--brand-800);
+    }
+    .cal-holiday {
+        display: flex; align-items: center; gap: 4px; margin-bottom: 3px;
+        padding: 2px 6px; border-radius: 6px;
+        background: var(--warning-50); color: var(--warning-700);
+        font-size: 10.5px; font-weight: 600; line-height: 16px;
+    }
+    .cal-see-all {
+        display: flex; align-items: center; justify-content: center; gap: 4px;
+        margin-top: 3px; padding: 2px 6px; border-radius: 9999px;
+        border: 1px solid var(--primary-ring); color: var(--brand-800);
+        font-size: 10.5px; font-weight: 600; line-height: 16px; text-decoration: none;
+        position: relative; z-index: 6; width: 100%; background: white; cursor: pointer;
+    }
+    .cal-see-all:hover { background: var(--brand-50); }
+
+    /* Platform badge of the filter pills and the side panel. */
+    .cal-pill-icon {
+        width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+        display: inline-flex; align-items: center; justify-content: center; color: white;
+    }
+    .cal-pill-icon.pi-youtube { background: #FF0000 !important; color: white !important; min-width: 0 !important; width: 18px !important; }
+
+    /* Publish list tabs (_list_table.html / _list_row.html): one grid for header and rows. */
+    .pl-grid {
+        display: grid; align-items: center; gap: 12px;
+        grid-template-columns: 20px minmax(0, 1fr) 56px 120px 132px 150px 132px;
+        padding: 10px 16px;
+    }
+    .pl-head { font-size: 13px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+    .pl-group + .pl-group { border-top: 1px solid var(--border); }
+    .pl-group-head {
+        display: flex; align-items: center; gap: 8px; width: 100%;
+        padding: 10px 16px; background: var(--surface-2); text-align: left;
+        font-size: 14px; font-weight: 600; color: var(--text-primary); cursor: pointer;
+    }
+    .pl-row { cursor: pointer; border-top: 1px solid var(--border); transition: background var(--dur-fast) ease; }
+    .pl-group-head + div > .pl-row:first-child { border-top: 0; }
+    .pl-row:hover { background: var(--brand-50); }
+    .pl-thumb {
+        position: relative; width: 56px; height: 40px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--surface-2); color: var(--text-ghost);
+    }
+    .pl-col-channel { display: flex; justify-content: center; }
+    .cal-pill-icon.pl-channel-icon { width: 26px !important; height: 26px; border-radius: 7px; }
+    .pl-format {
+        display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 6px;
+        background: var(--surface-2); color: var(--text-secondary); font-size: 12px; font-weight: 600; white-space: nowrap;
+    }
+    .pl-col-date { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .post-chip.pl-status { display: inline-flex; max-width: 100%; border-radius: 9999px; padding: 3px 10px; font-size: 12px; margin: 0; cursor: default; }
+    .post-chip.pl-status:hover { transform: none; }
+    .pl-head .pl-col-date { font-size: inherit; color: inherit; }
+    .pl-col-actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+    .pl-action {
+        width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
+        color: var(--text-secondary); background: none; border: 0; cursor: pointer;
+    }
+    .pl-action:hover { background: var(--surface-2); color: var(--text-primary); }
+    @media (max-width: 1023px) {
+        .pl-grid { grid-template-columns: 20px minmax(0, 1fr) 132px 132px; }
+        .pl-col-channel, .pl-col-format, .pl-col-status { display: none; }
+    }
+    /* Share of the month's posts per platform. */
+    .cal-mix { display: flex; gap: 3px; height: 8px; margin-top: 1rem; }
+    .cal-mix > span { border-radius: 9999px; min-width: 6px; }
+    .cal-mix > .pi-youtube { background: #FF0000 !important; min-width: 6px !important; }
+
     .cal-day:hover { background: #FAFAFF; }
     .cal-day.past { background: #F5F3FF; }
     .cal-day.past:hover { background: #EEEEEC; }
-    .cal-day.today { background: #F9F5FF; }
+    .cal-day.today { background: #F9F5FF; box-shadow: inset 0 0 0 2px var(--primary-ring); }
     .cal-day.other-month { opacity: 0.4; }
     .cal-day .day-num {
         font-size: 13px; font-weight: 600;
@@ -104,9 +215,10 @@
         display: inline-flex; align-items: center; justify-content: center; color: white;
     }
     .post-chip--compact .chip-time {
-        flex-shrink: 0; margin-left: auto; font-weight: 700;
+        flex-shrink: 0; font-weight: 700;
         font-variant-numeric: tabular-nums; opacity: .85;
     }
+    .post-chip--compact .chip-thumb { width: 26px; height: 16px; border-radius: 4px; margin-left: auto; }
     .post-chip--compact .cal-select-box { width: 12px; height: 12px; }
     .post-chip.is-card-open { box-shadow: 0 0 0 2px #7C3AED; }
 
@@ -125,6 +237,15 @@
     .cal-add-menu-item svg { width: 16px; height: 16px; color: #64748B; flex-shrink: 0; }
     .cal-post-card { width: min(600px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow-y: auto; }
     .cal-post-card-grid { display: grid; grid-template-columns: 1fr; }
+    /* Post card actions: rows like the details list (icon column, left-aligned text). */
+    .cal-card-action {
+        display: flex; align-items: center; gap: 8px; padding: 7px 8px; margin-left: -8px; width: calc(100% + 16px);
+        border-radius: 8px; border: 0; background: none; text-align: left; text-decoration: none;
+        color: var(--text-primary); font-weight: 500; cursor: pointer; transition: background var(--dur-fast) ease;
+    }
+    .cal-card-action:hover { background: var(--surface-2); }
+    .cal-card-action.is-primary { background: var(--primary); color: #fff; font-weight: 600; margin: 0 0 4px; width: 100%; padding: 8px 10px; }
+    .cal-card-action.is-primary:hover { background: var(--brand-800); }
     .cal-post-card-side { border-top: 1px solid #E5E7EB; }
     @media (min-width: 640px) {
         .cal-post-card-grid { grid-template-columns: 1.2fr 1fr; }
@@ -155,16 +276,6 @@
     .status-on_hold    { background: #F5F3FF; color: #6D28D9; border: 1px solid #DDD6FE; }
     .status-on_hold .chip-dot { background: #7C3AED; }
 
-    /* View switcher */
-    .view-btn {
-        padding: 6px 14px; border-radius: 9999px;
-        font-size: 12px; font-weight: 600;
-        color: #64748B; border: none; background: transparent;
-        cursor: pointer; transition: all 150ms ease;
-    }
-    .view-btn:hover { color: #0F172A; background: #F5F3FF; }
-    .view-btn.active { color: #5B21B6; background: #F9F5FF; border: 1px solid #D8B4FE; box-shadow: 0 1px 2px rgba(194, 65, 12, 0.08); }
-
     /* Filter chips */
     .filter-chip {
         display: inline-flex; align-items: center; gap: 4px;
@@ -180,20 +291,6 @@
         color: #6D28D9; font-size: 10px;
     }
     .filter-chip button:hover { background: #F3E8FF; }
-
-    /* Publish tab styles */
-    .publish-tab {
-        padding: 10px 16px; border-radius: 0;
-        font-size: 13px; font-weight: 600;
-        color: #64748B; background: transparent;
-        border: none; cursor: pointer;
-        transition: all 150ms ease;
-        position: relative;
-        border-bottom: 2px solid transparent;
-        margin-bottom: -1px;
-    }
-    .publish-tab:hover { color: #0F172A; border-bottom-color: #CBD5E1; }
-    .publish-tab.active { color: #5B21B6; border-bottom-color: #7C3AED; }
 
     /* Hide scrollbar on filter containers */
     .cal-filters-scroll::-webkit-scrollbar { display: none; }
@@ -274,6 +371,16 @@
         transform: translate(-50%, -50%) scale(1.1);
         box-shadow: 0 6px 20px rgba(124, 58, 237,0.35);
     }
+
+    /* Month cells: on hover, every future day shows the same round "+" bottom-right,
+       clear of the day number and the post count. */
+    .cal-day.cal-add-cell .cal-add-btn,
+    .cal-day.cal-add-cell:not(.has-posts) .cal-add-btn {
+        top: auto; left: auto; right: 8px; bottom: 8px; width: 30px; height: 30px; transform: none;
+    }
+    .cal-day.cal-add-cell .cal-add-btn svg { width: 14px; height: 14px; }
+    .cal-day.cal-add-cell .cal-add-btn:hover,
+    .cal-day.cal-add-cell:not(.has-posts) .cal-add-btn:hover { transform: scale(1.08); }
 
     /* Day/week grids (non-month cells): hide add button entirely when cell has posts */
     .cal-add-cell.has-posts:not(.cal-day) .cal-add-btn,
@@ -393,25 +500,51 @@
     /* Play slideUp only on HTMX-swapped tab content, not initial server render */
     .tab-slide-in { animation: slideUp 200ms cubic-bezier(0.16,1,0.3,1) both; }
 
-    /* Board mode: one column per workflow stage. */
-    .sb-board { display: flex; gap: 12px; overflow-x: auto; padding: 4px 0 16px; align-items: flex-start; flex: 1 1 auto; }
-    .sb-column { flex: 0 0 250px; background: #F5F3FF; border-radius: 14px; display: flex; flex-direction: column; max-height: calc(100vh - 200px); transition: box-shadow .12s ease, opacity .12s ease; }
-    .sb-column.is-over { box-shadow: 0 0 0 2px #7C3AED inset; }
+    /* Board mode (_board_columns.html): one column per workflow stage, tinted by its tone. */
+    .sb-board { display: flex; gap: 14px; overflow-x: auto; padding: 2px 0 16px; align-items: flex-start; flex: 1 1 auto; }
+    .sb-column {
+        --sb-tint: var(--surface-2); --sb-ink: var(--text-primary);
+        flex: 1 0 250px; max-width: 320px; background: color-mix(in srgb, var(--sb-tint) 45%, white); border: 1px solid var(--border);
+        border-radius: 16px; display: flex; flex-direction: column; max-height: calc(100vh - 260px);
+        transition: box-shadow .12s ease, opacity .12s ease;
+    }
+    .sb-tone-amber { --sb-tint: #FEF3C7; --sb-ink: #B45309; }
+    .sb-tone-teal  { --sb-tint: #CCFBF1; --sb-ink: #0F766E; }
+    .sb-tone-blue  { --sb-tint: var(--brand-100); --sb-ink: var(--brand-800); }
+    .sb-tone-green { --sb-tint: #DCFCE7; --sb-ink: #15803D; }
+    .sb-tone-red   { --sb-tint: #FEE2E2; --sb-ink: #B91C1C; }
+    .sb-column.is-over { box-shadow: 0 0 0 2px var(--primary) inset; }
     .sb-board.is-dragging .sb-column.is-locked { opacity: .45; }
-    .sb-column-head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px; }
-    .sb-column-head h2 { font-size: 13px; font-weight: 700; color: #1e293b; }
-    .sb-count { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 9999px; background: white; color: #64748B; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
-    .sb-dot { width: 8px; height: 8px; border-radius: 9999px; background: #94A3B8; }
-    .sb-tone-amber .sb-dot { background: #F59E0B; } .sb-tone-teal .sb-dot { background: #14B8A6; }
-    .sb-tone-blue .sb-dot { background: #3B82F6; } .sb-tone-green .sb-dot { background: #22C55E; } .sb-tone-red .sb-dot { background: #EF4444; }
-    .sb-cards { overflow-y: auto; padding: 0 8px 8px; display: flex; flex-direction: column; gap: 8px; min-height: 48px; }
-    .sb-card { display: flex; flex-direction: column; gap: 6px; background: white; border: 1px solid #E5E7EB; border-radius: 10px; padding: 9px 10px; color: inherit; text-decoration: none; user-select: none; }
-    .sb-card:hover { border-color: #CBD5E1; box-shadow: 0 3px 10px rgba(28,25,23,.08); }
+    .sb-column-head {
+        display: flex; align-items: center; gap: 8px; padding: 12px 14px;
+        background: var(--sb-tint); border-radius: 15px 15px 0 0; color: var(--sb-ink);
+    }
+    .sb-column-icon svg { width: 18px; height: 18px; }
+    .sb-column-head h2 { font-size: 14px; font-weight: 700; color: inherit; }
+    .sb-count { margin-left: auto; min-width: 24px; height: 22px; padding: 0 7px; border-radius: 9999px; background: white; color: var(--sb-ink); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+    .sb-cards { overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; min-height: 48px; }
+    .sb-card { position: relative; display: flex; flex-direction: column; gap: 6px; background: white; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; cursor: pointer; user-select: none; }
+    .sb-card:hover { border-color: var(--primary-ring); box-shadow: var(--shadow-md); }
     .sb-card.is-dragging { opacity: .4; }
-    .sb-card .chip-platform { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; color: white; }
-    .sb-caption { font-size: 12px; color: #334155; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .sb-status { font-weight: 600; color: #64748B; }
-    .sb-empty { font-size: 11.5px; color: #94A3B8; text-align: center; padding: 10px 0; }
+    .sb-card-menu { position: absolute; top: 8px; right: 8px; }
+    .sb-card > .sb-title:first-of-type { padding-right: 28px; }
+    .sb-card.is-failed { border-color: #FECACA; }
+    .sb-thumb { position: relative; width: 120px; height: 68px; border-radius: 8px; overflow: hidden; background: var(--surface-2); }
+    .sb-title { font-size: 13.5px; font-weight: 700; color: var(--text-primary); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .sb-caption { font-size: 12px; color: var(--text-secondary); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .sb-retry {
+        display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 2px; padding: 7px 10px;
+        border: 1px solid #FCA5A5; border-radius: 9999px; color: #B91C1C; background: white; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    }
+    .sb-retry:hover { background: #FEF2F2; }
+    .sb-more { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 4px; font-size: 12px; font-weight: 600; color: var(--sb-ink); background: none; border: 0; cursor: pointer; }
+    .sb-column-action {
+        display: block; margin: 0 10px 10px; padding: 8px 10px; border-radius: 9999px; text-align: center;
+        border: 1px solid color-mix(in srgb, var(--sb-ink) 35%, white); color: var(--sb-ink); background: white;
+        font-size: 12.5px; font-weight: 600; text-decoration: none;
+    }
+    .sb-column-action:hover { background: var(--sb-tint); }
+    .sb-empty { font-size: 11.5px; color: var(--text-tertiary); text-align: center; padding: 10px 0; }
 </style>
 {% endblock %}
 
@@ -430,7 +563,7 @@
 {% comment %}Floating bulk-selection bar — outside the swapped regions so the
 selection survives grid reloads / tab switches. Shown when ≥1 chip/row is
 ticked (see the `sel` Alpine store).{% endcomment %}
-<div x-data="bulkBar()">
+<div x-data="bulkBar()" @bulk-ask.window="ask($event.detail)">
     {# Floating action bar #}
     <div x-cloak x-show="$store.sel.count > 0"
          x-effect="document.body.classList.toggle('has-selection', $store.sel.count > 0)"
@@ -549,6 +682,37 @@ function bulkBar() {
 function statusBoard() {
     return {
         dragId: null,
+        platform: '{{ active_filters.platforms.0|default:""|escapejs }}',
+        activeTag: '{{ active_filters.tags.0|default:""|escapejs }}',
+        periodDate: '{{ target_date|date:"Y-m-d" }}',
+        init() {
+            // A move (or a delete from a card's menu) changes the columns: reload them.
+            document.body.addEventListener('statusBoardChanged', () => this.reloadBoard());
+            window.addEventListener('post-deleted', () => this.reloadBoard());
+        },
+        _params() {
+            const params = new URLSearchParams({ mode: 'board', date: this.periodDate });
+            if (this.platform) params.set('platform', this.platform);
+            if (this.activeTag) params.set('tag', this.activeTag);
+            return params;
+        },
+        reloadBoard() {
+            if (!document.getElementById('board-content')) return; // another mode is on screen
+            const params = this._params();
+            params.set('_columns', '1');
+            htmx.ajax('GET', '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString(),
+                      { target: '#board-content', swap: 'innerHTML' });
+        },
+        filterPlatform(platform) {
+            this.platform = platform;
+            this.reloadBoard();
+        },
+        // Toolbar navigation (_period_toolbar.html): another month, same filters.
+        goToPeriod(date) {
+            const params = this._params();
+            if (date) params.set('date', date); else params.delete('date');
+            window.location = '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString();
+        },
         start(event, id) {
             this.dragId = id;
             event.dataTransfer.effectAllowed = 'move';
@@ -558,7 +722,8 @@ function statusBoard() {
         },
         end(event) {
             event.currentTarget.classList.remove('is-dragging');
-            this.$root.querySelector('.sb-board').classList.remove('is-dragging');
+            const board = this.$root.querySelector('.sb-board');
+            if (board) board.classList.remove('is-dragging');
             this.$root.querySelectorAll('.sb-column.is-over').forEach(function (c) { c.classList.remove('is-over'); });
             this.dragId = null;
         },
@@ -573,18 +738,20 @@ function statusBoard() {
         drop(event, column) {
             event.preventDefault();
             event.currentTarget.classList.remove('is-over');
-            var id = this.dragId;
-            if (!id) return;
-            var root = this.$root;
-            var body = new FormData();
+            if (this.dragId) this.move(this.dragId, column);
+        },
+        // Asks the server to move a card; it answers with HX-Trigger events (toast, statusBoardChanged).
+        move(id, column) {
+            const root = this.$root;
+            const body = new FormData();
             body.append('column', column);
-            var csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+            const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
             fetch(root.dataset.moveUrl.replace('00000000-0000-0000-0000-000000000000', id), {
                 method: 'POST', body: body, headers: { 'X-CSRFToken': csrf ? csrf.value : '', 'HX-Request': 'true' },
             }).then(function (response) {
-                var trigger = response.headers.get('HX-Trigger');
+                const trigger = response.headers.get('HX-Trigger');
                 if (!trigger) { if (!response.ok) throw new Error(String(response.status)); return; }
-                var events = JSON.parse(trigger);
+                const events = JSON.parse(trigger);
                 Object.keys(events).forEach(function (name) {
                     document.body.dispatchEvent(new CustomEvent(name, { detail: events[name], bubbles: true }));
                 });
@@ -601,9 +768,8 @@ function calendarApp() {
         draggedPlatformPostId: null,
         calendarFilters: {
             status: '{{ active_filters.statuses.0|default:"" }}',
-            channels: [],
+            platform: '{{ active_filters.platforms.0|default:""|escapejs }}',
             tag: '{{ active_filters.tags.0|default:"" }}',
-            tz: '{{ display_timezone|default:"UTC" }}',
         },
 
         reloadCalendar() {
@@ -616,22 +782,48 @@ function calendarApp() {
             params.set('view', this.activeView);
             params.set('date', '{{ target_date|date:"Y-m-d" }}');
             if (this.calendarFilters.status) params.set('status', this.calendarFilters.status);
-            this.calendarFilters.channels.forEach(c => params.append('channel', c));
+            if (this.calendarFilters.platform) params.set('platform', this.calendarFilters.platform);
             if (this.calendarFilters.tag) params.set('tag', this.calendarFilters.tag);
-            if (this.calendarFilters.tz) params.set('tz', this.calendarFilters.tz);
             const url = '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString();
             htmx.ajax('GET', url, {target: '#calendar-content', swap: 'innerHTML'});
+        },
+
+        // Toolbar navigation (_period_toolbar.html): another period, same filters.
+        // An empty date means today; view defaults to the one on screen.
+        goToPeriod(date, view) {
+            const params = new URLSearchParams({ mode: 'calendar', view: view || this.activeView });
+            if (date) params.set('date', date);
+            if (this.calendarFilters.status) params.set('status', this.calendarFilters.status);
+            if (this.calendarFilters.platform) params.set('platform', this.calendarFilters.platform);
+            if (this.calendarFilters.tag) params.set('tag', this.calendarFilters.tag);
+            window.location = '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString();
+        },
+
+        filterPlatform(platform) {
+            this.calendarFilters.platform = platform;
+            this.reloadCalendar();
         },
 
         init() {
             // SortableJS drag-and-drop. Wire on first load and re-wire after
             // every HTMX swap of the calendar grid (nav, view change, filters).
-            this.$nextTick(() => this.initCalendarDnD());
+            this.$nextTick(() => { this.initCalendarDnD(); this.fitDayCells(); });
+            // Text metrics change once the web font arrives; measure again then.
+            if (document.fonts) document.fonts.ready.then(() => this.fitDayCells());
             document.body.addEventListener('htmx:afterSettle', (e) => {
                 const t = e.detail && e.detail.target;
                 if (t && (t.id === 'calendar-content' || (t.querySelector && t.querySelector('.cal-drop')))) {
-                    this.$nextTick(() => this.initCalendarDnD());
+                    this.$nextTick(() => { this.initCalendarDnD(); this.fitDayCells(); });
                 }
+            });
+            let resizeTimer = null;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => this.fitDayCells(), 120);
+            });
+            // A bulk action reloads the grid; keep an open day list in step with it.
+            document.body.addEventListener('calendarRefresh', () => {
+                if (this.dayModal.open && this.dayModal.view === 'list') this._loadDay();
             });
             // A drag on an <a> chip would otherwise fire a trailing click and
             // navigate to the editor. Swallow that click while a drag is in
@@ -714,6 +906,68 @@ function calendarApp() {
             });
         },
 
+        // Month cells have a fixed height: hide the chips that don't fit and say how
+        // many are left on the cell's "+N more" button (it opens the day pop-up).
+        fitDayCells() {
+            document.querySelectorAll('#calendar-content .cal-day').forEach((cell) => {
+                const more = cell.querySelector('.cal-see-all');
+                if (!more) return;
+                const chips = [...cell.querySelectorAll('.post-chip')];
+                const total = Number(more.dataset.total) || chips.length;
+                chips.forEach((chip) => chip.classList.remove('is-overflow'));
+                more.classList.add('is-hidden');
+                cell.classList.remove('has-more');
+                const overflows = () => cell.scrollHeight > cell.clientHeight + 1;
+                let shown = chips.length;
+                if (shown < total || overflows()) {
+                    // Reserve the bottom row for the button before measuring what fits.
+                    cell.classList.add('has-more');
+                    more.classList.remove('is-hidden');
+                    while (shown > 0 && overflows()) chips[--shown].classList.add('is-overflow');
+                }
+                more.querySelector('.cal-see-all-label').textContent = '+' + (total - shown);
+                more.classList.toggle('is-hidden', shown >= total);
+                cell.classList.toggle('has-more', shown < total);
+            });
+        },
+
+        // Pop-up of one day: its posts, then a post's preview.
+        dayModal: { open: false, date: '', view: 'list' },
+
+        openDay(date) {
+            this.closePostCard();
+            this.addMenu.open = false;
+            this.dayModal = { open: true, date, view: 'list' };
+            this._loadDay();
+        },
+
+        _loadDay() {
+            const body = document.getElementById('cal-day-body');
+            body.innerHTML = '<div class="p-8 text-center text-xs text-neutral-500">' + body.dataset.loading + '</div>';
+            const params = new URLSearchParams({ date: this.dayModal.date });
+            if (this.calendarFilters.status) params.set('status', this.calendarFilters.status);
+            if (this.calendarFilters.platform) params.set('platform', this.calendarFilters.platform);
+            if (this.calendarFilters.tag) params.set('tag', this.calendarFilters.tag);
+            htmx.ajax('GET', '{% url "calendar:day_posts" workspace_id=workspace.id %}?' + params.toString(),
+                      { target: body, swap: 'innerHTML' });
+        },
+
+        openDayCard(url) {
+            this.dayModal.view = 'card';
+            const body = document.getElementById('cal-day-body');
+            body.innerHTML = '<div class="p-8 text-center text-xs text-neutral-500">' + body.dataset.loading + '</div>';
+            htmx.ajax('GET', url, { target: body, swap: 'innerHTML' });
+        },
+
+        backToDay() {
+            this.dayModal.view = 'list';
+            this._loadDay();
+        },
+
+        closeDay() {
+            this.dayModal.open = false;
+        },
+
         // Add menu of a day cell: one floating menu, moved next to whichever "+" was clicked.
         addMenu: { open: false, date: '', style: {} },
 
@@ -726,7 +980,8 @@ function calendarApp() {
         },
 
         composeUrl() {
-            return '{% url "composer:compose" workspace_id=workspace.id %}?scheduled_date=' + this.addMenu.date + '&scheduled_time=09:00';
+            // The composer defaults the time to noon (composer.views.DEFAULT_POST_TIME).
+            return '{% url "composer:compose" workspace_id=workspace.id %}?scheduled_date=' + this.addMenu.date;
         },
 
         addDate() {
@@ -735,10 +990,24 @@ function calendarApp() {
             const form = this.$refs.eventForm && this.$refs.eventForm.querySelector('form');
             if (!form) return;
             form.reset();
-            form.elements.start_date.value = date;
-            form.elements.end_date.value = date;
+            window.dispatchEvent(new CustomEvent('event-form-reset'));
+            // The date fields are flatpickr inputs (base.html): set them through it so
+            // the visible field shows the day too.
+            [form.elements.start_date, form.elements.end_date].forEach((el) => {
+                if (el._flatpickr) el._flatpickr.setDate(date, false); else el.value = date;
+            });
             this.showEventForm = true;
             this.$nextTick(() => form.elements.title.focus());
+        },
+
+        // A click on a campaign bar: the campaign modal in edit mode (event_form.html).
+        openCampaign(bar) {
+            this.closePostCard();
+            this.addMenu.open = false;
+            const form = this.$refs.eventForm && this.$refs.eventForm.querySelector('form');
+            if (form) form.reset();
+            window.dispatchEvent(new CustomEvent('event-form-edit', { detail: { ...bar.dataset } }));
+            this.showEventForm = true;
         },
 
         addIdea() {
@@ -757,11 +1026,10 @@ function calendarApp() {
             this.closePostCard();
             this.addMenu.open = false;
             chip.classList.add('is-card-open');
-            this.postCard = { open: true, style: this._cardStyle(chip, 420), chip };
+            this.postCard = { open: true, style: this._cardStyle(chip, 0), chip };
             const body = document.getElementById('cal-post-card-body');
             body.innerHTML = '<div class="p-8 text-center text-xs text-neutral-500">' + body.dataset.loading + '</div>';
-            const url = chip.dataset.cardUrl + '?tz=' + encodeURIComponent(this.calendarFilters.tz || '');
-            htmx.ajax('GET', url, { target: body, swap: 'innerHTML' }).then(() => {
+            htmx.ajax('GET', chip.dataset.cardUrl, { target: body, swap: 'innerHTML' }).then(() => {
                 if (this.postCard.chip === chip) {
                     this.postCard.style = this._cardStyle(chip, body.parentElement.offsetHeight);
                 }
@@ -773,15 +1041,19 @@ function calendarApp() {
             this.postCard = { open: false, style: {}, chip: null };
         },
 
-        // Right of the chip when it fits, else left of it; kept inside the viewport.
+        // Right of the chip when it fits, else left of it. Its bottom lines up with the
+        // chip's, so it opens upwards; kept inside the viewport.
         _cardStyle(chip, height) {
             const r = chip.getBoundingClientRect();
             const width = Math.min(600, window.innerWidth - 24);
             let left = r.right + 8;
             if (left + width > window.innerWidth - 12) left = r.left - width - 8;
             left = Math.max(12, Math.min(left, window.innerWidth - width - 12));
-            const top = Math.max(12, Math.min(r.top, window.innerHeight - height - 12));
-            return { top: top + 'px', left: left + 'px' };
+            // Anchored by its bottom, so the card grows upwards while it loads; when it
+            // would run past the top of the screen it starts at the top instead.
+            if (height > r.bottom - 12) return { top: '12px', bottom: 'auto', left: left + 'px' };
+            const bottom = Math.max(12, window.innerHeight - r.bottom);
+            return { top: 'auto', bottom: bottom + 'px', left: left + 'px' };
         },
 
         rescheduleChip(platformPostId, newDatetime) {
@@ -827,9 +1099,10 @@ function calendarApp() {
 function publishList() {
     return {
         activeTab: '{{ active_tab|default:"queue" }}',
-        selectedChannels: [],
-        activeTag: '',
-        displayTimezone: '{{ display_timezone|default:"UTC" }}',
+        platform: '{{ active_filters.platforms.0|default:""|escapejs }}',
+        activeTag: '{{ active_filters.tags.0|default:""|escapejs }}',
+        // The month shown; the tabs list only what falls in it.
+        periodDate: '{{ target_date|date:"Y-m-d" }}',
 
         tabUrls: {
             queue: '{% url "calendar:publish_tab_queue" workspace_id=workspace.id %}',
@@ -847,16 +1120,29 @@ function publishList() {
             this.reloadTab();
         },
 
+        filterPlatform(platform) {
+            this.platform = platform;
+            this.reloadTab();
+        },
+
+        // Toolbar navigation (_period_toolbar.html): another month, same tab and filters.
+        goToPeriod(date) {
+            const params = new URLSearchParams({ mode: 'list', tab: this.activeTab });
+            if (date) params.set('date', date);
+            if (this.platform) params.set('platform', this.platform);
+            if (this.activeTag) params.set('tag', this.activeTag);
+            window.location = '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString();
+        },
+
         reloadTab() {
             // Drop the selection whenever the visible set changes (tab switch,
-            // channel/tag/tz filter). The bar acts on stored ids regardless of
+            // platform/tag filter). The bar acts on stored ids regardless of
             // what's rendered, so a stale tick would let Delete hit a row the
             // user can no longer see.
             Alpine.store('sel').clear();
-            const params = new URLSearchParams();
-            this.selectedChannels.forEach(c => params.append('channel', c));
+            const params = new URLSearchParams({ date: this.periodDate });
+            if (this.platform) params.set('platform', this.platform);
             if (this.activeTag) params.set('tag', this.activeTag);
-            if (this.displayTimezone) params.set('tz', this.displayTimezone);
             const url = this.tabUrls[this.activeTab] + '?' + params.toString();
             htmx.ajax('GET', url, {target: '#tab-content', swap: 'innerHTML'});
         }

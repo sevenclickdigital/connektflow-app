@@ -82,9 +82,7 @@ class PublishableTagTests(ComposerTestCase):
         Tag.objects.create(workspace=self.workspace, name="shopeebrasil", kind=Tag.Kind.MENTION)
 
     def test_suffix_keeps_applied_order_and_drops_internal_tags(self):
-        suffix = Tag.publishable_suffix(
-            self.workspace.id, ["shopeebrasil", "SevenClick", "Black Friday"]
-        )
+        suffix = Tag.publishable_suffix(self.workspace.id, ["shopeebrasil", "SevenClick", "Black Friday"])
 
         self.assertEqual(suffix, "@shopeebrasil #BlackFriday")
 
@@ -119,9 +117,7 @@ class PublishableTagTests(ComposerTestCase):
         )
         target = PlatformPost.objects.create(post=post, social_account=self.account)
 
-        self.assertEqual(
-            target.effective_caption, "Promoção de fim de ano\n\n#BlackFriday"
-        )
+        self.assertEqual(target.effective_caption, "Promoção de fim de ano\n\n#BlackFriday")
         # The limit has to be measured against what actually goes out.
         self.assertEqual(target.caption_length, len(target.effective_caption))
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta
 
-from django.db.models import F
+from django.db.models import F, Q
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -22,7 +22,7 @@ from apps.composer.models import PlatformPost
 
 S = PlatformPost.Status
 
-# Published posts older than this stay out of the board; it is a workflow view.
+# Without a month, published posts older than this stay out of the board; it is a workflow view.
 PUBLISHED_WINDOW_DAYS = 30
 # Most cards a column renders, so a busy workspace doesn't load its whole history.
 COLUMN_LIMIT = 60
@@ -67,16 +67,30 @@ def column(key) -> Column | None:
     return _BY_KEY.get(key)
 
 
-def board_columns(workspace):
-    """Columns with their cards, each column's rows ordered by when they go out."""
-    since = timezone.now() - timedelta(days=PUBLISHED_WINDOW_DAYS)
+def board_columns(workspace, *, start=None, end=None, platforms=(), tag=""):
+    """Columns with their cards, each column's rows ordered by when they go out.
+
+    ``start``/``end`` keep the cards dated in that range (published, scheduled or
+    proposed) plus the undated ones; ``platforms`` and ``tag`` narrow them further.
+    """
     rows = (
         PlatformPost.objects.filter(post__workspace=workspace)
-        .exclude(status=S.PUBLISHED, published_at__lt=since)
         .select_related("post", "post__author", "social_account")
-        .annotate(effective_at=Coalesce("scheduled_at", "post__scheduled_at"))
+        .prefetch_related("post__media_attachments__media_asset")
+        .annotate(
+            effective_at=Coalesce("scheduled_at", "post__scheduled_at"),
+            period_at=Coalesce("published_at", "scheduled_at", "post__scheduled_at", "post__proposed_publish_at"),
+        )
         .order_by(F("effective_at").asc(nulls_last=True), "-post__updated_at")
     )
+    if start and end:
+        rows = rows.filter(Q(period_at__gte=start, period_at__lt=end) | Q(period_at__isnull=True))
+    else:
+        rows = rows.exclude(status=S.PUBLISHED, published_at__lt=timezone.now() - timedelta(days=PUBLISHED_WINDOW_DAYS))
+    if platforms:
+        rows = rows.filter(social_account__platform__in=platforms)
+    if tag:
+        rows = rows.filter(post__tags__contains=[tag])
     by_status: dict[str, list] = {}
     for pp in rows:
         by_status.setdefault(pp.status, []).append(pp)

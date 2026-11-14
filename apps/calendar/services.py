@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.dates import WEEKDAYS
 from django.utils.formats import date_format
 from django.utils.text import capfirst
+from django.utils.translation import gettext as _
 
 from .models import PostingSlot, Queue, QueueEntry
 
@@ -21,8 +22,33 @@ def month_label(day):
     return capfirst(date_format(day, "YEAR_MONTH_FORMAT"))
 
 
+def month_options(year, selected_month):
+    """The twelve months of ``year`` for the toolbar's month picker, January first."""
+    from datetime import date
+
+    return [
+        {
+            "date": date(year, month, 1),
+            "label": capfirst(date_format(date(year, month, 1), "F")),
+            "active": month == selected_month,
+        }
+        for month in range(1, 13)
+    ]
+
+
 def week_label(first, last):
-    """Localized range heading for a week view, e.g. "Nov. 2 – Nov. 8, 2026"."""
+    """Localized range heading for a week view.
+
+    A week inside one month is short ("November 9–15, 2026"); one across two months
+    names both ("Nov. 30 – Dec. 6, 2026").
+    """
+    if (first.year, first.month) == (last.year, last.month):
+        return _("%(month)s %(first)s–%(last)s, %(year)s") % {
+            "month": date_format(first, "F"),
+            "first": first.day,
+            "last": last.day,
+            "year": first.year,
+        }
     return f"{date_format(first, 'MONTH_DAY_FORMAT')} – {date_format(last, 'DATE_FORMAT')}"
 
 
@@ -586,13 +612,16 @@ def repair_future_published_scheduled_at(*, workspace_id=None, apply=True):
 # ---------------------------------------------------------------------------
 
 SPECIAL_DATES_SETTING = "calendar.show_special_dates"
+CUSTOM_EVENTS_SETTING = "calendar.show_custom_events"
+DRAFTS_SETTING = "calendar.show_drafts"
 
 
 def events_by_date(workspace, start, end) -> dict:
     """``{day: [event, ...]}`` for every day an event (or a repetition of one) covers.
 
     Each listed event is a copy whose ``start_date``/``end_date`` are those of
-    the occurrence, so templates don't need to know about recurrence.
+    the occurrence, so templates don't need to know about recurrence; the
+    series' own dates stay in ``series_start``/``series_end`` (what editing it changes).
     """
     import copy
 
@@ -610,6 +639,7 @@ def events_by_date(workspace, start, end) -> dict:
     for event in events:
         for first, last in event.occurrences(start, end):
             occurrence = copy.copy(event)
+            occurrence.series_start, occurrence.series_end = event.start_date, event.end_date
             occurrence.start_date, occurrence.end_date = first, last
             day = max(first, start)
             while day <= min(last, end):
@@ -622,6 +652,20 @@ def special_dates_enabled(workspace) -> bool:
     from apps.settings_manager.helpers import get_setting
 
     return bool(get_setting(workspace.id, SPECIAL_DATES_SETTING, workspace_org_id=workspace.organization_id))
+
+
+def drafts_shown(workspace) -> bool:
+    """Whether the calendar shows draft posts (the toolbar's "Drafts" button)."""
+    from apps.settings_manager.helpers import get_setting
+
+    return bool(get_setting(workspace.id, DRAFTS_SETTING, workspace_org_id=workspace.organization_id))
+
+
+def custom_events_enabled(workspace) -> bool:
+    """Whether the calendar shows the workspace's campaigns (its own CustomCalendarEvents)."""
+    from apps.settings_manager.helpers import get_setting
+
+    return bool(get_setting(workspace.id, CUSTOM_EVENTS_SETTING, workspace_org_id=workspace.organization_id))
 
 
 def upcoming_dates(workspace, start, days=60) -> list[dict]:

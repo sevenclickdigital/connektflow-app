@@ -1793,3 +1793,23 @@ def test_publish_story_fails_when_facebook_returns_no_story_id():
                 extra={"page_id": "page-1"},
             ),
         )
+
+
+def test_place_search_offers_only_pages_with_a_location():
+    """Instagram refuses a Page without location data as ``location_id``."""
+    provider = FacebookProvider({"client_id": "id", "client_secret": "secret"})
+    provider._request = MagicMock(
+        return_value=_resp(
+            {
+                "data": [
+                    {"id": "1", "name": "Padaria Central", "location": {"city": "Recife", "country": "Brazil"}},
+                    {"id": "2", "name": "Padaria Central Fans"},
+                    {"id": "3", "name": "Padaria Central Blog", "location": {}},
+                ]
+            }
+        )
+    )
+
+    places = provider.search_places("page-token", "padaria central")
+
+    assert places == [{"id": "1", "name": "Padaria Central", "where": "Recife, Brazil"}]

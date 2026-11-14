@@ -41,6 +41,12 @@ def reply_eligibility(message, *, origin=PROGRAMMATIC, actor=None, credentials=N
         "human_agent": False,
     }
     account = message.social_account
+    if message.message_type == InboxMessage.MessageType.TAG:
+        from django.utils.translation import gettext as _
+
+        result.update(can_send=False, window="unavailable")
+        result["reason"] = _("Instagram doesn't let a business reply to a post it was only tagged in.")
+        return result
     if message.message_type == "dm" and account.platform == "whatsapp":
         return _whatsapp_eligibility(message, result, now=now)
     if message.message_type != "dm" or account.platform not in META_DM_PLATFORMS:

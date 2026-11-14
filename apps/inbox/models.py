@@ -5,6 +5,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import pgettext_lazy
 
 from apps.common.managers import WorkspaceScopedManager
 
@@ -15,6 +16,9 @@ class InboxMessage(models.Model):
     class MessageType(models.TextChoices):
         COMMENT = "comment", _("Comment")
         MENTION = "mention", _("Mention")
+        # A post by another account that tagged this one in the photo. Kept
+        # apart from MENTION because the platform offers no way to answer it.
+        TAG = "tag", pgettext_lazy("inbox message type", "Tag")
         DM = "dm", _("Direct Message")
         REVIEW = "review", _("Review")
 

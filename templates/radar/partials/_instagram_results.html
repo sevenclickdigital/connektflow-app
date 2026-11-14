@@ -1,0 +1,57 @@
+{% comment %}
+Results of the Instagram research screen (radar/instagram.html).
+Context: tab, error, and either ``report`` (apps.radar.instagram.ProfileReport)
+for a watched profile or ``posts`` (list of Graph media dicts) for a hashtag.
+Media URLs come from Instagram's CDN, hence ``referrerpolicy="no-referrer"``.
+{% endcomment %}
+{% load i18n humanize %}
+<div id="ig-research-results">
+    {% if error %}
+    <div class="alert-error mb-4" role="alert">{{ error }}</div>
+    {% endif %}
+
+    {% if tab == "profiles" %}
+        {% if report %}
+        <div class="a-card p-5 mb-4">
+            <div class="flex items-start gap-4">
+                {% if report.picture_url %}
+                <img src="{{ report.picture_url }}" alt="" referrerpolicy="no-referrer" class="w-14 h-14 rounded-full object-cover flex-shrink-0">
+                {% endif %}
+                <div class="min-w-0 flex-1">
+                    <p class="text-base font-semibold text-neutral-950 truncate">{{ report.name|default:report.username }}</p>
+                    <a href="https://www.instagram.com/{{ report.username|urlencode }}/" target="_blank" rel="noopener noreferrer" class="text-sm text-brand-700 hover:underline">@{{ report.username }}</a>
+                    {% if report.biography %}<p class="text-sm text-neutral-600 mt-2 whitespace-pre-line">{{ report.biography }}</p>{% endif %}
+                </div>
+            </div>
+            <dl class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+                <div class="rounded-lg bg-neutral-50 px-3 py-2">
+                    <dt class="text-xs text-neutral-600">{% translate "Followers" %}</dt>
+                    <dd class="text-lg font-semibold text-neutral-950">{{ report.followers|default_if_none:"—"|intcomma }}</dd>
+                </div>
+                <div class="rounded-lg bg-neutral-50 px-3 py-2">
+                    <dt class="text-xs text-neutral-600">{% translate "Posts" %}</dt>
+                    <dd class="text-lg font-semibold text-neutral-950">{{ report.posts|default_if_none:"—"|intcomma }}</dd>
+                </div>
+                <div class="rounded-lg bg-neutral-50 px-3 py-2">
+                    <dt class="text-xs text-neutral-600">{% translate "Interactions per post" %}</dt>
+                    <dd class="text-lg font-semibold text-neutral-950">{{ report.avg_interactions|default_if_none:"—"|intcomma }}</dd>
+                </div>
+                <div class="rounded-lg bg-neutral-50 px-3 py-2">
+                    <dt class="text-xs text-neutral-600">{% translate "Engagement rate" %}</dt>
+                    <dd class="text-lg font-semibold text-neutral-950">{% if report.engagement_rate is not None %}{{ report.engagement_rate|floatformat:2 }}%{% else %}—{% endif %}</dd>
+                </div>
+            </dl>
+            <p class="text-xs text-neutral-500 mt-2">{% blocktranslate count counter=report.media|length %}Interactions are likes plus comments, averaged over the last post.{% plural %}Interactions are likes plus comments, averaged over the last {{ counter }} posts.{% endblocktranslate %}</p>
+        </div>
+        {% with posts=report.media %}{% include "radar/partials/_instagram_media_grid.html" %}{% endwith %}
+        {% elif not error %}
+        <div class="a-card p-8 text-center text-sm text-neutral-600">{% translate "Add a profile, or pick one on the left, to see its numbers and latest posts." %}</div>
+        {% endif %}
+    {% else %}
+        {% if posts %}
+        {% include "radar/partials/_instagram_media_grid.html" %}
+        {% elif hashtag and not error %}
+        <div class="a-card p-8 text-center text-sm text-neutral-600">{% blocktranslate %}No public posts found for #{{ hashtag }}.{% endblocktranslate %}</div>
+        {% endif %}
+    {% endif %}
+</div>

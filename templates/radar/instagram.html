@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block page_title %}{% translate "Instagram research" %}{% endblock %}
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "Instagram research" %}</h1>
+        <p class="page-description">{% translate "Follow other business accounts and see what is posted under a hashtag." %}</p>
+    </div>
+    {% if accounts|length > 1 %}
+    <form method="get" action="{% url 'radar:instagram' workspace_id=workspace_id %}">
+        <input type="hidden" name="tab" value="{{ tab }}">
+        <label class="sr-only" for="ig-research-account">{% translate "Read through" %}</label>
+        <select id="ig-research-account" name="account" class="form-input-styled text-sm" onchange="this.form.submit()">
+            {% for acc in accounts %}
+            <option value="{{ acc.id }}" {% if acc.id == account.id %}selected{% endif %}>{{ acc.account_name }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
+{% block content %}
+{% comment %}
+Two tabs over one Instagram account connected with Facebook Login:
+- Watched profiles: saved handles (WatchedProfile) read live through Business Discovery.
+- Hashtags: top or recent public posts for one hashtag.
+Results render in radar/partials/_instagram_results.html; the hashtag form
+swaps it with hx-get and pushes the URL so a search can be reloaded.
+{% endcomment %}
+<div class="w-full">
+    {% if not account %}
+    <div class="a-card p-8 text-center">
+        <p class="text-sm font-semibold text-neutral-900">{% translate "Connect an Instagram account to research other profiles." %}</p>
+        <p class="text-sm text-neutral-600 mt-1">{% translate "The research is read through an Instagram business or creator account connected with Facebook." %}</p>
+        <a href="{% url 'social_accounts:list' workspace_id=workspace_id %}" class="btn-brand mt-4 inline-flex">{% translate "Go to Social Accounts" %}</a>
+    </div>
+    {% else %}
+    <nav class="flex gap-1 border-b border-neutral-300 mb-5" aria-label="{% translate 'Instagram research' %}">
+        <a href="{% url 'radar:instagram' workspace_id=workspace_id %}?account={{ account.id }}" {% if tab == "profiles" %}aria-current="page"{% endif %}
+           class="px-3 py-2 -mb-px text-sm font-semibold border-b-2 transition-colors {% if tab == 'profiles' %}border-brand-700 text-brand-900{% else %}border-transparent text-neutral-600 hover:text-neutral-800{% endif %}">{% translate "Watched profiles" %}</a>
+        <a href="{% url 'radar:instagram' workspace_id=workspace_id %}?account={{ account.id }}&tab=hashtags" {% if tab == "hashtags" %}aria-current="page"{% endif %}
+           class="px-3 py-2 -mb-px text-sm font-semibold border-b-2 transition-colors {% if tab == 'hashtags' %}border-brand-700 text-brand-900{% else %}border-transparent text-neutral-600 hover:text-neutral-800{% endif %}">{% translate "Hashtags" %}</a>
+    </nav>
+
+    {% if tab == "profiles" %}
+    <div class="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-5">
+        <aside class="a-card p-4 h-fit">
+            <form method="post" action="{% url 'radar:watch_profile' workspace_id=workspace_id %}" class="flex flex-col gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="account" value="{{ account.id }}">
+                <input type="text" name="username" maxlength="31" required placeholder="@brand"
+                       aria-label="{% translate 'Instagram username' %}" class="form-input-styled w-full text-sm">
+                <button type="submit" class="btn-brand w-full justify-center">{% translate "Watch" %}</button>
+            </form>
+            <p class="text-xs text-neutral-500 mt-2">{% translate "Only business and creator accounts can be read." %}</p>
+            <ul class="mt-4 space-y-1">
+                {% for profile in watched %}
+                <li class="flex items-center gap-1">
+                    <a href="{% url 'radar:instagram' workspace_id=workspace_id %}?account={{ account.id }}&u={{ profile.username|urlencode }}"
+                       class="flex-1 min-w-0 truncate rounded-lg px-2.5 py-1.5 text-sm {% if handle == profile.username %}bg-brand-50 text-brand-900 font-semibold{% else %}text-neutral-800 hover:bg-neutral-50{% endif %}">@{{ profile.username }}</a>
+                    <form method="post" action="{% url 'radar:unwatch_profile' workspace_id=workspace_id profile_id=profile.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100"
+                                title="{% translate 'Stop watching' %}" aria-label="{% blocktranslate with username=profile.username %}Stop watching @{{ username }}{% endblocktranslate %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </form>
+                </li>
+                {% empty %}
+                <li class="text-sm text-neutral-600 px-1">{% translate "No profiles watched yet." %}</li>
+                {% endfor %}
+            </ul>
+        </aside>
+        <section class="min-w-0">
+            {% include "radar/partials/_instagram_results.html" %}
+        </section>
+    </div>
+    {% else %}
+    <form method="get" action="{% url 'radar:instagram' workspace_id=workspace_id %}"
+          hx-get="{% url 'radar:instagram' workspace_id=workspace_id %}" hx-target="#ig-research-results" hx-swap="outerHTML" hx-push-url="true"
+          class="a-card p-4 mb-4 flex flex-col sm:flex-row gap-2">
+        <input type="hidden" name="account" value="{{ account.id }}">
+        <input type="hidden" name="tab" value="hashtags">
+        <input type="search" name="tag" value="{{ hashtag }}" maxlength="101" required placeholder="#hashtag"
+               aria-label="{% translate 'Hashtag' %}" class="form-input-styled flex-1 min-w-0 text-sm">
+        <select name="order" aria-label="{% translate 'Order' %}" class="form-input-styled text-sm sm:w-44">
+            <option value="top" {% if order != "recent" %}selected{% endif %}>{% translate "Most popular" %}</option>
+            <option value="recent" {% if order == "recent" %}selected{% endif %}>{% translate "Most recent" %}</option>
+        </select>
+        <button type="submit" class="btn-brand" style="width: auto;">{% translate "Search" %}</button>
+    </form>
+    <p class="text-xs text-neutral-500 mb-4">{% translate "Instagram allows 30 different hashtags per account every 7 days. Searching the same hashtag again doesn't count twice." %}</p>
+    {% include "radar/partials/_instagram_results.html" %}
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

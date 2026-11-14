@@ -71,14 +71,19 @@ def parse_place_results(data: dict) -> list[dict]:
 
     ``where`` is the address as a human reads it, assembled from whichever
     location parts Meta returned — many Pages carry only a city.
+
+    A Page with no ``location`` is left out: the search matches any Page by
+    name, but only one with location data can be a place. Instagram refuses
+    any other as ``location_id`` (``INVALID_LOCATION_ID``), which fails the
+    whole publish.
     """
     results = []
     for row in (data or {}).get("data", []) or []:
         page_id = str(row.get("id") or "")
         name = row.get("name") or ""
-        if not page_id or not name:
-            continue
         location = row.get("location") or {}
+        if not page_id or not name or not location:
+            continue
         parts = [location.get(key) for key in ("street", "city", "state", "country")]
         results.append(
             {

@@ -969,6 +969,12 @@ class PublishEngine:
             )
             if post_type is PostType.STORY and len(content.media_urls) > 1:
                 result = self._publish_story_sequence(platform_post, provider, access_token, content)
+            elif (
+                post_type is PostType.IMAGE
+                and provider.album_threshold
+                and len(content.media_urls) > provider.album_threshold
+            ):
+                result = self._publish_album(platform_post, provider, access_token, content)
             else:
                 result = provider.publish_post(access_token, content)
             return {
@@ -1035,6 +1041,26 @@ class PublishEngine:
             platform_post_id=published[0],
             url=first.url if first else None,
             extra={**(first.extra if first else {}), "story_ids": published},
+        )
+
+    @staticmethod
+    def _publish_album(platform_post, provider, access_token, content):
+        """Publish more images than one post takes as an album, resumably.
+
+        The provider reports each step through ``save_progress``; it is kept on
+        the row, keyed to the row's id like the Story sequence, so a retry adds
+        the missing photos to the album already made instead of making another.
+        """
+
+        def save_progress(progress: dict) -> None:
+            platform_post.platform_extra = {
+                **(platform_post.platform_extra or {}),
+                ALBUM_PROGRESS_KEY: {"row": str(platform_post.id), **progress},
+            }
+            platform_post.save(update_fields=["platform_extra", "updated_at"])
+
+        return provider.publish_album(
+            access_token, content, progress=album_progress(platform_post), save_progress=save_progress
         )
 
     @staticmethod
@@ -1533,6 +1559,20 @@ def published_stories(platform_post) -> list[str]:
     if not isinstance(progress, dict) or progress.get("row") != str(platform_post.id):
         return []
     return list(progress.get("ids") or [])
+
+
+ALBUM_PROGRESS_KEY = "album_progress"
+
+
+def album_progress(platform_post) -> dict:
+    """The album an earlier attempt of this row created, and the photos already in it.
+
+    Keyed to the row's own id for the same reason as ``published_stories``.
+    """
+    progress = (platform_post.platform_extra or {}).get(ALBUM_PROGRESS_KEY) or {}
+    if not isinstance(progress, dict) or progress.get("row") != str(platform_post.id):
+        return {}
+    return {key: value for key, value in progress.items() if key != "row"}
 
 
 def with_story_progress(platform_post, message: str) -> str:

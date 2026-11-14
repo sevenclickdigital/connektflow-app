@@ -1,0 +1,29 @@
+{% comment %}
+A grid of Instagram posts read from Graph (Business Discovery or hashtag media).
+Usage: {% include "radar/partials/_instagram_media_grid.html" with posts=posts %}
+Each post (apps.radar.instagram._for_display): permalink, caption, media_type, preview_url, like_count
+(absent when the owner hides likes), comments_count, view_count, posted_at.
+{% endcomment %}
+{% load i18n humanize %}
+<ul class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+    {% for post in posts %}
+    <li class="a-card overflow-hidden flex flex-col">
+        <a href="{{ post.permalink }}" target="_blank" rel="noopener noreferrer" class="block aspect-square overflow-hidden bg-neutral-100">
+            {% if post.preview_url %}
+            <img src="{{ post.preview_url }}" alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full aspect-square object-cover">
+            {% else %}
+            <span class="w-full h-full flex items-center justify-center text-xs text-neutral-500">{% if post.media_type == "VIDEO" %}{% translate "Video" %}{% else %}{% translate "No preview" %}{% endif %}</span>
+            {% endif %}
+        </a>
+        <div class="p-3 flex-1 flex flex-col gap-2">
+            {% if post.caption %}<p class="text-xs text-neutral-700 line-clamp-3">{{ post.caption }}</p>{% endif %}
+            <p class="mt-auto flex flex-wrap gap-x-3 gap-y-1 text-xs text-neutral-600">
+                {% if "like_count" in post %}<span>{% blocktranslate with count=post.like_count|intcomma %}{{ count }} likes{% endblocktranslate %}</span>{% endif %}
+                {% if "comments_count" in post %}<span>{% blocktranslate with count=post.comments_count|intcomma %}{{ count }} comments{% endblocktranslate %}</span>{% endif %}
+                {% if post.view_count %}<span>{% blocktranslate with count=post.view_count|intcomma %}{{ count }} views{% endblocktranslate %}</span>{% endif %}
+            </p>
+            {% if post.posted_at %}<p class="text-[11px] text-neutral-500">{{ post.posted_at|date:"SHORT_DATE_FORMAT" }}</p>{% endif %}
+        </div>
+    </li>
+    {% endfor %}
+</ul>

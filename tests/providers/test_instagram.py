@@ -545,12 +545,10 @@ def test_find_own_comment_raises_when_the_comments_edge_cannot_be_read(make_prov
 def _poll_comments(provider, since=None):
     """Run just the comment half, whichever connection this is.
 
-    ``InstagramLoginProvider.get_messages`` also polls DMs, which would consume
-    the same ``_request`` mock and shift every call index below.
+    ``get_messages`` also polls DMs and tagged posts, which would consume the
+    same ``_request`` mock and shift every call index below.
     """
-    if isinstance(provider, InstagramLoginProvider):
-        return provider._fetch_media_comments("token", since)
-    return provider.get_messages("token", since=since)
+    return provider._fetch_media_comments("token", since)
 
 
 def _media(comments=None, media_id="media-1", **extra):

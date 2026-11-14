@@ -1,5 +1,5 @@
 {% if render_tab_counts_oob %}{% include "calendar/partials/_tab_counts_oob.html" %}{% endif %}
-{% load tz i18n %}
+{% load i18n %}
 {% comment %}
 Drafts tab partial for the Publish page.
 Shows all draft platform posts in a table. Loaded via HTMX into #tab-content.
@@ -7,86 +7,7 @@ Shows all draft platform posts in a table. Loaded via HTMX into #tab-content.
 
 <div x-data{% if is_htmx %} class="tab-slide-in"{% endif %}>
     {% if platform_posts %}
-    <table class="w-full">
-        <thead>
-            <tr class="border-b border-neutral-300 text-left">
-                <th class="pl-4 w-8"></th>
-                <th class="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{% translate "Media" %}</th>
-                <th class="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{% translate "Caption" %}</th>
-                <th class="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{% translate "Platform" %}</th>
-                <th class="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{% translate "Author" %}</th>
-                <th class="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{% translate "Last Updated" %}</th>
-                <th class="px-4 py-3 w-10"></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for pp in platform_posts %}
-            <tr class="border-b border-neutral-100 hover:bg-neutral-50 transition-colors duration-100 cursor-pointer"
-                @click="window.location='{% url 'composer:compose_edit' workspace_id=workspace.id post_id=pp.post_id %}?account={{ pp.social_account_id }}'">
-                <td class="pl-4 pr-1 py-3" @click.stop>
-                    {% if pp.is_bulk_selectable %}{% include "calendar/partials/_select_checkbox.html" with pp_id=pp.id extra_class="row-select-box" %}{% endif %}
-                </td>
-                <td class="px-4 py-3">
-                    {% with first_att=pp.post.media_attachments.all.0 %}
-                    {% if first_att %}
-                    <div class="w-10 h-10 rounded-lg overflow-hidden bg-neutral-100 flex-shrink-0 relative">
-                        {% if first_att.media_asset.thumbnail %}
-                            <img src="{{ first_att.media_asset.thumbnail.url }}" alt="" class="w-full h-full object-cover">
-                        {% elif first_att.media_asset.media_type == 'image' or first_att.media_asset.media_type == 'gif' %}
-                            <img src="{{ first_att.media_asset.file.url }}" alt="" class="w-full h-full object-cover">
-                        {% else %}
-                            <video src="{{ first_att.media_asset.file.url }}#t=0.5" class="w-full h-full object-cover" muted preload="metadata"></video>
-                        {% endif %}
-                        {% if first_att.media_asset.media_type == 'video' %}
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div class="w-4 h-4 rounded-full bg-black/50 flex items-center justify-center">
-                                <svg class="w-2 h-2 text-white ml-px" fill="currentColor" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% if pp.post.media_attachments.count > 1 %}
-                        <div class="absolute bottom-0 right-0 bg-black/60 text-white text-[9px] font-bold px-1 rounded-tl">
-                            +{{ pp.post.media_attachments.count|add:"-1" }}
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% else %}
-                    <div class="w-10 h-10 rounded-lg bg-neutral-50 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    </div>
-                    {% endif %}
-                    {% endwith %}
-                </td>
-                <td class="px-4 py-3 text-sm text-neutral-700 max-w-xs truncate">
-                    {{ pp.post.title|default:pp.post.caption_snippet|default:_("(no caption)") }}
-                </td>
-                <td class="px-4 py-3">
-                    <div class="flex items-center gap-1.5">
-                        <span class="w-5 h-5 rounded-[5px] flex items-center justify-center">
-                            {% include "partials/_platform_icon.html" with platform=pp.social_account.platform size="sm" %}
-                        </span>
-                        <span class="flex flex-col items-start gap-0.5">
-                            <span class="text-xs text-neutral-600">{{ pp.social_account.account_name|default:pp.social_account.account_handle }}</span>
-                            {% include "partials/_format_badge.html" %}
-                        </span>
-                    </div>
-                </td>
-                <td class="px-4 py-3 text-xs text-neutral-600">
-                    {{ pp.post.author.display_name|default:"-" }}
-                </td>
-                <td class="px-4 py-3 text-xs text-neutral-600 tabular-nums whitespace-nowrap">
-                    {% blocktranslate with time=pp.post.updated_at|timesince %}{{ time }} ago{% endblocktranslate %}
-                    {% if pp.post.proposed_publish_at %}
-                    <span class="block text-[0.6875rem] text-brand-700" title="{% translate 'Proposed publishing time' %}">{% timezone display_timezone %}{% blocktranslate with date=pp.post.proposed_publish_at|date:"M j, g:i A" %}Proposed Publishing {{ date }}{% endblocktranslate %}{% endtimezone %}</span>
-                    {% endif %}
-                </td>
-                <td class="px-4 py-3 text-right" @click.stop>
-                    {% include "calendar/partials/_post_actions_menu.html" with post_id=pp.post_id account_id=pp.social_account_id platform_post_id=pp.id %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    {% include "calendar/partials/_list_table.html" with tab="drafts" %}
     {% else %}
     {% if not has_connected_accounts %}
     {% include "calendar/partials/_no_channels_empty_state.html" %}

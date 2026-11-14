@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from urllib.parse import urlencode
 
 from . import meta_history
@@ -18,6 +18,7 @@ from .meta_accounts import fetch_me_accounts, page_can_publish
 from .meta_comments import (
     fetch_instagram_comments,
     find_own_instagram_comment,
+    parse_graph_time,
     resolve_comment_reply_target,
 )
 from .meta_feed_extras import apply_instagram_extras
@@ -94,6 +95,31 @@ INSTAGRAM_MEDIA_FIELDS = [
     "like_count",
     "comments_count",
 ]
+
+# Fields read for a media item someone else posted: a caption mention or a
+# post the account was tagged in. ``username`` names its author; ``owner`` is
+# only returned for the account's own media.
+INSTAGRAM_FOREIGN_MEDIA_FIELDS = "id,caption,username,timestamp,permalink,media_type"
+# ``mentioned_comment`` exposes no author, only the text and the media it is on.
+INSTAGRAM_MENTIONED_COMMENT_FIELDS = "id,text,timestamp,media{id,permalink,username}"
+# One page of the ``/tags`` edge per poll: the inbox dedupes on the media id,
+# so a poll only has to see what is new since the last one.
+INSTAGRAM_TAGS_PAGE_SIZE = 25
+
+# Public fields of another professional account, read through Business
+# Discovery, and of its recent posts. ``view_count`` mixes paid and organic.
+INSTAGRAM_DISCOVERY_PROFILE_FIELDS = (
+    "username,name,biography,website,profile_picture_url,followers_count,follows_count,media_count"
+)
+INSTAGRAM_DISCOVERY_MEDIA_FIELDS = (
+    "id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count,"
+    "view_count,media_url,thumbnail_url"
+)
+INSTAGRAM_DISCOVERY_MEDIA_LIMIT = 12
+# Hashtag media cannot return ``username`` or ``thumbnail_url``.
+INSTAGRAM_HASHTAG_MEDIA_FIELDS = "id,caption,media_type,permalink,timestamp,like_count,comments_count,media_url"
+INSTAGRAM_HASHTAG_MEDIA_LIMIT = 24
+INSTAGRAM_HASHTAG_EDGES = ("top_media", "recent_media")
 
 # Polling settings for container status checks
 CONTAINER_POLL_INTERVAL = 2  # seconds
@@ -635,7 +661,11 @@ class InstagramProvider(SocialProvider):
     def get_messages(self, access_token: str, since: datetime | None = None) -> list[InboxMessage]:
         messages = InstagramMessageBatch()
         failures = []
-        for label, fetch in (("comment", self._fetch_media_comments), ("DM", self._fetch_direct_messages)):
+        for label, fetch in (
+            ("comment", self._fetch_media_comments),
+            ("tag", self._fetch_tagged_media),
+            ("DM", self._fetch_direct_messages),
+        ):
             try:
                 batch = fetch(access_token, since)
                 messages.extend(batch)
@@ -728,6 +758,143 @@ class InstagramProvider(SocialProvider):
             owner_handle=str(self.credentials.get("account_handle") or ""),
         )
 
+    def _fetch_tagged_media(self, access_token: str, since: datetime | None = None) -> list[InboxMessage]:
+        """Posts by other accounts that tagged this one in the photo.
+
+        Meta sends no webhook for a tag, so the ``/tags`` edge is polled. A tag
+        cannot be answered through the API ("commenting on photos in which you
+        were tagged is not supported"), so these arrive as ``tag`` items the
+        inbox shows without a reply box. ``since`` is not applied: dedupe on
+        the media id already keeps a repeat poll from filing anything twice.
+        """
+        ig_user_id = str(self.credentials.get("ig_user_id") or "")
+        if not ig_user_id or "instagram_manage_comments" in self.credentials.get("missing_scopes", []):
+            return []
+        data = self._request(
+            "GET",
+            f"{BASE_URL}/{ig_user_id}/tags",
+            access_token=access_token,
+            params={"fields": INSTAGRAM_FOREIGN_MEDIA_FIELDS, "limit": INSTAGRAM_TAGS_PAGE_SIZE},
+        ).json()
+        messages = []
+        for media in data.get("data", []):
+            media_id = str(media.get("id") or "")
+            if not media_id:
+                continue
+            username = str(media.get("username") or "")
+            messages.append(
+                InboxMessage(
+                    platform_message_id=f"tag_{media_id}",
+                    sender_id=username,
+                    sender_name=username or "Instagram",
+                    text=str(media.get("caption") or ""),
+                    timestamp=parse_graph_time(media.get("timestamp")) or datetime.now(UTC),
+                    message_type="tag",
+                    extra={"media_id": media_id, "permalink": media.get("permalink") or "", "source": "poll"},
+                )
+            )
+        return messages
+
+    def get_mention(self, access_token: str, *, media_id: str, comment_id: str = "") -> dict:
+        """What a mention says, for one the ``mentions`` webhook named only by id.
+
+        Returns ``{"text", "username", "timestamp", "permalink"}``; ``username``
+        is empty for a comment mention, which Meta returns without its author.
+        Errors propagate: the caller decides whether the placeholder stays.
+        """
+        ig_user_id = str(self.credentials.get("ig_user_id") or "")
+        if not ig_user_id:
+            raise APIError("Reconnect Instagram to read its mentions.", platform=self.platform_name)
+        if comment_id:
+            field = f"mentioned_comment.comment_id({comment_id}){{{INSTAGRAM_MENTIONED_COMMENT_FIELDS}}}"
+        else:
+            field = f"mentioned_media.media_id({media_id}){{{INSTAGRAM_FOREIGN_MEDIA_FIELDS}}}"
+        data = self._request(
+            "GET",
+            f"{BASE_URL}/{ig_user_id}",
+            access_token=access_token,
+            params={"fields": field},
+        ).json()
+        if comment_id:
+            found = data.get("mentioned_comment") or {}
+            media = found.get("media") or {}
+            return {
+                "text": str(found.get("text") or ""),
+                "username": "",
+                "timestamp": found.get("timestamp") or "",
+                "permalink": media.get("permalink") or "",
+            }
+        found = data.get("mentioned_media") or {}
+        return {
+            "text": str(found.get("caption") or ""),
+            "username": str(found.get("username") or ""),
+            "timestamp": found.get("timestamp") or "",
+            "permalink": found.get("permalink") or "",
+        }
+
+    # ------------------------------------------------------------------
+    # Research (Business Discovery, hashtag search)
+    # ------------------------------------------------------------------
+
+    def _research_user_id(self) -> str:
+        ig_user_id = str(self.credentials.get("ig_user_id") or "")
+        if not ig_user_id:
+            raise APIError("Reconnect Instagram to use it for research.", platform=self.platform_name)
+        return ig_user_id
+
+    def business_discovery(self, access_token: str, username: str) -> dict:
+        """Public profile and recent posts of another business or creator account.
+
+        Queried *through* the connected account: Meta answers only for
+        professional accounts, and not for age-gated ones. Returns the profile
+        fields plus ``media`` (a list, newest first).
+        """
+        handle = username.strip().lstrip("@")
+        fields = (
+            f"business_discovery.username({handle}){{{INSTAGRAM_DISCOVERY_PROFILE_FIELDS},"
+            f"media.limit({INSTAGRAM_DISCOVERY_MEDIA_LIMIT}){{{INSTAGRAM_DISCOVERY_MEDIA_FIELDS}}}}}"
+        )
+        data = self._request(
+            "GET",
+            f"{BASE_URL}/{self._research_user_id()}",
+            access_token=access_token,
+            params={"fields": fields},
+        ).json()
+        profile = dict(data.get("business_discovery") or {})
+        profile["media"] = list((profile.get("media") or {}).get("data") or [])
+        return profile
+
+    def hashtag_media(self, access_token: str, hashtag: str, *, edge: str = "top_media") -> list[dict]:
+        """Public posts carrying a hashtag, the most popular or the most recent.
+
+        Needs the Instagram Public Content Access feature approved in App
+        Review. Each distinct hashtag counts against Meta's limit of 30 per
+        account in a rolling seven days, whether looked up by name or by id.
+        """
+        if edge not in INSTAGRAM_HASHTAG_EDGES:
+            raise ValueError(f"Unknown hashtag edge {edge!r}")
+        user_id = self._research_user_id()
+        found = self._request(
+            "GET",
+            f"{BASE_URL}/ig_hashtag_search",
+            access_token=access_token,
+            params={"user_id": user_id, "q": hashtag.strip().lstrip("#")},
+        ).json()
+        hashtag_id = next((str(item.get("id")) for item in found.get("data") or [] if item.get("id")), "")
+        if not hashtag_id:
+            return []
+        data = self._request(
+            "GET",
+            f"{BASE_URL}/{hashtag_id}/{edge}",
+            access_token=access_token,
+            params={
+                "user_id": user_id,
+                "fields": INSTAGRAM_HASHTAG_MEDIA_FIELDS,
+                "limit": INSTAGRAM_HASHTAG_MEDIA_LIMIT,
+            },
+        ).json()
+        return list(data.get("data") or [])
+
     def fetch_user_profile(self, access_token: str, user_id: str) -> dict:
         """Profile fields for one person, or an empty dict. See ``SocialProvider``.
 
@@ -746,8 +913,14 @@ class InstagramProvider(SocialProvider):
         """Reply to a comment, or comment on a media item.
 
         Which object and edge to post to depends on what the inbox item is —
-        see ``resolve_comment_reply_target``.
+        see ``resolve_comment_reply_target``. A mention is on media another
+        account owns, where those edges are refused; Meta takes the reply on
+        the account's own ``/mentions`` edge instead, naming the media and, for
+        a comment mention, the comment.
         """
+        extra = extra or {}
+        if extra.get("mention"):
+            return self._reply_to_mention(access_token, comment_id, text, extra)
         target, edge = resolve_comment_reply_target(comment_id, extra)
         resp = self._request(
             "POST",
@@ -756,6 +929,23 @@ class InstagramProvider(SocialProvider):
             json={"message": text},
         )
         data = resp.json()
+        return ReplyResult(platform_message_id=data.get("id", ""), extra=data)
+
+    def _reply_to_mention(self, access_token: str, mention_id: str, text: str, extra: dict) -> ReplyResult:
+        ig_user_id = str(self.credentials.get("ig_user_id") or "")
+        media_id = str(extra.get("media_id") or extra.get("post_id") or "")
+        if not ig_user_id or not media_id:
+            raise MessagingError("Reconnect Instagram to reply to this mention.", platform=self.platform_name)
+        payload = {"media_id": media_id, "message": text}
+        comment_id = str(extra.get("comment_id") or "")
+        if comment_id:
+            payload["comment_id"] = comment_id
+        data = self._request(
+            "POST",
+            f"{BASE_URL}/{ig_user_id}/mentions",
+            access_token=access_token,
+            json=payload,
+        ).json()
         return ReplyResult(platform_message_id=data.get("id", ""), extra=data)
 
     def inspect_token(self, access_token: str) -> dict | None:

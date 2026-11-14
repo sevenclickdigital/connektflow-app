@@ -1375,7 +1375,7 @@ register_tool(
             "List inbound inbox items (comments, mentions, DMs, reviews) for the accounts this "
             "API key is allowed to act on, newest first. Each item carries its reply thread "
             "(including any draft replies). Optional `status` (unread/open/resolved/archived), "
-            "`message_type` (comment/mention/dm/review) and `social_account_id` filters, plus "
+            "`message_type` (comment/mention/tag/dm/review) and `social_account_id` filters, plus "
             "`limit` (default 50, max 100). When more remain, `next_cursor` is non-null — pass it "
             "back as `cursor`. Requires the use_inbox permission."
         ),

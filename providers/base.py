@@ -281,6 +281,10 @@ class SocialProvider(HttpProvider):
     # never be 0: the chunking loop would not advance.
     post_metrics_batch_size: int = 1
 
+    # Above this many images a single post is refused and the set goes out as
+    # an album through ``publish_album`` instead. None: no album flow.
+    album_threshold: int | None = None
+
     @property
     def rate_limits(self) -> RateLimitConfig:
         """Platform rate limit configuration."""
@@ -347,6 +351,18 @@ class SocialProvider(HttpProvider):
     def get_post_metrics(self, access_token: str, post_id: str) -> PostMetrics:
         """Fetch engagement metrics for a specific post."""
         raise NotImplementedError(f"{self.platform_name} does not support post metrics")
+
+    def publish_album(
+        self, access_token: str, content: PublishContent, *, progress: dict, save_progress
+    ) -> PublishResult:
+        """Publish more than ``album_threshold`` images as an album.
+
+        Resumable: ``progress`` is what an earlier attempt passed to
+        ``save_progress`` (empty on the first), and ``save_progress(dict)`` is
+        called after every step that created something on the platform, so a
+        retry continues the same album instead of starting another.
+        """
+        raise NotImplementedError(f"{self.platform_name} does not publish albums")
 
     def get_post_metrics_batch(self, access_token: str, post_ids: list[str]) -> dict[str, PostMetrics]:
         """Metrics for several posts in as few API calls as the platform allows.

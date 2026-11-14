@@ -715,3 +715,15 @@ def run_inbox_sync_cycle():
     ``run_inbox_sync`` management command uses — so the two never diverge.
     """
     InboxSyncEngine().run_cycle()
+
+
+@background(schedule=0)
+def fill_instagram_mention(message_id: str):
+    """Replace an Instagram mention's placeholder with what it says.
+
+    Enqueued by the ``mentions`` webhook, whose payload names the mention only
+    by id. See ``apps.inbox.services.fill_instagram_mention``.
+    """
+    from .services import fill_instagram_mention as fill
+
+    fill(message_id)

@@ -382,7 +382,7 @@ def _upsert_instagram_mention(account, value: dict):
     if not mention_id:
         return
 
-    _create_if_new(
+    message = _create_if_new(
         account=account,
         platform_message_id=str(mention_id),
         message_type=InboxMessage.MessageType.MENTION,
@@ -391,6 +391,13 @@ def _upsert_instagram_mention(account, value: dict):
         body=INSTAGRAM_MENTION_PLACEHOLDER,
         extra=_instagram_comment_extra(value, reply_edge="comment" if comment_id else "media"),
     )
+    # The Graph lookup for the text is a network round trip, which a webhook
+    # Meta expects answered at once must not wait on.
+    if message and account.platform == "instagram":
+        from .tasks import fill_instagram_mention
+
+        message_id = str(message.id)
+        transaction.on_commit(lambda: fill_instagram_mention(message_id))
 
 
 @transaction.atomic
@@ -504,7 +511,10 @@ def _create_if_new(
     extra: dict,
     received_at=None,
 ):
-    """Create InboxMessage if it doesn't already exist (deduplication)."""
+    """Create InboxMessage if it doesn't already exist (deduplication).
+
+    Returns the new message, or ``None`` when it was already stored.
+    """
     from django.utils import timezone
 
     from .tasks import _related_post_key
@@ -548,6 +558,8 @@ def _create_if_new(
         # exception here would unwind this handler and lose the customer's
         # message, which is far worse than not automating a reply to it.
         on_inbox_message_created(obj)
+        return obj
+    return None
 
 
 # --- WhatsApp (Cloud API) ---

@@ -1,63 +1,24 @@
 {% load i18n %}
 {% comment %}
-Board mode of the Publish page: every platform post in a column by workflow
-stage. Dropping a card asks calendar:status_board_move, which runs the same
-service as the rest of the app (submit, approve, back to draft, schedule) and
-answers with a toast plus statusBoardChanged, which re-fetches this shell.
-Expects: status_board (apps.calendar.status_board.board_columns), workspace.
+Board mode of the Publish page: the toolbar card (_period_toolbar.html), one pill per
+platform, then every platform post of the month shown in a column by workflow stage
+(_board_columns.html). Dropping a card asks calendar:status_board_move, which runs the
+same service as the rest of the app (submit, approve, back to draft, schedule) and
+answers with a toast plus statusBoardChanged, which reloads the columns.
+Expects: status_board (apps.calendar.status_board.board_columns), workspace, plus the toolbar's context.
 {% endcomment %}
-<div class="flex-1 flex flex-col min-h-0"
+<div class="flex-1 flex flex-col min-h-0 gap-4"
      x-data="statusBoard()"
      data-move-url="{% url 'calendar:status_board_move' workspace_id=workspace.id platform_post_id='00000000-0000-0000-0000-000000000000' %}"
-     data-move-failed="{% translate 'The post could not be moved. Try again.' %}"
-     hx-get="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=board&_switch_mode=1"
-     hx-trigger="statusBoardChanged from:body"
-     hx-target="#publish-body"
-     hx-swap="innerHTML">
-    <div class="sb-board">
-        {% for entry in status_board %}
-        {% with col=entry.column %}
-        <section class="sb-column sb-tone-{{ col.tone }}{% if not col.accepts_drop %} is-locked{% endif %}" data-column="{{ col.key }}"
-                 @dragover="over($event, {{ col.accepts_drop|yesno:'true,false' }})" @dragleave="leave($event)" @drop="drop($event, '{{ col.key }}')">
-            <header class="sb-column-head">
-                <span class="sb-dot"></span>
-                <h2>{{ col.label }}</h2>
-                <span class="sb-count">{{ entry.total }}</span>
-            </header>
-            <div class="sb-cards">
-                {% for pp in entry.cards %}
-                <a href="{% url 'composer:compose_edit' workspace_id=workspace.id post_id=pp.post_id %}"
-                   class="sb-card" draggable="true" data-pp="{{ pp.id }}"
-                   @dragstart="start($event, '{{ pp.id }}')" @dragend="end($event)">
-                    <div class="flex items-center gap-1.5 min-w-0">
-                        <span class="chip-platform pi-{{ pp.social_account.platform }}">
-                            {% include "social_accounts/partials/_platform_icon.html" with platform=pp.social_account.platform size="2.5" %}
-                        </span>
-                        <span class="text-[11.5px] font-semibold text-neutral-800 truncate">{{ pp.social_account.account_name }}</span>
-                        {% if pp.format_label %}<span class="flex-shrink-0 text-neutral-500" title="{{ pp.format_label }}">{% include "partials/_format_icon.html" with format=pp.format %}</span>{% endif %}
-                    </div>
-                    <p class="sb-caption">{{ pp.post.caption_snippet|default:pp.post.title|default:_("No caption") }}</p>
-                    <div class="flex items-center justify-between gap-2 text-[10.5px]">
-                        <span class="sb-status">{{ pp.get_status_display }}</span>
-                        {% if pp.status == "published" and pp.published_at %}
-                        <span class="text-neutral-500 tabular-nums">{{ pp.published_at|date:"d/m H:i" }}</span>
-                        {% elif pp.effective_at %}
-                        <span class="text-neutral-500 tabular-nums">{{ pp.effective_at|date:"d/m H:i" }}</span>
-                        {% endif %}
-                    </div>
-                    {% if pp.status == "failed" and pp.publish_error %}
-                    <p class="text-[10.5px] text-red-600 line-clamp-2">{{ pp.publish_error }}</p>
-                    {% endif %}
-                </a>
-                {% empty %}
-                <p class="sb-empty">{% translate "Nothing here" %}</p>
-                {% endfor %}
-                {% if entry.total > entry.cards|length %}
-                <p class="sb-empty">{% blocktranslate with shown=entry.cards|length total=entry.total %}Showing {{ shown }} of {{ total }}{% endblocktranslate %}</p>
-                {% endif %}
-            </div>
-        </section>
-        {% endwith %}
-        {% endfor %}
+     data-move-failed="{% translate 'The post could not be moved. Try again.' %}">
+
+    {% include "calendar/partials/_period_toolbar.html" with nav_query="mode=board" tag_model="activeTag" onchange="reloadBoard()" %}
+
+    {% include "calendar/partials/_platform_pills.html" with platform_model="platform" %}
+
+    <div id="board-content" class="flex-1 min-h-0 flex flex-col">
+        {% include "calendar/partials/_board_columns.html" %}
     </div>
+
+    {% include "calendar/partials/_delete_post_modal.html" %}
 </div>

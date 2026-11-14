@@ -23,9 +23,10 @@ from apps.members.decorators import require_permission
 from apps.tasks import creative_formats
 from providers.exceptions import OAuthError, ProviderError
 
+from . import instagram as ig_research
 from . import services
 from .forms import OfferFilterForm, ShopeeConnectForm
-from .models import OpportunityConnection
+from .models import OpportunityConnection, WatchedProfile
 from .sources import source_cards
 
 logger = logging.getLogger(__name__)
@@ -42,8 +43,84 @@ def index(request, workspace_id):
     return render(
         request,
         "radar/index.html",
-        {"workspace_id": workspace_id, "cards": source_cards(workspace_id)},
+        {
+            "workspace_id": workspace_id,
+            "cards": source_cards(workspace_id),
+            "has_instagram": bool(ig_research.research_accounts(workspace_id)),
+        },
     )
+
+
+@login_required
+@require_permission("create_posts")
+@ratelimit(key="user", rate="30/m", method="GET", block=True)
+@require_GET
+def instagram(request, workspace_id):
+    """Watched profiles and hashtag search, read through one of the workspace's Instagram accounts.
+
+    ``tab`` picks the panel, ``account`` the account to read through,
+    ``u`` the watched profile to open and ``tag``/``order`` the hashtag search.
+    HTMX requests get only the results block.
+    """
+    accounts = ig_research.research_accounts(request.workspace.id)
+    account = next((a for a in accounts if str(a.id) == request.GET.get("account")), accounts[0] if accounts else None)
+    tab = "hashtags" if request.GET.get("tab") == "hashtags" else "profiles"
+    context = {
+        "workspace_id": workspace_id,
+        "accounts": accounts,
+        "account": account,
+        "tab": tab,
+        "watched": WatchedProfile.objects.for_workspace(request.workspace.id),
+        "error": "",
+    }
+    if account and tab == "profiles" and request.GET.get("u"):
+        context["handle"] = request.GET["u"].strip().lstrip("@")
+        try:
+            context["report"] = ig_research.profile_report(account, request.GET["u"])
+        except ig_research.InvalidInputError as exc:
+            context["error"] = str(exc)
+        except ProviderError as exc:
+            logger.warning("Business Discovery refused for account %s: %s", account.id, exc)
+            context["error"] = ig_research.describe_error(exc, kind="profile")
+    elif account and tab == "hashtags" and request.GET.get("tag"):
+        context["hashtag"] = request.GET["tag"].strip().lstrip("#")
+        context["order"] = "recent" if request.GET.get("order") == "recent" else "top"
+        try:
+            context["posts"] = ig_research.hashtag_posts(account, request.GET["tag"], order=context["order"])
+        except ig_research.InvalidInputError as exc:
+            context["error"] = str(exc)
+        except ProviderError as exc:
+            logger.warning("Hashtag search refused for account %s: %s", account.id, exc)
+            context["error"] = ig_research.describe_error(exc, kind="hashtag")
+    if request.htmx:
+        return render(request, "radar/partials/_instagram_results.html", context)
+    return render(request, "radar/instagram.html", context)
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def watch_profile(request, workspace_id):
+    """Add a handle to the workspace's watched profiles and open it."""
+    try:
+        profile = ig_research.watch_profile(request.workspace, request.POST.get("username", ""), request.user)
+    except ig_research.InvalidInputError as exc:
+        messages.error(request, str(exc))
+        return redirect("radar:instagram", workspace_id=workspace_id)
+    query = {"u": profile.username}
+    if request.POST.get("account"):
+        query["account"] = request.POST["account"]
+    return redirect(f"{reverse('radar:instagram', kwargs={'workspace_id': workspace_id})}?{urlencode(query)}")
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def unwatch_profile(request, workspace_id, profile_id):
+    profile = get_object_or_404(WatchedProfile, id=profile_id, workspace_id=request.workspace.id)
+    profile.delete()
+    messages.success(request, _("@%(username)s is no longer watched.") % {"username": profile.username})
+    return redirect("radar:instagram", workspace_id=workspace_id)
 
 
 @login_required

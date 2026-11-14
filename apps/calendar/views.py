@@ -25,39 +25,17 @@ from apps.workspaces.models import Workspace
 from .holidays import get_holidays_for_range
 from .models import CustomCalendarEvent, PostingSlot, Queue, QueueEntry
 from .services import (
+    custom_events_enabled,
     day_label,
+    drafts_shown,
     drop_queue_entry_unless_scheduled,
     events_by_date,
     month_label,
+    month_options,
     special_dates_enabled,
     week_label,
     weekday_names,
 )
-
-# Common timezones for the publish page timezone dropdown
-COMMON_TIMEZONES = [
-    "US/Eastern",
-    "US/Central",
-    "US/Mountain",
-    "US/Pacific",
-    "UTC",
-    "Europe/London",
-    "Europe/Paris",
-    "Europe/Berlin",
-    "Europe/Amsterdam",
-    "Asia/Tokyo",
-    "Asia/Shanghai",
-    "Asia/Kolkata",
-    "Asia/Dubai",
-    "Australia/Sydney",
-    "Pacific/Auckland",
-    "America/Sao_Paulo",
-    "America/Toronto",
-    "America/Chicago",
-    "America/Denver",
-    "America/Los_Angeles",
-    "America/New_York",
-]
 
 # Statuses a calendar drop promotes to ``scheduled`` (implicit schedule / retry)
 # rather than merely re-timing. Because that promotion hands the row to the
@@ -187,8 +165,10 @@ def _get_filtered_platform_posts(workspace, request):
     Each row carries an ``effective_at`` annotation that falls back to
     ``post.scheduled_at`` when the PlatformPost has no per-platform override,
     and then to the draft's ``proposed_publish_at``, so a draft created for a
-    day (the calendar's "+") shows on that day.
+    day (the calendar's "+") shows on that day; a draft with no date at all
+    falls back to the day it was created.
     """
+    from django.db.models import Case, F, When
     from django.db.models.functions import Coalesce
 
     qs = (
@@ -198,7 +178,16 @@ def _get_filtered_platform_posts(workspace, request):
         # would fire its own media_attachments + media_asset queries (N+1) on
         # every month/week/day render.
         .prefetch_related("post__media_attachments__media_asset")
-        .annotate(effective_at=Coalesce("scheduled_at", "post__scheduled_at", "post__proposed_publish_at"))
+        .annotate(
+            effective_at=Coalesce(
+                "scheduled_at",
+                "post__scheduled_at",
+                "post__proposed_publish_at",
+                # A draft with no date at all sits on the day it was created, so
+                # no draft is left off the calendar.
+                Case(When(status=PlatformPost.Status.DRAFT, then=F("post__created_at"))),
+            )
+        )
     )
 
     # Status filter — editorial status now lives on the PlatformPost itself,
@@ -206,6 +195,12 @@ def _get_filtered_platform_posts(workspace, request):
     statuses = request.GET.getlist("status")
     if statuses:
         qs = qs.filter(status__in=statuses)
+
+    # The toolbar's "Drafts" button hides drafts from the calendar (read once per request).
+    if not hasattr(request, "_calendar_shows_drafts"):
+        request._calendar_shows_drafts = drafts_shown(workspace)
+    if not request._calendar_shows_drafts:
+        qs = qs.exclude(status=PlatformPost.Status.DRAFT)
 
     # Platform filter
     platforms = request.GET.getlist("platform")
@@ -363,100 +358,129 @@ def _publish_tab_counts(workspace, request):
     tab partial, so switching a tab can refresh all four badges out-of-band and
     they never drift from the real data.
 
-    The counts carry the same channel/tag filters the tab lists do — a badge
-    reading "12" over a channel-filtered list of 3 is exactly the drift the
+    The counts carry the same month, channel and tag filters the tab lists do — a
+    badge reading "12" over a channel-filtered list of 3 is exactly the drift the
     out-of-band refresh exists to prevent.
     """
     from django.db.models import Exists, OuterRef
 
-    def _pp(**kwargs):
-        return _apply_pp_publish_filters(
-            PlatformPost.objects.filter(post__workspace_id=workspace.id, **kwargs), request
-        ).count()
+    def _pp(tab):
+        return _list_tab_platform_posts(workspace, request, tab).count()
 
     # Approvals is a distinct-Post count (one row per post in the redesigned
     # tab). Status and channel must be satisfied by the SAME child row, so this
     # reuses the tab's own Exists subquery shape rather than chaining
     # .filter(platform_posts__...) — see the comment in `_get_tab_context`.
-    pp_match = PlatformPost.objects.filter(post_id=OuterRef("pk"), status__in=_APPROVAL_TAB_STATUSES)
-    channels = _get_channel_filters(request)
-    if channels:
-        pp_match = pp_match.filter(social_account_id__in=channels)
-    approvals = Post.objects.for_workspace(workspace.id).filter(Exists(pp_match))
+    pp_match = _filter_by_account(
+        PlatformPost.objects.filter(post_id=OuterRef("pk"), status__in=_APPROVAL_TAB_STATUSES), request
+    )
+    approvals = _approval_posts_in_month(
+        Post.objects.for_workspace(workspace.id).filter(Exists(pp_match)), request, workspace
+    )
     # Tag is a Post-level attribute (can't cross child rows) — apply it directly.
     tag = request.GET.get("tag")
     if tag:
         approvals = approvals.filter(tags__contains=[tag])
 
     return {
-        "queue_count": _pp(status="scheduled"),
-        "drafts_count": _pp(status="draft"),
+        "queue_count": _pp("queue"),
+        "drafts_count": _pp("drafts"),
         "approvals_count": approvals.distinct().count(),
-        "sent_count": _pp(status__in=["published", "failed"]),
+        "sent_count": _pp("sent"),
     }
 
 
 def _get_publish_context(workspace, request):
-    """Build shared context for the publish page (channels, tags, timezone)."""
-    # Channels that have posts in this workspace
-    channels_with_posts = (
-        SocialAccount.objects.filter(
-            platform_posts__post__workspace=workspace,
-        )
-        .distinct()
-        .order_by("platform", "account_name")
-    )
+    """Build shared context for the publish page (tags, display timezone, tab counts).
 
-    # All workspace tags from the Tag model
+    Times are shown in the workspace's timezone; there is no timezone picker. A raw
+    ``?tz=`` is still coerced here, once, because every reader (the grid builders,
+    the Today-in-view check, the ``{% timezone %}`` tag) feeds it to
+    ``zoneinfo.ZoneInfo``, which raises on an unknown zone.
+    """
     from apps.composer.models import Tag
 
     all_tags = set(Tag.objects.for_workspace(workspace.id).values_list("name", flat=True))
-
-    # Display timezone. Coerced here rather than at each consumer: this value is
-    # a raw user-supplied ``?tz=`` and every reader (the grid view builders, the
-    # Today-in-view check, the ``{% timezone %}`` tag) feeds it straight to
-    # ``zoneinfo.ZoneInfo``, which raises on an unknown zone. Coercing once at
-    # the source means no caller can turn ``?tz=garbage`` into a 500.
     ws_tz = workspace.effective_timezone or "UTC"
-    display_timezone = _coerce_timezone(request.GET.get("tz"), ws_tz)
-
-    # Build ordered timezone list (workspace default first, then common ones)
-    tz_list = [ws_tz]
-    for tz in COMMON_TIMEZONES:
-        if tz not in tz_list:
-            tz_list.append(tz)
-
-    # Pre-format options for the ui_select component: short label + workspace hint
-    tz_options = [
-        {
-            "value": tz,
-            "label": tz.split("/")[-1] + (" (workspace)" if tz == ws_tz else ""),
-        }
-        for tz in tz_list
-    ]
 
     return {
-        "channels_with_posts": channels_with_posts,
         "all_tags": sorted(all_tags),
-        "display_timezone": display_timezone,
-        "timezone_choices": tz_list,
-        "timezone_options": tz_options,
-        "workspace_timezone": ws_tz,
+        "display_timezone": _coerce_timezone(request.GET.get("tz"), ws_tz),
         **_publish_tab_counts(workspace, request),
     }
 
 
-def _apply_pp_publish_filters(qs, request):
-    """Apply channel and tag filters to a PlatformPost queryset."""
+def _filter_by_account(qs, request):
+    """Narrow a PlatformPost queryset to the ``channel`` (account id) and ``platform`` filters."""
     channels = _get_channel_filters(request)
     if channels:
         qs = qs.filter(social_account_id__in=channels)
+    platforms = request.GET.getlist("platform")
+    if platforms:
+        qs = qs.filter(social_account__platform__in=platforms)
+    return qs
+
+
+def _apply_pp_publish_filters(qs, request):
+    """Apply channel, platform and tag filters to a PlatformPost queryset."""
+    qs = _filter_by_account(qs, request)
 
     tag = request.GET.get("tag")
     if tag:
         qs = qs.filter(post__tags__contains=[tag])
 
     return qs
+
+
+def _shown_month_bounds(request, workspace):
+    """The month the list and board show (``date`` param, else today) as ``[start, end)``
+    in the display timezone."""
+    import zoneinfo
+
+    from django.utils import timezone as _tz
+
+    tz = zoneinfo.ZoneInfo(_coerce_timezone(request.GET.get("tz"), workspace.effective_timezone))
+    first = _parse_date(request.GET.get("date"), default=_tz.now().astimezone(tz).date()).replace(day=1)
+    after = (first + timedelta(days=32)).replace(day=1)
+    return datetime.combine(first, time.min, tzinfo=tz), datetime.combine(after, time.min, tzinfo=tz)
+
+
+# The date each list tab files a row under, and the statuses the tab lists.
+# Drafts fall back to the proposed day. A row with no date at all stays in every month,
+# so it can't fall out of the list.
+_LIST_TABS = {
+    "queue": (("scheduled",), ("scheduled_at", "post__scheduled_at")),
+    "drafts": (("draft",), ("scheduled_at", "post__scheduled_at", "post__proposed_publish_at")),
+    "sent": (("published", "failed"), ("published_at", "scheduled_at", "post__scheduled_at")),
+}
+
+
+def _list_tab_platform_posts(workspace, request, tab):
+    """PlatformPosts of a queue/drafts/sent tab in the month shown, under the list's filters,
+    each annotated with ``effective_at``."""
+    from django.db.models import Q
+    from django.db.models.functions import Coalesce
+
+    statuses, date_fields = _LIST_TABS[tab]
+    start, end = _shown_month_bounds(request, workspace)
+    in_month = Q(effective_at__gte=start, effective_at__lt=end) | Q(effective_at__isnull=True)
+    qs = (
+        PlatformPost.objects.filter(post__workspace_id=workspace.id, status__in=statuses)
+        .annotate(effective_at=Coalesce(*date_fields))
+        .filter(in_month)
+    )
+    return _apply_pp_publish_filters(qs, request)
+
+
+def _approval_posts_in_month(posts, request, workspace):
+    """Posts of the approvals tab dated in the month shown, plus the undated ones."""
+    from django.db.models import Q
+    from django.db.models.functions import Coalesce
+
+    start, end = _shown_month_bounds(request, workspace)
+    return posts.annotate(period_at=Coalesce("scheduled_at", "proposed_publish_at")).filter(
+        Q(period_at__gte=start, period_at__lt=end) | Q(period_at__isnull=True)
+    )
 
 
 _TAB_TEMPLATES = {
@@ -517,13 +541,28 @@ def _annotate_automation(platform_posts) -> None:
         pp.automation = flows.get(pp.id)
 
 
+def _group_by_day(platform_posts, display_tz: str) -> list[dict]:
+    """Consecutive rows that share a day (``effective_at`` in ``display_tz``) as
+    ``[{"day": date | None, "rows": [...]}]``, keeping the queryset's order."""
+    import zoneinfo
+
+    tz = zoneinfo.ZoneInfo(display_tz)
+    groups: list[dict] = []
+    for pp in platform_posts:
+        day = pp.effective_at.astimezone(tz).date() if pp.effective_at else None
+        if not groups or groups[-1]["day"] != day:
+            groups.append({"day": day, "rows": []})
+        groups[-1]["rows"].append(pp)
+    return groups
+
+
 def _get_tab_context(request, workspace, tab: str) -> dict:
     """Build the template context for one publish tab partial.
 
     Used both by `calendar_view` (initial server render) and the four
     `publish_tab_*` HTMX endpoints so the rendering paths stay in sync.
     """
-    from django.db.models.functions import Coalesce
+    from django.db.models import F
 
     if tab not in _TAB_TEMPLATES:
         tab = "queue"
@@ -533,52 +572,52 @@ def _get_tab_context(request, workspace, tab: str) -> dict:
     # (ZoneInfoNotFoundError / ValueError) on an unknown or empty value — that
     # would 500 the whole tab. Coerce to the first valid candidate.
     display_tz = _coerce_timezone(request.GET.get("tz"), workspace.effective_timezone)
-    has_connected_accounts = SocialAccount.objects.publishable().filter(
-        workspace=workspace,
-        connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-    ).exists()
+    has_connected_accounts = (
+        SocialAccount.objects.publishable()
+        .filter(
+            workspace=workspace,
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+        .exists()
+    )
+    membership = getattr(request, "workspace_membership", None)
     base_ctx = {
         "workspace": workspace,
         "display_timezone": display_tz,
         "has_connected_accounts": has_connected_accounts,
+        "can_create_posts": bool(membership and membership.effective_permissions.get("create_posts")),
     }
 
     platform_posts: QuerySet[PlatformPost]
     if tab == "queue":
         platform_posts = (
-            PlatformPost.objects.filter(post__workspace_id=workspace.id, status="scheduled")
+            _list_tab_platform_posts(workspace, request, tab)
             .select_related("post__author", "social_account")
             .prefetch_related("post__media_attachments__media_asset")
-            .annotate(effective_at=Coalesce("scheduled_at", "post__scheduled_at"))
             .order_by("effective_at", "-post__created_at")
         )
-        platform_posts = _apply_pp_publish_filters(platform_posts, request)
-        return {**base_ctx, "platform_posts": platform_posts[:200]}
+        rows = list(platform_posts[:200])
+        return {**base_ctx, "platform_posts": rows, "day_groups": _group_by_day(rows, display_tz)}
 
     if tab == "drafts":
         platform_posts = (
-            PlatformPost.objects.filter(post__workspace_id=workspace.id, status="draft")
+            _list_tab_platform_posts(workspace, request, tab)
             .select_related("post__author", "social_account")
             .prefetch_related("post__media_attachments__media_asset")
             .order_by("-post__updated_at")
         )
-        platform_posts = _apply_pp_publish_filters(platform_posts, request)
         return {**base_ctx, "platform_posts": platform_posts[:200]}
 
     if tab == "sent":
         platform_posts = (
-            PlatformPost.objects.filter(
-                post__workspace_id=workspace.id,
-                status__in=["published", "failed"],
-            )
+            _list_tab_platform_posts(workspace, request, tab)
             .select_related("post__author", "social_account")
             .prefetch_related("post__media_attachments__media_asset")
-            .order_by("-post__scheduled_at", "-post__created_at")
+            .order_by(F("effective_at").desc(nulls_last=True), "-post__created_at")
         )
-        platform_posts = _apply_pp_publish_filters(platform_posts, request)
         rows = list(platform_posts[:200])
         _annotate_automation(rows)
-        return {**base_ctx, "platform_posts": rows}
+        return {**base_ctx, "platform_posts": rows, "day_groups": _group_by_day(rows, display_tz)}
 
     # approvals — one row per Post (bundled), matching the approval-action model
     # and the approved design. on_hold is included so client-held posts surface
@@ -604,13 +643,10 @@ def _get_tab_context(request, workspace, tab: str) -> dict:
         pp_match = pp_match.filter(status=status_filter)
     else:
         pp_match = pp_match.filter(status__in=approval_statuses)
-    channels = _get_channel_filters(request)
-    if channels:
-        pp_match = pp_match.filter(social_account_id__in=channels)
+    pp_match = _filter_by_account(pp_match, request)
 
     posts_qs = (
-        Post.objects.for_workspace(workspace.id)
-        .filter(Exists(pp_match))
+        _approval_posts_in_month(Post.objects.for_workspace(workspace.id).filter(Exists(pp_match)), request, workspace)
         .select_related("author")
         .prefetch_related("platform_posts__social_account", "media_attachments__media_asset", "versions")
         .order_by("scheduled_at", "-created_at")
@@ -668,6 +704,8 @@ def _get_tab_context(request, workspace, tab: str) -> dict:
     # Preserve the active channel/tag/timezone filters across status pills and the
     # post-action self-refresh (otherwise acting on a post drops the filter).
     _filter_params = [("channel", c) for c in _get_channel_filters(request)]
+    _filter_params += [("platform", p) for p in request.GET.getlist("platform")]
+    _filter_params += [("date", request.GET["date"])] if request.GET.get("date") else []
     _filter_params += [(k, request.GET[k]) for k in ("tag", "tz") if request.GET.get(k)]
     filter_qs = urlencode(_filter_params)
 
@@ -691,10 +729,14 @@ def _get_tab_context(request, workspace, tab: str) -> dict:
 def calendar_view(request, workspace_id):
     """Main publish page - renders calendar or list mode."""
     workspace = _get_workspace(request, workspace_id)
-    has_connected_accounts = SocialAccount.objects.publishable().filter(
-        workspace=workspace,
-        connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-    ).exists()
+    has_connected_accounts = (
+        SocialAccount.objects.publishable()
+        .filter(
+            workspace=workspace,
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+        .exists()
+    )
     default_mode = "calendar" if has_connected_accounts else "list"
     mode = request.GET.get("mode", default_mode)
     active_tab = request.GET.get("tab", "queue")
@@ -703,7 +745,8 @@ def calendar_view(request, workspace_id):
 
     # Connected accounts for calendar filter UI
     social_accounts = (
-        SocialAccount.objects.for_workspace(workspace.id).publishable()
+        SocialAccount.objects.for_workspace(workspace.id)
+        .publishable()
         .filter(
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,
         )
@@ -735,30 +778,11 @@ def calendar_view(request, workspace_id):
     }
 
     show_holidays = special_dates_enabled(workspace)
+    show_events = custom_events_enabled(workspace)
+    show_drafts = drafts_shown(workspace)
 
     # Publish page context (channels, tags, timezone dropdowns)
     publish_ctx = _get_publish_context(workspace, request)
-
-    # Whether "today" already falls inside the period the calendar is showing.
-    # Lets the toolbar render the Today button as a no-op instead of firing an
-    # unnecessary navigation/reload when the user is already on the current
-    # month/week/day. "Today" must mean the same day the grids highlight, so it
-    # is read in the active display timezone rather than the server's — with a
-    # server on UTC and the calendar in Asia/Tokyo the two disagree for nine
-    # hours a day.
-    import zoneinfo
-
-    from django.utils import timezone as _tz
-
-    display_tz = zoneinfo.ZoneInfo(publish_ctx["display_timezone"])
-    today = _tz.now().astimezone(display_tz).date()
-    if view_type == "week":
-        week_start = target_date - timedelta(days=target_date.weekday())
-        is_today_in_view = week_start <= today <= week_start + timedelta(days=6)
-    elif view_type == "day":
-        is_today_in_view = target_date == today
-    else:  # month (and any fallback)
-        is_today_in_view = (target_date.year, target_date.month) == (today.year, today.month)
 
     context = {
         "workspace": workspace,
@@ -772,11 +796,13 @@ def calendar_view(request, workspace_id):
         "active_filters": active_filters,
         "status_choices": Post.Status.choices,
         "show_holidays": show_holidays,
+        "show_events": show_events,
+        "show_drafts": show_drafts,
         "event_recurrence_choices": CustomCalendarEvent.Recurrence.choices,
         "can_create_posts": bool(
             request.workspace_membership and request.workspace_membership.effective_permissions.get("create_posts")
         ),
-        "is_today_in_view": is_today_in_view,
+        **_month_period(target_date),
         **publish_ctx,
     }
 
@@ -787,15 +813,26 @@ def calendar_view(request, workspace_id):
         context.update(_get_tab_context(request, workspace, active_tab))
         context["initial_tab_template"] = _TAB_TEMPLATES.get(active_tab, _TAB_TEMPLATES["queue"])
         context["is_htmx"] = False
+        _list_side_panel_data(request, workspace, context)
 
     # HTMX partial: switching between list and calendar mode
     # Only intercept when the toggle buttons explicitly request a mode switch
+    is_htmx = getattr(request, "htmx", False)
     if mode == "board":
         from . import status_board
 
-        context["status_board"] = status_board.board_columns(workspace)
+        start, end = _shown_month_bounds(request, workspace)
+        context["status_board"] = status_board.board_columns(
+            workspace,
+            start=start,
+            end=end,
+            platforms=request.GET.getlist("platform"),
+            tag=request.GET.get("tag", ""),
+        )
+        # Filter changes reload only the columns; the toolbar and pills stay put.
+        if is_htmx and request.GET.get("_columns"):
+            return render(request, "calendar/partials/_board_columns.html", context)
 
-    is_htmx = getattr(request, "htmx", False)
     if is_htmx and request.GET.get("_switch_mode"):
         if mode == "board":
             return render(request, "calendar/partials/publish_board_shell.html", context)
@@ -816,6 +853,18 @@ def calendar_view(request, workspace_id):
 
     # Full page in list mode
     return render(request, "calendar/calendar.html", context)
+
+
+def _month_period(target_date):
+    """Toolbar context for the month of ``target_date``: label, previous/next month and
+    the month picker. The week and day views replace the label and the arrows' dates."""
+    first = target_date.replace(day=1)
+    return {
+        "period_label": month_label(first),
+        "prev_date": (first - timedelta(days=1)).replace(day=1).isoformat(),
+        "next_date": (first + timedelta(days=32)).replace(day=1).isoformat(),
+        "month_options": month_options(first.year, first.month),
+    }
 
 
 def _populate_calendar_context(request, workspace, view_type, target_date, context):
@@ -847,8 +896,9 @@ def _render_calendar_partial(request, workspace, view_type, target_date, context
     return _month_view(request, workspace, target_date, context)
 
 
-# Chips a month-view day shows before collapsing the rest into "+N more".
-MONTH_DAY_CHIPS = 4
+# Most chips a month-view day renders. The grid then hides the ones that don't fit
+# the cell (fitDayCells in calendar.html) behind "+N more", which opens the day pop-up.
+MONTH_DAY_CHIPS = 8
 
 
 def _month_view_data(request, workspace, target_date, context):
@@ -874,19 +924,6 @@ def _month_view_data(request, workspace, target_date, context):
         .order_by("effective_at")
     )
 
-    # Drafts with no date at all — neither scheduled nor proposed — have no day
-    # to sit on, so the month view lists them above the grid.
-    drafts = (
-        _get_filtered_posts(workspace, request)
-        .filter(
-            platform_posts__status="draft",
-            scheduled_at__isnull=True,
-            proposed_publish_at__isnull=True,
-        )
-        .distinct()
-        .order_by("-updated_at")[:10]
-    )
-
     # Group PlatformPosts by date in the display timezone
     posts_by_date = defaultdict(list)
     for pp in platform_posts:
@@ -899,7 +936,7 @@ def _month_view_data(request, workspace, target_date, context):
         holidays_by_date = get_holidays_for_range(weeks[0][0], weeks[-1][6])
 
     # Custom calendar events
-    events_by_day = events_by_date(workspace, weeks[0][0], weeks[-1][6])
+    events_by_day = events_by_date(workspace, weeks[0][0], weeks[-1][6]) if context.get("show_events") else {}
 
     # Build weeks data
     from django.utils import timezone as _tz
@@ -927,20 +964,96 @@ def _month_view_data(request, workspace, target_date, context):
             )
         calendar_weeks.append(week_data)
 
-    # Navigation
-    prev_month = (date(year, month, 1) - timedelta(days=1)).replace(day=1)
-    next_month = (date(year, month, 28) + timedelta(days=4)).replace(day=1)
-
     context.update(
         {
+            **_month_period(target_date),
             "calendar_weeks": calendar_weeks,
-            "period_label": month_label(date(year, month, 1)),
-            "prev_date": prev_month.isoformat(),
-            "next_date": next_month.isoformat(),
-            "unscheduled_drafts": drafts,
             "day_names": weekday_names(),
         }
     )
+    _side_panel_data(request, workspace, target_date, context)
+
+
+def _side_panel_data(request, workspace, target_date, context):
+    """Month summary and upcoming posts of the side panel shown beside every calendar view.
+
+    The summary covers the month of ``target_date`` in the display timezone; both
+    follow the calendar's filters.
+    """
+    import zoneinfo
+
+    from django.db.models import Count
+    from django.utils import timezone as _tz
+
+    display_tz = zoneinfo.ZoneInfo(context.get("display_timezone", "UTC"))
+    first = target_date.replace(day=1)
+    last = (first + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    per_platform = (
+        _get_filtered_platform_posts(workspace, request)
+        .prefetch_related(None)
+        .filter(
+            effective_at__gte=datetime.combine(first, time.min, tzinfo=display_tz),
+            effective_at__lt=datetime.combine(last + timedelta(days=1), time.min, tzinfo=display_tz),
+        )
+        .values("social_account__platform")
+        .annotate(count=Count("id"))
+    )
+    labels = dict(SocialAccount._meta.get_field("platform").choices or [])
+    platforms = sorted(
+        (
+            {
+                "platform": row["social_account__platform"],
+                "label": labels.get(row["social_account__platform"], row["social_account__platform"]),
+                "count": row["count"],
+            }
+            for row in per_platform
+        ),
+        key=lambda e: (-e["count"], str(e["label"])),
+    )
+
+    special_dates = 0
+    if context.get("show_holidays"):
+        special_dates = sum(len(entries) for entries in get_holidays_for_range(first, last).values())
+
+    context.update(
+        {
+            "month_summary": {
+                "total": sum(p["count"] for p in platforms),
+                "special_dates": special_dates,
+                "platforms": platforms,
+            },
+            "upcoming_posts": _upcoming_posts(workspace, request, display_tz, _tz.now().astimezone(display_tz).date()),
+        }
+    )
+
+
+# Statuses that will never go out on their own, so "upcoming" leaves them out.
+_NOT_UPCOMING_STATUSES = ("publishing", "published", "failed", "rejected")
+UPCOMING_POSTS_LIMIT = 3
+
+
+def _upcoming_posts(workspace, request, display_tz, today):
+    """The next posts due from now, under the calendar's filters, with a day label."""
+    from django.utils import timezone as _tz
+    from django.utils.formats import date_format
+
+    platform_posts = (
+        _get_filtered_platform_posts(workspace, request)
+        .filter(effective_at__gte=_tz.now())
+        .exclude(status__in=_NOT_UPCOMING_STATUSES)
+        .order_by("effective_at")[:UPCOMING_POSTS_LIMIT]
+    )
+    upcoming = []
+    for pp in platform_posts:
+        day = pp.effective_at.astimezone(display_tz).date()
+        if day == today:
+            label = _("Today")
+        elif day == today + timedelta(days=1):
+            label = _("Tomorrow")
+        else:
+            label = date_format(day, "j M")
+        upcoming.append({"pp": pp, "day_label": label})
+    return upcoming
 
 
 def _month_view(request, workspace, target_date, context):
@@ -1020,6 +1133,7 @@ def _week_view_data(request, workspace, target_date, context):
             "period_label": week_label(week_days[0], week_days[6]),
         }
     )
+    _side_panel_data(request, workspace, target_date, context)
 
 
 def _week_view(request, workspace, target_date, context):
@@ -1089,6 +1203,7 @@ def _day_view_data(request, workspace, target_date, context):
             "period_label": day_label(target_date),
         }
     )
+    _side_panel_data(request, workspace, target_date, context)
 
 
 def _day_view(request, workspace, target_date, context):
@@ -1102,10 +1217,14 @@ def _list_view(request, workspace, target_date, context):
     """Render list/table view of posts."""
     posts = _get_filtered_posts(workspace, request).order_by("-scheduled_at", "-created_at")[:200]
 
-    has_connected_accounts = SocialAccount.objects.publishable().filter(
-        workspace=workspace,
-        connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-    ).exists()
+    has_connected_accounts = (
+        SocialAccount.objects.publishable()
+        .filter(
+            workspace=workspace,
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+        .exists()
+    )
 
     context.update(
         {
@@ -1134,7 +1253,19 @@ def _render_tab(request, workspace, tab):
     # tab is switched or reloaded (they live outside the swapped #tab-content).
     ctx.update(_publish_tab_counts(workspace, request))
     ctx["render_tab_counts_oob"] = True
+    _list_side_panel_data(request, workspace, ctx)
     return render(request, _TAB_TEMPLATES[tab], ctx)
+
+
+def _list_side_panel_data(request, workspace, context):
+    """Side panel of the list mode: the month shown (``date`` param, else the current one)."""
+    import zoneinfo
+
+    from django.utils import timezone as _tz
+
+    context.setdefault("show_holidays", special_dates_enabled(workspace))
+    today = _tz.now().astimezone(zoneinfo.ZoneInfo(context["display_timezone"])).date()
+    _side_panel_data(request, workspace, _parse_date(request.GET.get("date"), default=today), context)
 
 
 @login_required
@@ -1163,6 +1294,33 @@ def publish_tab_sent(request, workspace_id):
     """HTMX partial: Sent tab content for the publish page."""
     workspace = _get_workspace(request, workspace_id)
     return _render_tab(request, workspace, "sent")
+
+
+@login_required
+def day_posts(request, workspace_id):
+    """The posts of one day (``date``), under the calendar's filters, for the month grid's day pop-up."""
+    import zoneinfo
+
+    workspace = _get_workspace(request, workspace_id)
+    display_timezone = _coerce_timezone(request.GET.get("tz"), workspace.effective_timezone)
+    tz = zoneinfo.ZoneInfo(display_timezone)
+    day = _parse_date(request.GET.get("date"))
+    start = datetime.combine(day, time.min, tzinfo=tz)
+    platform_posts = (
+        _get_filtered_platform_posts(workspace, request)
+        .filter(effective_at__gte=start, effective_at__lt=start + timedelta(days=1))
+        .order_by("effective_at")
+    )
+    return render(
+        request,
+        "calendar/partials/_day_posts.html",
+        {
+            "workspace": workspace,
+            "day": day,
+            "platform_posts": platform_posts,
+            "display_timezone": display_timezone,
+        },
+    )
 
 
 @login_required
@@ -1525,8 +1683,12 @@ def bulk_platform_action(request, workspace_id):
 def posting_slots(request, workspace_id):
     """Manage posting slots for a workspace's social accounts."""
     workspace = _get_workspace(request, workspace_id)
-    accounts = SocialAccount.objects.for_workspace(workspace.id).publishable().filter(
-        connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+    accounts = (
+        SocialAccount.objects.for_workspace(workspace.id)
+        .publishable()
+        .filter(
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
     )
 
     slots = (
@@ -1723,8 +1885,12 @@ def queue_list(request, workspace_id):
     """List all queues for this workspace."""
     workspace = _get_workspace(request, workspace_id)
     queues = Queue.objects.for_workspace(workspace.id).select_related("social_account", "category")
-    accounts = SocialAccount.objects.for_workspace(workspace.id).publishable().filter(
-        connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+    accounts = (
+        SocialAccount.objects.for_workspace(workspace.id)
+        .publishable()
+        .filter(
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
     )
     categories = ContentCategory.objects.for_workspace(workspace.id)
 
@@ -1883,29 +2049,36 @@ def queue_entry_reslot(request, workspace_id, queue_id, entry_id):
 # ---------------------------------------------------------------------------
 
 
+def _event_form_error(request, message):
+    """A refused event form: a toast for the modal (it stays open), else a 400."""
+    if request.htmx:
+        return toast_response(tone="error", title=message)
+    return JsonResponse({"error": message}, status=400)
+
+
 @login_required
 @require_permission("create_posts")
 @require_POST
 def event_create(request, workspace_id):
-    """Create a custom calendar event via HTMX."""
+    """Create a campaign (a CustomCalendarEvent) from the calendar's "New campaign" modal."""
     workspace = _get_workspace(request, workspace_id)
     title = request.POST.get("title", "").strip()
     start_date_str = request.POST.get("start_date", "")
     end_date_str = request.POST.get("end_date", "")
-    color = request.POST.get("color", "#3B82F6")
+    color = request.POST.get("color", "#7c3aed")
     description = request.POST.get("description", "").strip()
 
     if not title or not start_date_str or not end_date_str:
-        return JsonResponse({"error": "Title, start date, and end date required."}, status=400)
+        return _event_form_error(request, _("Fill in the name and the dates."))
 
     if not is_valid_hex_color(color):
-        return JsonResponse({"error": "Color must be a 6-digit hex value like #3B82F6."}, status=400)
+        return _event_form_error(request, _("Choose a valid colour."))
 
     try:
         start = date.fromisoformat(start_date_str)
         end = date.fromisoformat(end_date_str)
     except (ValueError, TypeError):
-        return JsonResponse({"error": "Invalid date format."}, status=400)
+        return _event_form_error(request, _("Enter valid dates."))
 
     if end < start:
         end = start
@@ -1926,7 +2099,12 @@ def event_create(request, workspace_id):
     )
 
     if request.htmx:
-        return HttpResponse(status=204, headers={"HX-Trigger": "calendarRefresh"})
+        # event-saved closes the modal; calendarRefresh redraws the grid with the new date.
+        return toast_response(
+            tone="success",
+            title=_("Campaign added to the calendar."),
+            events={"calendarRefresh": True, "event-saved": True},
+        )
     return JsonResponse({"created": True})
 
 
@@ -1938,11 +2116,14 @@ def event_edit(request, workspace_id, event_id):
     workspace = _get_workspace(request, workspace_id)
     event = get_object_or_404(CustomCalendarEvent, id=event_id, workspace=workspace)
 
-    event.title = request.POST.get("title", event.title).strip()
+    title = request.POST.get("title", event.title).strip()
+    if not title:
+        return _event_form_error(request, _("Fill in the name and the dates."))
+    event.title = title
     event.description = request.POST.get("description", event.description).strip()
     new_color = request.POST.get("color", event.color)
     if not is_valid_hex_color(new_color):
-        return JsonResponse({"error": "Color must be a 6-digit hex value like #3B82F6."}, status=400)
+        return _event_form_error(request, _("Choose a valid colour."))
     event.color = new_color
 
     import contextlib
@@ -1955,13 +2136,17 @@ def event_edit(request, workspace_id, event_id):
     if end_str:
         with contextlib.suppress(ValueError, TypeError):
             event.end_date = date.fromisoformat(end_str)
+    if event.end_date < event.start_date:
+        event.end_date = event.start_date
     if request.POST.get("recurrence") in CustomCalendarEvent.Recurrence.values:
         event.recurrence = request.POST["recurrence"]
 
     event.save()
 
     if request.htmx:
-        return HttpResponse(status=204, headers={"HX-Trigger": "calendarRefresh"})
+        return toast_response(
+            tone="success", title=_("Campaign updated."), events={"calendarRefresh": True, "event-saved": True}
+        )
     return JsonResponse({"updated": True})
 
 
@@ -1975,8 +2160,18 @@ def event_delete(request, workspace_id, event_id):
     event.delete()
 
     if request.htmx:
-        return HttpResponse(status=204, headers={"HX-Trigger": "calendarRefresh"})
+        return toast_response(
+            tone="success", title=_("Campaign deleted."), events={"calendarRefresh": True, "event-saved": True}
+        )
     return JsonResponse({"deleted": True})
+
+
+def _toggle_workspace_setting(workspace, key, current: bool):
+    """Flip a calendar on/off workspace setting and reload the page that asked."""
+    from apps.settings_manager.models import WorkspaceSetting
+
+    WorkspaceSetting.objects.update_or_create(workspace=workspace, key=key, defaults={"value": not current})
+    return HttpResponse(status=204, headers={"HX-Refresh": "true"})
 
 
 @login_required
@@ -1984,15 +2179,32 @@ def event_delete(request, workspace_id, event_id):
 @require_POST
 def special_dates_toggle(request, workspace_id):
     """Show or hide the holidays and commercial dates for the whole workspace."""
-    from apps.settings_manager.models import WorkspaceSetting
-
     from .services import SPECIAL_DATES_SETTING
 
     workspace = _get_workspace(request, workspace_id)
-    WorkspaceSetting.objects.update_or_create(
-        workspace=workspace, key=SPECIAL_DATES_SETTING, defaults={"value": not special_dates_enabled(workspace)}
-    )
-    return HttpResponse(status=204, headers={"HX-Refresh": "true"})
+    return _toggle_workspace_setting(workspace, SPECIAL_DATES_SETTING, special_dates_enabled(workspace))
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def drafts_toggle(request, workspace_id):
+    """Show or hide draft posts on the calendar for the whole workspace."""
+    from .services import DRAFTS_SETTING
+
+    workspace = _get_workspace(request, workspace_id)
+    return _toggle_workspace_setting(workspace, DRAFTS_SETTING, drafts_shown(workspace))
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def custom_events_toggle(request, workspace_id):
+    """Show or hide the workspace's own calendar events for the whole workspace."""
+    from .services import CUSTOM_EVENTS_SETTING
+
+    workspace = _get_workspace(request, workspace_id)
+    return _toggle_workspace_setting(workspace, CUSTOM_EVENTS_SETTING, custom_events_enabled(workspace))
 
 
 @login_required

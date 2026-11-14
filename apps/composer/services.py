@@ -168,7 +168,9 @@ def create_post(
                 return None
 
         resolved = [(mid, _to_uuid(mid)) for mid in media_ids]
-        found = list(MediaAsset.objects.filter(id__in=[u for _key, u in resolved if u is not None], workspace=workspace))
+        found = list(
+            MediaAsset.objects.filter(id__in=[u for _key, u in resolved if u is not None], workspace=workspace)
+        )
         asset_map = {a.id: a for a in found}
         missing = [mid for mid, u in resolved if u is None or u not in asset_map]
         if missing:
@@ -313,8 +315,10 @@ def create_draft_post(*, workspace, author, caption: str, title: str = "", media
     from apps.composer.models import PlatformPost, Post, PostMedia
     from apps.social_accounts.models import SocialAccount
 
-    accounts = SocialAccount.objects.for_workspace(workspace.id).publishable().filter(
-        connection_status=SocialAccount.ConnectionStatus.CONNECTED
+    accounts = (
+        SocialAccount.objects.for_workspace(workspace.id)
+        .publishable()
+        .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
     )
     with transaction.atomic():
         post = Post.objects.create(workspace=workspace, author=author, title=title[:255], caption=caption)

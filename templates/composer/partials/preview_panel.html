@@ -9,8 +9,8 @@ Context: previews (one per account: {account, slides}; each slide has format, la
 One tab per account, one card shown at a time; the arrows in the panel header
 (compose.html) step through the tabs with the preview-prev / preview-next
 window events. With several formats chosen (Feed, Stories, Reels…) the card
-is a carousel with a slide per format, picked from the format tabs above it,
-the dots or the thumbnail strip below it. The open tab and slide are kept on
+is a carousel with a slide per format, picked from the format tabs above it
+(the dots below it show which one is on). The open tab and slide are kept on
 window.previewTab / window.previewSlide, since every keystroke re-renders
 this panel.
 {% endcomment %}
@@ -94,32 +94,6 @@ this panel.
         {% endfor %}
     </div>
 
-    <div class="flex items-center gap-2">
-        <button type="button" class="preview-arrow flex-shrink-0 disabled:opacity-40 disabled:cursor-default"
-                :disabled="slide === 0" @click="slide = Math.max(0, slide - 1)" aria-label="{% translate 'Previous format' %}">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-        </button>
-        <div class="flex-1 min-w-0 flex gap-2 overflow-x-auto [&>:first-child]:ml-auto [&>:last-child]:mr-auto">
-            {% for s in p.slides %}
-            <button type="button" class="preview-thumb" :class="slide === {{ forloop.counter0 }} && 'is-on'" @click="slide = {{ forloop.counter0 }}">
-                <span class="preview-thumb-frame">
-                    {% if s.thumb %}
-                    <span class="block h-full overflow-hidden rounded-md bg-neutral-100 {% if s.ratio == '9:16' %}aspect-[9/16]{% else %}aspect-square{% endif %}">
-                        {% if s.thumb.is_video %}<video src="{{ s.thumb.url }}" class="w-full h-full object-cover" muted preload="metadata"></video>{% else %}<img src="{{ s.thumb.url }}" class="w-full h-full object-cover" alt="">{% endif %}
-                    </span>
-                    {% else %}
-                    {% include "partials/_format_icon.html" with format=s.format show_default=True cls="w-6 h-6 text-neutral-400" %}
-                    {% endif %}
-                </span>
-                <span class="text-xs truncate max-w-full">{{ s.format_label }}{% if s.ratio %} ({{ s.ratio }}){% endif %}</span>
-            </button>
-            {% endfor %}
-        </div>
-        <button type="button" class="preview-arrow flex-shrink-0 disabled:opacity-40 disabled:cursor-default"
-                :disabled="slide === slides - 1" @click="slide = Math.min(slides - 1, slide + 1)" aria-label="{% translate 'Next format' %}">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-        </button>
-    </div>
     {% endif %}
     </div>
     {% endfor %}

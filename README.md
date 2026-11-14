@@ -459,6 +459,29 @@ Facebook and Instagram share the same Meta app credentials. Threads runs on the 
    ```
    These have no fallback: until both are set, Threads shows as **Not Configured** on the connect page. Sending the Facebook App ID to Threads fails with error `4476002`.
 
+### Meta App Review: permissions and features to request
+
+Everything above works for people with a role on the app (admin, developer, tester) while it is in development mode. To serve other businesses, the app needs **business verification** and **Advanced Access** for each permission it uses, granted in **App Review**. Some screens also need a *feature*, which is requested separately and is not a permission: the code cannot work around a missing one, and the screen that depends on it shows the reason Meta gave instead of failing silently.
+
+| What to request | Type | Used by | Without it |
+|---|---|---|---|
+| Permissions in step 3 (Facebook, Messenger, Instagram, Threads) | Advanced Access | Publishing, inbox, analytics | Only app roles can connect accounts |
+| **Page Public Metadata Access** | Feature | Composer place picker: the Facebook post's place and the Instagram location (`/pages/search`) | The picker says the search isn't enabled; posts go out without a place |
+| **Instagram Public Content Access** | Feature | Radar → Instagram research → Hashtags (`ig_hashtag_search`, `top_media`, `recent_media`) | The Hashtags tab says the search isn't enabled |
+| **Human Agent** | Feature | Replying to a Messenger / Instagram DM between 24 hours and 7 days after the customer wrote | Replies close at 24 hours; see [Instagram DMs and reply windows](#instagram-dms-and-reply-windows) |
+| `whatsapp_business_management`, `whatsapp_business_messaging` | Advanced Access | WhatsApp | See [WhatsApp](#whatsapp-cloud-api-via-embedded-signup) |
+
+These need **no new request**, only the permissions already in step 3 and the Instagram webhook fields in step 5:
+
+- Instagram collaborators, tagged people, Reel cover and "show on profile grid" when publishing (`instagram_content_publish`).
+- Instagram mentions in the inbox with their real text, replies to them through `/{ig-user-id}/mentions`, and posts that tag the account (`/tags`, filed as *Tag*) (`instagram_basic`, `instagram_manage_comments`, `pages_read_engagement`; webhook field `mentions`). Meta lets no one reply to a post the account was only tagged in.
+- Radar → Instagram research → Watched profiles, through Business Discovery (`instagram_basic`, `instagram_manage_insights`, `pages_read_engagement`). Only business and creator accounts can be read.
+- Facebook posts with more than 10 photos, published as a Page album (`pages_manage_posts`).
+
+Limits Meta applies whatever is approved: 30 distinct hashtags per Instagram account in a rolling 7 days; up to 3 collaborators and 20 tagged people per Instagram post.
+
+For the review itself, record each screen the request is for, end to end: for Page Public Metadata Access, searching a place in the composer and the published post showing it; for Instagram Public Content Access, a hashtag search in the Radar and opening a result on Instagram.
+
 ### Instagram DMs and reply windows
 
 Both Instagram connectors receive DMs and supported incoming media in the unified
@@ -517,6 +540,34 @@ reply within 24 hours, duplicate/echo suppression, and an approved human support
 reply after 24 hours. Incoming media URLs may expire; open Instagram if an
 attachment cannot load. Outgoing media and new automated reply workflows are not
 included.
+
+### WhatsApp (Cloud API, via Embedded Signup)
+
+WhatsApp is a messaging-only channel: it never appears in the composer, calendar, analytics or automations. A workspace connects a business phone number from **Social Accounts** through Meta's **Embedded Signup** popup (`templates/social_accounts/partials/_whatsapp_signup.html`), which hands back the WhatsApp Business Account (WABA), the phone number and a code the server exchanges for a business token (`providers/whatsapp.py`). The Cloud API has no endpoint that lists past messages, so **messages arrive only through the webhook**.
+
+It runs on the same Meta app as Facebook by default.
+
+1. **Partner status.** Embedded Signup is only offered to apps of a **Tech Provider** (or Solution Partner). In the App Dashboard, add the **WhatsApp** use case ("Connect with customers through WhatsApp") and complete the Tech Provider onboarding it asks for, including **business verification** of the business portfolio that owns the app. Onboarding more than 200 businesses a week requires becoming a Meta Business Partner.
+2. **Permissions.** Add `whatsapp_business_management` and `whatsapp_business_messaging` to the use case, and request **Advanced Access** for both in App Review. In development mode only people with a role on the app can complete the signup.
+3. **Allowed domains.** Under **Facebook Login for Business → Settings → Client OAuth settings**, set *Client OAuth login*, *Web OAuth login*, *Enforce HTTPS*, *Embedded Browser OAuth Login*, *Use Strict Mode for redirect URIs* and **Login with the JavaScript SDK** to **Yes**, and add your domain (HTTPS only) to both **Allowed domains for the JavaScript SDK** and **Valid OAuth Redirect URIs**. Without it the popup opens but never returns the WABA and phone number.
+4. **Configuration.** Under **Facebook Login for Business → Configurations**, create one from the template *WhatsApp Embedded Signup Configuration With 60 Expiration Token* (or a custom one with the login variation **WhatsApp Embedded Signup**), product **WhatsApp Cloud API**, asset **WhatsApp accounts** only, and the two permissions above. Copy its **Configuration ID**.
+5. **Webhook.** On **Webhooks**, choose the **WhatsApp Business Account** object:
+   - **Callback URL:** `{APP_URL}/webhooks/whatsapp/`
+   - **Verify token:** `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (falls back to `FACEBOOK_WEBHOOK_VERIFY_TOKEN`)
+   - Subscribe to **`messages`** (incoming messages and delivery/read statuses) and **`account_update`**, which Meta requires for Embedded Signup. Studio subscribes each connected WABA to the app itself (`/subscribed_apps`) and registers the number on the Cloud API if it isn't yet.
+6. Set the environment variables:
+   ```
+   # Optional: only when WhatsApp runs on a different Meta app than Facebook
+   PLATFORM_WHATSAPP_APP_ID=
+   PLATFORM_WHATSAPP_APP_SECRET=
+   # Required: the Embedded Signup configuration ID from step 4
+   PLATFORM_WHATSAPP_CONFIG_ID=your-configuration-id
+   WHATSAPP_WEBHOOK_VERIFY_TOKEN=your-random-verify-token
+   ```
+
+What the app does and doesn't do once connected: replies are free text within **24 hours** of the customer's last message (`apps/inbox/reply_policy.py`); after that WhatsApp delivers only approved **template messages**, which Studio does not send yet, so the reply box explains why it is closed. A number already in use in the WhatsApp Business app needs the *Coexistence* onboarding, which this flow does not enable.
+
+> **Embedded Signup version.** The popup opens **v5** (`providers.whatsapp.EMBEDDED_SIGNUP_VERSION`, sent as `extras.version`); v5 takes its products from the Facebook Login for Business configuration, so the configuration in step 4 must have **WhatsApp Cloud API** selected. It switches off v5's default onboarding of numbers already in the WhatsApp Business app (*Coexistence*), which this integration doesn't support, and reads the account from `messaging_account_ids` (v5's name for the former `waba_id`). Meta's [versions table](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/versions): v2 and v3 retired on 15 October 2026 (requests for them are served as v4); v4 (8 Oct 2025) and v5 (20 Oct 2026) have no end date announced yet.
 
 ### Instagram (Direct, via Instagram Login)
 

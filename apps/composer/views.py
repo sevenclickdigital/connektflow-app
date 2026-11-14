@@ -6,7 +6,7 @@ import json
 import logging
 import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, time
 from urllib.parse import urljoin
 
 import httpx
@@ -86,7 +86,8 @@ MAX_CSV_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB cap on CSV planner imports
 FACEBOOK_GRID_MAX_TILES = 5
 
 
-PREVIEW_FORMAT_RATIOS = {"story": "9:16", "reel": "9:16", "profile_photo": "1:1"}
+# Frame of the preview slide per format (the ordinary post keeps its media's own shape).
+PREVIEW_FORMAT_RATIOS = PlatformPost.FORMAT_RATIOS
 
 
 def _preview_media_item(asset):
@@ -936,6 +937,8 @@ def compose(request, workspace_id, post_id=None):
                     continue
             if parsed_time is not None:
                 initial["scheduled_time"] = parsed_time.strftime("%H:%M")
+        if "scheduled_date" in initial and "scheduled_time" not in initial:
+            initial["scheduled_time"] = DEFAULT_POST_TIME.strftime("%H:%M")
         # Resolve ?template=<id> into template_data (supports both built-in int IDs
         # and PostTemplate UUIDs). Seed caption so it pre-fills the form.
         template_data = _resolve_template_data(request.GET.get("template"), workspace)
@@ -1293,6 +1296,10 @@ def _platform_status_map(post):
     return {str(pp.id): pp.status for pp in post.platform_posts.all()}
 
 
+# The time a post gets when only its day is known (a day of the calendar).
+DEFAULT_POST_TIME = time(12, 0)
+
+
 def _combine_schedule_dt(workspace, sched_date, sched_time):
     """Combine the composer's date + time inputs into a workspace-tz-aware datetime.
 
@@ -1306,6 +1313,22 @@ def _combine_schedule_dt(workspace, sched_date, sched_time):
 
     tz = zoneinfo.ZoneInfo(workspace.effective_timezone or "UTC")
     return datetime.combine(sched_date, sched_time).replace(tzinfo=tz)
+
+
+def _proposed_from_inputs(workspace, date_str, time_str):
+    """The Schedule panel's raw date and time strings as a proposed datetime, or None.
+
+    A date without a (valid) time gets ``DEFAULT_POST_TIME``.
+    """
+    try:
+        sched_date = date.fromisoformat((date_str or "").strip())
+    except ValueError:
+        return None
+    try:
+        sched_time = datetime.strptime((time_str or "").strip(), "%H:%M").time()
+    except ValueError:
+        sched_time = DEFAULT_POST_TIME
+    return _combine_schedule_dt(workspace, sched_date, sched_time)
 
 
 def _capture_proposed_publish_at(post, post_id, workspace, form, *, clear_when_blank=True):
@@ -1331,10 +1354,9 @@ def _capture_proposed_publish_at(post, post_id, workspace, form, *, clear_when_b
     )
     if already_scheduled:
         return
+    sched_date = form.cleaned_data.get("scheduled_date")
     proposed = _combine_schedule_dt(
-        workspace,
-        form.cleaned_data.get("scheduled_date"),
-        form.cleaned_data.get("scheduled_time"),
+        workspace, sched_date, form.cleaned_data.get("scheduled_time") or (sched_date and DEFAULT_POST_TIME)
     )
     if proposed is None and not clear_when_blank:
         return
@@ -1823,6 +1845,18 @@ def autosave(request, workspace_id, post_id=None):
     post.internal_notes = request.POST.get("internal_notes", "")
 
     post.tags = parse_and_truncate_tag_string(request.POST.get("tags", ""))
+
+    # The day picked in the Schedule panel (the calendar day the post was started
+    # on) is the draft's proposed day from the first save, so the draft shows on
+    # that day of the calendar; a scheduled post keeps its own time.
+    if post.scheduled_at is None and not (
+        post.pk and post.platform_posts.filter(status__in=["scheduled", "publishing", "published"]).exists()
+    ):
+        proposed = _proposed_from_inputs(
+            workspace, request.POST.get("scheduled_date"), request.POST.get("scheduled_time")
+        )
+        if proposed is not None:
+            post.proposed_publish_at = proposed
 
     # Opening the composer and walking away must not leave an empty draft
     # behind: a new post is only created once there is something to keep.

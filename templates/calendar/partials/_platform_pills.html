@@ -1,0 +1,29 @@
+{% load i18n %}
+{% comment %}
+One filter pill per connected platform, plus "More channels" (Social Accounts page) for
+whoever can manage accounts. The enclosing Alpine component provides filterPlatform(code)
+and keeps the selection in platform_model.
+Context: social_accounts (ordered by platform), active_filters.platforms, workspace, request.
+{% endcomment %}
+{% if social_accounts %}
+<div class="cal-filters-scroll flex-shrink-0 flex items-center gap-2 overflow-x-auto flex-nowrap" style="scrollbar-width: none;">
+    <button type="button" class="chip rounded-full px-4{% if not active_filters.platforms %} active{% endif %}" :class="{ active: !{{ platform_model }} }"
+            @click="filterPlatform('')">
+        {% translate "All" %}
+    </button>
+    {% regroup social_accounts by platform as platform_groups %}
+    {% for group in platform_groups %}
+    <button type="button" class="chip rounded-full{% if group.grouper in active_filters.platforms %} active{% endif %}" :class="{ active: {{ platform_model }} === '{{ group.grouper }}' }"
+            @click="filterPlatform('{{ group.grouper }}')" title="{{ group.list.0.get_platform_display }}">
+        {% include "calendar/partials/_platform_badge.html" with platform=group.grouper %}
+        {{ group.list.0.get_platform_display }}
+    </button>
+    {% endfor %}
+    {% if request.workspace_membership.effective_permissions.manage_social_accounts %}
+    <a href="{% url 'social_accounts:list' workspace_id=workspace.id %}" class="chip rounded-full no-underline">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        {% translate "More channels" %}
+    </a>
+    {% endif %}
+</div>
+{% endif %}

@@ -636,6 +636,35 @@ class PlatformPost(models.Model):
     def is_story(self):
         return self.format == self.Format.STORY
 
+    # Recommended aspect ratio of the art per format, and per platform for the
+    # ordinary post. Story, Reels, profile photo and the Instagram feed match the
+    # composer's crop rules (compose.html ratioRule); the rest are the platforms'
+    # own recommendations. Shown next to the format, e.g. in the calendar's post card.
+    FORMAT_RATIOS = {"story": "9:16", "reel": "9:16", "profile_photo": "1:1"}
+    FEED_RATIOS = {
+        "instagram": "4:5 – 1.91:1",
+        "instagram_login": "4:5 – 1.91:1",
+        "facebook": "1:1 / 4:5",
+        "threads": "4:5",
+        "linkedin": "1.91:1 / 1:1",
+        "linkedin_personal": "1.91:1 / 1:1",
+        "linkedin_company": "1.91:1 / 1:1",
+        "tiktok": "9:16",
+        "youtube": "16:9",
+        "pinterest": "2:3",
+        "x": "16:9",
+        "bluesky": "16:9",
+        "mastodon": "16:9",
+        "google_business": "4:3",
+    }
+
+    @property
+    def recommended_ratio(self):
+        """The art's recommended aspect ratio for this format and platform, or ""."""
+        if self.format in self.FORMAT_RATIOS:
+            return self.FORMAT_RATIOS[self.format]
+        return self.FEED_RATIOS.get(self.social_account.platform, "")
+
     @property
     def format_label(self):
         """The format as the user reads it, or "" for the platform's ordinary post."""

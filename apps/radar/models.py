@@ -83,3 +83,32 @@ class SavedOffer(WorkspaceScopedModel):
 
     def __str__(self):
         return f"{self.get_source_display()} {self.item_id}"
+
+
+class WatchedProfile(WorkspaceScopedModel):
+    """An Instagram business or creator account the team keeps an eye on.
+
+    Only the handle is stored. Followers and posts are read live through
+    Business Discovery each time the profile is opened, so nothing here goes
+    stale or keeps another account's data.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    username = models.CharField(max_length=30)
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="watched_profiles",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["username"]
+        constraints = [
+            models.UniqueConstraint(fields=["workspace", "username"], name="radar_one_watched_profile_per_handle"),
+        ]
+
+    def __str__(self):
+        return f"@{self.username}"

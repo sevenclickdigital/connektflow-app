@@ -4,7 +4,8 @@ Day view - single-day timeline with hourly divisions.
 Context: day_slots, target_date, workspace.
 {% endcomment %}
 
-<div class="bg-white mx-auto" style="animation: slideUp 200ms cubic-bezier(0.16,1,0.3,1) both; max-height: calc(100vh - 200px); overflow-y: auto;">
+<div class="cal-layout">
+<div class="cal-main a-card" style="animation: slideUp 200ms cubic-bezier(0.16,1,0.3,1) both; max-height: calc(100vh - 200px); overflow-y: auto;">
 {% for cell in day_slots %}
     <div class="flex border-b border-neutral-100 min-h-[64px] cal-add-cell {% if cell.posts or cell.slots %}has-posts{% endif %} {% if is_today and cell.hour == current_hour %}bg-brand-50/50{% endif %}">
         <!-- Time label -->
@@ -55,15 +56,7 @@ Context: day_slots, target_date, workspace.
                 <span class="w-4 h-4 rounded flex items-center justify-center pi-{{ pp.social_account.platform }} flex-shrink-0 text-white">
                     {% include "social_accounts/partials/_platform_icon.html" with platform=pp.social_account.platform size="3" %}
                 </span>
-                {% with first_media=pp.post.media_attachments.all.0 %}
-                {% if first_media and first_media.media_asset.thumbnail %}
-                <img src="{{ first_media.media_asset.thumbnail.url }}" alt="" class="w-5 h-5 rounded object-cover flex-shrink-0">
-                {% elif first_media and not first_media.media_asset.is_video %}
-                <img src="{{ first_media.media_asset.file.url }}" alt="" class="w-5 h-5 rounded object-cover flex-shrink-0">
-                {% elif first_media and first_media.media_asset.is_video %}
-                <video src="{{ first_media.media_asset.file.url }}#t=0.5" class="w-5 h-5 rounded object-cover flex-shrink-0" muted preload="metadata"></video>
-                {% endif %}
-                {% endwith %}
+                {% include "calendar/partials/_post_thumb.html" with post=pp.post classes="w-5 h-5 rounded" %}
                 <span class="truncate">{{ pp.post.title|default:pp.post.caption_snippet|truncatechars:28 }}</span>
                 {% include "partials/_format_badge.html" %}
                 {% if pp.delivered_by_notification %}<span class="text-[9px] font-semibold uppercase tracking-wide opacity-70 flex-shrink-0">{% translate "Notified" %}</span>{% endif %}
@@ -77,4 +70,6 @@ Context: day_slots, target_date, workspace.
         </div>
     </div>
     {% endfor %}
+</div>
+{% include "calendar/partials/_side_panel.html" %}
 </div>

@@ -39,6 +39,12 @@ from .types import (
 
 logger = logging.getLogger(__name__)
 
+# The Embedded Signup flow the connect popup opens (``extras.version``). Meta
+# versions it apart from the Graph API and retires old ones: check the dates
+# in its versions table before changing it, and the session object the popup
+# reads (``_whatsapp_signup.html``), which changes between versions.
+EMBEDDED_SIGNUP_VERSION = "v5"
+
 # WhatsApp counts characters, not bytes, for a text message body.
 MAX_TEXT_LENGTH = 4096
 

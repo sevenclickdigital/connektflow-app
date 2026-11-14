@@ -1,0 +1,111 @@
+{% load i18n tz %}
+{% comment %}
+One row of the Publish list tabs (queue, drafts, sent): publication, channel, format,
+date and time, status and actions, laid out on the .pl-grid columns.
+Expects: pp (PlatformPost, effective_at annotated where the tab has one), workspace,
+display_timezone, can_create_posts; tab ("queue" | "drafts" | "sent") adds that tab's actions.
+{% endcomment %}
+<div class="pl-row pl-grid" @click="window.location='{% url 'composer:compose_edit' workspace_id=workspace.id post_id=pp.post_id %}?account={{ pp.social_account_id }}'">
+    <div @click.stop>
+        {% if pp.is_bulk_selectable %}{% include "calendar/partials/_select_checkbox.html" with pp_id=pp.id extra_class="row-select-box" %}{% endif %}
+    </div>
+
+    <div class="flex items-center gap-3 min-w-0">
+        <span class="pl-thumb">
+            {% with first_att=pp.post.media_attachments.all.0 %}
+            {% if first_att %}
+            {% include "calendar/partials/_post_thumb.html" with post=pp.post classes="w-full h-full" %}
+            {% if first_att.media_asset.is_video %}
+            <span class="absolute inset-0 flex items-center justify-center">
+                <span class="w-5 h-5 rounded-full bg-black/50 flex items-center justify-center">
+                    <svg class="w-2.5 h-2.5 text-white ml-px" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 9-14 9V3z"/></svg>
+                </span>
+            </span>
+            {% endif %}
+            {% else %}
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            {% endif %}
+            {% endwith %}
+        </span>
+        <span class="min-w-0">
+            <span class="block truncate text-sm font-semibold text-neutral-950">{{ pp.post.title|default:pp.post.caption_snippet|default:_("(no caption)") }}</span>
+            <span class="block truncate text-xs text-neutral-600">
+                {% if pp.post.title and pp.post.caption_snippet %}{{ pp.post.caption_snippet }}{% else %}{{ pp.social_account.account_name|default:pp.social_account.account_handle }}{% endif %}
+            </span>
+        </span>
+    </div>
+
+    <div class="pl-col-channel" title="{{ pp.social_account.account_name|default:pp.social_account.account_handle }}">
+        {% include "calendar/partials/_platform_badge.html" with platform=pp.social_account.platform size="3.5" extra_class="pl-channel-icon" %}
+    </div>
+
+    <div class="pl-col-format">
+        <span class="pl-format">{% include "partials/_format_icon.html" with format=pp.format show_default=True cls="w-3.5 h-3.5" %}{{ pp.get_format_display }}</span>
+    </div>
+
+    <div class="pl-col-date">
+        {% if pp.post.proposed_publish_at and not pp.scheduled_at and not pp.post.scheduled_at %}
+        <svg class="w-4 h-4 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span class="text-brand-700" title="{% translate 'Proposed publishing time' %}">{{ pp.post.proposed_publish_at|timezone:display_timezone|date:"d M, H:i" }}</span>
+        {% elif pp.effective_at %}
+        <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        {{ pp.effective_at|timezone:display_timezone|date:"d M, H:i" }}
+        {% elif tab == "drafts" %}
+        <span class="text-neutral-500">{% blocktranslate with time=pp.post.updated_at|timesince %}{{ time }} ago{% endblocktranslate %}</span>
+        {% else %}
+        <span class="text-neutral-400">—</span>
+        {% endif %}
+    </div>
+
+    <div class="pl-col-status min-w-0">
+        <span class="post-chip pl-status status-{{ pp.status }}">
+            <span class="chip-dot"></span>
+            {% if pp.delivered_by_notification %}{% translate "Notified" %}{% else %}{{ pp.get_status_display }}{% endif %}
+        </span>
+        {% if tab == "sent" %}
+        {% if pp.delivered_by_notification %}
+        <a @click.stop href="{% url 'composer:manual_publish' workspace_id=workspace.id post_id=pp.post_id platform_post_id=pp.id %}"
+           class="block text-[11px] text-brand-800 hover:underline mt-1">{% translate "Media and caption to publish" %}</a>
+        {% endif %}
+        {% if pp.status == "failed" and pp.publish_error %}
+        <p class="text-[11px] text-red-500 mt-1 truncate" title="{{ pp.publish_error }}">{{ pp.publish_error }}</p>
+        {% endif %}
+        {% comment %}Published, but its first comment never landed — amber, not red: the post itself went out fine.{% endcomment %}
+        {% if pp.first_comment_status == "failed" %}
+        <p class="text-[11px] text-amber-600 mt-1 truncate" title="{{ pp.first_comment_error }}">{% translate "First comment failed" %}</p>
+        {% endif %}
+        {% endif %}
+    </div>
+
+    <div class="pl-col-actions" @click.stop>
+        {% if tab == "queue" %}
+        <a href="{% url 'composer:compose_edit' workspace_id=workspace.id post_id=pp.post_id %}?account={{ pp.social_account_id }}&action=publish_now"
+           class="pl-action" title="{% translate 'Publish' %}" aria-label="{% translate 'Publish' %}">
+            <svg class="w-4 h-4 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+        </a>
+        {% endif %}
+        {% comment %}
+        The already-published entry point of an automation. A flow set up here arms on
+        save, since the post id already exists.
+        {% endcomment %}
+        {% if tab == "sent" and pp.supports_automation %}
+        <a href="{% url 'automations:flow_builder' workspace_id=workspace.id platform_post_id=pp.id %}"
+           class="pl-action{% if not pp.automation %} text-brand-700{% endif %}"
+           title="{% if pp.automation %}{% translate 'Automation' %}: {{ pp.automation.get_status_display }}{% else %}{% translate 'Set up automation' %}{% endif %}"
+           aria-label="{% translate 'Automation' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </a>
+        {% endif %}
+        <a href="{% url 'composer:compose_edit' workspace_id=workspace.id post_id=pp.post_id %}?account={{ pp.social_account_id }}"
+           class="pl-action" title="{% translate 'Edit' %}" aria-label="{% translate 'Edit' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+        </a>
+        {% if can_create_posts %}
+        <button type="button" class="pl-action" title="{% translate 'Clone' %}" aria-label="{% translate 'Clone' %}"
+                hx-post="{% url 'composer:clone_post' workspace_id=workspace.id post_id=pp.post_id %}" hx-swap="none">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1"/></svg>
+        </button>
+        {% endif %}
+        {% include "calendar/partials/_post_actions_menu.html" with post_id=pp.post_id account_id=pp.social_account_id platform_post_id=pp.id %}
+    </div>
+</div>

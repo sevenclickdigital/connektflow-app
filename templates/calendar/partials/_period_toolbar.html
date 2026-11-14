@@ -1,0 +1,87 @@
+{% load common_extras i18n %}
+{% comment %}
+Toolbar card of the Publish modes: month arrows, period, the month
+picker (January to December of the year shown), the campaigns and special dates switches
+and the filters.
+Times follow the workspace timezone, so there is no timezone filter.
+The enclosing Alpine component provides goToPeriod(date, view) — it keeps the mode, tab
+and filters — and the models named by status_model / tag_model, reloaded by onchange.
+Context: period_label, prev_date, next_date, month_options, show_drafts,
+show_holidays, show_events, can_create_posts, status_choices, all_tags, workspace;
+nav_query (e.g. "mode=list&tab=queue"), status_model (optional), tag_model, onchange,
+drafts_switch (the calendar's "Drafts" button; the list and board have their own drafts views).
+{% endcomment %}
+{% url 'calendar:calendar' workspace_id=workspace.id as publish_url %}
+<div class="a-card flex-shrink-0 px-3 sm:px-4 py-3 flex flex-wrap items-center gap-2 sm:gap-3" x-data="{ monthOpen: false }">
+
+    <div class="flex items-center gap-1">
+        <a href="{{ publish_url }}?{{ nav_query }}&date={{ prev_date }}" @click.prevent="goToPeriod('{{ prev_date }}')"
+           class="w-8 h-8 rounded-md text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100 flex items-center justify-center transition-all duration-150"
+           aria-label="{% translate 'Previous' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <a href="{{ publish_url }}?{{ nav_query }}&date={{ next_date }}" @click.prevent="goToPeriod('{{ next_date }}')"
+           class="w-8 h-8 rounded-md text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100 flex items-center justify-center transition-all duration-150"
+           aria-label="{% translate 'Next' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+    </div>
+
+    <h2 class="text-lg font-semibold text-neutral-950 tracking-tight">{{ period_label }}</h2>
+
+    <!-- Month picker -->
+    <div class="relative" @click.outside="monthOpen = false" @keydown.escape="monthOpen = false">
+        <button type="button" @click="monthOpen = !monthOpen" :aria-expanded="monthOpen"
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-neutral-700 border border-neutral-300 rounded-md hover:bg-neutral-50 transition-all duration-150">
+            {% translate "Month" %}
+            <svg class="w-3 h-3 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div x-show="monthOpen" x-cloak
+             x-transition:enter="transition ease-out duration-100"
+             x-transition:enter-start="opacity-0 -translate-y-1"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             class="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 p-1.5 z-50 grid grid-cols-3 gap-1 w-72">
+            {% for option in month_options %}
+            <a href="{{ publish_url }}?{{ nav_query }}&date={{ option.date|date:'Y-m-d' }}"
+               @click.prevent="goToPeriod('{{ option.date|date:'Y-m-d' }}', 'month')"
+               class="px-2 py-1.5 rounded-md text-xs text-center font-medium no-underline transition-colors {% if option.active %}bg-brand-700 text-white{% else %}text-neutral-700 hover:bg-brand-50 hover:text-brand-800{% endif %}">
+                {{ option.label }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% comment %}Right side: special dates and filters. On wide screens it keeps the toolbar on one
+    row and scrolls sideways when the period label is long; the spacer right-aligns it.{% endcomment %}
+    <div class="cal-filters-scroll flex items-center gap-2 overflow-x-auto flex-nowrap w-full xl:w-auto xl:flex-1 xl:min-w-0" style="-webkit-overflow-scrolling: touch; scrollbar-width: none;">
+        <span class="hidden xl:block flex-1" aria-hidden="true"></span>
+        {% if can_create_posts %}
+        {% if drafts_switch %}
+        <button type="button" hx-post="{% url 'calendar:drafts_toggle' workspace_id=workspace.id %}" hx-swap="none"
+                aria-pressed="{{ show_drafts|yesno:'true,false' }}"
+                title="{% translate 'Show the draft posts on the calendar' %}"
+                class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all duration-150 {% if show_drafts %}border-neutral-400 bg-neutral-100 text-neutral-800{% else %}border-neutral-300 text-neutral-600 hover:bg-neutral-50{% endif %}">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+            {% translate "Drafts" %}
+        </button>
+        {% endif %}
+        <button type="button" hx-post="{% url 'calendar:custom_events_toggle' workspace_id=workspace.id %}" hx-swap="none"
+                aria-pressed="{{ show_events|yesno:'true,false' }}"
+                title="{% translate 'Show the campaigns on the calendar' %}"
+                class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all duration-150 {% if show_events %}border-brand-300 bg-brand-50 text-brand-800{% else %}border-neutral-300 text-neutral-600 hover:bg-neutral-50{% endif %}">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+            {% translate "Campaigns" %}
+        </button>
+        <button type="button" hx-post="{% url 'calendar:special_dates_toggle' workspace_id=workspace.id %}" hx-swap="none"
+                aria-pressed="{{ show_holidays|yesno:'true,false' }}"
+                title="{% translate 'Show Brazilian holidays and commercial dates' %}"
+                class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all duration-150 {% if show_holidays %}border-amber-300 bg-amber-50 text-amber-700{% else %}border-neutral-300 text-neutral-600 hover:bg-neutral-50{% endif %}">
+            🎉 {% translate "Special dates" %}
+        </button>
+        {% endif %}
+        {% if status_model %}
+        {% ui_select model=status_model options=status_choices onchange=onchange placeholder=_("All Posts") icon="status" %}
+        {% endif %}
+        {% ui_select model=tag_model options=all_tags onchange=onchange placeholder=_("Tags") icon="tag" %}
+    </div>
+</div>

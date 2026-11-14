@@ -30,6 +30,8 @@ APP_DEFAULTS = {
     "publishing.retry_backoff_schedule": "1min,5min,30min",
     "scheduling.recurring_post_lookahead_days": 90,
     "calendar.show_special_dates": True,
+    "calendar.show_custom_events": True,
+    "calendar.show_drafts": True,
     "scheduling.queue_empty_slot_warning_days": 30,
     "inbox.sync_interval_minutes": 5,
     "inbox.auto_resolve_on_reply": True,

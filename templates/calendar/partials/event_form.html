@@ -1,94 +1,136 @@
 {% load i18n %}
-<!-- Custom Calendar Event create/edit form (loaded via HTMX into modal) -->
-<div class="p-5">
-    <h3 class="text-sm font-semibold text-neutral-950 mb-4">
-        {% if event %}{% translate "Edit Event" %}{% else %}{% translate "Add Custom Event" %}{% endif %}
-    </h3>
+{% comment %}
+Body of the calendar's campaign modal: the period (start and end) of a campaign or action,
+shown as a bar on the month grid (CustomCalendarEvent).
+Two modes, picked by window events from calendarApp:
+- event-form-reset (a day's "+" → "Mark campaign"): a new campaign, posted to event_create;
+- event-form-edit (a click on a campaign bar, detail = the bar's data-*): that campaign,
+  posted to event_edit, with "Delete campaign" (event_delete).
+A refused form answers with an error toast and the modal stays open; a saved or deleted one
+fires event-saved, which closes it.
+Context: workspace, event_recurrence_choices.
+{% endcomment %}
+{% with zero="00000000-0000-0000-0000-000000000000" %}
+<div x-data="{
+        color: '#7c3aed',
+        presets: ['#7c3aed', '#3b82f6', '#14b8a6', '#22c55e', '#eab308', '#f97316', '#ef4444', '#ec4899'],
+        campaignId: null,
+        setMode(id) {
+            this.campaignId = id;
+            const form = this.$refs.form, del = this.$refs.del, urls = this.$root.dataset;
+            form.setAttribute('hx-post', id ? urls.editUrl.replace('{{ zero }}', id) : urls.createUrl);
+            del.setAttribute('hx-post', urls.deleteUrl.replace('{{ zero }}', id || '{{ zero }}'));
+            htmx.process(form);
+            htmx.process(del);
+        },
+        setDate(el, value) { if (el._flatpickr) el._flatpickr.setDate(value, false); else el.value = value; },
+        fill(data) {
+            const f = this.$refs.form.elements;
+            this.setMode(data.id);
+            f.title.value = data.title;
+            f.description.value = data.description || '';
+            f.recurrence.value = data.recurrence;
+            this.setDate(f.start_date, data.start);
+            this.setDate(f.end_date, data.end);
+            this.color = (data.color || '#7c3aed').toLowerCase();
+            this.syncPicker();
+        },
+        // A form reset blanks the native colour input; show the chosen colour again.
+        syncPicker() { this.$nextTick(() => { this.$refs.picker.value = this.color; }); },
+     }"
+     data-create-url="{% url 'calendar:event_create' workspace_id=workspace.id %}"
+     data-edit-url="{% url 'calendar:event_edit' workspace_id=workspace.id event_id=zero %}"
+     data-delete-url="{% url 'calendar:event_delete' workspace_id=workspace.id event_id=zero %}"
+     @event-form-reset.window="color = '#7c3aed'; setMode(null); syncPicker()"
+     @event-form-edit.window="fill($event.detail)">
 
-    <form {% if event %}
-          hx-post="{% url 'calendar:event_edit' workspace_id=workspace.id event_id=event.id %}"
-          {% else %}
-          hx-post="{% url 'calendar:event_create' workspace_id=workspace.id %}"
-          {% endif %}
-          hx-swap="none"
-          class="space-y-3">
+    <button type="button" class="modal-close" @click="showEventForm = false" aria-label="{% translate 'Close' %}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+    <div class="modal-header">
+        <div class="modal-icon is-brand">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        </div>
+        <div>
+            <h2 id="event-form-title" class="modal-title">
+                <span x-show="!campaignId">{% translate "New campaign" %}</span>
+                <span x-show="campaignId" x-cloak>{% translate "Edit campaign" %}</span>
+            </h2>
+            <p class="modal-meta">{% translate "Mark the period of a campaign or action (launch, promotion, seasonal). The posts of that period sit under it on the calendar." %}</p>
+        </div>
+    </div>
+
+    <form x-ref="form" hx-post="{% url 'calendar:event_create' workspace_id=workspace.id %}" hx-swap="none" class="space-y-4">
         {% csrf_token %}
 
         <div>
-            <label class="block text-xs font-semibold text-neutral-800 mb-1">{% translate "Title" %}</label>
-            <input type="text" name="title"
-                   value="{% if event %}{{ event.title }}{% endif %}"
-                   placeholder="{% translate 'e.g., Product Launch, Campaign Start' %}"
-                   required
-                   class="form-input w-full text-sm">
+            <label for="event-title" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Campaign name" %}</label>
+            <input id="event-title" type="text" name="title" required maxlength="200"
+                   placeholder="{% translate 'e.g., Black Friday, Summer collection launch' %}"
+                   class="form-input-styled">
         </div>
 
         <div class="grid grid-cols-2 gap-3">
             <div>
-                <label class="block text-xs font-semibold text-neutral-800 mb-1">{% translate "Start Date" %}</label>
-                <input type="date" name="start_date"
-                       value="{% if event %}{{ event.start_date|date:'Y-m-d' }}{% endif %}"
-                       required
-                       class="form-datetime">
+                <label for="event-start" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Start" %}</label>
+                <input id="event-start" type="date" name="start_date" required class="form-datetime w-full"
+                       @change="const end = $el.form.elements.end_date; if (!end.value || end.value < $el.value) setDate(end, $el.value)">
             </div>
             <div>
-                <label class="block text-xs font-semibold text-neutral-800 mb-1">{% translate "End Date" %}</label>
-                <input type="date" name="end_date"
-                       value="{% if event %}{{ event.end_date|date:'Y-m-d' }}{% endif %}"
-                       required
-                       class="form-datetime">
+                <label for="event-end" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "End" %}</label>
+                <input id="event-end" type="date" name="end_date" required class="form-datetime w-full">
             </div>
         </div>
 
         <div>
-            <label class="block text-xs font-semibold text-neutral-800 mb-1" for="event-recurrence">{% translate "Repeats" %}</label>
-            <select id="event-recurrence" name="recurrence" class="bb-select w-full text-sm">
+            <label for="event-recurrence" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Repeats" %}</label>
+            <select id="event-recurrence" name="recurrence" class="bb-select form-input-styled">
                 {% for value, label in event_recurrence_choices %}
-                <option value="{{ value }}" {% if event and event.recurrence == value %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ value }}">{{ label }}</option>
                 {% endfor %}
             </select>
         </div>
 
         <div>
-            <label class="block text-xs font-semibold text-neutral-800 mb-1">{% translate "Color" %}</label>
-            <div class="flex items-center gap-2">
-                <input type="color" name="color"
-                       value="{% if event %}{{ event.color }}{% else %}#3B82F6{% endif %}"
-                       class="w-9 h-9 rounded-lg border border-neutral-300 cursor-pointer p-0.5">
-                <div class="flex gap-1.5"
-                     x-data="{ presets: ['#3B82F6','#22C55E','#EAB308','#7C3AED','#EF4444','#8B5CF6','#EC4899','#14B8A6'] }">
-                    <template x-for="hex in presets" :key="hex">
-                        <button type="button"
-                                @click="$el.closest('form').querySelector('[name=color]').value = hex"
-                                class="w-6 h-6 rounded-full border-2 border-white shadow-sm hover:scale-110 transition-transform"
-                                :style="'background: ' + hex"></button>
-                    </template>
-                </div>
+            <span class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Color" %}</span>
+            <input type="hidden" name="color" :value="color">
+            <div class="flex items-center gap-2 flex-wrap">
+                <template x-for="hex in presets" :key="hex">
+                    <button type="button" @click="color = hex" :aria-pressed="color === hex"
+                            class="w-7 h-7 rounded-full transition-transform hover:scale-110"
+                            :class="color === hex ? 'ring-2 ring-offset-2 ring-neutral-950' : ''"
+                            :style="'background: ' + hex"></button>
+                </template>
+                <label class="ml-1 inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-600 cursor-pointer">
+                    <input type="color" x-ref="picker" :value="color" @input="color = $event.target.value.toLowerCase()" class="w-7 h-7 rounded-full border border-neutral-300 cursor-pointer p-0.5">
+                    {% translate "Other colour" %}
+                </label>
             </div>
         </div>
 
         <div>
-            <label class="block text-xs font-semibold text-neutral-800 mb-1">{% translate "Description (optional)" %}</label>
-            <textarea name="description" rows="2" placeholder="{% translate 'Notes about this event...' %}" class="form-input w-full text-sm">{% if event %}{{ event.description }}{% endif %}</textarea>
+            <label for="event-description" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Description (optional)" %}</label>
+            <textarea id="event-description" name="description" rows="2" placeholder="{% translate 'Goal, offer, audience…' %}" class="form-input-styled"></textarea>
         </div>
 
-        <div class="flex items-center justify-between pt-2">
-            {% if event %}
-            <form x-data hx-post="{% url 'calendar:event_delete' workspace_id=workspace.id event_id=event.id %}" hx-swap="none" class="inline"
-                  @submit="if(!confirm('{% translate "Delete this event?" %}')) $event.preventDefault()">
-                {% csrf_token %}
-                <button type="submit" class="text-xs text-red-500 hover:text-red-700 font-medium">{% translate "Delete Event" %}</button>
-            </form>
-            {% else %}
-            <div></div>
-            {% endif %}
+        <div class="flex items-center justify-between gap-2 pt-2">
+            <span>
+                <button type="button" x-ref="del" x-show="campaignId" x-cloak
+                        hx-post="{% url 'calendar:event_delete' workspace_id=workspace.id event_id=zero %}" hx-swap="none"
+                        hx-confirm="{% translate 'Delete this campaign? Its bar leaves the calendar; the posts stay.' %}"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    {% translate "Delete campaign" %}
+                </button>
+            </span>
             <div class="flex items-center gap-2">
-                <button type="button" @click="showEventForm = false" class="text-sm text-neutral-600 hover:text-neutral-800 py-2 px-3">{% translate "Cancel" %}</button>
-                <button type="submit" class="btn-brand text-sm py-2 px-4"
-                        @htmx:after-request="showEventForm = false">
-                    {% if event %}{% translate "Save Changes" %}{% else %}{% translate "Add Event" %}{% endif %}
+                <button type="button" class="btn-outline" @click="showEventForm = false">{% translate "Cancel" %}</button>
+                <button type="submit" class="btn-brand">
+                    <span x-show="!campaignId">{% translate "Create campaign" %}</span>
+                    <span x-show="campaignId" x-cloak>{% translate "Save Changes" %}</span>
                 </button>
             </div>
         </div>
     </form>
 </div>
+{% endwith %}

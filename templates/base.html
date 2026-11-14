@@ -462,14 +462,15 @@
                          x-transition:leave-start="opacity-100 scale-100"
                          x-transition:leave-end="opacity-0 scale-95"
                          class="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 z-50 overflow-hidden py-1.5 px-1.5">
-                        <a href="{% url 'composer:compose' workspace_id=request.workspace.id %}"
+                        {% comment %}A post starts from a day of the calendar (its "+"), so it always has a date.{% endcomment %}
+                        <a href="{% url 'calendar:calendar' workspace_id=request.workspace.id %}?mode=calendar"
                            class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-neutral-50 transition-colors">
                             <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
                                 <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                             </div>
                             <div>
                                 <div class="text-sm font-semibold text-neutral-900">{% translate "Post" %}</div>
-                                <div class="text-xs text-neutral-600">{% translate "Publish content to a channel" %}</div>
+                                <div class="text-xs text-neutral-600">{% translate "Pick its day on the calendar" %}</div>
                             </div>
                         </a>
                         <button type="button" @click="openCreateModal()"
@@ -729,8 +730,8 @@
                         <svg class="sidebar-nav-chevron" :class="open && 'rotate-180'" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
                     </button>
                     <div class="sidebar-subnav" x-show="open" x-cloak>
-                    <a href="{% url 'calendar:calendar' workspace_id=request.workspace.id %}?mode=calendar" class="sidebar-subnav-item {% if url_name == 'calendar' and app == 'calendar' and mode != 'list' %}active{% endif %}">{% translate "Calendar" context "menu" %}</a>
-                    <a href="{% url 'composer:compose' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'composer' and url_name == 'compose' %}active{% endif %}">{% translate "Schedule post" context "menu" %}</a>
+                    {% comment %}No "new post" entry here: a post starts from a day of the calendar, so it always has a date.{% endcomment %}
+                    <a href="{% url 'calendar:calendar' workspace_id=request.workspace.id %}?mode=calendar" class="sidebar-subnav-item {% if url_name == 'calendar' and app == 'calendar' and mode != 'list' or app == 'composer' and url_name == 'compose' %}active{% endif %}">{% translate "Calendar" context "menu" %}</a>
                     {% if request.workspace_membership and request.workspace_membership.workspace_role != "client" %}
                     <a href="{% url 'tasks:board' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'tasks' %}active{% endif %}">{% translate "Task management" context "menu" %}</a>
                     {% endif %}

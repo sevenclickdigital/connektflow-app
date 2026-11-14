@@ -57,6 +57,7 @@ When the code and a doc disagree, the code is right — fix the doc in the same 
 - One module per platform, subclassing `SocialProvider` (`providers/base.py`), registered in `PROVIDER_REGISTRY`. HTTP goes through the base `_request`, never raw `requests` calls.
 - Meta logic is split into `meta_*.py` helpers; extend those instead of duplicating Graph API code in `facebook.py` / `instagram.py`.
 - When a platform answers with a generic error, verify the real cause against the API (endpoint, field, edge) before adding retries.
+- **Platform API versions.** Before changing one, check the platform's official versions table: never adopt a version that already has a retirement date announced, and plan the move off the current one at least 6 months before its date. The Meta Graph API version is written in several places (`providers/facebook.py`, `providers/instagram.py`, `providers/instagram_login.py`, `diagnose_instagram_messages`) — `grep -rn "v25.0"` and change them together. WhatsApp Embedded Signup has its own version, `providers.whatsapp.EMBEDDED_SIGNUP_VERSION`, whose session object changes between versions (`_whatsapp_signup.html`). Keep the current versions and their end dates in the README's platform section.
 - Skill: `provider-integration`.
 
 ### Background tasks

@@ -5,7 +5,12 @@ the authorization code, and a ``WA_EMBEDDED_SIGNUP`` window message carries the
 WhatsApp Business Account and phone number picked. Once both are in, the hidden
 form posts them to ``connect_whatsapp``, which verifies the ids against the
 token before connecting anything.
-Context: ``whatsapp_signup`` (app_id, config_id, version, messages), ``workspace_id``.
+The flow version is ``signup_version`` (providers.whatsapp.EMBEDDED_SIGNUP_VERSION).
+From v5 the session object names the account in ``messaging_account_ids`` (the
+former ``waba_id``), and onboarding a WhatsApp Business app number is on by
+default; it is switched off here because such a number must not be registered
+on the Cloud API, which connecting does.
+Context: ``whatsapp_signup`` (app_id, config_id, version, signup_version, messages), ``workspace_id``.
 {% endcomment %}
 {{ whatsapp_signup|json_script:"whatsapp-signup-config" }}
 <form id="whatsapp-signup-form" method="post" action="{% url 'social_accounts:connect_whatsapp' workspace_id=workspace_id %}" class="hidden">
@@ -26,12 +31,16 @@ Context: ``whatsapp_signup`` (app_id, config_id, version, messages), ``workspace
         document.body.dispatchEvent(new CustomEvent('showToast', { detail: { tone: tone, title: body } }));
     }
 
+    function accountId() {
+        return (session.messaging_account_ids || [])[0] || session.waba_id || '';
+    }
+
     function submitIfReady() {
-        if (submitted || !code || !session.waba_id) return;
+        if (submitted || !code || !accountId()) return;
         if (!session.phone_number_id) { toast('warn', cfg.messages.no_number); return; }
         submitted = true;
         form.elements.code.value = code;
-        form.elements.waba_id.value = session.waba_id;
+        form.elements.waba_id.value = accountId();
         form.elements.phone_number_id.value = session.phone_number_id;
         form.submit();
     }
@@ -45,10 +54,19 @@ Context: ``whatsapp_signup`` (app_id, config_id, version, messages), ``workspace
             try { data = JSON.parse(data); } catch (e) { return; }
         }
         if (!data || data.type !== 'WA_EMBEDDED_SIGNUP') return;
-        if (String(data.event || '').startsWith('FINISH')) {
+        const flowEvent = String(data.event || '');
+        if (flowEvent === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING' || (data.data || {}).is_on_biz_app) {
+            submitted = true;
+            toast('warn', cfg.messages.business_app);
+        } else if (flowEvent === 'FINISH_ONLY_WABA') {
+            submitted = true;
+            toast('warn', cfg.messages.no_number);
+        } else if (flowEvent.startsWith('FINISH')) {
             session = data.data || {};
             submitIfReady();
-        } else if (data.event === 'CANCEL') {
+        } else if (flowEvent === 'ERROR' || (flowEvent === 'CANCEL' && (data.data || {}).error_code)) {
+            toast('error', cfg.messages.error);
+        } else if (flowEvent === 'CANCEL') {
             toast('info', cfg.messages.cancelled);
         }
     });
@@ -82,7 +100,10 @@ Context: ``whatsapp_signup`` (app_id, config_id, version, messages), ``workspace
             config_id: cfg.config_id,
             response_type: 'code',
             override_default_response_type: true,
-            extras: { setup: {}, featureType: '', sessionInfoVersion: '3' },
+            extras: {
+                version: cfg.signup_version,
+                features: [{ name: 'whatsapp_business_app_onboarding', enabled: false }],
+            },
         });
     });
 })();

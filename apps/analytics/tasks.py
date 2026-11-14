@@ -901,11 +901,16 @@ def retry_youtube_post_analytics(account_id: str, on_date_iso: str, attempt: int
 
 
 def _has_unusable_platform_post_id(post, platform: str) -> bool:
-    """Meta posts whose ``platform_post_id`` is really an internal UUID.
+    """Meta posts whose ``platform_post_id`` names no post Meta can report on.
 
     A publish that half-failed can leave our own row id in the field; calling
     Meta with it is guaranteed to fail, so skip without spending the request.
+    A Facebook album (``FACEBOOK_ALBUM_ID_PREFIX``) has no post insights.
     """
+    from providers.facebook import FACEBOOK_ALBUM_ID_PREFIX
+
+    if platform == "facebook" and str(post.platform_post_id).startswith(FACEBOOK_ALBUM_ID_PREFIX):
+        return True
     if platform in {"facebook", "instagram", "instagram_login"} and _looks_like_uuid(post.platform_post_id):
         logger.warning(
             "Skipping %s analytics for PlatformPost %s because platform_post_id looks like an internal UUID.",
@@ -1688,10 +1693,14 @@ def sync_all_account_analytics() -> None:
     # cost a query per account to answer the same question.
     cache: dict = {}
 
-    accounts = SocialAccount.objects.publishable().filter(
-        connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-        platform__in=syncable,
-    ).select_related("workspace")
+    accounts = (
+        SocialAccount.objects.publishable()
+        .filter(
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+            platform__in=syncable,
+        )
+        .select_related("workspace")
+    )
 
     totals = [0, 0, 0]  # synced, failed, api_calls
     seen = truncated = 0

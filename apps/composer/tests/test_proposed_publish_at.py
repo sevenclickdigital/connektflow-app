@@ -121,6 +121,35 @@ class ProposedPublishAtSaveTests(TestCase):
         # A proposal is NOT a schedule — the publisher column stays empty.
         self.assertIsNone(post.scheduled_at)
 
+    def test_a_post_started_on_a_calendar_day_defaults_to_noon(self):
+        resp = self.client.get(
+            reverse("composer:compose", kwargs={"workspace_id": self.ws.id}), {"scheduled_date": "2027-09-01"}
+        )
+        self.assertEqual(resp.context["form"].initial["scheduled_time"], "12:00")
+
+    def test_save_draft_with_a_day_but_no_time_proposes_noon(self):
+        self.client.post(
+            self.save_url,
+            data={
+                "action": "save_draft",
+                "caption": "body",
+                "tags": "",
+                "selected_accounts": str(self.sa.id),
+                "scheduled_date": "2027-09-01",
+                "scheduled_time": "",
+            },
+        )
+        self.assertEqual(self._latest().proposed_publish_at, datetime(2027, 9, 1, 12, 0, tzinfo=BERLIN))
+
+    def test_autosave_puts_the_new_draft_on_its_calendar_day(self):
+        self.client.post(
+            reverse("composer:autosave", kwargs={"workspace_id": self.ws.id}),
+            data={"caption": "body", "selected_accounts": str(self.sa.id), "scheduled_date": "2027-09-01"},
+        )
+        post = self._latest()
+        self.assertEqual(post.proposed_publish_at, datetime(2027, 9, 1, 12, 0, tzinfo=BERLIN))
+        self.assertIsNone(post.scheduled_at)
+
     def test_save_draft_blank_clears_proposed(self):
         post = create_post(
             workspace=self.ws,
@@ -423,21 +452,3 @@ class ProposedDraftOnCalendarTests(TestCase):
 
         day = next(d for week in weeks for d in week if d["date"] == PROPOSED_LOCAL.date())
         self.assertIn(post.id, [pp.post_id for pp in day["posts"]])
-
-    def test_an_undated_draft_is_listed_above_the_month(self):
-        dated = create_post(
-            workspace=self.ws,
-            social_account=self.sa,
-            caption="dated",
-            status="draft",
-            proposed_publish_at=PROPOSED_LOCAL,
-            author=self.user,
-        )
-        undated = create_post(
-            workspace=self.ws, social_account=self.sa, caption="undated", status="draft", author=self.user
-        )
-
-        drafts = list(self._month().context["unscheduled_drafts"])
-
-        self.assertIn(undated, drafts)
-        self.assertNotIn(dated, drafts)

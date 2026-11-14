@@ -1,0 +1,62 @@
+{% load i18n tz %}
+{% comment %}
+Body of the month grid's day pop-up (calendar:day_posts): the day's posts with their
+time and status. Rows tick into the shared selection ($store.sel), so the bulk bar and
+"Remove selected" act on them; a click on a row opens the post's preview (openDayCard).
+Context: day, platform_posts, display_timezone, workspace.
+{% endcomment %}
+<div x-data="{
+        rowIds() { return [...$root.querySelectorAll('[data-sel-id]')].map((el) => el.dataset.selId); },
+        allSelected() { const ids = this.rowIds(); return ids.length > 0 && ids.every((id) => $store.sel.has(id)); },
+        toggleAll() { const all = this.allSelected(); this.rowIds().forEach((id) => { if ($store.sel.has(id) === all) $store.sel.toggle(id); }); },
+        anySelected() { return this.rowIds().some((id) => $store.sel.has(id)); },
+     }">
+    <h2 class="text-xl font-semibold text-neutral-950 text-center pr-8 pl-8">
+        {{ day|date:"SHORT_DATE_FORMAT" }} <span class="ml-2">{{ day|date:"l"|capfirst }}</span>
+    </h2>
+
+    {% if platform_posts %}
+    <div class="flex items-center justify-between gap-3 mt-5">
+        <button type="button" class="flex items-center gap-3 text-sm text-neutral-700" @click="toggleAll()">
+            <span class="cal-select-box row-select-box" :class="allSelected() && 'is-checked'">
+                <svg x-show="allSelected()" x-cloak class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="4"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </span>
+            {% translate "Select all" %}
+        </button>
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                :disabled="!anySelected()" @click="$dispatch('bulk-ask', 'delete')">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            {% translate "Remove selected" %}
+        </button>
+    </div>
+
+    <div class="cal-day-table mt-4">
+        <div class="cal-day-row cal-day-head">
+            <span></span>
+            <span>{% translate "Item" %}</span>
+            <span class="text-center">{% translate "Time" %}</span>
+            <span class="text-center">{% translate "Status" %}</span>
+        </div>
+        {% for pp in platform_posts %}
+        <div class="cal-day-row is-item" @click="openDayCard('{% url 'calendar:post_card' workspace_id=workspace.id platform_post_id=pp.id %}')">
+            <span @click.stop>
+                {% if pp.is_bulk_selectable %}
+                <span data-sel-id="{{ pp.id }}">{% include "calendar/partials/_select_checkbox.html" with pp_id=pp.id extra_class="row-select-box" %}</span>
+                {% endif %}
+            </span>
+            <span class="flex items-center gap-3 min-w-0">
+                {% include "calendar/partials/_platform_badge.html" with platform=pp.social_account.platform size="3.5" extra_class="pl-channel-icon" %}
+                <span class="min-w-0">
+                    <span class="block truncate text-sm font-medium text-neutral-950">{{ pp.post.title|default:pp.post.caption_snippet|default:_("(no caption)") }}</span>
+                    <span class="block truncate text-xs text-neutral-600">{{ pp.social_account.account_name|default:pp.social_account.account_handle }}{% if pp.format_label %} · {{ pp.format_label }}{% endif %}</span>
+                </span>
+            </span>
+            <span class="text-center text-sm font-semibold tabular-nums text-neutral-800">{{ pp.effective_at|timezone:display_timezone|time:"H:i" }}</span>
+            <span class="text-center"><span class="post-chip pl-status status-{{ pp.status }}"><span class="chip-dot"></span>{% if pp.delivered_by_notification %}{% translate "Notified" %}{% else %}{{ pp.get_status_display }}{% endif %}</span></span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-neutral-600 text-center py-10">{% translate "No posts on this day." %}</p>
+    {% endif %}
+</div>

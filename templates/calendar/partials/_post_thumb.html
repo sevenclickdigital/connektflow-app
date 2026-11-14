@@ -1,0 +1,14 @@
+{% comment %}
+First media of a calendar post, as a small thumbnail. Renders nothing for a post without media.
+Usage: {% include "calendar/partials/_post_thumb.html" with post=pp.post classes="w-5 h-5 rounded" %}
+The caller prefetches post__media_attachments__media_asset.
+{% endcomment %}
+{% with first_media=post.media_attachments.all.0 %}
+{% if first_media and first_media.media_asset.thumbnail %}
+<img src="{{ first_media.media_asset.thumbnail.url }}" alt="" class="{{ classes }} object-cover flex-shrink-0">
+{% elif first_media and not first_media.media_asset.is_video %}
+<img src="{{ first_media.media_asset.file.url }}" alt="" class="{{ classes }} object-cover flex-shrink-0">
+{% elif first_media and first_media.media_asset.is_video %}
+<video src="{{ first_media.media_asset.file.url }}#t=0.5" class="{{ classes }} object-cover flex-shrink-0" muted preload="metadata"></video>
+{% endif %}
+{% endwith %}

@@ -88,6 +88,11 @@ def _dispatch_to_platform(message: InboxMessage, body: str, *, origin=PROGRAMMAT
     if recipient:
         extra.setdefault("recipient_id", recipient)
 
+    if message.message_type == InboxMessage.MessageType.MENTION:
+        # A mention sits on media another account owns, which the platforms
+        # answer on a different edge from a comment on our own post.
+        extra["mention"] = True
+
     if message.message_type in _COMMENT_LIKE_TYPES:
         result = provider.reply_to_comment(
             access_token=account.oauth_access_token,
@@ -95,6 +100,8 @@ def _dispatch_to_platform(message: InboxMessage, body: str, *, origin=PROGRAMMAT
             text=body,
             extra=extra,
         )
+    elif message.message_type == InboxMessage.MessageType.TAG:
+        raise MessagingError(reply_eligibility(message)["reason"], platform=account.platform)
     else:
         policy = reply_eligibility(message, origin=origin, actor=actor, credentials=credentials)
         if not policy["can_send"]:
@@ -251,3 +258,55 @@ def send_reply(*, message: InboxMessage, body: str, author=None, origin=PROGRAMM
         if not (message.message_type == "dm" and message.social_account.platform in META_DM_PLATFORMS):
             InboxReply.objects.filter(pk=reply.pk, status=InboxReply.Status.FAILED).delete()
         raise
+
+
+def fill_instagram_mention(message_id) -> bool:
+    """Fetch the text, author and link of an Instagram mention filed as a placeholder.
+
+    Idempotent: a message that no longer carries the placeholder is left alone,
+    so a re-run never overwrites a body a person already read. A refused lookup
+    keeps the placeholder, which already tells the team to open the post, and
+    is logged — Meta refuses it when comments are off on the post.
+    """
+    from apps.publisher.engine import _resolve_publish_credentials
+    from providers.exceptions import ProviderError
+    from providers.instagram import InstagramProvider
+
+    from .sentiment import analyze_sentiment
+    from .webhooks import INSTAGRAM_MENTION_PLACEHOLDER
+
+    message = (
+        InboxMessage.objects.select_related("social_account")
+        .filter(pk=message_id, message_type=InboxMessage.MessageType.MENTION, social_account__platform="instagram")
+        .first()
+    )
+    if not message or message.body != INSTAGRAM_MENTION_PLACEHOLDER:
+        return False
+    account = message.social_account
+    extra = dict(message.extra or {})
+    provider = get_provider(account.platform, _resolve_publish_credentials(account))
+    if not isinstance(provider, InstagramProvider):
+        return False
+    try:
+        mention = provider.get_mention(
+            account.oauth_access_token,
+            media_id=str(extra.get("media_id") or ""),
+            comment_id=str(extra.get("comment_id") or ""),
+        )
+    except ProviderError as exc:
+        logger.warning("Could not read Instagram mention %s: %s", message.platform_message_id, exc)
+        return False
+    if not mention["text"]:
+        return False
+
+    message.body = mention["text"]
+    if message.sentiment_source == InboxMessage.SentimentSource.AUTO:
+        message.sentiment = analyze_sentiment(message.body)
+    if mention["username"]:
+        message.sender_name = mention["username"]
+        message.sender_handle = mention["username"]
+    if mention["permalink"]:
+        extra["permalink"] = mention["permalink"]
+    message.extra = extra
+    message.save(update_fields=["body", "sentiment", "sender_name", "sender_handle", "extra"])
+    return True

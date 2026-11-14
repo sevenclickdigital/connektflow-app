@@ -7,9 +7,7 @@ branch, REST ``/schedule``). These tests pin that gate plus the protected-status
 skips and the orphan-Post cleanup.
 """
 
-import zoneinfo
-from datetime import UTC, date, datetime, timedelta
-from unittest.mock import patch
+from datetime import timedelta
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -440,37 +438,6 @@ class PublishTabCountTests(BulkActionBase):
         )
 
         self.assertEqual(response.context["queue_count"], 2)
-
-
-class TodayInViewTimezoneTests(BulkActionBase):
-    """The Today button must agree with the day the grid highlights."""
-
-    def setUp(self):
-        super().setUp()
-        self.client.force_login(self.owner)
-
-    def test_today_is_read_in_the_display_timezone(self):
-        """At 22:00 UTC it is already tomorrow in Tokyo.
-
-        The grids compute `today` as now-in-display-tz; the toolbar must use the
-        same clock or the button disables on the wrong day for hours at a time.
-        """
-        tokyo = zoneinfo.ZoneInfo("Asia/Tokyo")
-        fixed = datetime(2026, 8, 7, 22, 0, tzinfo=UTC)
-        tokyo_today = fixed.astimezone(tokyo).date()
-        self.assertEqual(tokyo_today, date(2026, 8, 8))  # guards the premise
-
-        url = reverse("calendar:calendar", kwargs={"workspace_id": self.workspace.id})
-        with patch("django.utils.timezone.now", return_value=fixed):
-            response = self.client.get(
-                url, {"mode": "calendar", "view": "day", "date": "2026-08-08", "tz": "Asia/Tokyo"}
-            )
-            self.assertTrue(response.context["is_today_in_view"])
-
-            response = self.client.get(
-                url, {"mode": "calendar", "view": "day", "date": "2026-08-07", "tz": "Asia/Tokyo"}
-            )
-            self.assertFalse(response.context["is_today_in_view"])
 
 
 class InvalidTimezoneTests(BulkActionBase):
