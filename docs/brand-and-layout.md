@@ -69,4 +69,3 @@ The design source is the brand pack in `branding/` (logo, mascot poses and per-n
 - The Trustpilot review card (`templates/partials/_review_banner.html`) asks for a review of BrightBean on its Trustpilot page and says the product is free. Remove it, or point it at Connekt Flow's own review page.
 - Dark mode: not specified by the pack.
 - Moti's art is to be revised for the Connekt Flow identity; until the new images arrive the current ones stay.
-- `README.md` is still upstream's (logo, badges, hosted version at brightbean.xyz). Rewrite it for Connekt Flow, keeping the AGPL notice and the credit to BrightBean Studio.

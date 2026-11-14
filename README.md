@@ -1,66 +1,53 @@
 <p align="center">
-  <a href="https://github.com/brightbeanxyz/brightbean-studio">
-    <img src=".github/assets/brightbean-studio-logo.webp" alt="BrightBean Studio" width="280">
-  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="branding/logo/connektflow-wordmark.png">
+    <img src="branding/logo/connektflow-wordmark-dark.png" alt="Connekt Flow" width="320">
+  </picture>
 </p>
 
 <p align="center">
-  <strong>Open-source social media management for creators, agencies, and SMBs.</strong>
+  <strong>Social media management for agencies and brands: publish, approve, answer and automate from one place.</strong>
 </p>
 
 <p align="center">
-  <a href="https://github.com/brightbeanxyz/brightbean-studio/actions/workflows/ci.yml"><img src="https://github.com/brightbeanxyz/brightbean-studio/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/sevenclickdigital/connektflow-app/actions/workflows/ci.yml"><img src="https://github.com/sevenclickdigital/connektflow-app/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="License: AGPL-3.0"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.12%2B-blue.svg" alt="Python 3.12+"></a>
   <a href="https://www.djangoproject.com/"><img src="https://img.shields.io/badge/Django-5.x-green.svg" alt="Django 5.x"></a>
 </p>
 
-<p align="center">
-  <a href="https://brightbean.xyz/studio/"><img src="https://img.shields.io/badge/Free%20hosted%20version-brightbean.xyz%2Fstudio-FFB300?style=for-the-badge" alt="Free hosted version at brightbean.xyz/studio"></a>
-</p>
-
 ---
 
-## About BrightBean Studio
+## About Connekt Flow
 
-BrightBean Studio is an open-source, self-hostable social media management platform built for creators, agencies and SMBs. It does what Sendible, SocialPilot, or ContentStudio do, but free and without per-seat, per-channel, or per-workspace limits. Plan, compose, schedule, approve, publish, and monitor content across Facebook, Instagram, LinkedIn, TikTok, YouTube, Pinterest, Threads, Bluesky, Google Business Profile, Mastodon, and DEV.to from a single multi-workspace dashboard.
+Connekt Flow ([connektflow.com.br](https://connektflow.com.br)) is a social media management platform built by Seven Click. A team plans, composes, schedules, approves and publishes content, answers every channel from one inbox, follows the numbers and automates replies to comments and messages — for as many brands as it manages, each in its own workspace.
 
-It's for people managing many client accounts under one roof who'd rather own their social stack than pay $100–300/month to a SaaS vendor. Every feature is available to every user. No paid tier, no feature gate, no upsell.
+Every integration talks directly to the platform's official API with your own developer credentials. There is no aggregator between the app and the networks.
 
-A free hosted version is available at [brightbean.xyz/studio](https://brightbean.xyz/studio/). You can also deploy it yourself on [Dokploy](https://dokploy.com/) or run it locally. All platform integrations talk directly to the official first-party APIs using your own developer credentials, so there's no aggregator middleman, no vendor lock-in, and no third party sitting between you and your data.
+This repository is the application. It is a fork of the open-source [BrightBean Studio](https://github.com/brightbeanxyz/brightbean-studio) and stays under the same licence; see [License](#license).
 
 ## Features
 
 | | |
 |---|---|
-| **Multi-workspace & teams** | Unlimited orgs → workspaces → members. Granular RBAC with custom roles, invitations, and a separate Client role for external collaborators. |
-| **Content composer** | Rich editor with per-platform caption/media overrides, version history, reusable templates, content categories & tags, a Kanban idea board. |
-| **Calendar & scheduling** | Visual calendar with recurring weekly posting slots per account and named queues that auto-assign posts to the next available slot. |
-| **Publishing engine** | Direct first-party API integrations (no aggregator), automatic retries, per-account rate-limit tracking, and a 90-day publish audit log. |
-| **Approval workflows** | Configurable stages (none / optional / internal / internal + client), threaded internal & external comments, reminders, and a full audit trail. |
-| **Unified social inbox** | Comments, mentions, DMs, and reviews from every connected platform in one place, with sentiment analysis, assignments, threaded replies, and historical backfill. |
-| **Analytics** | Per-post and channel-level performance from every connected platform's native API, with KPI cards, 7/30/90-day trend charts, and a sortable all-posts table for views, engagement, follower growth, reach, and watch time. |
-| **Media library** | Org- and workspace-scoped libraries with nested folders, auto-generated platform-optimized variants, alt text, and built-in Unsplash stock-photo search in the composer. |
-| **Client portal** | Passwordless 30-day magic-link access so clients can approve or reject posts without creating an account. |
-| **Notifications** | In-app, email, and webhook delivery with per-user preferences for every event type. |
-| **Security & ops** | Encrypted token & credential storage, Google SSO, Sentry support, and a 14-day org-deletion grace period for non-YouTube data. YouTube connections and copied API data are removed immediately when deletion is requested. 2FA (TOTP) is on the roadmap. |
-| **White-label friendly** | Per-workspace branding (logo, colors) and workspace defaults for hashtags, first comments, and posting templates. |
+| **Organizations, brands & teams** | Organizations hold workspaces (one per brand) and members. Role-based permissions with custom roles, invitations, and a separate Client role for external collaborators. |
+| **Composer** | Per-platform caption and media overrides, version history, reusable templates, categories and tags, an idea board. |
+| **Calendar & scheduling** | Calendar, list and board views of the same posts, recurring posting slots per account, queues that fill the next free slot, commemorative dates. |
+| **Publishing engine** | Direct first-party API integrations, automatic retries, per-account rate-limit tracking, a publish audit log, and deletion of a published post from its network. |
+| **Approval workflows** | Configurable stages (none / optional / internal / internal + client), threaded internal and external comments, reminders, audit trail. |
+| **Client portal** | Passwordless magic-link access so a client approves or rejects posts without creating an account. |
+| **Inbox** | Comments, mentions and direct messages from every connected channel, WhatsApp included, shown as conversations with assignment, status, saved replies and internal notes. |
+| **Automations** | A flow builder that answers comments and messages by rule and can follow up by direct message. |
+| **Contacts & funnels** | The people who wrote in, and sales funnels to move their conversations through. |
+| **Tasks** | A task board for the team, including art requests tied to a post. |
+| **Analytics** | Per-post and per-account figures from each platform's native API, with trend charts and a sortable table of every post. |
+| **Media library** | Per-workspace and shared libraries with folders, platform-optimized variants, alt text, and Unsplash search in the composer. |
+| **Notifications** | In-app, email and webhook delivery with per-user preferences. |
+| **Billing** | Priced per workspace, charged through [Asaas](https://www.asaas.com/), with included disk space and paid extra storage. |
+| **API & MCP** | A REST API and an MCP server so scripts and agents can read analytics, manage media and create or schedule posts. |
+| **Security & ops** | Encrypted token and credential storage, Google sign-in, Sentry support, and a grace period before an organization's data is deleted. |
 
-### A quick look
-
-<table>
-  <tr>
-    <td colspan="2"><img src=".github/assets/BrightBean%20Studio%20Calendar.webp" alt="Calendar view"><br><sub><b>Visual calendar</b> - drag-and-drop scheduling with recurring slots and queues.</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src=".github/assets/BrightBean%20Studio%20Post%20Editor.webp" alt="Post editor"><br><sub><b>Post editor</b> - composer with per-platform overrides and previews.</sub></td>
-    <td width="50%"><img src=".github/assets/BrightBean%20Studio%20Idea%20Kanban%20Board.webp" alt="Idea kanban board"><br><sub><b>Idea board</b> - Kanban workflow to keep track of all your post ideas.</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src=".github/assets/BrightBean%20Social%20Media%20Platforms.webp" alt="Connected platforms"><br><sub><b>Connect anything</b> - 10+ first-party integrations, no aggregator.</sub></td>
-    <td width="50%"><img src=".github/assets/BrightBean%20Studio%20Analytics.webp" alt="Analytics dashboard"><br><sub><b>Performance analytics</b> - per-post and channel-level metrics with KPI cards and trend charts.</sub></td>
-  </tr>
-</table>
+What each feature does, and where it lives in the code, is in [`docs/features.md`](docs/features.md). How the pieces fit together is in [`docs/architecture.md`](docs/architecture.md).
 
 ## Supported Platforms
 
@@ -80,16 +67,11 @@ A free hosted version is available at [brightbean.xyz/studio](https://brightbean
 | <img src="https://api.iconify.design/logos/google-icon.svg" width="16" height="16"> Google Business Profile | ✓ | — | — | ✓ |
 | <img src="https://cdn.simpleicons.org/mastodon" width="16" height="16"> Mastodon | ✓ | ✓ | — | — |
 | <img src="https://cdn.simpleicons.org/devdotto/000000" width="16" height="16"> DEV.to | ✓ | — | — | — |
+| <img src="https://cdn.simpleicons.org/whatsapp" width="16" height="16"> WhatsApp (Cloud API) | — | — | ✓ | — |
 
 ---
 
-### Hosted Version
-
-A free hosted version of Brightbean Studio is available at [brightbean.xyz/studio](https://brightbean.xyz/studio/). It runs the same codebase as this repository, with no setup or maintenance required.
-
-If you'd rather self-host, choose one of the options below.
-
-### Self-Hosting
+## Environment Variables
 
 Production runs on Dokploy — see [Production Deployment](#production-deployment).
 
@@ -123,8 +105,8 @@ For social media API keys, see [Platform Credentials](#platform-credentials). Fu
 ## Quick Start (Docker)
 
 ```bash
-git clone https://github.com/brightbeanxyz/brightbean-studio.git
-cd brightbean-studio
+git clone https://github.com/sevenclickdigital/connektflow-app.git
+cd connektflow-app
 cp .env.example .env
 ```
 
@@ -165,8 +147,8 @@ Run everything natively - no Docker, no PostgreSQL install. Uses SQLite for the 
 **1. Clone and configure**
 
 ```bash
-git clone https://github.com/brightbeanxyz/brightbean-studio.git
-cd brightbean-studio
+git clone https://github.com/sevenclickdigital/connektflow-app.git
+cd connektflow-app
 cp .env.example .env
 ```
 
@@ -319,7 +301,7 @@ What a visitor who may not sign up sees depends on `CUSTOM_SIGNUP_URL`:
   from `/accounts/signup/` and from the Google callback alike, before any
   account is created — and the login page's "Sign up" link points there too.
   In `invite` mode, visitors with a valid invitation still get the built-in
-  signup. Studio refuses to start if the URL points back at its own
+  signup. The app refuses to start if the URL points back at its own
   `/accounts/signup/`, which would loop.
 
 Things to expect with a redirect: a new Google user goes through Google's
@@ -335,24 +317,34 @@ being loud about.
 ## Project Structure
 
 ```
-brightbean-studio/
+connektflow-app/
 ├── config/
-│   ├── settings/
-│   │   ├── base.py            # Shared settings
-│   │   ├── development.py     # Local dev overrides
-│   │   ├── production.py      # Production hardening
-│   │   └── test.py            # Test overrides
+│   ├── settings/              # base, development, production, test
 │   ├── urls.py                # Root URL configuration
 │   ├── wsgi.py
 │   └── asgi.py
 ├── apps/
-│   ├── accounts/              # Custom User model, auth, OAuth, sessions
-│   ├── organizations/         # Organization management
-│   ├── workspaces/            # Workspace CRUD
+│   ├── accounts/              # Custom User model, auth, sessions
+│   ├── organizations/         # Organizations
+│   ├── workspaces/            # Workspaces (one per brand)
 │   ├── members/               # RBAC, invitations, middleware, decorators
-│   ├── settings_manager/      # Configurable defaults with cascade logic
-│   ├── credentials/           # Platform API credential storage (encrypted)
-│   └── common/                # Shared: encrypted fields, scoped model managers
+│   ├── credentials/           # Platform API credentials (encrypted)
+│   ├── social_accounts/       # Connecting accounts, health checks
+│   ├── composer/              # Writing posts
+│   ├── calendar/              # Calendar, slots, queues
+│   ├── approvals/             # Approval workflow
+│   ├── publisher/             # Publishing engine
+│   ├── client_portal/         # Magic-link access for clients
+│   ├── inbox/                 # Conversations, webhooks, replies
+│   ├── automations/           # Flow builder for comments and messages
+│   ├── contacts/  funnels/    # Contacts and sales funnels
+│   ├── tasks/                 # Task board and art requests
+│   ├── analytics/             # Metrics sync and reports
+│   ├── media_library/         # Media, folders, variants
+│   ├── notifications/         # In-app, email and webhook notifications
+│   ├── billing/               # Per-workspace billing through Asaas
+│   ├── api/  mcp/  api_keys/  oauth_server/   # REST API, MCP server and their auth
+│   └── common/                # Shared: encryption, scoped managers, the worker
 ├── providers/                 # Social platform API modules (one file per platform)
 ├── templates/                 # Django templates
 │   ├── base.html              # Layout with sidebar + nav
@@ -364,6 +356,8 @@ brightbean-studio/
 │       ├── src/styles.css     # Tailwind directives
 │       └── tailwind.config.js
 ├── Dockerfile
+├── docs/                      # Architecture, features, brand and layout
+├── branding/                  # Logo, mascot and design tokens
 ├── docker-compose.yml         # Dev: app + worker + postgres
 ├── docker-compose.dokploy.yml # Production (Dokploy)
 └── .env.example               # All environment variables
@@ -375,7 +369,7 @@ brightbean-studio/
 
 To connect social media accounts, you need API credentials from each platform's developer portal. You can set these via environment variables in `.env` (see `.env.example`) or, per organization, through the Django admin at `{APP_URL}/admin/` → **Credentials → Platform credentials** (superuser only). If a platform is configured in both places, the `.env` value takes precedence.
 
-**Admin UI access (superuser only):** The Django admin at `{APP_URL}/admin/` (for example `https://brightbean.example.com/admin/`) is restricted to superuser accounts — only a superuser can view or edit platform credentials there. If you don't already have one, create a superuser, then sign in and open **Credentials → Platform credentials**:
+**Admin UI access (superuser only):** The Django admin at `{APP_URL}/admin/` (for example `https://app.example.com/admin/`) is restricted to superuser accounts — only a superuser can view or edit platform credentials there. If you don't already have one, create a superuser, then sign in and open **Credentials → Platform credentials**:
 
 ```bash
 python manage.py createsuperuser
@@ -388,7 +382,7 @@ python manage.py createsuperuser
 {APP_URL}/social-accounts/callback/{platform}/
 ```
 
-For example, if your `APP_URL` is `https://brightbean.example.com`, the Facebook redirect URI would be `https://brightbean.example.com/social-accounts/callback/facebook/`.
+For example, if your `APP_URL` is `https://app.example.com`, the Facebook redirect URI would be `https://app.example.com/social-accounts/callback/facebook/`.
 
 > **TikTok:** use the slug `social1` instead of `tiktok` — TikTok rejects redirect URIs containing their brand name. See the [TikTok](#tiktok) section.
 
@@ -433,7 +427,7 @@ Facebook and Instagram share the same Meta app credentials. Threads runs on the 
    - **Callback URL:** `{APP_URL}/webhooks/facebook/` (the same endpoint — it handles both platforms)
    - Subscribe to the `comments`, `mentions`, and `messages` fields.
 
-   > `comments` and `mentions` belong to the **Instagram** object, not the Page — a Page accepts only its own fields (`feed`, `mention`, `messages`, …). Studio subscribes the Instagram *account* automatically on connect, but the object-level configuration here can only be done in the dashboard. Without it, Instagram comments arrive only via the 5-minute poll and mentions not at all.
+   > `comments` and `mentions` belong to the **Instagram** object, not the Page — a Page accepts only its own fields (`feed`, `mention`, `messages`, …). The app subscribes the Instagram *account* automatically on connect, but the object-level configuration here can only be done in the dashboard. Without it, Instagram comments arrive only via the 5-minute poll and mentions not at all.
 6. Set the environment variables:
    ```
    PLATFORM_FACEBOOK_APP_ID=your-app-id
@@ -488,7 +482,7 @@ For the review itself, record each screen the request is for, end to end: for Pa
 Both Instagram connectors receive DMs and supported incoming media in the unified
 inbox and send text replies. The Facebook Login connector uses the selected
 Page's token and ID for conversations and sending, while incoming webhook entries
-identify the Instagram account. Studio adds `messages` to that Page's existing
+identify the Instagram account. The app adds `messages` to that Page's existing
 subscription without replacing Facebook feed/mention fields.
 
 For Facebook Login Instagram messaging, the login needs `instagram_manage_messages`
@@ -508,7 +502,7 @@ changing the code's scope list does not change Meta's configuration.
 
 For external customers, complete Meta App Review, the required Advanced Access,
 and business verification. Prepare a review recording showing login and account
-selection, a customer DM appearing in Studio, an incoming attachment, a text reply,
+selection, a customer DM appearing in the inbox, an incoming attachment, a text reply,
 and receipt of that reply in Instagram. Configure the Instagram object's `messages`
 field and callback in the Meta dashboard; the Page subscription alone does not
 configure the app-level callback.
@@ -555,7 +549,7 @@ It runs on the same Meta app as Facebook by default.
 5. **Webhook.** On **Webhooks**, choose the **WhatsApp Business Account** object:
    - **Callback URL:** `{APP_URL}/webhooks/whatsapp/`
    - **Verify token:** `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (falls back to `FACEBOOK_WEBHOOK_VERIFY_TOKEN`)
-   - Subscribe to **`messages`** (incoming messages and delivery/read statuses) and **`account_update`**, which Meta requires for Embedded Signup. Studio subscribes each connected WABA to the app itself (`/subscribed_apps`) and registers the number on the Cloud API if it isn't yet.
+   - Subscribe to **`messages`** (incoming messages and delivery/read statuses) and **`account_update`**, which Meta requires for Embedded Signup. The app subscribes each connected WABA to the app itself (`/subscribed_apps`) and registers the number on the Cloud API if it isn't yet.
 6. Set the environment variables:
    ```
    # Optional: only when WhatsApp runs on a different Meta app than Facebook
@@ -600,7 +594,7 @@ The Instagram (Direct) connector uses the **Instagram API with Instagram Login**
 
 ### LinkedIn
 
-Brightbean Studio supports two LinkedIn paths. Pick whichever your LinkedIn dev app can obtain - or both, on separate apps.
+Connekt Flow supports two LinkedIn paths. Pick whichever your LinkedIn dev app can obtain - or both, on separate apps.
 
 **Path A - Personal-only (any individual developer can do this):**
 
@@ -641,7 +635,7 @@ Brightbean Studio supports two LinkedIn paths. Pick whichever your LinkedIn dev 
    PLATFORM_LINKEDIN_COMPANY_CLIENT_SECRET=your-client-secret
    ```
 
-If you set only the Path B (Company) credentials, Brightbean Studio automatically reuses them for personal connections too - refresh tokens (365-day) and inbox both work. You only need Path A vars if you have a separate Personal-only app.
+If you set only the Path B (Company) credentials, Connekt Flow automatically reuses them for personal connections too - refresh tokens (365-day) and inbox both work. You only need Path A vars if you have a separate Personal-only app.
 
 > **Note:** "Sign In with LinkedIn using OpenID Connect" / "Share on LinkedIn" and "Community Management API" are **mutually exclusive** on a single LinkedIn app. You need separate apps for Path A and Path B.
 
@@ -757,19 +751,19 @@ No developer app registration needed. Users connect by entering their Bluesky ha
 
 1. Log in to [Bluesky](https://bsky.app/)
 2. Go to **Settings → Privacy and Security → App Passwords**
-3. Create a new app password and use it when connecting your account in Brightbean Studio
+3. Create a new app password and use it when connecting your account in Connekt Flow
 
 ### Mastodon
 
-No developer app registration needed. Brightbean Studio automatically registers an OAuth application on each Mastodon instance when a user connects their account. Users just need to enter their instance URL (e.g., `mastodon.social`).
+No developer app registration needed. Connekt Flow automatically registers an OAuth application on each Mastodon instance when a user connects their account. Users just need to enter their instance URL (e.g., `mastodon.social`).
 
 ### DEV.to
 
 No developer app registration needed. Users connect by entering a personal **API key**:
 
 1. Log in to [DEV.to](https://dev.to/) and open **[Settings → Extensions](https://dev.to/settings/extensions)**
-2. Under **DEV Community API Keys**, enter a description (e.g. `Brightbean`) and click **Generate API Key**
-3. Copy the generated key and paste it when connecting your account in Brightbean Studio
+2. Under **DEV Community API Keys**, enter a description (e.g. `Connekt Flow`) and click **Generate API Key**
+3. Copy the generated key and paste it when connecting your account in Connekt Flow
 
 Posts publish as DEV.to articles (title + Markdown body). The key can be revoked at any time from the same settings page.
 
@@ -806,7 +800,7 @@ It reports the token's granted scopes (a missing `pages_manage_engagement` is wh
 
 ## API & MCP for Agents
 
-BrightBean Studio ships a REST API and an MCP (Model Context Protocol) server so agents and scripts can read analytics, manage media, and create or schedule posts. Both share the same authentication, permission model, rate limits, and audit log. Pick whichever protocol fits your client.
+Connekt Flow ships a REST API and an MCP (Model Context Protocol) server so agents and scripts can read analytics, manage media, and create or schedule posts. Both share the same authentication, permission model, rate limits, and audit log. Pick whichever protocol fits your client.
 
 **Base URL:** `{APP_URL}/api/v1/` (e.g. `https://your-studio.example.com/api/v1/`)
 
@@ -818,7 +812,7 @@ Issue an API key from **Organization → API Keys**. Keys are workspace-scoped, 
 Authorization: Bearer bb_studio_...
 ```
 
-Also send a `User-Agent` header naming your client (e.g. `User-Agent: my-agent/1.0`). Cloudflare's Browser Integrity Check, which is on by default and fronts the hosted `studio.brightbean.xyz`, rejects Python's standard-library default (`Python-urllib/3.x`) with `403` and a plain-text `error code: 1010` body before the request reaches Studio. Any value of your own gets through; `requests`, `httpx`, curl, and Node clients already send one that does.
+Also send a `User-Agent` header naming your client (e.g. `User-Agent: my-agent/1.0`). When Cloudflare fronts the deployment, its Browser Integrity Check (on by default) rejects Python's standard-library default (`Python-urllib/3.x`) with `403` and a plain-text `error code: 1010` body before the request reaches the app. Any value of your own gets through; `requests`, `httpx`, curl, and Node clients already send one that does.
 
 Permission keys: `create_posts`, `publish_directly`, `upload_media`, `view_analytics`, `use_inbox`, `reply_from_inbox`. Each endpoint requires the relevant permission; missing permissions return `403`.
 
@@ -834,7 +828,7 @@ Permission keys: `create_posts`, `publish_directly`, `upload_media`, `view_analy
 
 The hourly and daily caps count REST and MCP calls together (every JSON-RPC message, including `ping` and `tools/list`), over fixed UTC hours and UTC days. Calls refused with `429` don't count against them. Rate-limit responses (`429`) include a `tier` (`per_key_hourly`, `per_key_daily`, …) and `Retry-After`, `X-RateLimit-Limit`, and `X-RateLimit-Remaining` headers; for the hourly and daily caps `Retry-After` is the time until the window resets.
 
-Don't poll faster than the data changes. Studio syncs the inbox every 5 minutes and analytics every hour, so `GET /inbox/` more often than every 5 minutes, or analytics more often than hourly, returns the same data and spends your budget.
+Don't poll faster than the data changes. The app syncs the inbox every 5 minutes and analytics every hour, so `GET /inbox/` more often than every 5 minutes, or analytics more often than hourly, returns the same data and spends your budget.
 
 ### REST Endpoints
 
@@ -893,18 +887,14 @@ The MCP server lives at `POST {APP_URL}/api/v1/mcp` and speaks JSON-RPC 2.0 over
 
 The server is at `{APP_URL}/api/v1/mcp` and supports two authentication modes — pick whichever your client uses.
 
-**Claude Desktop (and other native OAuth connectors).** In Claude Desktop open **Settings → Connectors → Add custom connector**, name it, and enter the server URL `{APP_URL}/api/v1/mcp`. Claude registers itself (Dynamic Client Registration) and opens a browser to log in to BrightBean Studio and approve access — **no API key required**. Any Studio user can connect; the connection acts with **their own** workspace permissions (read-only roles get the read tools, while posting/scheduling/uploading require the matching permission), operating on their last-active workspace. Requires Studio to be served over a public **https** URL.
+**Claude Desktop (and other native OAuth connectors).** In Claude Desktop open **Settings → Connectors → Add custom connector**, name it, and enter the server URL `{APP_URL}/api/v1/mcp`. Claude registers itself (Dynamic Client Registration) and opens a browser to log in to Connekt Flow and approve access — **no API key required**. Any user can connect; the connection acts with **their own** workspace permissions (read-only roles get the read tools, while posting/scheduling/uploading require the matching permission), operating on their last-active workspace. Requires the app to be served over a public **https** URL.
 
 **Claude Code, Cursor, custom agents (static API key).** Point the client at the same URL and send an API key as a Bearer token (`Authorization: Bearer bb_studio_...`). For Claude Code:
 
 ```bash
-claude mcp add --transport http brightbean {APP_URL}/api/v1/mcp \
+claude mcp add --transport http connektflow {APP_URL}/api/v1/mcp \
   --header "Authorization: Bearer bb_studio_..."
 ```
-
-### Pre-built agent skill
-
-Don't want to wire up your own client? The companion [brightbean-studio-agent](https://github.com/brightbeanxyz/brightbean-studio-agent) repository hosts a holistic agent skill that drives BrightBean Studio end-to-end through the REST API and MCP tools documented above.
 
 ---
 
@@ -959,4 +949,6 @@ To report a security vulnerability, see [SECURITY.md](SECURITY.md). Do not open 
 
 ## License
 
-[AGPL-3.0](LICENSE) - see LICENSE for details.
+[AGPL-3.0](LICENSE).
+
+Connekt Flow is a fork of [BrightBean Studio](https://github.com/brightbeanxyz/brightbean-studio), which its authors publish under the AGPL-3.0. The changes made here by Seven Click are published under the same licence, in this repository.
