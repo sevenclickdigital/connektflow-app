@@ -82,7 +82,7 @@ After deploying, set these environment variables in Dokploy's Environment tab:
 | `DJANGO_SETTINGS_MODULE` | Auto-set | `config.settings.production`. Already set by `docker-compose.dokploy.yml`. |
 | `SECRET_KEY` | Yes | Django secret key — a random 50+ character string. |
 | `ENCRYPTION_KEY_SALT` | Yes | Encryption salt. Never change it once tokens are stored. |
-| `DATABASE_URL` | No | PostgreSQL connection string. Defaults to the compose file's own `postgres` service. |
+| `DATABASE_URL` | Yes | PostgreSQL connection string: the "Internal Connection URL" of the database created in Dokploy's Databases tab. |
 | `ALLOWED_HOSTS` | Yes | Your app's domain, e.g. `studio.example.com` |
 | `APP_URL` | Yes | Full public URL, e.g. `https://studio.example.com` |
 | `STORAGE_BACKEND` | No | Set to `s3` for S3/R2 storage. Default: `local`, which keeps uploads on the `media_data` volume. |
@@ -253,9 +253,11 @@ ruff format .
 
 ### Dokploy
 
-Create a *Docker Compose* application in Dokploy and point its "Compose Path" at `docker-compose.dokploy.yml` alone (do not combine it with `docker-compose.yml`). Set the variables above in the Environment tab, then add a Domain pointing to service `app`, container port `8000`. Dokploy's Traefik terminates TLS.
+First create a **PostgreSQL 16** database in Dokploy's Databases tab and copy its "Internal Connection URL" into `DATABASE_URL`; the stack has no database of its own. Schedule its backups there too.
 
-The stack runs a one-shot `migrate` container, `app` (Gunicorn), `worker` and PostgreSQL. With the default `STORAGE_BACKEND=local`, Django serves uploads at `/media/` from the `media_data` volume; switch to `STORAGE_BACKEND=s3` once media volume grows, since Django's static serve has no byte-range support (no video seeking).
+Then create a *Docker Compose* application in Dokploy and point its "Compose Path" at `docker-compose.dokploy.yml` alone (do not combine it with `docker-compose.yml`). Set the variables above in the Environment tab, then add a Domain pointing to service `app`, container port `8000`. Dokploy's Traefik terminates TLS.
+
+The stack runs a one-shot `migrate` container, `app` (Gunicorn) and `worker`, all on `dokploy-network` so they reach the database; leave "Isolated Deployments" off, since it moves the stack to a network of its own. With the default `STORAGE_BACKEND=local`, Django serves uploads at `/media/` from the `media_data` volume; switch to `STORAGE_BACKEND=s3` once media volume grows, since Django's static serve has no byte-range support (no video seeking).
 
 Create the first admin with `python manage.py createsuperuser` from the `app` container's terminal in Dokploy.
 

@@ -13,6 +13,13 @@
 #     publishing 8000 on the host would expose it bypassing TLS.
 #   - Env vars come from Dokploy's Environment tab, not an .env file: Dokploy
 #     writes that tab to a .env next to this file and interpolates it here.
+#   - No database here. PostgreSQL is a Dokploy database (Databases tab), so it
+#     has its own lifecycle and backups and a redeploy of this stack never
+#     touches it. DATABASE_URL is its "Internal Connection URL".
+#   - Every service joins dokploy-network, the network Dokploy's databases and
+#     Traefik live on; without it the database's internal host does not
+#     resolve. Keep "Isolated Deployments" off for this application, since it
+#     moves the stack to a network of its own.
 #
 # In Dokploy, add a Domain pointing to service `app`, container port `8000`.
 services:
@@ -25,12 +32,11 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings.production
       SECRET_KEY: ${SECRET_KEY}
       ENCRYPTION_KEY_SALT: ${ENCRYPTION_KEY_SALT}
-      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/brightbean}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the internal connection URL of the Dokploy database}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       APP_URL: ${APP_URL}
-    depends_on:
-      postgres:
-        condition: service_healthy
+    networks:
+      - dokploy-network
     restart: "no"
 
   app:
@@ -44,7 +50,7 @@ services:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
-      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/brightbean}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the internal connection URL of the Dokploy database}
       MEDIA_ROOT: /app/media
       # The Dockerfile reports the host's core count, so glibc's per-thread
       # arena cap is effectively unbounded here. See README "MALLOC_ARENA_MAX".
@@ -68,6 +74,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    networks:
+      - dokploy-network
     restart: unless-stopped
 
   worker:
@@ -81,7 +89,7 @@ services:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
-      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/brightbean}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the internal connection URL of the Dokploy database}
       MEDIA_ROOT: /app/media
       MALLOC_ARENA_MAX: 2
     volumes:
@@ -89,26 +97,13 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-    restart: unless-stopped
-
-  # Drop this service (and the postgres_data volume + depends_on above) if you
-  # provision Postgres in Dokploy's own Databases tab and set DATABASE_URL to
-  # its internal connection string.
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: brightbean
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d brightbean"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+    networks:
+      - dokploy-network
     restart: unless-stopped
 
 volumes:
-  postgres_data:
   media_data:
+
+networks:
+  dokploy-network:
+    external: true

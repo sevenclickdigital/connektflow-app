@@ -294,8 +294,8 @@ STORAGE_BACKEND=s3     →  storages.backends.s3boto3.S3Boto3Storage (S3_* env v
 migrate:  one-shot `manage.py migrate --noinput`
 app:      gunicorn config.wsgi:application --workers 1 --threads 4 (expose 8000, /health/ healthcheck)
 worker:   manage.py run_studio_worker
-postgres: postgres:16-alpine (optional; can be swapped for a Dokploy-managed DB via DATABASE_URL)
-volumes:  postgres_data, media_data (mounted at /app/media in app and worker)
+volumes:  media_data (mounted at /app/media in app and worker)
+networks: dokploy-network (external), where the database and Traefik are
 ```
 
 Dokploy's Traefik terminates TLS and proxies to `app:8000`. No host port is published and there is no second proxy. Env vars come from Dokploy's Environment tab. `config.settings.production` trusts `X-Forwarded-Proto` and exempts `/health/` from the SSL redirect. Gunicorn uses one worker because of memory (about 200 MB per warmed worker). `--max-requests` is left off on purpose (see the `Dockerfile` comment). `MALLOC_ARENA_MAX=2` is set on app and worker.
@@ -308,7 +308,7 @@ The image (`Dockerfile`, `python:3.12-slim`) installs FFmpeg, gettext and Node 2
 
 There is no backup management command. What needs backing up:
 
-- **PostgreSQL**: all application data, including the job queue. Use `pg_dump` against `DATABASE_URL` (for example `docker compose -f docker-compose.dokploy.yml exec postgres pg_dump -U postgres brightbean | gzip > db.sql.gz`) or Dokploy's database backups.
+- **PostgreSQL**: all application data, including the job queue. Schedule backups on the database in Dokploy, or run `pg_dump` against `DATABASE_URL`.
 - **Media**: the `media_data` volume when `STORAGE_BACKEND=local`. With S3, media lives in the bucket.
 - **Secrets**: keep `SECRET_KEY` and `ENCRYPTION_KEY_SALT` with the backup. Without them, encrypted tokens and credentials can't be decrypted (§17).
 
