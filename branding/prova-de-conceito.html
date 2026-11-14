@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Automator — Prova de conceito do layout</title>
+
+<!--
+  Proof of concept for the Automator layout.
+
+  - Tokens come from tokens/automator-tokens.css (linked, not copied): edit the
+    token, reload, see the result.
+  - Markup mirrors the app's templates (templates/base.html, social_accounts/list.html,
+    social_accounts/partials/_account_card.html, _status_badge.html, calendar/calendar.html,
+    calendar/partials/publish_calendar_shell.html, month_grid.html) so the migration is a
+    class swap, not a rewrite. Tailwind v4 (browser build) and Alpine are loaded from a CDN
+    here only; the app builds Tailwind locally and vendors Alpine.
+  - Component classes below are the ones in theme/static_src/src/styles.css and
+    calendar.html, with the changes the new layout needs. They live in @layer components
+    so utilities on the same element win (fixes the cascade caveat in docs/style-guide.html).
+  - Pages: the sidebar switches between "Contas Sociais", "Calendário" and "Guia de estilo".
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens/automator-tokens.css">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+
+<style>
+[x-cloak] { display: none !important; }
+body { font-family: var(--font-body); background: var(--surface-page); color: var(--text-primary); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+/* ── App component classes (styles.css names) ─────────────── */
+@layer components {
+  .btn-brand { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: var(--font-body); font-weight: 600; font-size: 0.875rem; padding: 0.625rem 1.25rem; border-radius: var(--radius-md); border: none; cursor: pointer; transition: all var(--dur-base) var(--ease-out); background: var(--primary); color: var(--text-inverse); box-shadow: var(--shadow-primary); white-space: nowrap; }
+  .btn-brand:hover { background: var(--primary-hover); transform: translateY(-1px); }
+  .btn-brand:active { transform: translateY(0); }
+  .btn-soft { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: var(--font-body); font-weight: 600; font-size: 0.875rem; padding: 0.5rem 1rem; border-radius: var(--radius-md); border: none; cursor: pointer; transition: all var(--dur-fast) ease; background: var(--primary-soft); color: var(--primary); white-space: nowrap; }
+  .btn-soft:hover { background: var(--primary-muted); }
+  .btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: var(--font-body); font-weight: 600; font-size: 0.875rem; padding: 0.625rem 1.25rem; border-radius: var(--radius-md); cursor: pointer; transition: all var(--dur-base) var(--ease-out); background: var(--surface-0); color: var(--primary); border: 1.5px solid var(--primary-ring); }
+  .btn-outline:hover { background: var(--brand-50); border-color: var(--primary); }
+  .btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: var(--font-body); font-weight: 500; font-size: 0.875rem; padding: 0.625rem 1.25rem; border-radius: var(--radius-md); cursor: pointer; transition: all var(--dur-fast) ease; background: var(--surface-0); color: var(--text-primary); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--surface-1); border-color: var(--border-hover); }
+  .btn-danger-soft { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: var(--font-body); font-weight: 600; font-size: 0.875rem; padding: 0.625rem 1.25rem; border-radius: var(--radius-md); cursor: pointer; transition: all var(--dur-fast) ease; background: var(--error-50); color: var(--error-500); border: 1px solid rgba(239,68,68,0.2); }
+  .btn-danger-soft:hover { background: #FEE2E2; }
+  .btn-link { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-body); font-weight: 500; font-size: 0.8125rem; padding: 0.5rem 1rem; border-radius: var(--radius-md); border: none; cursor: pointer; transition: all var(--dur-fast) ease; background: transparent; color: var(--primary); }
+  .btn-link:hover { background: var(--primary-soft); }
+  .btn-social { display: flex; align-items: center; justify-content: center; gap: 0.75rem; font-family: var(--font-body); font-weight: 500; font-size: 0.875rem; padding: 0.625rem 1.25rem; border-radius: var(--radius-md); cursor: pointer; transition: all var(--dur-base) var(--ease-out); background: var(--surface-0); color: var(--text-primary); border: 1.5px solid var(--border); width: 100%; text-decoration: none; }
+  .btn-social:hover { background: var(--surface-1); border-color: var(--border-hover); box-shadow: var(--shadow-sm); }
+
+  .form-input-styled { font-family: var(--font-body); font-size: 0.875rem; padding: 0.5625rem 0.875rem; border: 1.5px solid var(--border); border-radius: var(--radius-md); background: var(--surface-0); color: var(--text-primary); transition: all var(--dur-fast) ease; outline: none; width: 100%; }
+  .form-input-styled::placeholder { color: var(--text-ghost); }
+  .form-input-styled:hover { border-color: var(--border-hover); }
+  .form-input-styled:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-ring); }
+  .form-input-styled.is-error { border-color: var(--error-500); }
+  .form-input-styled.is-error:focus { box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
+  .bb-select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2364748B' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem 1rem; padding-right: 2.5rem; }
+  .bb-checkbox { accent-color: var(--primary); width: 16px; height: 16px; }
+  .bb-checkbox:focus-visible { outline: 2px solid var(--primary-ring); outline-offset: 1px; }
+  .bb-toggle { position: relative; display: inline-flex; flex-shrink: 0; width: 36px; height: 20px; cursor: pointer; }
+  .bb-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .bb-toggle-track { position: absolute; inset: 0; border-radius: 9999px; background: var(--neutral-400); transition: background 0.15s ease; }
+  .bb-toggle-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 9999px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: transform 0.15s ease; }
+  .bb-toggle input:checked + .bb-toggle-track { background: var(--primary); }
+  .bb-toggle input:checked + .bb-toggle-track::after { transform: translateX(16px); }
+  .bb-toggle input:focus-visible + .bb-toggle-track { outline: 2px solid var(--primary-ring); outline-offset: 1px; }
+  .bb-toggle input:disabled + .bb-toggle-track { opacity: 0.5; cursor: not-allowed; }
+  .cal-filter-select { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--radius-md); font-size: 12px; font-weight: 600; color: var(--text-secondary); background: var(--surface-0); border: 1px solid var(--border); cursor: pointer; transition: all var(--dur-fast) ease; font-family: inherit; white-space: nowrap; }
+  .cal-filter-select:hover { border-color: var(--border-hover); }
+  .cal-filter-select.active { border-color: var(--primary-ring); color: var(--primary); background: var(--brand-50); }
+  .cal-filter-select.is-holidays { border-color: rgba(245,158,11,.45); color: var(--warning-700); background: var(--warning-50); }
+
+  .divider-text { display: flex; align-items: center; gap: 1rem; color: var(--text-ghost); font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .divider-text::before, .divider-text::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .auth-bg { background-color: var(--surface-page); background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124,58,237,0.10), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(14,165,233,0.05), transparent); }
+  .auth-card { background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); padding: 2.5rem; width: 100%; max-width: 420px; }
+  .alert-error { background: var(--error-50); border: 1px solid rgba(239,68,68,0.2); border-radius: var(--radius-md); padding: 0.75rem 1rem; color: var(--error-700); font-size: 0.8125rem; line-height: 1.5; }
+  .alert-success { background: var(--success-50); border: 1px solid rgba(34,197,94,0.2); border-radius: var(--radius-md); padding: 0.75rem 1rem; color: var(--success-700); font-size: 0.8125rem; line-height: 1.5; }
+  .alert-warning { background: var(--warning-50); border: 1px solid rgba(245,158,11,0.25); border-radius: var(--radius-md); padding: 0.75rem 1rem; color: var(--warning-700); font-size: 0.8125rem; line-height: 1.5; }
+  .alert-info { background: var(--info-50); border: 1px solid rgba(59,130,246,0.2); border-radius: var(--radius-md); padding: 0.75rem 1rem; color: var(--info-700); font-size: 0.8125rem; line-height: 1.5; }
+
+  /* Sidebar (base.html) */
+  .sidebar-nav-item { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: all var(--dur-fast) ease; text-decoration: none; }
+  .sidebar-nav-item:hover { background: rgba(124,58,237,0.06); color: var(--text-primary); }
+  .sidebar-nav-item.active { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+  .sidebar-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-ghost); padding: 14px 12px 4px; }
+  .sidebar-badge { margin-left: auto; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: var(--radius-full); background: var(--surface-0); color: var(--text-tertiary); box-shadow: inset 0 0 0 1px var(--border); }
+  .sidebar-logo-mark { width: 30px; height: 30px; border-radius: var(--radius-md); background: var(--primary); color: white; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .card-hover-lift { transition: box-shadow var(--dur-fast) ease, border-color var(--dur-fast) ease, transform var(--dur-fast) ease; }
+  .card-hover-lift:hover { box-shadow: var(--shadow-md); border-color: var(--primary-ring); transform: translateY(-2px); }
+
+  .a-card { background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  .a-card-hover { transition: box-shadow var(--dur-base) ease, border-color var(--dur-base) ease, transform var(--dur-base) ease; }
+  .a-card-hover:hover { box-shadow: var(--shadow-md); border-color: var(--primary-ring); transform: translateY(-2px); }
+  .a-pill-group { display: inline-flex; align-items: center; background: var(--surface-2); border-radius: var(--radius-full); padding: 3px; }
+  .a-pill-group > button { padding: 6px 16px; font-size: 0.8125rem; font-weight: 600; border-radius: var(--radius-full); border: none; cursor: pointer; background: transparent; color: var(--text-secondary); font-family: inherit; transition: all var(--dur-fast) ease; white-space: nowrap; }
+  .a-pill-group > button:hover { color: var(--text-primary); }
+  .a-pill-group > button.active { background: var(--primary); color: var(--text-inverse); box-shadow: var(--shadow-xs); }
+  .a-delta { display: inline-flex; align-items: center; gap: 3px; border-radius: var(--radius-full); font-family: var(--font-mono); font-weight: 700; font-size: 11.5px; padding: 2px 7px; }
+  .a-delta.good { color: var(--success-700); background: var(--success-50); }
+  .a-delta.bad { color: var(--error-700); background: var(--error-50); }
+  .a-delta.neutral { color: var(--text-tertiary); background: var(--neutral-100); }
+  .bb-toast { display: flex; align-items: center; gap: .625rem; padding: .625rem 1rem .625rem .75rem; border-radius: var(--radius-lg); color: #fff; background: var(--neutral-900); box-shadow: 0 12px 30px rgba(15,23,42,.28); }
+  .bb-toast-title { font-size: .8125rem; font-weight: 600; line-height: 1.2; }
+  .bb-toast-body { font-size: .75rem; color: var(--neutral-400); line-height: 1.2; }
+
+  /* Status pill (approval_extras STATUS_META / _status_badge.html) */
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; font-size: 0.75rem; font-weight: 500; border-radius: 9999px; border: 1px solid transparent; white-space: nowrap; }
+  .pill i { width: 6px; height: 6px; border-radius: 9999px; display: inline-block; flex-shrink: 0; }
+  .pill-success { background: var(--success-50); color: var(--success-700); } .pill-success i { background: var(--success-500); }
+  .pill-error   { background: var(--error-50);   color: var(--error-700); }   .pill-error i   { background: var(--error-500); }
+  .pill-warning { background: var(--warning-50); color: var(--warning-700); } .pill-warning i { background: var(--warning-500); }
+  .pill-info    { background: var(--info-50);    color: var(--info-700); }    .pill-info i    { background: var(--info-500); }
+  .pill-brand   { background: var(--primary-soft); color: var(--brand-800); } .pill-brand i   { background: var(--primary); }
+  .pill-neutral { background: var(--surface-2);  color: var(--text-secondary); } .pill-neutral i { background: var(--text-ghost); }
+  .pill-teal    { background: var(--accent-teal-soft); color: #0F766E; }    .pill-teal i    { background: var(--accent-teal); }
+  .pill-indigo  { background: var(--accent-indigo-soft); color: #4338CA; }  .pill-indigo i  { background: var(--accent-indigo); }
+  .pill-rose    { background: var(--accent-rose-soft); color: #BE123C; }    .pill-rose i    { background: var(--accent-rose); }
+  /* A pill that opens the problem's detail: same look, plus a chevron and a hover */
+  .pill.is-action { cursor: pointer; padding-right: 7px; border: none; font-family: inherit; transition: filter var(--dur-fast) ease, box-shadow var(--dur-fast) ease; }
+  .pill.is-action:hover { filter: brightness(0.96); box-shadow: 0 0 0 1px currentColor; }
+  .pill.is-action svg { width: 10px; height: 10px; opacity: .7; margin-left: -1px; }
+
+  /* Icon tile (stat cards, "+ New" menu, empty states) */
+  .tile { width: 40px; height: 40px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* Modal — one structure for every dialog: overlay > panel > (close, header, body, footer).
+     Alpine owns open/close (x-show + x-transition); Esc and a click on the overlay close it. */
+  .modal-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(15,23,42,0.35); backdrop-filter: blur(2px); }
+  .modal-panel { position: relative; width: 100%; max-width: 28rem; background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--shadow-xl); padding: 1.5rem; }
+  .modal-panel.is-sm { max-width: 24rem; }
+  .modal-panel.is-lg { max-width: 40rem; }
+  .modal-close { position: absolute; top: 0.75rem; right: 0.75rem; width: 28px; height: 28px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; color: var(--text-ghost); background: transparent; border: none; cursor: pointer; transition: all var(--dur-fast) ease; }
+  .modal-close:hover { color: var(--text-primary); background: var(--surface-2); }
+  .modal-header { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 1rem; padding-right: 1.75rem; }
+  .modal-header.is-centered { flex-direction: column; align-items: center; text-align: center; padding-right: 0; }
+  .modal-icon { width: 44px; height: 44px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .modal-icon.is-brand   { background: var(--primary-soft); color: var(--primary); }
+  .modal-icon.is-success { background: var(--success-50); color: var(--success-500); }
+  .modal-icon.is-warning { background: var(--warning-50); color: var(--warning-500); }
+  .modal-icon.is-error   { background: var(--error-50); color: var(--error-500); }
+  .modal-icon.is-info    { background: var(--info-50); color: var(--info-500); }
+  .modal-title { font-size: 1rem; font-weight: 600; line-height: 1.4; color: var(--text-primary); }
+  .modal-meta { display: flex; align-items: center; gap: 0.375rem; font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.125rem; }
+  .modal-body { font-size: 0.875rem; line-height: 1.5; color: var(--text-secondary); }
+  .modal-body > * + * { margin-top: 1rem; }
+  .modal-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
+  .modal-footer.is-split > * { flex: 1; }
+
+  /* Target picker (composer "where to publish", art request network picker):
+     one card per connected account, its formats as toggles inside the card.
+     Replaces .target-tile; keeps toggleFormat()/hasFormat() from composerApp(). */
+  .target-picker { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .target-card { display: flex; flex-direction: column; gap: 0.5rem; width: 240px; padding: 0.625rem 0.75rem; border-radius: var(--radius-lg); border: 1.5px solid var(--border); background: var(--surface-0); text-decoration: none; transition: border-color var(--dur-fast) ease, background var(--dur-fast) ease, box-shadow var(--dur-fast) ease; }
+  .target-card:hover { border-color: var(--border-hover); }
+  .target-card.is-selected { border-color: var(--primary); background: var(--brand-50); }
+  .target-card-head { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+  .target-card-avatar { width: 28px; height: 28px; border-radius: 9999px; flex-shrink: 0; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text-tertiary); overflow: hidden; }
+  .target-card-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .target-card-name { font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .target-card-sub { display: flex; align-items: center; gap: 0.25rem; font-size: 0.6875rem; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .target-card-sub svg { flex-shrink: 0; }
+  .target-card-check { margin-left: auto; width: 18px; height: 18px; border-radius: 9999px; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .target-card-formats { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+  .format-toggle { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.1875rem 0.5rem; border-radius: 9999px; font-size: 0.6875rem; font-weight: 600; font-family: inherit; border: 1px solid var(--border); background: var(--surface-0); color: var(--text-secondary); cursor: pointer; transition: all var(--dur-fast) ease; }
+  .format-toggle svg { width: 11px; height: 11px; }
+  .format-toggle:hover { border-color: var(--primary-ring); color: var(--primary); }
+  .format-toggle.is-on { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .format-toggle.is-blocked { opacity: 0.5; cursor: not-allowed; text-decoration: line-through; }
+  .format-toggle.is-blocked:hover { border-color: var(--border); color: var(--text-secondary); }
+  .target-card.is-connect { border-style: dashed; background: transparent; align-items: center; justify-content: center; text-align: center; color: var(--text-secondary); cursor: pointer; }
+  .target-card.is-connect:hover { border-color: var(--primary-ring); background: var(--brand-50); color: var(--primary); }
+  .target-card.is-connect .target-card-name { color: inherit; }
+
+  /* Calendar (calendar.html + month_grid.html) */
+  .view-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 600; color: var(--text-tertiary); border: 1px solid transparent; background: transparent; cursor: pointer; transition: all 150ms ease; white-space: nowrap; }
+  .view-btn:hover { color: var(--text-primary); background: var(--surface-2); }
+  .view-btn.active { color: var(--primary); background: var(--primary-soft); border-color: var(--primary-ring); }
+  .cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); flex: 1 0 0; }
+  .cal-day { position: relative; min-height: 80px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 6px; transition: background 150ms ease; background: var(--surface-0); }
+  @media (min-width: 768px) { .cal-day { min-height: 130px; padding: 8px; } }
+  .cal-week > .cal-day:last-child { border-right: 0; }
+  .cal-day:hover { background: var(--surface-1); }
+  .cal-day.past { background: var(--surface-1); }
+  .cal-day.past:hover { background: var(--surface-2); }
+  .cal-day.today { background: var(--brand-50); }
+  .cal-day.other-month { opacity: 0.4; }
+  .cal-day .day-num { font-size: 13px; font-weight: 600; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 4px; color: var(--text-primary); }
+  .cal-day.past .day-num { color: var(--text-tertiary); }
+  .cal-day.today .day-num { background: var(--primary); color: #fff; }
+  .post-chip { display: flex; align-items: center; gap: 4px; padding: 3px 6px; border-radius: 6px; font-size: 11px; font-weight: 500; margin-bottom: 2px; cursor: pointer; transition: all 150ms ease; text-decoration: none; max-width: 100%; overflow: hidden; }
+  .post-chip:hover { transform: translateX(1px); }
+  .post-chip--compact { gap: 4px; padding: 1px 5px 1px 3px; margin-bottom: 1px; font-size: 10.5px; line-height: 16px; border-radius: 5px; }
+  .post-chip--compact .chip-platform { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: #fff; }
+  .post-chip--compact .chip-time { flex-shrink: 0; margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; opacity: .85; }
+  .post-chip.is-card-open { box-shadow: 0 0 0 2px var(--primary); }
+  .status-draft { background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border); }
+  .status-pending_review, .status-pending_client, .status-changes_requested { background: var(--primary-soft); color: var(--brand-800); border: 1px solid var(--brand-200); }
+  .status-scheduled { background: var(--info-50); color: var(--info-700); border: 1px solid #BFDBFE; }
+  .status-published { background: var(--success-50); color: var(--success-700); border: 1px solid #BBF7D0; }
+  .status-approved { background: var(--accent-teal-soft); color: #0F766E; border: 1px solid #99F6E4; }
+  .status-rejected, .status-failed { background: var(--error-50); color: var(--error-700); border: 1px solid #FECACA; }
+  .status-publishing { background: var(--accent-indigo-soft); color: #4338CA; border: 1px solid #C7D2FE; }
+  .status-partially_published { background: var(--warning-50); color: var(--warning-700); border: 1px solid #FDE68A; }
+  .status-on_hold { background: var(--accent-rose-soft); color: #BE123C; border: 1px solid #FECDD3; }
+  .cal-add-btn { display: none; position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; background: var(--primary); color: #fff; border: none; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--shadow-primary); z-index: 5; transition: transform 100ms ease, background 100ms ease; }
+  .cal-add-btn:hover { background: var(--primary-hover); transform: scale(1.1); }
+  .cal-add-cell:hover .cal-add-btn { display: flex; }
+}
+
+/* ── Guide chrome (not part of the app) ───────────────────── */
+.g-section { background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px; }
+.g-section > h2 { font: var(--text-section-title); letter-spacing: -0.01em; margin-bottom: 4px; }
+.g-section > p.desc { color: var(--text-secondary); margin-bottom: 18px; max-width: 760px; }
+h3.sub { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); margin: 22px 0 10px; }
+h3.sub:first-of-type { margin-top: 4px; }
+code, .mono { font-family: var(--font-mono); font-size: 12px; }
+code { background: var(--surface-2); padding: 1px 5px; border-radius: var(--radius-sm); }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.g-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.note { background: var(--surface-1); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius-md); padding: 12px 14px; color: var(--text-secondary); font-size: 13px; }
+.note + .note { margin-top: 8px; }
+.note strong { color: var(--text-primary); }
+.note.warn { border-left-color: var(--warning-500); }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.tbl th { text-align: left; font: var(--text-label); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-ghost); padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--surface-1); }
+table.tbl td { padding: 8px 10px; border-bottom: 1px solid var(--neutral-100); vertical-align: middle; }
+table.tbl td.mono { color: var(--text-secondary); }
+.sw { display: inline-block; width: 18px; height: 18px; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.08); vertical-align: middle; }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.swatch { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; background: var(--surface-0); }
+.swatch .c { height: 52px; border-bottom: 1px solid var(--border); }
+.swatch .l { padding: 6px 8px; font-size: 11px; line-height: 1.35; }
+.swatch .l b { display: block; font-size: 12px; }
+.swatch .l span { font-family: var(--font-mono); color: var(--text-tertiary); }
+.demo { border: 1px dashed var(--border-hover); border-radius: var(--radius-md); padding: 16px; background: var(--surface-0); }
+.demo.page { background: var(--surface-page); }
+.cap { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; font-family: var(--font-mono); }
+.modal-shell { position: relative; background: var(--surface-page); border-radius: var(--radius-md); padding: 28px; display: flex; justify-content: center; overflow: hidden; }
+.modal-shell::before { content: ''; position: absolute; inset: 0; background: rgba(15,23,42,0.35); }
+.ok { color: var(--success-700); font-weight: 700; } .no { color: var(--error-700); font-weight: 700; }
+/* Guide only: faithful copy of today's .target-tile (styles.css) for the before/after */
+.old-target-tile { position: relative; width: 44px; height: 44px; border-radius: 9999px; padding: 2px; border: 2px solid transparent; background: #fff; flex-shrink: 0; opacity: .45; filter: grayscale(1); }
+.old-target-tile.selected { opacity: 1; filter: none; border-color: var(--primary); }
+.old-target-tile .av { width: 100%; height: 100%; border-radius: 9999px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
+.old-target-tile .bd { position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; border-radius: 9999px; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 1px var(--border); }
+.old-target-tile .fm { position: absolute; left: -3px; bottom: -3px; width: 18px; height: 18px; border-radius: 9999px; background: var(--neutral-900); color: #fff; display: flex; align-items: center; justify-content: center; }
+.old-target-group { display: flex; align-items: center; gap: 8px; }
+.old-target-group + .old-target-group { border-left: 1px solid var(--border); padding-left: 10px; }
+</style>
+</head>
+<body>
+
+<!-- Platform icons: paths from templates/partials/_platform_icon.html -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="pi-facebook" viewBox="0 0 24 24"><path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></symbol>
+  <symbol id="pi-instagram" viewBox="0 0 24 24"><g fill="none" stroke="#E4405F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></g></symbol>
+  <symbol id="pi-threads" viewBox="0 0 24 24"><path fill="#000" d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.783 3.631 2.698 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.75-1.757-.513-.586-1.308-.883-2.359-.89h-.029c-.844 0-1.992.232-2.721 1.32L7.734 7.847c.98-1.454 2.568-2.256 4.478-2.256h.044c3.194.02 5.097 1.975 5.287 5.388.108.046.216.094.321.142 1.49.7 2.58 1.761 3.154 3.07.797 1.82.871 4.79-1.548 7.158-1.85 1.81-4.094 2.628-7.277 2.65Zm1.003-11.69c-.242 0-.487.007-.739.021-1.836.103-2.98.946-2.916 2.143.067 1.256 1.452 1.839 2.784 1.767 1.224-.065 2.818-.543 3.086-3.71a10.5 10.5 0 0 0-2.215-.221z"/></symbol>
+  <symbol id="pi-linkedin" viewBox="0 0 24 24"><path fill="#0A66C2" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></symbol>
+  <symbol id="pi-tiktok" viewBox="0 0 24 24"><path fill="#000" d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></symbol>
+  <symbol id="pi-pinterest" viewBox="0 0 24 24"><path fill="#BD081C" d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.174.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.607 0 11.985-5.365 11.985-11.987C23.97 5.39 18.592.026 11.985.026L12.017 0z"/></symbol>
+  <symbol id="pi-x" viewBox="0 0 24 24"><path fill="#000" d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></symbol>
+  <symbol id="pi-bluesky" viewBox="0 0 24 24"><path fill="#0085FF" d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.624 6.479.785 2.627 3.601 3.476 6.153 3.228-4.475.663-8.391 2.69-4.66 9.523 4.47-5.503 6.962-2.527 9.883-8.192 2.921 5.665 4.127 2.383 9.883 8.192 3.731-6.833-.185-8.86-4.66-9.523 2.552.248 5.368-.601 6.153-3.228C23.622 9.418 24 4.458 24 3.768c0-.688-.139-1.86-.902-2.203-.659-.3-1.664-.621-4.3 1.24C16.046 4.747 13.087 8.686 12 10.8z"/></symbol>
+  <symbol id="pi-mastodon" viewBox="0 0 24 24"><path fill="#6364FF" d="M23.268 5.313c-.35-2.578-2.617-4.61-5.304-5.004C17.51.242 15.792 0 11.813 0h-.03c-3.98 0-4.835.242-5.288.309C3.882.692 1.496 2.518.917 5.127.64 6.412.61 7.837.661 9.143c.074 1.874.088 3.745.26 5.611.118 1.24.325 2.47.62 3.68.55 2.237 2.777 4.098 4.96 4.857 2.336.792 4.849.923 7.256.38.265-.061.527-.132.786-.213.585-.184 1.27-.39 1.774-.753a.057.057 0 00.023-.043v-1.809a.052.052 0 00-.02-.041.053.053 0 00-.046-.01 20.282 20.282 0 01-4.709.547c-2.73 0-3.463-1.284-3.674-1.818a5.593 5.593 0 01-.319-1.433.053.053 0 01.066-.054 19.648 19.648 0 004.607.536c.551 0 1.1-.008 1.652-.029 1.923-.065 3.942-.205 5.84-.652.046-.011.09-.024.135-.036 2.435-.581 4.754-2.398 4.999-6.693.009-.156.032-1.628.032-1.79 0-.547.157-3.89-.018-5.94z"/></symbol>
+  <symbol id="pi-devto" viewBox="0 0 512 512"><rect width="512" height="512" rx="15%" fill="#000"/><path fill="#fff" d="M140.47 203.94h-17.44v104.47h17.45c10.155-.545 17.358-8.669 17.47-17.41v-69.65c-.696-10.364-7.796-17.272-17.48-17.41zm45.73 87.25c0 18.81-11.61 47.31-48.36 47.25h-46.4V172.98h47.38c35.44 0 47.36 28.46 47.37 47.28zm100.68-88.66H233.6v38.42h32.57v29.57H233.6v38.41h53.29v29.57h-62.18c-11.16.29-20.44-8.53-20.72-19.69V193.7c-.27-11.15 8.56-20.41 19.71-20.69h63.19zm103.64 115.29c-13.2 30.75-36.85 24.63-47.44 0l-38.53-144.8h32.57l29.71 113.72 29.57-113.72h32.58z"/></symbol>
+  <symbol id="pi-google_business" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></symbol>
+  <symbol id="pi-shopee" viewBox="0 0 24 24"><path fill="#EE4D2D" d="M6 7h12l1.2 14H4.8L6 7zm3-1a3 3 0 016 0h-1.6a1.4 1.4 0 00-2.8 0H9zm3 6.2c-1.5 0-2.6.8-2.6 1.9 0 2.3 4.1 1.3 4.1 2.6 0 .5-.6.9-1.5.9-.8 0-1.5-.3-2-.8l-.8.9c.7.7 1.7 1.1 2.8 1.1 1.7 0 2.8-.9 2.8-2.1 0-2.4-4.1-1.4-4.1-2.6 0-.4.5-.7 1.3-.7.7 0 1.3.3 1.7.6l.7-.9c-.6-.5-1.4-.9-2.4-.9z"/></symbol>
+  <!-- Settings gear reused by cards and nav -->
+  <symbol id="ic-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></g></symbol>
+</svg>
+
+<!-- ═══════════ APP SHELL: templates/base.html ═══════════ -->
+<div class="flex h-screen overflow-hidden" style="background: var(--surface-page);"
+     x-data="{ sidebarCollapsed: false, wsOpen: false, page: 'accounts' }">
+
+  <!-- Sidebar -->
+  <aside class="flex flex-col flex-shrink-0 w-60 border-r border-(--border) relative"
+         style="background: var(--surface-sidebar);"
+         :class="sidebarCollapsed ? 'lg:w-[60px]' : 'lg:w-60'">
+
+    <!-- Brand -->
+    <div class="flex items-center px-3 pt-4 pb-3" :class="sidebarCollapsed && 'justify-center px-0'">
+      <img src="logo/automator-wordmark-dark.svg" alt="Automator" class="w-full h-auto" x-show="!sidebarCollapsed">
+      <img src="logo/automator-symbol.svg" alt="Automator" class="h-9 w-9" x-show="sidebarCollapsed" x-cloak>
+    </div>
+
+    <!-- Workspace switcher -->
+    <div class="px-3 pb-2 relative">
+      <button @click="wsOpen = !wsOpen"
+              class="w-full flex items-center gap-2.5 px-2.5 py-2 text-left rounded-md bg-white border border-(--border) hover:border-(--border-hover) transition-colors cursor-pointer"
+              :class="sidebarCollapsed ? 'justify-center px-0' : ''">
+        <div class="sidebar-logo-mark" style="width:26px;height:26px;font-size:12px">S</div>
+        <span class="flex-1 min-w-0" x-show="!sidebarCollapsed">
+          <span class="block text-[10px] font-semibold uppercase tracking-wider text-(--text-ghost) leading-none">Workspace</span>
+          <span class="block text-sm font-semibold text-(--text-primary) truncate leading-tight">Seven Click</span>
+        </span>
+        <svg class="w-4 h-4 text-(--text-ghost) flex-shrink-0 transition-transform" :class="wsOpen && 'rotate-180'" x-show="!sidebarCollapsed" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <div x-show="wsOpen" @click.away="wsOpen = false" x-cloak x-transition
+           class="absolute left-3 right-3 top-full bg-white rounded-xl shadow-lg ring-1 ring-(--border) py-1 z-50">
+        <a href="#" class="flex items-center gap-2.5 px-3 py-2 text-sm rounded-md bg-(--surface-1) font-semibold text-(--text-primary)">
+          <div class="w-7 h-7 rounded-md flex items-center justify-center text-white text-[11px] font-bold" style="background: var(--primary);">S</div>
+          <span class="truncate">Seven Click</span>
+          <svg class="w-4 h-4 text-(--text-ghost) ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        </a>
+        <a href="#" class="flex items-center gap-2.5 px-3 py-2 text-sm rounded-md hover:bg-black/[0.04] text-(--text-secondary)">
+          <div class="w-7 h-7 rounded-md flex items-center justify-center text-white text-[11px] font-bold" style="background: var(--accent-teal);">K</div>
+          <span class="truncate">Kambai</span>
+        </a>
+        <div class="border-t border-(--neutral-100) mt-1 pt-1">
+          <a href="#" class="flex items-center gap-2.5 px-3 py-2 text-sm text-(--text-secondary) rounded-md hover:bg-black/[0.04]">
+            <div class="w-7 h-7 rounded-md flex items-center justify-center border border-dashed border-(--border-hover)"><svg class="w-3.5 h-3.5 text-(--text-ghost)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
+            <span>Criar workspace</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collapse toggle (base.html) -->
+    <button type="button" @click="sidebarCollapsed = !sidebarCollapsed"
+            class="hidden lg:flex absolute top-5 z-50 w-6 h-6 items-center justify-center rounded-full bg-white text-(--text-ghost) ring-1 ring-(--border) shadow-sm hover:text-(--text-primary) hover:ring-(--border-hover) transition-colors cursor-pointer"
+            :class="sidebarCollapsed ? '-right-3' : '-right-3'" title="Recolher menu">
+      <svg viewBox="0 0 24 24" fill="none" width="14" height="14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" :class="sidebarCollapsed && 'scale-x-[-1]'"><path d="M9 3V21M16 15L13 12L16 9M5 3H19C20.1046 3 21 3.89543 21 5V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3Z"/></svg>
+    </button>
+
+    <!-- Nav: order from the sidebar reference -->
+    <nav class="flex-1 overflow-y-auto py-2 px-3 space-y-0.5" :class="sidebarCollapsed ? 'px-2' : 'px-3'">
+      <a href="#" class="sidebar-nav-item"><svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg><span x-show="!sidebarCollapsed">Dashboard</span></a>
+      <a href="#" class="sidebar-nav-item"><svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M9 16l2 2 4-4"/></svg><span x-show="!sidebarCollapsed">Planejamento</span></a>
+      <a href="#" class="sidebar-nav-item"><svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg><span x-show="!sidebarCollapsed">Publicações</span></a>
+      <a href="#" class="sidebar-nav-item" :class="page === 'calendar' && 'active'" @click.prevent="page = 'calendar'"><svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span x-show="!sidebarCollapsed">Calendário</span></a>
+      <a href="#" class="sidebar-nav-item"><svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg><span x-show="!sidebarCollapsed">Conteúdo (IA)</span></a>
+      <a href="#" class="sidebar-nav-item"><svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span x-show="!sidebarCollapsed">Relatórios</span></a>
+      <a href="#" class="sidebar-nav-item" :class="page === 'accounts' && 'active'" @click.prevent="page = 'accounts'"><svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span x-show="!sidebarCollapsed">Contas Sociais</span></a>
+      <a href="#" class="sidebar-nav-item"><svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg><span x-show="!sidebarCollapsed">Integrações</span></a>
+      <a href="#" class="sidebar-nav-item"><svg class="flex-shrink-0" width="18" height="18"><use href="#ic-gear"/></svg><span x-show="!sidebarCollapsed">Configurações</span></a>
+
+      <div class="sidebar-section-label" x-show="!sidebarCollapsed">Prova de conceito</div>
+      <a href="#" class="sidebar-nav-item" :class="page === 'guide' && 'active'" @click.prevent="page = 'guide'"><svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg><span x-show="!sidebarCollapsed">Guia de estilo</span></a>
+    </nav>
+
+    <!-- Mascot + profile -->
+    <div class="px-4 pt-2" x-show="!sidebarCollapsed">
+      <img src="mascote/ilustracoes/moti_trabalhando_no_computador.png" alt="Moti trabalhando no computador" class="w-44 -mb-1 mx-auto">
+    </div>
+    <div class="border-t border-(--border) p-3 flex items-center gap-2.5" :class="sidebarCollapsed && 'justify-center p-2'">
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style="background: var(--primary);">RB</div>
+      <div class="min-w-0 flex-1" x-show="!sidebarCollapsed">
+        <div class="text-sm font-semibold text-(--text-primary) truncate">Robison Borges</div>
+        <div class="text-xs text-(--text-tertiary) truncate">Proprietário</div>
+      </div>
+      <button class="w-7 h-7 inline-flex items-center justify-center rounded-md text-(--text-ghost) hover:text-(--text-primary) hover:bg-white cursor-pointer" x-show="!sidebarCollapsed" title="Sair"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </aside>
+
+  <!-- Main content: no white container; content sits on the page surface -->
+  <main class="flex-1 overflow-y-auto flex flex-col p-4 lg:p-6">
+
+    <!-- ═══════════ PAGE: Contas Sociais (social_accounts/list.html) ═══════════ -->
+    <div x-show="page === 'accounts'" class="w-full max-w-7xl mx-auto" x-data="{ problem: null }" @keydown.escape.window="problem = null">
+
+      <!-- {% block page_header %} -->
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-6">
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight text-(--text-primary)">Contas Sociais</h1>
+          <p class="text-sm text-(--text-secondary) mt-1">Gerencie suas conexões e integre novas plataformas para publicar, analisar e automatizar seu conteúdo.</p>
+        </div>
+        <a href="#" class="btn-brand">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Conectar nova plataforma
+        </a>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="a-card p-4 flex items-center gap-3">
+          <div class="tile bg-(--success-50) text-(--success-500)"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg></div>
+          <div><div class="text-2xl font-bold leading-none tracking-tight">3</div><div class="text-sm text-(--text-secondary) mt-1">Conectadas</div></div>
+        </div>
+        <div class="a-card p-4 flex items-center gap-3">
+          <div class="tile bg-(--primary-soft) text-(--primary)"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+          <div><div class="text-2xl font-bold leading-none tracking-tight">7</div><div class="text-sm text-(--text-secondary) mt-1">Disponíveis</div></div>
+        </div>
+        <div class="a-card p-4 flex items-center gap-3">
+          <div class="tile bg-(--error-50) text-(--error-500)"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+          <div><div class="text-2xl font-bold leading-none tracking-tight text-(--error-500)">1</div><div class="text-sm text-(--text-secondary) mt-1">Com problemas</div></div>
+        </div>
+        <div class="a-card p-4 flex items-center gap-3">
+          <div class="tile bg-(--primary-soft) text-(--primary)"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
+          <div><div class="text-2xl font-bold leading-none tracking-tight">11</div><div class="text-sm text-(--text-secondary) mt-1">Plataformas no total</div></div>
+        </div>
+      </div>
+
+      <!-- Filter tabs + search + select -->
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-6" x-data="{ tab: 'all' }">
+        <div class="a-pill-group">
+          <button :class="tab === 'all' && 'active'" @click="tab = 'all'">Todas (11)</button>
+          <button :class="tab === 'on' && 'active'" @click="tab = 'on'">Conectadas (3)</button>
+          <button :class="tab === 'off' && 'active'" @click="tab = 'off'">Disponíveis (7)</button>
+          <button :class="tab === 'err' && 'active'" @click="tab = 'err'">Com problemas (1)</button>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="relative w-64">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-(--text-ghost)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="form-input-styled pl-9" placeholder="Buscar plataforma...">
+          </div>
+          <select class="form-input-styled bb-select w-48 cursor-pointer"><option>Todas as categorias</option><option>Redes sociais</option><option>Vídeos</option><option>Negócios locais</option></select>
+        </div>
+      </div>
+
+      <!-- Connected accounts -->
+      <div class="flex items-center gap-2 mb-3">
+        <svg class="w-5 h-5 text-(--success-500)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+        <h2 class="text-lg font-semibold text-(--text-primary)">Contas conectadas (3)</h2>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8" id="accounts-list">
+
+        <!-- _account_card.html skeleton -->
+        <div class="group relative flex flex-col bg-white rounded-xl border border-(--border) p-5 transition-all duration-200 hover:shadow-(--shadow-md)">
+          <div class="flex items-start gap-3">
+            <div class="tile bg-(--surface-1)"><svg width="24" height="24"><use href="#pi-facebook"/></svg></div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-base font-medium text-(--text-primary) truncate">Facebook</h3>
+              <p class="text-xs text-(--text-secondary)">Páginas e grupos</p>
+            </div>
+            <span class="pill pill-success"><i></i>Conectada</span>
+          </div>
+          <div class="border-t border-(--neutral-100) mt-4 pt-4 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-(--surface-2) flex items-center justify-center text-(--text-tertiary) text-xs font-bold ring-2 ring-(--neutral-100)">SC</div>
+            <div class="flex-1 min-w-0">
+              <h4 class="text-sm font-semibold text-(--text-primary) truncate">Seven Click Soluções</h4>
+              <p class="text-xs text-(--text-tertiary)">Conectada em 02/11/2026</p>
+            </div>
+            <button class="w-8 h-8 inline-flex items-center justify-center rounded-md text-(--text-ghost) hover:text-(--text-primary) hover:bg-(--surface-1) cursor-pointer"><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+          </div>
+          <div class="mt-auto pt-4 flex gap-2">
+            <button class="btn-outline w-full"><svg width="16" height="16"><use href="#ic-gear"/></svg>Gerenciar conexão</button>
+          </div>
+        </div>
+
+        <div class="group relative flex flex-col bg-white rounded-xl border border-(--border) p-5 transition-all duration-200 hover:shadow-(--shadow-md)">
+          <div class="flex items-start gap-3">
+            <div class="tile bg-(--surface-1)"><svg width="24" height="24"><use href="#pi-instagram"/></svg></div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-base font-medium text-(--text-primary) truncate">Instagram</h3>
+              <p class="text-xs text-(--text-secondary)">Contas vinculadas</p>
+            </div>
+            <button type="button" class="pill pill-warning is-action" title="Ver detalhes"
+                    @click="problem = { tone: 'warning', platform: 'instagram', account: 'Seven Click | Agência · @sevenclickdigital', title: 'Alguns recursos estão indisponíveis', body: 'Esta conta foi conectada sem a permissão instagram_manage_messages. As DMs não chegam ao inbox até você reconectar e conceder a permissão.', actions: ['reconnect'] }">
+              <i></i>Atenção<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+          </div>
+          <div class="border-t border-(--neutral-100) mt-4 pt-4 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-(--surface-2) flex items-center justify-center text-(--text-tertiary) text-xs font-bold ring-2 ring-(--neutral-100)">SC</div>
+            <div class="flex-1 min-w-0">
+              <h4 class="text-sm font-semibold text-(--text-primary) truncate">Seven Click | Agência</h4>
+              <p class="text-xs text-(--text-tertiary)">@sevenclickdigital · 12,4 mil seguidores</p>
+            </div>
+            <button class="w-8 h-8 inline-flex items-center justify-center rounded-md text-(--text-ghost) hover:text-(--text-primary) hover:bg-(--surface-1) cursor-pointer"><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+          </div>
+          <div class="mt-auto pt-4 flex gap-2">
+            <button class="btn-outline w-full"><svg width="16" height="16"><use href="#ic-gear"/></svg>Gerenciar conexão</button>
+          </div>
+        </div>
+
+        <div class="group relative flex flex-col bg-white rounded-xl border border-(--border) p-5 transition-all duration-200 hover:shadow-(--shadow-md)">
+          <div class="flex items-start gap-3">
+            <div class="tile bg-(--surface-1)"><svg width="24" height="24"><use href="#pi-threads"/></svg></div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-base font-medium text-(--text-primary) truncate">Threads</h3>
+              <p class="text-xs text-(--text-secondary)">Texto e mídia</p>
+            </div>
+            <button type="button" class="pill pill-error is-action" title="Ver detalhes"
+                    @click="problem = { tone: 'error', platform: 'threads', account: 'Seven Click | Agência · @sevenclickdigital', title: 'Token expirado', body: 'A autorização do Threads expirou. Publicações agendadas para esta conta vão falhar e os comentários deixam de chegar até você reconectar.', actions: ['reconnect', 'disconnect'] }">
+              <i></i>Com problema<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+          </div>
+          <div class="border-t border-(--neutral-100) mt-4 pt-4 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-(--surface-2) flex items-center justify-center text-(--text-tertiary) text-xs font-bold ring-2 ring-(--neutral-100)">SC</div>
+            <div class="flex-1 min-w-0">
+              <h4 class="text-sm font-semibold text-(--text-primary) truncate">Seven Click | Agência</h4>
+              <p class="text-xs text-(--text-tertiary)">@sevenclickdigital</p>
+            </div>
+            <button class="w-8 h-8 inline-flex items-center justify-center rounded-md text-(--text-ghost) hover:text-(--text-primary) hover:bg-(--surface-1) cursor-pointer"><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+          </div>
+          <div class="mt-auto pt-4 flex gap-2">
+            <button class="btn-outline w-full"><svg width="16" height="16"><use href="#ic-gear"/></svg>Gerenciar conexão</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connect other platforms -->
+      <div class="flex items-center gap-2 mb-3">
+        <svg class="w-5 h-5 text-(--primary)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        <h2 class="text-lg font-semibold text-(--text-primary)">Conectar outras plataformas</h2>
+      </div>
+      <div class="flex flex-wrap gap-2 mb-4" x-data="{ cat: 'social' }">
+        <button class="cal-filter-select" :class="cat === 'social' && 'active'" @click="cat = 'social'"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Redes sociais</button>
+        <button class="cal-filter-select" :class="cat === 'video' && 'active'" @click="cat = 'video'"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>Vídeos</button>
+        <button class="cal-filter-select" :class="cat === 'pro' && 'active'" @click="cat = 'pro'"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>Profissionais</button>
+        <button class="cal-filter-select" :class="cat === 'disc' && 'active'" @click="cat = 'disc'"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>Descoberta</button>
+        <button class="cal-filter-select" :class="cat === 'local' && 'active'" @click="cat = 'local'"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Negócios locais</button>
+        <button class="cal-filter-select" :class="cat === 'other' && 'active'" @click="cat = 'other'"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>Outras</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+        <div class="a-card a-card-hover p-4 flex items-center gap-3">
+          <div class="tile bg-(--surface-1)"><span class="text-[10px] font-semibold leading-tight text-(--text-secondary)">YouTube</span></div>
+          <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">YouTube</div><div class="text-xs text-(--text-tertiary) truncate">Vídeos e Shorts</div></div>
+          <button class="btn-soft py-1.5 px-3">Conectar</button>
+        </div>
+        <div class="a-card a-card-hover p-4 flex items-center gap-3">
+          <div class="tile bg-(--surface-1)"><svg width="22" height="22"><use href="#pi-bluesky"/></svg></div>
+          <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">Bluesky</div><div class="text-xs text-(--text-tertiary) truncate">Protocolo AT</div></div>
+          <button class="btn-soft py-1.5 px-3">Conectar</button>
+        </div>
+        <div class="a-card a-card-hover p-4 flex items-center gap-3">
+          <div class="tile bg-(--surface-1)"><svg width="22" height="22"><use href="#pi-mastodon"/></svg></div>
+          <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">Mastodon</div><div class="text-xs text-(--text-tertiary) truncate">Rede federada</div></div>
+          <button class="btn-soft py-1.5 px-3">Conectar</button>
+        </div>
+        <div class="a-card a-card-hover p-4 flex items-center gap-3">
+          <div class="tile bg-(--surface-1)"><svg width="22" height="22"><use href="#pi-devto"/></svg></div>
+          <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">DEV.to</div><div class="text-xs text-(--text-tertiary) truncate">Artigos e publicações</div></div>
+          <button class="btn-soft py-1.5 px-3">Conectar</button>
+        </div>
+        <div class="a-card a-card-hover p-4 flex items-center gap-3">
+          <div class="tile bg-(--surface-1)"><svg width="22" height="22"><use href="#pi-pinterest"/></svg></div>
+          <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">Pinterest</div><div class="text-xs text-(--text-tertiary) truncate">Pins e pastas</div></div>
+          <button class="btn-soft py-1.5 px-3">Conectar</button>
+        </div>
+        <div class="a-card a-card-hover p-4 flex items-center gap-3">
+          <div class="tile bg-(--surface-1)"><svg width="22" height="22"><use href="#pi-tiktok"/></svg></div>
+          <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">TikTok</div><div class="text-xs text-(--text-tertiary) truncate">Conteúdo em vídeo</div></div>
+          <button class="btn-soft py-1.5 px-3">Conectar</button>
+        </div>
+        <div class="a-card a-card-hover p-4 flex items-center gap-3">
+          <div class="tile bg-(--surface-1)"><svg width="22" height="22"><use href="#pi-x"/></svg></div>
+          <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">X (Twitter)</div><div class="text-xs text-(--text-tertiary) truncate">Posts, fotos e vídeo</div></div>
+          <button class="btn-soft py-1.5 px-3">Conectar</button>
+        </div>
+        <div class="a-card a-card-hover p-4 flex items-center gap-3">
+          <div class="tile bg-(--surface-1)"><svg width="22" height="22"><use href="#pi-linkedin"/></svg></div>
+          <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">LinkedIn (pessoal)</div><div class="text-xs text-(--text-tertiary) truncate">Perfil pessoal</div></div>
+          <button class="btn-soft py-1.5 px-3">Conectar</button>
+        </div>
+      </div>
+
+      <!-- Opportunities (radar/_source_card.html) -->
+      <div class="flex items-center gap-2 mb-3">
+        <svg class="w-5 h-5 text-(--text-secondary)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        <h2 class="text-lg font-semibold text-(--text-primary)">Negócios e oportunidades</h2>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+        <div class="a-card p-4 flex items-center gap-3">
+          <div class="tile bg-(--surface-1)"><svg width="22" height="22"><use href="#pi-google_business"/></svg></div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2"><span class="text-sm font-semibold">Google Business Profile</span>
+              <button type="button" class="pill pill-warning is-action" title="Ver detalhes"
+                      @click="problem = { tone: 'warning', platform: 'google_business', account: 'Seven Click Soluções', title: 'Não foi possível sincronizar', body: 'O Google recusou a última sincronização. Verifique se a conta ainda tem acesso ao perfil da empresa e reconecte.', actions: ['reconnect'] }">
+                <i></i>Atenção<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+            </div>
+            <div class="text-xs text-(--text-tertiary)">Publicações locais</div>
+          </div>
+          <button class="btn-soft py-1.5 px-3">Reconectar</button>
+        </div>
+        <div class="a-card p-4 flex items-center gap-3 relative">
+          <span class="absolute top-3 right-3 text-(--warning-500)" title="Recurso do plano Pro"><svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M3 18h18v2H3v-2zm0-2l2-9 4.5 4L12 5l2.5 6L19 7l2 9H3z"/></svg></span>
+          <div class="tile bg-(--surface-1)"><svg width="22" height="22"><use href="#pi-shopee"/></svg></div>
+          <div class="flex-1 min-w-0"><div class="text-sm font-semibold">Shopee Afiliados</div><div class="text-xs text-(--text-tertiary)">Produtos com comissão</div></div>
+          <button class="btn-soft py-1.5 px-3">Conectar</button>
+        </div>
+      </div>
+
+      <!-- Empty state with the mascot (list.html empty state + Moti) -->
+      <div class="a-card text-center py-10 px-6 mb-6">
+        <img src="mascote/poses/moti_pose_pensativo_interrogacao_corpo_inteiro.png" alt="Moti pensativo" class="mx-auto h-44 mb-4">
+        <h3 class="text-base font-semibold text-(--text-primary) mb-2">Nenhuma conta conectada ainda</h3>
+        <p class="text-sm text-(--text-secondary) max-w-sm mx-auto mb-6">Conecte suas redes para começar a publicar, acompanhar o engajamento e responder no inbox.</p>
+        <a href="#" class="btn-brand"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Conectar a primeira conta</a>
+      </div>
+
+      <!-- Problem detail modal: opened by an actionable status pill. Standard modal structure. -->
+      <div x-show="problem" x-cloak class="modal-overlay" role="dialog" aria-modal="true"
+           x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+           x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+           @click.self="problem = null">
+        <div class="modal-panel" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
+          <button type="button" class="modal-close" @click="problem = null" aria-label="Fechar">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+          <template x-if="problem">
+            <div>
+              <div class="modal-header">
+                <div class="modal-icon" :class="problem.tone === 'error' ? 'is-error' : 'is-warning'">
+                  <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <div class="modal-title" x-text="problem.title"></div>
+                  <div class="modal-meta"><svg width="12" height="12"><use :href="'#pi-' + problem.platform"/></svg><span x-text="problem.account"></span></div>
+                </div>
+              </div>
+              <div class="modal-body"><p x-text="problem.body"></p></div>
+              <div class="modal-footer">
+                <button type="button" class="btn-ghost" @click="problem = null">Fechar</button>
+                <button type="button" class="btn-danger-soft" x-show="problem.actions.includes('disconnect')">Desconectar</button>
+                <button type="button" class="btn-brand" x-show="problem.actions.includes('reconnect')">Reconectar</button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ PAGE: Publicar / Calendário (calendar/calendar.html) ═══════════ -->
+    <div x-show="page === 'calendar'" x-cloak class="flex-1 flex flex-col min-h-0 w-full" x-data="{ mode: 'calendar', viewOpen: false, holidays: true }">
+
+      <!-- {% block page_header %} -->
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight text-(--text-primary)">Publicar</h1>
+          <p class="text-sm text-(--text-secondary) mt-1">Planeje, agende e acompanhe as publicações de todos os canais.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <!-- List / Calendar / Board toggle -->
+          <div class="flex items-center bg-(--surface-2) rounded-full p-0.5">
+            <button class="view-btn" :class="mode === 'list' && 'active'" @click="mode = 'list'"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>Lista</button>
+            <button class="view-btn" :class="mode === 'calendar' && 'active'" @click="mode = 'calendar'"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</button>
+            <button class="view-btn" :class="mode === 'board' && 'active'" @click="mode = 'board'"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="4" height="8" rx="1"/></svg>Quadro</button>
+          </div>
+          <a href="#" class="btn-brand"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Nova publicação</a>
+        </div>
+      </div>
+
+      <!-- publish_calendar_shell.html, inside a card now that <main> has no white surface -->
+      <div class="a-card flex-1 flex flex-col min-h-0 overflow-hidden">
+
+        <!-- Toolbar -->
+        <div class="border-b border-(--border) px-4 py-2.5 flex flex-wrap items-center gap-2 sm:gap-3">
+          <div class="flex items-center gap-1">
+            <a href="#" class="w-7 h-7 rounded-md text-(--text-ghost) hover:text-(--text-primary) hover:bg-(--surface-2) flex items-center justify-center transition-all duration-150"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></a>
+            <a href="#" class="w-7 h-7 rounded-md text-(--text-ghost) hover:text-(--text-primary) hover:bg-(--surface-2) flex items-center justify-center transition-all duration-150"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></a>
+          </div>
+          <h2 class="text-base font-bold text-(--text-primary) tracking-tight">Novembro de 2026</h2>
+          <span class="px-3 py-1 text-xs font-semibold text-(--text-ghost) border border-(--neutral-200) rounded-md cursor-default select-none" aria-disabled="true" title="Já mostrando hoje">Hoje</span>
+          <div class="relative" @click.away="viewOpen = false">
+            <button @click="viewOpen = !viewOpen" class="cal-filter-select">Mês<svg class="w-3 h-3 text-(--text-ghost)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></button>
+            <div x-show="viewOpen" x-cloak x-transition class="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg ring-1 ring-(--border) py-1 z-50 min-w-[110px]">
+              <a href="#" class="block px-3 py-1.5 text-xs font-medium bg-(--primary-soft) text-(--brand-800)">Mês</a>
+              <a href="#" class="block px-3 py-1.5 text-xs font-medium text-(--text-secondary) hover:bg-(--surface-1)">Semana</a>
+              <a href="#" class="block px-3 py-1.5 text-xs font-medium text-(--text-secondary) hover:bg-(--surface-1)">Dia</a>
+            </div>
+          </div>
+
+          <!-- Right: filters (ui_select triggers) -->
+          <div class="flex items-center gap-2 ml-auto overflow-x-auto flex-nowrap">
+            <button type="button" class="cal-filter-select" :class="holidays && 'is-holidays'" @click="holidays = !holidays" :aria-pressed="holidays">🎉 Datas comemorativas</button>
+            <button class="cal-filter-select"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Todas as publicações<svg class="w-3 h-3 text-(--text-ghost)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></button>
+            <button class="cal-filter-select"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>Canais<svg class="w-3 h-3 text-(--text-ghost)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></button>
+            <button class="cal-filter-select"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>Tags<svg class="w-3 h-3 text-(--text-ghost)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></button>
+            <button class="cal-filter-select"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Sao_Paulo (workspace)<svg class="w-3 h-3 text-(--text-ghost)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></button>
+          </div>
+        </div>
+
+        <!-- month_grid.html -->
+        <div class="flex-1 overflow-auto min-h-0 flex flex-col">
+          <div class="min-w-[640px] flex-1 flex flex-col">
+            <div class="grid grid-cols-7 border-b border-(--border) bg-(--surface-1)">
+              <div class="px-3 py-2.5 text-xs font-semibold text-(--text-tertiary) text-center border-r border-(--border) tracking-wide">Segunda-feira</div>
+              <div class="px-3 py-2.5 text-xs font-semibold text-(--text-tertiary) text-center border-r border-(--border) tracking-wide">Terça-feira</div>
+              <div class="px-3 py-2.5 text-xs font-semibold text-(--text-tertiary) text-center border-r border-(--border) tracking-wide">Quarta-feira</div>
+              <div class="px-3 py-2.5 text-xs font-semibold text-(--text-tertiary) text-center border-r border-(--border) tracking-wide">Quinta-feira</div>
+              <div class="px-3 py-2.5 text-xs font-semibold text-(--text-tertiary) text-center border-r border-(--border) tracking-wide">Sexta-feira</div>
+              <div class="px-3 py-2.5 text-xs font-semibold text-(--text-tertiary) text-center border-r border-(--border) tracking-wide">Sábado</div>
+              <div class="px-3 py-2.5 text-xs font-semibold text-(--text-tertiary) text-center tracking-wide">Domingo</div>
+            </div>
+
+            <!-- Week 1: 26 Oct – 1 Nov -->
+            <div class="cal-week">
+              <div class="cal-day past other-month"><div class="flex items-center justify-between mb-1"><div class="day-num">26</div></div></div>
+              <div class="cal-day past other-month"><div class="flex items-center justify-between mb-1"><div class="day-num">27</div></div></div>
+              <div class="cal-day past other-month"><div class="flex items-center justify-between mb-1"><div class="day-num">28</div></div></div>
+              <div class="cal-day past other-month"><div class="flex items-center justify-between mb-1"><div class="day-num">29</div></div></div>
+              <div class="cal-day past other-month"><div class="flex items-center justify-between mb-1"><div class="day-num">30</div></div></div>
+              <div class="cal-day past other-month"><div class="flex items-center justify-between mb-1"><div class="day-num">31</div><div class="flex items-center gap-0.5" x-show="holidays"><span class="text-[10px]" title="Halloween">🎃</span></div></div><div class="mb-1" x-show="holidays"><div class="text-[9px] text-(--warning-700) font-medium leading-tight truncate">Halloween</div></div></div>
+              <div class="cal-day past"><div class="flex items-center justify-between mb-1"><div class="day-num">1</div></div></div>
+            </div>
+
+            <!-- Week 2: 2 – 8 Nov -->
+            <div class="cal-week">
+              <div class="cal-day cal-add-cell has-posts past">
+                <div class="flex items-center justify-between mb-1"><div class="day-num">2</div><div class="flex items-center gap-0.5" x-show="holidays"><span class="text-[10px]" title="Finados">🕯️</span></div></div>
+                <div class="mb-1" x-show="holidays"><div class="text-[9px] text-(--warning-700) font-medium leading-tight truncate">Finados</div></div>
+                <a href="#" class="post-chip post-chip--compact status-published" title="Seven Click | Agência · Hello Seven Automator"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-instagram"/></svg></span><span class="truncate flex-1 min-w-0">Hello Seven Automator</span><span class="chip-time">11:14</span></a>
+                <a href="#" class="post-chip post-chip--compact status-published" title="Seven Click Soluções · Hello Seven Automator"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-facebook"/></svg></span><span class="truncate flex-1 min-w-0">Hello Seven Automator</span><span class="chip-time">11:14</span></a>
+              </div>
+              <div class="cal-day past"><div class="flex items-center justify-between mb-1"><div class="day-num">3</div></div></div>
+              <div class="cal-day past"><div class="flex items-center justify-between mb-1"><div class="day-num">4</div></div></div>
+              <div class="cal-day past"><div class="flex items-center justify-between mb-1"><div class="day-num">5</div></div></div>
+              <div class="cal-day past"><div class="flex items-center justify-between mb-1"><div class="day-num">6</div></div></div>
+              <div class="cal-day past"><div class="flex items-center justify-between mb-1"><div class="day-num">7</div></div></div>
+              <div class="cal-day past"><div class="flex items-center justify-between mb-1"><div class="day-num">8</div></div></div>
+            </div>
+
+            <!-- Week 3: 9 – 15 Nov (today = 12) -->
+            <div class="cal-week">
+              <div class="cal-day past"><div class="flex items-center justify-between mb-1"><div class="day-num">9</div></div></div>
+              <div class="cal-day past"><div class="flex items-center justify-between mb-1"><div class="day-num">10</div></div></div>
+              <div class="cal-day past"><div class="flex items-center justify-between mb-1"><div class="day-num">11</div></div></div>
+              <div class="cal-day cal-add-cell today"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">12</div></div></div>
+              <div class="cal-day cal-add-cell has-posts"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button>
+                <div class="flex items-center justify-between mb-1"><div class="day-num">13</div></div>
+                <a href="#" class="post-chip post-chip--compact status-scheduled"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-instagram"/></svg></span><span class="truncate flex-1 min-w-0">Teaser Black Friday</span><span class="chip-time">09:00</span></a>
+              </div>
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">14</div></div></div>
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">15</div><div class="flex items-center gap-0.5" x-show="holidays"><span class="text-[10px]" title="Proclamação da República">🇧🇷</span></div></div><div class="mb-1" x-show="holidays"><div class="text-[9px] text-(--warning-700) font-medium leading-tight truncate">Proclamação da República</div></div></div>
+            </div>
+
+            <!-- Week 4: 16 – 22 Nov -->
+            <div class="cal-week">
+              <div class="cal-day cal-add-cell has-posts"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button>
+                <div class="flex items-center justify-between mb-1"><div class="day-num">16</div></div>
+                <a href="#" class="post-chip post-chip--compact status-draft"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-threads"/></svg></span><span class="truncate flex-1 min-w-0">Mesa de madeira maciça redonda</span><span class="chip-time">18:11</span></a>
+                <a href="#" class="post-chip post-chip--compact status-draft"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-facebook"/></svg></span><span class="truncate flex-1 min-w-0">Mesa de madeira maciça redonda</span><span class="chip-time">18:11</span></a>
+                <a href="#" class="post-chip post-chip--compact status-draft"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-instagram"/></svg></span><span class="truncate flex-1 min-w-0">Mesa de madeira maciça redonda</span><span class="chip-time">18:11</span></a>
+              </div>
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">17</div></div></div>
+              <div class="cal-day cal-add-cell has-posts"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button>
+                <div class="flex items-center justify-between mb-1"><div class="day-num">18</div></div>
+                <a href="#" class="post-chip post-chip--compact status-pending_review"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-facebook"/></svg></span><span class="truncate flex-1 min-w-0">Bastidores do estúdio</span><span class="chip-time">14:00</span></a>
+              </div>
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">19</div></div></div>
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">20</div><div class="flex items-center gap-0.5" x-show="holidays"><span class="text-[10px]" title="Dia da Consciência Negra">✊🏿</span></div></div><div class="mb-1" x-show="holidays"><div class="text-[9px] text-(--warning-700) font-medium leading-tight truncate">Dia da Consciência Negra</div></div></div>
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">21</div></div></div>
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">22</div></div></div>
+            </div>
+
+            <!-- Week 5: 23 – 29 Nov -->
+            <div class="cal-week">
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">23</div></div></div>
+              <div class="cal-day cal-add-cell has-posts"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button>
+                <div class="flex items-center justify-between mb-1"><div class="day-num">24</div></div>
+                <a href="#" class="post-chip post-chip--compact status-approved"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-threads"/></svg></span><span class="truncate flex-1 min-w-0">Oferta Shopee — mesa redonda</span><span class="chip-time">10:00</span></a>
+              </div>
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">25</div></div></div>
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">26</div></div></div>
+              <div class="cal-day cal-add-cell has-posts"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button>
+                <div class="flex items-center justify-between mb-1"><div class="day-num">27</div><div class="flex items-center gap-0.5" x-show="holidays"><span class="text-[10px]" title="Black Friday">🛍️</span></div></div>
+                <div class="mb-1" x-show="holidays"><div class="text-[9px] text-(--warning-700) font-medium leading-tight truncate">Black Friday</div></div>
+                <a href="#" class="post-chip post-chip--compact status-failed"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-instagram"/></svg></span><span class="truncate flex-1 min-w-0">Black Friday — oferta</span><span class="chip-time">08:00</span></a>
+                <a href="#" class="post-chip post-chip--compact status-publishing"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-facebook"/></svg></span><span class="truncate flex-1 min-w-0">Black Friday — oferta</span><span class="chip-time">08:00</span></a>
+              </div>
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">28</div></div></div>
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">29</div></div></div>
+            </div>
+
+            <!-- Week 6: 30 Nov – 6 Dec -->
+            <div class="cal-week">
+              <div class="cal-day cal-add-cell"><button type="button" class="cal-add-btn" title="Adicionar"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button><div class="flex items-center justify-between mb-1"><div class="day-num">30</div></div></div>
+              <div class="cal-day other-month"><div class="flex items-center justify-between mb-1"><div class="day-num">1</div></div></div>
+              <div class="cal-day other-month"><div class="flex items-center justify-between mb-1"><div class="day-num">2</div></div></div>
+              <div class="cal-day other-month"><div class="flex items-center justify-between mb-1"><div class="day-num">3</div></div></div>
+              <div class="cal-day other-month"><div class="flex items-center justify-between mb-1"><div class="day-num">4</div></div></div>
+              <div class="cal-day other-month"><div class="flex items-center justify-between mb-1"><div class="day-num">5</div></div></div>
+              <div class="cal-day other-month"><div class="flex items-center justify-between mb-1"><div class="day-num">6</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status legend -->
+        <div class="px-4 py-3 border-t border-(--border) bg-(--surface-1)">
+          <div class="flex flex-wrap items-center justify-end gap-x-1.5 gap-y-2 text-[11px]">
+            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md"><span class="w-3 h-3 rounded-full bg-(--text-ghost)"></span><span class="text-(--text-secondary)">Rascunho</span></span>
+            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md"><span class="w-3 h-3 rounded-full bg-(--primary)"></span><span class="text-(--brand-800)">Aguardando revisão</span></span>
+            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md"><span class="w-3 h-3 rounded-full bg-(--accent-teal)"></span><span style="color:#0F766E">Aprovado</span></span>
+            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md"><span class="w-3 h-3 rounded-full bg-(--info-500)"></span><span class="text-(--info-700)">Agendado</span></span>
+            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md"><span class="w-3 h-3 rounded-full bg-(--accent-indigo)"></span><span style="color:#4338CA">Publicando</span></span>
+            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md"><span class="w-3 h-3 rounded-full bg-(--success-500)"></span><span class="text-(--success-700)">Publicado</span></span>
+            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md"><span class="w-3 h-3 rounded-full bg-(--error-500)"></span><span class="text-(--error-700)">Falhou</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ PAGE: Guia de estilo (docs/style-guide.html structure) ═══════════ -->
+    <div x-show="page === 'guide'" x-cloak class="w-full max-w-7xl mx-auto">
+
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-6">
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight text-(--text-primary)">Guia de estilo</h1>
+          <p class="text-sm text-(--text-secondary) mt-1">Tokens e componentes lidos de <code>tokens/automator-tokens.css</code>, com os nomes que o <code>styles.css</code> já usa.</p>
+        </div>
+        <a href="#" class="btn-ghost"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar tokens</a>
+      </div>
+
+      <section class="g-section" id="color">
+        <h2>Cores</h2>
+        <p class="desc">Na migração só os valores mudam; os nomes dos tokens ficam.</p>
+        <h3 class="sub">Brand (violeta) — <code>--brand-*</code></h3>
+        <div class="swatches">
+          <div class="swatch"><div class="c" style="background:var(--brand-50)"></div><div class="l"><b>50</b><span>#F9F5FF</span></div></div>
+          <div class="swatch"><div class="c" style="background:var(--brand-100)"></div><div class="l"><b>100</b><span>#F3E8FF</span><br>primary-soft</div></div>
+          <div class="swatch"><div class="c" style="background:var(--brand-200)"></div><div class="l"><b>200</b><span>#E9D5FF</span><br>primary-muted</div></div>
+          <div class="swatch"><div class="c" style="background:var(--brand-300)"></div><div class="l"><b>300</b><span>#D8B4FE</span></div></div>
+          <div class="swatch"><div class="c" style="background:var(--brand-400)"></div><div class="l"><b>400</b><span>#C084FC</span></div></div>
+          <div class="swatch"><div class="c" style="background:var(--brand-500)"></div><div class="l"><b>500</b><span>#A855F7</span></div></div>
+          <div class="swatch"><div class="c" style="background:var(--brand-600)"></div><div class="l"><b>600</b><span>#9333EA</span></div></div>
+          <div class="swatch"><div class="c" style="background:var(--brand-700)"></div><div class="l"><b>700</b><span>#7C3AED</span><br>primary</div></div>
+          <div class="swatch"><div class="c" style="background:var(--brand-800)"></div><div class="l"><b>800</b><span>#6D28D9</span><br>primary-hover</div></div>
+          <div class="swatch"><div class="c" style="background:var(--brand-900)"></div><div class="l"><b>900</b><span>#5B21B6</span></div></div>
+          <div class="swatch"><div class="c" style="background:var(--primary-ring)"></div><div class="l"><b>ring</b><span>#C4B5FD</span><br>primary-ring</div></div>
+        </div>
+        <h3 class="sub">Neutros — <code>--neutral-*</code> (50–200 lilás, 300–950 slate)</h3>
+        <div class="swatches">
+          <div class="swatch"><div class="c" style="background:var(--neutral-950)"></div><div class="l"><b>950</b><span>#0F172A</span><br>text-primary</div></div>
+          <div class="swatch"><div class="c" style="background:var(--neutral-900)"></div><div class="l"><b>900</b><span>#1E293B</span><br>toast</div></div>
+          <div class="swatch"><div class="c" style="background:var(--neutral-800)"></div><div class="l"><b>800</b><span>#334155</span></div></div>
+          <div class="swatch"><div class="c" style="background:var(--neutral-700)"></div><div class="l"><b>700</b><span>#475569</span></div></div>
+          <div class="swatch"><div class="c" style="background:var(--neutral-600)"></div><div class="l"><b>600</b><span>#64748B</span><br>text-secondary</div></div>
+          <div class="swatch"><div class="c" style="background:var(--neutral-500)"></div><div class="l"><b>500</b><span>#94A3B8</span><br>text-tertiary</div></div>
+          <div class="swatch"><div class="c" style="background:var(--neutral-400)"></div><div class="l"><b>400</b><span>#CBD5E1</span><br>text-ghost, border-hover</div></div>
+          <div class="swatch"><div class="c" style="background:var(--neutral-300)"></div><div class="l"><b>300</b><span>#E5E7EB</span><br>border</div></div>
+          <div class="swatch"><div class="c" style="background:var(--neutral-200)"></div><div class="l"><b>200</b><span>#EDE9FE</span><br>surface-3</div></div>
+          <div class="swatch"><div class="c" style="background:var(--neutral-100)"></div><div class="l"><b>100</b><span>#F5F3FF</span><br>surface-2, sidebar</div></div>
+          <div class="swatch"><div class="c" style="background:var(--neutral-50)"></div><div class="l"><b>50</b><span>#FAFAFF</span><br>surface-1</div></div>
+          <div class="swatch"><div class="c" style="background:var(--surface-page)"></div><div class="l"><b>page</b><span>#F8FAFF</span><br>surface-page</div></div>
+        </div>
+        <h3 class="sub">Semânticas (50 / 500 / 700)</h3>
+        <div class="swatches">
+          <div class="swatch"><div class="c" style="background:linear-gradient(90deg,var(--success-50) 33%,var(--success-500) 33% 66%,var(--success-700) 66%)"></div><div class="l"><b>success</b><span>#ECFDF5 #22C55E #15803D</span></div></div>
+          <div class="swatch"><div class="c" style="background:linear-gradient(90deg,var(--warning-50) 33%,var(--warning-500) 33% 66%,var(--warning-700) 66%)"></div><div class="l"><b>warning</b><span>#FFFBEB #F59E0B #B45309</span></div></div>
+          <div class="swatch"><div class="c" style="background:linear-gradient(90deg,var(--error-50) 33%,var(--error-500) 33% 66%,var(--error-700) 66%)"></div><div class="l"><b>error</b><span>#FEF2F2 #EF4444 #B91C1C</span></div></div>
+          <div class="swatch"><div class="c" style="background:linear-gradient(90deg,var(--info-50) 33%,var(--info-500) 33% 66%,var(--info-700) 66%)"></div><div class="l"><b>info</b><span>#EFF6FF #3B82F6 #1D4ED8</span></div></div>
+        </div>
+        <h3 class="sub">Destaques (sólido / soft) — gráficos, tags, tiles</h3>
+        <div class="swatches">
+          <div class="swatch"><div class="c" style="background:linear-gradient(90deg,var(--accent-sky) 60%,var(--accent-sky-soft) 60%)"></div><div class="l"><b>sky</b><span>#0EA5E9 / #E0F2FE</span></div></div>
+          <div class="swatch"><div class="c" style="background:linear-gradient(90deg,var(--accent-teal) 60%,var(--accent-teal-soft) 60%)"></div><div class="l"><b>teal</b><span>#14B8A6 / #CCFBF1</span></div></div>
+          <div class="swatch"><div class="c" style="background:linear-gradient(90deg,var(--accent-rose) 60%,var(--accent-rose-soft) 60%)"></div><div class="l"><b>rose</b><span>#F43F5E / #FFE4E6</span></div></div>
+          <div class="swatch"><div class="c" style="background:linear-gradient(90deg,var(--accent-indigo) 60%,var(--accent-indigo-soft) 60%)"></div><div class="l"><b>indigo</b><span>#6366F1 / #EEF2FF</span></div></div>
+          <div class="swatch"><div class="c" style="background:linear-gradient(90deg,var(--accent-amber) 60%,var(--accent-amber-soft) 60%)"></div><div class="l"><b>amber</b><span>#F59E0B / #FFF7ED</span></div></div>
+          <div class="swatch"><div class="c" style="background:linear-gradient(90deg,var(--accent-emerald) 60%,var(--accent-emerald-soft) 60%)"></div><div class="l"><b>emerald</b><span>fora do guide</span></div></div>
+        </div>
+      </section>
+
+      <section class="g-section" id="type">
+        <h2>Tipografia</h2>
+        <p class="desc">Inter em tudo. <code>--font-display</code> agora aponta para a mesma família; o peso 600 faz o papel de destaque.</p>
+        <table class="tbl">
+          <thead><tr><th>Elemento</th><th>Token</th><th>Peso / tamanho</th><th>Amostra</th></tr></thead>
+          <tbody>
+            <tr><td>Título da página</td><td class="mono">--text-page-title</td><td class="mono">600 / 24px</td><td style="font:var(--text-page-title)">Contas Sociais</td></tr>
+            <tr><td>Título de seção</td><td class="mono">--text-section-title</td><td class="mono">600 / 18px</td><td style="font:var(--text-section-title)">Contas conectadas (3)</td></tr>
+            <tr><td>Título de card</td><td class="mono">--text-card-title</td><td class="mono">500 / 16px</td><td style="font:var(--text-card-title)">Instagram</td></tr>
+            <tr><td>Texto normal</td><td class="mono">--text-body</td><td class="mono">400 / 14px</td><td style="font:var(--text-body)">Gerencie suas conexões e integre novas plataformas.</td></tr>
+            <tr><td>Texto auxiliar</td><td class="mono">--text-aux</td><td class="mono">400 / 12px</td><td style="font:var(--text-aux);color:var(--text-tertiary)">@sevenclickdigital · Conectada em 02/11/2026</td></tr>
+            <tr><td>Rótulo / tag</td><td class="mono">--text-label</td><td class="mono">500 / 12px</td><td><span class="pill pill-brand"><i></i>Disponível</span></td></tr>
+            <tr><td>Número de stat card</td><td class="mono">text-2xl font-bold</td><td class="mono">700 / 24px</td><td style="font-size:24px;font-weight:700;letter-spacing:-0.02em">12.847</td></tr>
+            <tr><td>Mono (métricas, datas)</td><td class="mono">--font-mono</td><td class="mono">13px</td><td style="font-family:var(--font-mono);font-size:13px">+12.4% · 2026-11-12 14:00</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="g-section" id="foundations">
+        <h2>Raio, elevação e bordas</h2>
+        <p class="desc">Controles 8px, cards 12px, pills full. Sombras com tinta violeta; a de card é <code>--shadow-md</code>.</p>
+        <h3 class="sub">Raios — <code>--radius-*</code></h3>
+        <div class="row" style="gap:18px">
+          <div style="text-align:center"><div style="width:64px;height:64px;background:var(--primary-soft);border:1.5px solid var(--primary-ring);border-radius:var(--radius-sm)"></div><div class="cap">sm 4px</div></div>
+          <div style="text-align:center"><div style="width:64px;height:64px;background:var(--primary-soft);border:1.5px solid var(--primary-ring);border-radius:var(--radius-md)"></div><div class="cap">md 8px · controles</div></div>
+          <div style="text-align:center"><div style="width:64px;height:64px;background:var(--primary-soft);border:1.5px solid var(--primary-ring);border-radius:var(--radius-lg)"></div><div class="cap">lg 12px · cards</div></div>
+          <div style="text-align:center"><div style="width:64px;height:64px;background:var(--primary-soft);border:1.5px solid var(--primary-ring);border-radius:var(--radius-xl)"></div><div class="cap">xl 16px · painéis</div></div>
+          <div style="text-align:center"><div style="width:64px;height:64px;background:var(--primary-soft);border:1.5px solid var(--primary-ring);border-radius:var(--radius-2xl)"></div><div class="cap">2xl 20px</div></div>
+          <div style="text-align:center"><div style="width:64px;height:64px;background:var(--primary-soft);border:1.5px solid var(--primary-ring);border-radius:var(--radius-full)"></div><div class="cap">full · pills</div></div>
+        </div>
+        <h3 class="sub">Sombras — <code>--shadow-*</code></h3>
+        <div class="row" style="gap:18px;padding:8px 0 4px">
+          <div style="text-align:center"><div style="width:96px;height:64px;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-xs)"></div><div class="cap">xs</div></div>
+          <div style="text-align:center"><div style="width:96px;height:64px;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)"></div><div class="cap">sm</div></div>
+          <div style="text-align:center"><div style="width:96px;height:64px;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-md)"></div><div class="cap">md · card</div></div>
+          <div style="text-align:center"><div style="width:96px;height:64px;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg)"></div><div class="cap">lg · dropdown</div></div>
+          <div style="text-align:center"><div style="width:96px;height:64px;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-xl)"></div><div class="cap">xl · modal</div></div>
+          <div style="text-align:center"><div style="width:96px;height:64px;background:var(--primary);border-radius:var(--radius-md);box-shadow:var(--shadow-primary)"></div><div class="cap">primary</div></div>
+        </div>
+      </section>
+
+      <section class="g-section" id="buttons">
+        <h2>Botões</h2>
+        <p class="desc"><code>.btn-brand</code> deixa de ser pill e de ocupar 100%: raio <code>--radius-md</code>, largura automática, <code>w-full</code> onde precisar. Novos: <code>.btn-soft</code>, <code>.btn-ghost</code>, <code>.btn-danger-soft</code> substituem as combinações de utilitários <code>orange-*</code>/<code>stone-*</code> que hoje se repetem nas templates.</p>
+        <div class="demo row">
+          <button class="btn-brand"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Primário</button>
+          <button class="btn-soft">Secundário (soft)</button>
+          <button class="btn-outline">Outline</button>
+          <button class="btn-ghost">Fantasma</button>
+          <button class="btn-danger-soft"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Excluir</button>
+          <button class="btn-link">Reenviar código</button>
+          <button class="w-8 h-8 inline-flex items-center justify-center rounded-md border border-(--border) text-(--text-ghost) bg-white hover:text-(--text-primary) hover:bg-(--surface-1) hover:border-(--border-hover) cursor-pointer" aria-label="Voltar"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+        </div>
+        <div class="cap">.btn-brand · .btn-soft · .btn-outline · .btn-ghost · .btn-danger-soft · .btn-link · ícone: w-8 h-8 rounded-md border-(--border)</div>
+        <h3 class="sub">Tamanhos</h3>
+        <div class="demo row">
+          <button class="btn-brand py-1.5 px-3 text-xs">Pequeno</button>
+          <button class="btn-brand">Padrão</button>
+          <button class="btn-brand py-3 px-6 text-base">Grande</button>
+          <button class="btn-brand" disabled style="opacity:.5;cursor:not-allowed">Desabilitado</button>
+        </div>
+      </section>
+
+      <section class="g-section" id="forms">
+        <h2>Formulários</h2>
+        <p class="desc">Foco = borda <code>--primary</code> + halo 3px <code>--primary-ring</code>. Checkbox e toggle passam a usar <code>--primary</code> (antes era o verde da marca antiga).</p>
+        <div class="g-grid">
+          <div class="demo">
+            <label class="block text-sm font-semibold mb-1.5">E-mail</label>
+            <input class="form-input-styled" placeholder="voce@empresa.com">
+            <div class="cap">.form-input-styled (label: text-sm font-semibold mb-1.5)</div>
+          </div>
+          <div class="demo">
+            <label class="block text-sm font-semibold mb-1.5">Senha</label>
+            <input class="form-input-styled is-error" value="curta" type="password">
+            <p class="mt-1 text-xs text-(--error-500)">Esta senha é muito curta.</p>
+            <div class="cap">.form-input-styled.is-error + text-xs error-500</div>
+          </div>
+          <div class="demo">
+            <label class="block text-sm font-semibold mb-1.5">Fuso horário</label>
+            <select class="form-input-styled bb-select cursor-pointer"><option>America/Sao_Paulo</option><option>Europe/Berlin</option></select>
+            <div class="cap">.form-input-styled.bb-select</div>
+          </div>
+          <div class="demo">
+            <label class="block text-sm font-semibold mb-1.5">Descrição</label>
+            <textarea class="form-input-styled" rows="3" placeholder="Escreva a legenda..."></textarea>
+            <div class="cap">textarea.form-input-styled</div>
+          </div>
+          <div class="demo">
+            <div class="row" style="gap:20px">
+              <label class="row" style="gap:8px;font-size:14px"><input type="checkbox" class="bb-checkbox" checked> Aprovar automaticamente</label>
+              <label class="bb-toggle"><input type="checkbox" checked><span class="bb-toggle-track"></span></label>
+              <label class="bb-toggle"><input type="checkbox"><span class="bb-toggle-track"></span></label>
+              <label class="bb-toggle"><input type="checkbox" disabled><span class="bb-toggle-track"></span></label>
+            </div>
+            <div class="cap">.bb-checkbox (accent-color: --primary) · .bb-toggle 36×20</div>
+          </div>
+          <div class="demo">
+            <div class="row">
+              <button class="cal-filter-select">Todos os canais</button>
+              <button class="cal-filter-select active">2 selecionados</button>
+              <button class="cal-filter-select is-holidays">🎉 Datas comemorativas</button>
+            </div>
+            <div class="cap">ui_select trigger (.cal-filter-select); .active = primary · .is-holidays = âmbar</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="g-section" id="targets">
+        <h2>Seletor de destino (compositor e pedido de arte)</h2>
+        <p class="desc">Onde o post vai. Hoje: um círculo por conta × formato, todos com o mesmo avatar, formato num glifo de 18px, nome só no tooltip e as plataformas não conectadas na mesma fileira, apagadas. Proposta: um card por conta conectada com os formatos dentro, e um único card "Conectar canal" no fim. A API do Alpine (<code>toggleFormat</code> / <code>hasFormat</code>) não muda.</p>
+
+        <h3 class="sub">Hoje — .target-tile (compose.html)</h3>
+        <div class="demo page">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <div class="old-target-group">
+              <span class="old-target-tile selected"><span class="av">SC</span><span class="bd"><svg width="10" height="10"><use href="#pi-facebook"/></svg></span></span>
+              <span class="old-target-tile"><span class="av">SC</span><span class="bd"><svg width="10" height="10"><use href="#pi-facebook"/></svg></span><span class="fm"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9" stroke-dasharray="4 2.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg></span></span>
+              <span class="old-target-tile"><span class="av">SC</span><span class="bd"><svg width="10" height="10"><use href="#pi-facebook"/></svg></span><span class="fm"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M10 8.5v7l6-3.5-6-3.5z" fill="currentColor" stroke="none"/></svg></span></span>
+            </div>
+            <div class="old-target-group">
+              <span class="old-target-tile selected"><span class="av">SC</span><span class="bd"><svg width="10" height="10"><use href="#pi-instagram"/></svg></span></span>
+              <span class="old-target-tile selected"><span class="av">SC</span><span class="bd"><svg width="10" height="10"><use href="#pi-instagram"/></svg></span><span class="fm"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9" stroke-dasharray="4 2.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg></span></span>
+              <span class="old-target-tile"><span class="av">SC</span><span class="bd"><svg width="10" height="10"><use href="#pi-instagram"/></svg></span><span class="fm"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M10 8.5v7l6-3.5-6-3.5z" fill="currentColor" stroke="none"/></svg></span></span>
+            </div>
+            <div class="old-target-group">
+              <span class="old-target-tile"><span class="av">SC</span><span class="bd"><svg width="10" height="10"><use href="#pi-threads"/></svg></span></span>
+            </div>
+            <div class="old-target-group">
+              <span class="old-target-tile"><span class="av"><svg width="16" height="16"><use href="#pi-linkedin"/></svg></span></span>
+              <span class="old-target-tile"><span class="av"><svg width="16" height="16"><use href="#pi-tiktok"/></svg></span></span>
+              <span class="old-target-tile"><span class="av"><svg width="16" height="16"><use href="#pi-pinterest"/></svg></span></span>
+              <span class="old-target-tile"><span class="av"><svg width="16" height="16"><use href="#pi-bluesky"/></svg></span></span>
+              <span class="old-target-tile"><span class="av"><svg width="16" height="16"><use href="#pi-google_business"/></svg></span></span>
+              <span class="old-target-tile"><span class="av"><svg width="16" height="16"><use href="#pi-mastodon"/></svg></span></span>
+              <span class="old-target-tile"><span class="av"><svg width="16" height="16"><use href="#pi-devto"/></svg></span></span>
+              <span class="old-target-tile"><span class="av"><svg width="16" height="16"><use href="#pi-x"/></svg></span></span>
+            </div>
+          </div>
+        </div>
+        <div class="cap">Problemas: avatar igual em todos; formato = glifo de 18px; nome só no hover (não funciona no toque); não selecionado = cinza 45%, parece desabilitado; 8–10 ícones de plataformas não conectadas na fileira; sem contagem do que foi escolhido.</div>
+
+        <h3 class="sub">Proposta — .target-picker / .target-card / .format-toggle (clique para testar)</h3>
+        <div class="demo page" x-data="{
+          sel: { fb: ['post'], ig: ['post', 'story'], th: [] },
+          has(a, f) { return this.sel[a].includes(f) },
+          toggle(a, f) { const i = this.sel[a].indexOf(f); i >= 0 ? this.sel[a].splice(i, 1) : this.sel[a].push(f) },
+          count() { return Object.values(this.sel).reduce((n, l) => n + l.length, 0) },
+          clear() { Object.keys(this.sel).forEach(k => this.sel[k] = []) }
+        }">
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-(--text-tertiary)">Onde publicar</span>
+            <span class="text-xs text-(--text-secondary)"><strong class="text-(--text-primary)" x-text="count()"></strong> <span x-text="count() === 1 ? 'destino' : 'destinos'"></span> · <button type="button" class="btn-link py-0 px-1 text-xs" @click="clear()" x-show="count()">Limpar</button></span>
+          </div>
+          <div class="target-picker" role="group" aria-label="Onde publicar">
+
+            <div class="target-card" :class="sel.fb.length && 'is-selected'">
+              <div class="target-card-head">
+                <div class="target-card-avatar">SC</div>
+                <div class="flex-1 min-w-0"><div class="target-card-name">Seven Click Soluções</div><div class="target-card-sub"><svg width="11" height="11"><use href="#pi-facebook"/></svg>Facebook · Página</div></div>
+                <span class="target-card-check" x-show="sel.fb.length"><svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span>
+              </div>
+              <div class="target-card-formats">
+                <button type="button" class="format-toggle" :class="has('fb','post') && 'is-on'" :aria-pressed="has('fb','post')" @click="toggle('fb','post')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 9h10M7 13h6"/></svg>Feed</button>
+                <button type="button" class="format-toggle" :class="has('fb','story') && 'is-on'" :aria-pressed="has('fb','story')" @click="toggle('fb','story')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9" stroke-dasharray="4 2.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg>Story</button>
+                <button type="button" class="format-toggle" :class="has('fb','reel') && 'is-on'" :aria-pressed="has('fb','reel')" @click="toggle('fb','reel')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M10 8.5v7l6-3.5-6-3.5z" fill="currentColor" stroke="none"/></svg>Reel</button>
+              </div>
+            </div>
+
+            <div class="target-card" :class="sel.ig.length && 'is-selected'">
+              <div class="target-card-head">
+                <div class="target-card-avatar">SC</div>
+                <div class="flex-1 min-w-0"><div class="target-card-name">Seven Click | Agência</div><div class="target-card-sub"><svg width="11" height="11"><use href="#pi-instagram"/></svg>Instagram · @sevenclickdigital</div></div>
+                <span class="target-card-check" x-show="sel.ig.length"><svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span>
+              </div>
+              <div class="target-card-formats">
+                <button type="button" class="format-toggle" :class="has('ig','post') && 'is-on'" :aria-pressed="has('ig','post')" @click="toggle('ig','post')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 9h10M7 13h6"/></svg>Feed</button>
+                <button type="button" class="format-toggle" :class="has('ig','story') && 'is-on'" :aria-pressed="has('ig','story')" @click="toggle('ig','story')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9" stroke-dasharray="4 2.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg>Story</button>
+                <button type="button" class="format-toggle is-blocked" title="Reels precisa de um vídeo — anexe um para liberar" aria-disabled="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M10 8.5v7l6-3.5-6-3.5z" fill="currentColor" stroke="none"/></svg>Reel</button>
+              </div>
+            </div>
+
+            <div class="target-card" :class="sel.th.length && 'is-selected'">
+              <div class="target-card-head">
+                <div class="target-card-avatar">SC</div>
+                <div class="flex-1 min-w-0"><div class="target-card-name">Seven Click | Agência</div><div class="target-card-sub"><svg width="11" height="11"><use href="#pi-threads"/></svg>Threads · @sevenclickdigital</div></div>
+                <span class="target-card-check" x-show="sel.th.length"><svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span>
+              </div>
+              <div class="target-card-formats">
+                <button type="button" class="format-toggle" :class="has('th','post') && 'is-on'" :aria-pressed="has('th','post')" @click="toggle('th','post')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 9h10M7 13h6"/></svg>Post</button>
+              </div>
+            </div>
+
+            <a href="#" class="target-card is-connect" @click.prevent>
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+              <div><div class="target-card-name">Conectar canal</div><div class="target-card-sub justify-center">8 plataformas disponíveis</div></div>
+            </a>
+          </div>
+        </div>
+        <div class="cap">Card 240px: avatar 28 + nome + rede/handle com o ícone colorido; formatos como toggles (.is-on = primário; .is-blocked = a mídia não serve, com o motivo no title); card selecionado = borda primary + brand-50 + check. Uma conta com um só formato tem um toggle só. "Conectar canal" é um card tracejado único, não 8 ícones.</div>
+        <div class="note" style="margin-top:12px"><strong>No código:</strong> o partial <code>partials/_channel_tile.html</code> vira <code>_target_card.html</code> com os mesmos argumentos (<code>account</code>, <code>platform</code>, lista de <code>format_options</code>) e continua servindo o compositor e o pedido de arte — neste último, sem formatos, o card inteiro é o toggle. <code>composerApp()</code> não muda: cada toggle chama <code>toggleFormat(account.id, option.format)</code> e lê <code>hasFormat(...)</code>. Em telas estreitas a fileira rola na horizontal (<code>overflow-x-auto</code>, <code>flex-nowrap</code>) em vez de quebrar linha.</div>
+      </section>
+
+      <section class="g-section" id="badges">
+        <h2>Badges e pills</h2>
+        <p class="desc">Um só padrão: fundo 50 + bolinha 500 + texto 700, 12px/500, sem borda visível. Vale para <code>STATUS_META</code> (aprovações), <code>_status_badge.html</code> (conexão) e os chips do calendário (<code>.status-*</code>).</p>
+        <h3 class="sub">Status de post / aprovação — {% status_badge %}</h3>
+        <div class="row">
+          <span class="pill pill-neutral"><i></i>Rascunho</span>
+          <span class="pill pill-brand"><i></i>Em revisão</span>
+          <span class="pill pill-brand"><i></i>Aguardando cliente</span>
+          <span class="pill pill-brand"><i></i>Alterações pedidas</span>
+          <span class="pill pill-teal"><i></i>Aprovado</span>
+          <span class="pill pill-error"><i></i>Rejeitado</span>
+          <span class="pill pill-info"><i></i>Agendado</span>
+          <span class="pill pill-indigo"><i></i>Publicando</span>
+          <span class="pill pill-success"><i></i>Publicado</span>
+          <span class="pill pill-warning"><i></i>Parcialmente publicado</span>
+          <span class="pill pill-error"><i></i>Falhou</span>
+          <span class="pill pill-rose"><i></i>Pausa solicitada</span>
+        </div>
+        <div class="note warn" style="margin-top:12px"><strong>Decisão:</strong> "Pausa solicitada" (Hold) usava violeta <code>#7C3AED</code> — agora é a cor primária e colidiria com "Em revisão". A prova usa <code>rose</code>; confirmar.</div>
+        <h3 class="sub">Conexão — social_accounts/partials/_status_badge.html</h3>
+        <div class="row">
+          <span class="pill pill-success"><i></i>Conectada</span>
+          <span class="pill pill-neutral"><i></i>Desconectada</span>
+          <span class="pill pill-brand"><i></i>Disponível</span>
+          <button type="button" class="pill pill-warning is-action"><i></i>Atenção<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></button>
+          <button type="button" class="pill pill-error is-action"><i></i>Com problema<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></button>
+        </div>
+        <div class="note" style="margin-top:12px"><strong>Problemas e avisos nunca aparecem inline no card.</strong> O pill de status carrega o estado (âmbar = aviso: permissão faltando, token expirando, webhook sem assinatura; vermelho = erro: token expirado, conta desconectada pela rede) e vira botão (<code>.pill.is-action</code>, com seta). O clique abre um modal com ícone, título, conta, explicação e as ações (Reconectar, Desconectar, Fechar). O rodapé do card fica sempre igual: "Gerenciar conexão". Veja em Contas Sociais: Instagram, Threads e Google Business.</div>
+        <h3 class="sub">Chips do calendário — .post-chip--compact .status-*</h3>
+        <div class="row" style="max-width:520px">
+          <a href="#" class="post-chip post-chip--compact status-draft" style="width:160px"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-threads"/></svg></span><span class="truncate flex-1 min-w-0">Rascunho</span><span class="chip-time">18:11</span></a>
+          <a href="#" class="post-chip post-chip--compact status-pending_review" style="width:160px"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-facebook"/></svg></span><span class="truncate flex-1 min-w-0">Em revisão</span><span class="chip-time">14:00</span></a>
+          <a href="#" class="post-chip post-chip--compact status-approved" style="width:160px"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-threads"/></svg></span><span class="truncate flex-1 min-w-0">Aprovado</span><span class="chip-time">10:00</span></a>
+          <a href="#" class="post-chip post-chip--compact status-scheduled" style="width:160px"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-instagram"/></svg></span><span class="truncate flex-1 min-w-0">Agendado</span><span class="chip-time">09:00</span></a>
+          <a href="#" class="post-chip post-chip--compact status-publishing" style="width:160px"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-facebook"/></svg></span><span class="truncate flex-1 min-w-0">Publicando</span><span class="chip-time">08:00</span></a>
+          <a href="#" class="post-chip post-chip--compact status-published" style="width:160px"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-instagram"/></svg></span><span class="truncate flex-1 min-w-0">Publicado</span><span class="chip-time">11:14</span></a>
+          <a href="#" class="post-chip post-chip--compact status-failed" style="width:160px"><span class="chip-platform"><svg width="10" height="10"><use href="#pi-instagram"/></svg></span><span class="truncate flex-1 min-w-0">Falhou</span><span class="chip-time">08:00</span></a>
+        </div>
+        <h3 class="sub">Chips e contadores</h3>
+        <div class="row">
+          <span class="a-delta good">+12.4%</span><span class="a-delta bad">−3.1%</span><span class="a-delta neutral">0.0%</span>
+          <span class="sidebar-badge" style="margin-left:0">5</span>
+          <span class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold text-white" style="background:var(--primary)">3</span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-(--accent-sky-soft) text-(--accent-sky)">Vídeo</span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-(--accent-rose-soft) text-(--accent-rose)">Urgente</span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-(--accent-teal-soft) text-(--accent-teal)">Cliente</span>
+        </div>
+      </section>
+
+      <section class="g-section" id="feedback">
+        <h2>Alertas e toasts</h2>
+        <h3 class="sub">Alertas inline — .alert-*</h3>
+        <div style="display:grid;gap:8px;max-width:560px">
+          <div class="alert-error">O e-mail ou a senha estão incorretos.</div>
+          <div class="alert-success">Sua senha foi alterada.</div>
+          <div class="alert-warning">O token do Instagram expira em 3 dias. Reconecte a conta.</div>
+          <div class="alert-info">Enviamos um link de confirmação para sua caixa de entrada.</div>
+        </div>
+        <div class="cap">As flash messages de base.html (bg-red-50 text-red-800…) passam a usar estas mesmas classes.</div>
+        <h3 class="sub">Toast de ação — approvals/partials/_toasts.html (showToast)</h3>
+        <div class="row">
+          <div class="bb-toast"><span style="color:var(--success-500);display:flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg></span><div><div class="bb-toast-title">Post aprovado</div><div class="bb-toast-body">Agendado para 25 nov, 14:00</div></div></div>
+          <div class="bb-toast"><span style="color:var(--brand-400);display:flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span><div><div class="bb-toast-title">Cliente notificado</div></div></div>
+          <div class="bb-toast"><span style="color:var(--warning-500);display:flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span><div><div class="bb-toast-title">Pausa solicitada</div></div></div>
+          <div class="bb-toast" style="background:#7F1D1D"><span style="color:#FCA5A5;display:flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6l12 12"/></svg></span><div><div class="bb-toast-title">Não foi possível reagendar o post.</div></div></div>
+        </div>
+        <div class="cap">Fundo --neutral-900 (#1E293B); o de erro mantém o vermelho escuro.</div>
+      </section>
+
+      <section class="g-section" id="modals">
+        <h2>Modais e dropdown</h2>
+        <p class="desc">Um só modelo de modal: <code>.modal-overlay &gt; .modal-panel &gt; .modal-close + .modal-header + .modal-body + .modal-footer</code>. O que muda entre os casos é só o conteúdo do header e a composição do rodapé.</p>
+        <div class="note" style="margin-bottom:16px">
+          <strong>Regras.</strong>
+          Painel 448px (<code>.is-sm</code> 384 para confirmações, <code>.is-lg</code> 640 para conteúdo), raio <code>--radius-xl</code>, borda, <code>--shadow-xl</code>, padding 24px.
+          Fecha por Esc, clique no fundo e pelo "x" (sempre presente, exceto em confirmações destrutivas, que só fecham pelos botões).
+          Header: ícone 44px redondo no tom do caso (<code>.modal-icon.is-brand/success/warning/error/info</code>) + título 16/600 + meta 12 opcional; centralizado (<code>.is-centered</code>) só em confirmações.
+          Rodapé alinhado à direita na ordem Fechar/Cancelar (<code>.btn-ghost</code>) → destrutivo (<code>.btn-danger-soft</code>) → primário (<code>.btn-brand</code>); em confirmações, dois botões de largura igual (<code>.is-split</code>).
+          Entrada 150ms (opacidade + <code>scale-95</code>), saída 100ms. Nunca inline no card, nunca <code>alert()</code>.
+        </div>
+        <div class="g-grid" style="grid-template-columns: repeat(auto-fill, minmax(460px, 1fr))">
+          <div>
+            <div class="modal-shell">
+              <div class="modal-panel is-sm">
+                <div class="modal-header is-centered">
+                  <div class="modal-icon is-error"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></div>
+                  <div><div class="modal-title">Excluir post?</div></div>
+                </div>
+                <div class="modal-body" style="text-align:center"><p>Esta ação não pode ser desfeita.</p></div>
+                <div class="modal-footer is-split"><button class="btn-ghost">Cancelar</button><button class="btn-danger-soft">Excluir</button></div>
+              </div>
+            </div>
+            <div class="cap">Confirmação: .modal-panel.is-sm · header .is-centered · footer .is-split · sem "x"</div>
+          </div>
+          <div>
+            <div class="modal-shell">
+              <div class="modal-panel">
+                <button type="button" class="modal-close" aria-label="Fechar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                <div class="modal-header">
+                  <div class="modal-icon is-brand"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div>
+                  <div><div class="modal-title">Criar workspace</div><div class="modal-meta">Seven Click · organização</div></div>
+                </div>
+                <div class="modal-body">
+                  <div><label class="block text-sm font-semibold text-(--text-primary) mb-1.5">Nome</label><input class="form-input-styled" placeholder="Nome do workspace"></div>
+                  <div><label class="block text-sm font-semibold text-(--text-primary) mb-1.5">Fuso horário</label><select class="form-input-styled bb-select cursor-pointer"><option>America/Sao_Paulo</option></select></div>
+                </div>
+                <div class="modal-footer"><button class="btn-ghost">Cancelar</button><button class="btn-brand">Criar</button></div>
+              </div>
+            </div>
+            <div class="cap">Formulário: .modal-panel · ícone .is-brand · campos no .modal-body · footer Cancelar → Criar</div>
+          </div>
+          <div>
+            <div class="modal-shell">
+              <div class="modal-panel">
+                <button type="button" class="modal-close" aria-label="Fechar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                <div class="modal-header">
+                  <div class="modal-icon is-error"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+                  <div><div class="modal-title">Token expirado</div><div class="modal-meta"><svg width="12" height="12"><use href="#pi-threads"/></svg>Seven Click | Agência · @sevenclickdigital</div></div>
+                </div>
+                <div class="modal-body"><p>A autorização do Threads expirou. Publicações agendadas vão falhar até você reconectar.</p></div>
+                <div class="modal-footer"><button class="btn-ghost">Fechar</button><button class="btn-danger-soft">Desconectar</button><button class="btn-brand">Reconectar</button></div>
+              </div>
+            </div>
+            <div class="cap">Detalhe de problema: aberto pelo pill .is-action · ícone no tom do estado · meta com a conta</div>
+          </div>
+          <div>
+            <div class="demo page" style="display:flex;justify-content:center">
+              <div class="bg-white rounded-lg shadow-(--shadow-lg) ring-1 ring-(--border) py-1 w-56">
+                <div class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-(--primary) border-b border-(--neutral-100)">Canal — todos</div>
+                <div class="flex items-center gap-2 px-3 py-1.5 text-xs bg-(--primary-soft) text-(--brand-800)"><svg width="14" height="14"><use href="#pi-instagram"/></svg>Instagram</div>
+                <div class="flex items-center gap-2 px-3 py-1.5 text-xs text-(--text-secondary) hover:bg-(--surface-1)"><svg width="14" height="14"><use href="#pi-linkedin"/></svg>LinkedIn</div>
+                <div class="flex items-center gap-2 px-3 py-1.5 text-xs text-(--text-secondary) hover:bg-(--surface-1)"><svg width="14" height="14"><use href="#pi-tiktok"/></svg>TikTok</div>
+              </div>
+            </div>
+            <div class="cap">components/ui_select.html: selecionado = bg primary-soft + brand-800</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="g-section" id="tables">
+        <h2>Tabela</h2>
+        <div class="demo" style="padding:0;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-lg)">
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead style="background:var(--surface-1)"><tr>
+              <th class="px-4 py-3 text-left" style="font:var(--text-label);text-transform:uppercase;letter-spacing:.04em;color:var(--text-ghost)">Post</th>
+              <th class="px-4 py-3 text-left" style="font:var(--text-label);text-transform:uppercase;letter-spacing:.04em;color:var(--text-ghost)">Canal</th>
+              <th class="px-4 py-3 text-left" style="font:var(--text-label);text-transform:uppercase;letter-spacing:.04em;color:var(--text-ghost)">Status</th>
+              <th class="px-4 py-3 text-right" style="font:var(--text-label);text-transform:uppercase;letter-spacing:.04em;color:var(--text-ghost)">Alcance</th>
+            </tr></thead>
+            <tbody>
+              <tr style="border-top:1px solid var(--neutral-100)"><td class="px-4 py-3">Teaser do lançamento</td><td class="px-4 py-3"><svg width="16" height="16"><use href="#pi-instagram"/></svg></td><td class="px-4 py-3"><span class="pill pill-success"><i></i>Publicado</span></td><td class="px-4 py-3 text-right" style="font-family:var(--font-mono);font-size:13px">12.847</td></tr>
+              <tr style="border-top:1px solid var(--neutral-100)"><td class="px-4 py-3">Bastidores</td><td class="px-4 py-3"><svg width="16" height="16"><use href="#pi-facebook"/></svg></td><td class="px-4 py-3"><span class="pill pill-info"><i></i>Agendado</span></td><td class="px-4 py-3 text-right text-(--text-ghost)">—</td></tr>
+              <tr style="border-top:1px solid var(--neutral-100)"><td class="px-4 py-3">Oferta Shopee</td><td class="px-4 py-3"><svg width="16" height="16"><use href="#pi-threads"/></svg></td><td class="px-4 py-3"><span class="pill pill-error"><i></i>Falhou</span></td><td class="px-4 py-3 text-right text-(--text-ghost)">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="cap">th: --text-label uppercase text-ghost, fundo surface-1 · linhas: border neutral-100 · métricas em --font-mono</div>
+      </section>
+
+      <section class="g-section" id="auth">
+        <h2>Autenticação</h2>
+        <div class="auth-bg" style="padding:32px 16px;border-radius:var(--radius-lg);display:flex;justify-content:center">
+          <div class="auth-card">
+            <div class="text-center mb-5"><img src="logo/automator-symbol.svg" alt="Automator" class="w-12 h-12 mx-auto mb-3"><div style="font:var(--text-page-title)">Bem-vindo de volta</div></div>
+            <button class="btn-social"><svg width="16" height="16"><use href="#pi-google_business"/></svg>Continuar com Google</button>
+            <div class="divider-text" style="margin:24px 0">ou</div>
+            <input class="form-input-styled mb-4" placeholder="E-mail">
+            <button class="btn-brand w-full">Entrar</button>
+          </div>
+        </div>
+        <div class="cap">.auth-bg (gradiente violeta) + .auth-card (--radius-xl) · logo: automator-symbol 48px no lugar de brightbean-studio-logo.webp</div>
+      </section>
+
+      <section class="g-section" id="migration">
+        <h2>Mapa de migração das templates</h2>
+        <p class="desc">Trocas de classe que cobrem a maior parte das templates. Utilitários Tailwind com cor fixa viram referência ao token (<code>bg-(--primary)</code> é a sintaxe do Tailwind v4 para <code>var(--primary)</code>).</p>
+        <table class="tbl">
+          <thead><tr><th>Hoje (fixo)</th><th>Novo (token)</th><th>Onde</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">&lt;main class="lg:border lg:border-stone-200 lg:m-2.5 bg-white lg:rounded-xl …"&gt;</td><td class="mono">&lt;main class="flex-1 overflow-y-auto flex flex-col p-4 lg:p-6"&gt;</td><td>base.html — sem o container branco</td></tr>
+            <tr><td class="mono">&lt;aside … lg:bg-transparent&gt;</td><td class="mono">bg-(--surface-sidebar) border-r border-(--border)</td><td>base.html</td></tr>
+            <tr><td class="mono">título dentro de {% block content %}</td><td class="mono">{% block page_header %}: h1 + p + ações</td><td>todas as telas (social_accounts/list.html…)</td></tr>
+            <tr><td class="mono">text-orange-600 bg-orange-50 border-orange-200 rounded-full</td><td class="mono">.btn-soft</td><td>"Connect account", "Reconnect", CTAs secundários</td></tr>
+            <tr><td class="mono">btn-brand (pill, 100%)</td><td class="mono">.btn-brand (8px, auto) + w-full quando precisar</td><td>auth, headers</td></tr>
+            <tr><td class="mono">text-stone-600 bg-white border-stone-200 rounded-lg</td><td class="mono">.btn-ghost</td><td>"Cancel" em modais</td></tr>
+            <tr><td class="mono">text-white bg-red-500 rounded-full</td><td class="mono">.btn-danger-soft</td><td>"Delete", "Disconnect"</td></tr>
+            <tr><td class="mono">text-stone-900</td><td class="mono">text-(--text-primary)</td><td>títulos</td></tr>
+            <tr><td class="mono">text-stone-500 / text-stone-600</td><td class="mono">text-(--text-tertiary) / text-(--text-secondary)</td><td>descrições, meta</td></tr>
+            <tr><td class="mono">text-stone-400</td><td class="mono">text-(--text-ghost)</td><td>placeholders, ícones inativos, th</td></tr>
+            <tr><td class="mono">border-stone-200 / border-stone-100</td><td class="mono">border-(--border) / border-(--neutral-100)</td><td>cards, divisores</td></tr>
+            <tr><td class="mono">bg-stone-50 / bg-stone-100</td><td class="mono">bg-(--surface-1) / bg-(--surface-2)</td><td>hover, tiles, chips neutros</td></tr>
+            <tr><td class="mono">bg-green-50 text-green-700 ring-green-600/10</td><td class="mono">.pill.pill-success</td><td>_status_badge.html</td></tr>
+            <tr><td class="mono">bg-yellow-50 text-yellow-700</td><td class="mono">.pill.pill-warning</td><td>token expirando</td></tr>
+            <tr><td class="mono">bg-amber-50 border-amber-200 text-amber-800</td><td class="mono">bg-(--warning-50) text-(--warning-700)</td><td>avisos de permissão no card</td></tr>
+            <tr><td class="mono">bg-red-50 text-red-800 (flash)</td><td class="mono">.alert-error</td><td>base.html messages</td></tr>
+            <tr><td class="mono">.cal-day / .post-chip / .status-* / .view-btn / .cal-add-btn com #F97316 e stone</td><td class="mono">mesmas classes com tokens (ver &lt;style&gt; desta prova)</td><td>calendar.html</td></tr>
+            <tr><td class="mono">.view-btn.active (laranja)</td><td class="mono">.view-btn.active (primary-soft + primary + ring)</td><td>calendar.html</td></tr>
+            <tr><td class="mono">rounded-xl (cards)</td><td class="mono">rounded-xl (= --radius-lg 12px)</td><td>sem mudança visual</td></tr>
+            <tr><td class="mono">accent-orange-500</td><td class="mono">.bb-checkbox</td><td>checkboxes soltos</td></tr>
+            <tr><td class="mono">#F97316 / rgba(249,115,22,…)</td><td class="mono">var(--primary) / rgba(124,58,237,…)</td><td>63 literais em 27 arquivos (docs/style-guide.html → Known gaps)</td></tr>
+            <tr><td class="mono">img/brightbean-studio-logo.webp</td><td class="mono">img/automator-symbol.svg</td><td>login, signup, accept_terms, oauth2 authorize</td></tr>
+          </tbody>
+        </table>
+        <h3 class="sub">O que muda no styles.css além do :root</h3>
+        <table class="tbl"><tbody>
+          <tr><td class="ok">✓</td><td>Mover as classes de componente para <code>@layer components</code>: utilitários no mesmo elemento passam a vencer (<code>btn-brand w-full</code> funciona).</td></tr>
+          <tr><td class="ok">✓</td><td><code>.btn-brand</code>: <code>border-radius: var(--radius-md)</code>, sem <code>width:100%</code>, hover sem rgba laranja.</td></tr>
+          <tr><td class="ok">✓</td><td>Criar <code>.btn-soft</code>, <code>.btn-ghost</code>, <code>.btn-danger-soft</code>, <code>.pill-*</code>, <code>.tile</code> (hoje são combinações repetidas de utilitários).</td></tr>
+          <tr><td class="ok">✓</td><td><code>.bb-checkbox</code> / <code>.bb-toggle</code>: <code>--primary</code> no lugar de <code>--brand-green-*</code>; remover <code>--brand-green-*</code>.</td></tr>
+          <tr><td class="ok">✓</td><td><code>.sidebar-nav-item</code>: 40px, ícone 18, texto 14/500; ativo = <code>--primary-soft</code> + <code>--primary</code> 600 (igual ao print do menu).</td></tr>
+          <tr><td class="ok">✓</td><td><code>.a-pill-group > button.active</code>: fundo <code>--primary</code> (era branco com sombra).</td></tr>
+          <tr><td class="ok">✓</td><td>Levar as classes do calendário (<code>.cal-day</code>, <code>.post-chip</code>, <code>.status-*</code>, <code>.view-btn</code>, <code>.cal-add-btn</code>) de <code>calendar.html</code> para o <code>styles.css</code>, já com tokens.</td></tr>
+          <tr><td class="ok">✓</td><td><code>.auth-bg</code>, <code>.bb-select</code> (chevron), <code>.cal-filter-select</code>, <code>.bb-toast</code>: trocar literais por tokens.</td></tr>
+          <tr><td class="ok">✓</td><td><code>@font-face</code> Inter 400/500/600 em <code>static/fonts/</code>.</td></tr>
+          <tr><td class="no">✕</td><td>Não introduzir <code>violet-*</code>/<code>purple-*</code> do Tailwind: a escala do guide não é a do Tailwind (<code>--brand-700</code> ≠ <code>violet-700</code>). Sempre o token.</td></tr>
+        </tbody></table>
+      </section>
+    </div>
+  </main>
+</div>
+</body>
+</html>

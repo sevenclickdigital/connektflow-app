@@ -2,7 +2,7 @@
 
 The product is called **Automator** (it was BrightBean Studio, the open-source project this repository forks). This document is the working context for the rename and for the new layout: what is already in the code, the rules it established, and what is left.
 
-The design source is the brand pack in `NOVO-LAYOUT/Automator_Brand_Assets/` (not committed; 31 MB of artwork). Its `README.md` holds the full component anatomy, `tokens/automator-tokens.css` the token values, `referencias/referencia_style_guide.png` the official palette and type, and `prova-de-conceito.html` a clickable mock of the new shell, the "Contas Sociais" page and the calendar. When this document and the code disagree, the code is right; when the code and the pack disagree on a component that has not been migrated yet, the pack is the target.
+The design source is the brand pack in `branding/` (logo, mascot poses and per-network art, references, tokens). Its `README.md` holds the full component anatomy, `tokens/automator-tokens.css` the token values, `referencias/referencia_style_guide.png` the official palette and type, and `prova-de-conceito.html` a clickable mock of the new shell, the "Contas Sociais" page and the calendar. When this document and the code disagree, the code is right; when the code and the pack disagree on a component that has not been migrated yet, the pack is the target.
 
 ## 1. Naming rules
 

@@ -1,0 +1,118 @@
+/*
+ * Automator — design tokens.
+ * Source of truth: referencias/referencia_style_guide.png (palette, type scale,
+ * radius, shadow) and the "Contas Sociais" dashboard mock (components).
+ *
+ * Token names follow theme/static_src/src/styles.css so this block can replace
+ * the :root there as-is. Values not printed on the style guide are marked
+ * "derived" and come from the same Tailwind families the guide uses.
+ */
+:root {
+  /* Brand scale (violet) — the guide's "Paleta Principal" */
+  --brand-50:  #F9F5FF;
+  --brand-100: #F3E8FF;
+  --brand-200: #E9D5FF;
+  --brand-300: #D8B4FE;
+  --brand-400: #C084FC;
+  --brand-500: #A855F7;
+  --brand-600: #9333EA;
+  --brand-700: #7C3AED;
+  --brand-800: #6D28D9;
+  --brand-900: #5B21B6;
+
+  /* Primary roles */
+  --primary:       var(--brand-700);   /* buttons, active tabs, links, focus */
+  --primary-hover: var(--brand-800);
+  --primary-soft:  var(--brand-100);   /* soft buttons, active chip bg, icon tiles */
+  --primary-muted: var(--brand-200);
+  --primary-ring:  #C4B5FD;            /* focus ring, outline button border */
+
+  /* Neutral scale — the guide's "Cores Neutras" (50–200 violet-tinted, 300+ slate) */
+  --neutral-950: #0F172A;
+  --neutral-900: #1E293B;
+  --neutral-800: #334155;
+  --neutral-700: #475569;
+  --neutral-600: #64748B;
+  --neutral-500: #94A3B8;
+  --neutral-400: #CBD5E1;
+  --neutral-300: #E5E7EB;
+  --neutral-200: #EDE9FE;
+  --neutral-100: #F5F3FF;
+  --neutral-50:  #FAFAFF;
+
+  /* Surfaces and borders */
+  --surface-page: #F8FAFF;             /* page background; content sits directly on it */
+  --surface-sidebar: var(--neutral-100); /* sidebar background, one step darker than the page */
+  --surface-0:    #FFFFFF;             /* cards, inputs, dropdowns */
+  --surface-1:    var(--neutral-50);   /* card header, table header, tab container */
+  --surface-2:    var(--neutral-100);
+  --surface-3:    var(--neutral-200);
+  --border:       var(--neutral-300);
+  --border-hover: var(--neutral-400);
+
+  /* Text */
+  --text-primary:   var(--neutral-950);
+  --text-secondary: var(--neutral-600);
+  --text-tertiary:  var(--neutral-500); /* the guide's --text-muted */
+  --text-ghost:     var(--neutral-400);
+  --text-inverse:   #FFFFFF;
+
+  /* Illustrations (empty states) */
+  --color-illustration-border: var(--neutral-300);
+  --color-illustration-card: #FFFFFF;
+  --color-illustration-element: var(--neutral-200);
+  --color-illustration-secondary-element: var(--neutral-100);
+  --color-illustration-accent: var(--primary);
+
+  /* Semantic — the guide's "Cores Semânticas"; *-700 derived for text on soft bg */
+  --success-500: #22C55E; --success-50: #ECFDF5; --success-700: #15803D;
+  --warning-500: #F59E0B; --warning-50: #FFFBEB; --warning-700: #B45309;
+  --error-500:   #EF4444; --error-50:   #FEF2F2; --error-700:   #B91C1C;
+  --info-500:    #3B82F6; --info-50:    #EFF6FF; --info-700:    #1D4ED8;
+
+  /* Accents — the guide's "Cores de Destaque" (charts, tags, platform tints) */
+  --accent-sky:     #0EA5E9; --accent-sky-soft:     #E0F2FE;
+  --accent-teal:    #14B8A6; --accent-teal-soft:    #CCFBF1;
+  --accent-rose:    #F43F5E; --accent-rose-soft:    #FFE4E6;
+  --accent-indigo:  #6366F1; --accent-indigo-soft:  #EEF2FF;
+  --accent-amber:   #F59E0B; --accent-amber-soft:   #FFF7ED;
+  --accent-emerald: #10B981; --accent-emerald-soft: #ECFDF5; /* not on the guide; kept for existing classes */
+
+  /* Shadows — the guide's card shadow is --shadow-md; the rest keep its violet tint */
+  --shadow-xs:  0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(124, 58, 237, 0.04);
+  --shadow-md:  0 1px 3px rgba(0, 0, 0, 0.06), 0 6px 20px rgba(124, 58, 237, 0.08);
+  --shadow-lg:  0 2px 6px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(124, 58, 237, 0.10);
+  --shadow-xl:  0 4px 10px rgba(0, 0, 0, 0.05), 0 20px 40px rgba(124, 58, 237, 0.12);
+  --shadow-primary: 0 4px 14px rgba(124, 58, 237, 0.28);
+
+  /* Radius — cards 12px (guide); controls 8px; pills full */
+  --radius-sm:   0.25rem;   /* 4px  — checkboxes, tiny tags */
+  --radius-md:   0.5rem;    /* 8px  — buttons, inputs, selects, chips */
+  --radius-lg:   0.75rem;   /* 12px — cards, stat cards, dropdowns, modals */
+  --radius-xl:   1rem;      /* 16px — large panels, auth card */
+  --radius-2xl:  1.25rem;   /* 20px — hero/illustration containers */
+  --radius-full: 9999px;    /* status pills, filter tabs, avatars */
+
+  /* Motion (unchanged — not covered by the guide) */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast:    150ms;
+  --dur-base:    200ms;
+  --dur-slow:    350ms;
+
+  /* Typography — Inter everywhere (no serif display face) */
+  --brand-font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --brand-font-mono: ui-monospace, SFMono-Regular, 'Cascadia Code', 'Consolas', monospace;
+  --font-display: var(--brand-font-body);
+  --font-body:    var(--brand-font-body);
+  --font-mono:    var(--brand-font-mono);
+
+  /* Type scale — the guide's "Tipografia" table */
+  --text-page-title:    600 1.5rem/1.25 var(--font-body);   /* 24px */
+  --text-section-title: 600 1.125rem/1.3 var(--font-body);  /* 18px */
+  --text-card-title:    500 1rem/1.4 var(--font-body);      /* 16px */
+  --text-body:          400 0.875rem/1.5 var(--font-body);  /* 14px */
+  --text-aux:           400 0.75rem/1.4 var(--font-body);   /* 12px */
+  --text-label:         500 0.75rem/1.4 var(--font-body);   /* 12px — tags, pills, table headers */
+}
