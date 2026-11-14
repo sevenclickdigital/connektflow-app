@@ -1,0 +1,35 @@
+{% load i18n %}
+{% comment %}
+A customer's message in the chat, WhatsApp-style: a white bubble on the left,
+the time inside it at the bottom right. Context: ``item`` from views._chat
+(obj, time, attachments, show_name), ``message`` (the open entry).
+{% endcomment %}
+{% with msg=item.obj %}
+<div class="flex justify-start">
+    <div class="chat-bubble chat-bubble-in {% if item.tail %}has-tail{% endif %}">
+        {% if item.show_name %}<p class="text-[12px] font-semibold text-brand-700 mb-0.5">{{ msg.sender_name }}</p>{% endif %}
+        {% if msg.body %}<span class="whitespace-pre-wrap break-words">{{ msg.body }}</span>{% elif not item.attachments %}<span class="italic text-neutral-500">{% translate "Message without text" %}</span>{% endif %}
+        {% if msg.extra.is_deleted %}
+        <span class="block text-neutral-500 italic">{% translate "This message was deleted by its sender." %}</span>
+        {% elif msg.extra.is_unsupported %}
+        <span class="block text-neutral-500 italic">{% if msg.social_account.platform == "whatsapp" %}{% translate "This WhatsApp message type cannot be shown here. Open it on the phone." %}{% else %}{% translate "This message contains media Instagram cannot provide." %}{% endif %}</span>
+        {% endif %}
+        {% for attachment in item.attachments %}
+        <div class="mt-1.5 first:mt-0">
+            {% if not attachment.url %}
+            <span class="text-neutral-500">{% blocktranslate with type=attachment.type|title %}{{ type }} attachment unavailable.{% endblocktranslate %}</span>
+            {% elif attachment.type == 'image' %}
+            <a href="{{ attachment.url }}" target="_blank" rel="noopener noreferrer"><img src="{{ attachment.url }}" loading="lazy" referrerpolicy="no-referrer" alt="{% translate 'Incoming image attachment' %}" class="max-h-64 rounded-md"></a>
+            {% elif attachment.type == 'video' %}
+            <video controls preload="none" class="max-h-64 rounded-md" src="{{ attachment.url }}">{% translate "Video attachment unavailable." %}</video>
+            {% elif attachment.type == 'audio' %}
+            <audio controls preload="none" src="{{ attachment.url }}">{% translate "Audio attachment unavailable." %}</audio>
+            {% else %}
+            <a href="{{ attachment.url }}" target="_blank" rel="noopener noreferrer" class="underline">{% blocktranslate with type=attachment.type %}Open {{ type }} attachment{% endblocktranslate %}</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <span class="chat-meta">{{ item.time }}</span>
+    </div>
+</div>
+{% endwith %}

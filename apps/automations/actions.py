@@ -746,3 +746,38 @@ def purge_logs(*, older_than: timedelta) -> int:
     # the scoped door and this is deliberately not going through it.
     deleted, _ = AutomationLog.objects.filter(created_at__lt=cutoff).delete()
     return deleted
+
+
+def start_flow_for_message(message: InboxMessage, rule: AutomationRule) -> tuple[bool, str]:
+    """Run a post's flow for one comment, at a person's request from the inbox.
+
+    The same path a matching comment takes once its rule has won, minus the
+    keyword match: the private-reply window, the claim on the comment (so the
+    automation and a person never both answer it) and the graph run, with the
+    outcome on the log like any other. Returns ``(sent, reason)``; ``reason``
+    says why nothing went out.
+    """
+    from django.utils.translation import gettext as _
+
+    account = message.social_account
+    if not guards.may_claim_comment(message.received_at):
+        return False, _("This comment is older than 7 days: Meta no longer accepts a private reply to it.")
+    extra = message.extra or {}
+    row = guards.record_comment(
+        social_account=account,
+        rule=rule,
+        comment_id=message.platform_message_id,
+        post_id=str(extra.get("stored_post_id") or extra.get("post_id") or ""),
+        sender_id=message.sender_handle,
+        commented_at=message.received_at,
+        once_per_sender_per_post=rule.once_per_sender_per_post,
+        inbox_message=message,
+        workspace=message.workspace,
+    )
+    if row is None:
+        return False, _("An automation already answered this comment, or this person on this post.")
+    details: list[str] = []
+    sent = _start_graph_run(message, rule, row, details)
+    _finalise(row, sent=sent, details=details)
+    # The details are the log's (English, for the activity feed); the person gets a sentence.
+    return sent, "" if sent else _("The flow sent nothing. The automation's activity says why.")

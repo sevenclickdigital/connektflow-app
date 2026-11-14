@@ -23,10 +23,11 @@ class InboxMessage(models.Model):
         REVIEW = "review", _("Review")
 
     class Status(models.TextChoices):
-        UNREAD = "unread", _("Unread")
-        OPEN = "open", _("Open")
-        RESOLVED = "resolved", _("Resolved")
-        ARCHIVED = "archived", _("Archived")
+        # One entry's state, an adjective: "Open" here is never the verb.
+        UNREAD = "unread", pgettext_lazy("inbox status", "Unread")
+        OPEN = "open", pgettext_lazy("inbox status", "Open")
+        RESOLVED = "resolved", pgettext_lazy("inbox status", "Resolved")
+        ARCHIVED = "archived", pgettext_lazy("inbox status", "Archived")
 
     class Sentiment(models.TextChoices):
         POSITIVE = "positive", _("Positive")
@@ -140,6 +141,45 @@ class InboxMessage(models.Model):
 
         extra = self.extra or {}
         return normalize_attachments(extra.get("attachments", (extra.get("message") or {}).get("attachments", [])))
+
+    # The kind of post a comment hangs off, as inbox_services.post_preview
+    # names it from the post's format or the platform's product type.
+    ORIGIN_CHOICES = [
+        ("feed", pgettext_lazy("inbox message origin", "Feed")),
+        ("story", pgettext_lazy("inbox message origin", "Story")),
+        ("reel", pgettext_lazy("inbox message origin", "Reels")),
+    ]
+
+    # PlatformPost.format -> origin, for posts published through Automator.
+    FORMAT_ORIGINS = {"default": "feed", "story": "story", "reel": "reel"}
+
+    @property
+    def origin(self) -> str:
+        """Feed, Story or Reels: from the Automator post, else what the platform said."""
+        if self.related_post_id:
+            return self.FORMAT_ORIGINS.get(self.related_post.format, "")
+        origin = (self.extra or {}).get("post_origin") or ""
+        if not origin and self.message_type == self.MessageType.COMMENT and self.social_account.platform == "facebook":
+            # Comments on a Page reach the inbox only from its feed posts.
+            origin = "feed"
+        return origin
+
+    def get_origin_display(self) -> str:
+        return str(dict(self.ORIGIN_CHOICES).get(self.origin, ""))
+
+    @property
+    def post_url(self) -> str:
+        """The public link of the post the message hangs off, when the platform gave one."""
+        extra = self.extra or {}
+        for key in ("post_permalink_url", "permalink"):
+            url = str(extra.get(key) or "")
+            if url.startswith("https://"):
+                return url
+        if self.social_account.platform == "youtube" and extra.get("video_id"):
+            from urllib.parse import quote
+
+            return f"https://www.youtube.com/watch?v={quote(str(extra['video_id']))}"
+        return ""
 
 
 class InboxReply(models.Model):

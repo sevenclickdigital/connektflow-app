@@ -42,6 +42,8 @@ urlpatterns = [
     path("workspace/<uuid:workspace_id>/calendar/", include("apps.calendar.urls")),
     path("workspace/<uuid:workspace_id>/tasks/", include("apps.tasks.urls")),
     path("workspace/<uuid:workspace_id>/radar/", include("apps.radar.urls")),
+    path("workspace/<uuid:workspace_id>/contacts/", include("apps.contacts.urls")),
+    path("workspace/<uuid:workspace_id>/funnels/", include("apps.funnels.urls")),
     path("workspace/<uuid:workspace_id>/inbox/", include("apps.inbox.urls")),
     path("workspace/<uuid:workspace_id>/automations/", include("apps.automations.urls")),
     path("workspace/<uuid:workspace_id>/analytics/", include("apps.analytics.urls")),

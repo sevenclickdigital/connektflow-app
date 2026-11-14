@@ -73,6 +73,8 @@ LOCAL_APPS = [
     "apps.calendar",
     "apps.tasks",
     "apps.radar",
+    "apps.contacts",
+    "apps.funnels",
     "apps.publisher",
     "apps.notifications",
     "apps.inbox",

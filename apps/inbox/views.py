@@ -1,15 +1,22 @@
 """Views for the Unified Social Inbox (F-3.1)."""
 
 import logging
+from collections import Counter
+from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from django.utils.translation import pgettext_lazy
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.composer.emoji import emoji_catalogue
+from apps.contacts.services import contact_for_message
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
 from apps.notifications.engine import notify
@@ -41,6 +48,16 @@ logger = logging.getLogger(__name__)
 MESSAGES_PER_PAGE = 50
 
 
+def _panel_context(request, workspace, message):
+    """The open entry's context; on the funnel screen (``mode=funnel``) with its opportunity."""
+    context = _detail_context(workspace, message, actor=request.user)
+    if (request.GET.get("mode") or request.POST.get("mode")) == "funnel":
+        from apps.funnels.views import opportunity_context
+
+        context.update(opportunity_context(workspace, message))
+    return context
+
+
 def _detail_context(workspace, message, *, actor=None):
     """Build the full context needed for the message detail panel."""
     sla_config = InboxSLAConfig.objects.filter(workspace=workspace, is_active=True).first()
@@ -64,31 +81,93 @@ def _detail_context(workspace, message, *, actor=None):
     # sends awaiting a retry) are pending work, surfaced by the composer.
     sent_replies = [r for r in replies if r.status == InboxReply.Status.SENT]
     draft_replies = [r for r in replies if r.status != InboxReply.Status.SENT]
-    thread = sorted(
-        [("reply", r, r.sent_at or r.created_at) for r in sent_replies] + [("note", n, n.created_at) for n in notes],
-        key=lambda x: x[2],
-    )
-    child_messages = InboxMessage.objects.filter(parent_message=message).select_related("social_account")
+    child_messages = list(InboxMessage.objects.filter(parent_message=message).select_related("social_account"))
     history, newer = _conversation(message)
+    chat = _chat(workspace, message, history, sent_replies, notes, child_messages)
+    post = inbox_services.post_preview(message)
+    if post and not post.get("error"):
+        post["origin_label"] = dict(InboxMessage.ORIGIN_CHOICES).get(post.get("product_type"), "")
     return {
         "workspace": workspace,
         "message": message,
-        "thread": thread,
+        "chat": chat,
         "draft_replies": draft_replies,
-        "child_messages": child_messages,
         "sla_config": sla_config,
         "saved_replies": saved_replies,
         "team_members": team_members,
         "reply_form": ReplyForm(),
         "note_form": InternalNoteForm(),
         "status_choices": InboxMessage.Status.choices,
-        "attachments": _attachments(workspace, message),
-        "history": history,
+        "sentiment_choices": InboxMessage.Sentiment.choices,
+        "post_preview": post,
+        "contact": contact_for_message(message),
         "newer_message": newer,
         "reply_limit": REPLY_LIMITS.get((message.message_type == "dm", message.social_account.platform)),
         "sender_first_name": (message.sender_name or "").split(" ")[0].lstrip("@+"),
         "reply_eligibility": inbox_services.reply_eligibility(message, origin="web_inbox", actor=actor),
     }
+
+
+def _workspace_tz(workspace):
+    import zoneinfo
+
+    try:
+        return zoneinfo.ZoneInfo(workspace.effective_timezone or "UTC")
+    except (zoneinfo.ZoneInfoNotFoundError, ValueError):
+        return zoneinfo.ZoneInfo("UTC")
+
+
+def _chat(workspace, message, history, sent_replies, notes, child_messages):
+    """The conversation as a chat, oldest first: one item per bubble.
+
+    Each item is ``{"kind": "in" | "out" | "note", "obj", "time", "day", "tail"}``:
+    the customer's messages (the earlier ones, the open one and the platform's
+    replies under it), the team's sent replies and the internal notes. ``time``
+    is the workspace's clock; ``day`` is set on the first bubble of each day,
+    for the separator. Incoming messages carry their ``attachments``, and
+    ``show_name`` when someone other than the conversation's person wrote them.
+    """
+    from django.utils import formats
+    from django.utils.translation import gettext
+
+    tz = _workspace_tz(workspace)
+    items = []
+    for incoming in [*history, message, *child_messages]:
+        items.append(
+            {
+                "kind": "in",
+                "obj": incoming,
+                "at": incoming.received_at,
+                "attachments": _attachments(workspace, incoming),
+                "show_name": incoming.parent_message_id is not None and incoming.sender_name != message.sender_name,
+            }
+        )
+    for earlier in history:
+        items.extend(
+            {"kind": "out", "obj": reply, "at": reply.sent_at or reply.created_at} for reply in earlier.sent_replies
+        )
+    items.extend({"kind": "out", "obj": reply, "at": reply.sent_at or reply.created_at} for reply in sent_replies)
+    items.extend({"kind": "note", "obj": note, "at": note.created_at} for note in notes)
+    items.sort(key=lambda item: item["at"])
+
+    today = timezone.now().astimezone(tz).date()
+    previous_day = None
+    previous_kind = None
+    for item in items:
+        local = item["at"].astimezone(tz)
+        item["time"] = local.strftime("%H:%M")
+        # The first bubble of a run from one side gets the tail.
+        item["tail"] = item["kind"] != previous_kind or local.date() != previous_day
+        previous_kind = item["kind"]
+        if local.date() != previous_day:
+            previous_day = local.date()
+            if previous_day == today:
+                item["day"] = gettext("Today")
+            elif previous_day == today - timedelta(days=1):
+                item["day"] = gettext("Yesterday")
+            else:
+                item["day"] = formats.date_format(previous_day, "DATE_FORMAT")
+    return items
 
 
 # Longest reply each platform accepts, in characters: (is_dm, platform) -> limit.
@@ -105,33 +184,38 @@ REPLY_LIMITS = {
     (False, "youtube"): 10000,
 }
 
-# How much of a DM conversation the detail panel shows above the open message.
+# The entry types with a button of their own on the inbox page, in its order;
+# tags and reviews stay in the "Filters" panel.
+TYPE_BUTTONS = (
+    ("dm", pgettext_lazy("inbox type button", "Inbox")),
+    ("comment", _("Comments")),
+    ("mention", _("Mentions")),
+)
+
+# How much of a conversation the detail panel shows above the open message.
 CONVERSATION_HISTORY = 30
 
 
 def _conversation(message):
-    """Earlier messages from the same person in the same DM conversation.
+    """Earlier messages of the conversation ``message`` belongs to.
 
-    Returns (history, newer): up to ``CONVERSATION_HISTORY`` earlier inbound
-    messages, oldest first, each with its sent replies prefetched — so the panel
-    reads as a chat instead of one isolated message — and the newest later
-    message from that person, if any, so the panel can point to it.
+    The inbox lists a conversation once (inbox_services.thread_key: one person,
+    channel and kind — and post, for comments), so the panel shows its messages
+    together. Returns (history, newer): up to ``CONVERSATION_HISTORY`` earlier
+    inbound messages, oldest first, each with its sent replies prefetched, and
+    the newest later message, if any, so the panel can point to it.
     """
     from django.db.models import Prefetch
 
-    if message.message_type != InboxMessage.MessageType.DM or not message.sender_handle:
-        return [], None
-    same_person = InboxMessage.objects.filter(
-        social_account_id=message.social_account_id,
-        message_type=InboxMessage.MessageType.DM,
-        sender_handle=message.sender_handle,
-    ).exclude(pk=message.pk)
+    same_person = inbox_services.thread_messages(message).exclude(pk=message.pk)
     history = list(
         same_person.filter(received_at__lte=message.received_at)
         .prefetch_related(
             Prefetch(
                 "replies",
-                queryset=InboxReply.objects.filter(status=InboxReply.Status.SENT).order_by("sent_at"),
+                queryset=InboxReply.objects.filter(status=InboxReply.Status.SENT)
+                .select_related("author")
+                .order_by("sent_at"),
                 to_attr="sent_replies",
             )
         )
@@ -181,15 +265,22 @@ def _get_workspace(request, workspace_id):
 def inbox_feed(request, workspace_id):
     """Main inbox feed with filtering, pagination, and split-panel layout."""
     workspace = _get_workspace(request, workspace_id)
+    context = feed_context(request, workspace)
+    if request.htmx:
+        return render(request, "inbox/partials/_message_list.html", context)
+    context["emoji_categories"] = emoji_catalogue()
+    return render(request, "inbox/feed.html", context)
 
+
+def feed_context(request, workspace, *, scope_threads=None):
+    """The inbox page's list and filters, under the request's filters.
+
+    ``scope_threads(threads) -> (threads, extra_context)`` narrows the
+    conversations (one row each, keyed by ``with_thread_key``) before they are
+    counted and listed; the funnel screen uses it to keep one funnel's and
+    stage's conversations and to add its own context.
+    """
     qs = InboxMessage.objects.for_workspace(workspace.id).select_related("social_account", "assigned_to")
-
-    # View shortcuts
-    view = request.GET.get("view", "all")
-    if view == "mine":
-        qs = qs.filter(assigned_to=request.user)
-    elif view == "unassigned":
-        qs = qs.filter(assigned_to__isnull=True)
 
     # Filters
     platforms = request.GET.getlist("platform")
@@ -199,6 +290,17 @@ def inbox_feed(request, workspace_id):
     accounts = request.GET.getlist("account")
     if accounts:
         qs = qs.filter(social_account_id__in=accounts)
+
+    # Conversations with something unread, per type, under the channel,
+    # for the type buttons.
+    unread_threads = Counter(
+        row["message_type"]
+        for row in inbox_services.with_thread_key(qs.filter(status=InboxMessage.Status.UNREAD))
+        .order_by()
+        .values(*inbox_services.THREAD_FIELDS)
+        .distinct()
+    )
+    type_counts = {key: unread_threads.get(key, 0) for key, _label in TYPE_BUTTONS}
 
     types = request.GET.getlist("type")
     if types:
@@ -228,7 +330,29 @@ def inbox_feed(request, workspace_id):
     if q:
         qs = qs.filter(Q(body__icontains=q) | Q(sender_name__icontains=q) | Q(sender_handle__icontains=q))
 
-    messages = qs[:MESSAGES_PER_PAGE]
+    # One entry per conversation: its latest message under the filters, with
+    # how many messages it holds and how many of them are unread.
+    keyed = inbox_services.with_thread_key(qs).order_by()
+    sort = "oldest" if request.GET.get("sort") == "oldest" else "newest"
+    threads = inbox_services.latest_per_thread(qs)
+    extra_context = {}
+    if scope_threads is not None:
+        threads, extra_context = scope_threads(threads)
+    threads = threads.select_related("social_account", "assigned_to", "related_post__post").order_by(
+        "received_at" if sort == "oldest" else "-received_at"
+    )
+    total = threads.count()
+    messages = list(threads[:MESSAGES_PER_PAGE])
+    stats = {
+        tuple(row[field] for field in inbox_services.THREAD_FIELDS): row
+        for row in keyed.filter(thread_sender__in={message.thread_sender for message in messages})
+        .values(*inbox_services.THREAD_FIELDS)
+        .annotate(n=Count("id"), unread=Count("id", filter=Q(status=InboxMessage.Status.UNREAD)))
+    }
+    for message in messages:
+        row = stats.get(tuple(getattr(message, field) for field in inbox_services.THREAD_FIELDS), {})
+        message.thread_count = row.get("n", 1)
+        message.thread_unread = row.get("unread", 0)
 
     # SLA config for countdown display
     sla_config = InboxSLAConfig.objects.filter(workspace=workspace, is_active=True).first()
@@ -238,11 +362,11 @@ def inbox_feed(request, workspace_id):
         workspace=workspace,
     ).select_related("user")
 
-    # Connected accounts for filter dropdown
+    # The channel pills (calendar/partials/_platform_pills.html) group these by platform.
     social_accounts = SocialAccount.objects.filter(
         workspace=workspace,
         connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-    )
+    ).order_by("platform")
 
     context = {
         "workspace": workspace,
@@ -250,9 +374,13 @@ def inbox_feed(request, workspace_id):
         "sla_config": sla_config,
         "team_members": team_members,
         "social_accounts": social_accounts,
-        "current_view": view,
+        "total": total,
+        "type_counts": type_counts,
+        "type_buttons": TYPE_BUTTONS,
+        "sort": sort,
         "active_filters": {
             "platform": platforms,
+            "platforms": platforms,
             "account": accounts,
             "type": types,
             "status": statuses,
@@ -262,12 +390,11 @@ def inbox_feed(request, workspace_id):
             "date_to": date_to,
             "q": q,
         },
+        "list_url": reverse("inbox:feed", kwargs={"workspace_id": workspace.id}),
+        "detail_query": "",
     }
-
-    if request.htmx:
-        return render(request, "inbox/partials/_message_list.html", context)
-    context["emoji_categories"] = emoji_catalogue()
-    return render(request, "inbox/feed.html", context)
+    context.update(extra_context)
+    return context
 
 
 @login_required
@@ -341,17 +468,19 @@ def message_detail(request, workspace_id, message_id):
     """Message detail with thread, replies, notes, and reply composer."""
     workspace = _get_workspace(request, workspace_id)
     message = get_object_or_404(
-        InboxMessage.objects.select_related("social_account", "assigned_to"),
+        InboxMessage.objects.select_related("social_account", "assigned_to", "related_post__post"),
         id=message_id,
         workspace=workspace,
     )
 
-    # Mark as read → open
+    # Opening the conversation reads all of it: unread → open.
+    inbox_services.thread_messages(message).filter(status=InboxMessage.Status.UNREAD).update(
+        status=InboxMessage.Status.OPEN
+    )
     if message.status == InboxMessage.Status.UNREAD:
         message.status = InboxMessage.Status.OPEN
-        message.save(update_fields=["status"])
 
-    context = _detail_context(workspace, message, actor=request.user)
+    context = _panel_context(request, workspace, message)
 
     if request.htmx:
         return render(request, "inbox/partials/_message_panel.html", context)
@@ -406,7 +535,14 @@ def send_reply(request, workspace_id, message_id):
         response["HX-Reply-Failed"] = "1"
         return response
 
-    context = {"reply": reply, "workspace": workspace, "message": message}
+    sent = reply.sent_at or reply.created_at
+    context = {
+        "reply": reply,
+        "workspace": workspace,
+        "message": message,
+        "time": sent.astimezone(_workspace_tz(workspace)).strftime("%H:%M"),
+        "tail": True,
+    }
     return render(request, "inbox/partials/_reply_item.html", context)
 
 
@@ -432,9 +568,7 @@ def save_reply_draft(request, workspace_id, message_id):
         return HttpResponse(str(exc), status=400)
 
     message.refresh_from_db()
-    return render(
-        request, "inbox/partials/_message_panel.html", _detail_context(workspace, message, actor=request.user)
-    )
+    return render(request, "inbox/partials/_message_panel.html", _panel_context(request, workspace, message))
 
 
 @login_required
@@ -458,9 +592,7 @@ def send_reply_draft(request, workspace_id, reply_id):
         failed = True
 
     message.refresh_from_db()
-    panel = render(
-        request, "inbox/partials/_message_panel.html", _detail_context(workspace, message, actor=request.user)
-    )
+    panel = render(request, "inbox/partials/_message_panel.html", _panel_context(request, workspace, message))
     if failed:
         panel["HX-Reply-Failed"] = "1"
     return panel
@@ -481,9 +613,7 @@ def discard_reply_draft(request, workspace_id, reply_id):
         return HttpResponse(str(exc), status=409)
 
     message.refresh_from_db()
-    return render(
-        request, "inbox/partials/_message_panel.html", _detail_context(workspace, message, actor=request.user)
-    )
+    return render(request, "inbox/partials/_message_panel.html", _panel_context(request, workspace, message))
 
 
 # --- Internal Note ---
@@ -507,7 +637,13 @@ def add_note(request, workspace_id, message_id):
         body=form.cleaned_data["body"],
     )
 
-    context = {"note": note, "workspace": workspace, "message": message}
+    context = {
+        "note": note,
+        "workspace": workspace,
+        "message": message,
+        "time": note.created_at.astimezone(_workspace_tz(workspace)).strftime("%H:%M"),
+        "tail": True,
+    }
     return render(request, "inbox/partials/_note_item.html", context)
 
 
@@ -540,7 +676,8 @@ def assign_message(request, workspace_id, message_id):
     else:
         message.assigned_to = None
 
-    message.save(update_fields=["assigned_to"])
+    # The owner is the conversation's, not one message's.
+    inbox_services.thread_messages(message).update(assigned_to=message.assigned_to)
 
     # Notify the assignee
     if message.assigned_to and message.assigned_to != request.user:
@@ -555,7 +692,7 @@ def assign_message(request, workspace_id, message_id):
             },
         )
 
-    context = _detail_context(workspace, message, actor=request.user)
+    context = _panel_context(request, workspace, message)
     return render(request, "inbox/partials/_message_panel.html", context)
 
 
@@ -575,9 +712,10 @@ def change_status(request, workspace_id, message_id):
         return HttpResponse("Invalid status.", status=400)
 
     message.status = form.cleaned_data["status"]
-    message.save(update_fields=["status"])
+    # The status is the conversation's: resolving it resolves every message in it.
+    inbox_services.thread_messages(message).update(status=message.status)
 
-    context = _detail_context(workspace, message, actor=request.user)
+    context = _panel_context(request, workspace, message)
     return render(request, "inbox/partials/_message_panel.html", context)
 
 
@@ -600,8 +738,8 @@ def change_sentiment(request, workspace_id, message_id):
     message.sentiment_source = InboxMessage.SentimentSource.MANUAL
     message.save(update_fields=["sentiment", "sentiment_source"])
 
-    context = {"message": message, "workspace": workspace}
-    return render(request, "inbox/partials/_sentiment_badge.html", context)
+    context = _panel_context(request, workspace, message)
+    return render(request, "inbox/partials/_message_panel.html", context)
 
 
 # --- Bulk Actions ---
@@ -622,7 +760,11 @@ def bulk_action(request, workspace_id):
     action = form.cleaned_data["action"]
     value = form.cleaned_data.get("value", "")
 
-    qs = InboxMessage.objects.filter(id__in=message_ids, workspace=workspace)
+    # Each listed entry stands for its whole conversation.
+    thread_ids = set()
+    for selected in InboxMessage.objects.filter(id__in=message_ids, workspace=workspace):
+        thread_ids.update(inbox_services.thread_messages(selected).values_list("id", flat=True))
+    qs = InboxMessage.objects.filter(id__in=thread_ids, workspace=workspace)
 
     if action == "mark_read":
         qs.filter(status=InboxMessage.Status.UNREAD).update(status=InboxMessage.Status.OPEN)
@@ -635,13 +777,8 @@ def bulk_action(request, workspace_id):
         if membership:
             qs.update(assigned_to=membership.user)
 
-    # Re-fetch and return updated list
-    messages = InboxMessage.objects.for_workspace(workspace.id).select_related("social_account", "assigned_to")[
-        :MESSAGES_PER_PAGE
-    ]
-
-    context = {"workspace": workspace, "inbox_messages": messages}
-    return render(request, "inbox/partials/_message_list.html", context)
+    # The page reloads the list under the filters it has on screen.
+    return HttpResponse(status=204)
 
 
 # --- Saved Replies ---

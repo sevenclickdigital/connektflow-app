@@ -1,0 +1,11 @@
+{% comment %}
+One filter of the contacts list: a native select named `name` whose first
+option is the filter's label (no filter). Pass `choices` as (value, label)
+pairs, or `values` when the value is its own label (funnels, tags, segments).
+{% endcomment %}
+<select name="{{ name }}" aria-label="{{ label }}"
+        class="form-input-styled bb-select text-[13px] py-1.5 pl-3 pr-8 rounded-lg w-auto max-w-[11rem] {% if value %}border-brand-300 text-brand-900{% endif %}">
+    <option value="">{{ label }}</option>
+    {% for key, text in choices %}<option value="{{ key }}" {% if key == value %}selected{% endif %}>{{ text }}</option>{% endfor %}
+    {% for item in values %}<option value="{{ item }}" {% if item == value %}selected{% endif %}>{{ item }}</option>{% endfor %}
+</select>

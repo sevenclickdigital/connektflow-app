@@ -18,6 +18,7 @@ from .meta_accounts import fetch_me_accounts, page_can_publish
 from .meta_comments import (
     fetch_instagram_comments,
     find_own_instagram_comment,
+    instagram_media_preview,
     parse_graph_time,
     resolve_comment_reply_target,
 )
@@ -100,6 +101,8 @@ INSTAGRAM_MEDIA_FIELDS = [
 # post the account was tagged in. ``username`` names its author; ``owner`` is
 # only returned for the account's own media.
 INSTAGRAM_FOREIGN_MEDIA_FIELDS = "id,caption,username,timestamp,permalink,media_type"
+# The ``/tags`` edge also gives the picture and the kind of post, for the inbox's post card.
+INSTAGRAM_TAG_FIELDS = f"{INSTAGRAM_FOREIGN_MEDIA_FIELDS},media_url,thumbnail_url,media_product_type"
 # ``mentioned_comment`` exposes no author, only the text and the media it is on.
 INSTAGRAM_MENTIONED_COMMENT_FIELDS = "id,text,timestamp,media{id,permalink,username}"
 # One page of the ``/tags`` edge per poll: the inbox dedupes on the media id,
@@ -791,7 +794,7 @@ class InstagramProvider(SocialProvider):
             "GET",
             f"{BASE_URL}/{ig_user_id}/tags",
             access_token=access_token,
-            params={"fields": INSTAGRAM_FOREIGN_MEDIA_FIELDS, "limit": INSTAGRAM_TAGS_PAGE_SIZE},
+            params={"fields": INSTAGRAM_TAG_FIELDS, "limit": INSTAGRAM_TAGS_PAGE_SIZE},
         ).json()
         messages = []
         for media in data.get("data", []):
@@ -799,6 +802,7 @@ class InstagramProvider(SocialProvider):
             if not media_id:
                 continue
             username = str(media.get("username") or "")
+            preview = instagram_media_preview(media)
             messages.append(
                 InboxMessage(
                     platform_message_id=f"tag_{media_id}",
@@ -807,7 +811,14 @@ class InstagramProvider(SocialProvider):
                     text=str(media.get("caption") or ""),
                     timestamp=parse_graph_time(media.get("timestamp")) or datetime.now(UTC),
                     message_type="tag",
-                    extra={"media_id": media_id, "permalink": media.get("permalink") or "", "source": "poll"},
+                    extra={
+                        "media_id": media_id,
+                        "permalink": media.get("permalink") or "",
+                        "source": "poll",
+                        # Re-polled every cycle, so the CDN link is refreshed before it expires.
+                        "post_image": preview["image_url"],
+                        "post_origin": preview["product_type"],
+                    },
                 )
             )
         return messages
@@ -1166,6 +1177,12 @@ class InstagramProvider(SocialProvider):
         except APIError as exc:
             logger.debug("Instagram profile fields unavailable for %s: %s", ig_user_id, exc)
             return None
+
+    def get_post_preview(self, access_token: str, post_id: str) -> dict | None:
+        fields = self._get_media_fields(access_token, post_id)
+        if not fields:
+            raise APIError(f"Instagram media {post_id} could not be read.", platform=self.platform_name)
+        return instagram_media_preview(fields)
 
     def _get_media_fields(self, access_token: str, media_id: str) -> dict:
         try:

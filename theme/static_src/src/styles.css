@@ -1100,6 +1100,62 @@ textarea.idea-desc-input::placeholder {
 .modal-body > * + * { margin-top: 1rem; }
 .modal-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
 
+/* Platform badges in the platform's colour (templates/calendar/partials/_platform_badge.html):
+   the channel pills of the calendar and the inbox, the calendar's side panel. */
+.pi-facebook   { background: #1877F2; }
+.pi-instagram, .pi-instagram_login { background: linear-gradient(135deg, #F58529, #DD2A7B, #8134AF); }
+.pi-linkedin, .pi-linkedin_personal, .pi-linkedin_company { background: #0A66C2; }
+.pi-tiktok     { background: #010101; }
+.pi-youtube    { background: transparent !important; width: auto !important; min-width: 45px; color: #475569; font-size: 10px; }
+.pi-pinterest  { background: #E60023; }
+.pi-threads, .pi-x { background: #000000; }
+.pi-bluesky    { background: #0085FF; }
+.pi-google_business { background: #4285F4; }
+.pi-mastodon   { background: #6364FF; }
+.pi-whatsapp   { background: #25D366; }
+.cal-pill-icon { width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; color: white; }
+.cal-pill-icon.pi-youtube { background: #FF0000 !important; color: white !important; min-width: 0 !important; width: 18px !important; }
+
+/* Funnel stages (apps/funnels: FunnelStage.Color): a pill in the stage's colour, with its count. */
+.stage-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--st-bg); color: var(--st-fg); border: 1px solid transparent; }
+.stage-pill .stage-count { min-width: 22px; height: 18px; padding: 0 6px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: var(--st-chip); color: var(--st-fg); }
+.stage-pill.is-button { cursor: pointer; padding: 6px 8px 6px 14px; font-size: 13px; transition: box-shadow var(--dur-fast) ease; }
+.stage-pill.is-button.active { box-shadow: 0 0 0 2px var(--st-fg); }
+.stage-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--st-fg); display: inline-block; flex-shrink: 0; }
+.stage-violet { --st-bg: #EDE9FE; --st-fg: #6D28D9; --st-chip: #DDD6FE; --st-solid: #8B5CF6; }
+.stage-blue   { --st-bg: #DBEAFE; --st-fg: #1D4ED8; --st-chip: #BFDBFE; --st-solid: #60A5FA; }
+.stage-amber  { --st-bg: #FEF3C7; --st-fg: #B45309; --st-chip: #FDE68A; --st-solid: #FBBF24; }
+.stage-purple { --st-bg: #F3E8FF; --st-fg: #7E22CE; --st-chip: #E9D5FF; --st-solid: #A78BFA; }
+.stage-green  { --st-bg: #DCFCE7; --st-fg: #15803D; --st-chip: #BBF7D0; --st-solid: #4ADE80; }
+.stage-red    { --st-bg: #FEE2E2; --st-fg: #B91C1C; --st-chip: #FECACA; --st-solid: #F87171; }
+.stage-teal   { --st-bg: #CCFBF1; --st-fg: #0F766E; --st-chip: #99F6E4; --st-solid: #2DD4BF; }
+.stage-gray   { --st-bg: var(--surface-2); --st-fg: var(--text-secondary); --st-chip: var(--border); --st-solid: #9CA3AF; }
+
+/* Inbox entry details: label / value rows (templates/inbox/partials/_message_details.html) */
+.inbox-fact { display: grid; grid-template-columns: 6.5rem 1fr; align-items: center; gap: 0.75rem; padding: 0.625rem 0; border-bottom: 1px solid var(--surface-2); font-size: 13px; }
+.inbox-fact:last-child { border-bottom: none; }
+.inbox-fact > dt { color: var(--text-tertiary); font-size: 12px; }
+.inbox-fact > dd { color: var(--text-primary); font-weight: 500; min-width: 0; display: flex; align-items: center; gap: 0.5rem; }
+
+/* Inbox chat, WhatsApp-style (templates/inbox/partials/_chat_incoming.html, _reply_item.html, _note_item.html):
+   the customer on the left in white, the team on the right in brand, the time inside the bubble; the first
+   bubble of a run has a tail. */
+.chat-area { background: var(--surface-1); }
+.chat-day { display: flex; justify-content: center; margin: 0.5rem 0; }
+.chat-day > span { padding: 4px 12px; border-radius: var(--radius-md); background: var(--surface-0); box-shadow: var(--shadow-xs); font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+.chat-bubble { position: relative; max-width: min(75%, 34rem); padding: 6px 10px 8px; border-radius: 10px; font-size: 14px; line-height: 1.45; color: var(--text-primary); box-shadow: 0 1px 1px rgba(15, 23, 42, 0.08); }
+.chat-bubble-in { background: var(--surface-0); }
+.chat-bubble-out { background: var(--brand-100); }
+.chat-bubble-note { background: var(--warning-50); border: 1px solid #FDE68A; }
+.chat-bubble.has-tail.chat-bubble-in { border-top-left-radius: 0; }
+.chat-bubble.has-tail:not(.chat-bubble-in) { border-top-right-radius: 0; }
+.chat-bubble.has-tail::before { content: ''; position: absolute; top: 0; width: 0; height: 0; border-style: solid; }
+.chat-bubble.has-tail.chat-bubble-in::before { left: -7px; border-width: 0 8px 9px 0; border-color: transparent var(--surface-0) transparent transparent; }
+.chat-bubble.has-tail.chat-bubble-out::before { right: -7px; border-width: 0 0 9px 8px; border-color: transparent transparent transparent var(--brand-100); }
+.chat-bubble.has-tail.chat-bubble-note::before { right: -7px; border-width: 0 0 9px 8px; border-color: transparent transparent transparent var(--warning-50); }
+/* The time floats into the last line when it fits, like WhatsApp's. */
+.chat-meta { float: right; display: inline-flex; align-items: center; gap: 2px; margin: 8px 0 -6px 12px; font-size: 11px; line-height: 1; color: var(--text-tertiary); }
+
 /* Emoji picker (templates/composer/partials/emoji_picker.html, static/js/emoji-picker.js) */
 .emoji-panel { position: absolute; bottom: calc(100% + 8px); left: 0; width: 320px; background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 50; }
 .emoji-tab { flex: 1; height: 28px; border-radius: 6px; border: none; background: transparent; font-size: 15px; line-height: 1; cursor: pointer; transition: background var(--dur-fast) ease; }

@@ -310,3 +310,159 @@ def fill_instagram_mention(message_id) -> bool:
     message.extra = extra
     message.save(update_fields=["body", "sentiment", "sender_name", "sender_handle", "extra"])
     return True
+
+
+# ---------------------------------------------------------------------------
+# Conversations: one list entry per person, channel and kind
+# ---------------------------------------------------------------------------
+
+# The fields a conversation is keyed on. Direct messages, comments and
+# mentions stay apart (the type); comments also stay apart per post, since
+# each post is its own public thread.
+THREAD_FIELDS = ("social_account_id", "message_type", "thread_sender", "thread_post")
+
+
+def with_thread_key(qs):
+    """Annotate ``thread_sender`` and ``thread_post`` on inbox messages."""
+    from django.db.models import Case, CharField, Value, When
+    from django.db.models.fields.json import KeyTextTransform
+    from django.db.models.functions import Coalesce, NullIf
+
+    return qs.annotate(
+        thread_sender=Coalesce(NullIf("sender_handle", Value("")), "sender_name"),
+        thread_post=Case(
+            When(
+                message_type=InboxMessage.MessageType.COMMENT,
+                then=Coalesce(
+                    NullIf(KeyTextTransform("stored_post_id", "extra"), Value("")),
+                    NullIf(KeyTextTransform("post_id", "extra"), Value("")),
+                    Value(""),
+                ),
+            ),
+            default=Value(""),
+            output_field=CharField(),
+        ),
+    )
+
+
+def latest_per_thread(qs):
+    """The latest message of each conversation among ``qs``, keyed by ``with_thread_key``."""
+    latest_ids = [
+        row["id"]
+        for row in with_thread_key(qs)
+        .order_by(*THREAD_FIELDS, "-received_at")
+        .distinct(*THREAD_FIELDS)
+        .values("id", *THREAD_FIELDS)
+    ]
+    return with_thread_key(InboxMessage.objects.filter(id__in=latest_ids))
+
+
+def thread_key(message: InboxMessage) -> tuple:
+    """The conversation ``message`` belongs to, as ``THREAD_FIELDS`` values."""
+    extra = message.extra or {}
+    post = ""
+    if message.message_type == InboxMessage.MessageType.COMMENT:
+        post = str(extra.get("stored_post_id") or extra.get("post_id") or "")
+    return (message.social_account_id, message.message_type, message.sender_handle or message.sender_name, post)
+
+
+def thread_messages(message: InboxMessage):
+    """Every message of ``message``'s conversation, in its workspace."""
+    account_id, message_type, sender, post = thread_key(message)
+    return with_thread_key(
+        InboxMessage.objects.filter(
+            workspace_id=message.workspace_id, social_account_id=account_id, message_type=message_type
+        )
+    ).filter(thread_sender=sender, thread_post=post)
+
+
+# ---------------------------------------------------------------------------
+# The post a comment hangs off
+# ---------------------------------------------------------------------------
+
+POST_PREVIEW_TTL = 6 * 60 * 60
+
+
+def post_preview(message: InboxMessage) -> dict | None:
+    """What the entry shows of its post: caption, image, link and origin.
+
+    A post published through Automator is read locally; a tag or mention shows
+    what the sync recorded of the other account's post; a comment's post is read
+    from the platform once and cached, so the inbox shows it whoever published
+    it. ``{"error": True}`` when the platform refused the read.
+    """
+    from django.core.cache import cache
+
+    from providers.exceptions import ProviderError
+
+    if message.related_post_id:
+        return _local_post_preview(message)
+    extra = message.extra or {}
+    if message.message_type in (InboxMessage.MessageType.TAG, InboxMessage.MessageType.MENTION):
+        # Another account's post: what the sync recorded of it is all there is.
+        if not (message.post_url or extra.get("post_image")):
+            return None
+        return {
+            "caption": message.body,
+            "image_url": extra.get("post_image") or "",
+            "url": message.post_url,
+            "product_type": extra.get("post_origin") or "",
+        }
+    post_id = str(extra.get("stored_post_id") or extra.get("post_id") or "")
+    if message.message_type != InboxMessage.MessageType.COMMENT or not post_id:
+        return None
+    account = message.social_account
+    key = f"inbox:post-preview:{account.id}:{post_id}"
+    cached = cache.get(key)
+    if cached is not None:
+        return cached or None
+    from apps.publisher.engine import _resolve_publish_credentials
+
+    raw_id = str(extra.get("post_id") or post_id)
+    try:
+        provider = get_provider(account.platform, _resolve_publish_credentials(account))
+        preview = provider.get_post_preview(account.oauth_access_token, raw_id)
+    except ProviderError as exc:
+        logger.warning("Post %s of inbox message %s could not be read: %s", raw_id, message.id, exc)
+        return {"error": True, "url": message.post_url}
+    if preview:
+        preview = {**preview, "url": preview.get("url") or message.post_url}
+        _remember_post_origin(message, post_id, preview.get("product_type") or "")
+    cache.set(key, preview or {}, POST_PREVIEW_TTL)
+    return preview
+
+
+def _remember_post_origin(message: InboxMessage, post_id: str, origin: str) -> None:
+    """Keep the post's origin on its comments, so the list shows it without a platform read."""
+    if not origin:
+        return
+    comments = InboxMessage.objects.filter(
+        workspace_id=message.workspace_id,
+        social_account_id=message.social_account_id,
+        message_type=InboxMessage.MessageType.COMMENT,
+        extra__stored_post_id=post_id,
+    )
+    for comment in comments:
+        if (comment.extra or {}).get("post_origin") == origin:
+            continue
+        comment.extra = {**(comment.extra or {}), "post_origin": origin}
+        comment.save(update_fields=["extra"])
+
+
+def _local_post_preview(message: InboxMessage) -> dict:
+    platform_post = message.related_post
+    assert platform_post is not None  # post_preview only calls this with a related post
+    post = platform_post.post
+    first = post.media_attachments.select_related("media_asset").first()
+    image_url = ""
+    if first:
+        asset = first.media_asset
+        image_url = asset.thumbnail.url if asset.thumbnail else ("" if asset.is_video else asset.file.url)
+    origin = InboxMessage.FORMAT_ORIGINS.get(platform_post.format, "")
+    return {
+        "caption": post.caption or "",
+        "image_url": image_url,
+        "url": message.post_url,
+        "product_type": origin,
+        "post_id": post.id,
+    }

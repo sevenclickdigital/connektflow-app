@@ -24,6 +24,7 @@ from .exceptions import APIError, OAuthError, ProviderError, PublishError
 from .meta_comments import (
     fetch_instagram_comments,
     find_own_instagram_comment,
+    instagram_media_preview,
     resolve_comment_reply_target,
 )
 from .meta_insights import fetch_insights_safe, fetch_insights_series
@@ -702,7 +703,6 @@ class InstagramLoginProvider(SocialProvider):
         data = resp.json()
         return ReplyResult(platform_message_id=require_message_id(data, platform=self.platform_name), extra=data)
 
-
     def fetch_user_profile(self, access_token: str, user_id: str) -> dict:
         """Profile fields for one person, or an empty dict. See ``SocialProvider``.
 
@@ -775,6 +775,12 @@ class InstagramLoginProvider(SocialProvider):
         except APIError as exc:
             logger.debug("Instagram Login profile fields unavailable: %s", exc)
             return None
+
+    def get_post_preview(self, access_token: str, post_id: str) -> dict | None:
+        fields = self._get_media_fields(access_token, post_id)
+        if not fields:
+            raise APIError(f"Instagram media {post_id} could not be read.", platform=self.platform_name)
+        return instagram_media_preview(fields)
 
     def _get_media_fields(self, access_token: str, media_id: str) -> dict:
         try:

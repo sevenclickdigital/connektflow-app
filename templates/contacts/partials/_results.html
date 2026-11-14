@@ -1,0 +1,147 @@
+{% load i18n humanize tz %}
+{% comment %}
+The contacts table and its pagination. Swapped by the filter form and the
+pager (hx-target #contacts-results), and reloaded on `contactsChanged`.
+`selected` holds the ticked rows for the bulk delete bar.
+{% endcomment %}
+<div id="contacts-results"
+     hx-get="{% url 'contacts:list' workspace_id=workspace_id %}{% if filter_query %}?{{ filter_query }}{% endif %}"
+     hx-trigger="contactsChanged from:body" hx-target="this" hx-swap="outerHTML"
+     x-data="{ selected: [], mergeOpen: false, keep: '',
+               nameOf(id) { const box = this.$root.querySelector(`input[name=ids][value='${id}']`); return box ? box.dataset.name : ''; },
+               openMerge() { this.keep = this.selected[0]; this.mergeOpen = true; } }">
+    {% comment %}
+    Floating selection bar, the same as the Publish list's (calendar.html): count,
+    the bulk actions, and × to clear the selection.
+    {% endcomment %}
+    <div x-show="selected.length" x-cloak
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="translate-y-full opacity-0" x-transition:enter-end="translate-y-0 opacity-100"
+         class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1 bg-neutral-950 text-white rounded-full shadow-2xl pl-4 pr-2 py-2">
+        <span class="text-sm font-medium whitespace-nowrap"
+              data-one="{% translate '{n} selected' context 'contacts' %}" data-many="{% translate '{n} selected' context 'contacts, plural' %}"
+              x-text="(selected.length === 1 ? $el.dataset.one : $el.dataset.many).replace('{n}', selected.length)"></span>
+        <span class="w-px h-5 bg-white/20 mx-1.5" aria-hidden="true"></span>
+        <button type="button" x-show="selected.length > 1" @click="openMerge()"
+                class="px-3 py-1.5 text-xs font-semibold rounded-full hover:bg-white/10 transition-colors">{% translate "Merge" context "contacts" %}</button>
+        <button type="button" class="px-3 py-1.5 text-xs font-semibold rounded-full text-red-300 hover:bg-red-500/20 transition-colors"
+                hx-post="{% url 'contacts:bulk_delete' workspace_id=workspace_id %}"
+                hx-include="#contacts-results input[name='ids']:checked"
+                hx-confirm="{% translate 'Delete the selected contacts? This cannot be undone.' %}"
+                data-confirm-tone="danger" data-confirm-label="{% translate 'Delete' %}">{% translate "Delete" %}</button>
+        <button type="button" @click="selected = []" class="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
+                title="{% translate 'Clear selection' %}" aria-label="{% translate 'Clear selection' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
+
+    {% comment %}
+    Merge dialog: the person picks which selected contact stays; the others are
+    folded into it (contacts.services.merge_contacts) and deleted.
+    {% endcomment %}
+    <div x-show="mergeOpen" x-cloak class="modal-overlay z-[80]" role="dialog" aria-modal="true" aria-labelledby="contact-merge-title"
+         x-transition.opacity @keydown.escape.window="mergeOpen = false">
+        <form class="modal-panel" @click.outside="mergeOpen = false"
+              hx-post="{% url 'contacts:merge' workspace_id=workspace_id %}" hx-swap="none"
+              hx-include="#contacts-results input[name='ids']:checked" @htmx:after-request="if ($event.detail.successful) mergeOpen = false">
+            <div class="modal-header">
+                <div class="modal-icon is-brand">
+                    <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 009 9"/></svg>
+                </div>
+                <div class="modal-title" id="contact-merge-title">{% translate "Merge contacts" %}</div>
+            </div>
+            <div class="modal-body">
+                <p>{% translate "Choose the contact that stays. The others are joined into it: channels, tags, interactions and any empty field, and then deleted." %}</p>
+                <div class="space-y-2" role="radiogroup">
+                    <template x-for="id in selected" :key="id">
+                        <label class="flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors"
+                               :class="keep === id ? 'border-brand-300 bg-brand-50' : 'border-neutral-300 hover:bg-neutral-50'">
+                            <input type="radio" name="keep" :value="id" x-model="keep" class="bb-checkbox">
+                            <span class="text-sm font-semibold text-neutral-900 truncate" x-text="nameOf(id)"></span>
+                        </label>
+                    </template>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-ghost" @click="mergeOpen = false">{% translate "Cancel" %}</button>
+                <button type="submit" class="btn-brand">{% translate "Merge" context "contacts" %}</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="a-card overflow-hidden">
+        {% if page.object_list %}
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[60rem] text-sm">
+                <thead>
+                    <tr class="border-b border-neutral-300 text-left text-xs font-semibold text-neutral-600 whitespace-nowrap">
+                        <th class="w-10 pl-4 pr-2 py-3">
+                            <input type="checkbox" class="bb-checkbox" aria-label="{% translate 'Select all on this page' %}"
+                                   @change="selected = $event.target.checked ? [...$root.querySelectorAll('input[name=ids]')].map(i => i.value) : []">
+                        </th>
+                        <th class="px-2.5 py-3">{% translate "Contact" %}</th>
+                        <th class="px-2.5 py-3">{% translate "Channels" %}</th>
+                        <th class="px-2.5 py-3">{% translate "Source" %}</th>
+                        <th class="px-2.5 py-3">{% translate "Tags" %}</th>
+                        <th class="px-2.5 py-3">{% translate "Funnel" %}</th>
+                        <th class="px-2.5 py-3">{% translate "Engagement" %}</th>
+                        <th class="px-2.5 py-3">{% translate "Last contact" %}</th>
+                        <th class="px-2.5 py-3 text-right">{% translate "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-100">
+                    {% for contact in page.object_list %}
+                    {% include "contacts/partials/_row.html" %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-neutral-300 text-sm text-neutral-600">
+            <span>{% blocktranslate with start=page.start_index end=page.end_index total=page.paginator.count|intcomma %}Showing {{ start }}–{{ end }} of {{ total }} contacts{% endblocktranslate %}</span>
+            {% if page.has_other_pages %}
+            <nav class="flex items-center gap-1" aria-label="{% translate 'Pagination' %}">
+                {% if page.has_previous %}
+                <a href="?page={{ page.previous_page_number }}{% if filter_query %}&{{ filter_query }}{% endif %}"
+                   hx-get="{% url 'contacts:list' workspace_id=workspace_id %}?page={{ page.previous_page_number }}{% if filter_query %}&{{ filter_query }}{% endif %}"
+                   hx-target="#contacts-results" hx-swap="outerHTML" hx-push-url="true"
+                   class="p-1.5 rounded-lg hover:bg-neutral-100" aria-label="{% translate 'Previous page' %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                {% endif %}
+                {% for number in page_numbers %}
+                {% if number == page.paginator.ELLIPSIS %}
+                <span class="px-1.5">…</span>
+                {% elif number == page.number %}
+                <span class="min-w-[2rem] h-8 px-2 inline-flex items-center justify-center rounded-full bg-brand-700 text-white font-semibold" aria-current="page">{{ number|intcomma }}</span>
+                {% else %}
+                <a href="?page={{ number }}{% if filter_query %}&{{ filter_query }}{% endif %}"
+                   hx-get="{% url 'contacts:list' workspace_id=workspace_id %}?page={{ number }}{% if filter_query %}&{{ filter_query }}{% endif %}"
+                   hx-target="#contacts-results" hx-swap="outerHTML" hx-push-url="true"
+                   class="min-w-[2rem] h-8 px-2 inline-flex items-center justify-center rounded-full text-neutral-800 hover:bg-neutral-100">{{ number|intcomma }}</a>
+                {% endif %}
+                {% endfor %}
+                {% if page.has_next %}
+                <a href="?page={{ page.next_page_number }}{% if filter_query %}&{{ filter_query }}{% endif %}"
+                   hx-get="{% url 'contacts:list' workspace_id=workspace_id %}?page={{ page.next_page_number }}{% if filter_query %}&{{ filter_query }}{% endif %}"
+                   hx-target="#contacts-results" hx-swap="outerHTML" hx-push-url="true"
+                   class="p-1.5 rounded-lg hover:bg-neutral-100" aria-label="{% translate 'Next page' %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                </a>
+                {% endif %}
+            </nav>
+            {% endif %}
+        </div>
+        {% elif has_filters %}
+        <div class="px-6 py-12 text-center">
+            <p class="text-sm font-semibold text-neutral-900">{% translate "No contact matches these filters." %}</p>
+            <a href="{% url 'contacts:list' workspace_id=workspace_id %}" class="btn-link text-sm mt-2 inline-block">{% translate "Clear filters" %}</a>
+        </div>
+        {% else %}
+        <div class="px-6 py-12 text-center">
+            <p class="text-sm font-semibold text-neutral-900">{% translate "No contacts yet." %}</p>
+            <p class="text-sm text-neutral-600 mt-1 max-w-md mx-auto">{% translate "Whoever comments or writes to your accounts in the Inbox becomes a contact here. You can also add contacts by hand or import a CSV." %}</p>
+            <a href="{% url 'contacts:create' workspace_id=workspace_id %}" class="btn-brand mt-4 inline-flex">{% translate "New contact" %}</a>
+        </div>
+        {% endif %}
+    </div>
+</div>

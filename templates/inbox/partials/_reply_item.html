@@ -1,16 +1,16 @@
-{% load humanize i18n %}
-<div class="flex gap-2.5 items-start">
-    <div class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0" style="background: var(--primary);">
-        {{ reply.author.email|make_list|first|upper }}
-    </div>
-    <div class="flex-1 min-w-0">
-        <div class="bg-white border border-neutral-300 rounded-xl rounded-tl-sm px-3.5 py-2.5" style="box-shadow: var(--shadow-xs);">
-            <div class="flex items-center gap-2 mb-1">
-                <span class="text-[12px] font-semibold text-neutral-900">{{ reply.author.get_short_name|default:reply.author.email }}</span>
-                <span class="badge-pill" style="background: var(--primary-soft); color: var(--brand-700);">{% translate "Reply" %}</span>
-                <span class="text-[11px] text-neutral-500 ml-auto">{% blocktranslate with time=reply.sent_at|timesince %}{{ time }} ago{% endblocktranslate %}</span>
-            </div>
-            <p class="text-[13px] text-neutral-800 leading-relaxed whitespace-pre-wrap">{{ reply.body }}</p>
-        </div>
+{% load i18n %}
+{% comment %}
+A reply the team sent, WhatsApp-style: a brand bubble on the right with who
+sent it on top (a team can have several people answering) and the time and
+delivered ticks at the bottom right. Context: ``reply``, ``time`` (HH:MM in
+the workspace's clock), ``tail`` (first bubble of a run).
+{% endcomment %}
+<div class="flex justify-end">
+    <div class="chat-bubble chat-bubble-out {% if tail %}has-tail{% endif %}">
+        <p class="text-[12px] font-semibold text-brand-800 mb-0.5">{{ reply.author.get_short_name|default:reply.author.email }}</p>
+        <span class="whitespace-pre-wrap break-words">{{ reply.body }}</span>
+        <span class="chat-meta">{{ time }}
+            <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="{% translate 'Sent' %}"><path d="M1.5 13l4 4L15 7.5"/><path d="M9 16l1 1L20.5 7.5"/></svg>
+        </span>
     </div>
 </div>

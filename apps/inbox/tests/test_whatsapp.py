@@ -343,5 +343,6 @@ class TestLiveInbox:
             HTTP_HX_REQUEST="true",
         )
 
-        assert [m.body for m in response.context["history"]] == ["earlier-from-rita"]
+        incoming = [item["obj"].body for item in response.context["chat"] if item["kind"] == "in"]
+        assert incoming == ["earlier-from-rita", "current-from-rita"]
         assert b"from-someone-else" not in response.content

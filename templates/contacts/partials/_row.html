@@ -1,0 +1,72 @@
+{% load i18n tz %}
+{% comment %}
+One contact in the list. The funnel select saves on change (contacts:set_funnel);
+the message action opens the Inbox searched by the contact's main channel.
+{% endcomment %}
+{% with channels=contact.channels.all %}
+<tr class="hover:bg-neutral-50">
+    <td class="pl-4 pr-2 py-3">
+        <input type="checkbox" name="ids" value="{{ contact.id }}" data-name="{{ contact.name }}" x-model="selected" class="bb-checkbox"
+               aria-label="{% blocktranslate with name=contact.name %}Select {{ name }}{% endblocktranslate %}">
+    </td>
+    <td class="px-2.5 py-3">
+        <a href="{% url 'contacts:edit' workspace_id=workspace_id contact_id=contact.id %}" class="flex items-center gap-3 min-w-0 group">
+            {% include "contacts/partials/_avatar.html" with size="w-9 h-9" %}
+            <span class="min-w-0">
+                <span class="block font-semibold text-neutral-950 truncate max-w-[10.5rem] group-hover:text-brand-800">{{ contact.name }}</span>
+                {% for channel in channels %}{% if forloop.first %}<span class="block text-xs text-neutral-600 truncate max-w-[10.5rem]">{{ channel.display_value }}</span>{% endif %}{% endfor %}
+            </span>
+        </a>
+    </td>
+    <td class="px-2.5 py-3">
+        <span class="flex items-center gap-1.5">
+            {% for channel in channels %}{% ifchanged channel.kind %}<span title="{{ channel.get_kind_display }}: {{ channel.display_value }}">{% include "partials/_platform_icon.html" with platform=channel.kind size="sm" %}</span>{% endifchanged %}{% empty %}<span class="text-neutral-500">—</span>{% endfor %}
+        </span>
+    </td>
+    <td class="px-2.5 py-3"><span class="pill bg-brand-50 text-neutral-900 font-medium">{{ contact.get_source_display }}</span></td>
+    <td class="px-2.5 py-3">
+        <span class="flex gap-1">
+            {% for tag in contact.tags %}{% if forloop.counter <= 2 %}<span class="pill pill-brand max-w-[7rem]" title="{{ tag }}"><span class="truncate min-w-0">{{ tag }}</span></span>{% elif forloop.counter == 3 %}<span class="pill pill-neutral" title="{{ contact.tags|join:', ' }}">+{{ contact.tags|length|add:"-2" }}</span>{% endif %}{% empty %}<span class="text-neutral-500">—</span>{% endfor %}
+        </span>
+    </td>
+    <td class="px-2.5 py-3">
+        <select name="funnel" aria-label="{% translate 'Funnel' %}"
+                hx-post="{% url 'contacts:set_funnel' workspace_id=workspace_id contact_id=contact.id %}" hx-trigger="change" hx-swap="none"
+                class="form-input-styled bb-select text-[13px] py-1 pl-2.5 pr-7 rounded-lg w-28">
+            <option value="">—</option>
+            {% for funnel in facets.funnels %}<option value="{{ funnel }}" {% if funnel == contact.funnel %}selected{% endif %}>{{ funnel }}</option>{% endfor %}
+        </select>
+    </td>
+    <td class="px-2.5 py-3">
+        {% include "contacts/partials/_engagement.html" with level=contact.engagement label=contact.get_engagement_display %}
+    </td>
+    <td class="px-2.5 py-3 whitespace-nowrap text-neutral-700">
+        {% if contact.last_contact_at %}
+        {% timezone request.workspace.effective_timezone|default:"UTC" %}{% include "contacts/partials/_when.html" with when=contact.last_contact_at %}{% endtimezone %}
+        {% else %}<span class="text-neutral-500">—</span>{% endif %}
+    </td>
+    <td class="px-2.5 py-3">
+        <span class="flex items-center justify-end" x-data="{ menu: false }">
+            {% for channel in channels %}{% if forloop.first %}
+            <a href="{% url 'inbox:feed' workspace_id=workspace_id %}?q={{ channel.value|cut:'@'|cut:'+'|urlencode }}" class="p-1.5 rounded-lg text-neutral-600 hover:text-brand-800 hover:bg-brand-50"
+               title="{% translate 'Open conversations in the Inbox' %}" aria-label="{% translate 'Open conversations in the Inbox' %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+            </a>
+            {% endif %}{% endfor %}
+            <span class="relative" @click.away="menu = false">
+                <button type="button" class="p-1.5 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100" @click="menu = !menu"
+                        :aria-expanded="menu.toString()" aria-label="{% translate 'More actions' %}">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                </button>
+                <span x-show="menu" x-cloak class="absolute right-0 z-30 mt-1 w-40 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 text-left">
+                    <a href="{% url 'contacts:edit' workspace_id=workspace_id contact_id=contact.id %}" class="block px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50">{% translate "Edit" %}</a>
+                    <button type="button" class="w-full text-left px-3 py-2 text-sm text-[var(--error-700)] hover:bg-[var(--error-50)]"
+                            hx-post="{% url 'contacts:delete' workspace_id=workspace_id contact_id=contact.id %}" hx-swap="none"
+                            hx-confirm="{% blocktranslate with name=contact.name %}Delete {{ name }}? This cannot be undone.{% endblocktranslate %}"
+                            data-confirm-tone="danger" data-confirm-label="{% translate 'Delete' %}">{% translate "Delete" %}</button>
+                </span>
+            </span>
+        </span>
+    </td>
+</tr>
+{% endwith %}

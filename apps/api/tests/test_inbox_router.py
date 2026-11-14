@@ -166,6 +166,7 @@ def test_rest_late_dm_retains_draft_and_cannot_claim_human_agent(api, message):
             f"/api/v1/inbox/{message.id}/replies",
             data=json.dumps({"body": "Answer", "send": True, "human_agent": True}),
             content_type="application/json",
+            HTTP_ACCEPT_LANGUAGE="en",
         )
     assert response.status_code == 502
     assert "web inbox" in response.json()["detail"]

@@ -1,0 +1,8 @@
+{% comment %}
+A contact's picture, or its initials. Usage: {% include "contacts/partials/_avatar.html" with size="w-10 h-10" %}
+{% endcomment %}
+{% if contact.picture_url %}
+<img src="{{ contact.picture_url }}" alt="" referrerpolicy="no-referrer" loading="lazy" class="{{ size }} rounded-full object-cover flex-shrink-0 bg-neutral-100">
+{% else %}
+<span class="{{ size }} rounded-full flex-shrink-0 flex items-center justify-center bg-brand-100 text-brand-800 font-semibold text-sm" aria-hidden="true">{{ contact.initials }}</span>
+{% endif %}

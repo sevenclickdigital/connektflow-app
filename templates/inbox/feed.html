@@ -2,46 +2,45 @@
 {% load humanize i18n static %}
 
 {% block title %}{% translate "Inbox" %} - {{ workspace.name }} - Automator{% endblock %}
+{% comment %}Full bleed, like the flow builder: the inbox fills the area beside the sidebar.{% endcomment %}
+{% block main_padding %}{% endblock %}
+{% block content_width %}max-w-none{% endblock %}
 
 {% block extra_head %}
 <style>
-    /* Inbox: one card filling the page column; the panes scroll inside it */
-    .inbox-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; height: 100%; overflow: hidden; background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-lg); }
-
-    /* Split panel */
+    /* Inbox: the top bar and filters, then the list beside the open entry, split by rules; each pane scrolls on its own */
     .inbox-split { display: flex; flex: 1; min-height: 0; }
-    .inbox-list-pane { width: 100%; border-right: none; display: flex; flex-direction: column; }
-    .inbox-detail-pane { display: none; flex-direction: column; overflow: hidden; }
+    .inbox-list-pane { width: 100%; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    .inbox-detail-pane { display: none; flex-direction: column; min-width: 0; min-height: 0; }
 
     @media (min-width: 768px) {
-        .inbox-list-pane { width: 40%; min-width: 320px; border-right: 1px solid var(--border); }
+        .inbox-list-pane { width: 34%; min-width: 300px; max-width: 400px; flex-shrink: 0; border-right: 1px solid var(--border); }
         .inbox-detail-pane { display: flex; flex: 1; }
-        /* On desktop, always show both panels regardless of Alpine state */
         .inbox-list-pane[data-mobile-hidden] { display: flex; }
         .inbox-detail-pane[data-mobile-visible] { display: flex; }
     }
-
-    /* Mobile panel switching */
     @media (max-width: 767px) {
         .inbox-list-pane[data-mobile-hidden] { display: none; }
         .inbox-detail-pane[data-mobile-visible] { display: flex; flex: 1; }
     }
 
-    /* Message rows */
+    /* Entries */
     .inbox-row {
-        display: flex; gap: 10px; padding: 12px 16px;
+        display: flex; gap: 10px; padding: 14px 16px 14px 22px;
         border-bottom: 1px solid var(--surface-2);
         cursor: pointer; transition: background var(--dur-fast) ease;
         position: relative;
     }
     .inbox-row:hover { background: var(--surface-1); }
-    .inbox-row.is-active { background: var(--primary-soft); border-left: 3px solid var(--primary); padding-left: 13px; }
+    .inbox-row.is-active { background: var(--primary-soft); box-shadow: inset 3px 0 0 var(--primary); }
     .inbox-row.is-unread .inbox-row-sender { font-weight: 700; color: var(--text-primary); }
     .inbox-row.is-unread .inbox-row-preview { color: var(--text-primary); }
     .inbox-row.is-unread::before {
-        content: ''; position: absolute; left: 6px; top: 50%; transform: translateY(-50%);
-        width: 6px; height: 6px; border-radius: 50%; background: var(--primary);
+        content: ''; position: absolute; left: 9px; top: 22px;
+        width: 7px; height: 7px; border-radius: 50%; background: var(--primary);
     }
+    .inbox-row-check { opacity: 0; transition: opacity var(--dur-fast) ease; }
+    .inbox-row:hover .inbox-row-check, .inbox-row-check.is-checked, .inbox-row-check:focus-within { opacity: 1; }
 
     /* Badges */
     .badge-pill {
@@ -53,36 +52,24 @@
     .badge-sentiment-positive { background: var(--success-50); color: var(--success-700); }
     .badge-sentiment-neutral  { background: var(--surface-2); color: var(--text-tertiary); }
     .badge-sentiment-negative { background: var(--error-50); color: var(--error-700); }
-    .badge-type { background: var(--surface-2); color: var(--text-secondary); }
     .badge-status-unread  { background: var(--info-50); color: var(--info-700); }
     .badge-status-open    { background: var(--warning-50); color: var(--warning-700); }
     .badge-status-resolved { background: var(--success-50); color: var(--success-700); }
     .badge-status-archived { background: var(--surface-2); color: var(--text-ghost); }
-    .badge-sla-overdue { background: var(--error-50); color: var(--error-700); animation: pulse-badge 2s ease infinite; }
-    @keyframes pulse-badge { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
 
-    /* View tabs */
-    .inbox-tab {
-        font-size: 13px; font-weight: 500; padding: 6px 14px;
-        border-radius: var(--radius-full); color: var(--text-secondary);
-        transition: all var(--dur-fast) ease; cursor: pointer;
-        text-decoration: none; white-space: nowrap;
-    }
-    .inbox-tab:hover { background: var(--surface-1); color: var(--text-primary); }
-    .inbox-tab.active { background: var(--primary-soft); color: var(--brand-700); font-weight: 600; }
-
-    /* Filter controls */
+    /* Small selects: the entries' sort */
     .filter-select {
-        font-size: 12px; font-weight: 500; color: var(--text-secondary);
-        background: var(--surface-1); border: 1px solid var(--border);
-        border-radius: var(--radius-md); padding: 4px 24px 4px 8px;
-        transition: all var(--dur-fast) ease; cursor: pointer;
-        appearance: none;
+        font-size: 12px; font-weight: 600; color: var(--text-secondary);
+        background: transparent; border: none; padding: 2px 18px 2px 4px;
+        cursor: pointer; appearance: none;
         background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2378716C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 8px center;
+        background-repeat: no-repeat; background-position: right 4px center;
     }
-    .filter-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-ring); }
+    .filter-select:focus { outline: none; box-shadow: 0 0 0 2px var(--primary-ring); border-radius: var(--radius-sm); }
+
+    /* Unread count inside the type tabs (a-pill-group) */
+    .inbox-type-count { min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: var(--neutral-300); color: var(--text-inverse); }
+    .a-pill-group > button.active .inbox-type-count { background: var(--surface-0); color: var(--primary); }
 
     /* Bulk action bar */
     .bulk-bar {
@@ -115,123 +102,124 @@
 {% endblock %}
 
 {% block content %}
-<div class="inbox-shell" x-data="inboxController()">
+<div class="flex-1 min-h-0 flex flex-col bg-white" x-data="inboxController()" @inbox-list-refresh.window="refreshList()">
 
-    <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-5 py-3 border-b border-neutral-300 flex-shrink-0">
-        <div class="flex items-center gap-3 sm:gap-4">
-            <h1 class="text-base font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Inbox" %}</h1>
-            <div class="flex items-center gap-1 bg-neutral-50 rounded-full p-0.5">
-                <a href="{% url 'inbox:feed' workspace_id=workspace.id %}"
-                   class="inbox-tab {% if current_view == 'all' %}active{% endif %}"
-                   hx-get="{% url 'inbox:feed' workspace_id=workspace.id %}?view=all"
-                   hx-target="#inbox-message-list"
-                   hx-swap="innerHTML"
-                   hx-push-url="true">{% translate "All" %}</a>
-                <a href="{% url 'inbox:feed' workspace_id=workspace.id %}?view=mine"
-                   class="inbox-tab {% if current_view == 'mine' %}active{% endif %}"
-                   hx-get="{% url 'inbox:feed' workspace_id=workspace.id %}?view=mine"
-                   hx-target="#inbox-message-list"
-                   hx-swap="innerHTML"
-                   hx-push-url="true">{% translate "My Queue" %}</a>
-                <a href="{% url 'inbox:feed' workspace_id=workspace.id %}?view=unassigned"
-                   class="inbox-tab {% if current_view == 'unassigned' %}active{% endif %}"
-                   hx-get="{% url 'inbox:feed' workspace_id=workspace.id %}?view=unassigned"
-                   hx-target="#inbox-message-list"
-                   hx-swap="innerHTML"
-                   hx-push-url="true">{% translate "Unassigned" %}</a>
-            </div>
-        </div>
-        <div class="flex items-center gap-2">
-            <a href="{% url 'inbox:saved_replies' workspace_id=workspace.id %}"
-               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-neutral-700 bg-white border border-neutral-300 rounded-full hover:border-neutral-400 hover:bg-neutral-50 transition-all duration-150"
-               title="{% translate 'Saved Replies' %}">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-                <span class="hidden sm:inline">{% translate "Saved Replies" %}</span>
-            </a>
-            {% if sla_config %}
-            <a href="{% url 'inbox:sla_config' workspace_id=workspace.id %}"
-               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-neutral-700 bg-white border border-neutral-300 rounded-full hover:border-neutral-400 hover:bg-neutral-50 transition-all duration-150"
-               title="{% translate 'SLA Settings' %}">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span class="hidden sm:inline">{% translate "SLA" %}</span>
-            </a>
+    <!-- Top bar: title and the inbox's sections -->
+    <div class="flex flex-wrap items-center gap-3 px-5 py-3 border-b border-neutral-300 flex-shrink-0">
+        <div class="min-w-0 mr-auto">
+            {% if funnel %}
+            <h1 class="text-base font-semibold text-neutral-950">{% translate "Funnel" %}</h1>
+            <p class="text-xs text-neutral-600">{% translate "Each conversation's stage in your sales funnel, and what the team knows of the deal." %}</p>
+            {% else %}
+            <h1 class="text-base font-semibold text-neutral-950">{% translate "Inbox" %}</h1>
+            <p class="text-xs text-neutral-600">{% translate "Every conversation, comment and mention from your channels, in one place." %}</p>
             {% endif %}
         </div>
+        {% if funnel %}{% include "inbox/partials/_inbox_tabs.html" with active="funnel" %}{% else %}{% include "inbox/partials/_inbox_tabs.html" with active="conversations" %}{% endif %}
+        {% if sla_config %}
+        <a href="{% url 'inbox:sla_config' workspace_id=workspace.id %}" class="btn-outline" title="{% translate 'SLA Settings' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {% translate "SLA" %}
+        </a>
+        {% endif %}
     </div>
 
-    <!-- Split Layout -->
+    {% if funnel %}{% include "funnels/partials/_funnel_bar.html" %}{% else %}{% include "inbox/partials/_filter_bar.html" %}{% endif %}
+
     <div class="inbox-split">
-
-        <!-- Left: Message List -->
-        <div class="inbox-list-pane" :data-mobile-hidden="activePanel === 'detail' ? '' : undefined">
-
-            <!-- Filters -->
-            {% include "inbox/partials/_filter_bar.html" %}
-
-            <!-- Message list (HTMX target) -->
-            <div class="flex-1 overflow-y-auto" id="inbox-message-list">
+        <!-- Left: the entries -->
+        <section class="inbox-list-pane" :data-mobile-hidden="activePanel === 'detail' ? '' : undefined">
+            <div class="flex-1 min-h-0 overflow-y-auto" id="inbox-message-list">
                 {% include "inbox/partials/_message_list.html" %}
             </div>
 
-            <!-- Bulk action bar -->
             <div x-show="selectedCount > 0" x-cloak class="bulk-bar">
-                <span x-text="selectedCount + ' selected'"></span>
-                <button @click="bulkAction('mark_read')">{% translate "Mark Read" %}</button>
-                <button @click="bulkAction('resolve')">{% translate "Resolve" %}</button>
-                <button @click="bulkAction('archive')">{% translate "Archive" %}</button>
-                <button @click="closeBulk()" class="ml-auto" style="border: none;">
+                <span><span x-text="selectedCount"></span> {% translate "selected" context "inbox entries" %}</span>
+                <button type="button" @click="bulkAction('mark_read')">{% translate "Mark Read" %}</button>
+                <button type="button" @click="bulkAction('resolve')">{% translate "Resolve" %}</button>
+                <button type="button" @click="bulkAction('archive')">{% translate "Archive" %}</button>
+                <button type="button" @click="closeBulk()" class="ml-auto" style="border: none;" aria-label="{% translate 'Close' %}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
-        </div>
+        </section>
 
-        <!-- Right: Detail Panel -->
+        <!-- Centre and right: the open entry (inbox/partials/_message_panel.html) -->
         <div class="inbox-detail-pane" id="inbox-detail-panel"
              :data-mobile-visible="activePanel === 'detail' ? '' : undefined">
-            <!-- Mobile back button -->
-            <div class="flex md:hidden items-center gap-2 px-3 py-2.5 border-b border-neutral-300 flex-shrink-0">
-                <button @click="activePanel = 'list'"
-                        class="flex items-center gap-1.5 text-sm font-medium text-neutral-700 hover:text-neutral-950 transition-colors cursor-pointer">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-                    {% translate "Back" %}
-                </button>
-            </div>
-            <!-- Empty state shown when no message is selected -->
             <div class="inbox-empty-detail">
                 <svg class="w-12 h-12" style="color: var(--neutral-300);" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                 <p class="text-sm font-medium" style="color: var(--text-tertiary);">{% translate "Select a message to view details" %}</p>
             </div>
         </div>
-
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 {{ emoji_categories|json_script:"inbox-emoji" }}
+{{ active_filters|json_script:"inbox-filters" }}
 <script src="{% static 'js/emoji-picker.js' %}"></script>
 <script src="{% static 'js/inbox-reply.js' %}"></script>
 <script nonce="{{ request.csp_nonce }}">
 function inboxController() {
+    const initial = JSON.parse(document.getElementById('inbox-filters').textContent);
+    const one = (value) => Array.isArray(value) ? (value[0] || '') : (value || '');
     return {
         activePanel: 'list',
         selected: new Set(),
         activeId: null,
+        feedUrl: '{{ list_url|escapejs }}',
         listUrl: window.location.href,
         version: null,
+        filters: {
+            platform: one(initial.platform),
+            type: one(initial.type),
+            q: initial.q || '',
+            sort: '{{ sort|escapejs }}',
+            {% if funnel %}funnel: '{{ funnel.id }}',
+            stage: '{{ active_stage|default:""|escapejs }}',{% endif %}
+        },
+        /* Unread entries per type button, refreshed from each list the server sends. */
+        typeCounts: {},
+        readTypeCounts() {
+            const el = document.getElementById('inbox-type-counts');
+            if (el) this.typeCounts = JSON.parse(el.textContent);
+        },
+
+        filterPlatform(code) { this.set('platform', code); },
+        set(key, value) {
+            this.filters[key] = value;
+            this.apply();
+        },
+        apply() {
+            const params = new URLSearchParams();
+            Object.entries(this.filters).forEach(([key, value]) => {
+                if (!value || (key === 'sort' && value === 'newest')) return;
+                params.set(key, value);
+            });
+            const query = params.toString();
+            const url = this.feedUrl + (query ? '?' + query : '');
+            history.replaceState(null, '', url);
+            this.listUrl = url;
+            this.selected = new Set();
+            htmx.ajax('GET', url, { target: '#inbox-message-list', swap: 'innerHTML' });
+        },
+        refreshList() {
+            htmx.ajax('GET', this.listUrl, { target: '#inbox-message-list', swap: 'innerHTML' });
+        },
 
         /* Live list: poll a cheap version token and refetch the list, with
            the filters last applied, only when a new message has landed. */
         init() {
             const list = document.getElementById('inbox-message-list');
-            list.addEventListener('htmx:afterRequest', (event) => {
-                const xhr = event.detail.xhr;
-                if (event.detail.target === list && event.detail.requestConfig.verb === 'get' && xhr && xhr.responseURL) {
-                    this.listUrl = xhr.responseURL;
-                }
+            /* A status, sentiment or owner change on the open entry also shows in its row. */
+            document.getElementById('inbox-detail-panel').addEventListener('htmx:afterRequest', (event) => {
+                if (event.detail.successful && event.detail.requestConfig.verb === 'post' && event.detail.target.id === 'inbox-detail-panel') this.refreshList();
             });
+            this.readTypeCounts();
             list.addEventListener('htmx:afterSettle', () => {
+                this.readTypeCounts();
                 const row = this.activeId && document.getElementById('msg-' + this.activeId);
                 if (row) row.classList.add('is-active');
             });
@@ -241,9 +229,7 @@ function inboxController() {
                     .then((r) => r.ok ? r.json() : null)
                     .then((data) => {
                         if (!data) return;
-                        if (this.version !== null && data.v !== this.version) {
-                            htmx.ajax('GET', this.listUrl, { target: '#inbox-message-list', swap: 'innerHTML' });
-                        }
+                        if (this.version !== null && data.v !== this.version) this.refreshList();
                         this.version = data.v;
                     })
                     .catch(() => {});
@@ -272,42 +258,26 @@ function inboxController() {
             this.selected = new Set();
         },
 
+        /* Apply the action, then reload the list under the filters on screen. */
         bulkAction(action) {
-            const ids = Array.from(this.selected).join(',');
-
-            /* Build a hidden form and submit via HTMX */
-            const container = document.createElement('div');
-            container.innerHTML = `<form>
-                <input type="hidden" name="message_ids" value="${ids}">
-                <input type="hidden" name="action" value="${action}">
-            </form>`;
-            const form = container.querySelector('form');
-            document.body.appendChild(form);
-
-            htmx.ajax('POST',
-                '{% url "inbox:bulk_action" workspace_id=workspace.id %}',
-                {
-                    source: form,
-                    target: '#inbox-message-list',
-                    swap: 'innerHTML',
-                }
-            );
-            setTimeout(() => form.remove(), 100);
+            const body = new URLSearchParams({ message_ids: Array.from(this.selected).join(','), action });
+            fetch('{% url "inbox:bulk_action" workspace_id=workspace.id %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'HX-Request': 'true' },
+                body,
+            }).then(() => this.refreshList());
             this.selected = new Set();
         },
 
         selectMessage(id, url) {
             this.activeId = id;
-            /* Load detail panel via HTMX */
             htmx.ajax('GET', url, { target: '#inbox-detail-panel', swap: 'innerHTML' });
-            /* Highlight active row */
             document.querySelectorAll('.inbox-row').forEach(el => el.classList.remove('is-active'));
             const row = document.getElementById('msg-' + id);
             if (row) {
                 row.classList.add('is-active');
                 row.classList.remove('is-unread');
             }
-            /* Switch to detail panel on mobile */
             if (window.innerWidth < 768) {
                 this.activePanel = 'detail';
             }

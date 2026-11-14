@@ -74,6 +74,24 @@ INSTAGRAM_COMMENT_FIELD_SETS = (
 )
 
 
+# Instagram's media_product_type, as the inbox names a post's origin.
+_INSTAGRAM_PRODUCT_TYPES = {"FEED": "feed", "REELS": "reel", "STORY": "story"}
+
+
+def instagram_media_preview(fields: dict) -> dict:
+    """The inbox's post preview from an Instagram media object's fields."""
+    return {
+        "caption": fields.get("caption") or "",
+        # Videos and Reels carry their poster frame in thumbnail_url; their
+        # media_url is the video itself, which an <img> cannot show.
+        "image_url": fields.get("thumbnail_url")
+        or (fields.get("media_url") if fields.get("media_type") != "VIDEO" else "")
+        or "",
+        "url": fields.get("permalink") or "",
+        "product_type": _INSTAGRAM_PRODUCT_TYPES.get(fields.get("media_product_type") or "", ""),
+    }
+
+
 def parse_graph_time(value: str | None) -> datetime | None:
     """Parse Graph's ``2026-08-07T12:34:56+0000`` timestamps.
 
@@ -277,7 +295,10 @@ def _fetch_media(request, platform: str, media_url: str, access_token: str, medi
                 media_url,
                 access_token=access_token,
                 params={
-                    "fields": (f"id,timestamp,permalink,comments.limit({INSTAGRAM_COMMENTS_PER_MEDIA}){{{fields}}}"),
+                    "fields": (
+                        f"id,timestamp,permalink,media_product_type,"
+                        f"comments.limit({INSTAGRAM_COMMENTS_PER_MEDIA}){{{fields}}}"
+                    ),
                     "limit": INSTAGRAM_MEDIA_SCAN_LIMIT,
                     "since": int(media_floor.timestamp()),
                 },
@@ -392,6 +413,8 @@ def _to_message(
             "stored_post_id": media_id,
             "parent_id": parent_id,
             "post_permalink_url": media.get("permalink", ""),
+            # Feed, Reels or Story, for the inbox's origin.
+            "post_origin": _INSTAGRAM_PRODUCT_TYPES.get(media.get("media_product_type") or "", ""),
             # The platform user id, matching what the webhook path stores and
             # what FacebookProvider's poll emits. Re-polling a comment the
             # webhook already stored must not rewrite this column.

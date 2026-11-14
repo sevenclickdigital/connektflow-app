@@ -1,0 +1,11 @@
+{% comment %}
+Engagement as four bars and its label. `level` is high, medium or low.
+{% endcomment %}
+<span class="inline-flex items-center gap-2" title="{{ label }}">
+    <span class="flex items-end gap-0.5" aria-hidden="true">
+        {% for bar in "1234" %}
+        <span class="w-1.5 h-3 rounded-sm {% if level == 'high' %}bg-[var(--success-500)]{% elif level == 'medium' and forloop.counter <= 3 %}bg-[var(--warning-500)]{% elif level == 'low' and forloop.counter == 1 %}bg-[var(--error-500)]{% else %}bg-neutral-200{% endif %}"></span>
+        {% endfor %}
+    </span>
+    <span class="text-sm font-medium text-neutral-800">{{ label }}</span>
+</span>

@@ -876,6 +876,20 @@ class FacebookProvider(SocialProvider):
     # Analytics
     # ------------------------------------------------------------------
 
+    def get_post_preview(self, access_token: str, post_id: str) -> dict | None:
+        data = self._request(
+            "GET",
+            f"{BASE_URL}/{post_id}",
+            access_token=access_token,
+            params={"fields": "message,full_picture,permalink_url"},
+        ).json()
+        return {
+            "caption": data.get("message") or "",
+            "image_url": data.get("full_picture") or "",
+            "url": data.get("permalink_url") or "",
+            "product_type": "feed",
+        }
+
     def get_post_metrics(self, access_token: str, post_id: str) -> PostMetrics:
         fields, insight_candidates = self._resolve_post_fields(access_token, post_id)
         values, errors, insight_post_id = self._get_post_insights(access_token, insight_candidates)

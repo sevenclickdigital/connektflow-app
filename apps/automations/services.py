@@ -175,3 +175,33 @@ def on_platform_post_published(platform_post) -> None:
             "Could not arm the automation flow for platform post %s",
             getattr(platform_post, "pk", None),
         )
+
+
+def flows_for_message(message: InboxMessage) -> list:
+    """The flows that can be run for this conversation: those of the post a comment is on.
+
+    Flows answer a comment with a private reply, so a direct message, a
+    mention or a tag has none.
+    """
+    from django.db.models import Q
+
+    from apps.automations.actions import PRIVATE_REPLY_PLATFORMS
+    from apps.automations.models import PostAutomation
+
+    if (
+        message.message_type != InboxMessage.MessageType.COMMENT
+        or message.social_account.platform not in PRIVATE_REPLY_PLATFORMS
+    ):
+        return []
+    extra = message.extra or {}
+    post_ids = {str(extra.get(key) or "") for key in ("stored_post_id", "post_id")} - {""}
+    match = Q(armed_post_id__in=post_ids) if post_ids else Q(pk__in=[])
+    if message.related_post_id:
+        match |= Q(platform_post_id=message.related_post_id)
+    return list(
+        PostAutomation.objects.filter(
+            match, workspace_id=message.workspace_id, rule__social_account=message.social_account
+        )
+        .exclude(status=PostAutomation.Status.PENDING)
+        .select_related("rule")
+    )

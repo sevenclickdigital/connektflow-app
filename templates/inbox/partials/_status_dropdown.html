@@ -1,0 +1,26 @@
+{% load i18n %}
+{% comment %}
+The entry's status as a pill that opens the other statuses; picking one posts it
+and redraws the open entry. Context: message, status_choices, workspace.
+{% endcomment %}
+<div x-data="{ statusOpen: false }" class="relative" @keydown.escape="statusOpen = false">
+    <button type="button" @click="statusOpen = !statusOpen" :aria-expanded="statusOpen"
+            class="badge-pill badge-status-{{ message.status }} !text-xs !px-2.5 !py-1 cursor-pointer hover:opacity-80 transition-opacity">
+        {{ message.get_status_display }}
+        <svg class="w-2.5 h-2.5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+    </button>
+    <div x-show="statusOpen" @click.outside="statusOpen = false" x-cloak x-transition
+         class="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 min-w-[140px]">
+        {% for value, label in status_choices %}
+        <button type="button"
+                hx-post="{% url 'inbox:change_status' workspace_id=workspace.id message_id=message.id %}"
+                hx-vals='{"status": "{{ value }}"}'
+                hx-target="#inbox-detail-panel"
+                hx-swap="innerHTML"
+                @click="statusOpen = false"
+                class="w-full text-left px-3 py-1.5 text-[12px] text-neutral-800 hover:bg-neutral-50 transition-colors {% if message.status == value %}font-semibold{% endif %}">
+            {{ label }}
+        </button>
+        {% endfor %}
+    </div>
+</div>

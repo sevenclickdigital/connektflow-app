@@ -17,6 +17,15 @@ from apps.social_accounts.models import SocialAccount
 from providers.exceptions import MessagingError
 
 
+@pytest.fixture(autouse=True)
+def _english():
+    """The reasons are asserted in their source language."""
+    from django.utils import translation
+
+    with translation.override("en"):
+        yield
+
+
 @pytest.fixture
 def customer_dm(inbox_account):
     def create(age=1, sender="customer", mid="incoming", verified=True):

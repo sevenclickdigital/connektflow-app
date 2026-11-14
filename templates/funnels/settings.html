@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Funnels" %} - {{ workspace.name }} - Automator{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div class="flex items-start gap-3">
+        <a href="{% url 'funnels:inbox' workspace_id=workspace.id %}" class="mt-1 w-8 h-8 rounded-md flex items-center justify-center text-neutral-600 hover:bg-neutral-100" aria-label="{% translate 'Back to the funnel' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </a>
+        <div>
+            <h1 class="page-title">{% translate "Funnels" %}</h1>
+            <p class="page-description">{% translate "The funnels your conversations move through and their stages, in order. New conversations start in the first stage of the main funnel." %}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl space-y-4">
+    <form class="a-card p-4 flex flex-wrap items-end gap-3"
+          hx-post="{% url 'funnels:funnel_save' workspace_id=workspace.id %}" hx-target="#funnel-settings" hx-swap="innerHTML"
+          @htmx:after-request="if ($event.detail.successful) $el.reset()">
+        {% csrf_token %}
+        <label class="flex-1 min-w-[14rem]">
+            <span class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "New funnel" %}</span>
+            <input type="text" name="name" required maxlength="80" class="form-input-styled" placeholder="{% translate 'e.g. Support, Partnerships' %}">
+        </label>
+        <button type="submit" class="btn-brand">{% translate "Create funnel" %}</button>
+    </form>
+    <div id="funnel-settings">
+        {% include "funnels/partials/_settings_list.html" %}
+    </div>
+</div>
+{% endblock %}

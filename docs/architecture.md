@@ -58,6 +58,7 @@ docker-compose.dokploy.yml                         # production
 | `onboarding` | Client connection links, onboarding checklist |
 | `inbox` | Unified inbox (comments, mentions, DMs), polling sync, inbound webhooks |
 | `automations` | Comment-triggered auto-replies and flows (DM, buttons) |
+| `contacts` | Contacts (manual, CSV, created from inbox senders), channels, engagement, filters |
 | `analytics` | Account and post metrics, history import |
 | `notifications` | In-app, email and webhook notifications, digests |
 | `billing` | Per-workspace subscription via Asaas, storage add-ons, staff console |
@@ -88,6 +89,7 @@ Server-rendered HTML. The only build step is Tailwind. In development it runs as
 - HTMX handles partial swaps, inline actions and polling. `django_htmx.middleware.HtmxMiddleware` is installed.
 - Alpine.js handles client-side UI: dropdowns, modals, drag and drop, character counters. CSP allows `'unsafe-eval'` because the standard Alpine build needs it (`base.py`).
 - HTMX and Alpine are vendored (`static/js/htmx.min.js`, `static/js/alpine.min.js`), as is Cropper.js under `static/js/vendor/`. Static files are served by WhiteNoise (`CompressedManifestStaticFilesStorage` in production).
+- Confirmations use one dialog, `templates/components/_confirm_dialog.html` (included by `base.html`): it handles every `hx-confirm` through htmx's `htmx:confirm` event and every form with `data-confirm`, so no page opens the browser's `confirm()`.
 - Context processors in `base.py` add sidebar data, the onboarding checklist, the unread-notification count, the Intelligence flag, a storage-quota banner and an impersonation banner to every page.
 
 ---
@@ -184,6 +186,8 @@ WhatsApp media arrives as a media id behind an authenticated, short-lived URL; `
 **Live inbox.** The open feed polls `inbox:version` (the workspace's newest `created_at`, backed by the `inbox_msg_ws_created` index) every 4 seconds and refetches the list, with the filters last applied, only when it changes. Webhook deliveries therefore show up within seconds without a reload; polled platforms still depend on the 5-minute cycle.
 
 Other inbound webhooks: `/webhooks/resend/` (Svix-signed bounces/suppressions → `EmailSuppression`, `apps/common/webhooks.py`) and `/webhooks/asaas/` (§11).
+
+**Contacts.** Both birth points also call `apps.contacts.services.on_inbox_message_created`, which, like the automations hook, never raises: it runs `record_inbox_sender` after the commit and only logs a failure. A sender is matched on `ContactChannel(workspace, kind, external_id)` (the inbox `sender_handle`, unique per workspace and kind when set), then on the channel's value, so the platform ID from a webhook and the @handle from polling end on one contact. The daily `refresh_contacts` task (`apps/contacts/tasks.py`) covers what the hook missed, capped at `REFRESH_SENDER_CAP` senders per run.
 
 ---
 

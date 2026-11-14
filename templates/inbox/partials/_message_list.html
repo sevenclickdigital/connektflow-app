@@ -1,8 +1,28 @@
-{% load humanize %}
+{% load humanize i18n %}
+{% comment %}
+The entries under the filters on screen, headed by their count and sort.
+Context: inbox_messages, total, sort, type_counts (inbox_feed). The type
+buttons of the filter row read their unread counts from inbox-type-counts.
+{% endcomment %}
+{{ type_counts|json_script:"inbox-type-counts" }}
+<div class="sticky top-0 z-10 bg-white border-b border-neutral-100 px-4 py-3 flex items-center justify-between gap-2">
+    <span class="text-sm font-semibold text-neutral-950">{% blocktranslate count counter=total %}{{ counter }} entry{% plural %}{{ counter }} entries{% endblocktranslate %}</span>
+    <label class="inline-flex items-center gap-1 text-neutral-500">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M21 16l-4 4-4-4"/></svg>
+        <span class="sr-only">{% translate "Sort" %}</span>
+        <select class="filter-select" @change="set('sort', $event.target.value)">
+            <option value="newest" {% if sort != "oldest" %}selected{% endif %}>{% translate "Newest first" %}</option>
+            <option value="oldest" {% if sort == "oldest" %}selected{% endif %}>{% translate "Oldest first" %}</option>
+        </select>
+    </label>
+</div>
 {% if inbox_messages %}
 {% for msg in inbox_messages %}
 {% include "inbox/partials/_message_row.html" with message=msg %}
 {% endfor %}
+{% if total > inbox_messages|length %}
+<p class="px-4 py-3 text-center text-xs text-neutral-500">{% blocktranslate count counter=inbox_messages|length %}Showing the first {{ counter }} entry. Narrow the filters to find the others.{% plural %}Showing the first {{ counter }} entries. Narrow the filters to find the others.{% endblocktranslate %}</p>
+{% endif %}
 {% else %}
 {% include "inbox/partials/_empty_state.html" %}
 {% endif %}

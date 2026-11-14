@@ -19,6 +19,7 @@ description: "Use when creating or editing Django templates, HTMX interactions, 
 - A state-changing action answers **204 + `HX-Trigger`**: `{"showToast": {"message": ..., "tone": "success|warn|error"}, "<refresh-event>": ...}`. Reference: `apps/approvals/views.py` and `apps/approvals/test_workflow.py`.
 - Use `request.htmx` to return a partial for HTMX and the full page otherwise.
 - Failures must reach the user: an error toast or an inline error partial, never a silent 200.
+- Confirmations go through the app's dialog (`templates/components/_confirm_dialog.html`, included by `base.html`): `hx-confirm="…"` on an HTMX element, or `data-confirm="…"` on a plain form; add `data-confirm-tone="danger"` and `data-confirm-label` for deletions. Never `confirm()` / `onsubmit="return confirm(…)"`, which opens the browser's own box.
 
 ## Translation — every user-visible string
 

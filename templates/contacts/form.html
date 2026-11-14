@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% load i18n humanize tz %}
+{% block title %}{% if is_new %}{% translate "New contact" %}{% else %}{{ contact.name }}{% endif %} - Automator{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div class="flex items-center gap-3 min-w-0">
+        {% if not is_new %}{% include "contacts/partials/_avatar.html" with size="w-12 h-12" %}{% endif %}
+        <div class="min-w-0">
+            <h1 class="page-title truncate">{% if is_new %}{% translate "New contact" %}{% else %}{{ contact.name }}{% endif %}</h1>
+            <p class="page-description">{% if is_new %}{% translate "Add a person or company and the channels you reach them on." %}{% else %}{% blocktranslate with date=contact.created_at|date:"j M Y" %}Contact since {{ date }}{% endblocktranslate %}{% endif %}</p>
+        </div>
+    </div>
+    {% if not is_new %}
+    <div class="a-pill-group" role="tablist" x-data>
+        <button type="button" role="tab" :class="$store.contactTab.value === 'data' && 'active'" @click="$store.contactTab.value = 'data'">{% translate "Contact details" %}</button>
+        <button type="button" role="tab" :class="$store.contactTab.value === 'interactions' && 'active'" @click="$store.contactTab.value = 'interactions'">{% blocktranslate count counter=interactions|length %}Interactions ({{ counter }}){% plural %}Interactions ({{ counter }}){% endblocktranslate %}</button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+{% comment %}
+One form for creating and editing. Channels are rows of parallel
+channel_kind / channel_value inputs plus channel_primary (the main row's
+index), read by contacts.forms.parse_channels. Tags are chips written to one
+comma-separated `tags` input. Translated labels reach Alpine through json_script.
+{% endcomment %}
+{{ channels_data|json_script:"contact-channels" }}
+{{ channel_kinds|json_script:"contact-channel-kinds" }}
+{{ tags_data|default:""|json_script:"contact-tags-initial" }}
+<script nonce="{{ request.csp_nonce }}">
+    document.addEventListener('alpine:init', () => { Alpine.store('contactTab', { value: 'data' }); });
+</script>
+
+<div x-data x-show="$store.contactTab.value === 'data'">
+<form method="post" enctype="multipart/form-data" novalidate
+      x-data="contactForm()" @submit="syncTags()">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert-error mb-4">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
+        <section class="a-card p-5">
+            <h2 class="section-title text-base">
+                <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                {% translate "Personal information" %}
+            </h2>
+            <div class="flex items-start gap-4 mb-4">
+                <label class="relative flex-shrink-0 cursor-pointer group" title="{% translate 'Change photo' %}">
+                    <template x-if="photoPreview"><img :src="photoPreview" alt="" class="w-20 h-20 rounded-full object-cover"></template>
+                    <template x-if="!photoPreview">
+                        <span>{% if contact.picture_url %}<img src="{{ contact.picture_url }}" alt="" referrerpolicy="no-referrer" class="w-20 h-20 rounded-full object-cover">{% else %}<span class="w-20 h-20 rounded-full flex items-center justify-center bg-brand-100 text-brand-800 font-semibold text-xl">{% if is_new %}<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{% else %}{{ contact.initials }}{% endif %}</span>{% endif %}</span>
+                    </template>
+                    <span class="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-white ring-1 ring-neutral-300 flex items-center justify-center text-brand-700 group-hover:bg-brand-50">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>
+                    </span>
+                    <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" class="sr-only"
+                           @change="const f = $event.target.files[0]; photoPreview = f ? URL.createObjectURL(f) : ''">
+                </label>
+                <div class="flex-1 min-w-0">
+                    {% include "components/_form_field.html" with field=form.name hide_optional=True %}
+                    {% if contact.photo %}
+                    <label class="mt-2 flex items-center gap-2 text-xs text-neutral-600"><input type="checkbox" name="remove_photo" value="1" class="bb-checkbox">{% translate "Remove photo" %}</label>
+                    {% endif %}
+                    {% if photo_error %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ photo_error }}</p>{% endif %}
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {% include "components/_form_field.html" with field=form.kind hide_optional=True %}
+                {% include "components/_form_field.html" with field=form.tax_id hide_optional=True %}
+                {% include "components/_form_field.html" with field=form.birth_date hide_optional=True %}
+                {% include "components/_form_field.html" with field=form.gender hide_optional=True %}
+                {% include "components/_form_field.html" with field=form.company class="sm:col-span-2" hide_optional=True %}
+            </div>
+        </section>
+
+        <section class="a-card p-5">
+            <h2 class="section-title text-base">
+                <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                {% translate "Communication channels" %}
+            </h2>
+            {% for error in channel_errors %}<p class="alert-error text-sm mb-3">{{ error }}</p>{% endfor %}
+            <input type="hidden" name="channel_primary" :value="primary">
+            <div class="space-y-2.5">
+                <template x-for="(row, index) in rows" :key="row.key">
+                    <div class="flex items-center gap-1.5">
+                        <select name="channel_kind" x-model="row.kind" class="form-input-styled bb-select text-sm py-2 pl-3 pr-8 border rounded-lg w-28 flex-shrink-0"
+                                aria-label="{% translate 'Channel' %}">
+                            <template x-for="k in kinds" :key="k.value"><option :value="k.value" x-text="k.label" :selected="k.value === row.kind"></option></template>
+                        </select>
+                        <input type="text" name="channel_value" x-model="row.value" maxlength="255" class="form-input-styled text-sm py-2 px-3 border rounded-lg flex-1 min-w-0"
+                               :placeholder="placeholder(row.kind)" aria-label="{% translate 'Channel value' %}">
+                        <button type="button" @click="primary = index" class="p-1.5 rounded-lg flex-shrink-0 hover:bg-brand-50"
+                                :class="primary === index ? 'text-brand-700' : 'text-neutral-400 hover:text-brand-700'"
+                                :aria-pressed="(primary === index).toString()"
+                                title="{% translate 'Main' context 'contact channel' %}" aria-label="{% translate 'Main' context 'contact channel' %}">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linejoin="round" :fill="primary === index ? 'currentColor' : 'none'"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </button>
+                        <button type="button" @click="remove(index)" class="p-1.5 rounded-lg text-neutral-500 hover:text-[var(--error-700)] hover:bg-[var(--error-50)] flex-shrink-0"
+                                aria-label="{% translate 'Remove channel' %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                        </button>
+                    </div>
+                </template>
+                <p x-show="!rows.length" class="text-sm text-neutral-600">{% translate "No channel yet. Add WhatsApp, Instagram, email or another way to reach this contact." %}</p>
+            </div>
+            <button type="button" @click="add()" class="btn-outline w-full justify-center mt-3">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                {% translate "Add channel" %}
+            </button>
+            {% if not is_new and contact.interactions_90d %}
+            <p class="text-xs text-neutral-600 mt-3">{% blocktranslate count counter=contact.interactions_90d %}{{ counter }} interaction in the Inbox in the last 90 days.{% plural %}{{ counter }} interactions in the Inbox in the last 90 days.{% endblocktranslate %}</p>
+            {% endif %}
+        </section>
+
+        <section class="a-card p-5">
+            <h2 class="section-title text-base">
+                <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                {% translate "Organisation and marketing" %}
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {% include "components/_form_field.html" with field=form.status hide_optional=True %}
+                <div>
+                    {% include "components/_form_field.html" with field=form.funnel hide_optional=True %}
+                </div>
+                <div class="sm:col-span-2">
+                    <label for="contact-tag-input" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Tags" %}</label>
+                    <input type="hidden" name="tags" :value="tags.join(', ')">
+                    <div class="form-input-styled flex flex-wrap items-center gap-1.5 px-3 py-1.5 min-h-[2.375rem] border rounded-lg" @click="$refs.tagInput.focus()">
+                        <template x-for="(tag, i) in tags" :key="tag">
+                            <span class="pill pill-brand">
+                                <span x-text="tag"></span>
+                                <button type="button" @click.stop="tags.splice(i, 1)" class="opacity-70 hover:opacity-100" aria-label="{% translate 'Remove tag' %}">×</button>
+                            </span>
+                        </template>
+                        <input id="contact-tag-input" x-ref="tagInput" x-model="tagDraft" list="contact-tag-suggestions" maxlength="40"
+                               @keydown.enter.prevent="addTag()" @keydown.comma.prevent="addTag()" @blur="addTag()"
+                               @keydown.backspace="if (!tagDraft && tags.length) tags.pop()"
+                               class="flex-1 min-w-[6rem] border-0 p-0 text-sm focus:ring-0 outline-none bg-transparent"
+                               placeholder="{% translate 'Add a tag' %}">
+                    </div>
+                    <datalist id="contact-tag-suggestions">{% for tag in facets.tags %}<option value="{{ tag }}">{% endfor %}</datalist>
+                    {% for error in form.tags.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
+                </div>
+                {% include "components/_form_field.html" with field=form.segment hide_optional=True %}
+                {% include "components/_form_field.html" with field=form.source hide_optional=True %}
+                <div class="sm:col-span-2">
+                    {% include "components/_form_field.html" with field=form.engagement_manual hide_optional=True %}
+                    <p class="text-xs text-neutral-600 mt-1.5">{% blocktranslate with level=computed_engagement %}Automatic uses the Inbox interactions of the last 90 days (now: {{ level }}).{% endblocktranslate %}</p>
+                </div>
+            </div>
+            <datalist id="contact-funnel-suggestions">{% for item in facets.funnels %}<option value="{{ item }}">{% endfor %}</datalist>
+            <datalist id="contact-segment-suggestions">{% for item in facets.segments %}<option value="{{ item }}">{% endfor %}</datalist>
+        </section>
+    </div>
+
+    <section class="a-card p-5 mb-5">
+        <h2 class="section-title text-base">
+            <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            {% translate "Additional information" %}
+        </h2>
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-5">
+            <div class="grid grid-cols-2 sm:grid-cols-6 gap-4 content-start">
+                {% include "components/_form_field.html" with field=form.address class="col-span-2 sm:col-span-6" hide_optional=True %}
+                {% include "components/_form_field.html" with field=form.city class="col-span-2 sm:col-span-3" hide_optional=True %}
+                {% include "components/_form_field.html" with field=form.state class="sm:col-span-1" hide_optional=True %}
+                {% include "components/_form_field.html" with field=form.postal_code class="sm:col-span-2" hide_optional=True %}
+            </div>
+            <div x-data="{ count: {{ form.notes.value|default:''|length }} }">
+                <label for="{{ form.notes.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-2">{{ form.notes.label }}</label>
+                <textarea name="notes" id="{{ form.notes.id_for_label }}" rows="5" maxlength="{{ max_notes }}" class="form-input-styled text-sm px-3 py-2 border rounded-lg"
+                          @input="count = $event.target.value.length">{{ form.notes.value|default:'' }}</textarea>
+                <div class="flex justify-between mt-1.5">
+                    <span>{% for error in form.notes.errors %}<span class="text-xs text-[var(--error-700)]">{{ error }}</span>{% endfor %}</span>
+                    <span class="text-xs text-neutral-500"><span x-text="count"></span> / {{ max_notes }}</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+            {% if not is_new %}
+            <button type="submit" form="contact-delete-form" class="btn-danger-soft">{% translate "Delete contact" %}</button>
+            {% endif %}
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'contacts:list' workspace_id=workspace_id %}" class="btn-ghost">{% translate "Cancel" %}</a>
+            <button type="submit" class="btn-brand">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                {% translate "Save contact" %}
+            </button>
+        </div>
+    </div>
+</form>
+{% if not is_new %}
+<form id="contact-delete-form" method="post" action="{% url 'contacts:delete' workspace_id=workspace_id contact_id=contact.id %}"
+      data-confirm-tone="danger" data-confirm-label="{% translate 'Delete' %}" data-confirm="{% blocktranslate with name=contact.name %}Delete {{ name }}? This cannot be undone.{% endblocktranslate %}">
+    {% csrf_token %}
+</form>
+{% endif %}
+</div>
+
+{% if not is_new %}
+<div x-data x-show="$store.contactTab.value === 'interactions'" x-cloak>
+    <section class="a-card overflow-hidden">
+        {% for message in interactions %}
+        <a href="{% url 'inbox:feed' workspace_id=workspace_id %}?q={{ message.sender_handle|urlencode }}" class="flex items-start gap-3 px-5 py-3.5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
+            <span class="mt-0.5">{% include "partials/_platform_icon.html" with platform=message.social_account.platform size="md" %}</span>
+            <span class="flex-1 min-w-0">
+                <span class="flex items-center gap-2 text-xs text-neutral-600">
+                    <span class="pill pill-neutral">{{ message.get_message_type_display }}</span>
+                    <span>{{ message.social_account.account_name }}</span>
+                    <span>·</span>
+                    <span>{% timezone request.workspace.effective_timezone|default:"UTC" %}{% include "contacts/partials/_when.html" with when=message.received_at %}{% endtimezone %}</span>
+                </span>
+                <span class="block text-sm text-neutral-800 mt-1 line-clamp-2">{{ message.body|default:"—" }}</span>
+            </span>
+        </a>
+        {% empty %}
+        <div class="px-6 py-12 text-center">
+            <p class="text-sm font-semibold text-neutral-900">{% translate "No interactions yet." %}</p>
+            <p class="text-sm text-neutral-600 mt-1">{% translate "Comments, mentions and messages this contact sends to your accounts show up here." %}</p>
+        </div>
+        {% endfor %}
+    </section>
+</div>
+{% endif %}
+
+<script nonce="{{ request.csp_nonce }}">
+    function contactForm() {
+        const initial = JSON.parse(document.getElementById('contact-channels').textContent);
+        const kinds = JSON.parse(document.getElementById('contact-channel-kinds').textContent);
+        let key = 0;
+        const firstPrimary = initial.findIndex(r => r.primary);
+        return {
+            kinds,
+            rows: initial.map(r => ({ key: key++, kind: r.kind, value: r.value })),
+            primary: firstPrimary >= 0 ? firstPrimary : 0,
+            photoPreview: '',
+            tags: [],
+            tagDraft: '',
+            init() {
+                const raw = JSON.parse(document.getElementById('contact-tags-initial').textContent || '""');
+                this.tags = (raw || '').split(',').map(t => t.trim()).filter(Boolean);
+                if (!this.rows.length) this.add();
+            },
+            placeholder(kind) {
+                const found = kinds.find(k => k.value === kind);
+                return found ? found.placeholder : '';
+            },
+            add() { this.rows.push({ key: key++, kind: this.rows.length ? 'instagram' : 'whatsapp', value: '' }); },
+            remove(index) {
+                this.rows.splice(index, 1);
+                if (this.primary >= this.rows.length) this.primary = 0;
+                else if (index < this.primary) this.primary -= 1;
+            },
+            addTag() {
+                const tag = this.tagDraft.replace(/,/g, '').trim();
+                if (tag && !this.tags.some(t => t.toLowerCase() === tag.toLowerCase()) && this.tags.length < 20) this.tags.push(tag);
+                this.tagDraft = '';
+            },
+            syncTags() { this.addTag(); },
+        };
+    }
+</script>
+{% endblock %}

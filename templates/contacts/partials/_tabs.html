@@ -1,0 +1,13 @@
+{% load i18n %}
+{% comment %}
+The Contacts area's sections. Only Contacts exists so far; the others are
+listed so the team sees what is coming, and do nothing.
+{% endcomment %}
+<nav class="a-pill-group" aria-label="{% translate 'Contacts' %}">
+    <a href="{% url 'contacts:list' workspace_id=request.workspace.id %}" class="{% if active == 'contacts' %}active{% endif %}" {% if active == 'contacts' %}aria-current="page"{% endif %}>{% translate "Contacts" %}</a>
+    {% translate "Coming soon" as soon %}
+    <button type="button" disabled class="opacity-60 cursor-not-allowed" title="{{ soon }}">{% translate "Funnels" %}</button>
+    <button type="button" disabled class="opacity-60 cursor-not-allowed" title="{{ soon }}">{% translate "Lists" %}</button>
+    <button type="button" disabled class="opacity-60 cursor-not-allowed" title="{{ soon }}">{% translate "Segments" %}</button>
+    <button type="button" disabled class="opacity-60 cursor-not-allowed" title="{{ soon }}">{% translate "Campaigns" %}</button>
+</nav>

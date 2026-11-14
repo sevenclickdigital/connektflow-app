@@ -1,0 +1,27 @@
+{% load i18n %}
+{% comment %}
+Conversations that can be added to the funnel (the board's "Add opportunity"):
+each one goes into ``pick_stage`` through funnels:board_move. Context:
+candidates, pick_stage, workspace.
+{% endcomment %}
+<ul class="divide-y divide-neutral-100">
+    {% for message in candidates %}
+    <li class="flex items-center gap-3 py-2.5">
+        <div class="relative flex-shrink-0">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-neutral-600" style="background: var(--surface-2);">{{ message.sender_name|make_list|first|upper }}</div>
+            {% if message.social_account.platform != "youtube" %}<span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=message.social_account.platform size="sm" %}</span>{% endif %}
+        </div>
+        <div class="min-w-0 flex-1">
+            <p class="text-[13px] font-semibold text-neutral-900 truncate">{{ message.sender_name }}</p>
+            <p class="text-xs text-neutral-500 truncate">{% if message.body %}{{ message.body }}{% else %}{% translate "Message without text" %}{% endif %}</p>
+        </div>
+        <button type="button" class="btn-outline !py-1 !px-3 text-xs"
+                hx-post="{% url 'funnels:board_move' workspace_id=workspace.id %}"
+                hx-vals='{"message": "{{ message.id }}", "stage": "{{ pick_stage }}"}' hx-swap="none">
+            {% translate "Add" %}
+        </button>
+    </li>
+    {% empty %}
+    <li class="py-8 text-center text-sm text-neutral-500">{% translate "Every conversation is already in this funnel." %}</li>
+    {% endfor %}
+</ul>

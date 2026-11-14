@@ -558,6 +558,10 @@ def _create_if_new(
         # exception here would unwind this handler and lose the customer's
         # message, which is far worse than not automating a reply to it.
         on_inbox_message_created(obj)
+        # Never raises either: it runs after the commit and only logs.
+        from apps.contacts.services import on_inbox_message_created as record_contact
+
+        record_contact(obj)
         return obj
     return None
 

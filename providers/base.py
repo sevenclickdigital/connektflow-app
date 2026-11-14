@@ -366,6 +366,15 @@ class SocialProvider(HttpProvider):
         """Post a comment on an existing post (e.g. first comment)."""
         raise NotImplementedError(f"{self.platform_name} does not support comments")
 
+    def get_post_preview(self, access_token: str, post_id: str) -> dict | None:
+        """What the inbox shows of the post a comment hangs off.
+
+        ``{"caption", "image_url", "url", "product_type"}`` (``product_type``:
+        ``feed``, ``reel``, ``story`` or ``""``), or ``None`` when the platform
+        offers no such read. Raises ``ProviderError`` when the read fails.
+        """
+        return None
+
     # ------------------------------------------------------------------
     # Analytics (optional - override per provider)
     # ------------------------------------------------------------------

@@ -632,8 +632,10 @@ class InboxSyncEngine:
             # transaction rolls back, the queued task looks the message up by id,
             # finds nothing and returns (step 1 of ``actions.run_for_message``).
             from apps.automations.services import on_inbox_message_created
+            from apps.contacts.services import on_inbox_message_created as record_contact
 
             on_inbox_message_created(obj)
+            record_contact(obj)
 
     def _notify_new_message(self, message):
         """Send notification for a new inbox message."""

@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% load humanize i18n %}
+
+{% block title %}{{ funnel.name }} - {% translate "Funnel" %} - {{ workspace.name }} - Automator{% endblock %}
+{% block content_width %}max-w-none{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* One step of the funnel figure: 100% wide at the top, 12% narrower per stage, cut as a trapezoid. */
+    .funnel-step {
+        width: calc(100% - var(--step) * 12%); min-width: 40%; height: 30px;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--st-solid); color: #fff; font-size: 12px; font-weight: 700; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
+        clip-path: polygon(0 0, 100% 0, 92% 100%, 8% 100%); border-radius: 6px;
+    }
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div class="flex items-start gap-3">
+        <a href="{% url 'funnels:inbox' workspace_id=workspace.id %}?funnel={{ funnel.id }}" class="mt-1 w-8 h-8 rounded-md flex items-center justify-center text-neutral-600 hover:bg-neutral-100" aria-label="{% translate 'Back to the funnel' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </a>
+        <div>
+            <h1 class="page-title">{{ funnel.name }}</h1>
+            <p class="page-description">{% translate "Every opportunity that came from your conversations, comments and messages, by stage." %}</p>
+        </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+        <select class="form-input-styled bb-select !w-auto" aria-label="{% translate 'Period' %}" onchange="window.location = this.value">
+            {% for period in periods %}
+            <option value="?{% for key, value in filters.items %}{% if value %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}funnel={{ funnel.id }}&days={{ period }}" {% if days == period %}selected{% endif %}>{% blocktranslate count counter=period %}Last {{ counter }} day{% plural %}Last {{ counter }} days{% endblocktranslate %}</option>
+            {% endfor %}
+            <option value="?{% for key, value in filters.items %}{% if value %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}funnel={{ funnel.id }}&days=0" {% if not days %}selected{% endif %}>{% translate "All time" %}</option>
+        </select>
+        <button type="button" class="btn-brand" x-data @click="$dispatch('funnel-pick', '{{ columns.0.stage.id }}')">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            {% translate "New opportunity" %}
+        </button>
+        {% if request.workspace_membership.effective_permissions.manage_workspace_settings %}
+        <a href="{% url 'funnels:settings' workspace_id=workspace.id %}" class="btn-outline" title="{% translate 'Manage funnels' %}" aria-label="{% translate 'Manage funnels' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-4 min-h-0" x-data="funnelBoard()" @board-refresh.window="reload()" @funnel-pick.window="pick($event.detail)">
+
+    <!-- Figures -->
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {% with f=figures %}
+        <div class="a-card p-4 flex items-center gap-3">
+            <div class="tile bg-brand-100 text-brand-700"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+            <div><div class="text-2xl font-bold leading-none tracking-tight text-neutral-950">{{ f.total|intcomma }}</div><div class="text-sm text-neutral-600 mt-1">{% translate "Conversations in the funnel" %}</div></div>
+        </div>
+        <div class="a-card p-4 flex items-center gap-3">
+            <div class="tile bg-[var(--error-50)] text-[var(--error-500)]"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+            <div><div class="text-2xl font-bold leading-none tracking-tight text-neutral-950">{{ f.open|intcomma }}</div><div class="text-sm text-neutral-600 mt-1">{% translate "Active opportunities" %}</div></div>
+        </div>
+        <div class="a-card p-4 flex items-center gap-3">
+            <div class="tile bg-[var(--success-50)] text-[var(--success-500)]"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg></div>
+            <div><div class="text-2xl font-bold leading-none tracking-tight text-neutral-950">{{ f.won|intcomma }}</div><div class="text-sm text-neutral-600 mt-1">{% translate "Converted" %}</div></div>
+        </div>
+        <div class="a-card p-4 flex items-center gap-3">
+            <div class="tile bg-brand-100 text-brand-700"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+            <div><div class="text-2xl font-bold leading-none tracking-tight text-neutral-950">{{ f.conversion|floatformat:1 }}%</div><div class="text-sm text-neutral-600 mt-1">{% translate "Conversion rate" %}</div></div>
+        </div>
+        <div class="a-card p-4 flex items-center gap-3">
+            <div class="tile bg-brand-100 text-brand-700"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+            <div><div class="text-2xl font-bold leading-none tracking-tight text-neutral-950">R$ {{ f.value|floatformat:"2g" }}</div><div class="text-sm text-neutral-600 mt-1">{% translate "Potential value" %}</div></div>
+        </div>
+        {% endwith %}
+    </div>
+
+    <!-- Filters: plain links and selects; each change reloads the board with the new query -->
+    <div class="a-card px-4 py-3 flex flex-wrap items-center gap-3">
+        <div>
+            <label for="board-funnel" class="block text-[11px] font-medium text-neutral-500">{% translate "Funnel" %}</label>
+            <select id="board-funnel" class="form-input-styled bb-select !py-1.5 !w-auto" @change="go({ funnel: $event.target.value, stage: '' })">
+                {% for item in funnels %}<option value="{{ item.id }}" {% if item.id == funnel.id %}selected{% endif %}>{{ item.name }}</option>{% endfor %}
+            </select>
+        </div>
+        {% include "calendar/partials/_platform_pills.html" with platform_model="params.platform" %}
+        <select class="form-input-styled bb-select !py-1.5 !w-auto" aria-label="{% translate 'Assignee' %}" @change="go({ assigned: $event.target.value })">
+            <option value="">{% translate "Assignee" %}</option>
+            <option value="none" {% if filters.assigned == "none" %}selected{% endif %}>{% translate "Not assigned" %}</option>
+            {% for member in team_members %}<option value="{{ member.user.id }}" {% if filters.assigned == member.user.id|stringformat:"s" %}selected{% endif %}>{{ member.user.get_short_name|default:member.user.email }}</option>{% endfor %}
+        </select>
+        <select class="form-input-styled bb-select !py-1.5 !w-auto" aria-label="{% translate 'Tags' %}" @change="go({ tag: $event.target.value })">
+            <option value="">{% translate "Tags" %}</option>
+            {% for tag in tags %}<option value="{{ tag }}" {% if filters.tag == tag %}selected{% endif %}>{{ tag }}</option>{% endfor %}
+        </select>
+        <select class="form-input-styled bb-select !py-1.5 !w-auto" aria-label="{% translate 'Origin' %}" @change="go({ origin: $event.target.value })">
+            <option value="">{% translate "Origin" %}</option>
+            <option value="feed" {% if filters.origin == "feed" %}selected{% endif %}>{% translate "Feed" context "inbox message origin" %}</option>
+            <option value="reel" {% if filters.origin == "reel" %}selected{% endif %}>{% translate "Reels" context "inbox message origin" %}</option>
+            <option value="story" {% if filters.origin == "story" %}selected{% endif %}>{% translate "Story" context "inbox message origin" %}</option>
+        </select>
+        <span class="hidden xl:block flex-1" aria-hidden="true"></span>
+        <div class="relative w-full sm:w-64">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" class="form-input-styled pl-9" value="{{ filters.q }}" placeholder="{% translate 'Search opportunity…' %}" aria-label="{% translate 'Search opportunity…' %}"
+                   @keydown.enter="go({ q: $event.target.value.trim() })">
+        </div>
+    </div>
+
+    <div class="flex gap-4 min-h-0 items-start">
+        <!-- Columns: drag a card to another stage to move it -->
+        <div id="funnel-board" class="flex-1 min-w-0 overflow-x-auto pb-2">
+            <div class="flex gap-3 min-w-max">
+                {% for column in columns %}
+                <section class="w-72 flex-shrink-0 a-card flex flex-col max-h-[70vh] stage-{{ column.stage.color }}"
+                         @dragover.prevent="over = '{{ column.stage.id }}'" @dragleave="over = ''"
+                         @drop.prevent="drop('{{ column.stage.id }}')"
+                         :class="over === '{{ column.stage.id }}' && 'ring-2 ring-[var(--st-fg)]'">
+                    <header class="px-4 py-3 rounded-t-[inherit]" style="background: var(--st-bg);">
+                        <div class="flex items-center justify-between gap-2">
+                            <h2 class="text-sm font-semibold text-neutral-950 truncate">{{ column.stage.name }}</h2>
+                            <span class="stage-pill !px-2 !py-0" style="background: var(--st-chip);">{{ column.count }}</span>
+                        </div>
+                        <p class="text-[13px] font-semibold mt-0.5" style="color: var(--st-fg);">R$ {{ column.value|floatformat:"2g" }}</p>
+                    </header>
+                    <div class="flex-1 min-h-[4rem] overflow-y-auto p-2 space-y-2">
+                        {% for card in column.cards %}
+                        <a href="{% url 'inbox:message_detail' workspace_id=workspace.id message_id=card.id %}?mode=funnel"
+                           draggable="true" @dragstart="dragging = '{{ card.id }}'" @dragend="dragging = ''; over = ''"
+                           class="block rounded-lg border border-neutral-300 bg-white p-3 no-underline hover:border-brand-300 hover:shadow-sm transition-all cursor-grab">
+                            <div class="flex items-start gap-2">
+                                <div class="relative flex-shrink-0">
+                                    {% if card.sender_avatar_url %}<img src="{{ card.sender_avatar_url }}" alt="" class="w-8 h-8 rounded-full object-cover">{% else %}<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-neutral-600" style="background: var(--surface-2);">{{ card.sender_name|make_list|first|upper }}</div>{% endif %}
+                                    {% if card.social_account.platform != "youtube" %}<span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=card.social_account.platform size="sm" %}</span>{% endif %}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-[13px] font-semibold text-neutral-900 truncate">{{ card.sender_name }}</p>
+                                    <p class="text-[12px] text-neutral-600 line-clamp-2 mt-0.5">{% if card.body %}{{ card.body }}{% else %}{% translate "Message without text" %}{% endif %}</p>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                                <span class="text-[11px] text-neutral-500">{% blocktranslate with time=card.received_at|timesince %}{{ time }} ago{% endblocktranslate %}</span>
+                                {% for tag in card.opp_tags|slice:":2" %}<span class="pill pill-neutral !text-[11px]">{{ tag }}</span>{% endfor %}
+                                {% if card.opp_value %}<span class="ml-auto stage-pill !py-0.5 !text-[11px]">R$ {{ card.opp_value|floatformat:"2g" }}</span>{% endif %}
+                            </div>
+                        </a>
+                        {% empty %}
+                        <p class="px-2 py-6 text-center text-xs text-neutral-500">{% translate "No conversations in this stage." %}</p>
+                        {% endfor %}
+                    </div>
+                    <footer class="p-2 border-t border-neutral-100">
+                        <button type="button" class="w-full inline-flex items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-semibold text-brand-800 hover:bg-brand-50" @click="pick('{{ column.stage.id }}')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                            {% translate "Add opportunity" %}
+                        </button>
+                    </footer>
+                </section>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Funnel performance, conversion and recent activity -->
+        <aside class="hidden 2xl:flex flex-col gap-4 w-80 flex-shrink-0">
+            <div class="a-card p-5">
+                <h2 class="text-sm font-semibold text-neutral-950 mb-3">{% translate "Funnel performance" %}</h2>
+                {% comment %}A funnel drawn as stacked trapezoids, narrower at each stage, each with its share inside.{% endcomment %}
+                <ul class="space-y-1">
+                    {% for column in columns %}
+                    <li class="stage-{{ column.stage.color }} flex items-center gap-3">
+                        <div class="w-28 flex-shrink-0 flex justify-center">
+                            <div class="funnel-step" style="--step: {{ forloop.counter0 }};">{{ column.share }}%</div>
+                        </div>
+                        <span class="text-[13px] text-neutral-700 truncate flex-1">{{ column.stage.name }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="a-card p-5 flex items-start gap-3">
+                <div class="min-w-0 flex-1">
+                    <h2 class="text-sm font-semibold text-neutral-950">{% translate "Conversion rate" %}</h2>
+                    <p class="text-3xl font-bold tracking-tight text-neutral-950 mt-2">{{ figures.conversion|floatformat:1 }}%</p>
+                    <p class="text-xs text-neutral-500 mt-1">{% translate "Conversations in a won stage, out of every conversation in the funnel." %}</p>
+                </div>
+                <div class="w-14 h-14 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                </div>
+            </div>
+            <div class="a-card p-5">
+                <h2 class="text-sm font-semibold text-neutral-950 mb-3">{% translate "Recent activity" %}</h2>
+                <ul class="space-y-3">
+                    {% for activity in activities %}
+                    <li class="flex items-start gap-2 text-[13px]">
+                        {% include "partials/_platform_icon.html" with platform=activity.opportunity.social_account.platform size="sm" %}
+                        <span class="min-w-0 flex-1 text-neutral-700">{% if activity.stage %}{% blocktranslate with name=activity.opportunity.name|default:activity.opportunity.thread_sender stage=activity.stage.name %}<strong class="font-semibold text-neutral-900">{{ name }}</strong> moved to {{ stage }}{% endblocktranslate %}{% else %}{% blocktranslate with name=activity.opportunity.name|default:activity.opportunity.thread_sender %}<strong class="font-semibold text-neutral-900">{{ name }}</strong> was updated{% endblocktranslate %}{% endif %}</span>
+                        <span class="text-[11px] text-neutral-500 flex-shrink-0">{{ activity.created_at|naturaltime }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="text-xs text-neutral-500">{% translate "No movement yet. Moving a conversation between stages shows here." %}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Add a conversation to a stage -->
+    <template x-teleport="body">
+        <div x-show="pickStage" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pick-title"
+             x-transition.opacity @keydown.escape.window="pickStage = ''" @click.self="pickStage = ''">
+            <div class="modal-panel is-lg">
+                <button type="button" class="modal-close" @click="pickStage = ''" aria-label="{% translate 'Close' %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+                <div class="modal-header">
+                    <div><div id="pick-title" class="modal-title">{% translate "Add a conversation to the funnel" %}</div>
+                    <div class="modal-meta">{% translate "Conversations that are not in this funnel yet." %}</div></div>
+                </div>
+                <input type="search" class="form-input-styled mb-3" placeholder="{% translate 'Search by name or message…' %}" aria-label="{% translate 'Search by name or message…' %}"
+                       x-ref="pickSearch" @input.debounce.300ms="loadPick($event.target.value)">
+                <div id="funnel-pick-list" class="max-h-[50vh] overflow-y-auto"></div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ request.csp_nonce }}">
+function funnelBoard() {
+    return {
+        dragging: '',
+        over: '',
+        pickStage: '',
+        params: Object.fromEntries(new URLSearchParams(window.location.search)),
+        moveUrl: '{% url "funnels:board_move" workspace_id=workspace.id %}',
+        go(changes) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('funnel', '{{ funnel.id }}');
+            Object.entries(changes).forEach(([key, value]) => { if (value) params.set(key, value); else params.delete(key); });
+            window.location.search = params.toString();
+        },
+        filterPlatform(code) { this.go({ platform: code }); },
+        drop(stage) {
+            const message = this.dragging;
+            this.dragging = '';
+            this.over = '';
+            if (message) this.move(message, stage);
+        },
+        move(message, stage) {
+            htmx.ajax('POST', this.moveUrl, { values: { message, stage }, swap: 'none' });
+        },
+        reload() {
+            this.pickStage = '';
+            htmx.ajax('GET', window.location.href, { target: '#funnel-board', select: '#funnel-board', swap: 'outerHTML' });
+        },
+        pick(stage) {
+            this.pickStage = stage;
+            this.loadPick('');
+            this.$nextTick(() => this.$refs.pickSearch && this.$refs.pickSearch.focus());
+        },
+        loadPick(q) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('funnel', '{{ funnel.id }}');
+            params.set('pick', q);
+            params.set('stage', this.pickStage);
+            htmx.ajax('GET', window.location.pathname + '?' + params.toString(), { target: '#funnel-pick-list', swap: 'innerHTML' });
+        },
+    };
+}
+</script>
+{% endblock %}

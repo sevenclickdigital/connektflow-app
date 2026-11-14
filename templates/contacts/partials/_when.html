@@ -1,0 +1,3 @@
+{% load i18n humanize %}{% comment %}
+"Today, 14:35" / "Yesterday, 18:20" / "12 Nov, 11:02". Render inside the workspace's {% timezone %}.
+{% endcomment %}{% blocktranslate with day=when|naturalday:"j M"|capfirst time=when|time:"H:i" %}{{ day }}, {{ time }}{% endblocktranslate %}

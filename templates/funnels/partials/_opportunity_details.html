@@ -1,0 +1,109 @@
+{% load i18n %}
+{% comment %}
+"Opportunity details", the right column of an entry on the funnel screen (in place
+of inbox/partials/_message_details.html): the contact, the entry's facts, its
+funnel and stage, the owner and what the team knows of the deal. Each field saves
+on change (funnels:opportunity_update) and redraws the panel.
+Context: views.opportunity_context + the inbox's _detail_context.
+{% endcomment %}
+{% url 'funnels:opportunity_update' workspace_id=workspace.id message_id=message.id as save_url %}
+<aside class="hidden 2xl:flex flex-col w-80 flex-shrink-0 overflow-y-auto border-l border-neutral-300" aria-labelledby="opportunity-title">
+    <h2 id="opportunity-title" class="px-5 pt-5 pb-2 flex items-center gap-2 text-base font-semibold text-neutral-950">
+        <svg class="w-5 h-5 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        {% translate "Opportunity details" %}
+    </h2>
+
+    <dl class="px-5">
+        <div class="inbox-fact">
+            <dt>{% translate "Contact" %}</dt>
+            <dd>
+                <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-neutral-600 flex-shrink-0" style="background: var(--surface-2);">{{ message.sender_name|make_list|first|upper }}</span>
+                <span class="min-w-0">
+                    <span class="block truncate">{% firstof contact.name message.sender_name %}</span>
+                    {% if contact %}<a href="{% url 'contacts:edit' workspace_id=workspace.id contact_id=contact.id %}" class="text-xs font-normal text-brand-800 hover:underline">{% translate "See profile" %} ↗</a>{% endif %}
+                </span>
+            </dd>
+        </div>
+        {% include "inbox/partials/_entry_facts.html" %}
+        <div class="inbox-fact">
+            <dt><label for="opp-funnel">{% translate "Funnel" %}</label></dt>
+            <dd>
+                <select id="opp-funnel" name="value" class="form-input-styled bb-select !py-1.5 !text-[13px]"
+                        hx-post="{{ save_url }}" hx-vals='{"field": "funnel"}' hx-trigger="change"
+                        hx-target="#inbox-detail-panel" hx-swap="innerHTML">
+                    {% for item in funnels %}<option value="{{ item.id }}" {% if item.id == opp_funnel.id %}selected{% endif %}>{{ item.name }}</option>{% endfor %}
+                </select>
+            </dd>
+        </div>
+        <div class="inbox-fact">
+            <dt><label for="opp-stage">{% translate "Stage" %}</label></dt>
+            <dd>
+                <select id="opp-stage" name="value" class="form-input-styled bb-select !py-1.5 !text-[13px]"
+                        hx-post="{{ save_url }}" hx-vals='{"field": "stage"}' hx-trigger="change"
+                        hx-target="#inbox-detail-panel" hx-swap="innerHTML">
+                    {% for stage in opp_funnel.stages.all %}<option value="{{ stage.id }}" {% if stage.id == opp_stage.id %}selected{% endif %}>{{ stage.name }}</option>{% endfor %}
+                </select>
+            </dd>
+        </div>
+        <div class="inbox-fact">
+            <dt>{% translate "Status" %}</dt>
+            <dd>{% if opp_stage %}<span class="stage-{{ opp_stage.color }} inline-flex items-center gap-2"><span class="stage-dot"></span>{{ opp_stage.get_kind_display }}</span>{% endif %}</dd>
+        </div>
+        <div class="inbox-fact">
+            <dt>{% translate "Assignee" %}</dt>
+            <dd>{% include "inbox/partials/_assignment_dropdown.html" with wide=True %}</dd>
+        </div>
+        <div class="inbox-fact">
+            <dt>{% translate "Tags" %}</dt>
+            <dd class="flex-wrap">
+                {% for tag in opportunity.tags %}
+                <button type="button" class="pill pill-neutral is-action" hx-post="{{ save_url }}" hx-vals='{"field": "remove_tag", "value": "{{ tag|escapejs }}"}'
+                        hx-target="#inbox-detail-panel" hx-swap="innerHTML" aria-label="{% blocktranslate %}Remove the {{ tag }} tag{% endblocktranslate %}">
+                    {{ tag }}
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+                {% endfor %}
+                <input type="text" name="value" maxlength="40" placeholder="{% translate '+ Tag' %}" aria-label="{% translate 'Add a tag' %}"
+                       class="w-20 px-2 py-1 text-[12px] rounded-md border border-dashed border-neutral-300 focus:outline-none focus:border-brand-500"
+                       hx-post="{{ save_url }}" hx-vals='{"field": "add_tag"}' hx-trigger="keydown[key=='Enter'] consume"
+                       hx-target="#inbox-detail-panel" hx-swap="innerHTML">
+            </dd>
+        </div>
+        <div class="inbox-fact">
+            <dt><label for="opp-interest">{% translate "Interest" %}</label></dt>
+            <dd>
+                <input id="opp-interest" type="text" name="value" maxlength="100" list="opp-interest-list" value="{{ opportunity.interest|default:'' }}"
+                       placeholder="{% translate 'e.g. Delivery solution' %}" class="form-input-styled !py-1.5 !text-[13px]"
+                       hx-post="{{ save_url }}" hx-vals='{"field": "interest"}' hx-trigger="change" hx-target="#inbox-detail-panel" hx-swap="innerHTML">
+                <datalist id="opp-interest-list">{% for item in interest_suggestions %}<option value="{{ item }}">{% endfor %}</datalist>
+            </dd>
+        </div>
+        <div class="inbox-fact">
+            <dt><label for="opp-value">{% translate "Potential value" %}</label></dt>
+            <dd>
+                <div class="relative w-full">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-neutral-500 pointer-events-none">R$</span>
+                    <input id="opp-value" type="text" inputmode="decimal" name="value" value="{{ opportunity.value|default:'0'|floatformat:'2g' }}"
+                           class="form-input-styled !py-1.5 !pl-9 !text-[13px]"
+                           hx-post="{{ save_url }}" hx-vals='{"field": "value"}' hx-trigger="change" hx-target="#inbox-detail-panel" hx-swap="innerHTML">
+                </div>
+            </dd>
+        </div>
+        <div class="py-2.5">
+            <label for="opp-notes" class="block text-[12px] text-neutral-500 mb-1.5">{% translate "Notes" %}</label>
+            <textarea id="opp-notes" name="value" rows="3" maxlength="5000" placeholder="{% translate 'Add notes…' %}" class="form-input-styled !text-[13px]"
+                      hx-post="{{ save_url }}" hx-vals='{"field": "notes"}' hx-trigger="change" hx-target="#inbox-detail-panel" hx-swap="innerHTML">{{ opportunity.notes|default:'' }}</textarea>
+        </div>
+    </dl>
+
+    <div class="px-5 py-5 mt-auto">
+        {% if next_stage %}
+        <button type="button" class="btn-outline w-full justify-center"
+                hx-post="{% url 'funnels:opportunity_next' workspace_id=workspace.id message_id=message.id %}"
+                hx-target="#inbox-detail-panel" hx-swap="innerHTML">
+            {% blocktranslate with stage=next_stage.name %}Move to {{ stage }}{% endblocktranslate %}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+        {% endif %}
+    </div>
+</aside>

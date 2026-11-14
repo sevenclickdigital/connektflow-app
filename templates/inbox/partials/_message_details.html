@@ -1,0 +1,117 @@
+{% load i18n tz %}
+{% comment %}
+"Entry details", the right column of the open entry on wide screens (2xl): channel,
+type, origin, post, status, sentiment and owner, the sender's contact (when there is
+one) with a link to its profile, and "Mark as resolved".
+Below 2xl the column is hidden and the conversation header carries the status and
+owner instead (_message_panel.html). Context: _detail_context.
+{% endcomment %}
+<aside class="hidden 2xl:flex flex-col w-80 flex-shrink-0 overflow-y-auto border-l border-neutral-300" aria-labelledby="inbox-details-title">
+    <h2 id="inbox-details-title" class="px-5 pt-5 pb-2 flex items-center gap-2 text-base font-semibold text-neutral-950">
+        <svg class="w-5 h-5 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        {% translate "Entry details" %}
+    </h2>
+
+    <dl class="px-5">
+        {% include "inbox/partials/_entry_facts.html" %}
+        <div class="inbox-fact">
+            <dt>{% translate "Status" %}</dt>
+            <dd><svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>{% include "inbox/partials/_status_dropdown.html" %}</dd>
+        </div>
+        <div class="inbox-fact">
+            <dt>{% translate "Sentiment" %}</dt>
+            <dd>
+                <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                <div x-data="{ sentimentOpen: false }" class="relative" @keydown.escape="sentimentOpen = false">
+                    <button type="button" @click="sentimentOpen = !sentimentOpen" :aria-expanded="sentimentOpen" class="cursor-pointer hover:opacity-80 transition-opacity">
+                        {% include "inbox/partials/_sentiment_badge.html" %}
+                    </button>
+                    <div x-show="sentimentOpen" @click.outside="sentimentOpen = false" x-cloak x-transition
+                         class="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 min-w-[140px]">
+                        {% for value, label in sentiment_choices %}
+                        <button type="button"
+                                hx-post="{% url 'inbox:change_sentiment' workspace_id=workspace.id message_id=message.id %}"
+                                hx-vals='{"sentiment": "{{ value }}"}'
+                                hx-target="#inbox-detail-panel"
+                                hx-swap="innerHTML"
+                                @click="sentimentOpen = false"
+                                class="w-full text-left px-3 py-1.5 text-[12px] text-neutral-800 hover:bg-neutral-50 transition-colors {% if message.sentiment == value %}font-semibold{% endif %}">
+                            {{ label }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </dd>
+        </div>
+        <div class="inbox-fact">
+            <dt>{% translate "Assignee" %}</dt>
+            <dd>{% include "inbox/partials/_assignment_dropdown.html" with wide=True %}</dd>
+        </div>
+        {% if sla_config and sla_config.is_active and message.status != 'resolved' and message.status != 'archived' %}
+        <div class="inbox-fact">
+            <dt>{% translate "SLA" %}</dt>
+            <dd>{% include "inbox/partials/_sla_badge.html" %}</dd>
+        </div>
+        {% endif %}
+    </dl>
+
+    {% if contact %}
+    {% comment %}
+    The contact behind this entry (contacts.services.contact_for_message), with
+    the same facts the contacts list shows and a link to the profile.
+    {% endcomment %}
+    <section class="px-5 pt-5" aria-labelledby="inbox-contact-title">
+        <h3 id="inbox-contact-title" class="sr-only">{% translate "Contact" %}</h3>
+        <div class="flex items-center gap-3 pb-3 border-b border-[var(--surface-2)]">
+            {% include "contacts/partials/_avatar.html" with size="w-10 h-10" %}
+            <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold text-neutral-950 truncate">{{ contact.name }}</p>
+                <p class="text-xs text-neutral-500">{% translate "Contact" %}</p>
+            </div>
+            <a href="{% url 'contacts:edit' workspace_id=workspace.id contact_id=contact.id %}" class="chip rounded-full px-3 flex-shrink-0">
+                {% translate "View profile" %}
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+            </a>
+        </div>
+        <dl>
+            <div class="inbox-fact">
+                <dt>{% translate "Source" %}</dt>
+                <dd><span class="pill bg-brand-50 text-neutral-900 font-medium">{{ contact.get_source_display }}</span></dd>
+            </div>
+            <div class="inbox-fact">
+                <dt>{% translate "Tags" %}</dt>
+                <dd class="flex-wrap">{% for tag in contact.tags %}<span class="pill pill-brand">{{ tag }}</span>{% empty %}<span class="text-neutral-500">—</span>{% endfor %}</dd>
+            </div>
+            <div class="inbox-fact">
+                <dt>{% translate "Funnel" %}</dt>
+                <dd>{{ contact.funnel|default:"—" }}</dd>
+            </div>
+            <div class="inbox-fact">
+                <dt>{% translate "Engagement" %}</dt>
+                <dd>{% include "contacts/partials/_engagement.html" with level=contact.engagement label=contact.get_engagement_display %}</dd>
+            </div>
+            <div class="inbox-fact">
+                <dt>{% translate "Last contact" %}</dt>
+                <dd>{% if contact.last_contact_at %}{% timezone workspace.effective_timezone|default:"UTC" %}{% include "contacts/partials/_when.html" with when=contact.last_contact_at %}{% endtimezone %}{% else %}—{% endif %}</dd>
+            </div>
+        </dl>
+    </section>
+    {% endif %}
+
+    <div class="px-5 py-5 mt-auto">
+        {% if message.status == "resolved" %}
+        <button type="button" class="btn-outline w-full justify-center"
+                hx-post="{% url 'inbox:change_status' workspace_id=workspace.id message_id=message.id %}"
+                hx-vals='{"status": "open"}' hx-target="#inbox-detail-panel" hx-swap="innerHTML">
+            {% translate "Reopen" %}
+        </button>
+        {% else %}
+        <button type="button" class="btn-outline w-full justify-center"
+                hx-post="{% url 'inbox:change_status' workspace_id=workspace.id message_id=message.id %}"
+                hx-vals='{"status": "resolved"}' hx-target="#inbox-detail-panel" hx-swap="innerHTML">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            {% translate "Mark as resolved" %}
+        </button>
+        {% endif %}
+    </div>
+</aside>
