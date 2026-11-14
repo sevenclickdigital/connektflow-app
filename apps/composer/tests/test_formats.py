@@ -8,7 +8,7 @@ from django.utils import timezone
 from apps.calendar.models import Queue, QueueEntry
 from apps.calendar.services import drop_queue_entry_unless_scheduled
 from apps.composer.models import PlatformPost, Post
-from apps.composer.services import publish_blocker, require_publishable
+from apps.composer.services import format_blocker, publish_blocker, require_publishable
 from apps.composer.tests.test_account_scope import AccountScopeTestsBase
 from apps.media_library.models import MediaAsset
 from apps.social_accounts.models import SocialAccount
@@ -29,14 +29,17 @@ class FormatsTestsBase(AccountScopeTestsBase):
 
 
 class FormatBlockerTests(FormatsTestsBase):
-    def test_a_story_with_two_images_is_refused_before_the_platform_is_called(self):
+    def test_a_story_with_two_images_goes_out_as_two_stories(self):
         self._attach(MediaAsset.MediaType.IMAGE, "a.jpg", post=self.post)
         self._attach(MediaAsset.MediaType.IMAGE, "b.jpg", post=self.post)
 
-        with self.assertRaisesMessage(ValueError, "A Story needs exactly one photo or one video."):
-            require_publishable(self.story)
-        # The feed row is a carousel and is fine.
+        require_publishable(self.story)
         require_publishable(self.feed)
+
+    def test_a_story_needs_a_photo_or_a_video(self):
+        self.assertEqual(format_blocker("story", []), "A Story needs at least one photo or video.")
+        self.assertEqual(format_blocker("story", ["document"]), "A Story needs at least one photo or video.")
+        self.assertEqual(format_blocker("story", ["image", "video"]), "")
 
     def test_the_engine_check_uses_the_ordered_media(self):
         reason = publish_blocker(

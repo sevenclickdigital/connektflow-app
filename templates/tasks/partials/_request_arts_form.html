@@ -1,7 +1,7 @@
 {% load i18n %}
 {% comment %}
-The art request form: pick a network by its accounts (the composer's round
-account tiles), tick the formats needed, brief and assign. Rendered inside the
+The art request form: pick a network by its accounts (the composer's
+destination cards), tick the formats needed, brief and assign. Rendered inside the
 request modal (tasks/partials/_request_arts_host.html) and, without JS, on its
 own page. Posts back to itself, or to ``action_url`` when another app reuses it
 (tasks.views.render_art_request_form); a valid request answers HX-Redirect to
@@ -21,34 +21,17 @@ the board with the new task open.
             <h2 class="text-lg font-semibold text-neutral-950 pr-10">{% translate "Request arts" %}</h2>
             <p class="text-sm text-neutral-600 mt-0.5">{% translate "Choose every piece this content needs. The creative team gets one task with the exact size of each." %}</p>
 
-            <div class="flex items-center gap-2.5 flex-wrap mt-5 pb-3" role="tablist" aria-label="{% translate 'Networks' %}">
+            <div class="target-picker mt-5 pb-3" role="tablist" aria-label="{% translate 'Networks' %}">
                 {% for group in groups %}
-                {% if group.accounts %}
-                <div class="target-group flex items-center gap-2">
-                    {% for account in group.accounts %}
-                    <button type="button" role="tab" class="target-tile" :class="tab === '{{ group.network.key }}' && 'selected'"
-                            :aria-selected="tab === '{{ group.network.key }}' ? 'true' : 'false'"
-                            aria-label="{{ group.network.label }} · {{ account.account_name }}" @click="tab = '{{ group.network.key }}'">
-                        {% include "partials/_channel_tile.html" with platform=account.platform account=account tip=account.account_name %}
-                        <span class="target-format target-count" x-show="counts['{{ group.network.key }}']" x-text="counts['{{ group.network.key }}']" x-cloak></span>
-                    </button>
-                    {% endfor %}
-                </div>
+                {% for account in group.accounts %}
+                {% include "partials/_target_card.html" with platform=account.platform account=account network=group.network.key %}
+                {% endfor %}
+                {% endfor %}
+                {% for group in groups %}
+                {% if not group.accounts %}
+                {% include "partials/_target_card.html" with platform=group.network.platforms.0 label=group.network.label network=group.network.key %}
                 {% endif %}
                 {% endfor %}
-                <div class="target-group flex items-center gap-2">
-                    {% for group in groups %}
-                    {% if not group.accounts %}
-                    <button type="button" role="tab" class="target-tile" :class="tab === '{{ group.network.key }}' && 'selected'"
-                            :aria-selected="tab === '{{ group.network.key }}' ? 'true' : 'false'"
-                            aria-label="{{ group.network.label }}" @click="tab = '{{ group.network.key }}'">
-                        {% blocktranslate asvar tip with network=group.network.label %}{{ network }} · not connected{% endblocktranslate %}
-                        {% include "partials/_channel_tile.html" with platform=group.network.platforms.0 tip=tip %}
-                        <span class="target-format target-count" x-show="counts['{{ group.network.key }}']" x-text="counts['{{ group.network.key }}']" x-cloak></span>
-                    </button>
-                    {% endif %}
-                    {% endfor %}
-                </div>
             </div>
 
             {% for group in groups %}

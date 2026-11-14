@@ -62,7 +62,7 @@ def _analytics_accounts(workspace, enabled_platforms):
     render.
     """
     accounts = list(
-        SocialAccount.objects.filter(
+        SocialAccount.objects.publishable().filter(
             workspace=workspace,
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,
         ).order_by("platform", "account_name")

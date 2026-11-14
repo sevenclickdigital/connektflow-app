@@ -248,7 +248,7 @@ def test_the_modal_gets_the_form_and_a_redirect_to_the_new_task(workspace, owner
     invalid = client.post(_request_url(workspace), {"title": "Arts"}, HTTP_HX_REQUEST="true")
     created = client.post(_request_url(workspace), {"title": "Arts", "formats": ["ig_story"]}, HTTP_HX_REQUEST="true")
 
-    assert "<html" not in form and "target-tile" in form and "Insta" in form
+    assert "<html" not in form and "target-card" in form and "Insta" in form
     assert invalid.status_code == 200 and "Choose at least one format." in invalid.content.decode()
     task = Task.objects.get()
     assert created.status_code == 204 and created["HX-Redirect"].endswith(f"?task={task.pk}")

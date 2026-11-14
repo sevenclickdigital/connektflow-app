@@ -8,6 +8,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.accounts import impersonation
+from apps.accounts.forms import ProfileForm
 
 
 def health_check(request):
@@ -69,13 +70,19 @@ def account_settings(request):
     tab = request.GET.get("tab", "profile")
     settings_active = "preferences" if tab == "preferences" else "profile"
 
+    profile_form = ProfileForm(instance=user)
     if request.method == "POST":
         action = request.POST.get("action", "")
 
         if action == "update_photo":
             _handle_photo_update(request, user)
-        elif action == "update_name":
-            _handle_name_update(request, user)
+        elif action == "update_profile":
+            profile_form = ProfileForm(request.POST, instance=user)
+            if not profile_form.is_valid():
+                # Re-rendered, not redirected: the errors sit next to the fields.
+                return _render_account_settings(request, user, settings_active, profile_form)
+            profile_form.save()
+            messages.success(request, _("Profile updated."))
         elif action == "update_password":
             _handle_password_update(request, user)
         elif action == "delete_account":
@@ -83,17 +90,21 @@ def account_settings(request):
 
         return redirect("accounts:settings")
 
-    # Fetch the user's organization membership for role display
+    return _render_account_settings(request, user, settings_active, profile_form)
+
+
+def _render_account_settings(request, user, settings_active, profile_form):
     from apps.members.models import OrgMembership
 
+    # The organization membership, for the role shown on the page.
     org_membership = OrgMembership.objects.filter(user=user).select_related("organization").first()
-
     return render(
         request,
         "accounts/settings.html",
         {
             "settings_active": settings_active,
             "org_membership": org_membership,
+            "profile_form": profile_form,
         },
     )
 
@@ -157,18 +168,6 @@ def _handle_photo_update(request, user):
     user.avatar = avatar
     user.save(update_fields=["avatar", "updated_at"])
     messages.success(request, _("Photo updated."))
-
-
-def _handle_name_update(request, user):
-    """Handle name change."""
-    name = request.POST.get("name", "").strip()
-    if not name:
-        messages.error(request, _("Name cannot be empty."))
-        return
-
-    user.name = name
-    user.save(update_fields=["name"])
-    messages.success(request, _("Name updated."))
 
 
 def _handle_password_update(request, user):

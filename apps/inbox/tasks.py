@@ -203,9 +203,13 @@ class InboxSyncEngine:
 
     def sync_all(self):
         """Poll each connected account for new messages."""
-        accounts = SocialAccount.objects.filter(
-            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-        ).select_related("workspace")
+        # WhatsApp has no endpoint listing past messages: its webhook is the
+        # only source, so there is nothing to poll.
+        accounts = (
+            SocialAccount.objects.filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
+            .exclude(platform="whatsapp")
+            .select_related("workspace")
+        )
 
         # One dict for the whole pass. Accounts overwhelmingly share a single
         # OAuth client, so without it the breaker costs a query per account to

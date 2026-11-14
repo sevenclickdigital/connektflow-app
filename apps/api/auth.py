@@ -220,7 +220,7 @@ class _AllWorkspaceAccounts:
     def all(self):  # noqa: A003 — mirrors the Django manager method name.
         from apps.social_accounts.models import SocialAccount
 
-        return SocialAccount.objects.for_workspace(self._workspace_id)
+        return SocialAccount.objects.for_workspace(self._workspace_id).publishable()
 
 
 class OAuthMcpActor:

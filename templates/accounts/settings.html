@@ -1,207 +1,164 @@
 {% extends "layouts/settings.html" %}
 {% load i18n %}
 {% block title %}{% translate "Profile - Settings" %} - Automator{% endblock %}
-{% block content %}
-<div class="max-w-2xl">
-    <h2 class="text-xl font-semibold mb-8" style="color: var(--text-primary);">{% translate "Profile" %}</h2>
 
-    <!-- Photo section -->
-    <form method="POST" enctype="multipart/form-data" x-data="{
-        preview: '{% if user.avatar %}{{ user.avatar.url }}{% endif %}',
-        hasExisting: {{ user.avatar|yesno:'true,false' }},
-        fileName: ''
-    }">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="update_photo">
-        <input type="hidden" name="delete_photo" :value="(!preview && hasExisting) ? '1' : '0'">
-
-        <div class="flex items-center justify-between mb-10">
-            <div class="flex items-center gap-4">
-                <!-- Avatar preview or default silhouette -->
-                <template x-if="preview">
-                    <div class="relative">
-                        <img :src="preview" alt="{% translate 'Profile photo' %}" class="w-16 h-16 rounded-full object-cover border" style="border-color: var(--border);">
-                        <button type="button"
-                                @click="preview = ''; $refs.avatarInput.value = ''; fileName = ''"
-                                class="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer"
-                                style="background: var(--neutral-200); color: var(--text-secondary);"
-                                title="{% translate 'Remove photo' %}">
-                            <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
-                    </div>
-                </template>
-                <template x-if="!preview">
-                    <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background: var(--neutral-200);">
-                        <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--neutral-400);"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    </div>
-                </template>
-
-                <div>
-                    <p class="text-sm font-semibold" style="color: var(--text-primary);">{% translate "Photo" %}</p>
-                    <p class="text-xs mt-0.5" style="color: var(--text-tertiary);">{% translate "Please choose a photo that is at least 180×180 pixels in size." %}</p>
-                </div>
-            </div>
-
-            <label class="btn-neutral-surface inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full cursor-pointer transition-colors"
-                   style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                {% translate "Upload Photo" %}
-                <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" x-ref="avatarInput"
-                       @change="if ($el.files[0]) { preview = URL.createObjectURL($el.files[0]); fileName = $el.files[0].name; hasExisting = true; $el.closest('form').requestSubmit(); }">
-            </label>
-        </div>
-    </form>
-
-    <!-- Name section -->
-    <form method="POST" class="mb-10">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="update_name">
-        <div class="flex items-end gap-4">
-            <div class="flex-1">
-                <label for="name" class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">{% translate "Name" %}</label>
-                <input type="text" id="name" name="name" value="{{ user.name }}" required maxlength="255"
-                       class="input-focus w-full px-3 py-2 text-sm rounded-lg outline-none transition-colors"
-                       style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
-            </div>
-            <button type="submit"
-                    class="btn-neutral px-5 py-2 text-sm font-medium rounded-full transition-colors cursor-pointer whitespace-nowrap"
-                    style="background: var(--neutral-100); color: var(--text-primary);">
-                {% translate "Save Changes" %}
-            </button>
-        </div>
-    </form>
-
-    <!-- Email (read-only) -->
-    <div class="mb-10">
-        <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">{% translate "Email" %}</label>
-        <p class="text-sm" style="color: var(--text-secondary);">{{ user.email }}</p>
-    </div>
-
-    <!-- Password section -->
-    <form method="POST" class="mb-10">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="update_password">
-        <div class="space-y-4">
-            <div>
-                <label for="current_password" class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">{% translate "Current password" %}</label>
-                <input type="password" id="current_password" name="current_password" placeholder="{% translate 'Current password' %}" required
-                       class="input-focus w-full px-3 py-2 text-sm rounded-lg outline-none transition-colors"
-                       style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
-            </div>
-            <div>
-                <label for="password" class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">{% translate "New password" %}</label>
-                <input type="password" id="password" name="password" placeholder="{% translate 'New password' %}" minlength="8" required
-                       class="input-focus w-full px-3 py-2 text-sm rounded-lg outline-none transition-colors"
-                       style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
-            </div>
-            <div>
-                <label for="password_confirm" class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">{% translate "Confirm new password" %}</label>
-                <input type="password" id="password_confirm" name="password_confirm" placeholder="{% translate 'Confirm new password' %}" minlength="8" required
-                       class="input-focus w-full px-3 py-2 text-sm rounded-lg outline-none transition-colors"
-                       style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
-            </div>
-            <div>
-                <button type="submit"
-                        class="btn-neutral px-5 py-2 text-sm font-medium rounded-full transition-colors cursor-pointer whitespace-nowrap"
-                        style="background: var(--neutral-100); color: var(--text-primary);">
-                    {% translate "Change Password" %}
-                </button>
-            </div>
-        </div>
-    </form>
-
-    <!-- Role section -->
-    {% if org_membership %}
-    <div class="mb-10">
-        <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">{% translate "Role" %}</label>
-        <div class="flex items-center gap-3">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full"
-                  style="background: var(--neutral-100); color: var(--text-primary);">
-                {% if org_membership.org_role == 'owner' %}
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                {% translate "Owner" %}
-                {% elif org_membership.org_role == 'admin' %}
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                {% translate "Admin" %}
-                {% else %}
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                {% translate "Member" %}
-                {% endif %}
-            </span>
-            <span class="text-xs" style="color: var(--text-tertiary);">
-                {% blocktranslate with org=org_membership.organization.name %}in {{ org }}{% endblocktranslate %}
-            </span>
-        </div>
-    </div>
-    {% endif %}    
-
-    <!-- Divider -->
-    <hr class="my-10" style="border-color: var(--border);">
-
-    <!-- Delete account section -->
-    <div x-data="{ showDeleteModal: false }">
-        <div class="flex items-start justify-between gap-4">
-            <div>
-                <h3 class="text-base font-semibold mb-1" style="color: var(--text-primary);">{% translate "Delete your account" %}</h3>
-                <p class="text-sm" style="color: var(--text-secondary); max-width: 480px;">
-                    {% translate "When you delete your account, you lose access to Automator account services, and we permanently delete your personal data." %}
-                </p>
-            </div>
-
-            <button type="button" @click="showDeleteModal = true"
-                    class="btn-danger-soft px-5 py-2 text-sm font-medium rounded-full transition-colors cursor-pointer whitespace-nowrap shrink-0"
-                    style="background: var(--error-soft, #FEE2E2); color: var(--error-500, #EF4444);">
-                {% translate "Delete Account" %}
-            </button>
-        </div>
-
-        <!-- Delete confirmation modal -->
-        <template x-teleport="body">
-            <div x-show="showDeleteModal" x-transition.opacity
-                 @keydown.escape.window="showDeleteModal = false"
-                 class="fixed inset-0 z-50 flex items-center justify-center"
-                 style="background: rgba(0,0,0,0.4);">
-                <div @click.outside="showDeleteModal = false"
-                     x-show="showDeleteModal"
-                     x-transition
-                     class="w-full max-w-md rounded-xl shadow-xl"
-                     style="background: var(--surface-0);">
-
-                    <!-- Header -->
-                    <div class="flex items-center justify-between px-6 py-4" style="border-bottom: 1px solid var(--border);">
-                        <h3 class="text-base font-semibold" style="color: var(--text-primary);">{% translate "Delete your account" %}</h3>
-                        <button type="button" @click="showDeleteModal = false" class="cursor-pointer" style="color: var(--text-tertiary);">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
-                    </div>
-
-                    <!-- Body -->
-                    <div class="px-6 py-5">
-                        <p class="text-sm" style="color: var(--text-secondary);">
-                            {% translate "Are you sure you want to delete your account? This action is permanent and cannot be undone. You will lose access to all Automator services, and your personal data will be permanently deleted." %}
-                        </p>
-                    </div>
-
-                    <!-- Footer -->
-                    <div class="flex justify-end gap-3 px-6 py-4" style="border-top: 1px solid var(--border);">
-                        <button type="button" @click="showDeleteModal = false"
-                                class="btn-neutral px-5 py-2 text-sm font-medium rounded-full cursor-pointer transition-colors"
-                                style="background: var(--neutral-100); color: var(--text-primary);">
-                            {% translate "Cancel" %}
-                        </button>
-                        <form method="POST">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="delete_account">
-                            <button type="submit"
-                                    class="btn-opacity px-5 py-2 text-sm font-semibold rounded-full cursor-pointer transition-colors whitespace-nowrap"
-                                    style="background: var(--error-500, #EF4444); color: white;">
-                                {% translate "Yes, delete my account" %}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </template>
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "Profile" %}</h1>
+        <p class="page-description">{% translate "Your photo, personal details, address and password." %}</p>
     </div>
 </div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-start">
+    <!-- Personal details -->
+    <section class="flex flex-col lg:col-span-2">
+        <h2 class="section-title">{% translate "Personal details" %}</h2>
+        <div class="a-card divide-y divide-neutral-300 flex-1">
+            <form method="POST" enctype="multipart/form-data" class="p-6" x-data="{
+                preview: '{% if user.avatar %}{{ user.avatar.url }}{% endif %}',
+                hasExisting: {{ user.avatar|yesno:'true,false' }},
+                fileName: ''
+            }">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_photo">
+                <input type="hidden" name="delete_photo" :value="(!preview && hasExisting) ? '1' : '0'">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <template x-if="preview">
+                            <div class="relative">
+                                <img :src="preview" alt="{% translate 'Profile photo' %}" class="w-16 h-16 rounded-full object-cover border border-neutral-300">
+                                <button type="button"
+                                        @click="preview = ''; $refs.avatarInput.value = ''; fileName = ''"
+                                        class="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer bg-neutral-200 text-neutral-600"
+                                        title="{% translate 'Remove photo' %}">
+                                    <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                </button>
+                            </div>
+                        </template>
+                        <template x-if="!preview">
+                            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-neutral-200 text-neutral-400">
+                                <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </div>
+                        </template>
+                        <div>
+                            <p class="text-sm font-semibold text-neutral-950">{% translate "Photo" %}</p>
+                            <p class="text-xs mt-0.5 text-neutral-500">{% translate "Please choose a photo that is at least 180×180 pixels in size." %}</p>
+                        </div>
+                    </div>
+                    <label class="btn-ghost">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        {% translate "Upload Photo" %}
+                        <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" x-ref="avatarInput"
+                               @change="if ($el.files[0]) { preview = URL.createObjectURL($el.files[0]); fileName = $el.files[0].name; hasExisting = true; $el.closest('form').requestSubmit(); }">
+                    </label>
+                </div>
+            </form>
+
+            <form method="POST" class="divide-y divide-neutral-300" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_profile">
+                <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {% include "components/_form_field.html" with field=profile_form.first_name %}
+                    {% include "components/_form_field.html" with field=profile_form.last_name %}
+                    <div>
+                        <p class="text-sm font-semibold text-neutral-950 mb-2">{% translate "Email" %}</p>
+                        <p class="text-sm text-neutral-600 break-all py-2">{{ user.email }}</p>
+                    </div>
+                    {% if org_membership %}
+                    <div>
+                        <p class="text-sm font-semibold text-neutral-950 mb-2">{% translate "Role" %}</p>
+                        <div class="flex flex-wrap items-center gap-2 py-1.5">
+                            <span class="pill pill-brand"><i></i>{% if org_membership.org_role == 'owner' %}{% translate "Owner" %}{% elif org_membership.org_role == 'admin' %}{% translate "Admin" %}{% else %}{% translate "Member" %}{% endif %}</span>
+                            <span class="text-xs text-neutral-500">{% blocktranslate with org=org_membership.organization.name %}in {{ org }}{% endblocktranslate %}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="p-6">
+                    <h3 class="text-base font-semibold text-neutral-950">{% translate "Address" %}</h3>
+                    <p class="text-xs text-neutral-500 mt-0.5 mb-4">{% translate "Used for contracts and invoices. Fill it all in, or leave it blank." %}</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-6 gap-4">
+                        {% include "components/_form_field.html" with field=profile_form.address_postal_code hide_optional=True class="sm:col-span-2" %}
+                        {% include "components/_form_field.html" with field=profile_form.address_street hide_optional=True class="sm:col-span-4" %}
+                        {% include "components/_form_field.html" with field=profile_form.address_number hide_optional=True class="sm:col-span-2" %}
+                        {% include "components/_form_field.html" with field=profile_form.address_complement class="sm:col-span-4" %}
+                        {% include "components/_form_field.html" with field=profile_form.address_neighborhood hide_optional=True class="sm:col-span-2" %}
+                        {% include "components/_form_field.html" with field=profile_form.address_city hide_optional=True class="sm:col-span-2" %}
+                        {% include "components/_form_field.html" with field=profile_form.address_state hide_optional=True class="sm:col-span-2" %}
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 flex justify-end bg-[var(--surface-1)] rounded-b-[var(--radius-lg)]">
+                    <button type="submit" class="btn-brand">{% translate "Save Changes" %}</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Password -->
+    <section class="flex flex-col">
+        <h2 class="section-title">{% translate "Password" %}</h2>
+        <form method="POST" class="a-card p-6 flex-1 space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_password">
+            <div>
+                <label for="current_password" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Current password" %}</label>
+                <input type="password" id="current_password" name="current_password" placeholder="{% translate 'Current password' %}" required class="form-input-styled">
+            </div>
+            <div>
+                <label for="password" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "New password" %}</label>
+                <input type="password" id="password" name="password" placeholder="{% translate 'New password' %}" minlength="8" required class="form-input-styled">
+            </div>
+            <div>
+                <label for="password_confirm" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Confirm new password" %}</label>
+                <input type="password" id="password_confirm" name="password_confirm" placeholder="{% translate 'Confirm new password' %}" minlength="8" required class="form-input-styled">
+            </div>
+            <button type="submit" class="btn-brand">{% translate "Change Password" %}</button>
+        </form>
+    </section>
+</div>
+
+<section class="mb-8" x-data="{ showDeleteModal: false }">
+    <h2 class="section-title">{% translate "Danger zone" %}</h2>
+    <div class="a-card p-6 flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0 max-w-2xl">
+            <h3 class="text-base font-semibold text-neutral-950 mb-1">{% translate "Delete your account" %}</h3>
+            <p class="text-sm text-neutral-600">{% translate "When you delete your account, you lose access to Automator account services, and we permanently delete your personal data." %}</p>
+        </div>
+        <button type="button" @click="showDeleteModal = true" class="btn-danger-soft">{% translate "Delete Account" %}</button>
+    </div>
+
+    {% comment %}
+    A destructive confirmation: it closes only through its buttons, not on a
+    click outside, so a stray click cannot be read as a decision.
+    {% endcomment %}
+    <template x-teleport="body">
+        <div x-show="showDeleteModal" x-cloak class="modal-overlay" role="dialog" aria-modal="true"
+             x-transition.opacity @keydown.escape.window="showDeleteModal = false">
+            <div class="modal-panel">
+                <div class="modal-header">
+                    <div class="modal-icon is-error">
+                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <div class="modal-title">{% translate "Delete your account" %}</div>
+                </div>
+                <div class="modal-body">
+                    <p>{% translate "Are you sure you want to delete your account? This action is permanent and cannot be undone. You will lose access to all Automator services, and your personal data will be permanently deleted." %}</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-ghost" @click="showDeleteModal = false">{% translate "Cancel" %}</button>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_account">
+                        <button type="submit" class="btn-danger-soft">{% translate "Yes, delete my account" %}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </template>
+</section>
 {% endblock %}

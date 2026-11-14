@@ -165,7 +165,7 @@ def _row_context(api_key: ApiKey, *, user, memo: dict) -> dict:
         connected = memo["accounts"].get(workspace.id)
         if connected is None:
             connected = list(
-                SocialAccount.objects.filter(
+                SocialAccount.objects.publishable().filter(
                     workspace=workspace,
                     connection_status=SocialAccount.ConnectionStatus.CONNECTED,
                 ).order_by("platform", "account_name")
@@ -252,7 +252,7 @@ def workspace_options_partial(request):
 
     # Show all connected accounts; the issue endpoint re-checks the
     # account → workspace mapping before persisting.
-    accounts = SocialAccount.objects.filter(
+    accounts = SocialAccount.objects.publishable().filter(
         workspace=workspace,
         connection_status=SocialAccount.ConnectionStatus.CONNECTED,
     ).order_by("platform", "account_name")

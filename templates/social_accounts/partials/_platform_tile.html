@@ -1,0 +1,15 @@
+{% comment %}
+40px icon tile in the platform's own colours.
+Usage: {% include "social_accounts/partials/_platform_tile.html" with platform=account.platform %}
+YouTube gets a generic video glyph in neutral colours: no YouTube logo, red
+or play-button shape outside the places the brand guidelines allow.
+{% endcomment %}
+{% if platform == "youtube" %}
+<div class="tile bg-neutral-100 text-neutral-800">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg>
+</div>
+{% else %}
+<div class="tile {% if platform == 'facebook' %}bg-blue-50 text-blue-600{% elif platform == 'instagram' or platform == 'instagram_login' %}bg-gradient-to-br from-purple-50 to-pink-50 text-pink-600{% elif platform == 'linkedin_personal' or platform == 'linkedin_company' %}bg-blue-50 text-blue-700{% elif platform == 'tiktok' %}bg-neutral-950 text-white{% elif platform == 'pinterest' %}bg-red-50 text-red-500{% elif platform == 'bluesky' %}bg-sky-50 text-sky-500{% elif platform == 'google_business' %}bg-blue-50 text-blue-500{% elif platform == 'mastodon' %}bg-indigo-50 text-indigo-600{% elif platform == 'whatsapp' %}bg-green-50 text-green-600{% else %}bg-neutral-100 text-neutral-950{% endif %}">
+    {% include "social_accounts/partials/_platform_icon.html" with platform=platform size="5" %}
+</div>
+{% endif %}

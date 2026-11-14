@@ -58,7 +58,7 @@ def choosable_accounts(workspace):
     from apps.social_accounts.models import SocialAccount
 
     accounts = (
-        SocialAccount.objects.for_workspace(workspace.id)
+        SocialAccount.objects.for_workspace(workspace.id).publishable()
         .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
         .order_by("platform", "account_name")
     )

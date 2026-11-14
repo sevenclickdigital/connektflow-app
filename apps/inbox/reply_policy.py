@@ -41,6 +41,8 @@ def reply_eligibility(message, *, origin=PROGRAMMATIC, actor=None, credentials=N
         "human_agent": False,
     }
     account = message.social_account
+    if message.message_type == "dm" and account.platform == "whatsapp":
+        return _whatsapp_eligibility(message, result, now=now)
     if message.message_type != "dm" or account.platform not in META_DM_PLATFORMS:
         return result
     result.update(can_send=False, window="unavailable")
@@ -120,4 +122,45 @@ def reply_eligibility(message, *, origin=PROGRAMMATIC, actor=None, credentials=N
             "Human Agent access is not enabled for this Meta app. An administrator must enable it after Meta approval."
         )
     result.update(can_send=True, human_agent=True)
+    return result
+
+
+def _whatsapp_eligibility(message, result, *, now=None):
+    """WhatsApp's customer service window: free-form text only within 24 hours.
+
+    The window opens with each message the customer sends and there is no
+    human-agent extension: past it, WhatsApp delivers only approved templates.
+    ``received_at`` of a WhatsApp message is the platform's own timestamp
+    (see ``inbox.webhooks._upsert_whatsapp_message``).
+    """
+    from django.db.models import Max
+    from django.utils.translation import gettext as _
+
+    account = message.social_account
+    result.update(can_send=False, window="unavailable")
+    if account.needs_reconnect or not account.oauth_access_token:
+        result["reason"] = _("Reconnect this WhatsApp number before replying.")
+        return result
+    recipient = recipient_id(message)
+    if not recipient:
+        result["reason"] = _("The original message is missing the customer's number.")
+        return result
+    latest = (
+        InboxMessage.objects.filter(social_account=account, message_type="dm", sender_handle=recipient)
+        .aggregate(latest=Max("received_at"))
+        .get("latest")
+    )
+    now = now or timezone.now()
+    if latest is None or latest > now:
+        latest = message.received_at
+    until = latest + timedelta(hours=24)
+    result.update(standard_reply_until=until)
+    if now < until:
+        result.update(can_send=True, window="standard")
+        return result
+    result["window"] = "expired"
+    result["reason"] = _(
+        "More than 24 hours have passed since the customer last wrote. "
+        "WhatsApp only delivers approved template messages until they write again."
+    )
     return result

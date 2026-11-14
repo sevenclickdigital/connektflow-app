@@ -1,86 +1,87 @@
 {% extends "layouts/workspace_settings.html" %}
 {% load i18n %}
 {% block title %}{% translate "Settings" %} - {{ workspace.name }} - Automator{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "General" %}</h1>
+        <p class="page-description">{% translate "Name, logo and lifecycle of this workspace." %}</p>
+    </div>
+</div>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-2xl">
-    <h2 class="text-xl font-semibold mb-8" style="color: var(--text-primary);">{% translate "General" %}</h2>
-
-    <!-- Workspace Name section -->
-    <form method="POST" class="mb-10">
-        {% csrf_token %}
-        <div class="flex items-end gap-4">
-            <div class="flex-1">
-                <label for="name" class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">{% translate "Workspace Name" %}</label>
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Identity" %}</h2>
+    <div class="a-card divide-y divide-neutral-300">
+        <!-- Workspace name -->
+        <form method="POST" class="p-6">
+            {% csrf_token %}
+            <label for="name" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Workspace Name" %}</label>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                 <input type="text" id="name" name="name" value="{{ workspace.name }}" required maxlength="100"
-                       class="input-focus w-full px-3 py-2 text-sm rounded-lg outline-none transition-colors"
-                       style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
+                       class="form-input-styled flex-1">
+                <button type="submit" class="btn-brand">{% translate "Save Changes" %}</button>
             </div>
-            <button type="submit"
-                    class="btn-neutral px-5 py-2 text-sm font-medium rounded-full cursor-pointer whitespace-nowrap"
-                    style="background: var(--neutral-100); color: var(--text-primary);">
-                {% translate "Save Changes" %}
-            </button>
-        </div>
-    </form>
+        </form>
 
-    <!-- Logo section -->
-    <form method="POST" enctype="multipart/form-data" x-data="{
-        preview: '{% if workspace.icon %}{{ workspace.icon.url }}{% endif %}',
-        hasExisting: {{ workspace.icon|yesno:'true,false' }},
-        fileName: ''
-    }">
-        {% csrf_token %}
-        <input type="hidden" name="upload_icon" value="1">
-        <input type="hidden" name="delete_icon" :value="(!preview && hasExisting) ? '1' : '0'">
+        <!-- Logo -->
+        <form method="POST" enctype="multipart/form-data" class="p-6" x-data="{
+            preview: '{% if workspace.icon %}{{ workspace.icon.url }}{% endif %}',
+            hasExisting: {{ workspace.icon|yesno:'true,false' }},
+            fileName: ''
+        }">
+            {% csrf_token %}
+            <input type="hidden" name="upload_icon" value="1">
+            <input type="hidden" name="delete_icon" :value="(!preview && hasExisting) ? '1' : '0'">
 
-        <div class="flex items-center justify-between mb-10">
-            <div class="flex items-center gap-4">
-                <!-- Logo preview or default placeholder -->
-                <template x-if="preview">
-                    <div class="relative">
-                        <img :src="preview" alt="{% translate 'Workspace logo' %}" class="w-16 h-16 rounded-lg object-cover border" style="border-color: var(--border);">
-                        <button type="button"
-                                @click="preview = ''; $refs.fileInput.value = ''; fileName = ''"
-                                class="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer"
-                                style="background: var(--neutral-200); color: var(--text-secondary);"
-                                title="{% translate 'Remove logo' %}">
-                            <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <template x-if="preview">
+                        <div class="relative">
+                            <img :src="preview" alt="{% translate 'Workspace logo' %}" class="w-16 h-16 rounded-lg object-cover border border-neutral-300">
+                            <button type="button"
+                                    @click="preview = ''; $refs.fileInput.value = ''; fileName = ''"
+                                    class="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer bg-neutral-200 text-neutral-600"
+                                    title="{% translate 'Remove logo' %}">
+                                <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
+                    </template>
+                    <template x-if="!preview">
+                        <div class="w-16 h-16 rounded-lg flex items-center justify-center bg-neutral-200 text-neutral-400">
+                            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        </div>
+                    </template>
+                    <div>
+                        <p class="text-sm font-semibold text-neutral-950">{% translate "Logo" %}</p>
+                        <p class="text-xs mt-0.5 text-neutral-500">{% translate "JPEG, PNG, WebP, or GIF. Max 2 MB." %}</p>
                     </div>
-                </template>
-                <template x-if="!preview">
-                    <div class="w-16 h-16 rounded-lg flex items-center justify-center" style="background: var(--neutral-200);">
-                        <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--neutral-400);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                    </div>
-                </template>
-
-                <div>
-                    <p class="text-sm font-semibold" style="color: var(--text-primary);">{% translate "Logo" %}</p>
-                    <p class="text-xs mt-0.5" style="color: var(--text-tertiary);">{% translate "JPEG, PNG, WebP, or GIF. Max 2 MB." %}</p>
                 </div>
+
+                <label class="btn-ghost">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    {% translate "Upload Logo" %}
+                    <input type="file" name="icon" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" x-ref="fileInput"
+                           @change="if ($el.files[0]) { preview = URL.createObjectURL($el.files[0]); fileName = $el.files[0].name; hasExisting = true; $el.closest('form').requestSubmit(); }">
+                </label>
             </div>
+        </form>
+    </div>
+</section>
 
-            <label class="btn-surface-neutral-50 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full cursor-pointer"
-                   style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                {% translate "Upload Logo" %}
-                <input type="file" name="icon" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" x-ref="fileInput"
-                       @change="if ($el.files[0]) { preview = URL.createObjectURL($el.files[0]); fileName = $el.files[0].name; hasExisting = true; $el.closest('form').requestSubmit(); }">
-            </label>
-        </div>
-    </form>
-
-    {% if is_owner_or_manager %}
-    <hr class="my-10" style="border-color: var(--border);">
-
-    <!-- Archive / Restore Workspace section -->
-    <div x-data="{ showArchiveModal: false }">
-        <div class="flex items-start justify-between gap-4 mb-10">
-            <div>
-                <h3 class="text-base font-semibold mb-1" style="color: var(--text-primary);">
+{% if is_owner_or_manager %}
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Danger zone" %}</h2>
+    <div class="a-card divide-y divide-neutral-300">
+        <!-- Archive / restore -->
+        <div class="p-6 flex flex-wrap items-start justify-between gap-4" x-data="{ showArchiveModal: false }">
+            <div class="min-w-0 max-w-2xl">
+                <h3 class="text-base font-semibold text-neutral-950 mb-1">
                     {% if workspace.is_archived %}{% translate "Restore this workspace" %}{% else %}{% translate "Archive this workspace" %}{% endif %}
                 </h3>
-                <p class="text-sm" style="color: var(--text-secondary); max-width: 480px;">
+                <p class="text-sm text-neutral-600">
                     {% if workspace.is_archived %}
                     {% translate "This workspace is currently archived. Restoring it will make it visible in the sidebar and accessible to all members again." %}
                     {% elif can_archive %}
@@ -95,55 +96,33 @@
             <form method="POST">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="unarchive_workspace">
-                <button type="submit"
-                        class="btn-neutral px-5 py-2 text-sm font-medium rounded-full cursor-pointer whitespace-nowrap shrink-0"
-                        style="background: var(--neutral-100); color: var(--text-primary);">
-                    {% translate "Restore Workspace" %}
-                </button>
+                <button type="submit" class="btn-ghost">{% translate "Restore Workspace" %}</button>
             </form>
             {% elif can_archive %}
-            <button type="button" @click="showArchiveModal = true"
-                    class="btn-amber px-5 py-2 text-sm font-medium rounded-full cursor-pointer whitespace-nowrap shrink-0"
-                    style="background: #FEF3C7; color: #92400E;">
-                {% translate "Archive Workspace" %}
-            </button>
+            <button type="button" @click="showArchiveModal = true" class="btn-ghost text-[var(--warning-700)]">{% translate "Archive Workspace" %}</button>
 
-            <!-- Archive confirmation modal -->
             <template x-teleport="body">
-                <div x-show="showArchiveModal" x-transition.opacity
-                     @keydown.escape.window="showArchiveModal = false"
-                     class="fixed inset-0 z-50 flex items-center justify-center"
-                     style="background: rgba(0,0,0,0.4);">
-                    <div @click.outside="showArchiveModal = false"
-                         x-show="showArchiveModal"
-                         x-transition
-                         class="w-full max-w-md rounded-xl shadow-xl"
-                         style="background: var(--surface-0);">
-                        <div class="flex items-center justify-between px-6 py-4" style="border-bottom: 1px solid var(--border);">
-                            <h3 class="text-base font-semibold" style="color: var(--text-primary);">{% translate "Archive this workspace" %}</h3>
-                            <button type="button" @click="showArchiveModal = false" class="cursor-pointer" style="color: var(--text-tertiary);">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                            </button>
+                <div x-show="showArchiveModal" x-cloak class="modal-overlay" role="dialog" aria-modal="true"
+                     x-transition.opacity @keydown.escape.window="showArchiveModal = false" @click.self="showArchiveModal = false">
+                    <div class="modal-panel">
+                        <button type="button" class="modal-close" @click="showArchiveModal = false" aria-label="{% translate 'Close' %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                        <div class="modal-header">
+                            <div class="modal-icon is-warning">
+                                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                            </div>
+                            <div class="modal-title">{% translate "Archive this workspace" %}</div>
                         </div>
-                        <div class="px-6 py-5">
-                            <p class="text-sm" style="color: var(--text-secondary);">
-                                {% blocktranslate with ws=workspace.name %}Are you sure you want to archive <strong>{{ ws }}</strong>? The workspace will be hidden from the sidebar and no new posts can be created. All existing data will be preserved.{% endblocktranslate %}
-                            </p>
+                        <div class="modal-body">
+                            <p>{% blocktranslate with ws=workspace.name %}Are you sure you want to archive <strong>{{ ws }}</strong>? The workspace will be hidden from the sidebar and no new posts can be created. All existing data will be preserved.{% endblocktranslate %}</p>
                         </div>
-                        <div class="flex justify-end gap-3 px-6 py-4" style="border-top: 1px solid var(--border);">
-                            <button type="button" @click="showArchiveModal = false"
-                                    class="btn-neutral px-5 py-2 text-sm font-medium rounded-full cursor-pointer"
-                                    style="background: var(--neutral-100); color: var(--text-primary);">
-                                {% translate "Cancel" %}
-                            </button>
+                        <div class="modal-footer">
+                            <button type="button" class="btn-ghost" @click="showArchiveModal = false">{% translate "Cancel" %}</button>
                             <form method="POST">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="archive_workspace">
-                                <button type="submit"
-                                        class="btn-opacity px-5 py-2 text-sm font-semibold rounded-full cursor-pointer whitespace-nowrap"
-                                        style="background: #92400E; color: white;">
-                                    {% translate "Yes, archive this workspace" %}
-                                </button>
+                                <button type="submit" class="btn-brand">{% translate "Yes, archive this workspace" %}</button>
                             </form>
                         </div>
                     </div>
@@ -151,14 +130,12 @@
             </template>
             {% endif %}
         </div>
-    </div>
 
-    <!-- Delete Workspace section -->
-    <div x-data="{ showDeleteModal: false }">
-        <div class="flex items-start justify-between gap-4">
-            <div>
-                <h3 class="text-base font-semibold mb-1" style="color: var(--text-primary);">{% translate "Delete this workspace" %}</h3>
-                <p class="text-sm" style="color: var(--text-secondary); max-width: 480px;">
+        <!-- Delete -->
+        <div class="p-6 flex flex-wrap items-start justify-between gap-4" x-data="{ showDeleteModal: false }">
+            <div class="min-w-0 max-w-2xl">
+                <h3 class="text-base font-semibold text-neutral-950 mb-1">{% translate "Delete this workspace" %}</h3>
+                <p class="text-sm text-neutral-600">
                     {% if can_delete %}
                     {% translate "Permanently delete this workspace and all of its data. This includes all posts, connected social accounts, media assets, and workspace memberships. This action cannot be undone." %}
                     {% else %}
@@ -168,67 +145,48 @@
             </div>
 
             {% if can_delete %}
-            <button type="button" @click="showDeleteModal = true"
-                    class="btn-danger-soft px-5 py-2 text-sm font-medium rounded-full cursor-pointer whitespace-nowrap shrink-0"
-                    style="background: var(--error-soft, #FEE2E2); color: var(--error-500, #EF4444);">
-                {% translate "Delete Workspace" %}
-            </button>
-            {% endif %}
-        </div>
+            <button type="button" @click="showDeleteModal = true" class="btn-danger-soft">{% translate "Delete Workspace" %}</button>
 
-        {% if can_delete %}
-        <!-- Delete confirmation modal -->
-        <template x-teleport="body">
-            <div x-show="showDeleteModal" x-transition.opacity
-                 @keydown.escape.window="showDeleteModal = false"
-                 class="fixed inset-0 z-50 flex items-center justify-center"
-                 style="background: rgba(0,0,0,0.4);">
-                <div @click.outside="showDeleteModal = false"
-                     x-show="showDeleteModal"
-                     x-transition
-                     class="w-full max-w-md rounded-xl shadow-xl"
-                     style="background: var(--surface-0);">
-                    <div class="flex items-center justify-between px-6 py-4" style="border-bottom: 1px solid var(--border);">
-                        <h3 class="text-base font-semibold" style="color: var(--text-primary);">{% translate "Delete this workspace" %}</h3>
-                        <button type="button" @click="showDeleteModal = false" class="cursor-pointer" style="color: var(--text-tertiary);">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
-                    </div>
-                    <div class="px-6 py-5">
-                        <p class="text-sm mb-3" style="color: var(--text-secondary);">
-                            {% blocktranslate with ws=workspace.name %}Are you sure you want to permanently delete <strong>{{ ws }}</strong>? This action cannot be undone.{% endblocktranslate %}
-                        </p>
-                        <p class="text-sm" style="color: var(--text-secondary);">
-                            {% translate "All of the following will be permanently removed:" %}
-                        </p>
-                        <ul class="text-sm mt-2 ml-4 list-disc space-y-1" style="color: var(--text-secondary);">
-                            <li>{% translate "All scheduled and published posts" %}</li>
-                            <li>{% translate "Connected social accounts" %}</li>
-                            <li>{% translate "Media assets and files" %}</li>
-                            <li>{% translate "Workspace memberships" %}</li>
-                        </ul>
-                    </div>
-                    <div class="flex justify-end gap-3 px-6 py-4" style="border-top: 1px solid var(--border);">
-                        <button type="button" @click="showDeleteModal = false"
-                                class="btn-neutral px-5 py-2 text-sm font-medium rounded-full cursor-pointer"
-                                style="background: var(--neutral-100); color: var(--text-primary);">
-                            {% translate "Cancel" %}
-                        </button>
-                        <form method="POST">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="delete_workspace">
-                            <button type="submit"
-                                    class="btn-opacity px-5 py-2 text-sm font-semibold rounded-full cursor-pointer whitespace-nowrap"
-                                    style="background: var(--error-500, #EF4444); color: white;">
-                                {% translate "Yes, delete this workspace" %}
-                            </button>
-                        </form>
+            {% comment %}
+            A destructive confirmation: it closes only through its buttons, not
+            on a click outside, so a stray click cannot be read as a decision.
+            {% endcomment %}
+            <template x-teleport="body">
+                <div x-show="showDeleteModal" x-cloak class="modal-overlay" role="dialog" aria-modal="true"
+                     x-transition.opacity @keydown.escape.window="showDeleteModal = false">
+                    <div class="modal-panel">
+                        <div class="modal-header">
+                            <div class="modal-icon is-error">
+                                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                            </div>
+                            <div class="modal-title">{% translate "Delete this workspace" %}</div>
+                        </div>
+                        <div class="modal-body">
+                            <p>{% blocktranslate with ws=workspace.name %}Are you sure you want to permanently delete <strong>{{ ws }}</strong>? This action cannot be undone.{% endblocktranslate %}</p>
+                            <div>
+                                <p>{% translate "All of the following will be permanently removed:" %}</p>
+                                <ul class="mt-2 ml-4 list-disc space-y-1">
+                                    <li>{% translate "All scheduled and published posts" %}</li>
+                                    <li>{% translate "Connected social accounts" %}</li>
+                                    <li>{% translate "Media assets and files" %}</li>
+                                    <li>{% translate "Workspace memberships" %}</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn-ghost" @click="showDeleteModal = false">{% translate "Cancel" %}</button>
+                            <form method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_workspace">
+                                <button type="submit" class="btn-danger-soft">{% translate "Yes, delete this workspace" %}</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </template>
-        {% endif %}
+            </template>
+            {% endif %}
+        </div>
     </div>
-    {% endif %}
-</div>
+</section>
+{% endif %}
 {% endblock %}

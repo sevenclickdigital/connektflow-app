@@ -84,7 +84,7 @@ Consistency beats personal preference. Use this table; if a term is missing, add
 | Connect | Conectar |
 | Disconnect | Desconectar |
 | Reconnect | Reconectar |
-| Workspace | Workspace |
+| Workspace | Marca (feminine: "a marca", "esta marca", "todas as marcas"; the code keeps `workspace`) |
 | Organization | Organização |
 | Member | Membro |
 | Team | Equipe |

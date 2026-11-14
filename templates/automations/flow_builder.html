@@ -3,18 +3,19 @@
 
 {% block title %}{% if template_mode %}{{ flow_template.name }} - {% translate "Templates" %} - {% translate "Administration" %}{% else %}{% translate "Flow builder" %} - {{ workspace.name }}{% endif %} - Automator{% endblock %}
 
+{# The canvas fills the whole area beside the sidebar: no page padding, no column. #}
+{% block main_padding %}{% endblock %}
+{% block content_width %}max-w-none{% endblock %}
+
 {% block extra_head %}
 <style>
     {% comment %}
-    The same full-bleed shell the inbox uses (``templates/inbox/feed.html``),
-    for the same reason and with the same escape hatch. The content block is
-    rendered inside a padded, scrolling wrapper; a canvas needs the full panel
-    and owns its own panning, so the negative margin cancels that padding and
-    the ``:has`` rule turns off the ancestor's scrolling. Replicated rather
-    than shared because the inbox declares it inline too — extracting it is a
-    change to that page's layout, which is not this feature's to make.
+    The canvas is the one screen outside the page column: it fills the whole
+    area beside the sidebar (block main_padding and content_width are emptied
+    above). It owns its own panning, so the shell clips instead of letting the
+    page scroll.
     {% endcomment %}
-    .flow-shell { margin: -0.75rem; display: flex; flex-direction: column; height: calc(100% + 1.5rem); overflow: hidden; }
+    .flow-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; height: 100%; overflow: hidden; background: var(--surface-0); }
 
     {% comment %}
     While a gesture is in flight, nothing on the canvas is selectable. The
@@ -27,13 +28,6 @@
     {% endcomment %}
     .flow-shell.is-gesturing, .flow-shell.is-gesturing * { user-select: none; -webkit-user-select: none; }
     .flow-shell.is-gesturing input, .flow-shell.is-gesturing textarea { user-select: text; -webkit-user-select: text; }
-    :has(> .flow-shell) { overflow: visible !important; }
-    @media (min-width: 640px) {
-        .flow-shell { margin: -1rem; height: calc(100% + 2rem); }
-    }
-    @media (min-width: 1024px) {
-        .flow-shell { margin: -1.5rem; height: calc(100% + 3rem); }
-    }
 </style>
 {% endblock %}
 

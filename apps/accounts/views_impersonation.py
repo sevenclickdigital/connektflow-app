@@ -56,8 +56,7 @@ def start_impersonation(request, user_id):
     )
     messages.warning(
         request,
-        _("You are now using %(email)s's account. Everything you do happens as them.")
-        % {"email": target.email},
+        _("You are now using %(email)s's account. Everything you do happens as them.") % {"email": target.email},
     )
     return redirect("/")
 

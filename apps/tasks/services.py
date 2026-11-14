@@ -401,7 +401,7 @@ def create_post_from_task(task, actor):
         raise NothingToPublishError
 
     accounts = list(
-        SocialAccount.objects.for_workspace(task.workspace_id).filter(
+        SocialAccount.objects.for_workspace(task.workspace_id).publishable().filter(
             connection_status=SocialAccount.ConnectionStatus.CONNECTED
         )
     )

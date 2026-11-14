@@ -4,14 +4,13 @@
 
 {% block title %}{% if is_edit %}{% translate "Edit Post" %}{% else %}{% translate "New Post" %}{% endif %} - {{ workspace.name }} - Automator{% endblock %}
 
-{% comment %}Header is rendered inside the content block to avoid overlap with the -m-6 layout{% endcomment %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'js/vendor/cropper.min.css' %}">
 <style>
     /* ── Composer-specific overrides ──────────────────────────── */
-    /* Remove parent padding/overflow so the composer can fill the full area */
-    main:has(.composer-main) { padding: 0 !important; overflow: hidden !important; }
+    /* The panels scroll on their own, not the page; main keeps its standard padding */
+    main:has(.composer-main) { overflow: hidden !important; }
     main:has(.composer-main) > div { overflow: hidden !important; }
     .composer-main { padding: 0 !important; overflow: hidden; }
 
@@ -114,6 +113,43 @@
     }
     .caption-editor::placeholder { color: #94A3B8; }
 
+    /* Preview: one tab per platform, arrows in the panel header step through them */
+    .preview-tab {
+        flex: 1 0 6.5rem; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        padding: 6px 10px; border-radius: 10px; cursor: pointer;
+        background: #FFFFFF; border: 1px solid var(--neutral-200);
+        font-size: 0.8125rem; font-weight: 500; color: var(--neutral-800);
+        transition: border-color 150ms ease, background-color 150ms ease;
+    }
+    .preview-tab:hover { border-color: var(--brand-200); }
+    .preview-tab.is-on { background: var(--brand-50); border-color: var(--brand-500); color: var(--brand-800); font-weight: 600; }
+    .preview-tab.is-sm { flex-basis: 5rem; padding: 4px 8px; font-size: 0.8125rem; }
+    /* Format strip under the card: a thumbnail of each format's media */
+    .preview-thumb {
+        flex: 0 0 6.25rem; display: flex; flex-direction: column; align-items: center; gap: 6px;
+        padding: 8px; border-radius: 12px; cursor: pointer;
+        background: #FFFFFF; border: 1px solid var(--neutral-200); color: var(--neutral-700);
+        transition: border-color 150ms ease, background-color 150ms ease;
+    }
+    .preview-thumb:hover { border-color: var(--brand-200); }
+    .preview-thumb.is-on { background: var(--brand-50); border-color: var(--brand-500); color: var(--brand-800); font-weight: 600; }
+    .preview-thumb-frame { height: 64px; display: flex; align-items: center; justify-content: center; }
+    .preview-arrow {
+        width: 30px; height: 30px; border-radius: 9999px; cursor: pointer;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: #FFFFFF; border: 1px solid var(--neutral-200); color: var(--neutral-700);
+    }
+    .preview-arrow:hover { border-color: var(--brand-200); color: var(--brand-800); }
+
+    /* Icon buttons in the caption's bottom bar */
+    .caption-tool {
+        width: 32px; height: 32px; border-radius: 8px;
+        display: inline-flex; align-items: center; justify-content: center;
+        color: var(--neutral-700); cursor: pointer;
+        transition: background-color 150ms ease, color 150ms ease;
+    }
+    .caption-tool:hover, .caption-tool.is-on { background: var(--brand-50); color: var(--brand-800); }
+
     /* First-comment editor - thinner variant */
     .comment-editor {
         font-family: system-ui, -apple-system, sans-serif;
@@ -129,6 +165,9 @@
         transition: border-color 150ms ease, box-shadow 150ms ease;
     }
     .comment-editor::placeholder { color: #94A3B8; }
+    /* Empty, the hint stays on one line: the field is half width next to Tags. */
+    .comment-editor:placeholder-shown,
+    .comment-editor:placeholder-shown::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .comment-editor:hover { border-color: #CBD5E1; }
     .comment-editor:focus {
         border-color: #7C3AED;
@@ -274,40 +313,6 @@
     .media-thumb .thumb-menu-item:hover { background: #E5E7EB; }
 
     /* ── Emoji picker ──────────────────────────────────────────────── */
-    .emoji-panel {
-        position: absolute; bottom: calc(100% + 8px); left: 0;
-        width: 320px;
-        background: #FFFFFF;
-        border: 1px solid #E5E7EB;
-        border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-        z-index: 50;
-    }
-    .emoji-tab {
-        flex: 1; height: 28px;
-        border-radius: 6px; border: none; background: transparent;
-        font-size: 15px; line-height: 1; cursor: pointer;
-        transition: background 120ms ease;
-    }
-    .emoji-tab:hover { background: #F5F3FF; }
-    .emoji-tab.is-active { background: #F3E8FF; }
-    .emoji-grid {
-        display: grid;
-        grid-template-columns: repeat(8, 1fr);
-        gap: 2px;
-        padding: 8px;
-        max-height: 220px;
-        overflow-y: auto;
-    }
-    .emoji-cell {
-        aspect-ratio: 1;
-        border: none; background: transparent;
-        border-radius: 6px;
-        font-size: 19px; line-height: 1; cursor: pointer;
-        transition: background 100ms ease;
-    }
-    .emoji-cell:hover { background: #F5F3FF; }
-
     /* ── Facebook place picker ─────────────────────────────────────── */
     .place-result {
         display: block; width: 100%; text-align: left;
@@ -413,26 +418,30 @@
        editor and the preview. It stays inside the form (htmx only tracks the
        clicked submit button for buttons inside it), so it is positioned
        against .composer-panels and both columns leave room for it. */
-    .composer-panels { position: relative; --action-bar-h: 64px; }
-    @media (min-width: 640px) { .composer-panels { --action-bar-h: 76px; } }
+    /* --action-bar-space: the floating bar plus the gap above it, kept free
+       at the bottom of both panels so nothing scrolls under it. */
+    .composer-panels { position: relative; --action-bar-h: 60px; --action-bar-gap: 8px; --action-bar-space: calc(var(--action-bar-h) + var(--action-bar-gap)); }
+    @media (min-width: 640px) { .composer-panels { --action-bar-h: 64px; --action-bar-gap: 16px; } }
     /* The bar lives in the editor column, whose entrance animation makes it a
        stacking context: lift the whole column (a flex item, so z-index needs no
        position, which would make it the bar's containing block) above the preview so the part
        of the bar under the preview isn't painted over. The mobile preview
        drawer (z-index 58) still opens above it. */
-    .composer-panels .panel-center { padding-bottom: var(--action-bar-h); z-index: 2; }
-    @media (min-width: 1024px) { .composer-panels .panel-right { padding-bottom: var(--action-bar-h); } }
+    .composer-panels .panel-center { padding-bottom: var(--action-bar-space); z-index: 2; }
+    @media (min-width: 1024px) { .composer-panels .panel-right { padding-bottom: var(--action-bar-space); } }
     .action-bar {
         position: absolute; left: 0; right: 0; bottom: 0;
         height: var(--action-bar-h);
         background: #FFFFFF;
-        border-top: 1px solid #E5E7EB;
-        padding: 0 16px;
+        border: 1px solid var(--neutral-200);
+        border-radius: 16px;
+        box-shadow: var(--shadow-lg);
+        padding: 0 12px;
         display: flex; align-items: center; gap: 6px;
         z-index: 51;
     }
     @media (min-width: 640px) {
-        .action-bar { padding: 0 24px; gap: 8px; }
+        .action-bar { padding: 0 16px 0 20px; gap: 8px; }
     }
 
     /* Subtle entrance animation - uses 'both' but resets transform at 100% to avoid
@@ -471,22 +480,89 @@
      @keydown.meta.s.prevent="saveDraft()"
      @keydown.ctrl.s.prevent="saveDraft()">
 
-    <!-- Page header -->
-    <div class="flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-neutral-100 flex-shrink-0">
-        <button @click="if (document.referrer && document.referrer.startsWith(location.origin)) { history.back(); } else { location.href='{% url 'composer:create_landing' workspace_id=workspace.id %}'; }"
-                class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-neutral-300 text-neutral-500 hover:text-neutral-800 hover:border-neutral-400 hover:bg-neutral-50 transition-all duration-150 cursor-pointer">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        </button>
-        <h1 class="text-base font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% if is_edit %}{% translate "Edit" %}{% else %}{% translate "Create" %}{% endif %}</h1>
-        <!-- Preview toggle (mobile only) -->
-        <button type="button" @click="showPreviewPanel = true"
-                class="lg:hidden ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300 text-neutral-700 text-xs font-semibold hover:border-neutral-400 hover:bg-neutral-50 transition-all duration-150 cursor-pointer">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            <span>{% translate "Preview" %}</span>
-            <span x-show="selectedAccounts.length > 0"
-                  x-text="selectedAccounts.length"
-                  class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-brand-100 text-brand-900 text-[10px] font-bold tabular-nums"></span>
-        </button>
+    <!-- Page header: title, then the template actions -->
+    <div class="page-header flex-shrink-0"
+         x-data="{ showTemplatePicker: false, showSaveTemplate: false, tplName: '', tplDesc: '', savingTemplate: false }">
+        <div class="min-w-0">
+            <h1 class="page-title truncate">{% if is_edit %}{% translate "Edit post" %}{% else %}{% translate "Create post" %}{% endif %}</h1>
+            <p class="page-description hidden sm:block truncate">{% translate "Create, customize and publish your content on several platforms." %}</p>
+        </div>
+
+        <div class="ml-auto flex items-center gap-2">
+            {% comment %}
+            A template is made from the saved post, so a post that was never
+            saved has nothing to make one from yet.
+            {% endcomment %}
+            <div class="relative hidden md:block">
+                {% if post and is_edit %}
+                <button type="button" @click="showSaveTemplate = !showSaveTemplate" class="btn-soft text-sm">
+                {% else %}
+                <button type="button" class="btn-soft text-sm" disabled title="{% translate 'Save the draft first to turn it into a template.' %}">
+                {% endif %}
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l9 5-9 5-9-5 9-5zm-9 9l9 5 9-5M3 16l9 5 9-5"/></svg>
+                    {% translate "Save as Template" %}
+                </button>
+                {% if post and is_edit %}
+                <div x-show="showSaveTemplate" x-cloak x-transition
+                     @click.outside="showSaveTemplate = false"
+                     data-saved="{% translate 'Template saved.' %}" data-failed="{% translate 'Could not save the template. Try again.' %}"
+                     class="absolute z-50 mt-2 right-0 p-3 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 w-72 max-w-[calc(100vw-2rem)]">
+                    <input type="text" x-model="tplName" placeholder="{% translate 'Template name…' %}"
+                           class="form-input w-full text-sm mb-2">
+                    <textarea x-model="tplDesc" placeholder="{% translate 'Description (optional)…' %}" rows="2"
+                              class="form-input w-full text-xs mb-2"></textarea>
+                    <button type="button" class="btn-brand text-xs py-1.5 px-3 w-full"
+                            :disabled="!tplName.trim() || savingTemplate"
+                            @click="if (!tplName.trim() || savingTemplate) return;
+                                savingTemplate = true;
+                                const labels = $el.parentElement.dataset;
+                                fetch('{% url 'composer:save_as_template' workspace_id=workspace.id post_id=post.id %}', {
+                                    method: 'POST',
+                                    headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'Content-Type': 'application/x-www-form-urlencoded', 'HX-Request': 'true' },
+                                    body: 'template_name=' + encodeURIComponent(tplName) + '&template_description=' + encodeURIComponent(tplDesc)
+                                }).then(response => {
+                                    if (!response.ok) throw new Error('template save failed');
+                                    showSaveTemplate = false; tplName = ''; tplDesc = '';
+                                    htmx.trigger(document.body, 'templateSaved');
+                                    document.body.dispatchEvent(new CustomEvent('showToast', { detail: { tone: 'success', title: labels.saved } }));
+                                }).catch(() => {
+                                    document.body.dispatchEvent(new CustomEvent('showToast', { detail: { tone: 'error', title: labels.failed } }));
+                                }).finally(() => { savingTemplate = false; });">
+                        {% translate "Save Template" %}
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="relative">
+                <button type="button"
+                        @click="showTemplatePicker = !showTemplatePicker; if (showTemplatePicker) $nextTick(() => htmx.trigger($refs.templatePicker, 'load-picker'))"
+                        class="btn-brand text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path stroke-linecap="round" d="M8 8h8M8 12h8M8 16h5"/></svg>
+                    <span class="hidden sm:inline">{% translate "Use Template" %}</span>
+                </button>
+                <div x-ref="templatePicker"
+                     x-show="showTemplatePicker" x-cloak x-transition
+                     @click.outside="showTemplatePicker = false"
+                     class="absolute z-50 top-full mt-2 right-0 p-3 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 w-80 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto"
+                     hx-get="{% url 'composer:template_picker' workspace_id=workspace.id %}"
+                     hx-trigger="load-picker, templateSaved from:body, templateChanged from:body"
+                     hx-target="this"
+                     hx-swap="innerHTML">
+                    <div class="p-4 text-center text-xs text-neutral-500">{% translate "Loading templates…" %}</div>
+                </div>
+            </div>
+
+            <!-- Preview toggle (mobile only) -->
+            <button type="button" @click="showPreviewPanel = true"
+                    class="lg:hidden inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-neutral-300 bg-white text-neutral-700 text-xs font-semibold hover:border-neutral-400 hover:bg-neutral-50 transition-all duration-150 cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <span>{% translate "Preview" %}</span>
+                <span x-show="selectedAccounts.length > 0"
+                      x-text="selectedAccounts.length"
+                      class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-brand-100 text-brand-900 text-[10px] font-bold tabular-nums"></span>
+            </button>
+        </div>
     </div>
 
     <!-- Panels -->
@@ -504,7 +580,9 @@
               @htmx:after-request="onFormSaved($event)"
               @htmx:send-error="onFormSendError($event)"
               @click="rememberAction($event)"
-              {# onFormSaved renders every failure inline, JSON or not, so the global toast would duplicate it. Element-scoped: nested controls (Clone, template picker) keep theirs. #}
+              @input="draftSaved = false"
+              @change="draftSaved = false"
+              {# onFormSaved renders every failure inline, JSON or not, so the global toast would duplicate it. Element-scoped: nested controls (Clone) keep theirs. #}
               data-no-error-toast
               class="flex flex-col flex-1 min-h-0">
             <input type="hidden" name="selected_accounts" :value="selectedAccounts.join(',')">
@@ -515,7 +593,7 @@
             <input type="hidden" name="account_scope" value="{{ account_scope }}">
             {% endif %}
 
-            <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5 panel-scroll relative" style="z-index: 0;">
+            <div class="flex-1 overflow-y-auto -ml-1 pl-1 -mr-1 pr-1 lg:mr-0 lg:pr-6 pb-4 sm:pb-6 space-y-4 sm:space-y-5 panel-scroll relative" style="z-index: 0;">
 
                 {% comment %}
                 The 90% disk warning. The composer attaches media, so this
@@ -527,43 +605,36 @@
                 {% if billing_storage %}{% include "billing/_storage_warning.html" %}{% endif %}
 
                 {% comment %}
-                Where the post goes: one tile per format of each account
-                (Instagram, Instagram Stories, Instagram Reels…). Several formats
-                of one account can be chosen at once; each becomes its own
-                platform post. The choice doesn't depend on the media attached
-                yet — a format the media can't satisfy is flagged below and
-                refused on save.
+                Where the post goes: one card per connected account with a
+                toggle per format (Feed, Story, Reels…). Several formats of one
+                account can be chosen at once; each becomes its own platform
+                post. Formats can be picked before any media is attached; once
+                media is attached, a format it can't satisfy is greyed out with
+                the reason, and save refuses it anyway (format_blocker).
                 {% endcomment %}
-                <div class="flex items-center gap-2.5 flex-wrap" role="group" aria-label="{% translate 'Where to publish' %}">
-                    {% for account in social_accounts %}
-                    <div class="target-group flex items-center gap-2">
-                        {% for option in account.format_options %}
-                        <button type="button" class="target-tile"
-                                :class="{ 'selected': hasFormat('{{ account.id }}', '{{ option.format }}') }"
-                                :aria-pressed="hasFormat('{{ account.id }}', '{{ option.format }}') ? 'true' : 'false'"
-                                aria-label="{{ option.label }}"
-                                @click="toggleFormat('{{ account.id }}', '{{ option.format }}')">
-                            {% include "partials/_channel_tile.html" with platform=account.platform account=account tip=option.label format=option.format %}
-                        </button>
-                        {% endfor %}
-                    </div>
-                    {% endfor %}
-                    {% if unconnected_channels %}
-                    <div class="target-group flex items-center gap-2">
-                        {% for platform, label in unconnected_channels %}
-                        {% blocktranslate asvar connect_tip %}Connect {{ label }}{% endblocktranslate %}
-                        {% if can_connect_channels %}
-                        <a href="{% url 'social_accounts:connect' workspace_id=workspace.id %}" target="_blank" rel="noopener" class="target-tile" aria-label="{{ connect_tip }}">
-                            {% include "partials/_channel_tile.html" with platform=platform tip=connect_tip %}
-                        </a>
-                        {% else %}
-                        <span class="target-tile" aria-label="{{ label }}">
-                            {% include "partials/_channel_tile.html" with platform=platform tip=label %}
+                <div>
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500">{% translate "Where to publish" %}</span>
+                        <span class="text-xs text-neutral-600" x-show="selectedTargetList().length" x-cloak>
+                            <strong class="text-neutral-950" x-text="selectedTargetList().length"></strong>
+                            <span x-show="selectedTargetList().length === 1">{% translate "destination" %}</span><span x-show="selectedTargetList().length !== 1">{% translate "destinations" %}</span>
+                            · <button type="button" class="btn-link py-0 px-1 text-xs" @click="clearTargets()">{% translate "Clear" %}</button>
                         </span>
-                        {% endif %}
-                        {% endfor %}
                     </div>
-                    {% endif %}
+                    <div class="target-picker" role="group" aria-label="{% translate 'Where to publish' %}">
+                        {% for account in social_accounts %}
+                        {% include "partials/_target_card.html" with platform=account.platform account=account formats=account.format_options %}
+                        {% endfor %}
+                        {% if unconnected_channels and can_connect_channels %}
+                        <a href="{% url 'social_accounts:connect' workspace_id=workspace.id %}" target="_blank" rel="noopener" class="target-card is-connect">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+                            <span>
+                                <span class="target-card-name">{% translate "Connect channel" %}</span>
+                                <span class="target-card-sub justify-center">{% blocktranslate count counter=unconnected_channels|length %}{{ counter }} platform available{% plural %}{{ counter }} platforms available{% endblocktranslate %}</span>
+                            </span>
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
 
                 {% if failed_platform_posts %}
@@ -648,7 +719,7 @@
 
                 <!-- Title (conditional - only when YouTube/Pinterest selected) -->
                 <div x-show="anyPlatformNeedsTitle" x-transition x-cloak>
-                    <label class="block text-sm font-semibold text-neutral-600 uppercase tracking-wider mb-2"
+                    <label class="block text-sm font-semibold text-neutral-800 uppercase tracking-wider mb-2"
                            x-text="titleLabel">{% translate "Title" %}</label>
                     <input type="text" name="title"
                            class="w-full text-[15px] font-medium text-neutral-950 px-4 py-3 rounded-xl border border-neutral-300 bg-white outline-none transition-all duration-150 focus:border-brand-700 focus:ring-2 focus:ring-brand-100"
@@ -669,59 +740,10 @@
                 </template>
 
                 <!-- Caption with inline media -->
-                <div x-data="{ showTemplatePicker: false }">
+                <div>
                     <div class="flex items-center justify-between mb-2">
-                        <label class="text-sm font-semibold text-neutral-600 uppercase tracking-wider"
-                               x-text="captionLabel">{% translate "Caption" %}</label>
-                        <div class="flex items-center gap-2 relative">
-                            {% if post and is_edit %}
-                            <div x-data="{ showSaveTemplate: false }">
-                                <button type="button" @click="showSaveTemplate = !showSaveTemplate"
-                                        class="text-xs font-semibold py-1.5 px-3 rounded-full border border-neutral-300 text-neutral-600 hover:border-neutral-400 hover:text-neutral-800 transition-colors flex items-center gap-1">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-                                    {% translate "Save as Template" %}
-                                </button>
-                                <div x-show="showSaveTemplate" x-cloak x-transition
-                                     @click.outside="showSaveTemplate = false"
-                                     class="absolute z-50 mt-1 right-0 p-3 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 w-72 max-w-[calc(100vw-2rem)]">
-                                    <div x-data="{ tplName: '', tplDesc: '' }">
-                                        <input type="text" x-model="tplName" placeholder="{% translate 'Template name…' %}"
-                                               class="form-input w-full text-sm mb-2">
-                                        <textarea x-model="tplDesc" placeholder="{% translate 'Description (optional)…' %}" rows="2"
-                                                  class="form-input w-full text-xs mb-2"></textarea>
-                                        <button type="button" class="btn-brand text-xs py-1.5 px-3 w-full"
-                                                :disabled="!tplName.trim()"
-                                                @click="if (!tplName.trim()) return;
-                                                    fetch('{% url 'composer:save_as_template' workspace_id=workspace.id post_id=post.id %}', {
-                                                        method: 'POST',
-                                                        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'Content-Type': 'application/x-www-form-urlencoded' },
-                                                        body: 'template_name=' + encodeURIComponent(tplName) + '&template_description=' + encodeURIComponent(tplDesc)
-                                                    }).then(() => { showSaveTemplate = false; tplName = ''; tplDesc = ''; });">
-                                            {% translate "Save Template" %}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endif %}
-                            <button type="button"
-                                    @click="showTemplatePicker = !showTemplatePicker; if (showTemplatePicker) $nextTick(() => htmx.trigger($refs.templatePicker, 'load-picker'))"
-                                    class="text-xs font-semibold py-1.5 px-3 rounded-full border border-neutral-300 text-neutral-600 hover:border-neutral-400 hover:text-neutral-800 transition-colors flex items-center gap-1">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                {% translate "Use Template" %}
-                            </button>
-                            <!-- Template picker modal -->
-                            <!-- hx-swap="innerHTML" is explicit because composer-form ancestor sets hx-swap="none" -->
-                            <div x-ref="templatePicker"
-                                 x-show="showTemplatePicker" x-cloak x-transition
-                                 @click.outside="showTemplatePicker = false"
-                                 class="absolute z-50 top-full mt-1 right-0 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 w-80 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto"
-                                 hx-get="{% url 'composer:template_picker' workspace_id=workspace.id %}"
-                                 hx-trigger="load-picker, templateSaved from:body, templateChanged from:body"
-                                 hx-target="this"
-                                 hx-swap="innerHTML">
-                                <div class="p-4 text-center text-xs text-neutral-500">{% translate "Loading templates…" %}</div>
-                            </div>
-                        </div>
+                        <label class="text-sm font-semibold text-neutral-800 uppercase tracking-wider"
+                               x-text="captionLabel">{% translate "Post content" %}</label>
                     </div>
                     <div class="caption-wrap">
                         <textarea name="caption"
@@ -773,9 +795,9 @@
                         {% endcomment %}
                         <input type="hidden" name="media_order" x-ref="mediaOrder">
 
-                        <!-- Bottom bar: emoji + char counter (the media library opens from the "Add" tile) -->
-                        <div class="flex items-center justify-between px-4 py-2 border-t border-neutral-100">
-                            <div class="flex items-center gap-3">
+                        <!-- Bottom bar: emoji, hashtag, mention, AI assistant + char counter (the media library opens from the "Add" tile) -->
+                        <div class="flex items-center justify-between px-3 py-2 border-t border-neutral-100">
+                            <div class="flex items-center gap-1">
                                 {% comment %}
                                 Emoji is plain text in the caption, so unlike the
                                 Facebook-only place and feeling pickers this one
@@ -783,18 +805,33 @@
                                 {% endcomment %}
                                 <div class="relative" @keydown.escape.window="showEmoji = false">
                                     <button type="button" @click="toggleEmoji()"
-                                            class="text-xs font-medium text-neutral-500 hover:text-brand-800 transition-colors flex items-center gap-1.5 cursor-pointer"
-                                            :class="showEmoji && 'text-brand-800'"
-                                            title="{% translate 'Insert emoji' %}">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                        {% translate "Emoji" %}
+                                            class="caption-tool" :class="showEmoji && 'is-on'"
+                                            title="{% translate 'Insert emoji' %}" aria-label="{% translate 'Insert emoji' %}">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                     </button>
                                     {% include "composer/partials/emoji_picker.html" %}
                                 </div>
+                                <button type="button" @click="insertSigil('#')" class="caption-tool"
+                                        title="{% translate 'Add hashtag' %}" aria-label="{% translate 'Add hashtag' %}">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/></svg>
+                                </button>
+                                <button type="button" @click="insertSigil('@')" class="caption-tool"
+                                        title="{% translate 'Add mention' %}" aria-label="{% translate 'Add mention' %}">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-3.9 7.9"/></svg>
+                                </button>
+                                {% comment %}
+                                There is no AI caption service behind the composer yet, so the
+                                assistant is shown as coming soon instead of a button that does nothing.
+                                {% endcomment %}
+                                <span class="ml-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-100 text-brand-800 text-xs font-semibold opacity-70 cursor-not-allowed"
+                                      title="{% translate 'Available soon' %}" aria-disabled="true">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2l1.8 5.2L17 9l-5.2 1.8L10 16l-1.8-5.2L3 9l5.2-1.8L10 2zm8 10l.9 2.6 2.6.9-2.6.9L18 19l-.9-2.6-2.6-.9 2.6-.9L18 12z"/></svg>
+                                    {% translate "AI assistant" %}
+                                </span>
                             </div>
                             <span class="text-xs tabular-nums font-medium"
                                   :class="captionOverLimit() ? 'text-red-500' : 'text-neutral-500'"
-                                  x-text="captionLimit() ? captionCount() + ' / ' + captionLimit() : captionCount()">
+                                  x-text="captionLimit() ? formatCount(captionCount()) + ' / ' + formatCount(captionLimit()) : formatCount(captionCount())">
                             </span>
                         </div>
                     </div>
@@ -1214,37 +1251,7 @@
                             <p x-show="ttBrandContent" class="text-[11px] text-neutral-500 mt-1">{% translate "Branded content visibility cannot be set to private." %}</p>
                         </div>
                         <!-- Cover: TikTok takes a frame timestamp, not an uploaded image -->
-                        <div>
-                            <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{% translate "Cover" %}</label>
-                            <input type="hidden"
-                                   :name="'tiktok_video_cover_timestamp_ms_' + accId"
-                                   :value="platformExtras[accId]?.video_cover_timestamp_ms ?? ''">
-                            <div class="flex items-stretch gap-3">
-                                {% include "composer/partials/choose_from_video_card.html" with mode="timestamp" %}
-                                <template x-if="tiktokCoverPreview[accId]">
-                                    <div class="relative flex-shrink-0">
-                                        <img :src="tiktokCoverPreview[accId]"
-                                             class="h-[104px] w-auto max-w-[480px] object-cover rounded-lg border border-neutral-300">
-                                        <button type="button" @click="clearTiktokCover(accId)"
-                                                title="{% translate 'Reset to default cover' %}"
-                                                class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/55 hover:bg-red-500 text-white flex items-center justify-center transition-colors cursor-pointer">
-                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
-                                        </button>
-                                    </div>
-                                </template>
-                                <template x-if="!tiktokCoverPreview[accId] && (platformExtras[accId]?.video_cover_timestamp_ms ?? null) !== null">
-                                    <div class="relative flex-1 max-w-[480px] rounded-lg border border-neutral-300 bg-neutral-50 flex items-center justify-center min-h-[104px]">
-                                        <span class="text-xs text-neutral-600 font-medium tabular-nums"
-                                              x-text="cLabel('cover-at').replace('{time}', formatTimecode((platformExtras[accId]?.video_cover_timestamp_ms || 0) / 1000))"></span>
-                                        <button type="button" @click="clearTiktokCover(accId)"
-                                                title="{% translate 'Reset to default cover' %}"
-                                                class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/55 hover:bg-red-500 text-white flex items-center justify-center transition-colors cursor-pointer">
-                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
-                                        </button>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
+                        {% include "composer/partials/_video_cover_picker.html" with field="tiktok_video_cover_timestamp_ms" %}
                         <!-- Interaction abilities — separate per-interaction toggles.
                              TikTok requires an independent checkbox per interaction,
                              greyed out individually when disabled in creator settings. -->
@@ -1389,9 +1396,13 @@
                              accId: t.accId,
                              placeId: platformExtras[t.accId]?.place_id || '',
                              placeName: platformExtras[t.accId]?.place_name || '',
+                             igCollaborators: (platformExtras[t.accId]?.collaborators || []).map(name => '@' + name).join(', '),
+                             igUserTags: (platformExtras[t.accId]?.user_tags || []).map(name => '@' + name).join(', '),
+                             igShareToFeed: platformExtras[t.accId]?.share_to_feed !== false,
                              placeQuery: '',
                              placeResults: [],
                              placeSearching: false,
+                             placeError: '',
                              placeTimer: null,
                              feeling: platformExtras[t.accId]?.feeling_object_id || '',
                              storyDelivery: formatExtras[t.accId]?.story_delivery || '',
@@ -1491,56 +1502,7 @@
                             <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3">
                                 <input type="hidden" :name="'facebook_custom_' + accId" value="1">
 
-                                <div>
-                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Location" %}</label>
-                                    <input type="hidden" :name="'facebook_place_id_' + accId" :value="placeId">
-                                    <input type="hidden" :name="'facebook_place_name_' + accId" :value="placeName">
-
-                                    <div x-show="placeId" class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-neutral-50 border border-neutral-300">
-                                        <span class="text-sm text-neutral-800 truncate" x-text="placeName"></span>
-                                        <button type="button"
-                                                @click="placeId = ''; placeName = ''; placeQuery = ''; placeResults = []"
-                                                class="text-xs text-neutral-500 hover:text-red-500 transition-colors cursor-pointer flex-shrink-0">
-                                            {% translate "Remove" %}
-                                        </button>
-                                    </div>
-
-                                    {% comment %}
-                                    Keyword search only — Meta retired the endpoint that
-                                    searched by coordinates in 2020 and never replaced it,
-                                    so there is no "near me" to offer.
-                                    {% endcomment %}
-                                    <div x-show="!placeId" class="relative">
-                                        <input type="text"
-                                               x-model="placeQuery"
-                                               @input="
-                                                   clearTimeout(placeTimer);
-                                                   const q = placeQuery.trim();
-                                                   if (q.length < 2) { placeResults = []; return; }
-                                                   placeTimer = setTimeout(() => {
-                                                       placeSearching = true;
-                                                       fetch(`/workspace/{{ workspace.id }}/compose/facebook-places/${accId}/?q=` + encodeURIComponent(q))
-                                                           .then(r => r.json())
-                                                           .then(d => { placeResults = d.places || []; })
-                                                           .catch(() => { placeResults = []; })
-                                                           .finally(() => { placeSearching = false; });
-                                                   }, 350);
-                                               "
-                                               placeholder="{% translate 'Search for a place' %}"
-                                               class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
-                                        <div x-show="placeResults.length"
-                                             class="absolute left-0 right-0 top-full mt-1 bg-white border border-neutral-300 rounded-lg shadow-lg p-1 z-20 max-h-48 overflow-y-auto">
-                                            <template x-for="place in placeResults" :key="place.id">
-                                                <button type="button" class="place-result"
-                                                        @click="placeId = place.id; placeName = place.name; placeResults = []">
-                                                    <span class="block text-sm text-neutral-800" x-text="place.name"></span>
-                                                    <span class="block text-[11px] text-neutral-500" x-text="place.where"></span>
-                                                </button>
-                                            </template>
-                                        </div>
-                                        <p x-show="placeSearching" class="text-[11px] text-neutral-500 mt-1">{% translate "Searching…" %}</p>
-                                    </div>
-                                </div>
+                                {% include "composer/partials/_place_picker.html" with prefix="facebook" %}
 
                                 <div>
                                     <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Feeling / activity" %}</label>
@@ -1552,6 +1514,43 @@
                                         {% endfor %}
                                     </select>
                                 </div>
+                            </div>
+                        </template>
+
+                        {% comment %}
+                        Instagram extras, account-wide like the Facebook place:
+                        shown in the card of the account's first chosen format
+                        only, so the fields are posted once. The provider sends
+                        each one only where Instagram takes it.
+                        {% endcomment %}
+                        <template x-if="charLimits[accId]?.platform === 'instagram' && t.fmt === (selectedFormats[accId] || [])[0]">
+                            <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3">
+                                <input type="hidden" :name="'instagram_custom_' + accId" value="1">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Collaborators" %}</label>
+                                    <input type="text" :name="'instagram_collaborators_' + accId" x-model="igCollaborators"
+                                           placeholder="{% translate '@profile1, @profile2' %}"
+                                           class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                    <p class="text-[11px] text-neutral-500 mt-1">{% translate "Up to 3 profiles. Each gets an invite and, once accepted, the post shows on their profile too. Feed and Reels only." %}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Tag people" %}</label>
+                                    <input type="text" :name="'instagram_user_tags_' + accId" x-model="igUserTags"
+                                           placeholder="{% translate '@profile1, @profile2' %}"
+                                           class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                    <p class="text-[11px] text-neutral-500 mt-1">{% translate "Public profiles only. Tagged on the photo (the first one in a carousel) and on Stories; Reels can't be tagged." %}</p>
+                                </div>
+                                {% include "composer/partials/_place_picker.html" with prefix="instagram" %}
+                                <template x-if="(selectedFormats[accId] || []).includes('reel')">
+                                    <div class="space-y-3">
+                                        {% include "composer/partials/_video_cover_picker.html" with field="instagram_reel_cover_ms" %}
+                                        <label class="flex items-center gap-2 text-sm text-neutral-800 cursor-pointer">
+                                            <input type="checkbox" :name="'instagram_share_to_feed_' + accId" value="1" x-model="igShareToFeed"
+                                                   class="rounded border-neutral-400 text-brand-700 focus:ring-brand-200">
+                                            {% translate "Also show the Reel on the profile grid" %}
+                                        </label>
+                                    </div>
+                                </template>
                             </div>
                         </template>
                     </div>
@@ -1573,16 +1572,16 @@
                 it in one line.
                 {% endcomment %}
                 <div x-show="anyPlatformSupportsAutomation" x-transition x-cloak>
-                    <label class="block text-sm font-semibold text-neutral-600 uppercase tracking-wider mb-2">{% translate "Comment automation" %}</label>
-                    <div class="rounded-xl border border-neutral-300 bg-white divide-y divide-neutral-100">
+                    <label class="flex items-center gap-2 text-sm font-semibold text-neutral-800 uppercase tracking-wider mb-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path stroke-linecap="round" d="M3 20a6 6 0 0112 0M16 4.5a3.5 3.5 0 010 7M21 20a6 6 0 00-4-5.6"/></svg>{% translate "Comment automation" %}</label>
+                    <div class="rounded-xl border border-neutral-200 bg-white shadow-xs divide-y divide-neutral-100">
                         <template x-for="accId in automationAccounts" :key="'autom-' + accId">
                             <div class="flex items-center gap-3 px-4 py-3">
-                                <span class="platform-icon w-6 h-6 rounded-[5px] flex items-center justify-center shrink-0"
+                                <span class="platform-icon w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                                       :class="'pi-' + (charLimits[accId]?.platform || '')"
                                       x-html="platformIconSvg(charLimits[accId]?.platform || '')"></span>
 
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-[13px] font-medium text-neutral-800 truncate" x-text="targetLabel(accId, 'default')"></p>
+                                    <p class="text-sm font-semibold text-neutral-900 truncate" x-text="targetLabel(accId, 'default')"></p>
                                     {% comment %}
                                     status_label is already translated (the Status
                                     choices are marked), so it stands alone rather
@@ -1590,7 +1589,7 @@
                                     a glued-together phrase has no msgid to
                                     translate and reads wrong in most languages.
                                     {% endcomment %}
-                                    <p class="text-[11px] text-neutral-500"
+                                    <p class="text-xs text-neutral-600"
                                        x-text="automationTarget(accId)
                                            ? (automationTarget(accId).has_flow
                                                ? automationTarget(accId).status_label
@@ -1610,35 +1609,22 @@
 
                                 <template x-if="automationTarget(accId)">
                                     <a :href="automationUrl(accId)"
-                                       class="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-lg border transition-colors cursor-pointer shrink-0"
+                                       class="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-full transition-colors cursor-pointer shrink-0"
                                        :class="automationTarget(accId).has_flow
-                                           ? 'border-neutral-300 text-neutral-700 hover:border-neutral-400 hover:text-neutral-900'
-                                           : 'border-brand-200 bg-brand-50 text-brand-900 hover:bg-brand-100'">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                           ? 'border border-neutral-300 text-neutral-700 hover:border-neutral-400 hover:text-neutral-900'
+                                           : 'bg-brand-100 text-brand-800 hover:bg-brand-200'">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.9l7.6-3.8M8.2 13.1l7.6 3.8"/></svg>
                                         <span x-text="automationTarget(accId).has_flow ? cLabel('edit-flow') : cLabel('set-up-flow')"></span>
                                     </a>
                                 </template>
 
                                 <template x-if="!automationTarget(accId)">
-                                    <span class="px-3 py-1.5 text-[13px] text-neutral-400 shrink-0">{% translate "Set up flow" %}</span>
+                                    <span class="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-full bg-brand-100 text-brand-800 opacity-60 cursor-not-allowed shrink-0" aria-disabled="true"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.9l7.6-3.8M8.2 13.1l7.6 3.8"/></svg>{% translate "Set up flow" %}</span>
                                 </template>
                             </div>
                         </template>
                     </div>
                 </div>
-
-                <!-- First Comment (conditional - only when a platform supporting comments is selected) -->
-                <div x-show="anyPlatformSupportsFirstComment" x-transition x-cloak>
-                    <label class="block text-sm font-semibold text-neutral-600 uppercase tracking-wider mb-2">{% translate "First Comment" %}</label>
-                    <textarea name="first_comment"
-                              class="comment-editor"
-                              placeholder="{% translate 'First comment posted after the main post…' %}"
-                              rows="1">{{ form.first_comment.value|default:"" }}</textarea>
-                </div>
-                <!-- Hidden first_comment field for form submission when section is hidden -->
-                <template x-if="!anyPlatformSupportsFirstComment">
-                    <input type="hidden" name="first_comment" value="{{ form.first_comment.value|default:"" }}">
-                </template>
 
                 <!-- Content Category -->
                 {% if categories %}
@@ -1657,213 +1643,229 @@
                 </div>
                 {% endif %}
 
-                <hr class="border-neutral-300">
-
-                <!-- Tags (dropdown with search & create) -->
-                <div class="relative" x-data="{
-                    tags: {{ post.tags|json_attr }},
-                    tagDropdownOpen: false,
-                    tagSearch: '',
-                    allTags: [{% for tag in all_tags %}'{{ tag.name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
-                    /* name -> kind, so a chip can show what the tag will do. */
-                    tagKindByName: {{ tag_kinds_json|default:"{}" }},
-                    tagKinds: [
-                        { value: 'internal', label: cLabel('tag-kind-internal') },
-                        { value: 'hashtag', label: cLabel('tag-kind-hashtag') },
-                        { value: 'mention', label: cLabel('tag-kind-mention') },
-                    ],
-                    /* Mirrors Tag.slug_for_publishing: the networks cut a tag at
-                       the first space, so the preview has to fold it the same
-                       way or it would promise something else. */
-                    tagPreview(name, kind) {
-                        const sigil = { hashtag: '#', mention: '@' }[kind];
-                        if (!sigil) return '';
-                        const slug = (name || '').split('').filter(c => /\p{L}|\p{N}/u.test(c)).join('');
-                        return slug ? sigil + slug : '';
-                    },
-                    get filteredTags() {
-                        const q = this.tagSearch.toLowerCase();
-                        return this.allTags.filter(t => !q || t.toLowerCase().includes(q));
-                    },
-                    toggleTag(name) {
-                        const idx = this.tags.indexOf(name);
-                        if (idx >= 0) { this.tags.splice(idx, 1); }
-                        else { this.tags.push(name); }
-                        /* Published tags are part of the caption now, so the
-                           preview is stale the moment one is added or dropped. */
-                        this.triggerPreviewUpdate();
-                    },
-                    createTag() {
-                        const name = this.tagSearch.trim();
-                        if (!name) return;
-                        if (!this.allTags.includes(name)) { this.allTags.push(name); this.allTags.sort(); }
-                        if (!this.tags.includes(name)) { this.tags.push(name); }
-                        this.tagSearch = '';
-                        /* Persist to server */
-                        fetch('{% url "composer:tag_create" workspace_id=workspace.id %}', {
-                            method: 'POST',
-                            headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: 'name=' + encodeURIComponent(name),
-                        });
-                    },
-                    removeTag(idx) { this.tags.splice(idx, 1); },
-                    showCreateTagModal: false,
-                    newTagName: '',
-                    newTagKind: 'internal',
-                    _persistTag(name, kind) {
-                        kind = kind || 'internal';
-                        if (!this.allTags.includes(name)) { this.allTags.push(name); this.allTags.sort(); }
-                        if (!this.tags.includes(name)) { this.tags.push(name); }
-                        this.tagKindByName[name] = kind;
-                        fetch('{% url "composer:tag_create" workspace_id=workspace.id %}', {
-                            method: 'POST',
-                            headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: 'name=' + encodeURIComponent(name) + '&kind=' + encodeURIComponent(kind),
-                        }).then(() => this.triggerPreviewUpdate?.());
-                    },
-                }" @click.away="tagDropdownOpen = false">
-                    <div class="flex items-center gap-2 mb-2">
-                        <label class="text-sm font-semibold text-neutral-600 uppercase tracking-wider">{% translate "Tags" %}</label>
-                        <span class="text-[10px] font-semibold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full uppercase tracking-wider">{% translate "Internal team only" %}</span>
+                {% comment %}
+                First comment and tags share a row; tags take the whole row when
+                no chosen platform supports a first comment.
+                {% endcomment %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                    <!-- First Comment (conditional - only when a platform supporting comments is selected) -->
+                    <div x-show="anyPlatformSupportsFirstComment" x-transition x-cloak>
+                        <label class="flex items-center gap-2 text-sm font-semibold text-neutral-800 uppercase tracking-wider mb-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m-9 6l2.6-3.4A8 8 0 1112 20H4z"/></svg>{% translate "First Comment" %}</label>
+                        <textarea name="first_comment"
+                                  class="comment-editor"
+                                  placeholder="{% translate 'First comment posted after the main post…' %}"
+                                  rows="1">{{ form.first_comment.value|default:"" }}</textarea>
                     </div>
-                    <input type="hidden" name="tags" :value="tags.join(',')">
-
-                    <!-- Selected tags chips + trigger -->
-                    <div class="flex flex-wrap items-center gap-1.5 w-full min-h-[42px] px-3 py-2 rounded-xl border border-neutral-300 bg-white transition-all duration-150 cursor-pointer"
-                         :class="tagDropdownOpen && 'border-brand-700 ring-2 ring-brand-100'"
-                         @click="tagDropdownOpen = !tagDropdownOpen; if(tagDropdownOpen) $nextTick(() => { $refs.tagSearchInput.focus(); $refs.tagSearchInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); })">
-                        {% comment %}
-                        A published tag is tinted and carries its sigil, so the
-                        ones that leave the workspace are tellable at a glance
-                        from the ones that only file the post.
-                        {% endcomment %}
-                        <template x-for="(tag, idx) in tags" :key="tag">
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-                                  :class="tagPreview(tag, tagKindByName[tag]) ? 'bg-brand-50 text-brand-900' : 'bg-neutral-100 text-neutral-800'">
-                                <span x-text="tagPreview(tag, tagKindByName[tag]) || tag"></span>
-                                <button type="button" @click.stop="removeTag(idx)" class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-neutral-500 hover:text-red-500 hover:bg-red-50 transition-colors">
-                                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                            </span>
-                        </template>
-                        <span x-show="!tags.length" class="text-sm text-neutral-500">{% translate "Select tags..." %}</span>
-                        <svg class="w-4 h-4 ml-auto text-neutral-500 shrink-0 transition-transform duration-150" :class="tagDropdownOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                    </div>
-
-                    <!-- Dropdown -->
-                    <div x-show="tagDropdownOpen" x-cloak x-transition
-                         class="mt-1 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 py-1 max-h-[220px] overflow-y-auto"
-                         @click.stop>
-                        <!-- Search input -->
-                        <div class="px-2 py-1.5 border-b border-neutral-100">
-                            <input type="text" x-ref="tagSearchInput" x-model="tagSearch"
-                                   @keydown.enter.prevent="if (tagSearch.trim() && !filteredTags.includes(tagSearch.trim())) { createTag(); } else if (filteredTags.length === 1) { toggleTag(filteredTags[0]); tagSearch = ''; }"
-                                   class="w-full text-sm px-2 py-1.5 rounded-lg border border-neutral-300 outline-none focus:border-brand-500 transition-colors"
-                                   placeholder="{% translate 'Search or create tag...' %}">
+                    <!-- Tags (dropdown with search & create) -->
+                    <div class="relative" :class="anyPlatformSupportsFirstComment ? '' : 'md:col-span-2'" x-data="{
+                        tags: {{ post.tags|json_attr }},
+                        tagDropdownOpen: false,
+                        tagSearch: '',
+                        allTags: [{% for tag in all_tags %}'{{ tag.name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                        /* name -> kind, so a chip can show what the tag will do. */
+                        tagKindByName: {{ tag_kinds_json|default:"{}" }},
+                        tagKinds: [
+                            { value: 'internal', label: cLabel('tag-kind-internal') },
+                            { value: 'hashtag', label: cLabel('tag-kind-hashtag') },
+                            { value: 'mention', label: cLabel('tag-kind-mention') },
+                        ],
+                        /* Mirrors Tag.slug_for_publishing: the networks cut a tag at
+                           the first space, so the preview has to fold it the same
+                           way or it would promise something else. */
+                        tagPreview(name, kind) {
+                            const sigil = { hashtag: '#', mention: '@' }[kind];
+                            if (!sigil) return '';
+                            const slug = (name || '').split('').filter(c => /\p{L}|\p{N}/u.test(c)).join('');
+                            return slug ? sigil + slug : '';
+                        },
+                        get filteredTags() {
+                            const q = this.tagSearch.toLowerCase();
+                            return this.allTags.filter(t => !q || t.toLowerCase().includes(q));
+                        },
+                        toggleTag(name) {
+                            const idx = this.tags.indexOf(name);
+                            if (idx >= 0) { this.tags.splice(idx, 1); }
+                            else { this.tags.push(name); }
+                            /* Published tags are part of the caption now, so the
+                               preview is stale the moment one is added or dropped. */
+                            this.triggerPreviewUpdate();
+                        },
+                        createTag() {
+                            const name = this.tagSearch.trim();
+                            if (!name) return;
+                            if (!this.allTags.includes(name)) { this.allTags.push(name); this.allTags.sort(); }
+                            if (!this.tags.includes(name)) { this.tags.push(name); }
+                            this.tagSearch = '';
+                            /* Persist to server */
+                            fetch('{% url "composer:tag_create" workspace_id=workspace.id %}', {
+                                method: 'POST',
+                                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'name=' + encodeURIComponent(name),
+                            });
+                        },
+                        removeTag(idx) { this.tags.splice(idx, 1); },
+                        showCreateTagModal: false,
+                        newTagName: '',
+                        newTagKind: 'internal',
+                        _persistTag(name, kind) {
+                            kind = kind || 'internal';
+                            if (!this.allTags.includes(name)) { this.allTags.push(name); this.allTags.sort(); }
+                            if (!this.tags.includes(name)) { this.tags.push(name); }
+                            this.tagKindByName[name] = kind;
+                            fetch('{% url "composer:tag_create" workspace_id=workspace.id %}', {
+                                method: 'POST',
+                                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'name=' + encodeURIComponent(name) + '&kind=' + encodeURIComponent(kind),
+                            }).then(() => this.triggerPreviewUpdate?.());
+                        },
+                    }" @click.away="tagDropdownOpen = false">
+                        <div class="flex items-center gap-2 mb-2">
+                            <label class="flex items-center gap-2 text-sm font-semibold text-neutral-800 uppercase tracking-wider"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12V4a1 1 0 011-1h8l9 9-9 9-9-9z"/><circle cx="7.5" cy="7.5" r="1.25" fill="currentColor"/></svg>{% translate "Tags" %}</label>
+                            <span class="pill pill-brand text-[11px]">{% translate "Internal team only" %}</span>
                         </div>
-                        <!-- Tag list -->
-                        <template x-for="tag in filteredTags" :key="tag">
-                            <label class="flex items-center gap-2 px-3 py-1.5 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer rounded-md mx-1">
-                                <input type="checkbox" class="rounded accent-brand-700"
-                                       :checked="tags.includes(tag)"
-                                       @change="toggleTag(tag)">
-                                <span x-text="tag"></span>
-                                <span class="ml-auto text-[10px] font-semibold text-brand-800"
-                                      x-show="tagPreview(tag, tagKindByName[tag])"
-                                      x-text="tagPreview(tag, tagKindByName[tag])"></span>
-                            </label>
-                        </template>
-                        <!-- No results / Create -->
-                        <template x-if="tagSearch.trim() && !filteredTags.length">
-                            <button type="button" @click="createTag()"
-                                    class="flex items-center gap-2 w-full px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md mx-1">
-                                <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                {% translate "Create" %} “<span x-text="tagSearch.trim()" class="font-semibold"></span>”
-                            </button>
-                        </template>
-                        <template x-if="tagSearch.trim() && filteredTags.length && !filteredTags.includes(tagSearch.trim())">
-                            <div class="border-t border-neutral-100 mt-1 pt-1">
+                        <input type="hidden" name="tags" :value="tags.join(',')">
+
+                        <!-- Selected tags chips + trigger -->
+                        <div class="flex flex-wrap items-center gap-1.5 w-full min-h-[42px] px-3 py-2 rounded-xl border border-neutral-300 bg-white transition-all duration-150 cursor-pointer"
+                             :class="tagDropdownOpen && 'border-brand-700 ring-2 ring-brand-100'"
+                             @click="tagDropdownOpen = !tagDropdownOpen; if(tagDropdownOpen) $nextTick(() => { $refs.tagSearchInput.focus(); $refs.tagSearchInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); })">
+                            {% comment %}
+                            A published tag is tinted and carries its sigil, so the
+                            ones that leave the workspace are tellable at a glance
+                            from the ones that only file the post.
+                            {% endcomment %}
+                            <template x-for="(tag, idx) in tags" :key="tag">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+                                      :class="tagPreview(tag, tagKindByName[tag]) ? 'bg-brand-50 text-brand-900' : 'bg-neutral-100 text-neutral-800'">
+                                    <span x-text="tagPreview(tag, tagKindByName[tag]) || tag"></span>
+                                    <button type="button" @click.stop="removeTag(idx)" class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-neutral-500 hover:text-red-500 hover:bg-red-50 transition-colors">
+                                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                </span>
+                            </template>
+                            <span x-show="!tags.length" class="text-sm text-neutral-500">{% translate "Select tags..." %}</span>
+                            <svg class="w-4 h-4 ml-auto text-neutral-500 shrink-0 transition-transform duration-150" :class="tagDropdownOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+
+                        <!-- Dropdown -->
+                        <div x-show="tagDropdownOpen" x-cloak x-transition
+                             class="absolute left-0 right-0 top-full z-30 mt-1 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 py-1 max-h-[220px] overflow-y-auto"
+                             @click.stop>
+                            <!-- Search input -->
+                            <div class="px-2 py-1.5 border-b border-neutral-100">
+                                <input type="text" x-ref="tagSearchInput" x-model="tagSearch"
+                                       @keydown.enter.prevent="if (tagSearch.trim() && !filteredTags.includes(tagSearch.trim())) { createTag(); } else if (filteredTags.length === 1) { toggleTag(filteredTags[0]); tagSearch = ''; }"
+                                       class="w-full text-sm px-2 py-1.5 rounded-lg border border-neutral-300 outline-none focus:border-brand-500 transition-colors"
+                                       placeholder="{% translate 'Search or create tag...' %}">
+                            </div>
+                            <!-- Tag list -->
+                            <template x-for="tag in filteredTags" :key="tag">
+                                <label class="flex items-center gap-2 px-3 py-1.5 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer rounded-md mx-1">
+                                    <input type="checkbox" class="rounded accent-brand-700"
+                                           :checked="tags.includes(tag)"
+                                           @change="toggleTag(tag)">
+                                    <span x-text="tag"></span>
+                                    <span class="ml-auto text-[10px] font-semibold text-brand-800"
+                                          x-show="tagPreview(tag, tagKindByName[tag])"
+                                          x-text="tagPreview(tag, tagKindByName[tag])"></span>
+                                </label>
+                            </template>
+                            <!-- No results / Create -->
+                            <template x-if="tagSearch.trim() && !filteredTags.length">
                                 <button type="button" @click="createTag()"
                                         class="flex items-center gap-2 w-full px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md mx-1">
                                     <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                                     {% translate "Create" %} “<span x-text="tagSearch.trim()" class="font-semibold"></span>”
                                 </button>
+                            </template>
+                            <template x-if="tagSearch.trim() && filteredTags.length && !filteredTags.includes(tagSearch.trim())">
+                                <div class="border-t border-neutral-100 mt-1 pt-1">
+                                    <button type="button" @click="createTag()"
+                                            class="flex items-center gap-2 w-full px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md mx-1">
+                                        <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                        {% translate "Create" %} “<span x-text="tagSearch.trim()" class="font-semibold"></span>”
+                                    </button>
+                                </div>
+                            </template>
+                            <template x-if="!tagSearch.trim() && !allTags.length">
+                                <div class="px-3 py-2 text-xs text-neutral-500">{% translate "No tags yet. Type to create one." %}</div>
+                            </template>
+                            <!-- Create new tag -->
+                            <div class="border-t border-neutral-100 px-1 py-1">
+                                <button type="button" @click="tagDropdownOpen = false; showCreateTagModal = true; newTagName = tagSearch; tagSearch = ''; $nextTick(() => $refs.newTagNameInput.focus())"
+                                        class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
+                                    <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                    {% translate "Create new tag" %}
+                                </button>
                             </div>
-                        </template>
-                        <template x-if="!tagSearch.trim() && !allTags.length">
-                            <div class="px-3 py-2 text-xs text-neutral-500">{% translate "No tags yet. Type to create one." %}</div>
-                        </template>
-                        <!-- Create new tag -->
-                        <div class="border-t border-neutral-100 px-1 py-1">
-                            <button type="button" @click="tagDropdownOpen = false; showCreateTagModal = true; newTagName = tagSearch; tagSearch = ''; $nextTick(() => $refs.newTagNameInput.focus())"
-                                    class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
-                                <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                {% translate "Create new tag" %}
-                            </button>
                         </div>
-                    </div>
 
-                    <!-- Create Tag Modal (teleported to body to escape stacking contexts) -->
-                    <template x-teleport="body">
-                        <div x-show="showCreateTagModal" x-cloak class="fixed inset-0 z-[200] flex items-center justify-center" @keydown.escape.window="showCreateTagModal = false">
-                            <div class="fixed inset-0 bg-black/30" @click="showCreateTagModal = false"></div>
-                            <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6" @click.stop>
-                                <h3 class="text-base font-semibold text-neutral-900 mb-4">{% translate "Create new tag" %}</h3>
-                                <input type="text" x-ref="newTagNameInput" x-model="newTagName"
-                                       @keydown.enter.prevent="if(newTagName.trim()) { _persistTag(newTagName.trim(), newTagKind); showCreateTagModal = false; newTagName = ''; newTagKind = 'internal'; }"
-                                       class="w-full text-sm px-3 py-2.5 rounded-xl border border-neutral-300 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all"
-                                       placeholder="{% translate 'Tag name...' %}">
-                                {% comment %}
-                                The kind is the whole point of the tag doing two
-                                jobs: internal keeps it to the filters, the other
-                                two also put it in the caption. Defaulting to
-                                internal means nothing reaches a post unless it
-                                was chosen deliberately.
-                                {% endcomment %}
-                                <div class="mt-3">
-                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{% translate "Use" %}</label>
-                                    <div class="grid grid-cols-3 gap-1.5">
-                                        <template x-for="opt in tagKinds" :key="opt.value">
-                                            <button type="button" @click="newTagKind = opt.value"
-                                                    class="px-2 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer"
-                                                    :class="newTagKind === opt.value
-                                                        ? 'border-brand-300 bg-brand-50 text-brand-900'
-                                                        : 'border-neutral-300 text-neutral-600 hover:border-neutral-400'">
-                                                <span x-text="opt.label"></span>
-                                            </button>
-                                        </template>
+                        <!-- Create Tag Modal (teleported to body to escape stacking contexts) -->
+                        <template x-teleport="body">
+                            <div x-show="showCreateTagModal" x-cloak class="fixed inset-0 z-[200] flex items-center justify-center" @keydown.escape.window="showCreateTagModal = false">
+                                <div class="fixed inset-0 bg-black/30" @click="showCreateTagModal = false"></div>
+                                <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6" @click.stop>
+                                    <h3 class="text-base font-semibold text-neutral-900 mb-4">{% translate "Create new tag" %}</h3>
+                                    <input type="text" x-ref="newTagNameInput" x-model="newTagName"
+                                           @keydown.enter.prevent="if(newTagName.trim()) { _persistTag(newTagName.trim(), newTagKind); showCreateTagModal = false; newTagName = ''; newTagKind = 'internal'; }"
+                                           class="w-full text-sm px-3 py-2.5 rounded-xl border border-neutral-300 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all"
+                                           placeholder="{% translate 'Tag name...' %}">
+                                    {% comment %}
+                                    The kind is the whole point of the tag doing two
+                                    jobs: internal keeps it to the filters, the other
+                                    two also put it in the caption. Defaulting to
+                                    internal means nothing reaches a post unless it
+                                    was chosen deliberately.
+                                    {% endcomment %}
+                                    <div class="mt-3">
+                                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{% translate "Use" %}</label>
+                                        <div class="grid grid-cols-3 gap-1.5">
+                                            <template x-for="opt in tagKinds" :key="opt.value">
+                                                <button type="button" @click="newTagKind = opt.value"
+                                                        class="px-2 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer"
+                                                        :class="newTagKind === opt.value
+                                                            ? 'border-brand-300 bg-brand-50 text-brand-900'
+                                                            : 'border-neutral-300 text-neutral-600 hover:border-neutral-400'">
+                                                    <span x-text="opt.label"></span>
+                                                </button>
+                                            </template>
+                                        </div>
+                                        <p class="text-[11px] text-neutral-500 mt-1.5"
+                                           x-show="newTagKind !== 'internal'"
+                                           x-text="cLabel('tag-kind-hint') + ': ' + tagPreview(newTagName, newTagKind)"></p>
                                     </div>
-                                    <p class="text-[11px] text-neutral-500 mt-1.5"
-                                       x-show="newTagKind !== 'internal'"
-                                       x-text="cLabel('tag-kind-hint') + ': ' + tagPreview(newTagName, newTagKind)"></p>
-                                </div>
-                                <div class="flex justify-end gap-2 mt-4">
-                                    <button type="button" @click="showCreateTagModal = false; newTagName = ''; newTagKind = 'internal'"
-                                            class="px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded-lg cursor-pointer transition-colors">
-                                        {% translate "Cancel" %}
-                                    </button>
-                                    <button type="button"
-                                            @click="if(newTagName.trim()) { _persistTag(newTagName.trim(), newTagKind); showCreateTagModal = false; newTagName = ''; newTagKind = 'internal'; }"
-                                            class="px-4 py-2 text-sm font-semibold text-white rounded-lg transition-colors"
-                                            style="background: var(--primary);"
-                                            :class="newTagName.trim() ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'">
-                                        {% translate "Create" %}
-                                    </button>
+                                    <div class="flex justify-end gap-2 mt-4">
+                                        <button type="button" @click="showCreateTagModal = false; newTagName = ''; newTagKind = 'internal'"
+                                                class="px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded-lg cursor-pointer transition-colors">
+                                            {% translate "Cancel" %}
+                                        </button>
+                                        <button type="button"
+                                                @click="if(newTagName.trim()) { _persistTag(newTagName.trim(), newTagKind); showCreateTagModal = false; newTagName = ''; newTagKind = 'internal'; }"
+                                                class="px-4 py-2 text-sm font-semibold text-white rounded-lg transition-colors"
+                                                style="background: var(--primary);"
+                                                :class="newTagName.trim() ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'">
+                                            {% translate "Create" %}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </template>
+                        </template>
+                    </div>
                 </div>
+                <!-- Hidden first_comment field for form submission when section is hidden -->
+                <template x-if="!anyPlatformSupportsFirstComment">
+                    <input type="hidden" name="first_comment" value="{{ form.first_comment.value|default:"" }}">
+                </template>
 
                 <!-- Internal Notes (hidden from client/viewer roles) -->
                 {% if can_view_internal_notes %}
                 <div>
                     <div class="flex items-center gap-2 mb-2">
-                        <label class="text-sm font-semibold text-neutral-600 uppercase tracking-wider">{% translate "Notes" %}</label>
-                        <span class="text-[10px] font-semibold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full uppercase tracking-wider">{% translate "Internal team only" %}</span>
+                        <label class="flex items-center gap-2 text-sm font-semibold text-neutral-800 uppercase tracking-wider"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path stroke-linecap="round" d="M14 3v6h6M8 13h8M8 17h5"/></svg>{% translate "Notes" %}</label>
+                        <span class="pill pill-brand text-[11px]">{% translate "Internal team only" %}</span>
                     </div>
                     <textarea name="internal_notes"
-                              class="w-full text-sm font-normal px-4 py-3 rounded-xl border border-dashed border-neutral-300 bg-neutral-50/80 text-neutral-700 outline-none focus:border-neutral-400 transition-all duration-150 resize-none"
+                              class="w-full text-sm font-normal px-4 py-3 rounded-xl border border-neutral-300 bg-white text-neutral-700 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all duration-150 resize-none"
                               placeholder="{% translate 'Internal team notes - not visible to clients…' %}"
                               rows="2">{{ form.internal_notes.value|default:"" }}</textarea>
                 </div>
@@ -1881,18 +1883,22 @@
                 </button>
                 {% endif %}
 
-                <!-- Autosave indicator -->
-                <div id="autosave-status" class="text-xs text-neutral-500 mr-auto hidden sm:flex items-center gap-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-neutral-400" :class="{ 'bg-emerald-400': lastSaved }"></span>
+                <!-- Autosave indicator: last save time, and "Draft saved" until the next edit -->
+                <div id="autosave-status" class="text-xs text-neutral-600 mr-auto hidden sm:flex items-center gap-2">
+                    <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 18a4.5 4.5 0 01-.9-8.91A6 6 0 0117.7 8.1 4.5 4.5 0 0117 18H7z"/></svg>
                     <span x-text="lastSaved ? cLabel('saved') + ' ' + lastSaved : cLabel('not-saved')"></span>
+                    <span x-show="draftSaved" x-cloak class="pill pill-success">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        {% translate "Draft saved" %}
+                    </span>
                 </div>
                 <div class="mr-auto sm:hidden"></div>
 
                 {% if not post_is_readonly %}
                 <!-- Save Draft -->
                 <button type="submit" name="action" value="save_draft"
-                        class="inline-flex items-center gap-1.5 px-2 sm:px-4 py-2 text-sm font-semibold text-neutral-700 hover:text-neutral-900 rounded-lg hover:bg-neutral-100 transition-all duration-150 cursor-pointer flex-shrink-0">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                        class="inline-flex items-center gap-2 px-2 sm:px-4 py-2.5 text-sm font-semibold text-neutral-800 hover:text-neutral-950 rounded-xl hover:bg-neutral-100 transition-all duration-150 cursor-pointer flex-shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M17 21l-5-4-5 4V5a2 2 0 012-2h6a2 2 0 012 2v16z"/></svg>
                     <span class="hidden sm:inline">{% translate "Save Draft" %}</span>
                 </button>
                 {% endif %}
@@ -1929,7 +1935,7 @@
                     <button type="button" id="publish-mode-btn"
                             :disabled="selectedAccounts.length === 0"
                             :class="selectedAccounts.length === 0 && 'opacity-50 cursor-not-allowed'"
-                            class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-semibold text-brand-900 bg-brand-100 rounded-lg hover:bg-brand-200 border border-brand-200 transition-all duration-150 cursor-pointer">
+                            class="inline-flex items-center gap-2 px-3 sm:px-5 py-2.5 text-sm font-semibold text-brand-800 bg-brand-100 rounded-xl hover:bg-brand-200 transition-all duration-150 cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                         <span class="hidden sm:inline">{% translate "Schedule" %}</span>
                         <svg class="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
@@ -2012,7 +2018,7 @@
                 <button type="submit" name="action" value="publish_now" id="publish-now-btn"
                         :disabled="selectedAccounts.length === 0"
                         :class="selectedAccounts.length === 0 && 'opacity-50 cursor-not-allowed'"
-                        class="inline-flex items-center gap-1.5 px-3 sm:px-5 py-2 text-sm font-semibold text-white bg-brand-700 rounded-lg hover:bg-brand-800 border border-brand-700 hover:border-brand-800 shadow-sm transition-all duration-150 cursor-pointer flex-shrink-0">
+                        class="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 text-sm font-semibold text-white bg-brand-700 rounded-xl hover:bg-brand-800 shadow-sm transition-all duration-150 cursor-pointer flex-shrink-0">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
                     {% translate "Publish now" %}
                 </button>
@@ -2147,15 +2153,21 @@
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
          class="panel-right-backdrop"></div>
-    <div class="panel-right border-l border-neutral-300 bg-neutral-50 lg:bg-neutral-50 flex flex-col"
+    <div class="panel-right bg-neutral-50 lg:bg-neutral-50 flex flex-col"
          :class="{ 'is-open': showPreviewPanel }">
-        <div class="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
-            <h3 class="text-xs font-semibold text-neutral-600 uppercase tracking-wider">{% translate "Preview" %}</h3>
+        <div class="px-4 py-3 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-neutral-800 uppercase tracking-wider">{% translate "Post preview" %}</h3>
             <div class="flex items-center gap-2">
-                <span class="text-xs text-neutral-500 tabular-nums"
-                      x-show="selectedAccounts.length > 0"
-                      x-text="selectedAccounts.length + (selectedAccounts.length === 1 ? ' platform' : ' platforms')">
-                </span>
+                <template x-if="selectedAccounts.length > 1">
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" class="preview-arrow" @click="$dispatch('preview-prev')" aria-label="{% translate 'Previous platform' %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <button type="button" class="preview-arrow" @click="$dispatch('preview-next')" aria-label="{% translate 'Next platform' %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                </template>
                 <button type="button" @click="showPreviewPanel = false"
                         class="lg:hidden w-7 h-7 rounded-md text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 flex items-center justify-center transition-colors cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -2591,7 +2603,6 @@
     {% endif %}
 </div>
 {# Toast host for approval-action feedback (outside htmx-swapped regions) #}
-{% include "approvals/partials/_toasts.html" %}
 {% endblock %}
 
 {% block extra_js %}
@@ -2603,9 +2614,9 @@
     setTimeout(function () { window.location.reload(); }, 1100);
   });
 </script>
-{% translate "Saved" as lbl_c_saved %}
+{% translate "Saved at" as lbl_c_saved %}
 {% translate "Not saved yet" as lbl_c_not_saved %}
-{% translate "Caption" as lbl_c_caption %}
+{% translate "Post content" as lbl_c_caption %}
 {% translate "Caption / Description" as lbl_c_caption_desc %}
 {% translate "Title" as lbl_c_title %}
 {% translate "Schedule" as lbl_c_schedule %}
@@ -2680,7 +2691,7 @@
 {% translate "{count} media outside the {format} ratio" as lbl_c_ratio_issue_many %}
 {% translate "outside the ratio" as lbl_c_ratio_outside %}
 {% translate "This crop applies to {format} only; the other formats keep the original image." as lbl_c_crop_for_format %}
-{% translate "A Story needs exactly one photo or one video." as lbl_c_story_media %}
+{% translate "A Story needs at least one photo or video." as lbl_c_story_media %}
 {% translate "A Reel needs exactly one video." as lbl_c_reel_media %}
 {% translate "A profile photo needs exactly one image." as lbl_c_photo_media %}
 {{ lbl_c_saved|json_script:"c-saved" }}
@@ -2782,6 +2793,7 @@ function cLabel(id) {
 {{ format_media|json_script:"composer-format-media" }}
 {{ media_items|json_script:"composer-media-items" }}
 {{ emoji_categories|json_script:"composer-emoji" }}
+<script src="{% static 'js/emoji-picker.js' %}"></script>
 <script nonce="{{ request.csp_nonce }}">
 function composerApp() {
     return {
@@ -2813,13 +2825,12 @@ function composerApp() {
         showSaveToast: false,
         formError: '',
         lastSaved: null,
+        // True from a successful save until the next edit; drives "Draft saved".
+        draftSaved: false,
         previewTimer: null,
         autosavedPostId: '{{ post.id|default:"" }}',
         mediaItems: JSON.parse(document.getElementById('composer-media-items').textContent),
-        emojiCategories: JSON.parse(document.getElementById('composer-emoji').textContent),
-        showEmoji: false,
-        emojiQuery: '',
-        emojiCategory: 'smileys',
+        ...emojiPicker('composer-emoji'),
 
         // Unsplash search modal
         showUnsplashModal: false,
@@ -2837,12 +2848,11 @@ function composerApp() {
         hasMediaAttached: false,
         hasVideoAttached: false,
         hasSingleVideoAttached: false,
-        hasSingleMediaAttached: false,
         hasSingleImageAttached: false,
         showFramePicker: false,
         framePickerAccId: null,
         framePickerMode: 'upload',
-        tiktokCoverPreview: {},
+        coverPreview: {},
         frameAssetId: null,
         frameVideoUrl: '',
         frameVideoCors: false,
@@ -3043,7 +3053,6 @@ function composerApp() {
                 this.hasMediaAttached = thumbs.length > 0;
                 this.hasVideoAttached = videoCount > 0;
                 this.hasSingleVideoAttached = thumbs.length === 1 && videoCount === 1;
-                this.hasSingleMediaAttached = thumbs.length === 1;
                 this.hasSingleImageAttached = thumbs.length === 1 && videoCount === 0;
                 this.mediaInfo = thumbs.filter(t => t.dataset.mediaId).map(t => ({
                     id: t.dataset.mediaId,
@@ -3276,6 +3285,7 @@ function composerApp() {
         // selected while it has any format, through toggleAccount so its
         // per-account panels set up and tear down as before.
         toggleFormat(accId, fmt) {
+            this.draftSaved = false;
             const current = this.selectedFormats[accId] || [];
             const next = current.includes(fmt) ? current.filter(f => f !== fmt) : [...current, fmt];
             this.selectedFormats = { ...this.selectedFormats, [accId]: next };
@@ -3303,10 +3313,19 @@ function composerApp() {
                 .flatMap(accId => (this.selectedFormats[accId] || ['default']).map(fmt => accId + ':' + fmt))
                 .join(',');
         },
+        // Why a format that isn't picked can't be picked now, or ''. Only
+        // once media is attached: before that, any format can be picked.
+        formatBlocked(accId, fmt) {
+            if (!this.hasMediaAttached || this.hasFormat(accId, fmt)) return '';
+            return this.formatMismatch(fmt);
+        },
+        clearTargets() {
+            [...this.selectedAccounts].forEach(accId => this.toggleAccount(accId));
+        },
         // Why the attached media can't go out as ``fmt``, or ''. Mirrors
         // composer.services.format_blocker, which has the final say on save.
         formatMismatch(fmt) {
-            if (fmt === 'story' && !this.hasSingleMediaAttached) return cLabel('story-media');
+            if (fmt === 'story' && !this.hasMediaAttached) return cLabel('story-media');
             if (fmt === 'reel' && !this.hasSingleVideoAttached) return cLabel('reel-media');
             if (fmt === 'profile_photo' && !this.hasSingleImageAttached) return cLabel('photo-media');
             return '';
@@ -3709,7 +3728,7 @@ function composerApp() {
             try {
                 canvas.getContext('2d').drawImage(v, 0, 0);
                 if (this.framePickerMode === 'timestamp') {
-                    // TikTok: the API picks the cover by timestamp; the capture
+                    // TikTok and Instagram Reels: the API picks the cover by timestamp; the capture
                     // is only a local preview. Downscale it before storing in
                     // reactive state so a 4K frame isn't held as a multi-MB
                     // data URL for the rest of the session.
@@ -3722,9 +3741,9 @@ function composerApp() {
                         pc.width = pw;
                         pc.height = ph;
                         pc.getContext('2d').drawImage(v, 0, 0, pw, ph);
-                        this.tiktokCoverPreview[accId] = pc.toDataURL('image/jpeg', 0.7);
+                        this.coverPreview[accId] = pc.toDataURL('image/jpeg', 0.7);
                     } catch (e) {
-                        delete this.tiktokCoverPreview[accId];
+                        delete this.coverPreview[accId];
                     }
                     this.frameCapturing = false;
                     this.closeFramePicker();
@@ -3748,8 +3767,8 @@ function composerApp() {
             }
         },
 
-        clearTiktokCover(accId) {
-            delete this.tiktokCoverPreview[accId];
+        clearVideoCover(accId) {
+            delete this.coverPreview[accId];
             if (this.platformExtras[accId]) {
                 delete this.platformExtras[accId].video_cover_timestamp_ms;
             }
@@ -3797,6 +3816,7 @@ function composerApp() {
                 this.showSaveToast = true;
                 const now = new Date();
                 this.lastSaved = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                this.draftSaved = true;
                 setTimeout(() => { this.showSaveToast = false; }, 2000);
             } else if (xhr && xhr.status >= 400) {
                 try {
@@ -3815,34 +3835,19 @@ function composerApp() {
 
         uploadUrl: '{% if post %}{% url "composer:upload_media_post" workspace_id=workspace.id post_id=post.id %}{% else %}{% url "composer:upload_media" workspace_id=workspace.id %}{% endif %}',
 
-        // --- Emoji picker --------------------------------------------
-        toggleEmoji() {
-            this.showEmoji = !this.showEmoji;
-            if (this.showEmoji) {
-                this.$nextTick(() => this.$refs.emojiSearch?.focus());
-            }
+        // --- Emoji picker (state in static/js/emoji-picker.js) -------
+        // Starts a hashtag or mention at the cursor, with a space before it
+        // when it would otherwise stick to the previous word.
+        insertSigil(sigil) {
+            const field = document.querySelector('[name=caption]');
+            const at = field?.selectionStart ?? this.caption.length;
+            const before = this.caption.slice(0, at);
+            this.insertEmoji(before && !/\s$/.test(before) ? ' ' + sigil : sigil);
         },
-
-        visibleEmoji() {
-            const query = this.emojiQuery.trim().toLowerCase();
-            if (query) {
-                // Search spans every category, capped so a one-letter query
-                // doesn't render hundreds of cells.
-                const hits = [];
-                for (const cat of this.emojiCategories) {
-                    for (const item of cat.items) {
-                        if (item.n.includes(query)) {
-                            hits.push(item);
-                            if (hits.length >= 64) return hits;
-                        }
-                    }
-                }
-                return hits;
-            }
-            const cat = this.emojiCategories.find(c => c.key === this.emojiCategory);
-            return cat ? cat.items : [];
+        // Thousands separators in the page language (63.206 in pt-BR).
+        formatCount(n) {
+            return new Intl.NumberFormat(document.documentElement.lang || undefined).format(n);
         },
-
         insertEmoji(char) {
             // Insert at the cursor rather than appending: people reach for an
             // emoji mid-sentence as often as at the end.

@@ -1,146 +1,211 @@
 {% comment %}
-Single connected account card - HTMX-swappable.
+One connected account - HTMX-swappable (#account-<id>).
 Usage: {% include "social_accounts/partials/_account_card.html" with account=account workspace_id=workspace_id %}
+
+The card itself never carries a problem: the status pill does. A warning or
+an error turns the pill into a button that opens the detail modal, with the
+explanation and the way out (reconnect, try again, disconnect). Posting
+schedule and disconnect live in the "⋯" menu, so the card keeps
+the same shape whatever state the account is in.
 {% endcomment %}
 {% load social_accounts_tags i18n %}
-<div id="account-{{ account.id }}" class="group relative flex flex-col bg-white rounded-xl border border-neutral-300 p-5 transition-all duration-200 hover:shadow">
-    <div class="flex items-start gap-4">
-        <!-- Avatar -->
-        <div class="flex-shrink-0">
-            {% if account.avatar_url %}
-            <img src="{{ account.avatar_url }}" alt="{{ account.account_name|default:account.account_handle }}" class="w-11 h-11 rounded-full object-cover ring-2 ring-neutral-100">
-            {% else %}
-            <div class="w-11 h-11 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500">
-                {% if account.platform == "youtube" %}<span class="font-semibold">{{ account.account_name|default:account.account_handle|make_list|first|upper }}</span>{% else %}{% include "social_accounts/partials/_platform_icon.html" with platform=account.platform size="5" %}{% endif %}
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Info -->
+{% with health=account.health webhook_warning=account.webhook_warning %}
+<div id="account-{{ account.id }}"
+     class="relative flex flex-col a-card p-5 transition-shadow duration-200 hover:shadow-[var(--shadow-md)]"
+     data-state="{% if health == 'error' %}problem{% else %}connected{% endif %}"
+     data-category="{{ account.platform|platform_category }}"
+     data-name="{{ account.get_platform_display|lower }} {{ account.display_label|lower }}"
+     x-show="typeof matches !== 'function' || matches($el)"
+     x-data="{ detail: false, manage: false, menu: false, confirmDisconnect: false }"
+     @keydown.escape.window="detail = false; manage = false">
+    <div class="flex items-start gap-3">
+        {% include "social_accounts/partials/_platform_tile.html" with platform=account.platform %}
         <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-1">
-                <h3 class="text-sm font-semibold text-neutral-950 truncate">{{ account.account_name|default:account.account_handle }}</h3>
-                <span class="flex-shrink-0 text-neutral-500">
-                    {% if account.platform == "youtube" %}<a href="https://www.youtube.com/channel/{{ account.account_platform_id|urlencode }}" target="_blank" rel="noopener noreferrer" class="text-xs font-medium text-neutral-600 underline underline-offset-2">YouTube</a>{% else %}{% include "social_accounts/partials/_platform_icon.html" with platform=account.platform size="4" %}{% endif %}
-                </span>
-            </div>
-            {% if account.account_handle %}
-            <p class="text-xs text-neutral-600 truncate">@{{ account.account_handle|cut:"@" }}</p>
+            {% if account.platform == "youtube" %}
+            <a href="https://www.youtube.com/channel/{{ account.account_platform_id|urlencode }}" target="_blank" rel="noopener noreferrer" class="text-base font-medium text-neutral-950 underline underline-offset-2">YouTube</a>
+            {% else %}
+            <h3 class="text-base font-medium text-neutral-950 truncate">{{ account.get_platform_display }}</h3>
             {% endif %}
-            <div class="flex items-center gap-3 mt-2">
-                {% include "social_accounts/partials/_status_badge.html" with status=account.connection_status error=account.last_error %}
-                {% if account.follower_count %}
-                <span class="text-xs text-neutral-500">{{ account.follower_count|format_number }} {% if account.platform == "youtube" %}{% translate "subscribers" %}{% else %}{% translate "followers" %}{% endif %}</span>
+            <p class="text-xs text-neutral-600 truncate">{{ account.platform|platform_description }}</p>
+            {% with messaging=account.messaging_state %}
+            {% if messaging %}
+            <p class="mt-1 inline-flex items-center gap-1 text-xs font-medium {% if messaging == 'active' %}text-[var(--success-700)]{% else %}text-[var(--warning-700)]{% endif %}"
+               title="{% if messaging == 'active' %}{% translate 'Private messages arrive in the inbox in real time.' %}{% else %}{% translate 'Private messages are not reaching the inbox. Open the status for details or reconnect.' %}{% endif %}">
+                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                {% if messaging == "active" %}{% translate "Messages active" %}{% else %}{% translate "Messages unavailable" %}{% endif %}
+            </p>
+            {% endif %}
+            {% endwith %}
+        </div>
+        {% if health == "ok" %}
+        <span class="pill pill-success"><i></i>{% translate "Connected" %}</span>
+        {% else %}
+        <button type="button" @click="detail = true"
+                class="pill {% if health == 'error' %}pill-error{% else %}pill-warning{% endif %} is-action"
+                title="{% translate 'See details' %}">
+            <i></i>{% if health == "error" %}{% translate "Problem" %}{% else %}{% translate "Attention" %}{% endif %}
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="border-t border-neutral-100 mt-4 pt-4 flex items-center gap-3">
+        {% if account.avatar_url %}
+        <img src="{{ account.avatar_url }}" alt="" class="w-9 h-9 rounded-full object-cover ring-2 ring-neutral-100 flex-shrink-0" referrerpolicy="no-referrer">
+        {% else %}
+        <div class="w-9 h-9 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 text-xs font-bold ring-2 ring-neutral-100 flex-shrink-0">{{ account.display_label|make_list|first|upper }}</div>
+        {% endif %}
+        <div class="flex-1 min-w-0">
+            <h4 class="text-sm font-semibold text-neutral-950 truncate" title="{{ account.display_label }}">{{ account.display_label }}</h4>
+            <p class="text-xs text-neutral-500 truncate">
+                {% if account.account_handle and account.account_handle != account.account_name %}{% if account.platform != "whatsapp" %}@{% endif %}{{ account.account_handle|cut:"@" }}{% if account.follower_count %} · {% endif %}{% endif %}{% if account.follower_count %}{{ account.follower_count|format_number }} {% if account.platform == "youtube" %}{% translate "subscribers" %}{% else %}{% translate "followers" %}{% endif %}{% elif not account.account_handle or account.account_handle == account.account_name %}{% blocktranslate with date=account.connected_at|date:"SHORT_DATE_FORMAT" %}Connected on {{ date }}{% endblocktranslate %}{% endif %}
+            </p>
+        </div>
+        <div class="relative">
+            <button type="button" @click="menu = !menu" class="w-8 h-8 inline-flex items-center justify-center rounded-md text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50 cursor-pointer" aria-label="{% translate 'More actions' %}">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+            </button>
+            <div x-show="menu" x-cloak @click.away="menu = false" x-transition
+                 class="absolute right-0 top-full mt-1 z-20 w-48 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1">
+                <button type="button" @click="menu = false; manage = true" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Manage connection" %}</button>
+                <button type="button" @click="menu = false; confirmDisconnect = true" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer">{% translate "Disconnect" %}</button>
+            </div>
+            {% include "social_accounts/partials/_disconnect_confirm.html" with account=account workspace_id=workspace_id swap=True position="right-0 top-full mt-1" %}
+        </div>
+    </div>
+
+
+    {% if health != "ok" %}
+    <!-- Problem detail, opened by the status pill -->
+    <div x-show="detail" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="account-detail-title-{{ account.id }}"
+         x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+         @click.self="detail = false">
+        <div class="modal-panel">
+            <button type="button" class="modal-close" @click="detail = false" aria-label="{% translate 'Close' %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <div class="modal-header">
+                <div class="modal-icon {% if health == 'error' %}is-error{% else %}is-warning{% endif %}">
+                    <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div class="min-w-0">
+                    <div id="account-detail-title-{{ account.id }}" class="modal-title">{% if health == "error" %}{% translate "The connection was lost" %}{% else %}{% translate "Some features are unavailable." %}{% endif %}</div>
+                    <div class="modal-meta">{{ account.get_platform_display }} · {{ account.display_label }}</div>
+                </div>
+            </div>
+            <div class="modal-body">
+                {% if account.needs_reconnect %}
+                <p>{% if account.last_error %}{{ account.last_error }}{% else %}{% translate "Automator can no longer reach this account. Scheduled posts for it will fail and new comments stop arriving until you reconnect." %}{% endif %}</p>
+                {% elif account.connection_status == "token_expiring" %}
+                <p>{% translate "The access to this account expires soon. Reconnect to renew it before scheduled posts start failing." %}</p>
+                {% endif %}
+                {% comment %}
+                Meta drops permissions it has not approved, or that the user
+                declined, without failing the grant — so the connection reports
+                healthy and only breaks later, at publish or insights time, with
+                an opaque platform error. Naming them turns that into something
+                the user can act on.
+                {% endcomment %}
+                {% if account.connection_missing_scopes %}
+                <p>{% blocktranslate with scopes=account.connection_missing_scopes|join:", " %}This account was connected without {{ scopes }}. Anything relying on them will fail until the permission is granted — reconnect to try again.{% endblocktranslate %}</p>
+                {% endif %}
+                {% if account.instagram_dm_permission_request_disabled %}
+                <p>{% translate "Instagram DM access is unavailable for this connection. Contact your administrator to enable it." %}</p>
+                {% elif account.messaging_access is False %}
+                <p>{% translate "DMs unavailable: grant messaging access on the linked Facebook Page, then reconnect this account." %}</p>
+                {% endif %}
+                {% comment %}
+                Without the webhook subscription comments still reach the inbox
+                through polling, minutes late instead of instantly. Suppressed
+                once the connection itself is broken: a dead token can't carry a
+                subscription, and retry_webhooks refuses those accounts too.
+                {% endcomment %}
+                {% if webhook_warning and not account.needs_reconnect %}
+                <div class="space-y-3">
+                    <p><span class="font-semibold text-neutral-900">{% translate "Some real-time inbox updates are unavailable." %}</span>
+                    {{ webhook_warning.message|default:_("We couldn't set up real-time updates for this account.") }}
+                    {% translate "Activity with the required permissions can still arrive through polling." %}</p>
+                    {% if webhook_warning.needs_reconnect %}
+                    <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=workspace_id account_id=account.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-brand">{% translate "Reconnect" %}</button>
+                    </form>
+                    {% else %}
+                    {% comment %}
+                    method/action as well as hx-post: a browser that never ran
+                    htmx falls back to a plain POST instead of a GET with the
+                    token in the query string.
+                    {% endcomment %}
+                    <form method="post"
+                          action="{% url 'social_accounts:retry_webhooks' workspace_id=workspace_id account_id=account.id %}"
+                          hx-post="{% url 'social_accounts:retry_webhooks' workspace_id=workspace_id account_id=account.id %}"
+                          hx-target="#account-{{ account.id }}"
+                          hx-swap="outerHTML"
+                          x-data="{ retrying: false }"
+                          @submit="retrying = true"
+                          @htmx:after-request.camel="retrying = false">
+                        {% csrf_token %}
+                        <button type="submit" :disabled="retrying" class="btn-soft">
+                            <svg x-show="retrying" x-cloak class="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                            <span x-text="retrying ? $el.dataset.busy : $el.dataset.idle" data-busy="{% translate 'Trying…' %}" data-idle="{% translate 'Try again' %}">{% translate "Try again" %}</span>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-ghost" @click="detail = false">{% translate "Close" %}</button>
+                <button type="button" class="btn-danger-soft" @click="detail = false; confirmDisconnect = true">{% translate "Disconnect" %}</button>
+                {% if account.needs_reconnect or account.connection_missing_scopes or account.connection_status == "token_expiring" %}
+                <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=workspace_id account_id=account.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-brand">{% translate "Reconnect" %}</button>
+                </form>
                 {% endif %}
             </div>
         </div>
     </div>
-
-    {% comment %}
-    Meta drops permissions it has not approved, or that the user declined,
-    without failing the grant — so the connection reports healthy and only
-    breaks later, at publish or insights time, with an opaque platform error.
-    Naming them here turns that into something the user can act on.
-    {% endcomment %}
-    {% include "analytics/_instagram_status.html" %}
-    {% if account.connection_missing_scopes %}
-    <div class="mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-        <p class="text-xs text-amber-800">
-            <span class="font-semibold">{% translate "Some features are unavailable." %}</span>
-            {% blocktranslate with scopes=account.connection_missing_scopes|join:", " %}This account was connected without {{ scopes }}. Anything relying on them will fail until the permission is granted — reconnect to try again.{% endblocktranslate %}
-        </p>
-    </div>
     {% endif %}
 
-    {% if account.instagram_dm_permission_request_disabled %}
-    <p class="mt-3 text-xs text-amber-800">{% translate "Instagram DM access is unavailable for this connection. Contact your administrator to enable it." %}</p>
-    {% elif account.messaging_access is False %}
-    <p class="mt-3 text-xs text-amber-800">{% translate "DMs unavailable: grant messaging access on the linked Facebook Page, then reconnect this account." %}</p>
-    {% endif %}
-    {% if account.last_error and account.connection_status == "error" %}
-    <div class="mt-3 px-3 py-2 bg-red-50 rounded-lg">
-        <p class="text-xs text-red-600 truncate">{{ account.last_error }}</p>
-    </div>
-    {% endif %}
-
-    {% comment %}
-    The connection is healthy enough to publish and report, and comments still
-    reach the inbox via the polling cycle — but without the subscription they
-    arrive minutes late instead of instantly, which is worth saying rather than
-    letting the account look untouched. Every failure here offers a way out:
-    "Try again" re-runs the call, and a grant that can never satisfy it offers
-    Reconnect instead.
-
-    Suppressed entirely once the *connection* is broken. A dead token can't
-    carry a subscription, so "Try again" there would be a button that provably
-    does nothing; the card already shows the connection error and its own
-    Reconnect, which is the only thing that helps. ``retry_webhooks`` refuses
-    the same accounts, so the two never disagree about what is on offer.
-    {% endcomment %}
-    {% with webhook_warning=account.webhook_warning %}
-    {% if webhook_warning and not account.needs_reconnect %}
-    <div class="mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-        <div class="flex items-start justify-between gap-3">
-            <p class="text-xs text-amber-800">
-                <span class="font-semibold">{% translate "Some real-time inbox updates are unavailable." %}</span>
-                {{ webhook_warning.message|default:_("We couldn't set up real-time updates for this account.") }}
-                {% translate "Activity with the required permissions can still arrive through polling." %}
-            </p>
-            {% if webhook_warning.needs_reconnect %}
-            <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=workspace_id account_id=account.id %}">
-                {% csrf_token %}
-                <button type="submit" class="inline-flex flex-shrink-0 items-center whitespace-nowrap px-3 py-1.5 text-xs font-semibold text-amber-800 bg-amber-100 rounded-full hover:bg-amber-200 transition-colors cursor-pointer">
-                    {% translate "Reconnect" %}
-                </button>
-            </form>
-            {% else %}
-            {% comment %}
-            method/action as well as hx-post: without them a browser that never
-            ran htmx falls back to the form default — GET to the current URL,
-            which puts the CSRF token in the query string and retries nothing.
-            @htmx:after-request re-enables the button when a request fails,
-            since htmx only swaps this card away on success.
-            {% endcomment %}
-            <form method="post"
-                  action="{% url 'social_accounts:retry_webhooks' workspace_id=workspace_id account_id=account.id %}"
-                  hx-post="{% url 'social_accounts:retry_webhooks' workspace_id=workspace_id account_id=account.id %}"
-                  hx-target="#account-{{ account.id }}"
-                  hx-swap="outerHTML"
-                  x-data="{ retrying: false }"
-                  @submit="retrying = true"
-                  @htmx:after-request.camel="retrying = false">
-                {% csrf_token %}
-                <button type="submit" :disabled="retrying" class="inline-flex flex-shrink-0 items-center whitespace-nowrap gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-800 bg-amber-100 rounded-full hover:bg-amber-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg x-show="retrying" x-cloak class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                    <span x-text="retrying ? '{% translate 'Trying…' %}' : '{% translate 'Try again' %}'">{% translate "Try again" %}</span>
-                </button>
-            </form>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
-    {% endwith %}
-
-    <!-- Posting Schedule -->
-    {% if account.connection_status == "connected" %}
-    <div class="border-t border-neutral-100 mt-4 pt-4">
-        <div class="mb-3">
-            <h4 class="text-xs font-semibold text-neutral-800 uppercase tracking-wider">{% translate "Posting Schedule" %}</h4>
-            <p class="text-xs text-neutral-500 mt-0.5">{% translate "Set recurring time slots for when queued posts are automatically published." %}</p>
-        </div>
-        {% include "social_accounts/partials/_posting_slots_grid.html" with account=account workspace_id=workspace_id %}
-    </div>
-    {% endif %}
-
-    <div class="mt-auto pt-4 flex gap-2">
-        {% if account.needs_reconnect %}
-        <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=workspace_id account_id=account.id %}" class="flex-1 min-w-0">
-            {% csrf_token %}
-            <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-semibold text-brand-800 bg-brand-50 border border-brand-200 rounded-full hover:bg-brand-100 hover:border-brand-300 transition-all duration-200 cursor-pointer">
-                {% translate "Reconnect" %}
+    <!-- Manage connection: posting schedule, analytics status, disconnect -->
+    <div x-show="manage" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="account-manage-title-{{ account.id }}"
+         x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+         @click.self="manage = false">
+        <div class="modal-panel is-lg" style="max-width: 56rem;">
+            <button type="button" class="modal-close" @click="manage = false" aria-label="{% translate 'Close' %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
-        </form>
-        {% endif %}
-        {% include "social_accounts/partials/_disconnect_button.html" with account=account workspace_id=workspace_id swap=True %}
+            <div class="modal-header">
+                {% include "social_accounts/partials/_platform_tile.html" with platform=account.platform %}
+                <div class="min-w-0">
+                    <div id="account-manage-title-{{ account.id }}" class="modal-title">{% translate "Manage connection" %}</div>
+                    <div class="modal-meta">{{ account.get_platform_display }} · {{ account.display_label }}</div>
+                </div>
+            </div>
+            <div class="modal-body">
+                {% include "analytics/_instagram_status.html" %}
+                {% if account.connection_status == "connected" %}
+                <div>
+                    <h4 class="text-xs font-semibold text-neutral-800 uppercase tracking-wider">{% translate "Posting Schedule" %}</h4>
+                    <p class="text-xs text-neutral-500 mt-0.5 mb-3">{% translate "Set recurring time slots for when queued posts are automatically published." %}</p>
+                    {% include "social_accounts/partials/_posting_slots_grid.html" with account=account workspace_id=workspace_id %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-ghost" @click="manage = false">{% translate "Close" %}</button>
+                <button type="button" class="btn-danger-soft" @click="manage = false; confirmDisconnect = true">{% translate "Disconnect" %}</button>
+                {% if account.needs_reconnect %}
+                <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=workspace_id account_id=account.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-brand">{% translate "Reconnect" %}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
+{% endwith %}

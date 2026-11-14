@@ -256,7 +256,7 @@ def test_connected_source_shows_one_account_row_with_its_disconnect(workspace, o
     body = response.content.decode()
     assert "App ID 18340070022" in body
     assert _url("disconnect", workspace, connection_id=shopee.id) in body
-    assert "Connect another account" not in body.split("Opportunities", 1)[1]
+    assert "Connect another account" not in body
 
 
 # ----------------------------------------------------------------------

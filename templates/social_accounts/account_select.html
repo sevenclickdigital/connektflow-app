@@ -1,123 +1,216 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n static humanize %}
 {# Plural form, which the heading below also uses: the tab title does not need to #}
 {# agree in number, and "Select Account" as both a plain msgid and a plural's #}
 {# singular is the collision gettext warns about. #}
-{% block page_title %}{% translate "Select Accounts" %}{% endblock %}
+{% block title %}{% translate "Select Accounts" %} - Automator{% endblock %}
+{% block content_width %}max-w-5xl{% endblock %}
 {% block content %}
-<div class="max-w-2xl">
-    <!-- Header -->
-    <div class="mb-8">
-        {% if platform == "youtube" %}
-        <div class="w-12 h-12 flex items-center justify-center mb-4">{% include "partials/_youtube_icon.html" with size="24" %}</div>
-        {% else %}
-        <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-4">
-            {% include "social_accounts/partials/_platform_icon.html" with platform=platform size="6" %}
-        </div>
-        {% endif %}
-        <h2 class="text-xl font-semibold text-neutral-950">{% blocktranslate count counter=pages|length %}Select Account{% plural %}Select Accounts{% endblocktranslate %}</h2>
-        <p class="text-sm text-neutral-600 mt-1">{% blocktranslate with platform_name=platform|title %}Your {{ platform_name }} login has access to multiple accounts. Select which one to connect.{% endblocktranslate %}</p>
-    </div>
+<form method="post" action="{% url 'social_accounts:select_account' %}"
+      x-data="accountPicker({{ slots }})" @change="sync()" @submit="submit($event)"
+      class="flex flex-col flex-1">
+    {% csrf_token %}
 
-    <form method="post" action="{% url 'social_accounts:select_account' %}">
-        {% csrf_token %}
-
-        <div class="flex items-center justify-between mb-3">
-            <p class="text-xs text-neutral-600"><span id="selected-count">0</span> {% translate "selected" %}</p>
-            <div class="flex items-center gap-3">
-                <button type="button" id="select-all-btn" class="text-xs font-semibold text-brand-800 hover:text-brand-900">{% translate "Select all publishable" %}</button>
-                <button type="button" id="clear-all-btn" class="text-xs font-semibold text-neutral-600 hover:text-neutral-800">{% translate "Clear" %}</button>
+    <div class="flex items-end gap-6">
+        <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-3">
+                <h1 class="page-title">{% blocktranslate count counter=pages|length %}Select Account{% plural %}Select Accounts{% endblocktranslate %}</h1>
+                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-neutral-300 bg-white text-sm font-semibold text-neutral-950">
+                    {% if platform == "youtube" %}{% include "partials/_youtube_icon.html" with size="16" %}{% else %}{% include "social_accounts/partials/_platform_icon.html" with platform=platform size="4" %}{% endif %}
+                    {{ platform_name }}
+                </span>
+            </div>
+            <p class="text-sm text-neutral-600 mt-1 max-w-xl">{% blocktranslate %}Your {{ platform_name }} login has access to multiple accounts. Select which one to connect.{% endblocktranslate %}</p>
+            <div class="a-card mt-5 p-4 flex flex-wrap items-center gap-x-8 gap-y-4">
+                <div class="flex items-center gap-3">
+                    <span class="w-11 h-11 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center" aria-hidden="true">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </span>
+                    <span>
+                        <span class="block text-xl font-bold text-neutral-950 tabular-nums">{{ pages|length }}</span>
+                        <span class="block text-xs text-neutral-600">{% blocktranslate count counter=pages|length %}account available{% plural %}accounts available{% endblocktranslate %}</span>
+                    </span>
+                </div>
+                <div class="flex items-center gap-3 sm:border-l sm:border-neutral-300 sm:pl-8">
+                    <span class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center" aria-hidden="true">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </span>
+                    <span>
+                        <span class="block text-xl font-bold text-neutral-950 tabular-nums" x-text="picked">0</span>
+                        <span class="block text-xs text-neutral-600"><span x-show="picked === 1">{% translate "selected" context "one account" %}</span><span x-show="picked !== 1">{% translate "selected" context "several accounts" %}</span></span>
+                    </span>
+                </div>
+                <p class="flex items-start gap-2 sm:ml-auto max-w-sm px-3 py-2 rounded-lg bg-brand-50 text-xs text-neutral-700">
+                    <svg class="w-4 h-4 mt-px text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 11v5M12 8h.01"/></svg>
+                    <span>
+                        {% if slots == 0 %}
+                        {% blocktranslate %}This workspace already has its {{ platform_name }} account. You can refresh it here; to connect a different one, disconnect it first.{% endblocktranslate %}
+                        {% elif slots < new_publishable %}
+                        {% blocktranslate count counter=slots %}This workspace can connect {{ counter }} more {{ platform_name }} account.{% plural %}This workspace can connect {{ counter }} more {{ platform_name }} accounts.{% endblocktranslate %}
+                        {% else %}
+                        {% translate "You can select one or several accounts to publish and manage." %}
+                        {% endif %}
+                    </span>
+                </p>
             </div>
         </div>
+        {% if platform == "instagram" or platform == "instagram_login" %}
+        <img src="{% static 'img/moti/moti-instagram.webp' %}" alt="{% translate 'Moti, the Automator robot, holding the Instagram logo' %}" class="hidden sm:block h-40 flex-shrink-0 -mb-1">
+        {% elif platform == "facebook" %}
+        <img src="{% static 'img/moti/moti-facebook.webp' %}" alt="{% translate 'Moti, the Automator robot, holding the Facebook logo' %}" class="hidden sm:block h-40 flex-shrink-0 -mb-1">
+        {% else %}
+        <img src="{% static 'img/moti/moti-joinha.webp' %}" alt="{% translate 'Moti, the Automator robot, giving a thumbs up' %}" class="hidden sm:block h-36 flex-shrink-0 -mb-1">
+        {% endif %}
+    </div>
 
-        <div class="space-y-3 mb-8">
-            {% for page in pages %}
-            <label class="flex items-center gap-4 p-4 bg-white rounded-xl border border-neutral-300 transition-all duration-200 {% if page.can_publish %}cursor-pointer hover:shadow-md hover:border-brand-200 has-[:checked]:border-brand-500 has-[:checked]:ring-2 has-[:checked]:ring-brand-100 has-[:checked]:bg-brand-50/30{% else %}opacity-60 cursor-not-allowed{% endif %}">
-                {% comment %}
-                Never pre-checked, including for an account that is already
-                connected. Submitting re-runs the full connect for every ticked
-                row — resetting its webhook state and queueing a fresh
-                subscription — so ticking has to stay something the person did
-                on purpose. It also keeps the checkbox meaning one thing:
-                "connect or refresh this", never "this is connected", which
-                unticking could not undo anyway.
-                {% endcomment %}
-                <input type="checkbox" name="selected_pages" value="{{ page.id }}"
-                       {% if not page.can_publish %}disabled{% endif %}
-                       class="w-4 h-4 rounded border-neutral-400 text-brand-700 focus:ring-brand-700 focus:ring-offset-0 {% if page.can_publish %}cursor-pointer{% else %}cursor-not-allowed{% endif %}">
-
-                {% if page.picture %}
-                <img src="{{ page.picture }}" alt="{{ page.name }}" class="w-10 h-10 rounded-full object-cover ring-2 ring-neutral-100">
-                {% else %}
-                <div class="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500">
-                    {% if platform == "youtube" %}<span class="text-xs font-semibold">{{ page.name|make_list|first|upper }}</span>{% else %}{% include "social_accounts/partials/_platform_icon.html" with platform=platform size="5" %}{% endif %}
-                </div>
-                {% endif %}
-
-                <div class="flex-1 min-w-0">
-                    <h3 class="text-sm font-semibold text-neutral-950 truncate">{{ page.name }}</h3>
-                    {% if page.category %}
-                    <p class="text-xs text-neutral-500">{{ page.category }}</p>
-                    {% endif %}
-                    {% if not page.can_publish %}
-                    <p class="text-xs text-amber-600 mt-0.5">{% translate "Missing Facebook content publishing access" %}</p>
-                    {% elif page.already_connected %}
-                    <p class="text-xs text-emerald-600 mt-0.5">{% translate "Already connected" %} &middot; {% translate "select to refresh" %}</p>
-                    {% endif %}
-                    {% if page.can_message is False %}
-                    <p class="text-xs text-amber-600 mt-0.5">{% translate "DMs unavailable: grant messaging access on the linked Facebook Page, then reconnect." %}</p>
-                    {% endif %}
-                </div>
-
-                {% if page.followers_count %}
-                <span class="text-xs text-neutral-500">{{ page.followers_count }} {% if platform == "youtube" %}{% translate "subscribers" %}{% else %}{% translate "followers" %}{% endif %}</span>
-                {% endif %}
-            </label>
-            {% endfor %}
-        </div>
-
-        <div class="flex items-center gap-3">
-            <button type="submit" id="connect-btn" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-brand-700 rounded-full shadow-[0_4px_14px_rgba(124, 58, 237,0.28)] hover:bg-brand-800 transition-all duration-200 cursor-pointer">
-                <span id="connect-btn-text" data-busy-label="{% translate 'Connecting…' %}">{% translate "Connect Selected" %}</span>
-                <svg id="connect-btn-check" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                <svg id="connect-btn-spinner" class="w-4 h-4 animate-spin hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+    <div class="flex flex-wrap items-center gap-3 mt-5 mb-3">
+        <label class="relative flex-1 min-w-[200px] max-w-xs">
+            <span class="sr-only">{% translate "Search account" %}</span>
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M20 20l-3.5-3.5"/></svg>
+            <input type="search" x-model="query" @keydown.enter.prevent placeholder="{% translate 'Search account…' %}" class="form-input-styled text-sm pl-9">
+        </label>
+        {% if categories|length > 1 %}
+        <label class="min-w-[180px]">
+            <span class="sr-only">{% translate "Category" %}</span>
+            <select x-model="category" class="form-input-styled text-sm">
+                <option value="">{% translate "All categories" %}</option>
+                {% for category in categories %}<option value="{{ category }}">{{ category }}</option>{% endfor %}
+            </select>
+        </label>
+        {% endif %}
+        <div class="flex items-center gap-1 ml-auto">
+            {% if slots >= new_publishable and publishable_count > 1 %}
+            <button type="button" class="btn-ghost text-sm text-brand-800" @click="selectAll()">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
+                {% blocktranslate with count=publishable_count %}Select all ({{ count }}){% endblocktranslate %}
             </button>
-            <a href="{% url 'social_accounts:list' workspace_id=workspace_id %}" class="px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:text-neutral-900 transition-colors">
-                {% translate "Cancel" %}
-            </a>
+            {% endif %}
+            <button type="button" class="btn-ghost text-sm" @click="clear()" :disabled="!picked">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                {% translate "Clear" %}
+            </button>
         </div>
-    </form>
-</div>
+    </div>
+
+    <div class="space-y-2 mb-6">
+        {% for page in pages %}
+        <label data-search="{{ page.name|lower }} {{ page.handle|default:''|lower }} {{ page.category|default:''|lower }}" data-category="{{ page.category|default:'' }}"
+               x-show="matches($el)"
+               class="flex items-center gap-4 px-4 py-3 bg-white rounded-xl border border-neutral-300 transition-colors has-[:checked]:border-brand-500 has-[:checked]:ring-2 has-[:checked]:ring-brand-100 has-[:checked]:bg-brand-50/40 has-[:disabled]:opacity-60 has-[:disabled]:cursor-not-allowed {% if page.can_publish %}cursor-pointer hover:border-brand-200{% endif %}">
+            {% comment %}
+            Never pre-checked, including for an account that is already
+            connected. Submitting re-runs the full connect for every ticked
+            row — resetting its webhook state and queueing a fresh
+            subscription — so ticking has to stay something the person did
+            on purpose. It also keeps the checkbox meaning one thing:
+            "connect or refresh this", never "this is connected", which
+            unticking could not undo anyway. Rows past the workspace's cap
+            are disabled by accountPicker() at runtime, not in the markup.
+            {% endcomment %}
+            <input type="checkbox" name="selected_pages" value="{{ page.id }}"
+                   {% if not page.can_publish %}disabled data-blocked="1"{% elif not page.already_connected %}data-new="1"{% endif %}
+                   class="w-4 h-4 rounded border-neutral-400 text-brand-700 focus:ring-brand-700 focus:ring-offset-0 cursor-pointer">
+
+            {% if page.picture %}
+            <img src="{{ page.picture }}" alt="" class="w-11 h-11 rounded-full object-cover ring-2 ring-neutral-100 flex-shrink-0" referrerpolicy="no-referrer">
+            {% else %}
+            <div class="w-11 h-11 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 flex-shrink-0">
+                {% if platform == "youtube" %}<span class="text-xs font-semibold">{{ page.name|make_list|first|upper }}</span>{% else %}{% include "social_accounts/partials/_platform_icon.html" with platform=platform size="5" %}{% endif %}
+            </div>
+            {% endif %}
+
+            <div class="flex-1 min-w-0">
+                <h3 class="text-sm font-semibold text-neutral-950 truncate">{{ page.name }}</h3>
+                {% if page.handle or page.category %}
+                <p class="text-xs text-neutral-600 truncate">{% if page.handle %}@{{ page.handle }}{% if page.category %} · {% endif %}{% endif %}{{ page.category|default:"" }}</p>
+                {% endif %}
+                {% if not page.can_publish %}
+                <p class="text-xs text-amber-700 mt-0.5">{% translate "Missing Facebook content publishing access" %}</p>
+                {% endif %}
+                {% if page.can_message is False %}
+                <p class="text-xs text-amber-700 mt-0.5">{% translate "DMs unavailable: grant messaging access on the linked Facebook Page, then reconnect." %}</p>
+                {% endif %}
+            </div>
+
+            {% if page.can_publish and page.already_connected %}
+            <span class="pill pill-success hidden sm:inline-flex" title="{% translate 'select to refresh' %}"><i></i>{% translate "Already connected" %}</span>
+            {% elif not page.can_publish %}
+            <span class="pill pill-warning hidden sm:inline-flex"><i></i>{% translate "Can't publish" %}</span>
+            {% endif %}
+
+            {% if page.followers_count %}
+            <span class="hidden sm:flex items-center gap-1.5 text-xs text-neutral-600 whitespace-nowrap sm:w-36 sm:justify-end">
+                <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                {% if platform == "youtube" %}{% blocktranslate count counter=page.followers_count with shown=page.followers_count|intcomma %}{{ shown }} subscriber{% plural %}{{ shown }} subscribers{% endblocktranslate %}{% else %}{% blocktranslate count counter=page.followers_count with shown=page.followers_count|intcomma %}{{ shown }} follower{% plural %}{{ shown }} followers{% endblocktranslate %}{% endif %}
+            </span>
+            {% endif %}
+        </label>
+        {% endfor %}
+        <p x-show="!visibleCount()" x-cloak class="py-8 text-center text-sm text-neutral-600">{% translate "No account matches the search." %}</p>
+    </div>
+
+    <div class="sticky bottom-0 mt-auto a-card px-4 py-3 flex items-center gap-3 shadow-lg">
+        <span class="flex items-center gap-2 text-sm font-semibold text-brand-800">
+            <span class="w-6 h-6 rounded-full flex items-center justify-center" :class="picked ? 'bg-brand-700 text-white' : 'bg-neutral-100 text-neutral-400'" aria-hidden="true">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </span>
+            <span x-show="picked === 1">{% translate "1 account selected" %}</span>
+            <span x-show="picked !== 1" x-cloak><span x-text="picked"></span> {% translate "accounts selected" %}</span>
+        </span>
+        <a href="{% url 'social_accounts:list' workspace_id=workspace_id %}" class="ml-auto px-3 py-2 text-sm font-semibold text-neutral-700 hover:text-neutral-950">{% translate "Cancel" %}</a>
+        <button type="submit" class="btn-brand disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!picked || busy">
+            <span x-show="!busy">{% translate "Connect Selected" %}</span>
+            <span x-show="busy" x-cloak>{% translate "Connecting…" %}</span>
+            <svg x-show="!busy" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <svg x-show="busy" x-cloak class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        </button>
+    </div>
+</form>
 
 <script nonce="{{ request.csp_nonce }}">
-    const accountForm = document.getElementById('connect-btn').closest('form');
-    const accountCheckboxes = [...accountForm.querySelectorAll('input[name="selected_pages"]')];
-    const updateSelectedCount = () => {
-        document.getElementById('selected-count').textContent = accountCheckboxes.filter(input => input.checked && !input.disabled).length;
+/* The picker's state. ``slots`` is how many accounts not connected yet still
+   fit under the workspace's per-platform cap; once that many are ticked, the
+   other new rows are disabled (the server refuses them anyway). Rows already
+   connected only refresh, so they are never limited. */
+function accountPicker(slots) {
+    return {
+        slots: slots,
+        query: '',
+        category: '',
+        picked: 0,
+        busy: false,
+        boxes() { return [...this.$root.querySelectorAll('input[name="selected_pages"]')]; },
+        init() { this.sync(); },
+        matches(row) {
+            const q = this.query.trim().toLowerCase();
+            return (!q || row.dataset.search.includes(q)) && (!this.category || row.dataset.category === this.category);
+        },
+        visibleCount() {
+            return [...this.$root.querySelectorAll('[data-search]')].filter((row) => this.matches(row)).length;
+        },
+        sync() {
+            const boxes = this.boxes();
+            const pickedNew = boxes.filter((box) => box.checked && box.dataset.new).length;
+            boxes.forEach((box) => {
+                if (box.dataset.new) box.disabled = !box.checked && pickedNew >= this.slots;
+            });
+            this.picked = boxes.filter((box) => box.checked).length;
+        },
+        selectAll() {
+            this.boxes().forEach((box) => {
+                if (!box.dataset.blocked && this.matches(box.closest('[data-search]'))) box.checked = true;
+            });
+            this.sync();
+        },
+        clear() {
+            this.boxes().forEach((box) => { box.checked = false; });
+            this.sync();
+        },
+        submit(event) {
+            if (this.busy || !this.picked) { event.preventDefault(); return; }
+            this.busy = true;
+        },
     };
-    accountCheckboxes.forEach(input => input.addEventListener('change', updateSelectedCount));
-    document.getElementById('select-all-btn').addEventListener('click', () => {
-        accountCheckboxes.forEach(input => { if (!input.disabled) input.checked = true; });
-        updateSelectedCount();
-    });
-    document.getElementById('clear-all-btn').addEventListener('click', () => {
-        accountCheckboxes.forEach(input => { input.checked = false; });
-        updateSelectedCount();
-    });
-    updateSelectedCount();
-
-    accountForm.addEventListener('submit', function(e) {
-        const btn = document.getElementById('connect-btn');
-        if (btn.disabled) {
-            e.preventDefault();
-            return;
-        }
-        btn.disabled = true;
-        btn.classList.add('opacity-75');
-        const btnText = document.getElementById('connect-btn-text');
-        btnText.textContent = btnText.dataset.busyLabel;
-        document.getElementById('connect-btn-check').classList.add('hidden');
-        document.getElementById('connect-btn-spinner').classList.remove('hidden');
-    });
+}
 </script>
 {% endblock %}

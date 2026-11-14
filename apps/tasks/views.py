@@ -480,7 +480,7 @@ def render_art_request_form(
         task_settings = services.art_settings(workspace)
         chosen_assignees = {str(task_settings.art_assignee_id)} if task_settings.art_assignee_id else set()
     accounts = list(
-        SocialAccount.objects.for_workspace(workspace.id)
+        SocialAccount.objects.for_workspace(workspace.id).publishable()
         .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
         .order_by("platform", "account_name")
     )

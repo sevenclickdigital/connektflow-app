@@ -15,6 +15,7 @@ from django.core.files.base import ContentFile
 from django.db import connection
 from django.db.models import Sum
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from .models import MediaAsset, MediaAssetVersion, MediaFolder
 from .validators import validate_file
@@ -45,9 +46,16 @@ def check_folder_depth(parent_folder):
 
 
 def create_folder(organization, workspace, name, parent_folder=None):
-    """Create a new media folder."""
+    """Create a new media folder.
+
+    Sibling names are checked here because the database constraint cannot do
+    it at the top level: ``unique_folder_name_per_parent`` includes
+    ``parent_folder``, and PostgreSQL never treats two NULL parents as equal.
+    """
     if parent_folder:
         check_folder_depth(parent_folder)
+    if MediaFolder.objects.filter(workspace=workspace, parent_folder=parent_folder, name=name).exists():
+        raise ValidationError(_("A folder with this name already exists here."))
     folder = MediaFolder(
         organization=organization,
         workspace=workspace,

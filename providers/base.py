@@ -466,9 +466,8 @@ class SocialProvider(HttpProvider):
         """Locations matching ``query`` that a post can be tagged with.
 
         Empty by default, like ``fetch_user_profile``: most platforms have no
-        such concept, and attaching a place is optional everywhere it exists,
-        so "this platform cannot answer" and "nothing matched" lead to the
-        same behaviour — no picker results, and composing continues.
+        such concept. A platform that has one raises its provider error when
+        the search is refused, so the caller can say why nothing came back.
         """
         return []
 

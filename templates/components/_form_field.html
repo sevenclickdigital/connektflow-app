@@ -1,0 +1,17 @@
+{% load i18n %}
+{% comment %}
+One form field: label, widget and its errors.
+Usage: {% include "components/_form_field.html" with field=form.city class="sm:col-span-2" %}
+The widget's own classes come from the form (e.g. form-input-styled), so this
+partial only lays out what is around it. Optional fields say so in the label,
+unless hide_optional is set (fields that are only required together).
+{% endcomment %}
+<div class="{{ class|default:'' }}">
+    <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-2">
+        {{ field.label }}{% if not field.field.required and not hide_optional %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span>{% endif %}
+    </label>
+    {{ field }}
+    {% for error in field.errors %}
+    <p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>
+    {% endfor %}
+</div>

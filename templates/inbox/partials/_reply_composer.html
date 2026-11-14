@@ -1,7 +1,8 @@
 {% load humanize i18n %}
-<!-- Reply composer -->
+<!-- Reply composer: component in static/js/inbox-reply.js -->
 <div class="border-t border-neutral-300 px-5 py-3 flex-shrink-0" style="background: var(--surface-1);"
-     x-data="{ mode: 'reply', noteText: '', replyText: '' }">
+     x-data="inboxReply({ limit: {{ reply_limit|default:0 }}, canSend: {% if reply_eligibility.can_send %}true{% else %}false{% endif %}, firstName: '{{ sender_first_name|escapejs }}' })"
+     @keydown.escape="showEmoji = false; savedOpen = false">
 
     <!-- Pending draft replies (agent-created or saved for later) -->
     {% if draft_replies %}
@@ -25,27 +26,6 @@
                 :class="mode === 'note' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'text-neutral-600 hover:text-neutral-800'">
             {% translate "Internal Note" %}
         </button>
-
-        <!-- Saved replies dropdown -->
-        {% if saved_replies %}
-        <div class="relative ml-auto" x-data="{ srOpen: false }">
-            <button @click="srOpen = !srOpen"
-                    class="text-[11px] font-medium text-neutral-600 hover:text-neutral-800 flex items-center gap-1 transition-colors">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-                {% translate "Saved Replies" %}
-            </button>
-            <div x-show="srOpen" @click.away="srOpen = false" x-cloak x-transition
-                 class="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 min-w-[200px] max-h-[200px] overflow-y-auto">
-                {% for sr in saved_replies %}
-                <button @click="replyText = '{{ sr.body|escapejs }}'; srOpen = false;"
-                        class="w-full text-left px-3 py-2 hover:bg-neutral-50 transition-colors">
-                    <span class="text-[12px] font-medium text-neutral-900 block">{{ sr.title }}</span>
-                    <span class="text-[11px] text-neutral-500 block truncate">{{ sr.body|truncatewords:10 }}</span>
-                </button>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
     </div>
 
     <!-- Reply form -->
@@ -54,18 +34,73 @@
         <p class="mb-2 text-xs text-amber-800">{% blocktranslate with reason=reply_eligibility.reason %}{{ reason }} You can still save a draft.{% endblocktranslate %}</p>
         {% elif reply_eligibility.human_agent %}
         <p class="mb-2 text-xs text-amber-800">{% translate "Human support reply: review the message before sending. This reply uses your app's approved seven-day Human Agent access." %}</p>
+        {% elif reply_eligibility.window == "standard" and reply_eligibility.standard_reply_until %}
+        <p class="mb-2 inline-flex items-center gap-1 text-xs text-neutral-600">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {% blocktranslate with until=reply_eligibility.standard_reply_until|date:"SHORT_DATETIME_FORMAT" %}Reply window open until {{ until }}{% endblocktranslate %}
+        </p>
         {% endif %}
         <form hx-post="{% url 'inbox:send_reply' workspace_id=workspace.id message_id=message.id %}"
               hx-target="#inbox-thread"
               hx-swap="beforeend"
-              @htmx:after-request="if (!$event.detail.xhr.getResponseHeader('HX-Reply-Failed')) replyText = ''">
+              @htmx:after-request="if (!$event.detail.xhr.getResponseHeader('HX-Reply-Failed')) { replyText = ''; reset($refs.reply); }">
             {% csrf_token %}
-            <textarea name="body"
-                      x-model="replyText"
-                      placeholder="{% translate 'Write a reply...' %}"
-                      rows="2"
-                      class="w-full px-3 py-2 text-[13px] bg-white border border-neutral-300 rounded-lg resize-none focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all"
-                      required></textarea>
+            <div class="bg-white border border-neutral-300 rounded-lg focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100 transition-all"
+                 :class="over && '!border-[var(--error-500)]'">
+                <textarea name="body"
+                          x-ref="reply"
+                          x-model="replyText"
+                          @input="grow($el)"
+                          @keydown.enter="onEnter($event)"
+                          placeholder="{% translate 'Write a reply...' %}"
+                          rows="2"
+                          aria-describedby="reply-hint"
+                          class="block w-full px-3 pt-2 pb-1 text-[13px] bg-transparent border-0 rounded-lg resize-none focus:outline-none focus:ring-0"
+                          required></textarea>
+                <div class="flex items-center gap-0.5 px-1.5 pb-1.5">
+                    <div class="relative">
+                        <button type="button" @click="toggleEmoji()" class="composer-tool" :class="showEmoji && 'is-active'"
+                                title="{% translate 'Insert emoji' %}" aria-label="{% translate 'Insert emoji' %}">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                        </button>
+                        {% include "composer/partials/emoji_picker.html" %}
+                    </div>
+                    {% if saved_replies %}
+                    <div class="relative">
+                        <button type="button" @click="savedOpen = !savedOpen; $nextTick(() => $refs.savedSearch?.focus())" class="composer-tool" :class="savedOpen && 'is-active'"
+                                title="{% translate 'Saved Replies' %}" aria-label="{% translate 'Saved Replies' %}">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                        </button>
+                        <div x-show="savedOpen" x-cloak x-transition @click.outside="savedOpen = false"
+                             class="absolute left-0 bottom-full mb-2 z-50 w-72 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300">
+                            <div class="p-2 border-b border-neutral-100">
+                                <input type="text" x-ref="savedSearch" x-model="savedQuery" placeholder="{% translate 'Search saved replies' %}"
+                                       class="w-full text-sm px-3 py-1.5 rounded-lg border border-neutral-300 bg-neutral-50 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100">
+                            </div>
+                            <div class="max-h-56 overflow-y-auto py-1">
+                                {% for sr in saved_replies %}
+                                <button type="button" @click="useSaved($el.dataset.body)" data-body="{{ sr.body }}" data-search="{{ sr.title|lower }} {{ sr.body|lower|truncatewords:30 }}"
+                                        x-show="savedMatches($el)"
+                                        class="w-full text-left px-3 py-2 hover:bg-neutral-50 transition-colors cursor-pointer">
+                                    <span class="text-[12px] font-medium text-neutral-900 block">{{ sr.title }}</span>
+                                    <span class="text-[11px] text-neutral-500 block truncate">{{ sr.body|truncatewords:12 }}</span>
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if sender_first_name %}
+                    <button type="button" @click="insert(firstName)" class="composer-tool"
+                            title="{% blocktranslate with name=sender_first_name %}Insert the name ({{ name }}){% endblocktranslate %}"
+                            aria-label="{% translate 'Insert the customer name' %}">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </button>
+                    {% endif %}
+                    <span id="reply-hint" class="ml-auto hidden sm:inline text-[10px] text-neutral-500">{% translate "Enter to send · Shift+Enter for a new line" %}</span>
+                    <span x-show="limit" x-cloak class="ml-2 text-[11px] tabular-nums font-medium" :class="over ? 'text-[var(--error-700)]' : 'text-neutral-500'" x-text="count + ' / ' + limit"></span>
+                </div>
+            </div>
             <div class="flex {% if message.social_account.platform == 'youtube' %}flex-col sm:flex-row gap-2{% endif %} items-center justify-between mt-2">
                 {# The platform name is resolved first so the sentence reaches the #}
                 {# catalogue whole. Split around the name, the translator gets a #}
@@ -85,7 +120,8 @@
                     </button>
                     <button type="submit"
                             {% if not reply_eligibility.can_send %}disabled{% endif %}
-                            class="btn-primary-hover inline-flex items-center gap-1.5 px-4 py-1.5 text-[12px] font-semibold text-white rounded-full transition-all duration-150 cursor-pointer"
+                            :disabled="!sendable"
+                            class="disabled:opacity-40 disabled:cursor-not-allowed btn-primary-hover inline-flex items-center gap-1.5 px-4 py-1.5 text-[12px] font-semibold text-white rounded-full transition-all duration-150 cursor-pointer"
                             style="background: var(--primary); box-shadow: var(--shadow-primary);">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                         {% translate "Send Reply" %}
@@ -100,10 +136,13 @@
         <form hx-post="{% url 'inbox:add_note' workspace_id=workspace.id message_id=message.id %}"
               hx-target="#inbox-thread"
               hx-swap="beforeend"
-              @htmx:after-request="noteText = ''">
+              @htmx:after-request="noteText = ''; reset($refs.note)">
             {% csrf_token %}
             <textarea name="body"
+                      x-ref="note"
                       x-model="noteText"
+                      @input="grow($el)"
+                      @keydown.enter="onEnter($event)"
                       placeholder="{% translate 'Add an internal note (only visible to your team)...' %}"
                       rows="2"
                       class="w-full px-3 py-2 text-[13px] bg-amber-50 border border-amber-200 rounded-lg resize-none focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all"

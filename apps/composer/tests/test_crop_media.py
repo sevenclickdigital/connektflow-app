@@ -292,5 +292,7 @@ class FormatCropTests(CropMediaTestsBase):
         )
 
         body = response.content.decode()
-        self.assertEqual(body.count(cropped_url), 1)
-        self.assertIn(self.asset.file.url, body)
+        # The Story slide and its thumbnail in the format strip; the feed
+        # slide and its thumbnail keep the original.
+        self.assertEqual(body.count(cropped_url), 2)
+        self.assertEqual(body.count(self.asset.file.url), 2)

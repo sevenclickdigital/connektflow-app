@@ -44,10 +44,11 @@ from apps.publisher.manual_delivery import NOTIFY_DELIVERY, is_notify_delivery
 from apps.social_accounts.models import PlatformVisibility, SocialAccount
 from apps.workspaces.models import Workspace
 from providers import is_video_only, requires_media
+from providers.exceptions import ProviderError
 from providers.google_business import PROFILE_PHOTO_CATEGORIES
 from providers.tiktok import VALID_PRIVACY_LEVELS as TIKTOK_PRIVACY_LEVELS
 
-from .emoji import EMOJI_CATEGORIES, facebook_feeling_choices
+from .emoji import emoji_catalogue, facebook_feeling_choices
 from .forms import ContentCategoryForm, PostForm
 from .models import (
     ContentCategory,
@@ -83,6 +84,9 @@ MAX_CSV_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB cap on CSV planner imports
 # on the fifth as "+N". Mirrored in the preview so the composer shows what
 # the feed will show.
 FACEBOOK_GRID_MAX_TILES = 5
+
+
+PREVIEW_FORMAT_RATIOS = {"story": "9:16", "reel": "9:16", "profile_photo": "1:1"}
 
 
 def _preview_media_item(asset):
@@ -331,22 +335,75 @@ def _apply_facebook_feed_extras(request, extra, acc_id):
     if f"facebook_custom_{acc_id}" not in request.POST:
         return
 
-    place_id = request.POST.get(f"facebook_place_id_{acc_id}", "").strip()
-    place_name = request.POST.get(f"facebook_place_name_{acc_id}", "").strip()
-    if place_id:
-        extra["place_id"] = place_id
-        # Kept only so the composer can show what was chosen without
-        # re-querying Meta; the publish path uses the id.
-        extra["place_name"] = place_name
-    else:
-        extra.pop("place_id", None)
-        extra.pop("place_name", None)
+    _apply_place(request, extra, acc_id, "facebook")
 
     feeling_id = request.POST.get(f"facebook_feeling_{acc_id}", "").strip()
     if feeling_id in FEELING_IDS:
         extra["feeling_object_id"] = feeling_id
     else:
         extra.pop("feeling_object_id", None)
+
+
+def _apply_place(request, extra, acc_id, prefix):
+    """Record the place picker's choice (``<prefix>_place_id_<account>``) on ``extra``.
+
+    The id is a location Page we only ever got from our own search endpoint;
+    the name is kept so the composer can show the choice without asking Meta
+    again. An empty field removes the place.
+    """
+    place_id = request.POST.get(f"{prefix}_place_id_{acc_id}", "").strip()
+    place_name = request.POST.get(f"{prefix}_place_name_{acc_id}", "").strip()
+    if place_id:
+        extra["place_id"] = place_id
+        extra["place_name"] = place_name
+    else:
+        extra.pop("place_id", None)
+        extra.pop("place_name", None)
+
+
+def _apply_instagram_extras(request, extra, acc_id):
+    """Record the Instagram card's collaborators, tagged people and location.
+
+    Account-wide like the Facebook place: written to every format of the
+    account, and the provider sends each one only where Instagram takes it
+    (no collaborators on a Story, no tags on a Reel). Gated on the card's own
+    marker for the same reason as ``_apply_facebook_feed_extras``.
+    """
+    from providers.meta_feed_extras import IG_MAX_COLLABORATORS, IG_MAX_USER_TAGS, parse_instagram_usernames
+
+    if f"instagram_custom_{acc_id}" not in request.POST:
+        return
+
+    for key, limit in (("collaborators", IG_MAX_COLLABORATORS), ("user_tags", IG_MAX_USER_TAGS)):
+        usernames = parse_instagram_usernames(request.POST.get(f"instagram_{key}_{acc_id}", ""), limit=limit)
+        if usernames:
+            extra[key] = usernames
+        else:
+            extra.pop(key, None)
+    _apply_place(request, extra, acc_id, "instagram")
+
+    # A Reel's cover (a moment of the video) and whether it also shows on the
+    # profile grid. The checkbox is only on screen while Reels is chosen.
+    if f"instagram_reel_cover_ms_{acc_id}" in request.POST:
+        cover_ms = _cover_timestamp_ms(request.POST.get(f"instagram_reel_cover_ms_{acc_id}", ""))
+        if cover_ms is None:
+            extra.pop("video_cover_timestamp_ms", None)
+        else:
+            extra["video_cover_timestamp_ms"] = cover_ms
+        extra["share_to_feed"] = bool(request.POST.get(f"instagram_share_to_feed_{acc_id}"))
+
+
+def _cover_timestamp_ms(value):
+    """A frame picker timestamp in milliseconds, or None when blank or invalid.
+
+    Parsed with int() rather than str.isdigit(): isdigit() accepts non-ASCII
+    digits (e.g. "²", "١٢") that int() then rejects.
+    """
+    try:
+        ms = int(str(value or "").strip())
+    except ValueError:
+        return None
+    return ms if ms >= 0 else None
 
 
 # post_type hints that name a format. The row's ``format`` says this now, so
@@ -436,6 +493,11 @@ def _sync_platform_post(request, post, account, fmt, initial_status):
         _apply_facebook_feed_extras(request, extra, acc_id)
         pp.platform_extra = extra
 
+    elif account.platform == "instagram":
+        extra = {**(pp.platform_extra or {})}
+        _apply_instagram_extras(request, extra, acc_id)
+        pp.platform_extra = extra
+
     elif account.platform == "youtube":
         tags_list = parse_and_truncate_youtube_tag_string(request.POST.get(f"yt_tags_{acc_id}", ""))
         privacy_status = request.POST.get(f"yt_privacy_status_{acc_id}", "public")
@@ -486,17 +548,9 @@ def _sync_platform_post(request, post, account, fmt, initial_status):
             extra["privacy_level"] = privacy
         # Cover frame timestamp from the composer's frame picker; omitted
         # when blank/invalid so TikTok falls back to the first frame.
-        # Parse with int() rather than str.isdigit() — isdigit() accepts
-        # non-ASCII digits (e.g. "²", "١٢") that int() then rejects with an
-        # unhandled ValueError.
-        cover_ms = request.POST.get(f"tiktok_video_cover_timestamp_ms_{acc_id}", "").strip()
-        if cover_ms:
-            try:
-                cover_ms_val = int(cover_ms)
-            except ValueError:
-                cover_ms_val = -1
-            if cover_ms_val >= 0:
-                extra["video_cover_timestamp_ms"] = cover_ms_val
+        cover_ms = _cover_timestamp_ms(request.POST.get(f"tiktok_video_cover_timestamp_ms_{acc_id}", ""))
+        if cover_ms is not None:
+            extra["video_cover_timestamp_ms"] = cover_ms
         pp.platform_extra = extra
 
     _apply_format_extras(request, pp, acc_id)
@@ -909,6 +963,7 @@ def compose(request, workspace_id, post_id=None):
     # Connected social accounts for this workspace
     social_accounts = (
         SocialAccount.objects.for_workspace(workspace.id)
+        .publishable()
         .filter(
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,
         )
@@ -1165,10 +1220,7 @@ def compose(request, workspace_id, post_id=None):
         "unsplash_enabled": bool(settings.UNSPLASH_ACCESS_KEY),
         # Serialised into the page for the caption emoji picker and the
         # Facebook feeling selector; both are static tables, not queries.
-        "emoji_categories": [
-            {"key": key, "label": label, "items": [{"c": char, "n": name} for char, name in items]}
-            for key, label, items in EMOJI_CATEGORIES
-        ],
+        "emoji_categories": emoji_catalogue(),
         "facebook_feelings": facebook_feeling_choices(),
     }
     return render(request, "composer/compose.html", context)
@@ -1848,7 +1900,7 @@ def preview(request, workspace_id):
             workspace=workspace,
         ).order_by("platform")
         for account in accounts:
-            labels = {option["format"]: option["label"] for option in account.format_options()}
+            options = {option["format"]: option for option in account.format_options()}
             field_config = account.field_config
             char_limit = account.char_limit
             slides = []
@@ -1865,14 +1917,8 @@ def preview(request, workspace_id):
                     {
                         "account": account,
                         "format": fmt,
-                        "label": labels.get(fmt, account.get_platform_display()),
-                        "format_label": (
-                            PlatformPost.Format(fmt).label
-                            if fmt != PlatformPost.Format.DEFAULT
-                            else _("Feed")
-                            if "story" in account.formats
-                            else PlatformPost.Format.DEFAULT.label
-                        ),
+                        "label": options[fmt]["label"] if fmt in options else account.get_platform_display(),
+                        "format_label": options[fmt]["short"] if fmt in options else PlatformPost.Format(fmt).label,
                         "title": effective_title,
                         "caption": effective_caption,
                         "first_comment": first_comment,
@@ -1926,6 +1972,15 @@ def preview(request, workspace_id):
         if pending_ids:
             for asset in MediaAsset.objects.filter(id__in=pending_ids, workspace=workspace):
                 media_items.append(_preview_media_item(asset))
+
+    # The format strip under each card: the first media the slide shows, and
+    # the frame the format fills (Story and Reels 9:16, a profile photo 1:1;
+    # an ordinary post keeps the media's own shape, so it names none).
+    for preview_entry in previews:
+        for slide in preview_entry["slides"]:
+            shown = slide.get("media_items") or media_items
+            slide["thumb"] = shown[0] if shown else None
+            slide["ratio"] = PREVIEW_FORMAT_RATIOS.get(slide["format"], "")
 
     return render(
         request,
@@ -2591,13 +2646,19 @@ def pinterest_boards(request, workspace_id, account_id):
 @login_required
 @require_GET
 def facebook_places(request, workspace_id, account_id):
-    """Search location Pages for the composer's Facebook place picker.
+    """Search location Pages for the composer's place picker.
+
+    Serves the Facebook place and the Instagram location alike: Instagram's
+    ``location_id`` is the id of one of these Pages, and an Instagram account
+    connected through Facebook Login holds a Page token that can search them.
 
     Keyword search only — Meta retired the endpoint that searched by
     coordinates in 2020 without a replacement.
     """
     workspace = _get_workspace(request, workspace_id)
-    account = get_object_or_404(SocialAccount, id=account_id, workspace=workspace, platform="facebook")
+    account = get_object_or_404(
+        SocialAccount, id=account_id, workspace=workspace, platform__in=("facebook", "instagram")
+    )
 
     query = request.GET.get("q", "").strip()
     if not query:
@@ -2609,9 +2670,21 @@ def facebook_places(request, workspace_id, account_id):
     credentials = resolve_platform_credentials("facebook", workspace.organization_id)
     provider = get_provider("facebook", credentials)
 
-    # search_places swallows its own failures and answers [], so a place
-    # lookup can never be what stops someone composing.
-    return JsonResponse({"places": provider.search_places(account.oauth_access_token, query)})
+    # A refused search answers 200 with the reason, never an empty list on its
+    # own: the picker shows it, and composing carries on without a place.
+    try:
+        places = provider.search_places(account.oauth_access_token, query)
+    except ProviderError as exc:
+        logger.warning("Place search refused for account %s: %s", account.id, exc)
+        if "Authorization Error" in str(exc):
+            message = _(
+                "Place search isn't enabled for this app on Meta yet: it needs the "
+                "Page Public Metadata Access feature approved in App Review."
+            )
+        else:
+            message = _("Could not search places right now. Try again in a moment.")
+        return JsonResponse({"places": [], "error": str(message)})
+    return JsonResponse({"places": places})
 
 
 @login_required
@@ -2879,7 +2952,16 @@ def upload_media(request, workspace_id, post_id=None):
     if not uploaded_file:
         return JsonResponse({"error": _("No file provided")}, status=400)
 
-    from apps.media_library.models import MediaAsset
+    from apps.media_library.models import MediaAsset, MediaFolder
+
+    # The media picker sends the folder it has open, so the file lands there.
+    folder = None
+    if folder_id := request.POST.get("folder_id"):
+        try:
+            folder_pk = uuid.UUID(folder_id)
+        except ValueError:
+            raise Http404 from None
+        folder = get_object_or_404(MediaFolder, pk=folder_pk, workspace=workspace)
 
     # Determine media type
     content_type = uploaded_file.content_type or ""
@@ -2909,6 +2991,7 @@ def upload_media(request, workspace_id, post_id=None):
         mime_type=content_type,
         file_size=uploaded_file.size,
         source="upload",
+        folder=folder,
     )
 
     if post_id:
@@ -3890,6 +3973,7 @@ def idea_create_post(request, workspace_id, idea_id):
 
     connected_accounts = list(
         SocialAccount.objects.for_workspace(workspace.id)
+        .publishable()
         .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
         .order_by("platform", "account_name", "id")
     )
@@ -4385,6 +4469,7 @@ def csv_preview(request, workspace_id):
     valid_platforms = {p[0].lower() for p in SocialAccount.Platform.choices}
     connected_accounts = set(
         SocialAccount.objects.for_workspace(workspace.id)
+        .publishable()
         .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
         .values_list("platform", flat=True)
     )

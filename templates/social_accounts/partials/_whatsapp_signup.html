@@ -1,0 +1,89 @@
+{% comment %}
+WhatsApp Embedded Signup. Any element with ``data-whatsapp-signup`` opens Meta's
+popup. Meta answers twice and in no fixed order: the FB.login callback carries
+the authorization code, and a ``WA_EMBEDDED_SIGNUP`` window message carries the
+WhatsApp Business Account and phone number picked. Once both are in, the hidden
+form posts them to ``connect_whatsapp``, which verifies the ids against the
+token before connecting anything.
+Context: ``whatsapp_signup`` (app_id, config_id, version, messages), ``workspace_id``.
+{% endcomment %}
+{{ whatsapp_signup|json_script:"whatsapp-signup-config" }}
+<form id="whatsapp-signup-form" method="post" action="{% url 'social_accounts:connect_whatsapp' workspace_id=workspace_id %}" class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="code">
+    <input type="hidden" name="waba_id">
+    <input type="hidden" name="phone_number_id">
+</form>
+<script nonce="{{ request.csp_nonce }}">
+(function () {
+    const cfg = JSON.parse(document.getElementById('whatsapp-signup-config').textContent);
+    const form = document.getElementById('whatsapp-signup-form');
+    let code = '';
+    let session = {};
+    let submitted = false;
+
+    function toast(tone, body) {
+        document.body.dispatchEvent(new CustomEvent('showToast', { detail: { tone: tone, title: body } }));
+    }
+
+    function submitIfReady() {
+        if (submitted || !code || !session.waba_id) return;
+        if (!session.phone_number_id) { toast('warn', cfg.messages.no_number); return; }
+        submitted = true;
+        form.elements.code.value = code;
+        form.elements.waba_id.value = session.waba_id;
+        form.elements.phone_number_id.value = session.phone_number_id;
+        form.submit();
+    }
+
+    window.addEventListener('message', function (event) {
+        let host = '';
+        try { host = new URL(event.origin).hostname; } catch (e) { return; }
+        if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) return;
+        let data = event.data;
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch (e) { return; }
+        }
+        if (!data || data.type !== 'WA_EMBEDDED_SIGNUP') return;
+        if (String(data.event || '').startsWith('FINISH')) {
+            session = data.data || {};
+            submitIfReady();
+        } else if (data.event === 'CANCEL') {
+            toast('info', cfg.messages.cancelled);
+        }
+    });
+
+    window.fbAsyncInit = function () {
+        FB.init({ appId: cfg.app_id, autoLogAppEvents: true, xfbml: false, version: cfg.version });
+    };
+    const sdk = document.createElement('script');
+    sdk.src = 'https://connect.facebook.net/en_US/sdk.js';
+    sdk.async = true;
+    sdk.defer = true;
+    sdk.crossOrigin = 'anonymous';
+    document.head.appendChild(sdk);
+
+    document.addEventListener('click', function (event) {
+        const trigger = event.target.closest('[data-whatsapp-signup]');
+        if (!trigger) return;
+        event.preventDefault();
+        if (!window.FB) { toast('info', cfg.messages.loading); return; }
+        code = '';
+        session = {};
+        submitted = false;
+        FB.login(function (response) {
+            if (response && response.authResponse && response.authResponse.code) {
+                code = response.authResponse.code;
+                submitIfReady();
+            } else {
+                toast('info', cfg.messages.cancelled);
+            }
+        }, {
+            config_id: cfg.config_id,
+            response_type: 'code',
+            override_default_response_type: true,
+            extras: { setup: {}, featureType: '', sessionInfoVersion: '3' },
+        });
+    });
+})();
+</script>

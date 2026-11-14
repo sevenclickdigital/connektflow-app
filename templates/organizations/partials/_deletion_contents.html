@@ -1,0 +1,12 @@
+{% load i18n %}
+{# What deleting an organization removes; shared by the scheduled and the immediate confirmation. #}
+<div>
+    <p>{% translate "All of the following will be permanently removed:" %}</p>
+    <ul class="mt-2 ml-4 list-disc space-y-1">
+        <li>{% translate "All workspaces and their settings" %}</li>
+        <li>{% translate "All scheduled and published posts" %}</li>
+        <li>{% translate "Connected social accounts and credentials" %}</li>
+        <li>{% translate "Media assets and files" %}</li>
+        <li>{% translate "Team memberships and invitations" %}</li>
+    </ul>
+</div>

@@ -20,6 +20,7 @@ from .meta_comments import (
     find_own_instagram_comment,
     resolve_comment_reply_target,
 )
+from .meta_feed_extras import apply_instagram_extras
 from .meta_insights import fetch_insights_safe, fetch_insights_series
 from .meta_messaging import (
     InstagramMessageBatch,
@@ -340,7 +341,7 @@ class InstagramProvider(SocialProvider):
 
         ig_user_id = content.extra.get("ig_user_id") or self._get_ig_user_id(access_token)
 
-        # A carousel needs 2-10 children; with a single item Meta rejects the
+        # A carousel takes 2-20 children; with a single item Meta rejects the
         # parent container, so publish it as an ordinary single post instead.
         if content.post_type == PostType.CAROUSEL and len(content.media_urls) > 1:
             return self._publish_carousel(access_token, ig_user_id, content)
@@ -364,6 +365,7 @@ class InstagramProvider(SocialProvider):
         if content.post_type == PostType.STORY:
             payload["media_type"] = "STORIES"
             payload["video_url" if is_video else "image_url"] = url
+            kind = "story"
         elif is_video or content.post_type in (PostType.REEL, PostType.VIDEO):
             # Instagram has no standalone feed video: a single video is
             # published as a Reel. This also catches a lone video that arrived
@@ -372,8 +374,11 @@ class InstagramProvider(SocialProvider):
             # single item.
             payload["media_type"] = "REELS"
             payload["video_url"] = url
+            kind = "reel"
         else:
             payload["image_url"] = url
+            kind = "image"
+        apply_instagram_extras(payload, content.extra, kind=kind)
 
         # Step 1: create container
         container_id = self._create_container(access_token, ig_user_id, payload)
@@ -387,6 +392,7 @@ class InstagramProvider(SocialProvider):
     def _publish_carousel(self, access_token: str, ig_user_id: str, content: PublishContent) -> PublishResult:
         """Publish a carousel post with multiple media items."""
         child_ids: list[str] = []
+        child_payloads: list[dict] = []
 
         for index, url in enumerate(content.media_urls):
             child_payload: dict = {
@@ -397,6 +403,11 @@ class InstagramProvider(SocialProvider):
                 child_payload["video_url"] = url
             else:
                 child_payload["image_url"] = url
+                # Tagged people go on the first photo; a carousel parent
+                # takes no tags of its own.
+                if not any("user_tags" in previous for previous in child_payloads):
+                    apply_instagram_extras(child_payload, content.extra, kind="carousel_item")
+            child_payloads.append(child_payload)
 
             child_id = self._create_container(access_token, ig_user_id, child_payload)
             self._wait_for_container(access_token, child_id)
@@ -409,6 +420,7 @@ class InstagramProvider(SocialProvider):
         }
         if content.text:
             carousel_payload["caption"] = content.text
+        apply_instagram_extras(carousel_payload, content.extra, kind="carousel")
 
         carousel_id = self._create_container(access_token, ig_user_id, carousel_payload)
         self._wait_for_container(access_token, carousel_id)
@@ -715,7 +727,6 @@ class InstagramProvider(SocialProvider):
             owner_id=ig_user_id,
             owner_handle=str(self.credentials.get("account_handle") or ""),
         )
-
 
     def fetch_user_profile(self, access_token: str, user_id: str) -> dict:
         """Profile fields for one person, or an empty dict. See ``SocialProvider``.

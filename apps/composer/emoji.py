@@ -720,3 +720,11 @@ EMOJI_CATEGORIES: tuple[tuple[str, str, tuple[tuple[str, str], ...]], ...] = (
 )
 
 EMOJI_COUNT = sum(len(entries) for _key, _label, entries in EMOJI_CATEGORIES)
+
+
+def emoji_catalogue() -> list[dict]:
+    """The picker's catalogue as ``json_script`` data (static/js/emoji-picker.js)."""
+    return [
+        {"key": key, "label": label, "items": [{"c": char, "n": name} for char, name in items]}
+        for key, label, items in EMOJI_CATEGORIES
+    ]

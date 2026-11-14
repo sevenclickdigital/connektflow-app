@@ -555,6 +555,15 @@ _META_CREDENTIALS = {
     "config_id": env("PLATFORM_FACEBOOK_CONFIG_ID", default=""),
     "human_agent_enabled": env.bool("PLATFORM_FACEBOOK_HUMAN_AGENT_ENABLED", default=False),
 }
+# WhatsApp Cloud API, connected through Embedded Signup. Normally the same Meta
+# app as Facebook (the WhatsApp product is added to it); a separate app can be
+# named instead. ``config_id`` is the Embedded Signup configuration and is
+# required: without it the popup cannot offer the WhatsApp onboarding.
+_WHATSAPP_CREDENTIALS = {
+    "app_id": env("PLATFORM_WHATSAPP_APP_ID", default="") or env("PLATFORM_FACEBOOK_APP_ID", default=""),
+    "app_secret": env("PLATFORM_WHATSAPP_APP_SECRET", default="") or env("PLATFORM_FACEBOOK_APP_SECRET", default=""),
+    "config_id": env("PLATFORM_WHATSAPP_CONFIG_ID", default=""),
+}
 _GOOGLE_CREDENTIALS = {
     "client_id": env("PLATFORM_GOOGLE_CLIENT_ID", default=""),
     "client_secret": env("PLATFORM_GOOGLE_CLIENT_SECRET", default=""),
@@ -619,6 +628,7 @@ PLATFORM_CREDENTIALS_FROM_ENV = {
     # Threads runs on the same Meta app but a different app identity - see
     # _THREADS_CREDENTIALS above and the README "Meta" section.
     "threads": _THREADS_CREDENTIALS,
+    "whatsapp": _WHATSAPP_CREDENTIALS,
     # Instagram (Direct) - uses Instagram Login with separate Instagram App credentials.
     # Despite the platform key, this targets Professional (Business/Creator) IG accounts
     # without requiring a linked Facebook Page. See providers/instagram_login.py.
@@ -787,6 +797,7 @@ ASAAS_TIMEOUT_SECONDS = env.int("ASAAS_TIMEOUT_SECONDS", default=20)
 # Webhook verification
 FACEBOOK_WEBHOOK_VERIFY_TOKEN = env("FACEBOOK_WEBHOOK_VERIFY_TOKEN", default="")
 INSTAGRAM_LOGIN_WEBHOOK_VERIFY_TOKEN = env("INSTAGRAM_LOGIN_WEBHOOK_VERIFY_TOKEN", default="")
+WHATSAPP_WEBHOOK_VERIFY_TOKEN = env("WHATSAPP_WEBHOOK_VERIFY_TOKEN", default="") or FACEBOOK_WEBHOOK_VERIFY_TOKEN
 YOUTUBE_WEBHOOK_SECRET = env("YOUTUBE_WEBHOOK_SECRET", default="")
 YOUTUBE_COMPLIANCE_ENFORCEMENT = env.bool("YOUTUBE_COMPLIANCE_ENFORCEMENT", default=False)
 

@@ -7,6 +7,9 @@ A connected source shows as an account row like a social platform's, and the
 foot of the card has Disconnect (for whoever ``can_connect``). A workspace has at
 most one connection per source, so there is never a "connect another".
 ``return_to`` ("connect" or "radar") is where disconnecting lands.
+``connect_href``, when given, turns Connect into a plain link there (the Radar
+sends people to Social Accounts) instead of opening the connect form here.
+An upcoming source (``card.upcoming``, sources.UPCOMING) shows "Soon" and no action.
 {% endcomment %}
 {% load i18n %}
 <div class="relative h-full flex flex-col bg-white rounded-xl border border-neutral-300 p-5 transition-all duration-200"
@@ -16,7 +19,7 @@ most one connection per source, so there is never a "connect another".
             {% include "social_accounts/partials/_platform_icon.html" with platform=card.source.key size="5" %}
         </div>
         <div class="flex-1 min-w-0">
-            <h3 class="text-sm font-semibold text-neutral-950">{{ card.source.label }}</h3>
+            <h3 class="flex items-center gap-2 text-sm font-semibold text-neutral-950">{{ card.source.label }}{% if card.upcoming %} <span class="pill pill-neutral">{% translate "Soon" context "menu" %}</span>{% endif %}</h3>
             <p class="text-xs text-neutral-500 mt-0.5">{{ card.source.description }}</p>
         </div>
     </div>
@@ -37,10 +40,20 @@ most one connection per source, so there is never a "connect another".
     {% endif %}
 
     <div class="mt-auto pt-4 flex gap-2">
-        {% if action == "connect" and card.connection and card.connection.status != "error" %}
+        {% if card.upcoming %}
+        <span class="w-full inline-flex items-center justify-center px-4 py-1.5 text-xs font-semibold text-neutral-500 bg-neutral-100 rounded-full" aria-disabled="true">
+            {% translate "Available soon" %}
+        </span>
+        {% elif action == "connect" and card.connection and card.connection.status != "error" %}
         {% elif action == "open" and card.connection %}
         <a href="{{ card.open_url }}" class="flex-1 min-w-0 inline-flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-semibold text-brand-800 bg-brand-50 border border-brand-200 rounded-full hover:bg-brand-100 hover:border-brand-300 transition-all duration-200">
             {% translate "Open" %}
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+        {% elif can_connect and connect_href %}
+        <a href="{{ connect_href }}"
+           class="flex-1 min-w-0 inline-flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-semibold text-brand-800 bg-brand-50 border border-brand-200 rounded-full hover:bg-brand-100 hover:border-brand-300 transition-all duration-200">
+            {% if card.connection %}{% translate "Reconnect" %}{% else %}{% translate "Connect" %}{% endif %}
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
         </a>
         {% elif can_connect %}

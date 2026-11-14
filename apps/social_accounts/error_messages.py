@@ -54,6 +54,9 @@ PUBLISH_RATE_LIMIT_MESSAGE = "The platform's rate limit was reached. We'll retry
 PUBLISH_QUOTA_EXHAUSTED_MESSAGE = "The platform's daily API limit is used up, so the post couldn't be published."
 PUBLISH_REJECTED_MESSAGE = "The platform rejected this post."
 PUBLISH_GENERIC_MESSAGE = "Publishing failed. Please try again."
+# A Story row with several media goes out as one Story per item; when one of
+# them fails, the ones already live stay live, and the user has to know which.
+STORY_PROGRESS_MESSAGE = "{done} of {total} stories already went out. {message}"
 # The two messages above promise a retry, which is true only while attempts
 # remain. Once the budget is spent the post is permanently failed and the
 # composer must not keep telling the user to sit tight.

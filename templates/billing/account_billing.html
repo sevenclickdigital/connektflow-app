@@ -1,0 +1,49 @@
+{% extends "layouts/settings.html" %}
+{% load i18n billing_extras %}
+{% block title %}{% translate "Billing" %} - Automator{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "Billing" %}</h1>
+        <p class="page-description">{% translate "Subscription and monthly cost of each brand you manage." %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Brands" %} ({{ rows|length }})</h2>
+    {% if rows %}
+    <div class="a-card divide-y divide-neutral-300">
+        {% for row in rows %}
+        <div class="px-6 py-4 flex flex-wrap items-center gap-4">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold bg-brand-100 text-brand-800">{{ row.workspace.name|first|upper }}</div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-neutral-950 truncate">{{ row.workspace.name }}</div>
+                <div class="text-xs text-neutral-500 truncate">{{ row.workspace.organization.name }}</div>
+            </div>
+            {% with sub=row.subscription %}
+            <span class="pill {% if sub.status == 'active' %}pill-success{% elif sub.status == 'courtesy' %}pill-brand{% elif sub.status == 'past_due' %}pill-warning{% elif sub.status == 'canceled' %}pill-neutral{% else %}pill-info{% endif %}">
+                <i></i>{% if sub %}{{ sub.get_status_display }}{% else %}{% translate "Pending" %}{% endif %}
+            </span>
+            {% endwith %}
+            <div class="w-32 text-right">
+                <div class="text-sm font-semibold text-neutral-950 tabular-nums">R$ {{ row.monthly_total_cents|brl }}</div>
+                <div class="text-xs text-neutral-500">{% translate "per month" %}</div>
+            </div>
+            {% if row.can_open %}
+            <a href="{% url 'billing:workspace_billing' workspace_id=row.workspace.id %}" class="btn-soft py-1.5 px-3 text-xs">{% translate "View billing" %}</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <div class="px-6 py-4 flex items-center justify-between bg-[var(--surface-1)] rounded-b-[var(--radius-lg)]">
+            <span class="text-sm font-semibold text-neutral-700">{% translate "Monthly total" %}</span>
+            <span class="text-base font-semibold text-neutral-950 tabular-nums">R$ {{ total_cents|brl }}</span>
+        </div>
+    </div>
+    {% else %}
+    <div class="a-card px-6 py-12 text-center text-sm text-neutral-500">{% translate "You don't manage the billing of any brand." %}</div>
+    {% endif %}
+</section>
+{% endblock %}

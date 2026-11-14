@@ -1275,3 +1275,122 @@ def test_video_is_a_declared_post_type(provider_cls):
     """An explicit post_type hint can still hand the provider VIDEO, so the
     declared contract has to admit it."""
     assert PostType.VIDEO in provider_cls(IG_CREDS).supported_post_types
+
+
+# --- Collaborators, tagged people and location ---------------------------
+
+_IG_EXTRAS = {
+    "ig_user_id": "ig-1",
+    "collaborators": ["ana", "bia"],
+    "user_tags": ["cris"],
+    "place_id": "loc-9",
+}
+
+
+def _captured_containers(content):
+    """Publish ``content`` and return every container payload sent, in order."""
+    provider = InstagramProvider({"app_id": "x", "app_secret": "y"})
+    payloads = []
+    provider._create_container = MagicMock(
+        side_effect=lambda _token, _user, payload: payloads.append(payload) or f"c{len(payloads)}"
+    )
+    provider._wait_for_container = MagicMock()
+    provider._publish_container = MagicMock(return_value=MagicMock())
+    provider.publish_post("tok", content)
+    return payloads
+
+
+def test_a_feed_photo_carries_collaborators_tags_and_location():
+    [payload] = _captured_containers(
+        PublishContent(
+            media_urls=["https://cdn/a.jpg"], media_types=["image"], post_type=PostType.IMAGE, extra=_IG_EXTRAS
+        )
+    )
+
+    assert payload["collaborators"] == ["ana", "bia"]
+    assert payload["user_tags"] == [{"username": "cris", "x": 0.5, "y": 0.5}]
+    assert payload["location_id"] == "loc-9"
+
+
+def test_a_story_carries_only_unpositioned_tags():
+    [payload] = _captured_containers(
+        PublishContent(
+            media_urls=["https://cdn/a.jpg"], media_types=["image"], post_type=PostType.STORY, extra=_IG_EXTRAS
+        )
+    )
+
+    assert payload["user_tags"] == [{"username": "cris"}]
+    assert "collaborators" not in payload
+    assert "location_id" not in payload
+
+
+def test_a_reel_carries_collaborators_and_location_but_no_tags():
+    [payload] = _captured_containers(
+        PublishContent(
+            media_urls=["https://cdn/a.mp4"], media_types=["video"], post_type=PostType.REEL, extra=_IG_EXTRAS
+        )
+    )
+
+    assert payload["collaborators"] == ["ana", "bia"]
+    assert payload["location_id"] == "loc-9"
+    assert "user_tags" not in payload
+
+
+def test_a_carousel_tags_its_first_photo_and_credits_on_the_parent():
+    first, second, parent = _captured_containers(
+        PublishContent(
+            media_urls=["https://cdn/a.jpg", "https://cdn/b.jpg"],
+            media_types=["image", "image"],
+            post_type=PostType.CAROUSEL,
+            extra=_IG_EXTRAS,
+        )
+    )
+
+    assert first["user_tags"] == [{"username": "cris", "x": 0.5, "y": 0.5}]
+    assert "user_tags" not in second
+    assert "collaborators" not in first and "location_id" not in first
+    assert parent["media_type"] == "CAROUSEL"
+    assert parent["collaborators"] == ["ana", "bia"]
+    assert parent["location_id"] == "loc-9"
+    assert "user_tags" not in parent
+
+
+def test_a_post_without_extras_sends_none_of_them():
+    [payload] = _captured_containers(
+        PublishContent(
+            media_urls=["https://cdn/a.jpg"],
+            media_types=["image"],
+            post_type=PostType.IMAGE,
+            extra={"ig_user_id": "ig-1"},
+        )
+    )
+
+    assert not {"collaborators", "user_tags", "location_id"} & payload.keys()
+
+
+def test_a_reel_carries_its_cover_moment_and_can_stay_off_the_grid():
+    [payload] = _captured_containers(
+        PublishContent(
+            media_urls=["https://cdn/a.mp4"],
+            media_types=["video"],
+            post_type=PostType.REEL,
+            extra={"ig_user_id": "ig-1", "video_cover_timestamp_ms": 2500, "share_to_feed": False},
+        )
+    )
+
+    assert payload["thumb_offset"] == 2500
+    assert payload["share_to_feed"] is False
+
+
+def test_a_reel_left_on_the_grid_does_not_send_share_to_feed():
+    [payload] = _captured_containers(
+        PublishContent(
+            media_urls=["https://cdn/a.mp4"],
+            media_types=["video"],
+            post_type=PostType.REEL,
+            extra={"ig_user_id": "ig-1", "share_to_feed": True},
+        )
+    )
+
+    assert "share_to_feed" not in payload
+    assert "thumb_offset" not in payload

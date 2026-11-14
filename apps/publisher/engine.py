@@ -14,6 +14,7 @@ aggregate ``status`` property derived from its children (see
 """
 
 import contextlib
+import dataclasses
 import logging
 import math
 import os
@@ -44,6 +45,7 @@ from apps.social_accounts.error_messages import (
     PUBLISH_INTERRUPTED_MESSAGE,
     PUBLISH_RATE_LIMIT_MESSAGE,
     PUBLISH_UNCONFIRMED_MESSAGE,
+    STORY_PROGRESS_MESSAGE,
     exhausted_publish_message,
     friendly_first_comment_error,
     friendly_publish_error,
@@ -51,7 +53,14 @@ from apps.social_accounts.error_messages import (
 )
 from providers import VIDEO_POST_TYPES, get_provider
 from providers.exceptions import ProviderError, PublishError, RateLimitError
-from providers.types import FORMAT_POST_TYPES, PostType, PublishContent, PublishState, media_fits_post_type
+from providers.types import (
+    FORMAT_POST_TYPES,
+    PostType,
+    PublishContent,
+    PublishResult,
+    PublishState,
+    media_fits_post_type,
+)
 
 from .manual_delivery import deliver_by_notification, is_notify_delivery
 from .models import PublishLog, RateLimitState
@@ -119,6 +128,9 @@ def _resolve_publish_credentials(account):
             credentials["location_id"] = account.account_platform_id
     elif platform == "facebook":
         credentials["page_id"] = account.account_platform_id
+    elif platform == "whatsapp":
+        credentials["phone_number_id"] = account.account_platform_id
+        credentials["waba_id"] = account.webhook_target_id
     elif platform in ("instagram", "instagram_login"):
         credentials["ig_user_id"] = account.account_platform_id
         if platform == "instagram":
@@ -955,7 +967,10 @@ class PublishEngine:
                 post_type.value,
                 len(media_files),
             )
-            result = provider.publish_post(access_token, content)
+            if post_type is PostType.STORY and len(content.media_urls) > 1:
+                result = self._publish_story_sequence(platform_post, provider, access_token, content)
+            else:
+                result = provider.publish_post(access_token, content)
             return {
                 "success": True,
                 "platform_post_id": result.platform_post_id,
@@ -985,6 +1000,42 @@ class PublishEngine:
         attachments do not fit.
         """
         return media_fits_post_type(hint, media_count, first_media_type)
+
+    @staticmethod
+    def _publish_story_sequence(platform_post, provider, access_token, content):
+        """Publish a Story row with several media as one Story per item, in order.
+
+        Meta's Story APIs take a single photo or video per call. Each id is
+        saved on the row as soon as its Story is live, so a retry after a
+        failure part-way resumes at the first item not yet published instead
+        of posting the earlier ones again. Returns the first Story's id, with
+        every id in ``extra["story_ids"]``.
+        """
+        published = published_stories(platform_post)
+        total = len(content.media_urls)
+        first = None
+        for index in range(len(published), total):
+            single = dataclasses.replace(
+                content,
+                media_urls=content.media_urls[index : index + 1],
+                media_types=content.media_types[index : index + 1],
+                media_files=content.media_files[index : index + 1],
+                idempotency_key=f"{content.idempotency_key}-{index}" if content.idempotency_key else None,
+            )
+            result = provider.publish_post(access_token, single)
+            if index == 0:
+                first = result
+            published.append(result.platform_post_id)
+            platform_post.platform_extra = {
+                **(platform_post.platform_extra or {}),
+                STORY_PROGRESS_KEY: {"row": str(platform_post.id), "ids": published, "total": total},
+            }
+            platform_post.save(update_fields=["platform_extra", "updated_at"])
+        return PublishResult(
+            platform_post_id=published[0],
+            url=first.url if first else None,
+            extra={**(first.extra if first else {}), "story_ids": published},
+        )
 
     @staticmethod
     def _resolve_post_type(
@@ -1064,7 +1115,7 @@ class PublishEngine:
         provider response body — which is why ``user_message`` has no default:
         every caller has to decide, and a forgotten one is a leak.
         """
-        publish_error = (user_message or PUBLISH_GENERIC_MESSAGE)[:2000]
+        publish_error = with_story_progress(platform_post, user_message or PUBLISH_GENERIC_MESSAGE)[:2000]
 
         # A targeted UPDATE guarded on the row still being ``publishing``, not
         # ``platform_post.save()``. Every one of the seven paths that reaches
@@ -1205,7 +1256,7 @@ class PublishEngine:
         # Drop back to SCHEDULED so the next _process_retries tick picks it up
         # once next_retry_at passes.
         platform_post.status = PlatformPost.Status.SCHEDULED
-        platform_post.publish_error = (user_message or PUBLISH_GENERIC_MESSAGE)[:2000]
+        platform_post.publish_error = with_story_progress(platform_post, user_message or PUBLISH_GENERIC_MESSAGE)[:2000]
         platform_post.save()
 
         logger.info(
@@ -1467,6 +1518,32 @@ class PublishEngine:
         if latest and post.published_at != latest:
             post.published_at = latest
             post.save(update_fields=["published_at", "updated_at"])
+
+
+STORY_PROGRESS_KEY = "story_progress"
+
+
+def published_stories(platform_post) -> list[str]:
+    """Ids of the Stories this row already put out on an earlier attempt.
+
+    Keyed to the row's own id: a clone copies ``platform_extra``, and must not
+    take the original's Stories for its own and skip publishing them.
+    """
+    progress = (platform_post.platform_extra or {}).get(STORY_PROGRESS_KEY) or {}
+    if not isinstance(progress, dict) or progress.get("row") != str(platform_post.id):
+        return []
+    return list(progress.get("ids") or [])
+
+
+def with_story_progress(platform_post, message: str) -> str:
+    """``message``, led by how many Stories of a part-published row are live."""
+    published = published_stories(platform_post)
+    if not published:
+        return message
+    total = platform_post.platform_extra[STORY_PROGRESS_KEY].get("total") or len(published)
+    if len(published) >= total:
+        return message
+    return STORY_PROGRESS_MESSAGE.format(done=len(published), total=total, message=message)
 
 
 def _refused_a_live_token(account, exc) -> bool:

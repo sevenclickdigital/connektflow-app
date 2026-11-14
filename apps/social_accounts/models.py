@@ -5,10 +5,23 @@ from django.conf import settings
 from django.db import models, router, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import pgettext_lazy
 
 from apps.common.encryption import EncryptedTextField
 from apps.common.managers import WorkspaceScopedManager
 from apps.credentials.models import PlatformCredential
+
+# Platforms connected only to talk to customers: nothing is published, scheduled
+# or measured on them, so the composer, calendar, analytics and automations
+# leave them out (``SocialAccount.objects.publishable()``), while the inbox and
+# the Social Accounts page show them like any other account.
+MESSAGING_ONLY_PLATFORMS = frozenset({"whatsapp"})
+
+
+class SocialAccountQuerySet(models.QuerySet):
+    def publishable(self):
+        """Accounts that posts can be published to."""
+        return self.exclude(platform__in=MESSAGING_ONLY_PLATFORMS)
 
 
 class YouTubeRevocation(models.Model):
@@ -165,7 +178,7 @@ class SocialAccount(models.Model):
     # Contains only object IDs/cursors, never OAuth tokens or message bodies.
     instagram_dm_poll_state = models.JSONField(default=dict, blank=True)
 
-    objects = WorkspaceScopedManager()
+    objects = WorkspaceScopedManager.from_queryset(SocialAccountQuerySet)()
 
     class Meta:
         db_table = "social_accounts_social_account"
@@ -296,6 +309,57 @@ class SocialAccount(models.Model):
             self.ConnectionStatus.DISCONNECTED,
             self.ConnectionStatus.ERROR,
         )
+
+    # The permission each Meta chat channel needs for DMs to reach the inbox.
+    _MESSAGING_SCOPES = {
+        "facebook": "pages_messaging",
+        "instagram": "instagram_manage_messages",
+        "instagram_login": "instagram_business_manage_messages",
+    }
+
+    @property
+    def messaging_state(self) -> str:
+        """Whether this account's private messages reach the inbox.
+
+        ``active`` or ``unavailable`` for the chat channels (Messenger,
+        Instagram Direct, WhatsApp), ``""`` for platforms without one. Mirrors
+        what ``inbox.reply_policy`` refuses on, so the card and the inbox agree.
+        """
+        if self.platform == "whatsapp":
+            return "unavailable" if self.needs_reconnect or self.webhooks_active is False else "active"
+        scope = self._MESSAGING_SCOPES.get(self.platform)
+        if not scope:
+            return ""
+        if (
+            self.needs_reconnect
+            or scope in (self.missing_scopes or [])
+            or self.messaging_access is False
+            or self.webhooks_active is False
+            or (
+                self.platform == "instagram"
+                and (self.instagram_dm_permission_request_disabled or not self.webhook_target_id)
+            )
+        ):
+            return "unavailable"
+        return "active"
+
+    @property
+    def health(self) -> str:
+        """``error`` when the connection is broken, ``warning`` when it works
+        with something missing (permissions, real-time updates, an expiring
+        token), else ``ok``. Drives the status pill on the account card; the
+        details behind a warning are the properties above."""
+        if self.needs_reconnect:
+            return "error"
+        if (
+            self.connection_status == self.ConnectionStatus.TOKEN_EXPIRING
+            or self.connection_missing_scopes
+            or self.webhook_warning
+            or self.instagram_dm_permission_request_disabled
+            or self.messaging_access is False
+        ):
+            return "warning"
+        return "ok"
 
     def refresh_oauth_token(self, provider, *, enqueue_backfill: bool = True) -> str:
         """Refresh this account's OAuth access token via *provider* and persist it.
@@ -493,10 +557,12 @@ class SocialAccount(models.Model):
         return self.field_config["formats"]
 
     def format_options(self) -> list[dict]:
-        """``[{"format", "label"}]`` for the composer's picker, in display order.
+        """``[{"format", "label", "short"}]`` for the composer, in display order.
 
-        The label names what the user gets ("Instagram Stories"); the ordinary
-        post is just the platform's name.
+        ``label`` names what the user gets ("Instagram Stories"); the ordinary
+        post is just the platform's name. ``short`` is the format alone, for a
+        toggle or chip next to the account: the ordinary post is "Feed" where
+        the account also has Stories, "Post" elsewhere.
         """
         platform = self.get_platform_display()
         labels = {
@@ -505,7 +571,13 @@ class SocialAccount(models.Model):
             "reel": _("%(platform)s Reels") % {"platform": platform},
             "profile_photo": _("%(platform)s photo") % {"platform": platform},
         }
-        return [{"format": fmt, "label": str(labels[fmt])} for fmt in self.formats]
+        shorts = {
+            "default": _("Feed") if "story" in self.formats else _("Post"),
+            "story": pgettext_lazy("publishing format", "Story"),
+            "reel": _("Reels"),
+            "profile_photo": _("Photo"),
+        }
+        return [{"format": fmt, "label": str(labels[fmt]), "short": str(shorts[fmt])} for fmt in self.formats]
 
     @property
     def keeps_platform_grant_on_disconnect(self) -> bool:
@@ -664,14 +736,14 @@ class PlatformVisibility(models.Model):
     def unconnected_choices(cls, connected_platforms) -> list[tuple[str, str]]:
         """Visible platforms whose network has no connected account yet.
 
-        Shown after the connected accounts wherever channels are picked (the
-        composer, the art request), so every channel on offer is visible.
+        Offered as "connect a channel" wherever a post's channels are picked;
+        chat-only platforms publish nothing, so they are left out.
         """
         connected = {cls.SAME_NETWORK.get(p, p) for p in connected_platforms}
         return [
             (value, label)
             for value, label in cls.visible_choices()
-            if cls.SAME_NETWORK.get(value, value) not in connected
+            if cls.SAME_NETWORK.get(value, value) not in connected and value not in MESSAGING_ONLY_PLATFORMS
         ]
 
 

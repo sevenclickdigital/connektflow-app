@@ -1,27 +1,31 @@
-{% extends "layouts/workspace_settings.html" %}
+{% extends "layouts/settings.html" %}
 {% load i18n billing_extras %}
 {% comment %}
 Billing for one workspace: what it costs, whether it may be used, how
 much disk is left, and the only purchase the product sells on top — extra
 GB.
 
-Under the workspace settings layout because that is where "what this
-workspace is and how it is configured" already lives, and the sidebar
-there keeps Media Library one click away — the other half of the answer
-when disk runs short.
+In the account centre, under Billing: the owner pays for brands from
+there, and the overview links each brand to this page.
 {% endcomment %}
 
 {% block title %}{% translate "Billing" %} - {{ workspace.name }} - Automator{% endblock %}
 
-{% block content %}
-<div class="max-w-3xl">
-
-  <div class="mb-6">
-    <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Billing" %}</h1>
-    <p class="text-sm text-neutral-600 mt-1">
-      {% blocktranslate with name=workspace.name %}Subscription and storage for {{ name }}.{% endblocktranslate %}
-    </p>
+{% block page_header %}
+<a href="{% url 'billing_account:overview' %}" class="inline-flex items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-950 mb-3">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+  {% translate "All brands" %}
+</a>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% translate "Billing" %} · {{ workspace.name }}</h1>
+    <p class="page-description">{% blocktranslate with name=workspace.name %}Subscription and storage for {{ name }}.{% endblocktranslate %}</p>
   </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div>
 
   {% if not gateway_configured %}
   {% comment %}
@@ -29,7 +33,7 @@ when disk runs short.
   charge can be created, and that is the normal state of this
   installation today rather than a fault.
   {% endcomment %}
-  <div class="mb-6 rounded-xl border border-neutral-300 bg-neutral-50 px-4 py-3 flex items-start gap-3">
+  <div class="mb-6 a-card px-4 py-3 flex items-start gap-3">
     <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
     </svg>
@@ -42,28 +46,16 @@ when disk runs short.
   </div>
   {% endif %}
 
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
   {# ───────────────── Subscription ───────────────── #}
-  <section class="mb-10">
-    <h2 class="text-base font-semibold text-neutral-950 mb-4">{% translate "Subscription" %}</h2>
+  <section class="flex flex-col">
+    <h2 class="section-title">{% translate "Subscription" %}</h2>
 
-    <div class="rounded-xl border border-neutral-300 bg-white p-5">
+    <div class="a-card p-6 flex-1">
       <div class="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div class="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Status" %}</div>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full
-                       {% if subscription.status == 'active' %}bg-green-50 text-green-700
-                       {% elif subscription.status == 'courtesy' %}bg-indigo-50 text-indigo-700
-                       {% elif subscription.status == 'past_due' %}bg-amber-50 text-amber-700
-                       {% elif subscription.status == 'canceled' %}bg-neutral-100 text-neutral-700
-                       {% else %}bg-blue-50 text-blue-700{% endif %}">
-            <span class="w-1.5 h-1.5 rounded-full
-                         {% if subscription.status == 'active' %}bg-green-500
-                         {% elif subscription.status == 'courtesy' %}bg-indigo-500
-                         {% elif subscription.status == 'past_due' %}bg-amber-500
-                         {% elif subscription.status == 'canceled' %}bg-neutral-500
-                         {% else %}bg-blue-500{% endif %}"></span>
-            {{ subscription.get_status_display }}
-          </span>
+          <span class="pill {% if subscription.status == 'active' %}pill-success{% elif subscription.status == 'courtesy' %}pill-brand{% elif subscription.status == 'past_due' %}pill-warning{% elif subscription.status == 'canceled' %}pill-neutral{% else %}pill-info{% endif %}"><i></i>{{ subscription.get_status_display }}</span>
 
           {% if subscription.status == 'pending' %}
           <p class="text-xs text-neutral-600 mt-2 max-w-sm">
@@ -103,7 +95,7 @@ when disk runs short.
       {% if can_manage_billing and not subscription.is_active %}
       <div class="mt-5 pt-4 border-t border-neutral-100">
         <a href="{% url 'billing:subscribe_modal' workspace_id=workspace.id %}"
-           class="btn-brand inline-flex items-center gap-2 px-4 py-2 text-sm">
+           class="btn-brand">
           {% translate "Contract this workspace" %}
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
@@ -115,13 +107,13 @@ when disk runs short.
   </section>
 
   {# ───────────────── Storage ───────────────── #}
-  <section id="storage" class="mb-10">
-    <h2 class="text-base font-semibold text-neutral-950 mb-1">{% translate "Storage" %}</h2>
-    <p class="text-sm text-neutral-600 mb-4">
-      {% translate "Files uploaded to this workspace's gallery count against this allowance." %}
-    </p>
+  <section id="storage" class="flex flex-col">
+    <h2 class="section-title">{% translate "Storage" %}</h2>
 
-    <div class="rounded-xl border border-neutral-300 bg-white p-5">
+    <div class="a-card p-6 flex-1">
+      <p class="text-sm text-neutral-600 mb-4">
+        {% translate "Files uploaded to this workspace's gallery count against this allowance." %}
+      </p>
       <div class="flex items-end justify-between gap-4 mb-2">
         <div class="text-sm text-neutral-800">
           {% blocktranslate with used=storage.used_bytes|gb limit=storage.limit_bytes|gb %}<span class="font-semibold">{{ used }} GB</span> of {{ limit }} GB used{% endblocktranslate %}
@@ -180,12 +172,13 @@ when disk runs short.
       {% endif %}
     </div>
   </section>
+  </div>
 
   {# ───────────────── Contract extra GB ───────────────── #}
   {% if can_manage_billing %}
-  <section class="mb-10">
-    <h2 class="text-base font-semibold text-neutral-950 mb-1">{% translate "Contract extra storage" %}</h2>
-    <p class="text-sm text-neutral-600 mb-4">
+  <section class="mb-8">
+    <h2 class="section-title">{% translate "Contract extra storage" %}</h2>
+    <p class="text-sm text-neutral-600 -mt-1 mb-4">
       {% blocktranslate with price=storage_price_per_gb_cents|brl %}R$ {{ price }} per GB per month. Choose how much you need — the price updates before you confirm.{% endblocktranslate %}
     </p>
 
@@ -196,7 +189,7 @@ when disk runs short.
     up. ``unitCents`` is only ever used for the instant preview.
     {% endcomment %}
     <form method="post" action="{% url 'billing:contract_storage' workspace_id=workspace.id %}"
-          class="rounded-xl border border-neutral-300 bg-white p-5"
+          class="a-card p-6"
           x-data="{ quantity: {{ storage_addon_choices.0 }} }">
       {% csrf_token %}
 
@@ -206,7 +199,7 @@ when disk runs short.
         <button type="button"
                 @click="quantity = {{ choice }}; $refs.quantityField.value = {{ choice }}; $refs.quoteTrigger.click()"
                 :class="quantity === {{ choice }} ? 'border-brand-700 bg-brand-50 text-brand-900' : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'"
-                class="px-4 py-2 text-sm font-semibold rounded-xl border transition-colors cursor-pointer tabular-nums">
+                class="px-4 py-2 text-sm font-semibold rounded-md border transition-colors cursor-pointer tabular-nums">
           {% blocktranslate with gb_amount=choice %}{{ gb_amount }} GB{% endblocktranslate %}
         </button>
         {% endfor %}
@@ -240,7 +233,7 @@ when disk runs short.
         {% include "billing/_storage_quote.html" %}
       </div>
 
-      <button type="submit" class="btn-brand inline-flex items-center gap-2 px-4 py-2 text-sm">
+      <button type="submit" class="btn-brand">
         {% translate "Confirm and contract" %}
       </button>
       <p class="text-xs text-neutral-500 mt-2">

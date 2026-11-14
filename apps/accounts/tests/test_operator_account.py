@@ -45,9 +45,7 @@ def operator(db):
 
 @pytest.fixture
 def customer(db):
-    user = User.objects.create_user(
-        email="client@example.com", password="x", tos_accepted_at=timezone.now()
-    )
+    user = User.objects.create_user(email="client@example.com", password="x", tos_accepted_at=timezone.now())
     org = Organization.objects.create(name="Client Co")
     workspace = Workspace.objects.create(organization=org, name="Client Social")
     OrgMembership.objects.create(user=user, organization=org, org_role=OrgMembership.OrgRole.OWNER)
@@ -110,9 +108,7 @@ class TestCustomerIsUnaffected:
     def test_customer_with_no_workspace_still_sees_the_dashboard(self, client, db):
         """A real customer with nothing yet gets the create-workspace screen,
         which is right for them and wrong for an operator."""
-        user = User.objects.create_user(
-            email="newbie@example.com", password="x", tos_accepted_at=timezone.now()
-        )
+        user = User.objects.create_user(email="newbie@example.com", password="x", tos_accepted_at=timezone.now())
         WorkspaceMembership.objects.filter(user=user).delete()
         OrgMembership.objects.filter(user=user).delete()
         user.last_workspace_id = None

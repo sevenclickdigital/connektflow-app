@@ -1349,26 +1349,24 @@ class FacebookProvider(SocialProvider):
         replacement, so there is no "near me" to offer — the user types the
         name of the place.
 
-        Returns [] on any refusal: a place is optional, and a search that
-        fails must not block composing.
+        Raises the provider error when Meta refuses: the search needs the
+        app's "Page Public Metadata Access" feature, and without it Meta
+        answers "Authorization Error" (code 100) to every token we hold. The
+        caller tells the user instead of showing an empty result list.
         """
         query = (query or "").strip()
         if not query:
             return []
-        try:
-            resp = self._request(
-                "GET",
-                f"{BASE_URL}/pages/search",
-                access_token=access_token,
-                params={
-                    "q": query,
-                    "fields": PLACE_SEARCH_FIELDS,
-                    "limit": PLACE_SEARCH_LIMIT,
-                },
-            )
-        except Exception:
-            logger.warning("Facebook place search failed for %r", query, exc_info=True)
-            return []
+        resp = self._request(
+            "GET",
+            f"{BASE_URL}/pages/search",
+            access_token=access_token,
+            params={
+                "q": query,
+                "fields": PLACE_SEARCH_FIELDS,
+                "limit": PLACE_SEARCH_LIMIT,
+            },
+        )
         return parse_place_results(resp.json())
 
     def reply_to_comment(self, access_token: str, comment_id: str, text: str, extra: dict | None = None) -> ReplyResult:

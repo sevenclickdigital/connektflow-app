@@ -1,0 +1,107 @@
+{% extends "layouts/workspace_settings.html" %}
+{% load i18n %}
+{% block title %}{% translate "Manage team" %} - {{ workspace.name }} - Automator{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "Manage team" %}</h1>
+        <p class="page-description">{% blocktranslate with name=workspace.name %}Who works on {{ name }} and what each person can do.{% endblocktranslate %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% comment %}
+A role is only offered (and a member only editable) up to the viewer's own
+level in the brand; set_brand_role enforces the same rule on the server.
+{% endcomment %}
+{% with assignable=role_choices %}
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Members" %} ({{ memberships|length }})</h2>
+    <div class="a-card divide-y divide-neutral-300">
+        {% for m in memberships %}
+        <div class="px-6 py-4 flex flex-wrap items-center gap-3">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 bg-brand-100 text-brand-800 uppercase">{{ m.user.display_name|slice:":2" }}</div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-neutral-950 truncate">{{ m.user.display_name }}{% if m.user_id == request.user.id %} <span class="text-xs font-normal text-neutral-500">({% translate "you" %})</span>{% endif %}</div>
+                <div class="text-xs text-neutral-500 truncate">{{ m.user.email }}</div>
+            </div>
+            <form method="POST" class="flex items-center gap-2" x-data>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="change_role">
+                <input type="hidden" name="user_id" value="{{ m.user_id }}">
+                <select name="role" class="form-input-styled bb-select cursor-pointer w-44 py-1.5 text-sm" aria-label="{% translate 'Role' %}"
+                        @change="$el.form.requestSubmit()"
+                        {% if m.workspace_role not in assignable_values %}disabled{% endif %}>
+                    {% for value, label in all_roles %}
+                    {% if value in assignable_values or value == m.workspace_role %}
+                    <option value="{{ value }}" {% if value == m.workspace_role %}selected{% endif %}>{% translate label %}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </form>
+            {% if m.workspace_role in assignable_values %}
+            <form method="POST" x-data="{ confirming: false }" class="relative">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="remove">
+                <input type="hidden" name="user_id" value="{{ m.user_id }}">
+                <button type="button" class="btn-ghost py-1.5 px-3 text-xs text-[var(--error-700)]" @click="confirming = true" x-show="!confirming">{% translate "Remove" %}</button>
+                <button type="submit" class="btn-danger-soft py-1.5 px-3 text-xs" x-show="confirming" x-cloak @click.away="confirming = false">{% translate "Confirm removal" %}</button>
+            </form>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="px-6 py-10 text-center text-sm text-neutral-500">{% translate "Nobody is in this brand yet." %}</div>
+        {% endfor %}
+    </div>
+</section>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <section class="flex flex-col">
+        <h2 class="section-title">{% translate "Add from the organization" %}</h2>
+        <form method="POST" class="a-card p-6 flex-1 space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add">
+            {% if addable_members %}
+            <div>
+                <label for="add-user" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Person" %}</label>
+                <select id="add-user" name="user_id" class="form-input-styled bb-select cursor-pointer" required>
+                    {% for user in addable_members %}<option value="{{ user.id }}">{{ user.display_name }} · {{ user.email }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="add-role" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Role" %}</label>
+                <select id="add-role" name="role" class="form-input-styled bb-select cursor-pointer" required>
+                    {% for value, label in assignable %}<option value="{{ value }}" {% if value == "editor" %}selected{% endif %}>{% translate label %}</option>{% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn-brand">{% translate "Add to the brand" %}</button>
+            {% else %}
+            <p class="text-sm text-neutral-500">{% translate "Everyone in the organization is already in this brand. Invite someone new by email." %}</p>
+            {% endif %}
+        </form>
+    </section>
+
+    <section class="flex flex-col">
+        <h2 class="section-title">{% translate "Invite by email" %}</h2>
+        <form method="POST" class="a-card p-6 flex-1 space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="invite">
+            <div>
+                <label for="invite-email" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Email" %}</label>
+                <input id="invite-email" type="email" name="email" required class="form-input-styled" placeholder="{% translate 'name@company.com' %}">
+            </div>
+            <div>
+                <label for="invite-role" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Role" %}</label>
+                <select id="invite-role" name="role" class="form-input-styled bb-select cursor-pointer" required>
+                    {% for value, label in assignable %}<option value="{{ value }}" {% if value == "editor" %}selected{% endif %}>{% translate label %}</option>{% endfor %}
+                </select>
+            </div>
+            <p class="text-xs text-neutral-500">{% translate "The person joins the organization as a member, with access only to this brand." %}</p>
+            <button type="submit" class="btn-brand">{% translate "Send invitation" %}</button>
+        </form>
+    </section>
+</div>
+{% endwith %}
+{% endblock %}

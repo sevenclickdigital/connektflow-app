@@ -26,8 +26,22 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
+    # Shown everywhere a person is named. The profile form writes it from
+    # first_name + last_name; accounts that predate those fields keep theirs.
     name = models.CharField(max_length=255, blank=True, default="")
     avatar = models.ImageField(upload_to="avatars/%Y/%m/", blank=True)
+
+    # Who is contracting the service. db_default keeps inserts from code that
+    # predates these columns working during a rolling deploy.
+    first_name = models.CharField(max_length=150, blank=True, default="", db_default="")
+    last_name = models.CharField(max_length=150, blank=True, default="", db_default="")
+    address_postal_code = models.CharField(max_length=9, blank=True, default="", db_default="")
+    address_street = models.CharField(max_length=255, blank=True, default="", db_default="")
+    address_number = models.CharField(max_length=20, blank=True, default="", db_default="")
+    address_complement = models.CharField(max_length=100, blank=True, default="", db_default="")
+    address_neighborhood = models.CharField(max_length=120, blank=True, default="", db_default="")
+    address_city = models.CharField(max_length=120, blank=True, default="", db_default="")
+    address_state = models.CharField(max_length=2, blank=True, default="", db_default="")
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 

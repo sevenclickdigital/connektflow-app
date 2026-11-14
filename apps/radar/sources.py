@@ -4,6 +4,9 @@ Adding a source means: a ``OpportunityConnection.Source`` choice, a client in
 ``providers/``, a connect view and a Radar screen, and one entry here. The
 Platforms grid, the connected-accounts list and the Radar index all render
 from this registry, so nothing else has to learn about the new source.
+
+``UPCOMING`` lists sources announced but not built: they show as "Soon" cards
+with no connect or open action, and move to ``SOURCES`` once they exist.
 """
 
 from __future__ import annotations
@@ -22,8 +25,8 @@ class OpportunitySource:
     key: str
     label: str | Promise
     description: str | Promise
-    connect_url_name: str
-    open_url_name: str
+    connect_url_name: str = ""
+    open_url_name: str = ""
 
 
 SOURCES: dict[str, OpportunitySource] = {
@@ -36,6 +39,12 @@ SOURCES: dict[str, OpportunitySource] = {
     ),
 }
 
+UPCOMING: tuple[OpportunitySource, ...] = (
+    OpportunitySource(key="shein", label="Shein", description=_("Fashion and accessories to share")),
+    OpportunitySource(key="mercado_livre", label="Mercado Livre", description=_("Marketplace offers to share")),
+    OpportunitySource(key="tiktok_shop", label="TikTok Shop", description=_("Shop products to promote")),
+)
+
 
 @dataclass(frozen=True)
 class SourceCard:
@@ -45,6 +54,7 @@ class SourceCard:
     connection: OpportunityConnection | None
     connect_url: str
     open_url: str
+    upcoming: bool = False
 
 
 def source_cards(workspace_id) -> list[SourceCard]:
@@ -57,4 +67,4 @@ def source_cards(workspace_id) -> list[SourceCard]:
             open_url=reverse(source.open_url_name, kwargs={"workspace_id": workspace_id}),
         )
         for key, source in SOURCES.items()
-    ]
+    ] + [SourceCard(source=source, connection=None, connect_url="", open_url="", upcoming=True) for source in UPCOMING]

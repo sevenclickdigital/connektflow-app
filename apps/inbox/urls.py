@@ -9,8 +9,10 @@ app_name = "inbox"
 urlpatterns = [
     # Main inbox feed
     path("", views.inbox_feed, name="feed"),
+    path("version/", views.inbox_version, name="version"),
     # Message detail + thread
     path("<uuid:message_id>/", views.message_detail, name="message_detail"),
+    path("<uuid:message_id>/media/<int:index>/", views.message_media, name="message_media"),
     # Reply to message
     path("<uuid:message_id>/reply/", views.send_reply, name="send_reply"),
     # Draft replies

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% load humanize i18n %}
+{% load humanize i18n static %}
 
 {% block title %}{{ message.sender_name }} - {% translate "Inbox" %} - {{ workspace.name }} - Automator{% endblock %}
 
 {% block extra_head %}
 <style>
-    .inbox-detail-full { margin: -1.5rem; height: calc(100% + 3rem); }
+    .inbox-detail-full { display: flex; flex-direction: column; flex: 1; min-height: 0; height: 100%; overflow: hidden; background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-lg); }
     .badge-pill {
         display: inline-flex; align-items: center; gap: 3px;
         font-size: 10px; font-weight: 600; padding: 2px 7px;
@@ -58,4 +58,10 @@
         {% include "inbox/partials/_message_panel.html" %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ emoji_categories|json_script:"inbox-emoji" }}
+<script src="{% static 'js/emoji-picker.js' %}"></script>
+<script src="{% static 'js/inbox-reply.js' %}"></script>
 {% endblock %}

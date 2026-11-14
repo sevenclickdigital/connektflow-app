@@ -67,7 +67,7 @@ class Organization(models.Model):
           — those don't carry request context and we don't want to silently
           delete accounts from a background job.
         - Every other member gets a freshly provisioned default "My
-          Organization" + "My Workspace" so they land on a working dashboard
+          Organization" + "My brand" so they land on a working dashboard
           instead of limbo on next login.
         - Any user's `last_workspace_id` that points at a workspace in this
           org is nulled first (defensive; provision-for-member would reset it

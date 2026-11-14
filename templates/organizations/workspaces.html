@@ -1,33 +1,57 @@
 {% extends "layouts/settings.html" %}
 {% load i18n %}
 {% block title %}{% translate "Workspaces - Settings" %} - Automator{% endblock %}
-{% block content %}
-<div class="">
-    <h2 class="text-xl font-semibold mb-8" style="color: var(--text-primary);">{% translate "Workspaces" %}</h2>
 
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "Workspaces" %}</h1>
+        <p class="page-description">{% translate "Every workspace you have access to: those of your organization and those you were added to." %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Active" context "workspaces, plural" %} ({{ workspace_data|length }})</h2>
     {% if workspace_data %}
-    <div style="background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-xl);">
+    <div class="a-card divide-y divide-neutral-300">
         {% for item in workspace_data %}
-        <div class="px-6 py-4{% if not forloop.last %}" style="border-bottom: 1px solid var(--border);"{% else %}"{% endif %}>
+        <div class="px-6 py-4">
             {% include "organizations/partials/workspace_card.html" with item=item %}
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <div class="px-6 py-12 text-center rounded-xl" style="background: var(--surface-0); border: 1px solid var(--border);">
-        <p class="text-sm" style="color: var(--text-tertiary);">{% translate "No workspaces yet." %}</p>
+    <div class="a-card px-6 py-12 text-center">
+        <p class="text-sm text-neutral-500">{% translate "No workspaces yet." %}</p>
     </div>
     {% endif %}
+</section>
 
-    {% if archived_data %}
-    <h3 class="text-sm font-semibold mt-10 mb-3" style="color: var(--text-secondary);">{% translate "Archived" %}</h3>
-    <div style="background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-xl); opacity: 0.75;">
-        {% for item in archived_data %}
-        <div class="px-6 py-4{% if not forloop.last %}" style="border-bottom: 1px solid var(--border);"{% else %}"{% endif %}>
+{% if external_data %}
+<section class="mb-8">
+    <h2 class="section-title">{% translate "In other organizations" %} ({{ external_data|length }})</h2>
+    <div class="a-card divide-y divide-neutral-300">
+        {% for item in external_data %}
+        <div class="px-6 py-4">
             {% include "organizations/partials/workspace_card.html" with item=item %}
         </div>
         {% endfor %}
     </div>
-    {% endif %}
-</div>
+</section>
+{% endif %}
+
+{% if archived_data %}
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Archived" context "workspaces, plural" %} ({{ archived_data|length }})</h2>
+    <div class="a-card divide-y divide-neutral-300 opacity-75">
+        {% for item in archived_data %}
+        <div class="px-6 py-4">
+            {% include "organizations/partials/workspace_card.html" with item=item %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 {% endblock %}

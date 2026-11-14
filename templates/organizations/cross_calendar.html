@@ -4,7 +4,12 @@
 {% block title %}{% translate "Organization Calendar" %} - Automator{% endblock %}
 
 {% block page_header %}
-<h1 class="text-xl font-semibold text-neutral-950 mb-6" style="letter-spacing: -0.01em;">{% translate "Organization Calendar" %}</h1>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "Organization Calendar" %}</h1>
+        <p class="page-description">{% translate "Posts from every workspace of your organization in one calendar." %}</p>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_head %}
@@ -113,9 +118,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="cross-calendar-main" x-data="{ viewOpen: false, wsOpen: false }">
+<div class="cross-calendar-main a-card" x-data="{ viewOpen: false, wsOpen: false }">
     <!-- Toolbar -->
-    <div class="bg-white border-b border-neutral-300 px-6 py-3 flex flex-wrap items-center gap-3">
+    <div class="bg-white border-b border-neutral-300 rounded-t-[var(--radius-lg)] px-6 py-3 flex flex-wrap items-center gap-3">
         <!-- Navigation arrows -->
         <div class="flex items-center gap-2">
             <a href="?view={{ view_type }}&date={{ prev_date }}{% for sid in selected_workspace_ids %}&workspace={{ sid }}{% endfor %}{% if request.GET.channel %}&channel={{ request.GET.channel }}{% endif %}{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"

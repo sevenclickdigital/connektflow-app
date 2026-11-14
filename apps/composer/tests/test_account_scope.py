@@ -407,6 +407,78 @@ class FormatTargetsTests(AccountScopeTestsBase):
         pp.refresh_from_db()
         self.assertEqual(pp.platform_extra, {"audience": "x"})
 
+    def test_instagram_extras_reach_every_format_of_the_account(self):
+        acc = str(self.instagram.id)
+        self.client.post(
+            self.save_url,
+            data=self._targets_payload(
+                self.instagram,
+                "default",
+                "story",
+                **{
+                    f"instagram_custom_{acc}": "1",
+                    f"instagram_collaborators_{acc}": "@Ana, bia, not-valid, @carla, @dani",
+                    f"instagram_user_tags_{acc}": "@cris",
+                    f"instagram_place_id_{acc}": "loc-9",
+                    f"instagram_place_name_{acc}": "Avenida Paulista",
+                },
+            ),
+        )
+
+        for pp in self.post.platform_posts.filter(social_account=self.instagram):
+            self.assertEqual(pp.platform_extra["collaborators"], ["ana", "bia", "carla"])
+            self.assertEqual(pp.platform_extra["user_tags"], ["cris"])
+            self.assertEqual(pp.platform_extra["place_id"], "loc-9")
+
+    def test_a_reel_cover_and_grid_choice_are_saved(self):
+        acc = str(self.instagram.id)
+        self.client.post(
+            self.save_url,
+            data=self._targets_payload(
+                self.instagram,
+                "reel",
+                **{f"instagram_custom_{acc}": "1", f"instagram_reel_cover_ms_{acc}": "2500"},
+            ),
+        )
+
+        reel = self.post.platform_posts.get(social_account=self.instagram, format="reel")
+        self.assertEqual(reel.platform_extra["video_cover_timestamp_ms"], 2500)
+        self.assertIs(reel.platform_extra["share_to_feed"], False)
+
+    def test_a_refused_place_search_tells_the_user_why(self):
+        from unittest.mock import patch
+
+        from providers.exceptions import APIError
+
+        url = reverse(
+            "composer:facebook_places", kwargs={"workspace_id": self.workspace.id, "account_id": self.instagram.id}
+        )
+        provider = patch("providers.get_provider").start()
+        self.addCleanup(patch.stopall)
+        provider.return_value.search_places.side_effect = APIError(
+            'Facebook API error 400: {"error":{"message":"Authorization Error","code":100}}', platform="facebook"
+        )
+
+        data = self.client.get(url, {"q": "Paulista"}).json()
+
+        self.assertEqual(data["places"], [])
+        self.assertIn("Page Public Metadata Access", data["error"])
+
+    def test_instagram_extras_are_kept_by_a_save_that_did_not_render_them(self):
+        acc = str(self.instagram.id)
+        fields = {f"instagram_custom_{acc}": "1", f"instagram_collaborators_{acc}": "@ana"}
+        self.client.post(self.save_url, data=self._targets_payload(self.instagram, "default", **fields))
+
+        self.client.post(self.save_url, data=self._targets_payload(self.instagram, "default"))
+        feed = self.post.platform_posts.get(social_account=self.instagram, format="default")
+        self.assertEqual(feed.platform_extra["collaborators"], ["ana"])
+
+        self.client.post(
+            self.save_url, data=self._targets_payload(self.instagram, "default", **{f"instagram_custom_{acc}": "1"})
+        )
+        feed.refresh_from_db()
+        self.assertNotIn("collaborators", feed.platform_extra)
+
     def test_profile_photo_row_keeps_its_category(self):
         acc = str(self.gbp.id)
         self.client.post(
@@ -435,11 +507,11 @@ class FormatTargetsTests(AccountScopeTestsBase):
         self._attach(MediaAsset.MediaType.IMAGE, "second.jpg", post=self.post)
 
         response = self.client.post(
-            self.save_url, data=self._targets_payload(self.instagram, "story", action="schedule")
+            self.save_url, data=self._targets_payload(self.instagram, "reel", action="schedule")
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn("Story needs exactly one photo or one video", response.json()["errors"]["media"])
+        self.assertIn("A Reel needs exactly one video", response.json()["errors"]["media"])
         self.assertEqual(self._formats(self.instagram), set())
 
     def test_instagram_feed_and_reels_on_one_video_is_refused(self):

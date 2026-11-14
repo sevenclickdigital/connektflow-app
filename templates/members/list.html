@@ -1,25 +1,27 @@
 {% extends "layouts/settings.html" %}
 {% load i18n %}
 {% block title %}{% translate "Team Members - Settings" %} - Automator{% endblock %}
-{% block content %}
-<div x-data="{ showInviteModal: false }">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-semibold" style="color: var(--text-primary);">{% translate "Team Members" %}</h2>
-        {% if is_admin %}
-        <button @click="showInviteModal = true"
-                class="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-brand-800 bg-brand-50 border border-brand-200 rounded-full hover:bg-brand-100 hover:border-brand-300 active:bg-brand-100 transition-all duration-150 cursor-pointer whitespace-nowrap">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            {% translate "Invite Team Member" %}
-        </button>
-        {% endif %}
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "Team Members" %}</h1>
+        <p class="page-description">{% translate "Who has access to your organization and its workspaces." %}</p>
     </div>
+    {% if is_admin %}
+    <button type="button" class="btn-brand" @click="$dispatch('open-invite-member')">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        {% translate "Invite Team Member" %}
+    </button>
+    {% endif %}
+</div>
+{% endblock %}
 
-    <!-- Active Members -->
-    <div style="background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden;" class="mb-8">
-        <div class="px-6 py-4" style="border-bottom: 1px solid var(--border);">
-            <h3 class="text-sm font-semibold" style="color: var(--text-primary);">{% blocktranslate count counter=members_data|length %}{{ counter }} member{% plural %}Members ({{ counter }}){% endblocktranslate %}</h3>
-        </div>
+{% block content %}
+<div x-data="{ showInviteModal: false }" @open-invite-member.window="showInviteModal = true">
+    <!-- Active members -->
+    <section class="mb-8">
+    <h2 class="section-title">{% blocktranslate count counter=members_data|length %}{{ counter }} member{% plural %}Members ({{ counter }}){% endblocktranslate %}</h2>
+    <div class="a-card overflow-hidden">
         <div id="members-list">
             {% for member in members_data %}
                 {% include "members/partials/member_row.html" %}
@@ -30,13 +32,13 @@
             {% endfor %}
         </div>
     </div>
+    </section>
 
     <!-- Pending Invitations -->
     {% if is_admin %}
-    <div style="background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden;">
-        <div class="px-6 py-4" style="border-bottom: 1px solid var(--border);">
-            <h3 class="text-sm font-semibold" style="color: var(--text-primary);">{% translate "Pending Invitations" %}</h3>
-        </div>
+    <section class="mb-8">
+    <h2 class="section-title">{% translate "Pending Invitations" %}</h2>
+    <div class="a-card overflow-hidden">
         <div id="invitations-list">
             {% for invite in pending_invites %}
                 {% include "members/partials/invitation_row.html" %}
@@ -47,6 +49,7 @@
             {% endfor %}
         </div>
     </div>
+    </section>
     {% endif %}
 
     <!-- Invite Modal -->

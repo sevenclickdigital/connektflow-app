@@ -1688,7 +1688,7 @@ def sync_all_account_analytics() -> None:
     # cost a query per account to answer the same question.
     cache: dict = {}
 
-    accounts = SocialAccount.objects.filter(
+    accounts = SocialAccount.objects.publishable().filter(
         connection_status=SocialAccount.ConnectionStatus.CONNECTED,
         platform__in=syncable,
     ).select_related("workspace")

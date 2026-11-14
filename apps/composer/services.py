@@ -313,7 +313,7 @@ def create_draft_post(*, workspace, author, caption: str, title: str = "", media
     from apps.composer.models import PlatformPost, Post, PostMedia
     from apps.social_accounts.models import SocialAccount
 
-    accounts = SocialAccount.objects.for_workspace(workspace.id).filter(
+    accounts = SocialAccount.objects.for_workspace(workspace.id).publishable().filter(
         connection_status=SocialAccount.ConnectionStatus.CONNECTED
     )
     with transaction.atomic():
@@ -489,7 +489,7 @@ def format_blocker(format: str, ordered_media_types) -> str:
     if media_fits_post_type(post_type, len(types), types[0] if types else None):
         return ""
     if format == "story":
-        return _("A Story needs exactly one photo or one video.")
+        return _("A Story needs at least one photo or video.")
     if format == "reel":
         return _("A Reel needs exactly one video.")
     return _("A profile photo needs exactly one image.")

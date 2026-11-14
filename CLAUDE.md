@@ -42,6 +42,7 @@ When the code and a doc disagree, the code is right — fix the doc in the same 
 - Function-based views, explicit `@require_POST` / `require_http_methods` on mutations.
 - HTMX actions that change state answer `204` + `HX-Trigger` (`showToast` with `tone`, refresh events) — see `apps/approvals/views.py` and its tests. Use `request.htmx` to choose partial vs full page.
 - Partials live in `templates/<app>/partials/_name.html`; shared pieces in `templates/components/` and `templates/partials/`.
+- Page spacing comes from `base.html` (main padding + `max-w-7xl` column) and the header from `.page-header` / `.page-title` / `.page-description` — never a page's own outer padding, emptied `main_padding` or back button. Reference: `templates/members/list.html`; details in the `django-templates` skill.
 - Colours come from the tokens, exposed to Tailwind as `brand-*` (primary is `brand-700`) and `neutral-*` (border `neutral-300`, secondary text `neutral-600`). Never `orange-*`, `stone-*` or their hex values — see `docs/automator-redesign.md` §2.
 - Styles come from the tokens and component classes in `theme/static_src/src/styles.css` (`btn-*`, `.alert-*`, status pills…). Check `docs/style-guide.html` before inventing a class. After CSS/template class changes, the Tailwind watcher or `npm run build` in `theme/static_src` must run.
 - Alpine: pointer gestures that must not select text use `preventDefault`, not `.stop` (which only stops Alpine propagation).

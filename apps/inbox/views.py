@@ -5,10 +5,11 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
+from apps.composer.emoji import emoji_catalogue
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
 from apps.notifications.engine import notify
@@ -43,7 +44,17 @@ MESSAGES_PER_PAGE = 50
 def _detail_context(workspace, message, *, actor=None):
     """Build the full context needed for the message detail panel."""
     sla_config = InboxSLAConfig.objects.filter(workspace=workspace, is_active=True).first()
-    saved_replies = SavedReply.objects.for_workspace(workspace.id)
+    # Variables filled in for this message, so the box receives a ready reply.
+    variables = {
+        "sender_name": message.sender_name,
+        "account_name": message.social_account.account_name,
+        # No post link is stored for inbox messages; an empty value beats a
+        # literal "{post_url}" reaching the customer.
+        "post_url": "",
+    }
+    saved_replies = [
+        {"title": sr.title, "body": sr.render(variables)} for sr in SavedReply.objects.for_workspace(workspace.id)
+    ]
     team_members = WorkspaceMembership.objects.filter(
         workspace=workspace,
     ).select_related("user")
@@ -58,6 +69,7 @@ def _detail_context(workspace, message, *, actor=None):
         key=lambda x: x[2],
     )
     child_messages = InboxMessage.objects.filter(parent_message=message).select_related("social_account")
+    history, newer = _conversation(message)
     return {
         "workspace": workspace,
         "message": message,
@@ -70,9 +82,81 @@ def _detail_context(workspace, message, *, actor=None):
         "reply_form": ReplyForm(),
         "note_form": InternalNoteForm(),
         "status_choices": InboxMessage.Status.choices,
-        "attachments": message.attachments,
+        "attachments": _attachments(workspace, message),
+        "history": history,
+        "newer_message": newer,
+        "reply_limit": REPLY_LIMITS.get((message.message_type == "dm", message.social_account.platform)),
+        "sender_first_name": (message.sender_name or "").split(" ")[0].lstrip("@+"),
         "reply_eligibility": inbox_services.reply_eligibility(message, origin="web_inbox", actor=actor),
     }
+
+
+# Longest reply each platform accepts, in characters: (is_dm, platform) -> limit.
+# Instagram counts DM bytes (1,000); characters are what the counter can show,
+# and the provider still refuses an over-long multi-byte reply with a sentence.
+REPLY_LIMITS = {
+    (True, "whatsapp"): 4096,
+    (True, "facebook"): 2000,
+    (True, "instagram"): 1000,
+    (True, "instagram_login"): 1000,
+    (False, "facebook"): 8000,
+    (False, "instagram"): 2200,
+    (False, "instagram_login"): 2200,
+    (False, "youtube"): 10000,
+}
+
+# How much of a DM conversation the detail panel shows above the open message.
+CONVERSATION_HISTORY = 30
+
+
+def _conversation(message):
+    """Earlier messages from the same person in the same DM conversation.
+
+    Returns (history, newer): up to ``CONVERSATION_HISTORY`` earlier inbound
+    messages, oldest first, each with its sent replies prefetched — so the panel
+    reads as a chat instead of one isolated message — and the newest later
+    message from that person, if any, so the panel can point to it.
+    """
+    from django.db.models import Prefetch
+
+    if message.message_type != InboxMessage.MessageType.DM or not message.sender_handle:
+        return [], None
+    same_person = InboxMessage.objects.filter(
+        social_account_id=message.social_account_id,
+        message_type=InboxMessage.MessageType.DM,
+        sender_handle=message.sender_handle,
+    ).exclude(pk=message.pk)
+    history = list(
+        same_person.filter(received_at__lte=message.received_at)
+        .prefetch_related(
+            Prefetch(
+                "replies",
+                queryset=InboxReply.objects.filter(status=InboxReply.Status.SENT).order_by("sent_at"),
+                to_attr="sent_replies",
+            )
+        )
+        .order_by("-received_at")[:CONVERSATION_HISTORY]
+    )
+    history.reverse()
+    newer = same_person.filter(received_at__gt=message.received_at).order_by("-received_at").first()
+    return history, newer
+
+
+def _attachments(workspace, message):
+    """The message's attachments, WhatsApp media pointed at our download proxy."""
+    from django.urls import reverse
+
+    attachments = message.attachments
+    if message.social_account.platform != "whatsapp":
+        return attachments
+    raw = (message.extra or {}).get("attachments") or []
+    for index, attachment in enumerate(attachments):
+        if index < len(raw) and raw[index].get("media_id"):
+            attachment["url"] = reverse(
+                "inbox:message_media",
+                kwargs={"workspace_id": workspace.id, "message_id": message.id, "index": index},
+            )
+    return attachments
 
 
 def _get_workspace(request, workspace_id):
@@ -182,7 +266,70 @@ def inbox_feed(request, workspace_id):
 
     if request.htmx:
         return render(request, "inbox/partials/_message_list.html", context)
+    context["emoji_categories"] = emoji_catalogue()
     return render(request, "inbox/feed.html", context)
+
+
+@login_required
+@require_permission("use_inbox")
+@require_GET
+def inbox_version(request, workspace_id):
+    """A token that changes whenever a message lands in this workspace's inbox.
+
+    The feed polls it every few seconds and refetches the list only when it
+    moves, so a message that arrives by webhook shows up without a reload and
+    an idle inbox costs one indexed lookup per poll.
+    """
+    workspace = _get_workspace(request, workspace_id)
+    latest = (
+        InboxMessage.objects.for_workspace(workspace.id)
+        .order_by("-created_at")
+        .values_list("created_at", flat=True)
+        .first()
+    )
+    return JsonResponse({"v": latest.isoformat() if latest else ""})
+
+
+# Media types the browser may render inline from our origin. Anything else is
+# served as a download, so a customer cannot get HTML or SVG executed here.
+_INLINE_MEDIA_PREFIXES = ("image/jpeg", "image/png", "image/webp", "image/gif", "video/", "audio/")
+_MAX_MEDIA_BYTES = 25 * 1024 * 1024
+
+
+@login_required
+@require_permission("use_inbox")
+@require_GET
+def message_media(request, workspace_id, message_id, index):
+    """Serve one attachment of a WhatsApp message, fetched with the account token."""
+    from apps.publisher.engine import _resolve_publish_credentials
+    from providers import get_provider
+    from providers.exceptions import ProviderError
+
+    workspace = _get_workspace(request, workspace_id)
+    message = get_object_or_404(
+        InboxMessage.objects.select_related("social_account__workspace"),
+        id=message_id,
+        workspace=workspace,
+        social_account__platform="whatsapp",
+    )
+    attachments = (message.extra or {}).get("attachments") or []
+    media_id = str(attachments[index].get("media_id") or "") if 0 <= index < len(attachments) else ""
+    if not media_id.isdigit():
+        raise Http404
+    account = message.social_account
+    provider = get_provider(account.platform, _resolve_publish_credentials(account))
+    try:
+        content, mime_type = provider.download_media(account.oauth_access_token, media_id, max_bytes=_MAX_MEDIA_BYTES)
+    except ProviderError:
+        logger.warning("WhatsApp media %s unavailable for message %s", media_id, message.id)
+        raise Http404 from None
+    inline = mime_type.startswith(_INLINE_MEDIA_PREFIXES)
+    response = HttpResponse(content, content_type=mime_type if inline else "application/octet-stream")
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Cache-Control"] = "private, max-age=3600"
+    if not inline:
+        response["Content-Disposition"] = f'attachment; filename="whatsapp-{media_id}"'
+    return response
 
 
 # --- Message Detail ---
@@ -208,6 +355,7 @@ def message_detail(request, workspace_id, message_id):
 
     if request.htmx:
         return render(request, "inbox/partials/_message_panel.html", context)
+    context["emoji_categories"] = emoji_catalogue()
     return render(request, "inbox/message_detail.html", context)
 
 

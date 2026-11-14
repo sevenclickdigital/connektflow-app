@@ -235,9 +235,9 @@ class Command(BaseCommand):
         owner's call, and this command's job is to make the state legible.
         """
         orgs = list(
-            OrgMembership.objects.filter(user=user).select_related("organization").values_list(
-                "organization__name", flat=True
-            )
+            OrgMembership.objects.filter(user=user)
+            .select_related("organization")
+            .values_list("organization__name", flat=True)
         )
         if not orgs:
             return

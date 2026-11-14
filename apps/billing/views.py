@@ -43,7 +43,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
-from django.db.models import Prefetch, Sum
+from django.db.models import Prefetch, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -202,6 +202,51 @@ def workspace_billing(request, workspace_id):
     context = _billing_context(request, workspace)
     context["settings_active"] = "billing"
     return render(request, "billing/workspace_billing.html", context)
+
+
+@login_required
+@require_GET
+def account_billing(request):
+    """Account centre → Billing: every brand whose billing this user manages.
+
+    Brands of organizations where they are owner/admin, plus brands where
+    they are owner/manager (which may belong to another organization). Read
+    only: rows are not created here, so a brand with no subscription row yet
+    shows as pending, which is what it is.
+    """
+    admin_org_ids = OrgMembership.objects.filter(
+        user=request.user, org_role__in=(OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN)
+    ).values_list("organization_id", flat=True)
+    managed_ids = WorkspaceMembership.objects.filter(
+        user=request.user,
+        workspace_role__in=(WorkspaceMembership.WorkspaceRole.OWNER, WorkspaceMembership.WorkspaceRole.MANAGER),
+    ).values_list("workspace_id", flat=True)
+    workspaces = (
+        Workspace.objects.filter(is_archived=False)
+        .filter(Q(organization_id__in=admin_org_ids) | Q(id__in=managed_ids))
+        .select_related("organization", "billing_subscription")
+        .order_by("organization__name", "name")
+    )
+    member_of = set(WorkspaceMembership.objects.filter(user=request.user).values_list("workspace_id", flat=True))
+    rows = [
+        {
+            "workspace": ws,
+            "subscription": getattr(ws, "billing_subscription", None),
+            "monthly_total_cents": services.workspace_monthly_total_cents(ws),
+            # Billing pages need brand membership (_get_workspace).
+            "can_open": ws.id in member_of,
+        }
+        for ws in workspaces
+    ]
+    return render(
+        request,
+        "billing/account_billing.html",
+        {
+            "rows": rows,
+            "total_cents": sum(r["monthly_total_cents"] for r in rows),
+            "settings_active": "billing",
+        },
+    )
 
 
 @login_required
@@ -1171,8 +1216,10 @@ def staff_grant_courtesy(request, org_id):
     else:
         messages.success(
             request,
-            _('Account "%(org)s" has %(quota)s workspace(s) exempt from charges until %(date)s, '
-              "after which it is billed again automatically.")
+            _(
+                'Account "%(org)s" has %(quota)s workspace(s) exempt from charges until %(date)s, '
+                "after which it is billed again automatically."
+            )
             % {"org": organization.name, "quota": quota, "date": date_format(expires_on, "SHORT_DATE_FORMAT")},
         )
     return redirect("billing_staff:staff_console")

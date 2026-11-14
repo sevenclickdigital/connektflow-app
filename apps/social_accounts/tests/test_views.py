@@ -256,7 +256,7 @@ class TestConnectPlatformView:
         url = reverse("social_accounts:connect", kwargs={"workspace_id": workspace.id})
         response = authenticated_client.get(url)
         assert response.status_code == 200
-        assert b"Connect a Platform" in response.content
+        assert b"Connect other platforms" in response.content
 
     def test_post_invalid_platform(self, authenticated_client, workspace):
         url = reverse("social_accounts:connect", kwargs={"workspace_id": workspace.id})
@@ -687,8 +687,40 @@ class TestSelectAccountView:
 
         assert response.status_code == 200
         body = response.content.decode()
-        assert "Select all publishable" in body
         assert "Missing Facebook content publishing access" in body
+        blocked = re.search(r"<input[^>]*value=\"page-read-only\"[^>]*>", body).group(0)
+        assert "disabled" in blocked
+        # One publishable row: nothing to bulk-select.
+        assert "Select all (" not in body
+
+    def test_a_workspace_at_its_cap_is_told_so_and_offered_no_bulk_select(
+        self, authenticated_client, workspace, settings
+    ):
+        """The picker shows how many new accounts still fit, so ticking nine
+        and having eight refused on submit doesn't happen."""
+        settings.MAX_ACCOUNTS_PER_PLATFORM = 1
+        SocialAccount.objects.create(
+            workspace=workspace, platform="facebook", account_platform_id="page-a", account_name="Page A"
+        )
+        session = authenticated_client.session
+        session["oauth_page_select"] = {
+            "workspace_id": str(workspace.id),
+            "platform": "facebook",
+            "user_tokens": {"access_token": "user-token", "refresh_token": None},
+            "pages": [
+                {"id": "page-a", "name": "Page A", "access_token": "t", "already_connected": True},
+                {"id": "page-b", "name": "Page B", "access_token": "t"},
+                {"id": "page-c", "name": "Page C", "access_token": "t"},
+            ],
+        }
+        session.save()
+
+        response = authenticated_client.get(reverse("social_accounts:select_account"))
+
+        assert response.context["slots"] == 0
+        body = response.content.decode()
+        assert "This workspace already has its Facebook account." in body
+        assert "Select all (" not in body
 
     def test_an_already_connected_page_is_never_rendered_pre_checked(self, authenticated_client, workspace):
         """Ticking a row re-runs the whole connect, so it must be deliberate.
@@ -746,6 +778,8 @@ class TestSelectAccountView:
         response = authenticated_client.post(reverse("social_accounts:select_account"), {"selected_pages": ["page-1"]})
 
         assert response.status_code == 302
+        # Back to the Social Accounts page the connect started from.
+        assert response.url == reverse("social_accounts:list", kwargs={"workspace_id": workspace.id})
         account = SocialAccount.objects.get(workspace=workspace, account_platform_id="page-1")
         assert account.token_expires_at is not None
 

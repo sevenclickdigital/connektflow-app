@@ -9,8 +9,9 @@
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {% url 'social_accounts:list' workspace_id=workspace_id as social_accounts_url %}
         {% for card in cards %}
-        {% include "radar/partials/_source_card.html" with card=card action="open" can_connect=request.workspace_membership.effective_permissions.manage_social_accounts return_to="radar" %}
+        {% include "radar/partials/_source_card.html" with card=card action="open" can_connect=request.workspace_membership.effective_permissions.manage_social_accounts return_to="radar" connect_href=social_accounts_url %}
         {% endfor %}
     </div>
 </div>

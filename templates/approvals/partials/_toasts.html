@@ -1,10 +1,11 @@
 {% comment %}
-Scoped toast host for the approval surfaces (publish tab, composer, client portal).
-Fires on an `HX-Trigger: {"showToast": {tone,title,body}}` response header — htmx
-dispatches a `showToast` event whose `event.detail` is the payload. tone ∈
-success|info|warn|error. Self-contained: not added to base.html (app shell untouched).
-Include this ONCE per page, OUTSIDE any htmx-refetched region, so a list refresh
-fired by the same response doesn't tear down the toast before it's seen.
+The floating toast host. Fires on an `HX-Trigger: {"showToast": {tone,title,body}}`
+response header (htmx dispatches a `showToast` event whose `event.detail` is the
+payload) or on a `showToast` event a page script dispatches. tone ∈
+success|info|warn|error. base.html includes it once for the whole app and
+replays Django messages through it; layouts that don't extend base.html
+(client portal) include it themselves. Keep it outside any htmx-refetched
+region, so a refresh fired by the same response doesn't tear the toast down.
 {% endcomment %}
 <style nonce="{{ request.csp_nonce }}">
   @keyframes bb-toastPop { from { opacity:0; transform:translateY(8px) scale(.96); } to { opacity:1; transform:translateY(0) scale(1); } }

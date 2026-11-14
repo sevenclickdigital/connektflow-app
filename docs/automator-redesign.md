@@ -7,6 +7,7 @@ The design source is the brand pack in `NOVO-LAYOUT/Automator_Brand_Assets/` (no
 ## 1. Naming rules
 
 - User-facing name: **Automator** (masculine in Portuguese: "do Automator", "pelo Automator").
+- A workspace is called **marca** in Portuguese (feminine: "a marca", "esta marca", "todas as marcas"). Only the pt_BR catalogue says it; code, URLs, English text and the API keep `workspace`.
 - The Meta-facing legal name stays **Seven Automator** (`apps/common/legal_views.py`), because Meta App Review compares it with the app's configuration.
 - Kept on purpose, because changing them breaks running installations or third-party contracts:
   - HKDF `info` strings in `apps/common/encryption.py` and `apps/api_keys/services.py` (changing them makes every stored secret and API key unreadable);
@@ -43,23 +44,28 @@ The design source is the brand pack in `NOVO-LAYOUT/Automator_Brand_Assets/` (no
 - Tokens from the pack in `styles.css`; `brand-green` removed (checkbox/toggle accent is now `--primary`); the undefined `--primary-rgb` fallbacks replaced by `color-mix()` on `--primary`.
 - Inter, self-hosted in `static/fonts/` (variable, latin + latin-ext, OFL licence alongside). `--font-display` is Inter too; no serif face is left.
 - Logos: `static/img/automator-symbol.webp` (auth pages, collapsed sidebar) and `automator-wordmark-dark.webp` (sidebar, mobile top bar). Favicons and manifest icons regenerated from the symbol.
-- Shell in `templates/base.html`: sidebar on `--surface-sidebar` with a right border and the lockup on top; `<main>` without the white bordered container, content sits on `--surface-page`.
+- Shell in `templates/base.html`: sidebar on `--surface-sidebar` with the lockup, the workspace card, the menu, Moti and the profile (name, role, log out). Every page sits in one centred column (`max-w-7xl`); white is on the cards, never on `<main>`. The flow builder (`automations/flow_builder.html`, `flow_new.html`) is the one exception: it empties `{% block main_padding %}` and `{% block content_width %}` to fill the whole area beside the sidebar.
+- Menu (`templates/base.html`, `sidebar_nav`): Dashboard (points at `/`, the home redirect, until it has a page); **Publicar** group: Calendário, Agendar post (composer), Gestão de Tarefas; **Engajar** group: Inbox, Automação, Contatos (shown as "Em breve", no link yet) and WhatsApp (the inbox filtered to `?platform=whatsapp`); Conteúdo (IA), Relatórios, Contas Sociais. API keys live only in the account/organization settings ("Chaves de API"). Under "Mais": Publicações (list mode), Galeria, Radar, Notificações, Intelligence. A group opens by itself on one of its pages and otherwise remembers its state (`localStorage`). Menu labels use the `menu` translation context, so they can differ from the same word elsewhere. The channels section is gone, and with it the per-request channel queries in `sidebar_context`.
+- Workspace settings (opened from the workspace switcher, "Workspace settings") swap the main menu for their own (`layouts/workspace_settings.html`): back link, General, Approvals, Client portal, Manage team (`workspaces:team`: the brand's members and roles, add from the brand's organization, invite by email; `members.services.set_brand_role` enforces the role hierarchy and keeps at least one owner). Billing moved to the account centre: `billing_account:overview` lists every brand whose billing the user manages, and each brand's billing page now opens inside the account centre. The administrative area (staff only) is linked only from the account centre's menu. The account centre (`layouts/settings.html`: profile, preferences, organization general, brands, team, API keys) swaps the sidebar for its own menu and hides the brand switcher and the "+ Novo" button (`{% block sidebar_workspace_switcher %}`, `{% block sidebar_new_button %}`); its brand list (`organizations:workspaces`) shows the organization's brands, then "In other organizations": brands the user reaches as a brand member or as a member of the owning organization, with their role and Open/Settings, without listing that organization's other members. The organization calendar and shared library pages have no menu entry any more (brand galleries already show shared assets). The admin area also has its own menu.
+- Component classes in `styles.css` live in `@layer components`, so a utility on the same element wins (`btn-brand px-4` means what it says). Buttons are 8 px and size to their content (`.auth-card` buttons stay full width). New classes from the layout: `btn-soft`, `btn-ghost`, `btn-danger-soft`, `a-card`, `a-card-hover`, `page-header`/`page-title`/`page-description`, `section-title`, `a-pill-group`, `chip`, `tile`, `pill` (+ `pill-*`, `is-action`), `modal-*`.
+- Social Accounts rebuilt on the layout (see `docs/features.md` F-2.5): problems live in the status pill and its modal, not inside the card.
+- Destination picker (pack README, "Seletor de destino"): `.target-picker` / `.target-card` / `.format-toggle`, drawn by `templates/partials/_target_card.html` in the composer's "Where to publish" row and the art request's network picker.
+- Full-bleed screens (inbox, gallery, flow builder, message detail) are cards filling the column instead of cancelling the page padding with negative margins; the calendar grid is a card too. Settings forms sit in a card.
 
 ## 4. Next steps (in order)
 
-1. **Navigation** (pack §6 and §10): reorder to Dashboard, Planejamento, Publicações, Calendário, Conteúdo (IA), Relatórios, Contas Sociais, Integrações, Configurações; remove the channels section; mascot `moti_trabalhando_no_computador` above the profile. Needs the open decisions below.
-2. **Page header**: every page fills `{% block page_header %}` with title 24/600, description, primary action on the right. Pages that put the title inside `content` (e.g. `social_accounts/list.html`) move it up.
-3. **One modal component** (`.modal-overlay > .modal-panel …`, pack §6) replacing the three current variants (`rounded-2xl shadow-xl border`, `rounded-xl shadow-xl ring-1`, `.idea-modal`).
-4. **Contas Sociais**: platform card and compact connection card; problems move from inline `bg-amber-50`/`bg-red-50` blocks in `_account_card.html` to an actionable status pill that opens the modal.
-5. **Calendar**: toolbar and grid inside a card, day/post-chip/status classes on tokens (`calendar.html`; the proof of concept has the finished CSS).
-6. **Empty states with Moti** (pack §8): convert the needed poses to WebP (max 480 px tall) in `static/img/moti/` only when a template uses them.
-7. **`docs/style-guide.html`**: its classes were codemodded, but the copy and swatches still describe the orange palette; rewrite it against the pack.
-8. Radius: the pack makes controls 8 px and cards 12 px; many templates still hard-code `rounded-full` buttons and `rounded-xl` cards. Converge as each screen is migrated, not in a sweep.
+1. **Dashboard** page at `/` (today `/` redirects to the last workspace's calendar), then **Contatos** in the Engajar group.
+2. **Page header**: every page fills `{% block page_header %}` with `.page-header` (title, description, primary action on the right). Most pages still put an `h2` inside `content`.
+3. **One modal component**: `.modal-*` exists and Social Accounts uses it; the other variants (`rounded-2xl shadow-xl border`, `rounded-xl shadow-xl ring-1`, `.idea-modal`) still need converting.
+4. **Calendar** day/post-chip/status classes in `calendar.html` on tokens (the proof of concept has the finished CSS).
+5. **Empty states with Moti** (pack §8): poses are converted to WebP in `static/img/moti/` only when a template uses them.
+6. **`docs/style-guide.html`**: its classes were codemodded, but the copy and swatches still describe the orange palette; rewrite it against the pack.
+7. Radius: many templates still hard-code `rounded-full` buttons and `rounded-xl` cards. Converge as each screen is migrated, not in a sweep.
 
 ## 5. Open decisions
 
-- Where Inbox and Galeria go in the new menu (suggestion: Inbox after Publicações, Galeria inside Conteúdo).
-- Whether the sidebar "+ Novo" button stays or the primary action moves to each page header (the pack's mock has no "+ Novo").
+- Publicações, Galeria, Radar and Notificações sit under "Mais" until they are placed in a group.
+- Whether the sidebar "+ Novo" button stays or the primary action moves to each page header (the pack's mock has no "+ Novo"). It stays for now: it is the only entry to the quick "new idea" modal.
 - The Trustpilot review card (`templates/partials/_review_banner.html`) asks for a review of BrightBean on its Trustpilot page and says the product is free. Remove it, or point it at Automator's own review page.
 - Dark mode: not specified by the pack.
 - `README.md` is still upstream's (logo, badges, hosted version at brightbean.xyz). Rewrite it for Automator, keeping the AGPL notice and the credit to BrightBean Studio.

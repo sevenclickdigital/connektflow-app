@@ -145,11 +145,16 @@ rules have to arrive with it.
         <span class="truncate">{% translate "Favorites" %}</span>
       </button>
 
+      {% comment %}
+      Re-fetched (hx-select) after a folder is created here, so the new one
+      shows up without reloading the modal or losing the selection.
+      {% endcomment %}
+      <div id="picker-folders">
       {% if folders %}
       <div class="mt-3 pt-3 border-t" style="border-color: var(--surface-2, #F5F3FF);">
         <p class="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-ghost, #94A3B8);">{% translate "Folders" %}</p>
         {% for folder_item in folders %}
-        <button type="button"
+        <button type="button" data-folder-id="{{ folder_item.id }}"
                 @click="folder = '{{ folder_item.id }}'"
                 class="ml-folder-item w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm cursor-pointer"
                 :class="folder === '{{ folder_item.id }}' && 'active'"
@@ -161,7 +166,7 @@ rules have to arrive with it.
           <span class="truncate">{{ folder_item.name }}</span>
         </button>
         {% for subfolder in folder_item.subfolders.all %}
-        <button type="button"
+        <button type="button" data-folder-id="{{ subfolder.id }}"
                 @click="folder = '{{ subfolder.id }}'"
                 class="ml-folder-item w-full text-left flex items-center gap-2 pl-7 pr-3 py-1.5 rounded-lg text-sm cursor-pointer"
                 :class="folder === '{{ subfolder.id }}' && 'active'"
@@ -174,6 +179,36 @@ rules have to arrive with it.
         </button>
         {% endfor %}
         {% endfor %}
+      </div>
+      {% endif %}
+      </div>
+
+      {% if request.workspace_membership.effective_permissions.manage_media %}
+      {% url 'media_library:folder_create' workspace_id=workspace.id as folder_create_url %}
+      <div class="mt-3 pt-3 border-t" style="border-color: var(--surface-2, #F5F3FF);"
+           data-error="{% translate 'Could not create the folder. A folder with this name may already exist.' %}">
+        <button type="button" x-show="!newFolderOpen" @click="newFolderOpen = true; $nextTick(() => $refs.newFolderName.focus())"
+                class="ml-folder-item w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm cursor-pointer"
+                style="color: var(--primary, #7C3AED);">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 10v6m-3-3h6M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          <span class="truncate">{% translate "New folder" %}</span>
+        </button>
+        <form x-show="newFolderOpen" x-cloak class="px-1 space-y-1.5"
+              @submit.prevent="createFolder('{{ folder_create_url }}', '{{ picker_url }}', $el.parentElement.dataset.error)"
+              @keydown.escape.stop="newFolderOpen = false; newFolderName = ''">
+          <input type="text" x-ref="newFolderName" x-model="newFolderName" maxlength="255"
+                 placeholder="{% translate 'Folder name' %}" aria-label="{% translate 'Folder name' %}"
+                 class="input-focus w-full px-2.5 py-1.5 text-sm border rounded-lg outline-none"
+                 style="border-color: var(--border, #E5E7EB); background: var(--surface-0, #FFF);">
+          <div class="flex items-center gap-1.5">
+            <button type="submit" :disabled="!newFolderName.trim() || creatingFolder"
+                    class="px-2.5 py-1 text-xs font-semibold text-white rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    style="background: var(--primary, #7C3AED);">{% translate "Create" %}</button>
+            <button type="button" @click="newFolderOpen = false; newFolderName = ''"
+                    class="px-2.5 py-1 text-xs font-medium rounded-md cursor-pointer"
+                    style="color: var(--text-secondary, #475569);">{% translate "Cancel" %}</button>
+          </div>
+        </form>
       </div>
       {% endif %}
     </aside>
@@ -245,6 +280,9 @@ rules have to arrive with it.
       picked: [],
       type: '{{ current_type|default:"" }}',
       folder: '{{ current_folder|default:"" }}',
+      newFolderOpen: false,
+      newFolderName: '',
+      creatingFolder: false,
 
       isPicked(id) { return this.picked.includes(id); },
 
@@ -271,8 +309,8 @@ rules have to arrive with it.
         as a repeated media_asset_ids field for request.POST.getlist to see
         the whole selection, and htmx flattens an array value into one
         comma-joined string. The HTML comes back as the new thumbnails and is
-        appended to the composer's media list; HX-Trigger on the response
-        refreshes the preview.
+        appended to the composer's media list. fetch ignores HX-Trigger, so
+        the preview is refreshed by hand, on body where it listens.
         {% endcomment %}
         const body = new FormData();
         this.picked.forEach(id => body.append('media_asset_ids', id));
@@ -289,10 +327,39 @@ rules have to arrive with it.
             const list = document.getElementById('media-list');
             if (list) list.insertAdjacentHTML('beforeend', html);
             htmx.process(list);
-            window.dispatchEvent(new CustomEvent('previewUpdate'));
+            document.body.dispatchEvent(new CustomEvent('previewUpdate'));
             this.picked = [];
             this.showMediaPicker = false;
           });
+      },
+
+      // Creates a top-level folder through the gallery's endpoint, refreshes
+      // the folder list in place and opens the new folder.
+      createFolder(url, pickerUrl, errorMessage) {
+        const name = this.newFolderName.trim();
+        if (!name || this.creatingFolder) return;
+        this.creatingFolder = true;
+        const body = new FormData();
+        body.append('name', name);
+        fetch(url, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+          body,
+        })
+          .then(response => {
+            if (!response.ok) throw new Error('folder create failed');
+            return response.json();
+          })
+          .then(data => {
+            this.newFolderOpen = false;
+            this.newFolderName = '';
+            return htmx.ajax('GET', pickerUrl, { target: '#picker-folders', select: '#picker-folders', swap: 'outerHTML' })
+              .then(() => document.querySelector('#picker-folders [data-folder-id="' + data.id + '"]')?.click());
+          })
+          .catch(() => {
+            document.body.dispatchEvent(new CustomEvent('showToast', { detail: { tone: 'error', title: errorMessage } }));
+          })
+          .finally(() => { this.creatingFolder = false; });
       },
 
       upload(files, url) {
@@ -300,6 +367,8 @@ rules have to arrive with it.
         const uploads = Array.from(files).map(file => {
           const body = new FormData();
           body.append('file', file);
+          // Into the folder on screen, as the gallery's own upload does.
+          if (this.folder) body.append('folder_id', this.folder);
           return fetch(url, {
             method: 'POST',
             headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
@@ -310,7 +379,7 @@ rules have to arrive with it.
           htmx.trigger('body', 'uploadsComplete');
           // The upload endpoint already attached each file, so the composer's
           // own media list needs refreshing too.
-          window.dispatchEvent(new CustomEvent('previewUpdate'));
+          document.body.dispatchEvent(new CustomEvent('previewUpdate'));
         });
       },
     };

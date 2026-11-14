@@ -24,6 +24,7 @@ REQUIRED_CREDENTIAL_KEYS = {
     "linkedin_personal": (("client_id",), ("client_secret",)),
     "linkedin_company": (("client_id",), ("client_secret",)),
     "x": (("client_id",), ("client_secret",)),
+    "whatsapp": (("client_id", "app_id"), ("client_secret", "app_secret"), ("config_id",)),
 }
 
 
@@ -56,6 +57,7 @@ class PlatformCredential(models.Model):
         MASTODON = "mastodon", "Mastodon"
         DEVTO = "devto", "DEV.to"
         X = "x", "X"
+        WHATSAPP = "whatsapp", "WhatsApp"
 
     class TestResult(models.TextChoices):
         SUCCESS = "success", "Success"

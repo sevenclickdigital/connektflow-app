@@ -9,6 +9,8 @@ description: "Use when creating or editing Django templates, HTMX interactions, 
 
 - Pages extend `base.html`; app pages live in `templates/<app>/`, HTMX fragments in `templates/<app>/partials/_name.html`.
 - Shared pieces: `templates/components/` and `templates/partials/`. Search them before writing markup (`reuse-check`).
+- **Page spacing is the base layout's, never the page's own.** `base.html` gives `<main>` its padding (`px-4 py-5 sm:px-6 lg:px-8 lg:py-8`) and the content column (`w-full max-w-7xl mx-auto`). Pages don't override `main_padding` or `content_width` and don't add their own outer padding: the title starts where every other page's title starts (reference: `templates/members/list.html`). Only the flow builder canvas empties both blocks; `account_select.html` narrows the column to `max-w-5xl`.
+- **Page header:** `<div class="page-header">` with `<h1 class="page-title">` and `<p class="page-description">`, actions on the right — in `{% block page_header %}`, or at the top of `content` when it needs the page's Alpine state (the composer). No back buttons in page headers. `.page-header` is an unlayered component class, so Tailwind utilities on the same element (`mb-0`, `items-center`) do not override it.
 - Error pages (`templates/errors/`, `400/403/404/500.html`) deliberately extend nothing and load no stylesheet — Django may render them with an empty context.
 
 ## HTMX contract
@@ -38,6 +40,7 @@ description: "Use when creating or editing Django templates, HTMX interactions, 
 ## Styling
 
 - Use the tokens and component classes in `theme/static_src/src/styles.css` (`btn-brand`, `btn-*`, `.alert-*`, status pills via `approval_extras.status_badge`). See `docs/style-guide.html`. Colour utilities are `brand-*` / `neutral-*` (token scale, not Tailwind's: primary `brand-700`, border `neutral-300`); `orange-*` / `stone-*` are gone — `docs/automator-redesign.md` §2.
+- Pages render in a centred column on the page surface (`base.html`, `max-w-7xl`): the white goes on cards (`a-card`), never on the page. A full-height screen (inbox, gallery, a canvas) is a card that fills the column (`flex: 1; height: 100%; overflow: hidden`) — never cancel `<main>`'s padding with negative margins. Component classes are in `@layer components`, so a utility on the same element wins.
 - Component classes are not in a cascade layer, so Tailwind utilities can't override them (`btn-brand px-4` keeps the component padding). Add a variant instead of fighting it.
 - New utility classes need the Tailwind watcher (`npm run start` in `theme/static_src`) or a build to appear.
 - Check long text and narrow widths: overflowing columns ("0 / 10 GB0%") and clipped toolbars have shipped before.

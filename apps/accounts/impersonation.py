@@ -92,9 +92,7 @@ def real_user(request):
     if not is_impersonating(request):
         return user
 
-    operator = (
-        get_user_model().objects.filter(pk=request.session[IMPERSONATOR_SESSION_KEY], is_active=True).first()
-    )
+    operator = get_user_model().objects.filter(pk=request.session[IMPERSONATOR_SESSION_KEY], is_active=True).first()
     return operator or user
 
 

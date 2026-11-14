@@ -1,20 +1,12 @@
 {% extends "base.html" %}
-{% load humanize i18n %}
+{% load humanize i18n static %}
 
 {% block title %}{% translate "Inbox" %} - {{ workspace.name }} - Automator{% endblock %}
 
 {% block extra_head %}
 <style>
-    /* Inbox-specific layout: remove parent padding, fill height */
-    .inbox-shell { margin: -0.75rem; display: flex; flex-direction: column; height: calc(100% + 1.5rem); }
-    .inbox-shell { overflow: hidden; }
-    :has(> .inbox-shell) { overflow: visible !important; }
-    @media (min-width: 640px) {
-        .inbox-shell { margin: -1rem; height: calc(100% + 2rem); }
-    }
-    @media (min-width: 1024px) {
-        .inbox-shell { margin: -1.5rem; height: calc(100% + 3rem); }
-    }
+    /* Inbox: one card filling the page column; the panes scroll inside it */
+    .inbox-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; height: 100%; overflow: hidden; background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-lg); }
 
     /* Split panel */
     .inbox-split { display: flex; flex: 1; min-height: 0; }
@@ -217,11 +209,49 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ emoji_categories|json_script:"inbox-emoji" }}
+<script src="{% static 'js/emoji-picker.js' %}"></script>
+<script src="{% static 'js/inbox-reply.js' %}"></script>
 <script nonce="{{ request.csp_nonce }}">
 function inboxController() {
     return {
         activePanel: 'list',
         selected: new Set(),
+        activeId: null,
+        listUrl: window.location.href,
+        version: null,
+
+        /* Live list: poll a cheap version token and refetch the list, with
+           the filters last applied, only when a new message has landed. */
+        init() {
+            const list = document.getElementById('inbox-message-list');
+            list.addEventListener('htmx:afterRequest', (event) => {
+                const xhr = event.detail.xhr;
+                if (event.detail.target === list && event.detail.requestConfig.verb === 'get' && xhr && xhr.responseURL) {
+                    this.listUrl = xhr.responseURL;
+                }
+            });
+            list.addEventListener('htmx:afterSettle', () => {
+                const row = this.activeId && document.getElementById('msg-' + this.activeId);
+                if (row) row.classList.add('is-active');
+            });
+            const poll = () => {
+                if (document.hidden) return;
+                fetch('{% url "inbox:version" workspace_id=workspace.id %}', { headers: { 'Accept': 'application/json' } })
+                    .then((r) => r.ok ? r.json() : null)
+                    .then((data) => {
+                        if (!data) return;
+                        if (this.version !== null && data.v !== this.version) {
+                            htmx.ajax('GET', this.listUrl, { target: '#inbox-message-list', swap: 'innerHTML' });
+                        }
+                        this.version = data.v;
+                    })
+                    .catch(() => {});
+            };
+            poll();
+            setInterval(poll, 4000);
+            document.addEventListener('visibilitychange', poll);
+        },
         get selectedCount() { return this.selected.size; },
 
         toggleSelect(id) {
@@ -267,6 +297,7 @@ function inboxController() {
         },
 
         selectMessage(id, url) {
+            this.activeId = id;
             /* Load detail panel via HTMX */
             htmx.ajax('GET', url, { target: '#inbox-detail-panel', swap: 'innerHTML' });
             /* Highlight active row */

@@ -96,7 +96,7 @@ Expects: p (preview slide), kind ("story", "reel" or "photo"), media_items.
 
         {% if not m %}
         <div class="absolute inset-0 flex items-center justify-center px-6 text-center text-[11px] text-white/70">
-            {% if kind == "story" %}{% translate "A Story needs exactly one photo or one video." %}{% else %}{% translate "A Reel needs exactly one video." %}{% endif %}
+            {% if kind == "story" %}{% translate "A Story needs at least one photo or video." %}{% else %}{% translate "A Reel needs exactly one video." %}{% endif %}
         </div>
         {% endif %}
     </div>

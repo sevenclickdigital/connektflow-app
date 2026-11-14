@@ -28,8 +28,9 @@ from apps.members.decorators import require_permission
 from apps.radar.sources import source_cards
 from providers.exceptions import QuotaExceededError
 
+from .catalog import CATEGORIES, platform_category, platform_description
 from .error_messages import quota_connect_error
-from .models import MastodonAppRegistration, PlatformVisibility, SocialAccount
+from .models import MESSAGING_ONLY_PLATFORMS, MastodonAppRegistration, PlatformVisibility, SocialAccount
 from .oauth_aliases import from_url_slug, redirect_uri_from_request, to_url_slug
 from .oauth_pkce import issue_pkce_verifier, pkce_kwargs
 from .provider_factory import _get_provider_for_platform, apply_analytics_scope_flag
@@ -188,29 +189,91 @@ def _resolve_mastodon_extra_creds(session_data):
 # ------------------------------------------------------------------
 
 
-@login_required
-@require_permission("manage_social_accounts")
-def account_list(request, workspace_id):
-    """List connected social accounts for a workspace."""
-    accounts = (
+# The Social Accounts page loads Meta's JS SDK for WhatsApp Embedded Signup.
+_META_SDK_CSP = {
+    "SCRIPT_SRC": "https://connect.facebook.net",
+    "FRAME_SRC": "https://www.facebook.com https://web.facebook.com https://staticxx.facebook.com",
+    "CONNECT_SRC": "https://www.facebook.com https://graph.facebook.com",
+}
+
+
+def _overview_context(request, workspace_id):
+    """Everything the Social Accounts page shows: the workspace's accounts,
+    the platforms it can still connect, and the opportunity sources."""
+    accounts = list(
         SocialAccount.objects.for_workspace(workspace_id)
         .prefetch_related("posting_slots")
         .order_by("platform", "account_name")
     )
     configured_platforms = _get_configured_platforms(request.org.id)
 
-    return render(
-        request,
-        "social_accounts/list.html",
+    accounts_by_platform: dict[str, list] = {}
+    for account in accounts:
+        accounts_by_platform.setdefault(account.platform, []).append(account)
+    # A platform with room for another account is offered in the connect grid;
+    # one at its cap shows only as its account cards.
+    available_platforms = [
         {
-            "accounts": accounts,
-            "workspace_id": workspace_id,
-            "configured_platforms": configured_platforms,
-            "platform_choices": PlatformCredential.Platform.choices,
-            "settings_active": "social_accounts",
-            "opportunity_cards": [card for card in source_cards(workspace_id) if card.connection],
+            "value": value,
+            "label": label,
+            "description": platform_description(value),
+            "category": platform_category(value),
+            "configured": value in configured_platforms,
+            "has_accounts": value in accounts_by_platform,
+        }
+        for value, label in _get_visible_platform_choices()
+        if len(accounts_by_platform.get(value, [])) < settings.MAX_ACCOUNTS_PER_PLATFORM
+    ]
+    # Ones the user can connect right now first; unconfigured ones trail.
+    available_platforms.sort(key=lambda platform: not platform["configured"])
+    problem_count = sum(1 for a in accounts if a.health == "error")
+    return {
+        "accounts": accounts,
+        "workspace_id": workspace_id,
+        "configured_platforms": configured_platforms,
+        "available_platforms": available_platforms,
+        "categories": CATEGORIES,
+        "stats": {
+            "connected": len(accounts) - problem_count,
+            "available": len(available_platforms),
+            "problems": problem_count,
+            "total": len(accounts) + len(available_platforms),
         },
-    )
+        "opportunity_cards": source_cards(workspace_id),
+        "whatsapp_signup": _whatsapp_signup_config(request.org.id, available_platforms),
+    }
+
+
+def _whatsapp_signup_config(org_id, available_platforms):
+    """What the browser needs to open WhatsApp Embedded Signup, or None.
+
+    Only the app id and the Embedded Signup configuration id, both public by
+    design (Meta's own snippet puts them in the page); never the secret.
+    """
+    if not any(p["value"] == "whatsapp" and p["configured"] for p in available_platforms):
+        return None
+    from apps.credentials.models import resolve_platform_credentials
+    from providers.facebook import BASE_URL
+
+    creds = resolve_platform_credentials("whatsapp", org_id)
+    return {
+        "app_id": str(creds.get("client_id") or creds.get("app_id") or ""),
+        "config_id": str(creds.get("config_id") or ""),
+        "version": BASE_URL.rsplit("/", 1)[-1],
+        "messages": {
+            "loading": _("WhatsApp is still loading. Try again in a moment."),
+            "cancelled": _("The WhatsApp connection was cancelled."),
+            "no_number": _("Pick a phone number in the WhatsApp window to finish connecting."),
+        },
+    }
+
+
+@csp_update(**_META_SDK_CSP)
+@login_required
+@require_permission("manage_social_accounts")
+def account_list(request, workspace_id):
+    """The workspace's accounts, their health, and the platforms left to connect."""
+    return render(request, "social_accounts/list.html", _overview_context(request, workspace_id))
 
 
 # ------------------------------------------------------------------
@@ -218,42 +281,19 @@ def account_list(request, workspace_id):
 # ------------------------------------------------------------------
 
 
+@csp_update(**_META_SDK_CSP)
 @login_required
 @require_permission("manage_social_accounts")
 @ratelimit(key="user", rate="20/m", method="POST", block=True)
 def connect_platform(request, workspace_id):
-    """GET: show platform grid. POST: initiate OAuth flow."""
+    """GET: the Social Accounts page. POST: initiate the OAuth flow."""
+    if request.method == "GET":
+        # Connecting happens on the Social Accounts page; this URL stays as the
+        # form target and as the place errors redirect back to.
+        return render(request, "social_accounts/list.html", _overview_context(request, workspace_id))
+
     configured_platforms = _get_configured_platforms(request.org.id)
     visible_platform_choices = _get_visible_platform_choices()
-
-    if request.method == "GET":
-        accounts_by_platform: dict[str, list] = {}
-        for account in SocialAccount.objects.for_workspace(request.workspace.id).order_by("account_name"):
-            accounts_by_platform.setdefault(account.platform, []).append(account)
-        # A platform at its account cap shows its accounts instead of the Connect
-        # button; the button returns as Reconnect when one of them lost access.
-        platform_cards = []
-        for value, label in visible_platform_choices:
-            accounts = accounts_by_platform.get(value, [])
-            platform_cards.append(
-                {
-                    "value": value,
-                    "label": label,
-                    "accounts": accounts,
-                    "can_add": len(accounts) < settings.MAX_ACCOUNTS_PER_PLATFORM,
-                    "needs_reconnect": any(a.needs_reconnect for a in accounts),
-                }
-            )
-        return render(
-            request,
-            "social_accounts/connect.html",
-            {
-                "workspace_id": workspace_id,
-                "platform_cards": platform_cards,
-                "configured_platforms": configured_platforms,
-                "opportunity_cards": source_cards(workspace_id),
-            },
-        )
 
     # POST: initiate OAuth
     platform = request.POST.get("platform", "").strip()
@@ -276,6 +316,9 @@ def connect_platform(request, workspace_id):
         return redirect("social_accounts:connect_mastodon", workspace_id=workspace_id)
     if platform == PlatformCredential.Platform.DEVTO:
         return redirect("social_accounts:connect_devto", workspace_id=workspace_id)
+    if platform == PlatformCredential.Platform.WHATSAPP:
+        # Connected from Meta's popup on the Social Accounts page, never by redirect.
+        return redirect("social_accounts:list", workspace_id=workspace_id)
 
     # Standard OAuth flow
     provider = _get_provider_for_platform(platform, request.org.id)
@@ -324,7 +367,7 @@ def oauth_callback(request, platform):
         session_data = request.session.pop(OAUTH_SESSION_KEY, {})
         workspace_id = session_data.get("workspace_id")
         if workspace_id:
-            return redirect("calendar:calendar", workspace_id=workspace_id)
+            return redirect("social_accounts:list", workspace_id=workspace_id)
         return redirect("dashboard")
 
     code = request.GET.get("code")
@@ -496,7 +539,7 @@ def oauth_callback(request, platform):
             _("Failed to connect account. Please try again."),
         )
 
-    return redirect("calendar:calendar", workspace_id=workspace_id)
+    return redirect("social_accounts:list", workspace_id=workspace_id)
 
 
 # ------------------------------------------------------------------
@@ -520,13 +563,25 @@ def select_account(request):
         # in markup is a different predicate from the Python one and would drift
         # from it. The template gets a plain bool it can trust.
         rows = [{**page, "can_publish": page_is_publishable(page)} for page in page_data["pages"]]
+        platform = page_data["platform"]
+        # How many accounts not connected yet still fit under the per-platform
+        # cap; refreshing an account already connected never counts against it
+        # (see _create_or_update_account). The picker stops new ticks there
+        # instead of letting the POST refuse the extra rows one by one.
+        connected = SocialAccount.objects.filter(workspace_id=workspace_id, platform=platform).count()
+        new_publishable = sum(1 for row in rows if row["can_publish"] and not row.get("already_connected"))
         return render(
             request,
             "social_accounts/account_select.html",
             {
                 "pages": rows,
-                "platform": page_data["platform"],
+                "platform": platform,
+                "platform_name": SocialAccount(platform=platform).get_platform_display(),
                 "workspace_id": workspace_id,
+                "slots": max(0, settings.MAX_ACCOUNTS_PER_PLATFORM - connected),
+                "new_publishable": new_publishable,
+                "publishable_count": sum(1 for row in rows if row["can_publish"]),
+                "categories": sorted({row["category"] for row in rows if row.get("category")}),
             },
         )
 
@@ -582,9 +637,7 @@ def select_account(request):
                     access_token=access_token,
                     refresh_token=user_tokens.get("refresh_token"),
                     expires_in=user_tokens.get("expires_in"),
-                    facebook_user_access_token=user_tokens.get("access_token", "")
-                    if platform == "instagram"
-                    else None,
+                    facebook_user_access_token=user_tokens.get("access_token", "") if platform == "instagram" else None,
                     facebook_user_token_expires_at=user_tokens.get("user_expires_at"),
                     # Instagram-via-Facebook receives its webhooks through the
                     # linked Page, so remember which Page to subscribe.
@@ -610,7 +663,7 @@ def select_account(request):
         names = ", ".join(connected)
         messages.success(request, _("Connected: %(names)s") % {"names": names})
 
-    return redirect("calendar:calendar", workspace_id=workspace_id)
+    return redirect("social_accounts:list", workspace_id=workspace_id)
 
 
 # ------------------------------------------------------------------
@@ -677,7 +730,7 @@ def connect_bluesky(request, workspace_id):
             {"workspace_id": workspace_id},
         )
 
-    return redirect("calendar:calendar", workspace_id=workspace_id)
+    return redirect("social_accounts:list", workspace_id=workspace_id)
 
 
 # ------------------------------------------------------------------
@@ -723,7 +776,81 @@ def connect_devto(request, workspace_id):
         messages.error(request, _("Failed to connect DEV.to account. Check your API key."))
         return render(request, "social_accounts/devto_connect.html", {"workspace_id": workspace_id})
 
-    return redirect("calendar:calendar", workspace_id=workspace_id)
+    return redirect("social_accounts:list", workspace_id=workspace_id)
+
+
+# ------------------------------------------------------------------
+# WhatsApp Connect (Embedded Signup)
+# ------------------------------------------------------------------
+
+
+@login_required
+@require_permission("manage_social_accounts")
+@require_POST
+@ratelimit(key="user", rate="10/m", method="POST", block=True)
+def connect_whatsapp(request, workspace_id):
+    """Finish WhatsApp Embedded Signup.
+
+    The browser posts what Meta's popup returned: an authorization code and the
+    WhatsApp Business Account and phone number the person picked. The two ids
+    come from the browser, so they are only used after the token obtained from
+    the code proves it reaches that number in that account.
+    """
+    from providers.exceptions import MessagingError, ProviderError
+
+    code = request.POST.get("code", "").strip()
+    waba_id = request.POST.get("waba_id", "").strip()
+    phone_number_id = request.POST.get("phone_number_id", "").strip()
+    back = redirect("social_accounts:list", workspace_id=workspace_id)
+
+    if not code or not waba_id.isdigit() or not phone_number_id.isdigit():
+        messages.error(request, _("WhatsApp did not finish the connection. Try again."))
+        return back
+    if PlatformCredential.Platform.WHATSAPP not in _get_configured_platforms(request.org.id):
+        messages.error(request, _("WhatsApp is not configured. Contact your administrator."))
+        return back
+
+    provider = _get_provider_for_platform(
+        PlatformCredential.Platform.WHATSAPP,
+        request.org.id,
+        phone_number_id=phone_number_id,
+        waba_id=waba_id,
+    )
+    try:
+        tokens = provider.exchange_code(code)
+        if phone_number_id not in provider.waba_phone_number_ids(tokens.access_token, waba_id):
+            messages.error(request, _("That phone number does not belong to the WhatsApp account you authorized."))
+            return back
+        provider.ensure_registered(tokens.access_token)
+        profile = provider.get_profile(tokens.access_token)
+        _create_or_update_account(
+            workspace_id=workspace_id,
+            platform=PlatformCredential.Platform.WHATSAPP,
+            profile=profile,
+            access_token=tokens.access_token,
+            expires_in=tokens.expires_in,
+            webhook_target_id=waba_id,
+            authorizing_user=request.user,
+        )
+    except AccountLimitReached as exc:
+        messages.error(request, str(exc))
+        return back
+    except MessagingError as exc:
+        messages.error(request, str(exc))
+        return back
+    except ProviderError:
+        logger.exception("WhatsApp connection failed for workspace %s", workspace_id)
+        messages.error(
+            request, _("Meta refused the WhatsApp connection. Try again, or check the number in WhatsApp Manager.")
+        )
+        return back
+
+    messages.success(
+        request,
+        _("WhatsApp %(number)s connected. New messages arrive in the inbox.")
+        % {"number": profile.handle or profile.name},
+    )
+    return back
 
 
 # ------------------------------------------------------------------
@@ -1157,8 +1284,7 @@ def _create_or_update_account(
         if connected >= settings.MAX_ACCOUNTS_PER_PLATFORM:
             raise AccountLimitReached(
                 ngettext(
-                    "This workspace already has a %(platform)s account. "
-                    "Disconnect it before connecting another.",
+                    "This workspace already has a %(platform)s account. Disconnect it before connecting another.",
                     "This workspace already has the maximum of %(limit)s %(platform)s accounts. "
                     "Disconnect one before connecting another.",
                     settings.MAX_ACCOUNTS_PER_PLATFORM,
@@ -1202,7 +1328,7 @@ def _create_or_update_account(
         },
     )
 
-    if created:
+    if created and platform not in MESSAGING_ONLY_PLATFORMS:
         from apps.calendar.services import create_default_queue_and_slots
 
         create_default_queue_and_slots(account)

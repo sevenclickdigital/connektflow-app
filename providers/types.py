@@ -63,8 +63,9 @@ def media_fits_post_type(post_type: PostType, media_count: int, first_media_type
     if post_type is PostType.VIDEO:
         return first_media_type == "video"
     if post_type is PostType.STORY:
-        # A Story is one photo or one video, never text or a set.
-        return media_count == 1 and first_media_type in ("image", "video")
+        # A Story is a photo or a video, never text. Several go out as one
+        # Story each (PublishEngine._publish_story_sequence).
+        return media_count >= 1 and first_media_type in ("image", "video")
     if post_type is PostType.PROFILE_PHOTO:
         return media_count == 1 and first_media_type == "image"
     return True

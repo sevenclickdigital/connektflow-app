@@ -2,6 +2,7 @@ from allauth.account.signals import user_signed_up
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
+from django.utils.translation import gettext
 
 
 def provision_organization_and_workspace(user):
@@ -29,11 +30,13 @@ def provision_organization_and_workspace(user):
         org_role=OrgMembership.OrgRole.OWNER,
     )
 
-    # Create a default workspace so the user can start immediately
+    # Create a default workspace so the user can start immediately. Its name
+    # is stored, so it is written in the language active at sign-up (pt-br by
+    # default) rather than translated on display.
     workspace = Workspace.objects.create(
         organization=org,
-        name="My Workspace",
-        description="Your default workspace. Rename it anytime.",
+        name=gettext("My brand"),
+        description=gettext("Your default brand. Rename it anytime."),
     )
 
     WorkspaceMembership.objects.create(

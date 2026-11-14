@@ -8,6 +8,7 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import redirect, render
 from django.utils import timezone as django_tz
 from django.utils.translation import gettext as _
@@ -103,6 +104,7 @@ def workspaces_view(request):
             "workspace": ws,
             "members": members,
             "member_count": len(members),
+            "is_member": user_membership is not None,
             "can_manage": can_manage,
         }
         if ws.is_archived:
@@ -110,9 +112,41 @@ def workspaces_view(request):
         else:
             workspace_data.append(entry)
 
+    # Brands outside this organization that the user still reaches: as a
+    # member of the brand, or as a member of the organization that owns it
+    # (someone in two organizations). Read only from the user's own
+    # memberships, so nothing they don't belong to can appear; other members
+    # aren't listed, since that organization isn't this one.
+    brand_roles = dict(
+        WorkspaceMembership.objects.filter(user=request.user).values_list("workspace_id", "workspace_role")
+    )
+    org_roles = dict(OrgMembership.objects.filter(user=request.user).values_list("organization_id", "org_role"))
+    managing_roles = (WorkspaceMembership.WorkspaceRole.OWNER, WorkspaceMembership.WorkspaceRole.MANAGER)
+    org_admin_roles = (OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN)
+    external_data = []
+    for ws in (
+        Workspace.objects.filter(is_archived=False)
+        .filter(Q(id__in=brand_roles.keys()) | Q(organization_id__in=org_roles.keys()))
+        .exclude(organization=org)
+        .select_related("organization")
+        .order_by("name")
+    ):
+        brand_role = brand_roles.get(ws.id)
+        org_role = org_roles.get(ws.organization_id)
+        external_data.append(
+            {
+                "workspace": ws,
+                "organization": ws.organization,
+                "role": brand_role or org_role,
+                "is_member": brand_role is not None,
+                "can_manage": brand_role in managing_roles or org_role in org_admin_roles,
+            }
+        )
+
     context = {
         "workspace_data": workspace_data,
         "archived_data": archived_data,
+        "external_data": external_data,
         "settings_active": "workspaces",
     }
     return render(request, "organizations/workspaces.html", context)
@@ -257,7 +291,7 @@ def cross_workspace_calendar(request):
 
     # Social accounts across filtered workspaces (for channel filter)
     social_accounts = (
-        SocialAccount.objects.filter(
+        SocialAccount.objects.publishable().filter(
             workspace__in=filtered_workspaces,
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,
         )

@@ -39,6 +39,9 @@ def _account_provider(account, **overrides):
             "missing_scopes": account.missing_scopes,
             "messaging_access": account.messaging_access,
         }
+    elif account.platform == "whatsapp":
+        # The subscription belongs to the WhatsApp Business Account, not the number.
+        extra = {"phone_number_id": account.account_platform_id, "waba_id": account.webhook_target_id}
     return _get_provider_for_platform(account.platform, account.workspace.organization_id, **(extra | overrides))
 
 

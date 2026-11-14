@@ -1,51 +1,56 @@
 {% load i18n %}
-<!-- Workspace header -->
-<div class="flex items-center gap-3">
-    <!-- Workspace icon -->
+{% comment %}
+One brand in the account centre's brand list.
+``item``: workspace, can_manage, is_member and either members/member_count
+(a brand of this organization) or organization/role (a brand of another
+organization the user was added to, whose other members are not shown).
+{% endcomment %}
+<div class="flex flex-wrap items-center gap-3">
     {% if item.workspace.icon %}
     <img src="{{ item.workspace.icon.url }}" alt="" class="w-10 h-10 rounded-full object-cover flex-shrink-0">
     {% else %}
-    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold"
-         style="background: var(--neutral-200); color: var(--text-secondary);">
+    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold bg-brand-100 text-brand-800">
         {{ item.workspace.name|first|upper }}
     </div>
     {% endif %}
 
-    <!-- Name & member count -->
     <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2">
-            <span class="text-sm font-medium truncate" style="color: var(--text-primary);">
-                {{ item.workspace.name }}
-            </span>
+            <span class="text-sm font-semibold text-neutral-950 truncate">{{ item.workspace.name }}</span>
             {% if item.workspace.is_archived %}
-            <span class="text-xs px-2 py-0.5 rounded-full" style="background: #FEF3C7; color: #92400E;">{% translate "Archived" %}</span>
+            <span class="pill pill-warning"><i></i>{% translate "Archived" %}</span>
             {% endif %}
         </div>
-        <div class="text-xs" style="color: var(--text-tertiary);">
+        <div class="text-xs text-neutral-500">
+            {% if item.organization %}
+            {% if item.role == "owner" %}{% translate "Owner" as role %}{% elif item.role == "manager" %}{% translate "Manager" as role %}{% elif item.role == "editor" %}{% translate "Editor" as role %}{% elif item.role == "contributor" %}{% translate "Contributor" as role %}{% elif item.role == "client" %}{% translate "Client" as role %}{% elif item.role == "admin" %}{% translate "Admin" as role %}{% elif item.role == "member" %}{% translate "Member" as role %}{% else %}{% translate "Viewer" as role %}{% endif %}
+            {% blocktranslate with org=item.organization.name %}{{ org }} · your role: {{ role }}{% endblocktranslate %}
+            {% else %}
             {% blocktranslate count counter=item.member_count %}{{ counter }} member{% plural %}{{ counter }} members{% endblocktranslate %}
+            {% endif %}
         </div>
     </div>
 
-    <!-- Settings link for owner/manager -->
-    {% if item.can_manage %}
-    <a href="{% url 'workspaces:settings' workspace_id=item.workspace.id %}"
-       class="btn-neutral inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full"
-       style="background: var(--neutral-100); color: var(--text-secondary);">
-        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-        {% translate "Settings" %}
-    </a>
-    {% endif %}
+    <div class="flex items-center gap-2">
+        {% if item.is_member and not item.workspace.is_archived %}
+        <a href="{% url 'calendar:calendar' workspace_id=item.workspace.id %}" class="btn-soft py-1.5 px-3 text-xs">{% translate "Open" %}</a>
+        {% endif %}
+        {% if item.can_manage %}
+        <a href="{% url 'workspaces:settings' workspace_id=item.workspace.id %}" class="btn-ghost py-1.5 px-3 text-xs">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            {% translate "Settings" %}
+        </a>
+        {% endif %}
+    </div>
 </div>
 
-<!-- Members list -->
+{% if not item.organization %}
 {% if item.members %}
 <div class="flex items-center flex-wrap gap-2 mt-3">
     {% for membership in item.members %}
-    <span class="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full"
-          style="background: var(--neutral-100); color: var(--text-secondary);"
+    <span class="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600"
           title="{{ membership.user.display_name }} ({{ membership.get_workspace_role_display }})">
-        <span class="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0"
-              style="background: var(--neutral-200); color: var(--text-tertiary);">
+        <span class="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0 bg-neutral-200 text-neutral-500">
             {{ membership.user.display_name|first|upper }}
         </span>
         {{ membership.user.display_name }}
@@ -53,5 +58,6 @@
     {% endfor %}
 </div>
 {% else %}
-<div class="mt-3 text-xs" style="color: var(--text-tertiary);">{% translate "No members assigned" %}</div>
+<div class="mt-3 text-xs text-neutral-500">{% translate "No members assigned" %}</div>
+{% endif %}
 {% endif %}

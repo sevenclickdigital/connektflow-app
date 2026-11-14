@@ -144,9 +144,7 @@ class TestIdempotence:
         assert Workspace.objects.count() == 0
 
     def test_promoting_an_existing_customer_sets_staff(self):
-        customer = User.objects.create_user(
-            email="client@example.com", password="x", tos_accepted_at=timezone.now()
-        )
+        customer = User.objects.create_user(email="client@example.com", password="x", tos_accepted_at=timezone.now())
         assert customer.is_staff is False
 
         _run("client@example.com")
@@ -166,9 +164,7 @@ class TestPromotionDoesNotTouchBilling:
 
     @pytest.fixture
     def customer(self):
-        user = User.objects.create_user(
-            email="client@example.com", password="x", tos_accepted_at=timezone.now()
-        )
+        user = User.objects.create_user(email="client@example.com", password="x", tos_accepted_at=timezone.now())
         org = Organization.objects.create(name="Client Co")
         workspace = Workspace.objects.create(organization=org, name="Client Social")
         OrgMembership.objects.create(user=user, organization=org, org_role=OrgMembership.OrgRole.OWNER)

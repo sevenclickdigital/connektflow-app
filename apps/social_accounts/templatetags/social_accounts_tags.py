@@ -2,7 +2,21 @@ from collections import defaultdict
 
 from django import template
 
+from apps.social_accounts.catalog import platform_category, platform_description
+
 register = template.Library()
+
+
+@register.filter(name="platform_description")
+def platform_description_filter(platform):
+    """One-line description of a platform, from ``apps/social_accounts/catalog.py``."""
+    return platform_description(platform)
+
+
+@register.filter(name="platform_category")
+def platform_category_filter(platform):
+    """Category key of a platform (social, video, …), for the page filters."""
+    return platform_category(platform)
 
 
 @register.filter

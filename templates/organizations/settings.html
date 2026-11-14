@@ -1,40 +1,37 @@
 {% extends "layouts/settings.html" %}
 {% load i18n %}
 {% block title %}{% translate "General - Settings" %} - Automator{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "General" %}</h1>
+        <p class="page-description">{% translate "Name and default timezone of your organization." %}</p>
+    </div>
+</div>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-2xl">
-    <h2 class="text-xl font-semibold mb-8" style="color: var(--text-primary);">{% translate "General" %}</h2>
-
-    <!-- Organization Name section -->
-    <form method="POST" class="mb-10">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="update_name">
-        <div class="flex items-end gap-4">
-            <div class="flex-1">
-                <label for="name" class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">{% translate "Organization Name" %}</label>
-                <input type="text" id="name" name="name" value="{{ organization.name }}" required maxlength="100"
-                       class="input-focus w-full px-3 py-2 text-sm rounded-lg outline-none transition-colors"
-                       style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Organization" %}</h2>
+    <div class="a-card divide-y divide-neutral-300">
+        <form method="POST" class="p-6">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_name">
+            <label for="name" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Organization Name" %}</label>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <input type="text" id="name" name="name" value="{{ organization.name }}" required maxlength="100" class="form-input-styled flex-1">
+                <button type="submit" class="btn-brand">{% translate "Save Changes" %}</button>
             </div>
-            <button type="submit"
-                    class="btn-neutral px-5 py-2 text-sm font-medium rounded-full cursor-pointer whitespace-nowrap"
-                    style="background: var(--neutral-100); color: var(--text-primary);">
-                {% translate "Save Changes" %}
-            </button>
-        </div>
-    </form>
+        </form>
 
-    <!-- Default Timezone section -->
-    <form method="POST" class="mb-10">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="update_timezone">
-        <div class="flex items-end gap-4">
-            <div class="flex-1">
-                <label for="timezone" class="block text-sm font-semibold mb-1" style="color: var(--text-primary);">{% translate "Default Timezone" %}</label>
-                <p class="text-xs mb-2" style="color: var(--text-tertiary);">{% translate "Used as the fallback for workspaces that don't set their own." %}</p>
-                <select id="timezone" name="timezone"
-                        class="input-focus w-full px-3 py-2 text-sm rounded-lg outline-none transition-colors"
-                        style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
+        <form method="POST" class="p-6">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_timezone">
+            <label for="timezone" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Default Timezone" %}</label>
+            <p class="text-xs mb-2 text-neutral-500">{% translate "Used as the fallback for workspaces that don't set their own." %}</p>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <select id="timezone" name="timezone" class="form-input-styled bb-select flex-1 cursor-pointer">
                     <optgroup label="{% translate 'Common' %}">
                         {% for tz in common_timezones %}
                         <option value="{{ tz }}" {% if tz == organization.default_timezone %}selected{% endif %}>{{ tz }}</option>
@@ -46,103 +43,56 @@
                         {% endfor %}
                     </optgroup>
                 </select>
+                <button type="submit" class="btn-brand">{% translate "Save Changes" %}</button>
             </div>
-            <button type="submit"
-                    class="btn-neutral px-5 py-2 text-sm font-medium rounded-full cursor-pointer whitespace-nowrap"
-                    style="background: var(--neutral-100); color: var(--text-primary);">
-                {% translate "Save Changes" %}
-            </button>
-        </div>
-    </form>
+        </form>
+    </div>
+</section>
 
-    {% if is_owner %}
-    <hr class="my-10" style="border-color: var(--border);">
-
-    <!-- Delete Organization section -->
+{% if is_owner %}
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Danger zone" %}</h2>
     {% if organization.is_deletion_pending %}
-    <!-- Pending deletion state -->
-    <div x-data="{ showImmediateDeleteModal: false }"
-         class="rounded-lg p-4 mb-4"
-         style="background: var(--error-soft, #FEE2E2); border: 1px solid var(--error-500, #EF4444);">
-        <div class="flex items-start justify-between gap-4">
-            <div>
-                <h3 class="text-sm font-semibold mb-1" style="color: var(--error-500, #EF4444);">{% translate "Deletion scheduled" %}</h3>
-                <p class="text-sm" style="color: var(--text-secondary);">
+    <div class="a-card p-6 border-[var(--error-500)] bg-[var(--error-50)]" x-data="{ showImmediateDeleteModal: false }">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="min-w-0 max-w-2xl">
+                <h3 class="text-base font-semibold mb-1 text-[var(--error-700)]">{% translate "Deletion scheduled" %}</h3>
+                <p class="text-sm text-neutral-700">
                     {% blocktranslate with date=organization.deletion_scheduled_for|date:"F j, Y" %}This organization is scheduled for deletion on <strong>{{ date }}</strong>.
                     All workspaces, posts, social accounts, media, and team data will be permanently removed after this date.
                     YouTube connections and API data have already been deleted. Cancelling will require reconnecting YouTube.{% endblocktranslate %}
                 </p>
             </div>
-            <div class="flex flex-col gap-3 shrink-0">
+            <div class="flex flex-wrap gap-3 shrink-0">
                 <form method="POST">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="cancel_deletion">
-                    <button type="submit"
-                            class="btn-neutral px-5 py-2 text-sm font-medium rounded-full cursor-pointer whitespace-nowrap"
-                            style="background: var(--neutral-100); color: var(--text-primary);">
-                        {% translate "Cancel Deletion" %}
-                    </button>
+                    <button type="submit" class="btn-ghost">{% translate "Cancel Deletion" %}</button>
                 </form>
-                <button type="button" @click="showImmediateDeleteModal = true"
-                        class="btn-opacity px-5 py-2 text-sm font-medium rounded-full cursor-pointer whitespace-nowrap"
-                        style="background: var(--error-500, #EF4444); color: white;">
-                    {% translate "Delete Now" %}
-                </button>
+                <button type="button" @click="showImmediateDeleteModal = true" class="btn-danger-soft">{% translate "Delete Now" %}</button>
             </div>
         </div>
 
-        <!-- Immediate delete confirmation modal -->
         <template x-teleport="body">
-            <div x-show="showImmediateDeleteModal" x-transition.opacity
-                 @keydown.escape.window="showImmediateDeleteModal = false"
-                 class="fixed inset-0 z-50 flex items-center justify-center"
-                 style="background: rgba(0,0,0,0.4);">
-                <div @click.outside="showImmediateDeleteModal = false"
-                     x-show="showImmediateDeleteModal"
-                     x-transition
-                     class="w-full max-w-md rounded-xl shadow-xl"
-                     style="background: var(--surface-0);">
-
-                    <!-- Header -->
-                    <div class="flex items-center justify-between px-6 py-4" style="border-bottom: 1px solid var(--border);">
-                        <h3 class="text-base font-semibold" style="color: var(--text-primary);">{% translate "Delete immediately?" %}</h3>
-                        <button type="button" @click="showImmediateDeleteModal = false" class="cursor-pointer" style="color: var(--text-tertiary);">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
+            <div x-show="showImmediateDeleteModal" x-cloak class="modal-overlay" role="dialog" aria-modal="true"
+                 x-transition.opacity @keydown.escape.window="showImmediateDeleteModal = false">
+                <div class="modal-panel">
+                    <div class="modal-header">
+                        <div class="modal-icon is-error">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                        </div>
+                        <div class="modal-title">{% translate "Delete immediately?" %}</div>
                     </div>
-
-                    <!-- Body -->
-                    <div class="px-6 py-5">
-                        <p class="text-sm mb-3" style="color: var(--text-secondary);">
-                            {% blocktranslate with org=organization.name %}This will permanently delete <strong>{{ org }}</strong> right now, bypassing the 14-day grace period. This action cannot be undone.{% endblocktranslate %}
-                        </p>
-                        <p class="text-sm" style="color: var(--text-secondary);">
-                            {% translate "All of the following will be permanently removed:" %}
-                        </p>
-                        <ul class="text-sm mt-2 ml-4 list-disc space-y-1" style="color: var(--text-secondary);">
-                            <li>{% translate "All workspaces and their settings" %}</li>
-                            <li>{% translate "All scheduled and published posts" %}</li>
-                            <li>{% translate "Connected social accounts and credentials" %}</li>
-                            <li>{% translate "Media assets and files" %}</li>
-                            <li>{% translate "Team memberships and invitations" %}</li>
-                        </ul>
+                    <div class="modal-body">
+                        <p>{% blocktranslate with org=organization.name %}This will permanently delete <strong>{{ org }}</strong> right now, bypassing the 14-day grace period. This action cannot be undone.{% endblocktranslate %}</p>
+                        {% include "organizations/partials/_deletion_contents.html" %}
                     </div>
-
-                    <!-- Footer -->
-                    <div class="flex justify-end gap-3 px-6 py-4" style="border-top: 1px solid var(--border);">
-                        <button type="button" @click="showImmediateDeleteModal = false"
-                                class="btn-neutral px-5 py-2 text-sm font-medium rounded-full cursor-pointer"
-                                style="background: var(--neutral-100); color: var(--text-primary);">
-                            {% translate "Cancel" %}
-                        </button>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-ghost" @click="showImmediateDeleteModal = false">{% translate "Cancel" %}</button>
                         <form method="POST">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="delete_organization_now">
-                            <button type="submit"
-                                    class="btn-opacity px-5 py-2 text-sm font-semibold rounded-full cursor-pointer whitespace-nowrap"
-                                    style="background: var(--error-500, #EF4444); color: white;">
-                                {% translate "Yes, delete permanently" %}
-                            </button>
+                            <button type="submit" class="btn-danger-soft">{% translate "Yes, delete permanently" %}</button>
                         </form>
                     </div>
                 </div>
@@ -150,75 +100,35 @@
         </template>
     </div>
     {% else %}
-    <!-- Normal state -->
-    <div x-data="{ showDeleteModal: false }">
-        <div class="flex flex-col sm:flex-row items-start justify-between gap-4">
-            <div>
-                <h3 class="text-base font-semibold mb-1" style="color: var(--text-primary);">{% translate "Delete this organization" %}</h3>
-                <p class="text-sm" style="color: var(--text-secondary); max-width: 480px;">
-                    {% translate "Request deletion of this organization and its workspaces, posts, media and team memberships. YouTube connections and API data are removed immediately. Other data has a 14-day grace period. Cancelling requires reconnecting YouTube." %}
-                </p>
+    <div class="a-card p-6" x-data="{ showDeleteModal: false }">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="min-w-0 max-w-2xl">
+                <h3 class="text-base font-semibold text-neutral-950 mb-1">{% translate "Delete this organization" %}</h3>
+                <p class="text-sm text-neutral-600">{% translate "Request deletion of this organization and its workspaces, posts, media and team memberships. YouTube connections and API data are removed immediately. Other data has a 14-day grace period. Cancelling requires reconnecting YouTube." %}</p>
             </div>
-
-            <button type="button" @click="showDeleteModal = true"
-                    class="btn-danger-soft px-5 py-2 text-sm font-medium rounded-full cursor-pointer whitespace-nowrap shrink-0"
-                    style="background: var(--error-soft, #FEE2E2); color: var(--error-500, #EF4444);">
-                {% translate "Delete Organization" %}
-            </button>
+            <button type="button" @click="showDeleteModal = true" class="btn-danger-soft">{% translate "Delete Organization" %}</button>
         </div>
 
-        <!-- Delete confirmation modal -->
         <template x-teleport="body">
-            <div x-show="showDeleteModal" x-transition.opacity
-                 @keydown.escape.window="showDeleteModal = false"
-                 class="fixed inset-0 z-50 flex items-center justify-center"
-                 style="background: rgba(0,0,0,0.4);">
-                <div @click.outside="showDeleteModal = false"
-                     x-show="showDeleteModal"
-                     x-transition
-                     class="w-full max-w-md rounded-xl shadow-xl"
-                     style="background: var(--surface-0);">
-
-                    <!-- Header -->
-                    <div class="flex items-center justify-between px-6 py-4" style="border-bottom: 1px solid var(--border);">
-                        <h3 class="text-base font-semibold" style="color: var(--text-primary);">{% translate "Delete this organization" %}</h3>
-                        <button type="button" @click="showDeleteModal = false" class="cursor-pointer" style="color: var(--text-tertiary);">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
+            <div x-show="showDeleteModal" x-cloak class="modal-overlay" role="dialog" aria-modal="true"
+                 x-transition.opacity @keydown.escape.window="showDeleteModal = false">
+                <div class="modal-panel">
+                    <div class="modal-header">
+                        <div class="modal-icon is-error">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                        </div>
+                        <div class="modal-title">{% translate "Delete this organization" %}</div>
                     </div>
-
-                    <!-- Body -->
-                    <div class="px-6 py-5">
-                        <p class="text-sm mb-3" style="color: var(--text-secondary);">
-                            {% blocktranslate with org=organization.name %}Are you sure you want to delete <strong>{{ org }}</strong>? This will schedule the organization for permanent deletion in 14 days. YouTube connections, API data and notification copies are deleted immediately. Cancelling deletion will require reconnecting YouTube.{% endblocktranslate %}
-                        </p>
-                        <p class="text-sm" style="color: var(--text-secondary);">
-                            {% translate "All of the following will be permanently removed:" %}
-                        </p>
-                        <ul class="text-sm mt-2 ml-4 list-disc space-y-1" style="color: var(--text-secondary);">
-                            <li>{% translate "All workspaces and their settings" %}</li>
-                            <li>{% translate "All scheduled and published posts" %}</li>
-                            <li>{% translate "Connected social accounts and credentials" %}</li>
-                            <li>{% translate "Media assets and files" %}</li>
-                            <li>{% translate "Team memberships and invitations" %}</li>
-                        </ul>
+                    <div class="modal-body">
+                        <p>{% blocktranslate with org=organization.name %}Are you sure you want to delete <strong>{{ org }}</strong>? This will schedule the organization for permanent deletion in 14 days. YouTube connections, API data and notification copies are deleted immediately. Cancelling deletion will require reconnecting YouTube.{% endblocktranslate %}</p>
+                        {% include "organizations/partials/_deletion_contents.html" %}
                     </div>
-
-                    <!-- Footer -->
-                    <div class="flex justify-end gap-3 px-6 py-4" style="border-top: 1px solid var(--border);">
-                        <button type="button" @click="showDeleteModal = false"
-                                class="btn-neutral px-5 py-2 text-sm font-medium rounded-full cursor-pointer"
-                                style="background: var(--neutral-100); color: var(--text-primary);">
-                            {% translate "Cancel" %}
-                        </button>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-ghost" @click="showDeleteModal = false">{% translate "Cancel" %}</button>
                         <form method="POST">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="delete_organization">
-                            <button type="submit"
-                                    class="btn-opacity px-5 py-2 text-sm font-semibold rounded-full cursor-pointer whitespace-nowrap"
-                                    style="background: var(--error-500, #EF4444); color: white;">
-                                {% translate "Yes, delete this organization" %}
-                            </button>
+                            <button type="submit" class="btn-danger-soft">{% translate "Yes, delete this organization" %}</button>
                         </form>
                     </div>
                 </div>
@@ -226,6 +136,6 @@
         </template>
     </div>
     {% endif %}
-    {% endif %}
-</div>
+</section>
+{% endif %}
 {% endblock %}

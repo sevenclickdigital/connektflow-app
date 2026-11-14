@@ -1,0 +1,60 @@
+{% load i18n %}
+{% comment %}
+Location picker for a Meta post: searches location Pages by name and posts
+the chosen one as <prefix>_place_id_<account> / <prefix>_place_name_<account>.
+Lives inside the composer's customize card, whose x-data holds accId,
+placeId, placeName, placeQuery, placeResults, placeSearching, placeError
+and placeTimer. A refused search shows Meta's reason in placeError.
+Expects: prefix ("facebook" or "instagram").
+{% endcomment %}
+<div>
+    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Location" %}</label>
+    <input type="hidden" :name="'{{ prefix }}_place_id_' + accId" :value="placeId">
+    <input type="hidden" :name="'{{ prefix }}_place_name_' + accId" :value="placeName">
+
+    <div x-show="placeId" class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-neutral-50 border border-neutral-300">
+        <span class="text-sm text-neutral-800 truncate" x-text="placeName"></span>
+        <button type="button"
+                @click="placeId = ''; placeName = ''; placeQuery = ''; placeResults = []"
+                class="text-xs text-neutral-500 hover:text-red-500 transition-colors cursor-pointer flex-shrink-0">
+            {% translate "Remove" %}
+        </button>
+    </div>
+
+    {% comment %}
+    Keyword search only — Meta retired the endpoint that
+    searched by coordinates in 2020 and never replaced it,
+    so there is no "near me" to offer.
+    {% endcomment %}
+    <div x-show="!placeId" class="relative">
+        <input type="text"
+               x-model="placeQuery"
+               @input="
+                   clearTimeout(placeTimer);
+                   const q = placeQuery.trim();
+                   if (q.length < 2) { placeResults = []; return; }
+                   placeTimer = setTimeout(() => {
+                       placeSearching = true;
+                       fetch(`/workspace/{{ workspace.id }}/compose/facebook-places/${accId}/?q=` + encodeURIComponent(q))
+                           .then(r => r.json())
+                           .then(d => { placeResults = d.places || []; placeError = d.error || ''; })
+                           .catch(() => { placeResults = []; })
+                           .finally(() => { placeSearching = false; });
+                   }, 350);
+               "
+               placeholder="{% translate 'Search for a place' %}"
+               class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+        <div x-show="placeResults.length"
+             class="absolute left-0 right-0 top-full mt-1 bg-white border border-neutral-300 rounded-lg shadow-lg p-1 z-20 max-h-48 overflow-y-auto">
+            <template x-for="place in placeResults" :key="place.id">
+                <button type="button" class="place-result"
+                        @click="placeId = place.id; placeName = place.name; placeResults = []">
+                    <span class="block text-sm text-neutral-800" x-text="place.name"></span>
+                    <span class="block text-[11px] text-neutral-500" x-text="place.where"></span>
+                </button>
+            </template>
+        </div>
+        <p x-show="placeSearching" class="text-[11px] text-neutral-500 mt-1">{% translate "Searching…" %}</p>
+        <p x-show="placeError && !placeSearching" x-text="placeError" class="text-[11px] text-amber-700 mt-1"></p>
+    </div>
+</div>

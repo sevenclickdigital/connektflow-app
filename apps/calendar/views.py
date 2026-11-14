@@ -533,7 +533,7 @@ def _get_tab_context(request, workspace, tab: str) -> dict:
     # (ZoneInfoNotFoundError / ValueError) on an unknown or empty value — that
     # would 500 the whole tab. Coerce to the first valid candidate.
     display_tz = _coerce_timezone(request.GET.get("tz"), workspace.effective_timezone)
-    has_connected_accounts = SocialAccount.objects.filter(
+    has_connected_accounts = SocialAccount.objects.publishable().filter(
         workspace=workspace,
         connection_status=SocialAccount.ConnectionStatus.CONNECTED,
     ).exists()
@@ -691,7 +691,7 @@ def _get_tab_context(request, workspace, tab: str) -> dict:
 def calendar_view(request, workspace_id):
     """Main publish page - renders calendar or list mode."""
     workspace = _get_workspace(request, workspace_id)
-    has_connected_accounts = SocialAccount.objects.filter(
+    has_connected_accounts = SocialAccount.objects.publishable().filter(
         workspace=workspace,
         connection_status=SocialAccount.ConnectionStatus.CONNECTED,
     ).exists()
@@ -703,7 +703,7 @@ def calendar_view(request, workspace_id):
 
     # Connected accounts for calendar filter UI
     social_accounts = (
-        SocialAccount.objects.for_workspace(workspace.id)
+        SocialAccount.objects.for_workspace(workspace.id).publishable()
         .filter(
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,
         )
@@ -1102,7 +1102,7 @@ def _list_view(request, workspace, target_date, context):
     """Render list/table view of posts."""
     posts = _get_filtered_posts(workspace, request).order_by("-scheduled_at", "-created_at")[:200]
 
-    has_connected_accounts = SocialAccount.objects.filter(
+    has_connected_accounts = SocialAccount.objects.publishable().filter(
         workspace=workspace,
         connection_status=SocialAccount.ConnectionStatus.CONNECTED,
     ).exists()
@@ -1525,7 +1525,7 @@ def bulk_platform_action(request, workspace_id):
 def posting_slots(request, workspace_id):
     """Manage posting slots for a workspace's social accounts."""
     workspace = _get_workspace(request, workspace_id)
-    accounts = SocialAccount.objects.for_workspace(workspace.id).filter(
+    accounts = SocialAccount.objects.for_workspace(workspace.id).publishable().filter(
         connection_status=SocialAccount.ConnectionStatus.CONNECTED,
     )
 
@@ -1723,7 +1723,7 @@ def queue_list(request, workspace_id):
     """List all queues for this workspace."""
     workspace = _get_workspace(request, workspace_id)
     queues = Queue.objects.for_workspace(workspace.id).select_related("social_account", "category")
-    accounts = SocialAccount.objects.for_workspace(workspace.id).filter(
+    accounts = SocialAccount.objects.for_workspace(workspace.id).publishable().filter(
         connection_status=SocialAccount.ConnectionStatus.CONNECTED,
     )
     categories = ContentCategory.objects.for_workspace(workspace.id)

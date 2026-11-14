@@ -1,0 +1,71 @@
+{% load i18n %}
+{% comment %}
+One destination card (.target-card in styles.css): avatar, name, network and
+handle, a check while something on it is chosen. The composer's "Where to
+publish" row and the art request's network picker both draw their channels
+with it.
+
+Args:
+  platform   platform key (required)
+  account    SocialAccount, or nothing for a network not connected
+  formats    the account's format_options: one toggle per format, wired to
+             composerApp() (hasFormat / toggleFormat / formatBlocked)
+  network    art request only: the network key. The whole card is the tab
+             button of artPicker(), with that network's piece count as badge.
+  label      name shown when there is no account
+{% endcomment %}
+{% with account_id=account.id|stringformat:"s" %}
+{% if network %}
+{% if not account %}{% blocktranslate asvar not_connected_label with network=label %}{{ network }} · not connected{% endblocktranslate %}{% endif %}
+<button type="button" role="tab" class="target-card"{% if not account %} aria-label="{{ not_connected_label }}"{% endif %}
+        :class="tab === '{{ network }}' && 'is-selected'"
+        :aria-selected="tab === '{{ network }}' ? 'true' : 'false'"
+        @click="tab = '{{ network }}'">
+{% else %}
+<div class="target-card" :class="(selectedFormats['{{ account_id }}'] || []).length && 'is-selected'">
+{% endif %}
+    <div class="target-card-head">
+        <span class="target-card-avatar" aria-hidden="true">
+            {% if account.avatar_url %}<img src="{{ account.avatar_url }}" alt="" referrerpolicy="no-referrer">{% elif account %}{{ account.display_label|make_list|first|upper }}{% elif platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=platform size="sm" %}{% endif %}
+        </span>
+        <span class="flex-1 min-w-0 text-left">
+            <span class="target-card-name">{% if account %}{{ account.display_label }}{% else %}{{ label }}{% endif %}</span>
+            <span class="target-card-sub">
+                {% if account %}
+                {% if platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=platform %}{% endif %}
+                {{ account.get_platform_display }}{% if account.account_handle %} · {% if platform != "whatsapp" %}@{% endif %}{{ account.account_handle }}{% endif %}
+                {% else %}
+                {% translate "Not connected" %}
+                {% endif %}
+            </span>
+        </span>
+        {% if network %}
+        <span class="target-card-check" x-show="counts['{{ network }}']" x-text="counts['{{ network }}']" x-cloak></span>
+        {% else %}
+        <span class="target-card-check" x-show="(selectedFormats['{{ account_id }}'] || []).length" x-cloak aria-hidden="true">
+            <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        </span>
+        {% endif %}
+    </div>
+    {% if formats %}
+    <div class="target-card-formats">
+        {% for option in formats %}
+        <button type="button" class="format-toggle"
+                :class="{ 'is-on': hasFormat('{{ account_id }}', '{{ option.format }}'), 'is-blocked': formatBlocked('{{ account_id }}', '{{ option.format }}') }"
+                :aria-pressed="hasFormat('{{ account_id }}', '{{ option.format }}') ? 'true' : 'false'"
+                :aria-disabled="formatBlocked('{{ account_id }}', '{{ option.format }}') ? 'true' : 'false'"
+                :title="formatBlocked('{{ account_id }}', '{{ option.format }}') || '{{ option.label|escapejs }}'"
+                aria-label="{{ option.label }}"
+                @click="formatBlocked('{{ account_id }}', '{{ option.format }}') || toggleFormat('{{ account_id }}', '{{ option.format }}')">
+            {% include "partials/_format_icon.html" with format=option.format show_default=True %}
+            {{ option.short }}
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
+{% if network %}
+</button>
+{% else %}
+</div>
+{% endif %}
+{% endwith %}

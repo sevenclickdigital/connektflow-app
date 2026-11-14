@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from apps.social_accounts.models import MESSAGING_ONLY_PLATFORMS
 from providers import PROVIDER_REGISTRY, get_provider
 from providers.base import SocialProvider
 from providers.exceptions import APIError, RateLimitError
@@ -27,6 +28,7 @@ class TestProviderRegistry:
             "bluesky",
             "google_business",
             "mastodon",
+            "whatsapp",
             "devto",
             "x",
         }
@@ -75,7 +77,8 @@ class TestSocialProviderInterface:
         provider = get_provider(platform)
         post_types = provider.supported_post_types
         assert isinstance(post_types, list)
-        assert len(post_types) > 0
+        # A messaging-only channel publishes nothing; every other one must.
+        assert (len(post_types) == 0) == (platform in MESSAGING_ONLY_PLATFORMS)
         for pt in post_types:
             assert isinstance(pt, PostType)
 

@@ -116,6 +116,11 @@ class InboxMessage(models.Model):
                 fields=["workspace", "social_account", "-received_at"],
                 name="inbox_msg_ws_account_recv",
             ),
+            # The open inbox polls for its newest row every few seconds.
+            models.Index(
+                fields=["workspace", "-created_at"],
+                name="inbox_msg_ws_created",
+            ),
         ]
 
     def __str__(self):

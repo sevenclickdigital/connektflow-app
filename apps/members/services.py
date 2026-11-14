@@ -5,9 +5,11 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.db import transaction
 from django.db.models import F, Q
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from apps.common.mail import EmailNotSentError, send_or_raise, transactional
 from apps.workspaces.models import Workspace
@@ -489,6 +491,68 @@ def update_workspace_assignments(org, user, assignments, *, inviter=None):
                 workspace_id=ws_id,
                 workspace_role=role,
             )
+
+
+def can_manage_brand_team(user, workspace) -> bool:
+    """Whether ``user`` may manage who is in ``workspace`` (a brand).
+
+    Owner or manager of the brand, or owner/admin of the organization that
+    owns it. What they may grant is still bounded by their own level in the
+    brand (``assignable_brand_roles``).
+    """
+    org = workspace.organization
+    if _inviter_org_level(user, org) >= ORG_ROLE_LEVEL[OrgMembership.OrgRole.ADMIN]:
+        return True
+    return _inviter_workspace_level(user, org, workspace.id) >= WS_ROLE_LEVEL[WorkspaceMembership.WorkspaceRole.MANAGER]
+
+
+def assignable_brand_roles(user, workspace):
+    """The brand roles ``user`` may grant or change, highest first."""
+    level = _inviter_workspace_level(user, workspace.organization, workspace.id)
+    return [
+        (value, label) for value, label in WorkspaceMembership.WorkspaceRole.choices if WS_ROLE_LEVEL[value] <= level
+    ]
+
+
+@transaction.atomic
+def set_brand_role(workspace, user, role, *, by):
+    """Give ``user`` ``role`` in ``workspace``, or remove them with ``role=None``.
+
+    Only members of the organization that owns the brand can be added. ``by``
+    cannot grant a role above their own in the brand, nor touch someone
+    whose current role is above it, and the brand never loses its last owner.
+    Raises ``ValueError`` with a message for the user.
+    """
+    org = workspace.organization
+    if not OrgMembership.objects.filter(user=user, organization=org).exists():
+        raise ValueError(_("This person is not a member of the organization that owns this brand."))
+    if role is not None and role not in WS_ROLE_LEVEL:
+        raise ValueError(_("Unknown role."))
+
+    by_level = _inviter_workspace_level(by, org, workspace.id)
+    if role is not None and WS_ROLE_LEVEL[role] > by_level:
+        raise ValueError(_("You cannot grant a role higher than your own in this brand."))
+
+    # Locked so two simultaneous demotions can't both see "another owner left".
+    current = WorkspaceMembership.objects.select_for_update().filter(user=user, workspace=workspace).first()
+    if current and WS_ROLE_LEVEL.get(current.workspace_role, 0) > by_level:
+        raise ValueError(_("You cannot change someone whose role is higher than your own."))
+
+    owner = WorkspaceMembership.WorkspaceRole.OWNER
+    if current and current.workspace_role == owner and role != owner:
+        owners = WorkspaceMembership.objects.select_for_update().filter(workspace=workspace, workspace_role=owner)
+        if owners.count() <= 1:
+            raise ValueError(_("A brand needs at least one owner."))
+
+    if role is None:
+        if current:
+            current.delete()
+    elif current:
+        if current.workspace_role != role:
+            current.workspace_role = role
+            current.save(update_fields=["workspace_role"])
+    else:
+        WorkspaceMembership.objects.create(user=user, workspace=workspace, workspace_role=role)
 
 
 def _reserve_invite_send(invitation):

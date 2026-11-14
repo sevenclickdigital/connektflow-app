@@ -209,3 +209,82 @@ def approvals_settings(request, workspace_id):
             "approval_modes": Workspace.ApprovalWorkflowMode,
         },
     )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def workspace_team(request, workspace_id):
+    """Who is in this brand and with which role.
+
+    Managed by the brand's owners and managers, or the owners/admins of the
+    organization that owns it. Everyone else gets a 404, as on the other
+    brand settings pages, so the page doesn't confirm the brand exists.
+    """
+    from apps.members import services as member_services
+
+    workspace = Workspace.objects.select_related("organization").filter(id=workspace_id).first()
+    if workspace is None or not member_services.can_manage_brand_team(request.user, workspace):
+        raise Http404
+    org = workspace.organization
+
+    if request.method == "POST":
+        action = request.POST.get("action", "")
+        try:
+            if action == "invite":
+                role = request.POST.get("role", "")
+                if role not in dict(member_services.assignable_brand_roles(request.user, workspace)):
+                    raise ValueError(_("You cannot grant a role higher than your own in this brand."))
+                member_services.create_invitation(
+                    org=org,
+                    email=request.POST.get("email", ""),
+                    org_role=OrgMembership.OrgRole.MEMBER,
+                    workspace_assignments=[{"workspace_id": str(workspace.id), "role": role}],
+                    invited_by=request.user,
+                    inviter=request.user,
+                )
+                messages.success(request, _("Invitation sent."))
+            else:
+                # The person is looked up inside the brand's organization only,
+                # so an id from another organization can't be acted on.
+                member = OrgMembership.objects.filter(organization=org, user_id=request.POST.get("user_id")).first()
+                if member is None:
+                    raise ValueError(_("This person is not a member of the organization that owns this brand."))
+                if action == "remove":
+                    member_services.set_brand_role(workspace, member.user, None, by=request.user)
+                    messages.success(request, _("Removed from the brand."))
+                elif action in ("add", "change_role"):
+                    member_services.set_brand_role(workspace, member.user, request.POST.get("role"), by=request.user)
+                    messages.success(request, _("Team updated."))
+                else:
+                    raise ValueError(_("Unknown action."))
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        return redirect("workspaces:team", workspace_id=workspace.id)
+
+    memberships = list(
+        WorkspaceMembership.objects.filter(workspace=workspace)
+        .select_related("user")
+        .order_by("user__name", "user__email")
+    )
+    in_brand = {m.user_id for m in memberships}
+    assignable = member_services.assignable_brand_roles(request.user, workspace)
+    addable = [
+        m.user
+        for m in OrgMembership.objects.filter(organization=org)
+        .select_related("user")
+        .order_by("user__name", "user__email")
+        if m.user_id not in in_brand
+    ]
+    return render(
+        request,
+        "workspaces/team.html",
+        {
+            "workspace": workspace,
+            "memberships": memberships,
+            "addable_members": addable,
+            "role_choices": assignable,
+            "assignable_values": [value for value, _label in assignable],
+            "all_roles": WorkspaceMembership.WorkspaceRole.choices,
+            "settings_active": "team",
+        },
+    )

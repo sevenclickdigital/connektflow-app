@@ -33,7 +33,6 @@
         html.sidebar-is-collapsed .sidebar-initial .sidebar-section-label-wrap,
         html.sidebar-is-collapsed .sidebar-initial .sidebar-badge { display: none; }
         html.sidebar-is-collapsed .sidebar-initial .sidebar-new-label,
-        html.sidebar-is-collapsed .sidebar-initial .sidebar-connect-channels,
         html.sidebar-is-collapsed .sidebar-initial .sidebar-review-banner { display: none; }
         /* Collapsed child overrides before Alpine */
         html.sidebar-is-collapsed .sidebar-initial .sidebar-ws-btn { justify-content: center; padding-left: 0; padding-right: 0; gap: 0; }
@@ -338,31 +337,38 @@
             keep the switcher on every page, administrative ones
             included.
             {% endcomment %}
-            <div class="flex items-center h-14 flex-shrink-0" :class="sidebarCollapsed ? 'justify-center' : 'px-4'">
-                <img src="{% static 'img/automator-wordmark-dark.webp' %}" alt="Automator" class="h-8 w-auto" x-show="!sidebarCollapsed">
-                <img src="{% static 'img/automator-symbol.webp' %}" alt="Automator" class="w-8 h-8" x-show="sidebarCollapsed" x-cloak>
+            <div class="flex items-center flex-shrink-0 pt-4 pb-3" :class="sidebarCollapsed ? 'justify-center px-0' : 'px-4'">
+                <img src="{% static 'img/automator-wordmark-dark.webp' %}" alt="Automator" class="h-9 w-auto" x-show="!sidebarCollapsed">
+                <img src="{% static 'img/automator-symbol.webp' %}" alt="Automator" class="w-9 h-9" x-show="sidebarCollapsed" x-cloak>
             </div>
-            <div class="border-b border-neutral-300">
+            <div class="pb-2" :class="sidebarCollapsed ? 'px-2' : 'px-3'">
+            {% block sidebar_workspace_switcher %}
             {% if sidebar_workspaces or request.workspace %}
             <div class="relative" x-data="{ wsOpen: false }">
                 <button @click="wsOpen = !wsOpen"
-                        class="sidebar-ws-btn w-full flex items-center gap-2.5 px-4 py-3.5 text-left hover:bg-black/[0.04] transition-colors cursor-pointer rounded-br-lg"
-                        :class="sidebarCollapsed ? 'justify-center px-0' : 'gap-2.5 px-4'">
+                        class="sidebar-ws-btn w-full flex items-center gap-2.5 px-2.5 py-2 text-left rounded-md bg-white border border-neutral-300 hover:border-neutral-400 transition-colors cursor-pointer"
+                        :class="sidebarCollapsed && 'justify-center px-0'">
                     {% with current_ws=request.workspace %}
                     {% if current_ws %}
                     {% if current_ws.icon %}
-                    <img src="{{ current_ws.icon.url }}" alt="" class="sidebar-logo-mark flex-shrink-0 object-cover">
+                    <img src="{{ current_ws.icon.url }}" alt="" class="sidebar-logo-mark flex-shrink-0 object-cover" style="width:26px;height:26px">
                     {% else %}
-                    <div class="sidebar-logo-mark flex-shrink-0">{{ current_ws.name|make_list|first|upper }}</div>
+                    <div class="sidebar-logo-mark flex-shrink-0" style="width:26px;height:26px;font-size:12px">{{ current_ws.name|make_list|first|upper }}</div>
                     {% endif %}
-                    <span class="flex-1 font-bold text-[0.9375rem] tracking-tight text-neutral-950 truncate" x-show="!sidebarCollapsed" x-cloak>{{ current_ws.name }}</span>
+                    <span class="flex-1 min-w-0" x-show="!sidebarCollapsed" x-cloak>
+                        <span class="block text-[10px] font-semibold uppercase tracking-wider text-neutral-500 leading-none">{% translate "Workspace" %}</span>
+                        <span class="block text-sm font-semibold text-neutral-950 truncate leading-tight mt-0.5">{{ current_ws.name }}</span>
+                    </span>
                     {% elif sidebar_workspaces %}
                     {% if sidebar_workspaces.0.icon %}
-                    <img src="{{ sidebar_workspaces.0.icon.url }}" alt="" class="sidebar-logo-mark flex-shrink-0 object-cover">
+                    <img src="{{ sidebar_workspaces.0.icon.url }}" alt="" class="sidebar-logo-mark flex-shrink-0 object-cover" style="width:26px;height:26px">
                     {% else %}
-                    <div class="sidebar-logo-mark flex-shrink-0">{{ sidebar_workspaces.0.name|make_list|first|upper }}</div>
+                    <div class="sidebar-logo-mark flex-shrink-0" style="width:26px;height:26px;font-size:12px">{{ sidebar_workspaces.0.name|make_list|first|upper }}</div>
                     {% endif %}
-                    <span class="flex-1 font-bold text-[0.9375rem] tracking-tight text-neutral-950 truncate" x-show="!sidebarCollapsed" x-cloak>{{ sidebar_workspaces.0.name }}</span>
+                    <span class="flex-1 min-w-0" x-show="!sidebarCollapsed" x-cloak>
+                        <span class="block text-[10px] font-semibold uppercase tracking-wider text-neutral-500 leading-none">{% translate "Workspace" %}</span>
+                        <span class="block text-sm font-semibold text-neutral-950 truncate leading-tight mt-0.5">{{ sidebar_workspaces.0.name }}</span>
+                    </span>
                     {% endif %}
                     {% endwith %}
                     <svg class="w-4 h-4 text-neutral-500 flex-shrink-0 transition-transform" :class="wsOpen && 'rotate-180'" x-show="!sidebarCollapsed" x-cloak fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -376,7 +382,7 @@
                      x-transition:leave="transition ease-in duration-75"
                      x-transition:leave-start="opacity-100"
                      x-transition:leave-end="opacity-0"
-                     class="absolute left-2 right-2 top-full mt-1 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 py-1 z-50">
+                     class="absolute left-3 right-3 top-full mt-1 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 py-1 z-50">
                     {% for ws in sidebar_workspaces %}
                     <a href="{% url 'calendar:calendar' workspace_id=ws.id %}"
                        class="flex items-center gap-2.5 px-3 py-2 text-sm rounded-md hover:bg-black/[0.04] transition-colors {% if request.workspace and ws.id == request.workspace.id %}bg-neutral-50 font-semibold text-neutral-950{% else %}text-neutral-800{% endif %}">
@@ -422,10 +428,11 @@
 
             </div>
             {% endif %}
+            {% endblock %}
             {# Collapse toggle: a tab on the sidebar's right edge, level with the header. #}
             <button type="button" @click="sidebarCollapsed = !sidebarCollapsed"
                     class="hidden lg:flex absolute top-4 z-50 w-6 h-6 items-center justify-center rounded-full bg-white text-neutral-500 ring-1 ring-neutral-300 shadow-sm hover:text-neutral-800 hover:ring-neutral-400 transition-colors cursor-pointer"
-                    :class="sidebarCollapsed ? '-right-3' : '-right-5'"
+                    :class="'-right-3'"
                     :title="sidebarCollapsed ? $el.dataset.expand : $el.dataset.collapse"
                     data-expand="{% translate 'Expand sidebar' %}" data-collapse="{% translate 'Collapse sidebar' %}"
                     title="{% translate 'Collapse sidebar' %}">
@@ -433,6 +440,7 @@
             </button>
             </div>
 
+            {% block sidebar_new_button %}
             <!-- + New CTA -->
             {% if request.workspace %}
             <div class="sidebar-new-wrap px-3 pt-2 pb-1" :class="sidebarCollapsed && 'px-2'"
@@ -692,153 +700,100 @@
                 </template>
             </div>
             {% endif %}
+            {% endblock %}
 
             <!-- Navigation -->
             <nav class="sidebar-nav flex-1 overflow-y-auto py-2 px-3" :class="sidebarCollapsed ? 'px-2' : 'px-3'">
                 {% block sidebar_nav %}
-                {% if request.workspace %}
-                <a href="{% url 'calendar:calendar' workspace_id=request.workspace.id %}" class="mb-1 sidebar-nav-item {% if request.resolver_match.url_name == 'calendar' %}active{% endif %}">
-                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                    <span class="sidebar-nav-label">{% translate "Publish" %}</span>
+                {% comment %}
+                Main menu in the Automator layout: single items and collapsible
+                groups. A group opens by itself when the current page is one of
+                its children; otherwise it remembers how it was left. Items with
+                no place in the layout yet sit under "More" so no destination is
+                lost; ones announced but not built show as "Soon", without a link.
+                Dashboard points at "/" (the home redirect) until it has a page.
+                {% endcomment %}
+                <a href="/" class="mb-0.5 sidebar-nav-item ">
+                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>
+                    <span class="sidebar-nav-label">{% translate "Dashboard" context "menu" %}</span>
                 </a>
-                <a href="{% url 'composer:create_landing' workspace_id=request.workspace.id %}" class="mb-1 sidebar-nav-item {% if request.resolver_match.url_name == 'create_landing' or request.resolver_match.url_name == 'compose' %}active{% endif %}">
-                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 00-4 12.73V16a1 1 0 001 1h6a1 1 0 001-1v-1.27A7 7 0 0012 2z"/><path d="M9 18h6"/><path d="M10 22h4"/><path d="M10 8.5c0 1.5 2 2.5 2 4"/><path d="M14 8.5c0 1.5-2 2.5-2 4"/></svg>
-                    <span class="sidebar-nav-label">{% translate "Create Idea" %}</span>
-                </a>                
-                {% if request.workspace_membership and request.workspace_membership.workspace_role != "client" %}
-                <a href="{% url 'tasks:board' workspace_id=request.workspace.id %}" class="mb-1 sidebar-nav-item {% if request.resolver_match.app_name == 'tasks' %}active{% endif %}">
-                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="13" rx="1.5"/><rect x="14" y="3" width="7" height="8" rx="1.5"/><path d="M5.5 9l1.5 1.5L9 8"/></svg>
-                    <span class="sidebar-nav-label">{% translate "Tasks" %}</span>
+                {% if request.workspace %}
+                {% with app=request.resolver_match.app_name url_name=request.resolver_match.url_name %}
+                <div class="mb-0.5" x-data="{ open: {% if url_name == 'calendar' and app == 'calendar' and mode != 'list' or app == 'composer' and url_name == 'compose' or app == 'tasks' %}true{% else %}localStorage.getItem('nav:publish') === 'open'{% endif %} }"
+                     x-effect="localStorage.setItem('nav:publish', open ? 'open' : 'closed')">
+                    <button type="button" class="sidebar-nav-item sidebar-nav-group-toggle {% if url_name == 'calendar' and app == 'calendar' and mode != 'list' or app == 'composer' and url_name == 'compose' or app == 'tasks' %}has-active{% endif %}"
+                            :aria-expanded="open.toString()"
+                            @click="if (sidebarCollapsed) { sidebarCollapsed = false; open = true } else { open = !open }">
+                        <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M12 14v4M10 16l2 2 2-2"/></svg>
+                        <span class="sidebar-nav-label">{% translate "Publish" context "menu" %}</span>
+                        <svg class="sidebar-nav-chevron" :class="open && 'rotate-180'" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="sidebar-subnav" x-show="open" x-cloak>
+                    <a href="{% url 'calendar:calendar' workspace_id=request.workspace.id %}?mode=calendar" class="sidebar-subnav-item {% if url_name == 'calendar' and app == 'calendar' and mode != 'list' %}active{% endif %}">{% translate "Calendar" context "menu" %}</a>
+                    <a href="{% url 'composer:compose' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'composer' and url_name == 'compose' %}active{% endif %}">{% translate "Schedule post" context "menu" %}</a>
+                    {% if request.workspace_membership and request.workspace_membership.workspace_role != "client" %}
+                    <a href="{% url 'tasks:board' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'tasks' %}active{% endif %}">{% translate "Task management" context "menu" %}</a>
+                    {% endif %}
+                    </div>
+                </div>
+                <div class="mb-0.5" x-data="{ open: {% if app == 'inbox' or app == 'automations' %}true{% else %}localStorage.getItem('nav:engage') === 'open'{% endif %} }"
+                     x-effect="localStorage.setItem('nav:engage', open ? 'open' : 'closed')">
+                    <button type="button" class="sidebar-nav-item sidebar-nav-group-toggle {% if app == 'inbox' or app == 'automations' %}has-active{% endif %}"
+                            :aria-expanded="open.toString()"
+                            @click="if (sidebarCollapsed) { sidebarCollapsed = false; open = true } else { open = !open }">
+                        <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                        <span class="sidebar-nav-label">{% translate "Engage" context "menu" %}</span>
+                        <svg class="sidebar-nav-chevron" :class="open && 'rotate-180'" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="sidebar-subnav" x-show="open" x-cloak>
+                    <a href="{% url 'inbox:feed' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'inbox' and request.GET.platform != 'whatsapp' %}active{% endif %}">{% translate "Inbox" context "menu" %}{% if sidebar_unread_inbox_count %}<span class="sidebar-badge">{{ sidebar_unread_inbox_count }}</span>{% endif %}</a>
+                    <a href="{% url 'automations:list' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'automations' %}active{% endif %}">{% translate "Automation" context "menu" %}</a>
+                    <span class="sidebar-subnav-item is-soon" aria-disabled="true">{% translate "Contacts" context "menu" %}<span class="sidebar-soon">{% translate "Soon" context "menu" %}</span></span>
+                    <a href="{% url 'inbox:feed' workspace_id=request.workspace.id %}?platform=whatsapp" class="sidebar-subnav-item {% if app == 'inbox' and request.GET.platform == 'whatsapp' %}active{% endif %}">{% translate "WhatsApp" context "menu" %}</a>
+                    </div>
+                </div>
+                <a href="{% url 'composer:create_landing' workspace_id=request.workspace.id %}" class="mb-0.5 sidebar-nav-item {% if app == 'composer' and url_name != 'compose' %}active{% endif %}">
+                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                    <span class="sidebar-nav-label">{% translate "Content (AI)" %}</span>
+                </a>
+                {% if analytics_enabled_platforms %}
+                <a href="{% url 'analytics:index' workspace_id=request.workspace.id %}" class="mb-0.5 sidebar-nav-item {% if app == 'analytics' %}active{% endif %}">
+                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    <span class="sidebar-nav-label">{% translate "Reports" %}</span>
                 </a>
                 {% endif %}
+                {% if request.workspace_membership.effective_permissions.manage_social_accounts %}
+                <a href="{% url 'social_accounts:list' workspace_id=request.workspace.id %}" class="mb-0.5 sidebar-nav-item {% if app == 'social_accounts' %}active{% endif %}">
+                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    <span class="sidebar-nav-label">{% translate "Social Accounts" %}</span>
+                </a>
+                {% endif %}
+
+                <div class="sidebar-section-label">{% translate "More" %}</div>
+                <a href="{% url 'calendar:calendar' workspace_id=request.workspace.id %}?mode=list" class="mb-0.5 sidebar-nav-item {% if app == 'calendar' and url_name != 'calendar' or url_name == 'calendar' and mode == 'list' %}active{% endif %}">
+                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+                    <span class="sidebar-nav-label">{% translate "Posts" %}</span>
+                </a>
+                <a href="{% url 'media_library:index' workspace_id=request.workspace.id %}" class="mb-0.5 sidebar-nav-item {% if app == 'media_library' %}active{% endif %}">
+                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                    <span class="sidebar-nav-label">{% translate "Gallery" %}</span>
+                </a>
                 {% if request.workspace_membership.effective_permissions.create_posts %}
-                <a href="{% url 'radar:index' workspace_id=request.workspace.id %}" class="mb-1 sidebar-nav-item {% if request.resolver_match.app_name == 'radar' %}active{% endif %}">
+                <a href="{% url 'radar:index' workspace_id=request.workspace.id %}" class="mb-0.5 sidebar-nav-item {% if app == 'radar' %}active{% endif %}">
                     <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-6"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
                     <span class="sidebar-nav-label">{% translate "Radar" %}</span>
                 </a>
                 {% endif %}
-                <a href="{% url 'inbox:feed' workspace_id=request.workspace.id %}" class="mb-1 sidebar-nav-item {% if request.resolver_match.app_name == 'inbox' %}active{% endif %}">
-                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                    <span class="sidebar-nav-label">{% translate "Social Inbox" %}</span>
-                    {% if sidebar_unread_inbox_count %}<span class="sidebar-badge">{{ sidebar_unread_inbox_count }}</span>{% endif %}
-                </a>
-                {% comment %}
-                The media library had no way in from the sidebar — it was only
-                reachable from inside the composer's picker or by typing the
-                URL, which makes "where are my images?" a question with no
-                answer on screen.
-                {% endcomment %}
-                <a href="{% url 'media_library:index' workspace_id=request.workspace.id %}" class="mb-1 sidebar-nav-item {% if request.resolver_match.app_name == 'media_library' %}active{% endif %}">
-                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                    <span class="sidebar-nav-label">{% translate "Gallery" %}</span>
-                </a>
-                <a href="{% url 'automations:list' workspace_id=request.workspace.id %}" class="mb-1 sidebar-nav-item {% if request.resolver_match.app_name == 'automations' %}active{% endif %}">
-                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                    <span class="sidebar-nav-label">{% translate "Automations" %}</span>
-                </a>
+                {% endwith %}
                 {% endif %}
-
-                <a href="{% url 'notifications:list' %}" class="mb-1 sidebar-nav-item {% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'notifications' %}active{% endif %}">
+                <a href="{% url 'notifications:list' %}" class="mb-0.5 sidebar-nav-item {% if request.resolver_match.app_name == 'notifications' %}active{% endif %}">
                     <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
                     <span class="sidebar-nav-label">{% translate "Notifications" %}</span>
                 </a>
-
-                {% if request.workspace %}
-                {% if analytics_enabled_platforms %}
-                <a href="{% url 'analytics:index' workspace_id=request.workspace.id %}" class="mb-1 sidebar-nav-item {% if request.resolver_match.app_name == 'analytics' %}active{% endif %}">
-                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 12l4-4 4 4 6-6"/></svg>
-                    <span class="sidebar-nav-label">{% translate "Analytics" %}</span>
-                </a>
-                {% endif %}
-                {% endif %}
-
-                {% comment %}
-                  Intelligence — opt-in via env. INTELLIGENCE_ENABLED is False
-                  for self-hosters who haven't configured the integration, so
-                  they see no Stripe / billing surface at all. (Django's {# #}
-                  comment syntax is single-line only; this used to be a {# #}
-                  block spanning three lines, which rendered as literal text
-                  in the sidebar.)
-                {% endcomment %}
                 {% if INTELLIGENCE_ENABLED and request.org %}
-                <a href="{% url 'intelligence:playground' org_id=request.org.id %}"
-                   class="mb-1 sidebar-nav-item {% if request.resolver_match.app_name == 'intelligence' %}active{% endif %}">
+                <a href="{% url 'intelligence:playground' org_id=request.org.id %}" class="mb-0.5 sidebar-nav-item {% if request.resolver_match.app_name == 'intelligence' %}active{% endif %}">
                     <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="16.24 7.76 13.41 13.41 7.76 16.24 10.59 10.59 16.24 7.76"/></svg>
                     <span class="sidebar-nav-label">{% translate "Intelligence" %}</span>
-                </a>
-                {% endif %}
-
-                {% if request.workspace %}
-                {% if sidebar_channels or sidebar_unhealthy_channels %}
-                <!-- Channels -->
-                <div class="group flex items-center justify-between mt-3.5 sidebar-section-label-wrap">
-                    <div class="sidebar-section-label" style="padding-top:0">{% translate "Channels" %}</div>
-                    <a href="{% url 'social_accounts:connect' workspace_id=request.workspace.id %}"
-                       class="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-neutral-500 hover:text-neutral-700 transition-all mr-2 sidebar-nav-label"
-                       title="{% translate 'Connect a channel' %}">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    </a>
-                </div>
-                {% for channel in sidebar_channels %}
-                <a href="{% url 'social_accounts:list' workspace_id=request.workspace.id %}" class="sidebar-nav-item" title="{% if channel.platform == 'youtube' %}YouTube · {% endif %}{{ channel.account_name|default:channel.account_handle }} · {% blocktranslate count counter=channel.queued_post_count|default:0 %}{{ counter }} upcoming post{% plural %}{{ counter }} upcoming posts{% endblocktranslate %}">
-                    <div class="relative flex-shrink-0">
-                        {% if channel.avatar_url %}
-                        <img src="{{ channel.avatar_url }}" alt="" class="w-7 h-7 rounded-full object-cover">
-                        {% else %}
-                        <div class="w-7 h-7 rounded-full bg-neutral-300 flex items-center justify-center text-[11px] font-semibold text-neutral-600">{{ channel.account_name|default:channel.account_handle|make_list|first|upper }}</div>
-                        {% endif %}
-                        <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                            {% if channel.platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=channel.platform size="sm" %}{% endif %}
-                        </div>
-                    </div>
-                    <span class="sidebar-nav-label truncate">{{ channel.account_name|default:channel.account_handle }}</span>
-                    <span class="sidebar-badge">{{ channel.queued_post_count|default:0 }}</span>
-                </a>
-                {% endfor %}
-                {% endif %}
-
-                {% for channel in sidebar_unhealthy_channels %}
-                <div class="sidebar-nav-item flex items-center gap-2">
-                    {# Dimming sits on the avatar, not this wrapper: the badge below may hold the #}
-                    {# official YouTube icon, which the brand guidelines bar from carrying opacity. #}
-                    <div class="relative flex-shrink-0">
-                        {% if channel.avatar_url %}
-                        <img src="{{ channel.avatar_url }}" alt="" class="w-7 h-7 rounded-full object-cover grayscale opacity-60" x-data @error="$el.style.display='none';$el.nextElementSibling.style.display='flex'">
-                        <div class="w-7 h-7 rounded-full bg-neutral-300 opacity-60 items-center justify-center text-[11px] font-semibold text-neutral-600" style="display:none">{{ channel.account_name|default:channel.account_handle|make_list|first|upper }}</div>
-                        {% else %}
-                        <div class="w-7 h-7 rounded-full bg-neutral-300 opacity-60 flex items-center justify-center text-[11px] font-semibold text-neutral-600">{{ channel.account_name|default:channel.account_handle|make_list|first|upper }}</div>
-                        {% endif %}
-                        <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                            {% if channel.platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=channel.platform size="sm" %}{% endif %}
-                        </div>
-                    </div>
-                    <span class="sidebar-nav-label truncate flex-1 text-neutral-500 opacity-60">{{ channel.account_name|default:channel.account_handle }}</span>
-                    <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=request.workspace.id account_id=channel.id %}" class="sidebar-nav-label">
-                        {% csrf_token %}
-                        <button type="submit" class="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold text-brand-900 bg-brand-50 rounded-full hover:bg-brand-100 transition-colors cursor-pointer" title="{% blocktranslate with name=channel.account_name|default:channel.account_handle %}Reconnect {{ name }}{% endblocktranslate %}">
-                            {% translate "Reconnect" %}
-                        </button>
-                    </form>
-                </div>
-                {% endfor %}
-
-                {% comment %}
-                One way in, directly under the channels it adds to. The list of
-                three suggested platforms above it was a second entry point to
-                the same connect page, so the sidebar offered the same action
-                twice under two different headings — and which three appeared
-                depended on what was already connected, which made the section
-                shift around for no reason the user could see.
-
-                Shown whatever is connected: "add another channel" is as valid
-                with five accounts as with none.
-                {% endcomment %}
-                <a href="{% url 'social_accounts:connect' workspace_id=request.workspace.id %}"
-                   class="sidebar-nav-item mt-1">
-                    <div class="w-4 h-4 flex items-center justify-center flex-shrink-0 rounded-lg bg-neutral-100">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    </div>
-                    <span class="sidebar-nav-label">{% translate "More channels" %}</span>
                 </a>
                 {% endif %}
                 {% endblock %}
@@ -846,39 +801,34 @@
 
             {% if show_review_banner %}
             {% include "partials/_review_banner.html" %}
+            {% else %}
+            <div class="sidebar-mascot px-4 pt-2 flex-shrink-0" x-show="!sidebarCollapsed">
+                <img src="{% static 'img/moti/moti-computador.webp' %}" alt="{% translate 'Moti, the Automator robot, working on a laptop' %}" class="w-44 -mb-1 mx-auto">
+            </div>
             {% endif %}
 
             <!-- Organization footer -->
-            <div class="sidebar-org-footer border-t border-neutral-100 relative px-3 py-3" x-data="{ orgMenuOpen: false }"
+            <div class="sidebar-org-footer border-t border-neutral-300 relative px-3 py-3" x-data="{ orgMenuOpen: false }"
                  :class="sidebarCollapsed ? 'px-2 py-2' : 'px-3 py-3'">
                 <!-- Expanded: the org button on one row -->
                 <div class="sidebar-org-expanded flex items-center gap-1" x-show="!sidebarCollapsed">
                     <button @click="orgMenuOpen = !orgMenuOpen"
-                            class="flex-1 flex items-center gap-2 px-1 py-1 rounded-lg hover:bg-black/[0.04] transition-colors cursor-pointer min-w-0">
+                            class="flex-1 flex items-center gap-2.5 px-1 py-1 rounded-lg hover:bg-black/[0.04] transition-colors cursor-pointer min-w-0">
                         {% if user.avatar %}
                         <img src="{{ user.avatar.url }}" alt="" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
                         {% else %}
-                        <div class="w-8 h-8 rounded-full bg-neutral-300 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                        </div>
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 uppercase" style="background: var(--primary);">{% if user.name %}{{ user.name|slice:":2" }}{% else %}{{ user.email|slice:":2" }}{% endif %}</div>
                         {% endif %}
-                        {% comment %}
-                        Two lines, organization over person — unless
-                        there is no organization, in which case the
-                        person moves up rather than sitting under the
-                        words "My Organization", which for a session
-                        with no OrgMembership (an operator account) was
-                        simply false.
-                        {% endcomment %}
                         <div class="flex-1 min-w-0 text-left">
-                            {% if request.org %}
-                            <p class="text-sm font-semibold text-neutral-900 truncate">{{ request.org.name }}</p>
-                            <p class="text-[11px] text-neutral-500 truncate">{% if user.name %}{{ user.name }}{% else %}{{ user.email }}{% endif %}</p>
-                            {% else %}
-                            <p class="text-sm font-semibold text-neutral-900 truncate">{% if user.name %}{{ user.name }}{% else %}{{ user.email }}{% endif %}</p>
-                            {% endif %}
+                            <p class="text-sm font-semibold text-neutral-950 truncate">{% if user.name %}{{ user.name }}{% else %}{{ user.email }}{% endif %}</p>
+                            <p class="text-xs text-neutral-500 truncate">
+                                {% if request.org_membership.org_role == "owner" %}{% translate "Owner" %}{% elif request.org_membership.org_role == "admin" %}{% translate "Admin" %}{% elif request.org_membership %}{% translate "Member" %}{% elif request.org %}{{ request.org.name }}{% endif %}
+                            </p>
                         </div>
                     </button>
+                    <a href="{% url 'accounts:logout' %}" class="w-7 h-7 inline-flex items-center justify-center rounded-md text-neutral-500 hover:text-neutral-950 hover:bg-white flex-shrink-0" title="{% translate 'Log out' %}" aria-label="{% translate 'Log out' %}">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    </a>
                 </div>
                 <!-- Collapsed: stacked vertically -->
                 <div class="sidebar-org-collapsed flex flex-col items-center gap-2" x-show="sidebarCollapsed" x-cloak style="display:none">
@@ -939,41 +889,6 @@
                         </a>
                     </div>
 
-                    {% comment %}
-                    Operator-only, and in the account menu rather than a
-                    workspace's settings: the administrative area spans
-                    every organization, so hanging it off one workspace
-                    would suggest it only shows that one. The views
-                    enforce is_staff on their own — this only decides who
-                    is shown the door.
-
-                    The door, not the room: this leads into
-                    layouts/admin_shell.html, which is this same shell
-                    with the administrative navigation in place of the
-                    product's — the arrangement layouts/settings.html
-                    uses, and what the product owner asked for over the
-                    dark separate shell that preceded it. The product
-                    links an operator cannot use are not there because
-                    the whole of ``sidebar_nav`` is replaced; the rest of
-                    the chrome adapts to a session with no workspace by
-                    the conditions above.
-
-                    ``not impersonation`` because the views refuse an
-                    impersonated session (apps.billing.views._is_billing_staff):
-                    an operator wearing a customer's account would
-                    otherwise be shown a link that 403s, and worse, be
-                    invited to act as an operator from inside a
-                    customer's identity.
-                    {% endcomment %}
-                    {% if user.is_staff and not impersonation %}
-                    <div class="border-t border-neutral-100">
-                        <a href="{% url 'billing_staff:staff_console' %}"
-                           class="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-800 hover:bg-black/[0.04] transition-colors">
-                            <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                            {% translate "Administration" %}
-                        </a>
-                    </div>
-                    {% endif %}
 
                     {% get_current_language as current_language %}
                     <div class="border-t border-neutral-100 px-4 py-2.5">
@@ -1046,19 +961,18 @@
                 <div class="w-9"></div>
             </div>
             <!-- Main content -->
-            <main :class="sidebarCollapsed && 'lg:ml-0'" class="flex-1 p-3 sm:p-4 lg:p-6 overflow-y-auto flex flex-col">
+            {% comment %}
+            Every page sits in the same centred column on the page surface:
+            the white is on the cards inside it, not on <main>. The flow
+            builder canvas is the one exception: it empties both
+            main_padding and content_width to fill the area beside the sidebar.
+            {% endcomment %}
+            <main class="flex-1 {% block main_padding %}px-4 py-5 sm:px-6 lg:px-8 lg:py-8{% endblock %} overflow-y-auto flex flex-col">
+                <div class="w-full {% block content_width %}max-w-7xl{% endblock %} mx-auto flex-1 min-h-0 flex flex-col">
                 {% block page_header %}{% endblock %}
-                {% if messages %}
-                <div class="mb-4 space-y-2">
-                    {% for message in messages %}
-                    <div class="rounded-md p-4 {% if message.tags == 'error' %}bg-red-50 text-red-800{% elif message.tags == 'success' %}bg-green-50 text-green-800{% else %}bg-blue-50 text-blue-800{% endif %}">
-                        {{ message }}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
                 <div class="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden">
                 {% block content %}{% endblock %}
+                </div>
                 </div>
             </main>
         </div>
@@ -1066,6 +980,30 @@
 
     <!-- Onboarding checklist popup (fixed bottom-right) -->
     {% include "onboarding/partials/_checklist.html" %}
+
+    {% comment %}
+    Floating toasts for the whole app: the host listens for `showToast`
+    (HX-Trigger headers and page scripts), and Django messages from a
+    redirect are replayed through it. The text is read from the hidden list
+    below, so no user-visible string lives in the script.
+    {% endcomment %}
+    {% include "approvals/partials/_toasts.html" %}
+    {% if messages %}
+    <div id="django-messages" hidden>
+        {% for message in messages %}<span data-tags="{{ message.tags }}">{{ message }}</span>{% endfor %}
+    </div>
+    <script nonce="{{ request.csp_nonce }}">
+    (function () {
+        var tones = { success: 'success', error: 'error', warning: 'warn', info: 'info', debug: 'info' };
+        document.querySelectorAll('#django-messages [data-tags]').forEach(function (el) {
+            var tone = el.dataset.tags.split(' ').map(function (t) { return tones[t]; }).filter(Boolean)[0] || 'info';
+            document.body.dispatchEvent(new CustomEvent('showToast', {
+                detail: { tone: tone, title: el.textContent.trim(), duration: tone === 'error' ? 7000 : 4000 },
+            }));
+        });
+    })();
+    </script>
+    {% endif %}
 
     {% else %}
     <main class="auth-bg min-h-screen flex items-center justify-center py-12 px-4" style="font-family: var(--font-body);">

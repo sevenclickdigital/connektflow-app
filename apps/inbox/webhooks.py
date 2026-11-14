@@ -1,4 +1,4 @@
-"""Inbound webhook receivers for Facebook/Instagram and YouTube."""
+"""Inbound webhook receivers for Facebook/Instagram, WhatsApp and YouTube."""
 
 import hashlib
 import hmac
@@ -548,6 +548,173 @@ def _create_if_new(
         # exception here would unwind this handler and lose the customer's
         # message, which is far worse than not automating a reply to it.
         on_inbox_message_created(obj)
+
+
+# --- WhatsApp (Cloud API) ---
+
+
+@csrf_exempt
+@ratelimit(key="ip", rate="300/m", block=True)
+@require_http_methods(["GET", "POST"])
+def whatsapp_webhook(request):
+    """WhatsApp Business Account webhook endpoint (field ``messages``).
+
+    Same handshake and ``X-Hub-Signature-256`` scheme as the other Meta
+    endpoints. The rate limit is higher because every customer message and
+    every delivery status of every connected number arrives here, all from
+    Meta's few addresses.
+    """
+    if request.method == "GET":
+        return _meta_verify(request, settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN)
+
+    signature = request.headers.get("X-Hub-Signature-256", "")
+    valid_secrets = {
+        secret for secret in resolve_app_secrets("whatsapp") if _verify_meta_signature(request.body, signature, secret)
+    }
+    if not valid_secrets:
+        logger.warning("WhatsApp webhook: signature did not match any configured app secret.")
+        return HttpResponseForbidden("Invalid signature.")
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError:
+        logger.warning("Invalid JSON in WhatsApp webhook payload.")
+        return HttpResponse("Bad request", status=400)
+
+    _process_whatsapp_events(payload, valid_secrets)
+    return HttpResponse("OK", status=200)
+
+
+def _process_whatsapp_events(payload: dict, valid_secrets: set[str]):
+    """File each customer message in the inbox and record failed deliveries.
+
+    An event is applied only to the connected number it names
+    (``metadata.phone_number_id``), only when that number belongs to the
+    WhatsApp Business Account the entry is for, and only when the org owning
+    the account signed the delivery — the same binding as ``_process_meta_events``.
+    """
+    if payload.get("object") != "whatsapp_business_account":
+        return
+    for entry in payload.get("entry", []):
+        waba_id = str(entry.get("id") or "")
+        for change in entry.get("changes", []):
+            if change.get("field") != "messages":
+                continue
+            value = change.get("value") or {}
+            phone_number_id = str((value.get("metadata") or {}).get("phone_number_id") or "")
+            if not waba_id or not phone_number_id:
+                continue
+            accounts = SocialAccount.objects.filter(
+                platform="whatsapp",
+                account_platform_id=phone_number_id,
+                webhook_target_id=waba_id,
+                connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+            ).select_related("workspace__organization")
+            for account in accounts:
+                if resolve_app_secret("whatsapp", account.workspace.organization_id) not in valid_secrets:
+                    logger.warning("WhatsApp webhook: signature not valid for account %s's org app.", account.id)
+                    continue
+                names = {
+                    str(contact.get("wa_id")): (contact.get("profile") or {}).get("name") or ""
+                    for contact in value.get("contacts", [])
+                    if contact.get("wa_id")
+                }
+                for message in value.get("messages", []):
+                    try:
+                        _upsert_whatsapp_message(account, message, names)
+                    except Exception:
+                        # One malformed message must not cost the rest of the batch.
+                        logger.exception("Could not file a WhatsApp message for account %s", account.id)
+                for status in value.get("statuses", []):
+                    _apply_whatsapp_status(account, status)
+
+
+# What a WhatsApp message carries as text, by type. Media keeps only its caption:
+# the file itself sits behind an authenticated, short-lived Graph URL.
+_WHATSAPP_MEDIA_TYPES = {"image", "video", "audio", "document", "sticker"}
+
+
+def _whatsapp_text(message: dict) -> tuple[str, list[dict], bool]:
+    """Return (body, attachments, is_unsupported) for one webhook message."""
+    kind = message.get("type") or ""
+    if kind == "text":
+        return (message.get("text") or {}).get("body") or "", [], False
+    if kind in _WHATSAPP_MEDIA_TYPES:
+        media = message.get(kind) or {}
+        attachment = {"type": "file" if kind == "document" else kind, "url": "", "media_id": str(media.get("id") or "")}
+        return media.get("caption") or media.get("filename") or "", [attachment], False
+    if kind == "button":
+        return (message.get("button") or {}).get("text") or "", [], False
+    if kind == "interactive":
+        interactive = message.get("interactive") or {}
+        reply = interactive.get("button_reply") or interactive.get("list_reply") or {}
+        return reply.get("title") or "", [], False
+    if kind == "location":
+        location = message.get("location") or {}
+        label = " · ".join(part for part in (location.get("name"), location.get("address")) if part)
+        coords = f"https://maps.google.com/?q={location.get('latitude')},{location.get('longitude')}"
+        return f"{label}\n{coords}".strip(), [], False
+    if kind == "contacts":
+        people = [((c.get("name") or {}).get("formatted_name") or "") for c in message.get("contacts", [])]
+        return ", ".join(p for p in people if p), [], False
+    return "", [], True
+
+
+def _upsert_whatsapp_message(account, message: dict, names: dict[str, str]):
+    """File one incoming WhatsApp message as an inbox DM (deduplicated by wamid)."""
+    from datetime import UTC, datetime
+
+    message_id = str(message.get("id") or "")
+    sender_id = str(message.get("from") or "")
+    # Reactions are a tap on an existing message, not something to answer.
+    if not message_id or not sender_id or message.get("type") == "reaction":
+        return
+    try:
+        stamp = datetime.fromtimestamp(int(message.get("timestamp")), UTC)
+    except (TypeError, ValueError, OverflowError, OSError):
+        stamp = None
+    body, attachments, unsupported = _whatsapp_text(message)
+    extra = {
+        "sender_id": sender_id,
+        "conversation_id": sender_id,
+        "platform_timestamp": stamp.isoformat() if stamp else None,
+        "attachments": attachments,
+        "is_unsupported": unsupported,
+        "whatsapp_type": message.get("type") or "",
+    }
+    replied_to = (message.get("context") or {}).get("id")
+    if replied_to:
+        extra["reply_to_id"] = str(replied_to)
+    _create_if_new(
+        account=account,
+        platform_message_id=message_id,
+        message_type=InboxMessage.MessageType.DM,
+        sender_name=names.get(sender_id) or f"+{sender_id}",
+        sender_id=sender_id,
+        body=body,
+        extra=extra,
+        received_at=stamp,
+    )
+
+
+def _apply_whatsapp_status(account, status: dict):
+    """Mark a reply failed when WhatsApp reports it could not be delivered.
+
+    The send API accepts a message and only later says whether it reached the
+    customer, so without this a reply outside the 24-hour window would show as
+    sent forever.
+    """
+    from providers.whatsapp import send_error_message
+
+    from .models import InboxReply
+
+    if status.get("status") != "failed" or not status.get("id"):
+        return
+    error = (status.get("errors") or [{}])[0] or {}
+    reason = send_error_message(error.get("code")) or str(error.get("title") or error.get("message") or "")
+    InboxReply.objects.filter(
+        platform_reply_id=str(status["id"]),
+        inbox_message__social_account=account,
+    ).update(status=InboxReply.Status.FAILED, send_error=reason[:1000])
 
 
 # --- YouTube PubSubHubbub ---

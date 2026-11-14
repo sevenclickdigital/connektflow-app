@@ -40,9 +40,7 @@ def _staff_user(email):
 
     post_save.disconnect(create_organization_on_user_create, sender=User)
     try:
-        return User.objects.create_user(
-            email=email, password="x", is_staff=True, tos_accepted_at=timezone.now()
-        )
+        return User.objects.create_user(email=email, password="x", is_staff=True, tos_accepted_at=timezone.now())
     finally:
         post_save.connect(create_organization_on_user_create, sender=User)
 
@@ -59,9 +57,7 @@ def other_operator(db):
 
 @pytest.fixture
 def customer(db):
-    user = User.objects.create_user(
-        email="client@example.com", password="x", tos_accepted_at=timezone.now()
-    )
+    user = User.objects.create_user(email="client@example.com", password="x", tos_accepted_at=timezone.now())
     org = Organization.objects.create(name="Client Co")
     workspace = Workspace.objects.create(organization=org, name="Client Social")
     OrgMembership.objects.create(user=user, organization=org, org_role=OrgMembership.OrgRole.OWNER)
@@ -91,9 +87,7 @@ def _session_user_id(client):
 @pytest.mark.django_db
 class TestOnlyStaffStarts:
     def test_customer_is_refused(self, client, customer, db):
-        victim = User.objects.create_user(
-            email="victim@example.com", password="x", tos_accepted_at=timezone.now()
-        )
+        victim = User.objects.create_user(email="victim@example.com", password="x", tos_accepted_at=timezone.now())
         client.force_login(customer)
 
         response = client.post(_start_url(victim))
@@ -165,9 +159,7 @@ class TestNoStaffOnStaff:
         is gated. ``may_impersonate`` is the per-row flag that gates it.
         """
         org = Organization.objects.create(name="Mixed Co")
-        OrgMembership.objects.create(
-            user=other_operator, organization=org, org_role=OrgMembership.OrgRole.OWNER
-        )
+        OrgMembership.objects.create(user=other_operator, organization=org, org_role=OrgMembership.OrgRole.OWNER)
         client.force_login(operator)
 
         response = client.get(STAFF_CONSOLE)
@@ -239,9 +231,7 @@ class TestImpersonatedSessionIdentity:
     def test_takeover_cannot_be_chained(self, client, operator, customer, db):
         """An operator already inside an account must not jump to a second
         one — the original operator would be lost from the session."""
-        second = User.objects.create_user(
-            email="client2@example.com", password="x", tos_accepted_at=timezone.now()
-        )
+        second = User.objects.create_user(email="client2@example.com", password="x", tos_accepted_at=timezone.now())
         client.force_login(operator)
         client.post(_start_url(customer))
 
@@ -441,9 +431,7 @@ class TestImpersonatedSessionHasNoStaffPower:
 
 @pytest.mark.django_db
 class TestPrivilegeIsNotSnapshotted:
-    def test_demoting_the_operator_mid_takeover_removes_their_power(
-        self, client, operator, customer
-    ):
+    def test_demoting_the_operator_mid_takeover_removes_their_power(self, client, operator, customer):
         """``real_user`` re-reads the operator every request, so a demotion
         takes effect on the next one instead of at session expiry."""
         client.force_login(operator)
@@ -456,9 +444,7 @@ class TestPrivilegeIsNotSnapshotted:
 
         assert client.get(STAFF_CONSOLE).status_code == 403
 
-    def test_deactivating_the_operator_mid_takeover_ends_the_session(
-        self, client, operator, customer
-    ):
+    def test_deactivating_the_operator_mid_takeover_ends_the_session(self, client, operator, customer):
         client.force_login(operator)
         client.post(_start_url(customer))
 

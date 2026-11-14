@@ -411,10 +411,9 @@ class TestTheAreaIsIsolatedFromTheProduct:
         assert request.org_membership is None
 
     @pytest.mark.parametrize("name", ADMIN_SCREENS)
-    def test_the_sidebar_has_no_channels_or_workspaces_to_offer(self, client, operator, name):
-        """The two lists base.html renders outside ``sidebar_nav`` (the
-        workspace switcher) and inside it (connected channels) come from
-        apps/common/context_processors.py, which populates neither
+    def test_the_sidebar_has_no_workspaces_to_offer(self, client, operator, name):
+        """The workspace switcher base.html renders outside ``sidebar_nav``
+        comes from apps/common/context_processors.py, which leaves it empty
         without a workspace. Empty is what makes the shared shell safe
         here."""
         client.force_login(operator)
@@ -422,7 +421,6 @@ class TestTheAreaIsIsolatedFromTheProduct:
         context = client.get(reverse(name)).context
 
         assert list(context["sidebar_workspaces"]) == []
-        assert list(context["sidebar_channels"]) == []
 
     @pytest.mark.parametrize("name", ADMIN_SCREENS)
     def test_renders_with_no_workspace_on_the_request(self, client, operator, name):
