@@ -47,7 +47,7 @@ Expects context: workspace, csrf_token.
                         <span class="block text-xs text-neutral-600">{% translate "Unticked, the post stays live there and only its record here is removed." %}</span>
                     </span>
                 </label>
-                <p x-show="networkDelete === 'no'" class="alert-info mb-5 text-sm">{% blocktranslate with network=network_slot|safe %}This post stays live on {{ network }}: it can't be deleted from here. Only its record in Automator is removed.{% endblocktranslate %}</p>
+                <p x-show="networkDelete === 'no'" class="alert-info mb-5 text-sm">{% blocktranslate with network=network_slot|safe %}This post stays live on {{ network }}: it can't be deleted from here. Only its record in Connekt Flow is removed.{% endblocktranslate %}</p>
                 {% endwith %}
                 <p x-show="deleteError" x-text="deleteError" class="alert-error mb-5 text-sm" role="alert"></p>
                 <div class="flex gap-3">

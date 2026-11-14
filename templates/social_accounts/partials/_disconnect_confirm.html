@@ -27,18 +27,18 @@ and platforms left to connect all depend on which accounts are connected.
     {% endcomment %}
     <p class="text-xs text-neutral-600 mb-2">
         {% if account.revokes_platform_grant_on_disconnect %}
-        {% translate "This revokes Automator's access to the account." %}
+        {% translate "This revokes Connekt Flow's access to the account." %}
         {% elif account.keeps_platform_grant_on_disconnect %}
-        {% translate "This removes the account from Automator only. To revoke our access entirely, remove Automator in Facebook › Settings › Apps and Websites." %}
+        {% translate "This removes the account from Connekt Flow only. To revoke our access entirely, remove Connekt Flow in Facebook › Settings › Apps and Websites." %}
         {% else %}
-        {% blocktranslate with platform=account.get_platform_display %}This removes the account from Automator only. To revoke our access entirely, remove Automator in your {{ platform }} settings.{% endblocktranslate %}
+        {% blocktranslate with platform=account.get_platform_display %}This removes the account from Connekt Flow only. To revoke our access entirely, remove Connekt Flow in your {{ platform }} settings.{% endblocktranslate %}
         {% endif %}
     </p>
     <p class="text-xs text-neutral-600 mb-3">
         {% if account.platform == "youtube" %}
         {% translate "YouTube data, analytics and copied comments are deleted immediately, including notification copies. Your original uploads and posts shared with other channels stay." %}
         {% else %}
-        {% translate "Its analytics, inbox messages and posts made only for it are deleted from Automator. Posts shared with other channels stay." %}
+        {% translate "Its analytics, inbox messages and posts made only for it are deleted from Connekt Flow. Posts shared with other channels stay." %}
         {% endif %}
     </p>
     {% endif %}

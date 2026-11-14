@@ -150,12 +150,12 @@ class InboxMessage(models.Model):
         ("reel", pgettext_lazy("inbox message origin", "Reels")),
     ]
 
-    # PlatformPost.format -> origin, for posts published through Automator.
+    # PlatformPost.format -> origin, for posts published through Connekt Flow.
     FORMAT_ORIGINS = {"default": "feed", "story": "story", "reel": "reel"}
 
     @property
     def origin(self) -> str:
-        """Feed, Story or Reels: from the Automator post, else what the platform said."""
+        """Feed, Story or Reels: from the Connekt Flow post, else what the platform said."""
         if self.related_post_id:
             return self.FORMAT_ORIGINS.get(self.related_post.format, "")
         origin = (self.extra or {}).get("post_origin") or ""

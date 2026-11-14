@@ -328,7 +328,7 @@ def test_calculated_note_with_only_the_change_chips():
 
     assert note == (
         "Underlying data comes from Bluesky. The % changes vs. the previous period are calculated by "
-        "Automator, not reported by Bluesky."
+        "Connekt Flow, not reported by Bluesky."
     )
 
 
@@ -347,7 +347,7 @@ def test_calculated_note_names_estimates_and_follower_growth():
 
     assert note == (
         "Underlying data comes from Instagram. The estimates built from per-post counts, follower growth and "
-        "% changes vs. the previous period are calculated by Automator, not reported by Instagram."
+        "% changes vs. the previous period are calculated by Connekt Flow, not reported by Instagram."
     )
 
 

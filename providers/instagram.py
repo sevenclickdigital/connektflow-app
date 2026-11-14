@@ -320,7 +320,7 @@ class InstagramProvider(SocialProvider):
         """Fetch linked Instagram Business accounts for Facebook-login OAuth.
 
         The user authenticates through Facebook, but the connected account in
-        Automator should be the Instagram Business account selected from the
+        Connekt Flow should be the Instagram Business account selected from the
         Facebook Pages the user manages.
         """
         raw_pages = fetch_me_accounts(

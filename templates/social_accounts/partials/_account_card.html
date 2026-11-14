@@ -96,7 +96,7 @@ the same shape whatever state the account is in.
             </div>
             <div class="modal-body">
                 {% if account.needs_reconnect %}
-                <p>{% if account.last_error %}{{ account.last_error }}{% else %}{% translate "Automator can no longer reach this account. Scheduled posts for it will fail and new comments stop arriving until you reconnect." %}{% endif %}</p>
+                <p>{% if account.last_error %}{{ account.last_error }}{% else %}{% translate "Connekt Flow can no longer reach this account. Scheduled posts for it will fail and new comments stop arriving until you reconnect." %}{% endif %}</p>
                 {% elif account.connection_status == "token_expiring" %}
                 <p>{% translate "The access to this account expires soon. Reconnect to renew it before scheduled posts start failing." %}</p>
                 {% endif %}

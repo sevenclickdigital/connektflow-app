@@ -151,7 +151,7 @@ class MastodonProvider(SocialProvider):
             "POST",
             url,
             json={
-                "client_name": "Automator",
+                "client_name": "Connekt Flow",
                 "redirect_uris": redirect_uri,
                 "scopes": " ".join(self.required_scopes),
                 "website": settings.APP_URL,

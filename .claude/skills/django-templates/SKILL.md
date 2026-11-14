@@ -3,7 +3,7 @@ name: django-templates
 description: "Use when creating or editing Django templates, HTMX interactions, Alpine.js components or user-facing strings in templates/JS in this project. Covers partial layout, the HX-Trigger/showToast contract, translation in templates and JavaScript (json_script), Tailwind/token classes, and the template traps that already shipped (multi-line {# #}, missing load i18n, fuzzy catalogue entries, text selection on drag)."
 ---
 
-# Templates, HTMX and Alpine in Automator
+# Templates, HTMX and Alpine in Connekt Flow
 
 ## Layout
 
@@ -40,7 +40,7 @@ description: "Use when creating or editing Django templates, HTMX interactions, 
 
 ## Styling
 
-- Use the tokens and component classes in `theme/static_src/src/styles.css` (`btn-brand`, `btn-*`, `.alert-*`, status pills via `approval_extras.status_badge`). See `docs/style-guide.html`. Colour utilities are `brand-*` / `neutral-*` (token scale, not Tailwind's: primary `brand-700`, border `neutral-300`); `orange-*` / `stone-*` are gone — `docs/automator-redesign.md` §2.
+- Use the tokens and component classes in `theme/static_src/src/styles.css` (`btn-brand`, `btn-*`, `.alert-*`, status pills via `approval_extras.status_badge`). See `docs/style-guide.html`. Colour utilities are `brand-*` / `neutral-*` (token scale, not Tailwind's: primary `brand-700`, border `neutral-300`); `orange-*` / `stone-*` are gone — `docs/brand-and-layout.md` §2.
 - Pages render in a centred column on the page surface (`base.html`, `max-w-7xl`): the white goes on cards (`a-card`), never on the page. A full-height screen (inbox, gallery, a canvas) is a card that fills the column (`flex: 1; height: 100%; overflow: hidden`) — never cancel `<main>`'s padding with negative margins. Component classes are in `@layer components`, so a utility on the same element wins.
 - Component classes are not in a cascade layer, so Tailwind utilities can't override them (`btn-brand px-4` keeps the component padding). Add a variant instead of fighting it.
 - New utility classes need the Tailwind watcher (`npm run start` in `theme/static_src`) or a build to appear.

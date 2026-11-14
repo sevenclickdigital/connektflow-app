@@ -8,7 +8,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Automator{% endblock %}</title>
+    <title>{% block title %}Connekt Flow{% endblock %}</title>
     <link rel="icon" href="{% static 'favicon/favicon.ico' %}" sizes="any">
     <link rel="icon" type="image/svg+xml" href="{% static 'favicon/favicon.svg' %}">
     <link rel="icon" type="image/png" sizes="96x96" href="{% static 'favicon/favicon-96x96.png' %}">
@@ -338,8 +338,8 @@
             included.
             {% endcomment %}
             <div class="flex items-center flex-shrink-0 pt-4 pb-3" :class="sidebarCollapsed ? 'justify-center px-0' : 'px-4'">
-                <img src="{% static 'img/automator-wordmark-dark.webp' %}" alt="Automator" class="h-9 w-auto" x-show="!sidebarCollapsed">
-                <img src="{% static 'img/automator-symbol.webp' %}" alt="Automator" class="w-9 h-9" x-show="sidebarCollapsed" x-cloak>
+                <img src="{% static 'img/connektflow-wordmark-dark.svg' %}" alt="Connekt Flow" class="h-7 w-auto" x-show="!sidebarCollapsed">
+                <img src="{% static 'img/connektflow-symbol.svg' %}" alt="Connekt Flow" class="w-9 h-9 object-contain" x-show="sidebarCollapsed" x-cloak>
             </div>
             <div class="pb-2" :class="sidebarCollapsed ? 'px-2' : 'px-3'">
             {% block sidebar_workspace_switcher %}
@@ -707,7 +707,7 @@
             <nav class="sidebar-nav flex-1 overflow-y-auto py-2 px-3" :class="sidebarCollapsed ? 'px-2' : 'px-3'">
                 {% block sidebar_nav %}
                 {% comment %}
-                Main menu in the Automator layout: single items and collapsible
+                Main menu in the Connekt Flow layout: single items and collapsible
                 groups. A group opens by itself when the current page is one of
                 its children; otherwise it remembers how it was left. Items with
                 no place in the layout yet sit under "More" so no destination is
@@ -799,7 +799,7 @@
             {% include "partials/_review_banner.html" %}
             {% else %}
             <div class="sidebar-mascot px-4 pt-2 flex-shrink-0" x-show="!sidebarCollapsed">
-                <img src="{% static 'img/moti/moti-computador.webp' %}" alt="{% translate 'Moti, the Automator robot, working on a laptop' %}" class="w-44 -mb-1 mx-auto">
+                <img src="{% static 'img/moti/moti-computador.webp' %}" alt="{% translate 'Moti, the Connekt Flow robot, working on a laptop' %}" class="w-44 -mb-1 mx-auto">
             </div>
             {% endif %}
 
@@ -950,7 +950,7 @@
                     {% endif %}
                     <span class="text-sm font-semibold text-neutral-900 truncate max-w-[160px]">{{ current_ws.name }}</span>
                     {% else %}
-                    <img src="{% static 'img/automator-wordmark-dark.webp' %}" alt="Automator" class="h-7 w-auto">
+                    <img src="{% static 'img/connektflow-wordmark-dark.svg' %}" alt="Connekt Flow" class="h-5 w-auto">
                     {% endif %}
                     {% endwith %}
                 </div>

@@ -5111,7 +5111,7 @@ def _fetch_feed_events_for_workspace(feeds):
 
     headers = {
         "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.1",
-        "User-Agent": "Automator RSS Reader/1.0",
+        "User-Agent": "Connekt Flow RSS Reader/1.0",
     }
     all_events = []
     for feed in feeds:
@@ -5215,7 +5215,7 @@ def _validate_rss_url(rss_url):
     """Validate that a URL points to a reachable RSS/Atom XML feed."""
     headers = {
         "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.1",
-        "User-Agent": "Automator RSS Validator/1.0",
+        "User-Agent": "Connekt Flow RSS Validator/1.0",
     }
     response, _final_url = _safe_fetch_feed(rss_url, headers)
     if response is None:

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load i18n static %}
-{% block title %}{% translate "Social Accounts" %} - {{ request.workspace.name }} - Automator{% endblock %}
+{% block title %}{% translate "Social Accounts" %} - {{ request.workspace.name }} - Connekt Flow{% endblock %}
 
 {% block page_header %}
 <div class="page-header">
@@ -93,7 +93,7 @@ data-category and data-name on each card: the whole page is already here.
         </p>
         {% else %}
         <div class="a-card py-8 px-6 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8 text-center sm:text-left">
-            <img src="{% static 'img/moti/moti-sem-conexao.webp' %}" alt="{% translate 'Moti, the Automator robot, puzzled by a broken link' %}" class="h-36 sm:h-40 flex-shrink-0">
+            <img src="{% static 'img/moti/moti-sem-conexao.webp' %}" alt="{% translate 'Moti, the Connekt Flow robot, puzzled by a broken link' %}" class="h-36 sm:h-40 flex-shrink-0">
             <div class="max-w-sm">
                 <h3 class="text-base font-semibold text-neutral-950 mb-2">{% translate "No accounts connected yet" %}</h3>
                 <p class="text-sm text-neutral-600 mb-6">{% translate "Connect your social media accounts to start publishing content, tracking engagement, and managing your inbox." %}</p>

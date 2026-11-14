@@ -91,16 +91,16 @@ PUBLISH_UNCONFIRMED_MESSAGE = (
 # Shown in the request that asked for the deletion, so these are marked for the
 # catalogue here and translated when shown (``friendly_delete_error``) rather
 # than stored. Each one ends with the way out: the post's record
-# can still be removed from Automator alone.
+# can still be removed from Connekt Flow alone.
 DELETE_RECONNECT_MESSAGE = _(
     "The network refused to delete this post with the permissions this account granted. "
-    "Reconnect the account, or untick the option to remove the post only from Automator."
+    "Reconnect the account, or untick the option to remove the post only from Connekt Flow."
 )
 DELETE_TEMPORARY_MESSAGE = _("The network was unavailable, so the post wasn't deleted. Try again in a moment.")
 DELETE_RATE_LIMIT_MESSAGE = _("The network's request limit was reached, so the post wasn't deleted. Try again later.")
 DELETE_REJECTED_MESSAGE = _(
     "The network refused to delete this post. It may already be gone, or be one it doesn't let apps delete, "
-    "such as a post used in an ad. Untick the option to remove it only from Automator."
+    "such as a post used in an ad. Untick the option to remove it only from Connekt Flow."
 )
 DELETE_GENERIC_MESSAGE = _("The post couldn't be deleted from the network. Try again.")
 

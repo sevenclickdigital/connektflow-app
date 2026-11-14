@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Automator — Prova de conceito do layout</title>
+<title>Connekt Flow — Prova de conceito do layout</title>
 
 <!--
-  Proof of concept for the Automator layout.
+  Proof of concept for the Connekt Flow layout.
 
-  - Tokens come from tokens/automator-tokens.css (linked, not copied): edit the
+  - Tokens come from tokens/connektflow-tokens.css (linked, not copied): edit the
     token, reload, see the result.
   - Markup mirrors the app's templates (templates/base.html, social_accounts/list.html,
     social_accounts/partials/_account_card.html, _status_badge.html, calendar/calendar.html,
@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens/automator-tokens.css">
+<link rel="stylesheet" href="tokens/connektflow-tokens.css">
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
 
@@ -282,8 +282,8 @@ table.tbl td.mono { color: var(--text-secondary); }
 
     <!-- Brand -->
     <div class="flex items-center px-3 pt-4 pb-3" :class="sidebarCollapsed && 'justify-center px-0'">
-      <img src="logo/automator-wordmark-dark.svg" alt="Automator" class="w-full h-auto" x-show="!sidebarCollapsed">
-      <img src="logo/automator-symbol.svg" alt="Automator" class="h-9 w-9" x-show="sidebarCollapsed" x-cloak>
+      <img src="logo/connektflow-wordmark-dark.svg" alt="Connekt Flow" class="w-full h-auto" x-show="!sidebarCollapsed">
+      <img src="logo/connektflow-symbol.svg" alt="Connekt Flow" class="h-9 w-9 object-contain" x-show="sidebarCollapsed" x-cloak>
     </div>
 
     <!-- Workspace switcher -->
@@ -790,7 +790,7 @@ table.tbl td.mono { color: var(--text-secondary); }
       <div class="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 class="text-2xl font-semibold tracking-tight text-(--text-primary)">Guia de estilo</h1>
-          <p class="text-sm text-(--text-secondary) mt-1">Tokens e componentes lidos de <code>tokens/automator-tokens.css</code>, com os nomes que o <code>styles.css</code> já usa.</p>
+          <p class="text-sm text-(--text-secondary) mt-1">Tokens e componentes lidos de <code>tokens/connektflow-tokens.css</code>, com os nomes que o <code>styles.css</code> já usa.</p>
         </div>
         <a href="#" class="btn-ghost"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar tokens</a>
       </div>
@@ -1211,14 +1211,14 @@ table.tbl td.mono { color: var(--text-secondary); }
         <h2>Autenticação</h2>
         <div class="auth-bg" style="padding:32px 16px;border-radius:var(--radius-lg);display:flex;justify-content:center">
           <div class="auth-card">
-            <div class="text-center mb-5"><img src="logo/automator-symbol.svg" alt="Automator" class="w-12 h-12 mx-auto mb-3"><div style="font:var(--text-page-title)">Bem-vindo de volta</div></div>
+            <div class="text-center mb-5"><img src="logo/connektflow-symbol.svg" alt="Connekt Flow" class="w-12 h-12 object-contain mx-auto mb-3"><div style="font:var(--text-page-title)">Bem-vindo de volta</div></div>
             <button class="btn-social"><svg width="16" height="16"><use href="#pi-google_business"/></svg>Continuar com Google</button>
             <div class="divider-text" style="margin:24px 0">ou</div>
             <input class="form-input-styled mb-4" placeholder="E-mail">
             <button class="btn-brand w-full">Entrar</button>
           </div>
         </div>
-        <div class="cap">.auth-bg (gradiente violeta) + .auth-card (--radius-xl) · logo: automator-symbol 48px no lugar de brightbean-studio-logo.webp</div>
+        <div class="cap">.auth-bg (gradiente violeta) + .auth-card (--radius-xl) · logo: connektflow-symbol 48px no lugar de brightbean-studio-logo.webp</div>
       </section>
 
       <section class="g-section" id="migration">
@@ -1248,7 +1248,7 @@ table.tbl td.mono { color: var(--text-secondary); }
             <tr><td class="mono">rounded-xl (cards)</td><td class="mono">rounded-xl (= --radius-lg 12px)</td><td>sem mudança visual</td></tr>
             <tr><td class="mono">accent-orange-500</td><td class="mono">.bb-checkbox</td><td>checkboxes soltos</td></tr>
             <tr><td class="mono">#F97316 / rgba(249,115,22,…)</td><td class="mono">var(--primary) / rgba(124,58,237,…)</td><td>63 literais em 27 arquivos (docs/style-guide.html → Known gaps)</td></tr>
-            <tr><td class="mono">img/brightbean-studio-logo.webp</td><td class="mono">img/automator-symbol.svg</td><td>login, signup, accept_terms, oauth2 authorize</td></tr>
+            <tr><td class="mono">img/brightbean-studio-logo.webp</td><td class="mono">img/connektflow-symbol.svg</td><td>login, signup, accept_terms, oauth2 authorize</td></tr>
           </tbody>
         </table>
         <h3 class="sub">O que muda no styles.css além do :root</h3>

@@ -386,7 +386,7 @@ POST_PREVIEW_TTL = 6 * 60 * 60
 def post_preview(message: InboxMessage) -> dict | None:
     """What the entry shows of its post: caption, image, link and origin.
 
-    A post published through Automator is read locally; a tag or mention shows
+    A post published through Connekt Flow is read locally; a tag or mention shows
     what the sync recorded of the other account's post; a comment's post is read
     from the platform once and cached, so the inbox shows it whoever published
     it. ``{"error": True}`` when the platform refused the read.

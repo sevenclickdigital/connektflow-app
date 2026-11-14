@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static i18n allauth account socialaccount %}
 
-{% block title %}{% translate "Log in" %} · Automator{% endblock %}
+{% block title %}{% translate "Log in" %} · Connekt Flow{% endblock %}
 
 {% block auth_content %}
 <style>
@@ -21,14 +21,14 @@
     <!-- Logo & Header -->
     <div class="text-center mb-8">
         <div class="inline-flex items-center justify-center w-12 h-12 mb-4">
-            <img src="{% static 'img/automator-symbol.webp' %}" alt="{% translate 'Automator logo' %}" class="w-12 h-12 object-contain">
+            <img src="{% static 'img/connektflow-symbol.svg' %}" alt="{% translate 'Connekt Flow logo' %}" class="w-12 h-12 object-contain">
         </div>
-        <span class="block text-[11px] font-semibold uppercase tracking-widest mb-2" style="color: #7c3aed;">Automator</span>
+        <span class="block text-[11px] font-semibold uppercase tracking-widest mb-2" style="color: #7c3aed;">Connekt Flow</span>
         <h1 class="text-2xl font-bold tracking-tight" style="color: var(--text-primary);">
             {% translate "Welcome back" %}
         </h1>
         <p class="text-sm mt-1" style="color: var(--text-secondary);">
-            {% translate "Log in to Automator | Social media scheduling &amp; approvals." %}
+            {% translate "Log in to Connekt Flow | Social media scheduling &amp; approvals." %}
         </p>
     </div>
 

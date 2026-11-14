@@ -3,7 +3,7 @@
 {# Plural form, which the heading below also uses: the tab title does not need to #}
 {# agree in number, and "Select Account" as both a plain msgid and a plural's #}
 {# singular is the collision gettext warns about. #}
-{% block title %}{% translate "Select Accounts" %} - Automator{% endblock %}
+{% block title %}{% translate "Select Accounts" %} - Connekt Flow{% endblock %}
 {% block content_width %}max-w-5xl{% endblock %}
 {% block content %}
 <form method="post" action="{% url 'social_accounts:select_account' %}"
@@ -55,11 +55,11 @@
             </div>
         </div>
         {% if platform == "instagram" or platform == "instagram_login" %}
-        <img src="{% static 'img/moti/moti-instagram.webp' %}" alt="{% translate 'Moti, the Automator robot, holding the Instagram logo' %}" class="hidden sm:block h-40 flex-shrink-0 -mb-1">
+        <img src="{% static 'img/moti/moti-instagram.webp' %}" alt="{% translate 'Moti, the Connekt Flow robot, holding the Instagram logo' %}" class="hidden sm:block h-40 flex-shrink-0 -mb-1">
         {% elif platform == "facebook" %}
-        <img src="{% static 'img/moti/moti-facebook.webp' %}" alt="{% translate 'Moti, the Automator robot, holding the Facebook logo' %}" class="hidden sm:block h-40 flex-shrink-0 -mb-1">
+        <img src="{% static 'img/moti/moti-facebook.webp' %}" alt="{% translate 'Moti, the Connekt Flow robot, holding the Facebook logo' %}" class="hidden sm:block h-40 flex-shrink-0 -mb-1">
         {% else %}
-        <img src="{% static 'img/moti/moti-joinha.webp' %}" alt="{% translate 'Moti, the Automator robot, giving a thumbs up' %}" class="hidden sm:block h-36 flex-shrink-0 -mb-1">
+        <img src="{% static 'img/moti/moti-joinha.webp' %}" alt="{% translate 'Moti, the Connekt Flow robot, giving a thumbs up' %}" class="hidden sm:block h-36 flex-shrink-0 -mb-1">
         {% endif %}
     </div>
 

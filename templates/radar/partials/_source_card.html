@@ -102,7 +102,7 @@ An upcoming source (``card.upcoming``, sources.UPCOMING) shows "Soon" and no act
         {% endif %}
         {% if card.connection and can_connect %}
         {% url 'radar:disconnect' workspace_id=card.connection.workspace_id connection_id=card.connection.id as disconnect_url %}
-        {% translate "This removes the App ID and Secret from Automator. Favorites, and the tasks and posts made from offers, stay." as consequence %}
+        {% translate "This removes the App ID and Secret from Connekt Flow. Favorites, and the tasks and posts made from offers, stay." as consequence %}
         {% include "social_accounts/partials/_disconnect_button.html" with action_url=disconnect_url name=card.source.label consequence=consequence return_to=return_to %}
         {% endif %}
     </div>

@@ -410,7 +410,7 @@ Facebook and Instagram share the same Meta app credentials. Threads runs on the 
 
    **Use case: "Manage messaging & content on Instagram"** (Instagram)
    - Add these permissions: `instagram_basic`, `instagram_content_publish`, `instagram_manage_comments`, `instagram_manage_insights`, `instagram_manage_messages`, `pages_manage_metadata`
-   - Optional, to delete published Instagram posts from Automator: add `instagram_manage_contents`, then set `PLATFORM_INSTAGRAM_FACEBOOK_DELETE_SCOPE_ENABLED=true` and reconnect the Instagram accounts so they grant it. Leave the setting off until the app has the permission: Facebook Login refuses the whole dialog over a scope the app was not given. Serving other businesses needs Advanced Access (App Review, with a screencast of a post being deleted)
+   - Optional, to delete published Instagram posts from Connekt Flow: add `instagram_manage_contents`, then set `PLATFORM_INSTAGRAM_FACEBOOK_DELETE_SCOPE_ENABLED=true` and reconnect the Instagram accounts so they grant it. Leave the setting off until the app has the permission: Facebook Login refuses the whole dialog over a scope the app was not given. Serving other businesses needs Advanced Access (App Review, with a screencast of a post being deleted)
 
    **Use case: "Access the Threads API"** (Threads)
    - This use case auto-includes `threads_basic`

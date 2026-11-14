@@ -1,6 +1,6 @@
 {% extends "layouts/settings.html" %}
 {% load i18n %}
-{% block title %}{% translate "Profile - Settings" %} - Automator{% endblock %}
+{% block title %}{% translate "Profile - Settings" %} - Connekt Flow{% endblock %}
 
 {% block page_header %}
 <div class="page-header">
@@ -127,7 +127,7 @@
     <div class="a-card p-6 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0 max-w-2xl">
             <h3 class="text-base font-semibold text-neutral-950 mb-1">{% translate "Delete your account" %}</h3>
-            <p class="text-sm text-neutral-600">{% translate "When you delete your account, you lose access to Automator account services, and we permanently delete your personal data." %}</p>
+            <p class="text-sm text-neutral-600">{% translate "When you delete your account, you lose access to Connekt Flow account services, and we permanently delete your personal data." %}</p>
         </div>
         <button type="button" @click="showDeleteModal = true" class="btn-danger-soft">{% translate "Delete Account" %}</button>
     </div>
@@ -147,7 +147,7 @@
                     <div class="modal-title">{% translate "Delete your account" %}</div>
                 </div>
                 <div class="modal-body">
-                    <p>{% translate "Are you sure you want to delete your account? This action is permanent and cannot be undone. You will lose access to all Automator services, and your personal data will be permanently deleted." %}</p>
+                    <p>{% translate "Are you sure you want to delete your account? This action is permanent and cannot be undone. You will lose access to all Connekt Flow services, and your personal data will be permanently deleted." %}</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-ghost" @click="showDeleteModal = false">{% translate "Cancel" %}</button>

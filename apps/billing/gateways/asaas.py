@@ -150,7 +150,7 @@ class AsaasClient:
                     # deliberately report only method, path and status.
                     "access_token": self.api_key,
                     "Content-Type": "application/json",
-                    "User-Agent": "automator",
+                    "User-Agent": "connektflow",
                 },
             )
         except httpx.HTTPError as exc:

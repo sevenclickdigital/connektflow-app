@@ -1,15 +1,20 @@
-# Automator — Pacote de identidade visual
+# Connekt Flow — Pacote de identidade visual
 
-Fonte de verdade para o novo layout do painel. Tudo o que for aplicado no código sai daqui; quando uma imagem de referência e este README divergirem, vale a ordem de precedência da seção 2.
+> **Nome e logo atuais: Connekt Flow** (`connektflow.com.br`). O produto se chamava Automator.
+>
+> - **Logo:** `logo/` traz a logo como o sistema a usa, com o detalhe em roxo `#7C3AED`. Na arte original da marca esse detalhe é verde `#13E288`; ela não faz parte deste pacote.
+> - **Cores:** o sistema continua na paleta roxa deste pacote (`tokens/connektflow-tokens.css`). A paleta verde da identidade Connekt Flow **não** é usada na interface.
+> - **Mascote:** `mascote/` continua valendo como está; novas artes virão.
+> - **Superado:** o nome "Automator" e a logo antiga que aparecem nas pranchas de `referencias/` e no banner.
 
 ## 1. Estrutura
 
 | Caminho | Conteúdo | Dimensões |
 |---|---|---|
-| `logo/automator-symbol.svg` / `.png` | Só o símbolo "A" em gradiente roxo, fundo transparente | 512×512 / 1024×1024 |
-| `logo/automator-wordmark.svg` / `.png` | Lockup horizontal (símbolo + "Automator"), texto **branco** — só para fundo escuro ou roxo | 1200×320 / 1800×480 |
-| `logo/automator-wordmark-dark.svg` / `.png` | Mesmo lockup, texto `#0F172A` — para fundo claro (sidebar, login, e-mails) | 1200×320 / 1800×480 |
-| `logo/fonte/automator-wordmark-original.svg` | Arquivo original do lockup branco, em resolução maior. Só para gerar novas exportações | 2172×724 |
+| `logo/connektflow-symbol.svg` / `.png` | Só o símbolo, traços `#1D1D1B` e detalhe roxo, fundo transparente — para fundo claro | 190×149 / 380×298 |
+| `logo/connektflow-symbol-light.svg` / `.png` | Mesmo símbolo com traços `#FCFCFC` — para fundo escuro | 190×149 / 380×298 |
+| `logo/connektflow-wordmark-dark.svg` / `.png` | Lockup horizontal (símbolo + "CONNEKTFLOW"), texto `#1D1D1B` e "FLOW" roxo — para fundo claro (sidebar, login, e-mails) | 1039×149 / 2078×298 |
+| `logo/connektflow-wordmark.svg` / `.png` | Mesmo lockup, texto `#FCFCFC` — só para fundo escuro | 1039×149 / 2078×298 |
 | `mascote/poses/` | Poses do Moti (`moti_pose_*`), PNG com alpha, sem fundo | 623–1754 px de largura |
 | `mascote/ilustracoes/` | 2 cenas do Moti (calendário, laptop), **também** PNG com alpha, sem fundo | 1536×1024 |
 | `mascote/redes/` | Moti segurando o logo de cada rede (`moti_rede_<plataforma>`, com a chave da plataforma no código: `instagram`, `google_business`…), PNG com alpha | 1536×1024 |
@@ -18,21 +23,21 @@ Fonte de verdade para o novo layout do painel. Tudo o que for aplicado no códig
 | `referencias/preview_identidade_automator.png`, `preview_pacote_marca.png` | Pranchas de conceito: use só para mascote e variações de logo. **A paleta delas (`#5C22C4`) está superada** | 1536×1024 |
 | `referencias/conceito_inicial_marca_mascote.png` | Arte de conceito (Moti com capa, ícones das redes). Só inspiração | 1536×1024 |
 | `referencias/banner_divulgacao_automator.png` | Banner de divulgação (Moti, logo, slogan e recursos) sobre fundo roxo escuro. Só para material de marketing | 1536×1024 |
-| `tokens/automator-tokens.css` | Bloco `:root` pronto para substituir o de `theme/static_src/src/styles.css` | — |
+| `tokens/connektflow-tokens.css` | Bloco `:root` pronto para substituir o de `theme/static_src/src/styles.css` | — |
 | `prova-de-conceito.html` | Validação visual com os tokens linkados: shell novo (sidebar lilás, conteúdo sem container branco) e três páginas alternáveis pela própria navegação — "Contas Sociais", "Calendário" (tela Publicar) e "Guia de estilo" (componentes + mapa de migração). Abrir direto no browser (usa Tailwind e Alpine por CDN; precisa de internet). Mesma marcação das templates | — |
 
-Os SVGs da logo embutem a arte em bitmap (a origem já era assim). Para impressão ou ampliações grandes, exporte um vetor real da ferramenta de design.
+Os SVGs da logo são vetoriais; os PNGs são exportações em 2× com fundo transparente. `static/img/connektflow-symbol.svg` e `connektflow-wordmark-dark.svg` são cópias idênticas dos arquivos de `logo/`.
 
 ## 2. Precedência
 
-1. `tokens/automator-tokens.css` — valores finais.
+1. `tokens/connektflow-tokens.css` — valores finais.
 2. `referencias/referencia_style_guide.png` — paleta, tipografia, raio, sombra.
 3. Mock "Contas Sociais" — anatomia dos componentes (seção 6).
 4. Demais pranchas — só mascote e logo.
 
 ## 3. Cores
 
-Primária `#7C3AED` (brand-700), hover `#6D28D9`, soft `#F3E8FF`, ring `#C4B5FD`. A escala completa (50–900), os neutros, as semânticas e os destaques estão em `tokens/automator-tokens.css` com os mesmos nomes que o `styles.css` já usa — não há renomeação, só troca de valor.
+Primária `#7C3AED` (brand-700), hover `#6D28D9`, soft `#F3E8FF`, ring `#C4B5FD`. A escala completa (50–900), os neutros, as semânticas e os destaques estão em `tokens/connektflow-tokens.css` com os mesmos nomes que o `styles.css` já usa — não há renomeação, só troca de valor.
 
 Regras:
 - Roxo só em ação e estado ativo: botão primário, aba/chip ativo, link, foco, ícone de destaque. Fundo de página e cards ficam neutros.
@@ -68,7 +73,7 @@ Pesos necessários: 400, 500, 600 (700 opcional para números grandes dos stat c
 ## 6. Componentes (anatomia dos mocks "Contas Sociais" e "Publicar")
 
 - **Shell**: sidebar 240px (60px recolhida) com fundo `--surface-sidebar` e borda direita `--border`; conteúdo direto sobre `--surface-page`, **sem** o container branco com borda e raio que `base.html` põe hoje no `<main>` (`lg:border lg:m-2.5 bg-white lg:rounded-xl`). O que é branco são os cards.
-- **Sidebar, de cima para baixo**: logo (`automator-wordmark-dark`, 32px de altura); seletor de workspace; navegação; mascote (`moti_trabalhando_no_computador`) e, no rodapé, o perfil (avatar + nome + papel). Não há seção de canais: os canais aparecem no filtro "Canais" do calendário e em Contas Sociais.
+- **Sidebar, de cima para baixo**: logo (`connektflow-wordmark-dark`, 28px de altura); seletor de workspace; navegação; mascote (`moti_trabalhando_no_computador`) e, no rodapé, o perfil (avatar + nome + papel). Não há seção de canais: os canais aparecem no filtro "Canais" do calendário e em Contas Sociais.
 - **Navegação** (ordem fixa): Dashboard, Planejamento, Publicações, Calendário, Conteúdo (IA), Relatórios, Contas Sociais, Integrações, Configurações. Item 40px, ícone 18px traço 2, texto 14/500; ativo = fundo `--primary-soft` + texto `--primary` 600; hover `rgba(124,58,237,.06)`.
 - **Cabeçalho de página** (todas as telas, `{% block page_header %}` de `base.html`): à esquerda título 24/600 + descrição 14/400 secundária; à direita a ação primária da tela (`.btn-brand` com `+`) e, quando houver, controles secundários (ex.: alternador Lista/Calendário/Quadro). Exemplos: Contas Sociais → "Conectar nova plataforma"; Publicar → "Nova publicação"; Planejamento → "Nova tarefa"; Relatórios → "Exportar".
 - **Botão primário**: fundo `--primary`, texto branco, 8px, ícone à esquerda. Hover `--primary-hover`.
@@ -92,9 +97,9 @@ Pesos necessários: 400, 500, 600 (700 opcional para números grandes dos stat c
 
 ## 7. Uso da logo
 
-- Sidebar e cabeçalho sobre fundo claro: `automator-wordmark-dark`. Sidebar recolhida e favicon: `automator-symbol`.
-- Login/cadastro/aceite de termos (hoje usam `static/img/brightbean-studio-logo.webp` em 48×48): `automator-symbol`.
-- Fundo roxo ou escuro (e-mail com header roxo, splash, OG image): `automator-wordmark` (texto branco).
+- Sidebar e cabeçalho sobre fundo claro: `connektflow-wordmark-dark`. Sidebar recolhida: `connektflow-symbol`. Favicon e ícones do app: o símbolo em branco sobre quadrado roxo `#7C3AED`.
+- Login/cadastro/aceite de termos (48px de largura): `connektflow-symbol`.
+- Fundo roxo ou escuro (e-mail com header roxo, splash, OG image): `connektflow-wordmark` e `connektflow-symbol-light` (traços brancos).
 - Altura mínima do lockup 24px; do símbolo 16px. Área de respiro = altura do símbolo ÷ 4.
 - Não recolorir o símbolo, não aplicar sombra, não esticar, não girar. Não usar o lockup branco sobre fundo claro.
 
@@ -118,12 +123,12 @@ Regras: tamanho máximo 240px de altura em estados vazios, 120px em cards; sempr
 
 ## 9. Como aplicar no código
 
-1. Substituir o bloco `:root` de `theme/static_src/src/styles.css` pelo de `tokens/automator-tokens.css`. Os nomes são os mesmos; só mudam valores. Remover `--brand-green-*` (sobra da marca antiga) depois de conferir onde é usado.
+1. Substituir o bloco `:root` de `theme/static_src/src/styles.css` pelo de `tokens/connektflow-tokens.css`. Os nomes são os mesmos; só mudam valores. Remover `--brand-green-*` (sobra da marca antiga) depois de conferir onde é usado.
 2. `base.html`: fundo `--surface-sidebar` na `<aside>` (hoje `lg:bg-transparent`); tirar `lg:border lg:border-stone-200 lg:m-2.5 bg-white lg:rounded-xl` do `<main>`; reordenar a navegação conforme a seção 6 e remover a seção de canais. Decidir o destino dos itens que não existem no menu novo (seção 10).
 3. Toda tela preenche `{% block page_header %}` com título + descrição + ação (seção 6). As que hoje põem o título dentro de `{% block content %}` (ex.: `social_accounts/list.html`) sobem para o bloco.
 4. Carregar a Inter (400/500/600) — hoje o projeto não carrega nenhuma webfont. Recomendado: self-host em `static/fonts/` com `@font-face` no `styles.css` e `font-display: swap`, sem chamada externa.
 5. Revisar as classes que apontam para `--font-display` (era serifada): agora é Inter, o peso 600 faz o papel de destaque.
-6. Copiar `logo/automator-symbol.png` e `logo/automator-wordmark-dark.png` (ou os SVGs) para `static/img/` e trocar as 4 referências a `brightbean-studio-logo.webp` (`templates/account/login.html`, `signup.html`, `accept_terms.html`, `templates/oauth2_provider/authorize.html`) e a sidebar. Gerar favicon 16/32/48 e `apple-touch-icon` 180 a partir do símbolo.
+6. Copiar `logo/connektflow-symbol.svg` e `logo/connektflow-wordmark-dark.svg` para `static/img/` e trocar as 4 referências a `brightbean-studio-logo.webp` (`templates/account/login.html`, `signup.html`, `accept_terms.html`, `templates/oauth2_provider/authorize.html`) e a sidebar. Gerar favicon 16/32/48 e `apple-touch-icon` 180 a partir do símbolo.
 7. `calendar.html`: trocar os literais `#F97316`/stone das classes `.cal-day`, `.post-chip`, `.status-*`, `.view-btn`, `.cal-add-btn` pelos tokens (a prova de conceito tem a versão pronta).
 8. Atualizar `docs/style-guide.html` com a nova paleta e os componentes da seção 6; ele é a referência do projeto e precisa bater com o `styles.css`.
 9. Rodar `npm run build` em `theme/static_src` e conferir no browser (runserver 8003) as telas: login, sidebar, Contas Sociais, calendário, compositor, aprovações, inbox, billing.

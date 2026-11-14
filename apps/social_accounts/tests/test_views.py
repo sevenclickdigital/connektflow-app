@@ -550,7 +550,7 @@ class TestOAuthCallbackView:
         mock_provider.get_user_pages.return_value = [
             {
                 "id": "17841400000000000",
-                "name": "Automator",
+                "name": "Connekt Flow",
                 "handle": "brightbean",
                 "access_token": "page-token",
             }
@@ -821,7 +821,7 @@ class TestSelectAccountView:
             "pages": [
                 {
                     "id": "17841400000000000",
-                    "name": "Automator",
+                    "name": "Connekt Flow",
                     "handle": "brightbean",
                     "access_token": "",
                 }
@@ -853,7 +853,7 @@ class TestSelectAccountView:
             "pages": [
                 {
                     "id": "page-1",
-                    "name": "Automator Page",
+                    "name": "Connekt Flow Page",
                     "access_token": "",
                 }
             ],
@@ -1226,26 +1226,26 @@ class TestDisconnectConfirmation:
         text = self._card_text(authenticated_client, workspace, "youtube")
 
         assert "Disconnect <strong>Test Channel</strong>?" in text
-        assert "This revokes Automator's access to the account." in text
+        assert "This revokes Connekt Flow's access to the account." in text
         assert "YouTube data, analytics and copied comments are deleted immediately" in text
         assert "original uploads and posts shared with other channels stay" in text
         assert "Historical data will be preserved" not in text
-        assert "removes the account from Automator only" not in text
+        assert "removes the account from Connekt Flow only" not in text
 
     def test_facebook_says_the_grant_is_kept(self, authenticated_client, workspace):
         text = self._card_text(authenticated_client, workspace, "facebook")
 
-        assert "This removes the account from Automator only." in text
+        assert "This removes the account from Connekt Flow only." in text
         assert "Facebook › Settings › Apps and Websites" in text
-        assert "deleted from Automator" in text
-        assert "revokes Automator's access" not in text
+        assert "deleted from Connekt Flow" in text
+        assert "revokes Connekt Flow's access" not in text
 
     def test_a_platform_without_revocation_does_not_claim_it(self, authenticated_client, workspace):
         text = self._card_text(authenticated_client, workspace, "pinterest")
 
-        assert "remove Automator in your Pinterest settings" in text
-        assert "deleted from Automator" in text
-        assert "revokes Automator's access" not in text
+        assert "remove Connekt Flow in your Pinterest settings" in text
+        assert "deleted from Connekt Flow" in text
+        assert "revokes Connekt Flow's access" not in text
 
 
 @pytest.mark.django_db

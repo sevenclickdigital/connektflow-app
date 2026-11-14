@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% blocktranslate with org=invitation.organization.name %}Join {{ org }}{% endblocktranslate %} - Automator</title>
+    <title>{% blocktranslate with org=invitation.organization.name %}Join {{ org }}{% endblocktranslate %} - Connekt Flow</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -83,11 +83,11 @@
 </head>
 <body>
     <div class="card">
-        <div class="logo">Automator</div>
+        <div class="logo">Connekt Flow</div>
 
         <h1>{% blocktranslate with org=invitation.organization.name %}Join {{ org }}{% endblocktranslate %}</h1>
         <p class="subtitle">
-            {% blocktranslate with inviter=invitation.invited_by.display_name %}{{ inviter }} invited you to join their team on Automator.{% endblocktranslate %}
+            {% blocktranslate with inviter=invitation.invited_by.display_name %}{{ inviter }} invited you to join their team on Connekt Flow.{% endblocktranslate %}
         </p>
 
         {% if error %}

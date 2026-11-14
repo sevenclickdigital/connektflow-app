@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Automator, please report it responsibly.
+If you discover a security vulnerability in Connekt Flow, please report it responsibly.
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 

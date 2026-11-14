@@ -2,7 +2,7 @@
 {% load static i18n %}
 {% load common_extras %}
 
-{% block title %}{% if is_edit %}{% translate "Edit Post" %}{% else %}{% translate "New Post" %}{% endif %} - {{ workspace.name }} - Automator{% endblock %}
+{% block title %}{% if is_edit %}{% translate "Edit Post" %}{% else %}{% translate "New Post" %}{% endif %} - {{ workspace.name }} - Connekt Flow{% endblock %}
 
 
 {% block extra_head %}
@@ -2602,7 +2602,7 @@
                 </label>
                 {% endif %}
                 {% if delete_networks_no %}
-                <p class="alert-info mb-5 text-sm">{% blocktranslate with network=delete_networks_no|join:", " %}This post stays live on {{ network }}: it can't be deleted from here. Only its record in Automator is removed.{% endblocktranslate %}</p>
+                <p class="alert-info mb-5 text-sm">{% blocktranslate with network=delete_networks_no|join:", " %}This post stays live on {{ network }}: it can't be deleted from here. Only its record in Connekt Flow is removed.{% endblocktranslate %}</p>
                 {% endif %}
                 <p x-show="deleteError" x-cloak x-text="deleteError" class="alert-error mb-5 text-sm" role="alert"></p>
                 <div class="flex gap-3">

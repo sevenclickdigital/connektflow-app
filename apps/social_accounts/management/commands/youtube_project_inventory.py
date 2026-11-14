@@ -42,7 +42,7 @@ class Command(BaseCommand):
             safe_source(
                 str(getattr(settings, "GOOGLE_AUTH_CLIENT_ID", "") or ""),
                 "GOOGLE_AUTH_CLIENT_ID",
-                "Automator Google sign-in; not used by the YouTube provider",
+                "Connekt Flow Google sign-in; not used by the YouTube provider",
             ),
         ]
         for org in Organization.objects.all():

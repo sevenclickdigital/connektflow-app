@@ -1,10 +1,10 @@
 {% load account i18n %}{% autoescape off %}{% user_display user as user_display %}{% blocktranslate %}Hi {{ user_display }},{% endblocktranslate %}
 
-{% translate "Please confirm this email address for your Automator account by clicking the link below:" %}
+{% translate "Please confirm this email address for your Connekt Flow account by clicking the link below:" %}
 
 {{ activate_url }}
 
 {% translate "If you didn't add this email, you can safely ignore this message." %}
 
-- {% translate "The Automator team" %}
+- {% translate "The Connekt Flow team" %}
 {% endautoescape %}
