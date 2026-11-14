@@ -256,6 +256,18 @@ def _gated_children(children, scope):
     return _match_scope(children, scope) or list(children)
 
 
+def _network_delete_context(children):
+    """What the composer's delete dialog says about the posts already live:
+    the networks ``children`` can be deleted from, and those they stay on."""
+    networks: dict[str, list[str]] = {"yes": [], "no": []}
+    for child in children:
+        names = networks.get(child.network_delete)
+        label = str(child.social_account.get_platform_display())
+        if names is not None and label not in names:
+            names.append(label)
+    return {"delete_networks_yes": networks["yes"], "delete_networks_no": networks["no"]}
+
+
 def _children_are_locked(children):
     """Whether every one of ``children`` is published or mid-publish.
 
@@ -931,6 +943,10 @@ def compose(request, workspace_id, post_id=None):
             local_dt = prefill_dt.astimezone(tz)
             form.initial["scheduled_date"] = local_dt.strftime("%Y-%m-%d")
             form.initial["scheduled_time"] = local_dt.strftime("%H:%M")
+        elif post.status == PlatformPost.Status.DRAFT:
+            # A draft made outside the calendar (Radar offer, idea, task) has no
+            # day yet; saving it with the panel's default gives it one.
+            form.initial.update(_default_schedule_initial(workspace))
         # One fetch serves selected ids, extras, and the status checks below.
         platform_post_list = list(post.platform_posts.select_related("social_account"))
         selected_formats: dict[str, list[str]] = {}
@@ -984,7 +1000,9 @@ def compose(request, workspace_id, post_id=None):
                     continue
             if parsed_time is not None:
                 initial["scheduled_time"] = parsed_time.strftime("%H:%M")
-        if "scheduled_date" in initial and "scheduled_time" not in initial:
+        if "scheduled_date" not in initial:
+            initial.update(_default_schedule_initial(workspace))
+        elif "scheduled_time" not in initial:
             initial["scheduled_time"] = DEFAULT_POST_TIME.strftime("%H:%M")
         # Resolve ?template=<id> into template_data (supports both built-in int IDs
         # and PostTemplate UUIDs). Seed caption so it pre-fills the form.
@@ -1246,6 +1264,7 @@ def compose(request, workspace_id, post_id=None):
         "can_approve": can_approve,
         "can_view_internal_notes": can_view_internal_notes,
         "is_edit": post is not None,
+        **_network_delete_context(_gated_children(platform_post_list, account_filter) if post else []),
         "post_is_scheduled": post_is_scheduled,
         "post_is_readonly": post_is_readonly,
         "live_siblings": live_siblings,
@@ -1345,6 +1364,18 @@ def _platform_status_map(post):
 
 # The time a post gets when only its day is known (a day of the calendar).
 DEFAULT_POST_TIME = time(12, 0)
+
+
+def _default_schedule_initial(workspace):
+    """The Schedule panel's date and time for a post that has none: today, at noon.
+
+    The draft is saved with the panel's day, so it shows on the calendar instead
+    of having no day at all.
+    """
+    return {
+        "scheduled_date": _workspace_now(workspace).date().isoformat(),
+        "scheduled_time": DEFAULT_POST_TIME.strftime("%H:%M"),
+    }
 
 
 def _combine_schedule_dt(workspace, sched_date, sched_time):
@@ -3456,22 +3487,58 @@ def post_delete(request, workspace_id, post_id):
     ``account`` removes every format the post has on that account. If no
     PlatformPost remains the parent Post is deleted as well. Without either
     parameter the entire Post (and all its PlatformPosts) is deleted.
+
+    ``remote=1`` in the body also deletes the published rows from their
+    network, wherever the network allows it (``PlatformPost.network_delete``),
+    before their records go. A row the network refuses to delete keeps its
+    record and answers 422 with the reason, so nothing vanishes from here
+    while still live there.
     """
+    from providers.exceptions import ProviderError
+
     workspace = _get_workspace(request, workspace_id)
     post = get_object_or_404(Post, id=post_id, workspace=workspace)
 
     platform_post_id = request.GET.get("platform_post") or request.POST.get("platform_post")
     account_id = request.GET.get("account") or request.POST.get("account")
-    if platform_post_id or account_id:
+    scoped = bool(platform_post_id or account_id)
+    rows = post.platform_posts.all()
+    if scoped:
         if (platform_post_id and not _is_valid_uuid(platform_post_id)) or (
             account_id and not _is_valid_uuid(account_id)
         ):
             raise Http404
-        rows = post.platform_posts.filter(
-            **({"id": platform_post_id} if platform_post_id else {"social_account_id": account_id})
-        )
+        rows = rows.filter(**({"id": platform_post_id} if platform_post_id else {"social_account_id": account_id}))
         if not rows.exists():
             raise Http404
+
+    if request.POST.get("remote") == "1":
+        # Taking a post down from a client's profile is an edit of that post.
+        membership = request.workspace_membership
+        perms = membership.effective_permissions if membership else {}
+        if post.author != request.user and not perms.get("edit_others_posts", False):
+            return JsonResponse({"error": _("You don't have permission to delete this post.")}, status=403)
+        from apps.publisher.engine import delete_from_network
+        from apps.social_accounts.error_messages import friendly_delete_error
+
+        for row in rows.select_related("social_account"):
+            if row.network_delete != "yes":
+                continue
+            try:
+                delete_from_network(row)
+            except ProviderError as exc:
+                logger.warning("Could not delete PlatformPost %s from %s: %s", row.id, row.social_account.platform, exc)
+                return JsonResponse(
+                    {"error": friendly_delete_error(exc)},
+                    status=422,
+                    headers={"HX-Trigger": "postChanged"},
+                )
+            logger.info("User %s deleted PlatformPost %s from %s", request.user.pk, row.id, row.social_account.platform)
+            # Gone from the network: the record goes now, so a refusal further
+            # down the loop can't leave it pointing at a post that no longer exists.
+            row.delete()
+
+    if scoped:
         rows.delete()
         # If no platform posts remain, clean up the parent post too.
         if not post.platform_posts.exists():

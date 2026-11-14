@@ -310,6 +310,20 @@ class SocialAccount(models.Model):
             self.ConnectionStatus.ERROR,
         )
 
+    def can_delete_post(self, post_format: str) -> bool:
+        """Whether a published post of ``post_format`` can be deleted from the
+        network through this connection: the platform's API has to allow it and,
+        where deleting is a permission of its own, this deployment has to ask
+        for it and the grant has to carry it."""
+        import providers
+
+        if not providers.can_delete_post(self.platform, post_format):
+            return False
+        scope = providers.delete_post_scope(self.platform)
+        if not scope:
+            return True
+        return settings.PLATFORM_INSTAGRAM_FACEBOOK_DELETE_SCOPE_ENABLED and scope not in (self.missing_scopes or [])
+
     # The permission each Meta chat channel needs for DMs to reach the inbox.
     _MESSAGING_SCOPES = {
         "facebook": "pages_messaging",

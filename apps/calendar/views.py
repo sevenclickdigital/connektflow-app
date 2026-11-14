@@ -1361,6 +1361,7 @@ def post_card(request, workspace_id, platform_post_id):
             "type_label": type_label,
             "display_timezone": _coerce_timezone(request.GET.get("tz"), workspace.effective_timezone),
             "can_clone": perms.get("create_posts", False),
+            "can_delete": pp.post.author_id == request.user.id or perms.get("edit_others_posts", False),
             "can_automate": (
                 perms.get("use_inbox", False) and account.platform in COMMENT_PLATFORMS and not pp.is_story
             ),

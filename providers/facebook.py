@@ -773,8 +773,8 @@ class FacebookProvider(SocialProvider):
     # Comments
     # ------------------------------------------------------------------
 
-    def _comment_target_ids(self, post_id: str) -> list[str]:
-        """Graph nodes to try, in order, when commenting on a stored post id.
+    def _post_node_ids(self, post_id: str) -> list[str]:
+        """Graph nodes to try, in order, when acting on a stored post id.
 
         ``_publish_video`` stores the bare VIDEO id whenever the feed post_id
         lookup fails (video processing is async). Page-scoping that id
@@ -785,9 +785,32 @@ class FacebookProvider(SocialProvider):
         candidates = [self._page_scoped_post_id(post_id), post_id]
         return list(dict.fromkeys(candidate for candidate in candidates if candidate))
 
+    @classmethod
+    def can_delete_post(cls, post_format: str) -> bool:
+        # Feed posts, videos and Reels delete; a Story's delete is refused.
+        return post_format != "story"
+
+    def delete_post(self, access_token: str, post_id: str, *, post_format: str = "default") -> None:
+        first_error: APIError | None = None
+        for target in self._post_node_ids(post_id):
+            try:
+                self._request("DELETE", f"{BASE_URL}/{target}", access_token=access_token)
+            except APIError as exc:
+                # Only "no such object" earns the next candidate; any other
+                # refusal is the answer.
+                if exc.status_code not in (400, 404):
+                    raise
+                first_error = first_error or exc
+                continue
+            return
+        raise first_error or APIError(
+            f"No usable Facebook node to delete for post {post_id}",
+            platform=self.platform_name,
+        )
+
     def publish_comment(self, access_token: str, post_id: str, text: str) -> CommentResult:
         first_error: APIError | None = None
-        for target in self._comment_target_ids(post_id):
+        for target in self._post_node_ids(post_id):
             try:
                 resp = self._request(
                     "POST",
@@ -821,7 +844,7 @@ class FacebookProvider(SocialProvider):
         """
         page_id = str(self.credentials.get("page_id") or "")
 
-        for target in self._comment_target_ids(post_id):
+        for target in self._post_node_ids(post_id):
             try:
                 resp = self._request(
                     "GET",

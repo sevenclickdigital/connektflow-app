@@ -360,6 +360,16 @@ def _provider_and_access_token(account):
     return provider, access_token
 
 
+def delete_from_network(platform_post) -> None:
+    """Delete a published row's post from its network. Raises when refused.
+
+    A Story row that went out as several Stories deletes each of them.
+    """
+    provider, access_token = _provider_and_access_token(platform_post.social_account)
+    for post_id in published_stories(platform_post) or [platform_post.platform_post_id]:
+        provider.delete_post(access_token, post_id, post_format=platform_post.format)
+
+
 class _ProviderUploadCache:
     """The :class:`providers.types.UploadCache` the engine hands to providers.
 

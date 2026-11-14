@@ -989,9 +989,9 @@ any zoom level.
         makes it safe.
         {% endcomment %}
         <div x-show="templatesOpen" x-cloak
-             @keydown.escape.window="templatesOpen = false"
+             @keydown.escape.window="if (!pendingTemplate) templatesOpen = false"
              class="absolute inset-0 z-30 flex items-start justify-center bg-neutral-950/20 p-4 overflow-y-auto">
-            <div @click.outside="templatesOpen = false"
+            <div @click.outside="if (!pendingTemplate && !$event.target.closest('.modal-overlay')) templatesOpen = false"
                  class="w-full max-w-3xl bg-white rounded-2xl border border-neutral-300 shadow-xl my-auto overflow-hidden">
 
                 <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
@@ -1058,6 +1058,33 @@ any zoom level.
                 </div>
             </div>
         </div>
+
+        <template x-teleport="body">
+            <div x-show="pendingTemplate" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="fb-replace-title"
+                 x-transition.opacity @keydown.escape.window="pendingTemplate = null" @click.self="pendingTemplate = null">
+                <div class="modal-panel">
+                    <button type="button" class="modal-close" @click="pendingTemplate = null" aria-label="{% translate 'Close' %}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                    <div class="modal-header">
+                        <div class="modal-icon is-warning">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </div>
+                        <div class="min-w-0">
+                            <div id="fb-replace-title" class="modal-title">{% translate "Replace the flow with this template?" %}</div>
+                            <div class="modal-meta" x-text="pendingTemplate && pendingTemplate.name"></div>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <p>{% translate "Everything on the canvas is replaced by the template's steps." %}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-ghost" @click="pendingTemplate = null">{% translate "Cancel" %}</button>
+                        <button type="button" class="btn-brand" @click="replaceWithTemplate(pendingTemplate.graph)">{% translate "Replace flow" %}</button>
+                    </div>
+                </div>
+            </div>
+        </template>
         {% endif %}
 
         {% if template_mode %}
@@ -1217,7 +1244,6 @@ as data. json_script escapes for a JS context, which is where they land.
 {% translate "The templates could not be loaded." as lbl_templates_failed %}
 {% translate "The templates could not be loaded. Check your connection and try again." as lbl_templates_failed_net %}
 {% translate "That template is empty." as lbl_templates_empty %}
-{% translate "This replaces everything on the canvas. Continue?" as lbl_templates_replace %}
 {{ lbl_when|json_script:"fb-when" }}
 {{ lbl_trigger|json_script:"fb-trigger" }}
 {{ lbl_then_reply|json_script:"fb-then-reply" }}
@@ -1235,7 +1261,6 @@ as data. json_script escapes for a JS context, which is where they land.
 {{ lbl_templates_failed|json_script:"fb-templates-failed" }}
 {{ lbl_templates_failed_net|json_script:"fb-templates-failed-net" }}
 {{ lbl_templates_empty|json_script:"fb-templates-empty" }}
-{{ lbl_templates_replace|json_script:"fb-templates-replace" }}
 <script nonce="{{ request.csp_nonce }}">
 // Reads a label the template translated and left in a json_script tag.
 function fbLabel(id) {
@@ -1276,6 +1301,8 @@ function flowBuilder() {
         //: edited by the operator, not by this workspace, so a list baked in
         //: at page load is stale the moment a template is published.
         templatesOpen: false,
+        // The template picked over authored work, waiting for the replace confirm.
+        pendingTemplate: null,
         templates: [],
         templatesLoading: false,
         templatesError: '',
@@ -2189,8 +2216,15 @@ function flowBuilder() {
                 this.templatesError = fbLabel('templates-empty');
                 return;
             }
-            if (this.hasAuthoredWork() && !window.confirm(fbLabel('templates-replace'))) return;
+            if (this.hasAuthoredWork()) {
+                this.pendingTemplate = item;
+                return;
+            }
+            this.replaceWithTemplate(graph);
+        },
 
+        replaceWithTemplate(graph) {
+            this.pendingTemplate = null;
             // Replaced wholesale rather than mutated in place: Alpine tracks
             // the arrays, and swapping both in one go is what makes the canvas
             // redraw once instead of per node.

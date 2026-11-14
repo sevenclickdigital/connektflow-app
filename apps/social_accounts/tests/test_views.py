@@ -218,6 +218,32 @@ class TestAccountListView:
         response = authenticated_client.get(url)
         assert b"No accounts connected yet" in response.content
 
+    def test_disconnecting_the_last_account_reloads_the_whole_page(self, authenticated_client, workspace):
+        """The card's disconnect posts to the list, not into the card: the counts,
+        the empty state and the platforms left to connect all change with it."""
+        account = SocialAccount.objects.create(
+            workspace=workspace,
+            platform="facebook",
+            account_platform_id="page-1",
+            account_name="My Page",
+        )
+        list_url = reverse("social_accounts:list", kwargs={"workspace_id": workspace.id})
+        disconnect_url = reverse(
+            "social_accounts:disconnect", kwargs={"workspace_id": workspace.id, "account_id": account.id}
+        )
+        page = authenticated_client.get(list_url).content.decode()
+        assert 'data-name="facebook"' not in page
+        assert f'action="{disconnect_url}"' in page
+        assert f'hx-post="{disconnect_url}"' not in page
+
+        response = authenticated_client.post(disconnect_url)
+
+        assert response.status_code == 302
+        assert response.url == list_url
+        page = authenticated_client.get(list_url).content.decode()
+        assert "No accounts connected yet" in page
+        assert 'data-name="facebook"' in page
+
 
 @pytest.mark.django_db
 class TestConnectPlatformView:
@@ -1210,7 +1236,7 @@ class TestDisconnectConfirmation:
         text = self._card_text(authenticated_client, workspace, "facebook")
 
         assert "This removes the account from Automator only." in text
-        assert "Facebook &rsaquo; Settings &rsaquo; Apps and Websites" in text
+        assert "Facebook › Settings › Apps and Websites" in text
         assert "deleted from Automator" in text
         assert "revokes Automator's access" not in text
 

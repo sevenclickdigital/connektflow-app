@@ -598,3 +598,141 @@ def test_purge_logs_drops_only_rows_past_retention(db, account, rule):
 
     assert actions.purge_logs(older_than=timedelta(days=90)) == 1
     assert list(AutomationLog.objects.values_list("pk", flat=True)) == [kept_row.pk]
+
+
+# ---------------------------------------------------------------------------
+# The graph walk
+# ---------------------------------------------------------------------------
+
+
+def _walk(account, rule, graph):
+    """Run ``graph`` for one comment and return the provider calls it made."""
+    from apps.automations.engine import start_run
+
+    sent = []
+
+    class _Provider:
+        @staticmethod
+        def reply_to_message(**kwargs):
+            sent.append(kwargs)
+
+    with (
+        patch("apps.publisher.engine._resolve_publish_credentials", return_value={}),
+        patch("providers.get_provider", return_value=_Provider()),
+    ):
+        run, _count = start_run(make_comment(account), rule, graph, "trigger")
+    return run, sent
+
+
+def test_the_walk_never_sends_the_public_reply_as_a_private_message(account, rule):
+    """The public reply is posted under the comment before the walk starts.
+
+    Sent again by the walk, its text reached the person's inbox as well: a
+    live Facebook run delivered "Sent you a DM!" as a DM ahead of the card.
+    """
+    graph = {
+        "nodes": [
+            {"id": "trigger", "type": "trigger_comment", "data": {}},
+            {"id": "reply", "type": "reply_comment", "data": {"text": "Sent you a DM, {sender_name}!"}},
+            {
+                "id": "dm",
+                "type": "send_dm",
+                "data": {"text": "Here it is", "buttons": [{"type": "url", "label": "Open", "url": "https://x.test"}]},
+            },
+        ],
+        "edges": [{"from": "trigger", "to": "reply"}, {"from": "trigger", "to": "dm"}],
+    }
+
+    run, sent = _walk(account, rule, graph)
+
+    assert [call["text"] for call in sent] == ["Here it is"]
+    assert sent[0]["extra"]["private_reply_to_comment_id"] == "c-1"
+    assert run.is_waiting is False
+    assert set(run.visited_node_ids) == {"trigger", "reply", "dm"}
+
+
+def test_the_walk_continues_past_the_public_reply(account, rule):
+    """A message drawn after the public reply still goes out."""
+    graph = {
+        "nodes": [
+            {"id": "trigger", "type": "trigger_comment", "data": {}},
+            {"id": "reply", "type": "reply_comment", "data": {"text": "Check your DMs"}},
+            {"id": "dm", "type": "send_dm", "data": {"text": "Here it is"}},
+        ],
+        "edges": [{"from": "trigger", "to": "reply"}, {"from": "reply", "to": "dm"}],
+    }
+
+    _run, sent = _walk(account, rule, graph)
+
+    assert [call["text"] for call in sent] == ["Here it is"]
+
+
+def _attach_flow(rule, account, graph):
+    from apps.automations.models import PostAutomation
+    from apps.composer.models import PlatformPost, Post
+
+    post = Post.objects.create(workspace=account.workspace, caption="Comment GUIDE")
+    platform_post = PlatformPost.objects.create(post=post, social_account=account)
+    return PostAutomation.objects.create(
+        workspace=account.workspace, rule=rule, platform_post=platform_post, graph=graph
+    )
+
+
+_BUTTON_FLOW = {
+    "nodes": [
+        {"id": "trigger", "type": "trigger_comment", "data": {}},
+        {"id": "reply", "type": "reply_comment", "data": {"text": "Check your DMs"}},
+        {
+            "id": "dm",
+            "type": "send_dm",
+            "data": {"text": "Here it is", "buttons": [{"type": "url", "label": "Open", "url": "https://x.test"}]},
+        },
+    ],
+    "edges": [{"from": "trigger", "to": "reply"}, {"from": "trigger", "to": "dm"}],
+}
+
+
+def test_a_graph_flow_records_its_private_message_on_the_log(db, account, rule):
+    _attach_flow(rule, account, _BUTTON_FLOW)
+    message = make_comment(account)
+    sent = []
+
+    class _Provider:
+        @staticmethod
+        def reply_to_message(**kwargs):
+            sent.append(kwargs["text"])
+
+    with (
+        patch("apps.inbox.services.send_reply") as public_reply,
+        patch("apps.publisher.engine._resolve_publish_credentials", return_value={}),
+        patch("providers.get_provider", return_value=_Provider()),
+    ):
+        actions.run_for_message(str(message.id))
+
+    assert public_reply.call_count == 1
+    assert sent == ["Here it is"]
+    row = AutomationLog.objects.get(inbox_message=message)
+    assert row.outcome == AutomationLog.Outcome.SENT
+    assert row.public_reply_sent_at is not None
+    assert row.private_reply_sent_at is not None
+
+
+def test_a_graph_flow_whose_private_message_is_refused_says_so(db, account, rule):
+    _attach_flow(rule, account, _BUTTON_FLOW)
+    message = make_comment(account)
+
+    class _Provider:
+        @staticmethod
+        def reply_to_message(**kwargs):
+            raise RuntimeError("refused")
+
+    with (
+        patch("apps.inbox.services.send_reply"),
+        patch("apps.publisher.engine._resolve_publish_credentials", return_value={}),
+        patch("providers.get_provider", return_value=_Provider()),
+    ):
+        actions.run_for_message(str(message.id))
+
+    row = AutomationLog.objects.get(inbox_message=message)
+    assert row.private_reply_sent_at is None
+    assert "no private message" in row.detail

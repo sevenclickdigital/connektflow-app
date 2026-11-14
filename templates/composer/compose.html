@@ -2565,8 +2565,8 @@
 
     {% if is_edit %}
     <!-- Delete Confirmation Modal -->
-    <div x-data="{ showDeleteModal: false, deleting: false }" style="display: contents;"
-         @open-delete-modal.window="showDeleteModal = true">
+    <div x-data="{ showDeleteModal: false, deleting: false, alsoNetwork: true, deleteError: '' }" style="display: contents;"
+         @open-delete-modal.window="showDeleteModal = true; deleteError = ''">
         <div x-show="showDeleteModal" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center"
              @keydown.escape.window="showDeleteModal = false">
             <div class="fixed inset-0 bg-black/30 backdrop-blur-sm" @click="showDeleteModal = false"
@@ -2592,25 +2592,43 @@
                     <h3 class="text-base font-semibold text-neutral-950 mb-1">{% translate "Delete post?" %}</h3>
                     <p class="text-sm text-neutral-600 mb-6">{% translate "This action cannot be undone. The post and all associated data will be permanently removed." %}</p>
                 </div>
+                {% if delete_networks_yes %}
+                <label class="flex items-start gap-2 mb-5 text-sm text-neutral-800 cursor-pointer">
+                    <input type="checkbox" x-model="alsoNetwork" class="mt-0.5 rounded border-neutral-300 text-brand-700">
+                    <span>
+                        <span class="font-semibold">{% blocktranslate with network=delete_networks_yes|join:", " %}Also delete it from {{ network }}{% endblocktranslate %}</span>
+                        <span class="block text-xs text-neutral-600">{% translate "Unticked, the post stays live there and only its record here is removed." %}</span>
+                    </span>
+                </label>
+                {% endif %}
+                {% if delete_networks_no %}
+                <p class="alert-info mb-5 text-sm">{% blocktranslate with network=delete_networks_no|join:", " %}This post stays live on {{ network }}: it can't be deleted from here. Only its record in Automator is removed.{% endblocktranslate %}</p>
+                {% endif %}
+                <p x-show="deleteError" x-cloak x-text="deleteError" class="alert-error mb-5 text-sm" role="alert"></p>
                 <div class="flex gap-3">
                     <button @click="showDeleteModal = false"
                             class="flex-1 px-4 py-2 text-sm font-semibold text-neutral-800 bg-neutral-100 rounded-full hover:bg-neutral-300 transition-colors cursor-pointer">
                         {% translate "Cancel" %}
                     </button>
                     <button :disabled="deleting"
+                            data-failed="{% translate "The post couldn't be deleted. Try again." %}"
                             @click="
                                 deleting = true;
+                                deleteError = '';
                                 const deleteUrl = '{% url 'composer:post_delete' workspace.id post.id %}' + window.location.search;
                                 fetch(deleteUrl, {
                                     method: 'POST',
-                                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-                                }).then(resp => {
+                                    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                                    body: new URLSearchParams({% if delete_networks_yes %}alsoNetwork ? { remote: '1' } : {}{% endif %})
+                                }).then(async (resp) => {
                                     if (resp.ok) {
                                         window.location.href = '{% url "calendar:calendar" workspace_id=workspace.id %}';
-                                    } else {
-                                        deleting = false;
+                                        return;
                                     }
-                                }).catch(() => { deleting = false; });
+                                    deleting = false;
+                                    const data = await resp.json().catch(() => ({}));
+                                    deleteError = data.error || $el.dataset.failed;
+                                }).catch(() => { deleting = false; deleteError = $el.dataset.failed; });
                             "
                             :class="deleting && 'opacity-50 cursor-not-allowed'"
                             class="flex-1 px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-full hover:bg-red-600 transition-colors cursor-pointer">

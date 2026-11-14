@@ -1072,8 +1072,6 @@ def disconnect(request, workspace_id, account_id):
         name = account.account_name or account.account_handle
         purge_connection(account)
         messages.success(request, _("Disconnected %(name)s. YouTube data was deleted immediately.") % {"name": name})
-        if request.headers.get("HX-Request"):
-            return render(request, "social_accounts/partials/_empty.html")
         return _after_disconnect(request, workspace_id)
 
     # Stop the platform pushing us this account's activity before we drop the
@@ -1119,11 +1117,6 @@ def disconnect(request, workspace_id, account_id):
     account.delete()
 
     messages.success(request, _("Disconnected %(name)s.") % {"name": account_name})
-
-    # HTMX partial response
-    if request.headers.get("HX-Request"):
-        return render(request, "social_accounts/partials/_empty.html")
-
     return _after_disconnect(request, workspace_id)
 
 

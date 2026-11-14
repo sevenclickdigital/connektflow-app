@@ -331,7 +331,7 @@ def _run(message_id: str) -> None:
     # one.
     private_sent = False
     if _runs_as_graph(rule):
-        private_sent = _start_graph_run(message, rule, details)
+        private_sent = _start_graph_run(message, rule, row, details)
     else:
         private_sent = _send_private_half(message, rule, row, details)
 
@@ -401,13 +401,13 @@ def _fans_out(graph: dict) -> bool:
     return False
 
 
-def _start_graph_run(message: InboxMessage, rule: AutomationRule, details: list[str]) -> bool:
-    """Hand this comment to the graph executor. Returns whether the walk began.
+def _start_graph_run(message: InboxMessage, rule: AutomationRule, row: AutomationLog, details: list[str]) -> bool:
+    """Hand this comment to the graph executor. Returns whether it messaged the person.
 
     The executor owns delivery from here, including its own failure handling,
-    so this function only reports whether a run started — ``_finalise`` records
-    that the automation acted, and the run's own progress lives on
-    ``FlowRun``.
+    and the run's progress lives on ``FlowRun``. What it sent on this first
+    wake is recorded on the claim row like the v1 DM, so the activity feed
+    says a private message went out — or says that none did.
     """
     account = message.social_account
     if account.platform not in PRIVATE_REPLY_PLATFORMS:
@@ -424,7 +424,7 @@ def _start_graph_run(message: InboxMessage, rule: AutomationRule, details: list[
     from apps.automations.engine import FlowNotStartedError, start_run
 
     try:
-        start_run(message, rule, graph, start)
+        _run, sent = start_run(message, rule, graph, start)
     except FlowNotStartedError as exc:
         # A deliberate refusal, not a failure: its detail already says which of
         # the two reasons applied, and must reach the log verbatim. Caught
@@ -441,6 +441,10 @@ def _start_graph_run(message: InboxMessage, rule: AutomationRule, details: list[
         )
         details.append("The flow could not be started.")
         return False
+    if not sent:
+        details.append("The flow sent no private message.")
+        return False
+    guards.claim_private_reply(row)
     return True
 
 

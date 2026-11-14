@@ -61,6 +61,13 @@ __all__ = [
 #: reading as a flood — the reference flows in this space send two or three.
 MAX_STEPS_PER_WAKE = 5
 
+#: The nodes the walk sends, all of them as private messages. ``reply_comment``
+#: is absent on purpose: it is the public reply, and ``actions`` posts it under
+#: the comment before the walk starts. The walk passes through it like a
+#: trigger — sending it here would put the public reply's text in the person's
+#: inbox as well.
+_DM_NODE_TYPES = frozenset({"send_dm", "send_card"})
+
 #: Marks a postback payload as ours. Meta hands the payload back verbatim, and
 #: the same webhook receives payloads from any other integration the Page has
 #: ever had, plus Meta's own ``GET_STARTED``. A payload that is not ours must be
@@ -197,9 +204,7 @@ def _next_node_id(graph: Any, node_id: str, *, branch: str = "") -> str:
 #: follow us", and the loop that asks someone to follow before continuing. The
 #: other three arrive in the same response, so offering them costs nothing
 #: beyond the branch that reads them.
-PROFILE_CONDITION_FIELDS = frozenset(
-    {"follows_us", "we_follow_them", "is_verified", "follower_count"}
-)
+PROFILE_CONDITION_FIELDS = frozenset({"follows_us", "we_follow_them", "is_verified", "follower_count"})
 
 #: Which Graph field answers each of ours. Named separately so the editor's
 #: vocabulary ("follows_us") does not have to match Meta's, and so a renamed
@@ -479,8 +484,10 @@ def _drain(
     visited: list[str],
     context: dict,
     sent: int,
-) -> None:
+) -> int:
     """Deliver the branches still queued when the run parked on a button.
+
+    Returns the messages sent in this wake, counting those before the park.
 
     A flow that fans out — public reply on one branch, a DM with a button on
     the other — parks the moment the button goes out. Without this, whichever
@@ -509,7 +516,7 @@ def _drain(
             pending.extend(_next_node_ids(graph, node_id, branch=branch))
             continue
 
-        if node_type in {"send_dm", "reply_comment", "send_card"}:
+        if node_type in _DM_NODE_TYPES:
             try:
                 delivered = _send_node(node, run, context)
             except Exception as exc:
@@ -540,10 +547,13 @@ def _drain(
 
     run.visited_node_ids = visited
     run.save(update_fields=["visited_node_ids", "updated_at"])
+    return sent
 
 
-def _advance(run: FlowRun, graph: Any, start_node_id: str, context: dict) -> None:
+def _advance(run: FlowRun, graph: Any, start_node_id: str, context: dict) -> int:
     """Walk from ``start_node_id`` until the flow waits, ends, or hits a bound.
+
+    Returns how many messages went out in this wake.
 
     The loop is the whole module. Each turn: look the node up, do what its type
     says, then decide where to go — and the three bounds in the module docstring
@@ -581,7 +591,7 @@ def _advance(run: FlowRun, graph: Any, start_node_id: str, context: dict) -> Non
             pending.extend(_next_node_ids(graph, node_id, branch=branch))
             continue
 
-        if node_type in {"send_dm", "reply_comment", "send_card"}:
+        if node_type in _DM_NODE_TYPES:
             if sent >= MAX_STEPS_PER_WAKE:
                 logger.info("Flow run %s hit the per-wake message ceiling; parking.", run.pk)
                 break
@@ -613,13 +623,13 @@ def _advance(run: FlowRun, graph: Any, start_node_id: str, context: dict) -> Non
                 run.is_waiting = True
                 run.visited_node_ids = visited
                 run.save(update_fields=["awaiting_node_id", "is_waiting", "visited_node_ids", "updated_at"])
-                _drain(run, graph, nodes, pending, visited, context, sent)
-                return
+                return _drain(run, graph, nodes, pending, visited, context, sent)
 
             pending.extend(_next_node_ids(graph, node_id))
             continue
 
-        # Trigger nodes and anything unrecognised: pass straight through. An
+        # Trigger nodes, the public reply (see ``_DM_NODE_TYPES``) and anything
+        # unrecognised: pass straight through. An
         # unknown type is a node a newer editor drew and this deploy cannot run;
         # skipping it keeps the rest of the flow working rather than stranding
         # the person at a step that will never execute.
@@ -630,6 +640,7 @@ def _advance(run: FlowRun, graph: Any, start_node_id: str, context: dict) -> Non
     run.is_waiting = False
     run.visited_node_ids = visited
     run.save(update_fields=["awaiting_node_id", "is_waiting", "visited_node_ids", "updated_at"])
+    return sent
 
 
 # ---------------------------------------------------------------------------
@@ -672,8 +683,8 @@ NO_SENDER_DETAIL = "The platform did not say who commented, so no reply was sent
 RUN_IN_FLIGHT_DETAIL = "A flow is already running for this person."
 
 
-def start_run(message, rule: AutomationRule, graph: Any, start_node_id: str) -> FlowRun:
-    """Begin a graph walk for one comment. Returns the run.
+def start_run(message, rule: AutomationRule, graph: Any, start_node_id: str) -> tuple[FlowRun, int]:
+    """Begin a graph walk for one comment. Returns the run and the messages it sent.
 
     Raises :class:`FlowNotStartedError` when it declines — its ``detail`` says why,
     and is safe to show the user.
@@ -731,8 +742,7 @@ def start_run(message, rule: AutomationRule, graph: Any, start_node_id: str) -> 
         logger.info("Flow start declined: a run already exists for this sender on account %s", account.pk)
         raise FlowNotStartedError(RUN_IN_FLIGHT_DETAIL) from None
 
-    _advance(run, graph, start_node_id, _context_for(message, run))
-    return run
+    return run, _advance(run, graph, start_node_id, _context_for(message, run))
 
 
 def resume_from_postback(account, sender_id: str, payload: str) -> bool:

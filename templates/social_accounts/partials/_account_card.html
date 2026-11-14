@@ -70,7 +70,7 @@ the same shape whatever state the account is in.
                 <button type="button" @click="menu = false; manage = true" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Manage connection" %}</button>
                 <button type="button" @click="menu = false; confirmDisconnect = true" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer">{% translate "Disconnect" %}</button>
             </div>
-            {% include "social_accounts/partials/_disconnect_confirm.html" with account=account workspace_id=workspace_id swap=True position="right-0 top-full mt-1" %}
+            {% include "social_accounts/partials/_disconnect_confirm.html" with account=account workspace_id=workspace_id position="right-0 top-full mt-1" %}
         </div>
     </div>
 

@@ -83,7 +83,7 @@ class LanguagePickerTests(TestCase):
 
         self.assertIn("Publicar", html)
         self.assertIn("Engajar", html)
-        self.assertNotIn('<span class="sidebar-nav-label">Posts</span>', html)
+        self.assertNotIn('<span class="sidebar-nav-label">Gallery</span>', html)
 
     def test_switching_back_to_english_restores_the_source_strings(self):
         """pt-br is the default, so English is the switch that proves the
@@ -92,7 +92,7 @@ class LanguagePickerTests(TestCase):
 
         html = self.client.get(self._calendar()).content.decode()
 
-        self.assertIn('<span class="sidebar-nav-label">Posts</span>', html)
+        self.assertIn('<span class="sidebar-nav-label">Gallery</span>', html)
         self.assertNotIn("Engajar", html)
 
     def test_switching_language_returns_to_the_page_it_was_changed_from(self):

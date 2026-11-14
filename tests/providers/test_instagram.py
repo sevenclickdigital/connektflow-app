@@ -1393,3 +1393,26 @@ def test_a_reel_left_on_the_grid_does_not_send_share_to_feed():
 
     assert "share_to_feed" not in payload
     assert "thumb_offset" not in payload
+
+
+def test_delete_post_deletes_the_media():
+    provider = InstagramProvider({"client_id": "id", "client_secret": "secret"})
+    provider._request = MagicMock(return_value=MagicMock(json=MagicMock(return_value={"success": True})))
+
+    provider.delete_post("page-token", "17900000000000000", post_format="story")
+
+    provider._request.assert_called_once_with(
+        "DELETE", "https://graph.facebook.com/v25.0/17900000000000000", access_token="page-token"
+    )
+
+
+def test_the_delete_permission_is_requested_only_when_the_deployment_enables_it():
+    scope = "instagram_manage_contents"
+
+    assert scope not in InstagramProvider({"client_id": "id"}).oauth_scopes
+    assert scope in InstagramProvider({"client_id": "id", "delete_scope_enabled": True}).oauth_scopes
+
+
+def test_instagram_login_cannot_delete_a_post():
+    assert InstagramProvider.can_delete_post("default")
+    assert not InstagramLoginProvider.can_delete_post("default")

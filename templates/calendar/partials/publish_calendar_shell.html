@@ -8,6 +8,8 @@ Below it: one filter pill per connected platform, the grid (swapped by HTMX) and
 <div class="flex-1 flex flex-col min-h-0 gap-4"
      x-data="{ ...calendarApp(), showEventForm: false }"
      @calendar-refresh.window="htmx.trigger('#calendar-content', 'refresh')"
+     @open-delete-modal.window="closePostCard()"
+     @post-deleted.window="closePostCard(); if (dayModal.open && dayModal.view === 'card') backToDay(); htmx.trigger(document.body, 'calendarRefresh')"
      hx-trigger="calendarRefresh from:body"
      hx-get="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=calendar&view={{ view_type }}&date={{ target_date|date:'Y-m-d' }}"
      hx-target="#calendar-content"
@@ -54,6 +56,7 @@ Below it: one filter pill per connected platform, the grid (swapped by HTMX) and
         </button>
         <div id="cal-post-card-body" data-loading="{% translate 'Loading…' %}"></div>
     </div>
+    {% include "calendar/partials/_delete_post_modal.html" %}
 
     {% comment %}Pop-up of one day of the month grid: its posts (calendar:day_posts), then a post's
     preview (calendar:post_card) with a way back to the list.{% endcomment %}

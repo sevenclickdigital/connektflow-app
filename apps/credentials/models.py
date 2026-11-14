@@ -146,6 +146,7 @@ def resolve_platform_credentials(platform, org_id):
         # This deployment switch applies to every OAuth entry point, including
         # org-owned apps. Stored credentials cannot override an operator's opt-out.
         credentials["dm_oauth_scopes_enabled"] = settings.PLATFORM_INSTAGRAM_FACEBOOK_DM_SCOPES_ENABLED
+        credentials["delete_scope_enabled"] = settings.PLATFORM_INSTAGRAM_FACEBOOK_DELETE_SCOPE_ENABLED
     return credentials
 
 

@@ -174,9 +174,12 @@ class InstagramProvider(SocialProvider):
     def supported_media_types(self) -> list[MediaType]:
         return [MediaType.JPEG, MediaType.PNG, MediaType.GIF, MediaType.MP4, MediaType.MOV]
 
+    # Deleting media is its own Meta permission, not part of publishing.
+    delete_post_scope = "instagram_manage_contents"
+
     @property
     def required_scopes(self) -> list[str]:
-        return [
+        scopes = [
             "instagram_basic",
             "instagram_content_publish",
             "instagram_manage_comments",
@@ -186,6 +189,12 @@ class InstagramProvider(SocialProvider):
             "pages_read_engagement",
             "pages_manage_metadata",
         ]
+        # Asked for only when the deployment says its Meta app has the
+        # permission: Facebook Login refuses the whole dialog over a scope the
+        # app was never given.
+        if enabled(self.credentials.get("delete_scope_enabled", False)):
+            scopes.append(self.delete_post_scope)
+        return scopes
 
     @property
     def dm_oauth_scopes_enabled(self) -> bool:
@@ -511,6 +520,14 @@ class InstagramProvider(SocialProvider):
             url=f"https://www.instagram.com/p/{media_id}/",
             extra=data,
         )
+
+    @classmethod
+    def can_delete_post(cls, post_format: str) -> bool:
+        # Posts, Reels, Stories and whole carousels; never a post run as an ad.
+        return True
+
+    def delete_post(self, access_token: str, post_id: str, *, post_format: str = "default") -> None:
+        self._request("DELETE", f"{BASE_URL}/{post_id}", access_token=access_token)
 
     # ------------------------------------------------------------------
     # Comments

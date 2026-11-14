@@ -720,9 +720,9 @@
                 </a>
                 {% if request.workspace %}
                 {% with app=request.resolver_match.app_name url_name=request.resolver_match.url_name %}
-                <div class="mb-0.5" x-data="{ open: {% if url_name == 'calendar' and app == 'calendar' and mode != 'list' or app == 'composer' and url_name == 'compose' or app == 'tasks' %}true{% else %}localStorage.getItem('nav:publish') === 'open'{% endif %} }"
+                <div class="mb-0.5" x-data="{ open: {% if app == 'calendar' or app == 'composer' and url_name == 'compose' or app == 'tasks' %}true{% else %}localStorage.getItem('nav:publish') === 'open'{% endif %} }"
                      x-effect="localStorage.setItem('nav:publish', open ? 'open' : 'closed')">
-                    <button type="button" class="sidebar-nav-item sidebar-nav-group-toggle {% if url_name == 'calendar' and app == 'calendar' and mode != 'list' or app == 'composer' and url_name == 'compose' or app == 'tasks' %}has-active{% endif %}"
+                    <button type="button" class="sidebar-nav-item sidebar-nav-group-toggle {% if app == 'calendar' or app == 'composer' and url_name == 'compose' or app == 'tasks' %}has-active{% endif %}"
                             :aria-expanded="open.toString()"
                             @click="if (sidebarCollapsed) { sidebarCollapsed = false; open = true } else { open = !open }">
                         <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M12 14v4M10 16l2 2 2-2"/></svg>
@@ -731,7 +731,7 @@
                     </button>
                     <div class="sidebar-subnav" x-show="open" x-cloak>
                     {% comment %}No "new post" entry here: a post starts from a day of the calendar, so it always has a date.{% endcomment %}
-                    <a href="{% url 'calendar:calendar' workspace_id=request.workspace.id %}?mode=calendar" class="sidebar-subnav-item {% if url_name == 'calendar' and app == 'calendar' and mode != 'list' or app == 'composer' and url_name == 'compose' %}active{% endif %}">{% translate "Calendar" context "menu" %}</a>
+                    <a href="{% url 'calendar:calendar' workspace_id=request.workspace.id %}?mode=calendar" class="sidebar-subnav-item {% if app == 'calendar' or app == 'composer' and url_name == 'compose' %}active{% endif %}">{% translate "Calendar" context "menu" %}</a>
                     {% if request.workspace_membership and request.workspace_membership.workspace_role != "client" %}
                     <a href="{% url 'tasks:board' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'tasks' %}active{% endif %}">{% translate "Task management" context "menu" %}</a>
                     {% endif %}
@@ -771,10 +771,6 @@
                 {% endif %}
 
                 <div class="sidebar-section-label">{% translate "More" %}</div>
-                <a href="{% url 'calendar:calendar' workspace_id=request.workspace.id %}?mode=list" class="mb-0.5 sidebar-nav-item {% if app == 'calendar' and url_name != 'calendar' or url_name == 'calendar' and mode == 'list' %}active{% endif %}">
-                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
-                    <span class="sidebar-nav-label">{% translate "Posts" %}</span>
-                </a>
                 <a href="{% url 'media_library:index' workspace_id=request.workspace.id %}" class="mb-0.5 sidebar-nav-item {% if app == 'media_library' %}active{% endif %}">
                     <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                     <span class="sidebar-nav-label">{% translate "Gallery" %}</span>

@@ -636,6 +636,19 @@ class PlatformPost(models.Model):
     def is_story(self):
         return self.format == self.Format.STORY
 
+    @property
+    def network_delete(self) -> str:
+        """What deleting this row can do about the post on the network.
+
+        "" when nothing of it is live, "yes" when the network deletes it
+        through our connection, "no" when it stays live whatever we do.
+        """
+        if self.status != self.Status.PUBLISHED:
+            return ""
+        if self.platform_post_id and self.social_account.can_delete_post(self.format):
+            return "yes"
+        return "no"
+
     # Recommended aspect ratio of the art per format, and per platform for the
     # ordinary post. Story, Reels, profile photo and the Instagram feed match the
     # composer's crop rules (compose.html ratioRule); the rest are the platforms'

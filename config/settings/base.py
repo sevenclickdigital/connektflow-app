@@ -15,6 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 def gettext_noop(s):
     return s
 
+
 env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, []),
@@ -547,6 +548,9 @@ if SENTRY_DSN:
 
 # Platform credentials env vars (cloud version)
 PLATFORM_INSTAGRAM_FACEBOOK_DM_SCOPES_ENABLED = env.bool("PLATFORM_INSTAGRAM_FACEBOOK_DM_SCOPES_ENABLED", default=True)
+PLATFORM_INSTAGRAM_FACEBOOK_DELETE_SCOPE_ENABLED = env.bool(
+    "PLATFORM_INSTAGRAM_FACEBOOK_DELETE_SCOPE_ENABLED", default=False
+)
 _META_CREDENTIALS = {
     "app_id": env("PLATFORM_FACEBOOK_APP_ID", default=""),
     "app_secret": env("PLATFORM_FACEBOOK_APP_SECRET", default=""),

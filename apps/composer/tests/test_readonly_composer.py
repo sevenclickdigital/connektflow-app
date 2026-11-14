@@ -132,8 +132,8 @@ class ActionBarGatingTests(ReadonlyComposerTestsBase):
         self.assertNotIn(SAVE_DRAFT_BTN, body)
 
     def test_readonly_post_keeps_delete(self):
-        # The composer is the only place a published post can be deleted, so the
-        # button must survive the read-only gating.
+        # A published post can still be deleted, so the button must survive the
+        # read-only gating.
         body = self._compose(self._make_post(PlatformPost.Status.PUBLISHED)).content.decode("utf-8")
         self.assertIn(DELETE_BTN, body)
 

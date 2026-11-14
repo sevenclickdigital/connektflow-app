@@ -114,6 +114,17 @@ def max_images_per_post(platform: str) -> int | None:
     return getattr(provider_cls, "max_images_per_post", None)
 
 
+def can_delete_post(platform: str, post_format: str) -> bool:
+    """Whether ``platform``'s API deletes a published post of ``post_format``."""
+    provider_cls = PROVIDER_REGISTRY.get(platform)
+    return bool(provider_cls and provider_cls.can_delete_post(post_format))
+
+
+def delete_post_scope(platform: str) -> str:
+    """The extra OAuth scope ``platform`` needs to delete a post, or ""."""
+    return getattr(PROVIDER_REGISTRY.get(platform), "delete_post_scope", "")
+
+
 def offers_account_picker(platform: str) -> bool:
     """Whether connecting ``platform`` must let the author pick a target.
 

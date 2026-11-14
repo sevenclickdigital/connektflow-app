@@ -341,6 +341,27 @@ class SocialProvider(HttpProvider):
         """
         raise NotImplementedError(f"{self.platform_name} does not report publish status")
 
+    # The OAuth scope deleting a published post needs on top of publishing it,
+    # or "" when the publishing scopes already cover it.
+    delete_post_scope: str = ""
+
+    @classmethod
+    def can_delete_post(cls, post_format: str) -> bool:
+        """Whether the platform's API deletes a published post of ``post_format``.
+
+        ``post_format`` is a ``PlatformPost.Format`` value. A classmethod so the
+        interface can ask before any credentials are resolved.
+        """
+        return False
+
+    def delete_post(self, access_token: str, post_id: str, *, post_format: str = "default") -> None:
+        """Delete a published post from the platform. Raises when it refuses.
+
+        ``post_id`` is what ``publish_post`` returned as ``platform_post_id``.
+        Only implemented where ``can_delete_post`` answers True.
+        """
+        raise NotImplementedError(f"{self.platform_name} does not delete published posts")
+
     def publish_comment(self, access_token: str, post_id: str, text: str) -> CommentResult:
         """Post a comment on an existing post (e.g. first comment)."""
         raise NotImplementedError(f"{self.platform_name} does not support comments")

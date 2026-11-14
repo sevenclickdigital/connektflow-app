@@ -10,6 +10,9 @@ comment fails.
 from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
 
+from django.utils.translation import gettext
+from django.utils.translation import gettext_noop as _
+
 from providers.exceptions import (
     APIError,
     OAuthError,
@@ -84,6 +87,22 @@ PUBLISH_UNCONFIRMED_MESSAGE = (
     "This post was uploaded, but we couldn't confirm whether the platform published it. "
     "Check the account before publishing again — it may already be live."
 )
+
+# Shown in the request that asked for the deletion, so these are marked for the
+# catalogue here and translated when shown (``friendly_delete_error``) rather
+# than stored. Each one ends with the way out: the post's record
+# can still be removed from Automator alone.
+DELETE_RECONNECT_MESSAGE = _(
+    "The network refused to delete this post with the permissions this account granted. "
+    "Reconnect the account, or untick the option to remove the post only from Automator."
+)
+DELETE_TEMPORARY_MESSAGE = _("The network was unavailable, so the post wasn't deleted. Try again in a moment.")
+DELETE_RATE_LIMIT_MESSAGE = _("The network's request limit was reached, so the post wasn't deleted. Try again later.")
+DELETE_REJECTED_MESSAGE = _(
+    "The network refused to delete this post. It may already be gone, or be one it doesn't let apps delete, "
+    "such as a post used in an ad. Untick the option to remove it only from Automator."
+)
+DELETE_GENERIC_MESSAGE = _("The post couldn't be deleted from the network. Try again.")
 
 # A failed webhook subscription costs real-time delivery, not delivery itself:
 # the inbox still polls comments every few minutes. The copy says so, so nobody
@@ -398,6 +417,24 @@ def friendly_publish_error(exc: Exception) -> str:
             _REJECTED: PUBLISH_REJECTED_MESSAGE,
         },
         PUBLISH_GENERIC_MESSAGE,
+    )
+
+
+def friendly_delete_error(exc: Exception) -> str:
+    """Map a refused deletion of a published post to a message safe to show,
+    in the language of the request."""
+    return gettext(
+        _friendly(
+            exc,
+            {
+                _RECONNECT: DELETE_RECONNECT_MESSAGE,
+                _RATE_LIMITED: DELETE_RATE_LIMIT_MESSAGE,
+                _QUOTA_EXHAUSTED: DELETE_RATE_LIMIT_MESSAGE,
+                _UNAVAILABLE: DELETE_TEMPORARY_MESSAGE,
+                _REJECTED: DELETE_REJECTED_MESSAGE,
+            },
+            DELETE_GENERIC_MESSAGE,
+        )
     )
 
 

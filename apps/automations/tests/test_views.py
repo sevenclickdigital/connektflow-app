@@ -452,13 +452,15 @@ def test_rule_toggle_off_always_allowed(client, workspace, org_owner, user):
 
 
 @pytest.mark.django_db
-def test_rule_test_sends_nothing(client, workspace, account, org_owner, user):
+def test_rule_test_sends_nothing(client, workspace, account, org_owner, user, settings):
     """The dry run must create no reply and no log row.
 
     Asserted on the tables rather than on the response, because the thing that
     matters is not what the panel says — it is that a customer did not receive a
     comment or a DM from a preview.
     """
+    # The asserted copy is translated; the project default is pt-br.
+    settings.LANGUAGE_CODE = "en-us"
     _member(workspace, user, WorkspaceMembership.WorkspaceRole.OWNER)
     client.force_login(user)
     _comment(workspace, account, "what is the price?", platform_message_id="pm-1")
@@ -483,13 +485,15 @@ def test_rule_test_sends_nothing(client, workspace, account, org_owner, user):
 
 
 @pytest.mark.django_db
-def test_rule_test_warns_when_rule_would_not_run(client, workspace, account, org_owner, user):
+def test_rule_test_warns_when_rule_would_not_run(client, workspace, account, org_owner, user, settings):
     """``matches_history`` skips the platform and "can act" gates by design.
 
     So a match count on its own reads as "it works". The view has to raise both
     conditions separately or the preview misleads: here the rule matches a
     comment, is off, and has nothing to send.
     """
+    # The asserted copy is translated; the project default is pt-br.
+    settings.LANGUAGE_CODE = "en-us"
     _member(workspace, user, WorkspaceMembership.WorkspaceRole.OWNER)
     client.force_login(user)
     _comment(workspace, account, "price please")
@@ -613,12 +617,14 @@ def test_log_list_denied_without_use_inbox(client, workspace, org_owner, user):
 
 
 @pytest.mark.django_db
-def test_log_list_survives_rule_deletion(client, workspace, account, org_owner, user):
+def test_log_list_survives_rule_deletion(client, workspace, account, org_owner, user, settings):
     """``AutomationLog.rule`` is SET_NULL — the history outlives the rule.
 
     Deleting a rule must not erase the record of what it already posted in
     public, which is also what the delete confirmation in the UI promises.
     """
+    # The asserted copy is translated; the project default is pt-br.
+    settings.LANGUAGE_CODE = "en-us"
     _member(workspace, user, WorkspaceMembership.WorkspaceRole.OWNER)
     client.force_login(user)
     rule = AutomationRule.objects.create(

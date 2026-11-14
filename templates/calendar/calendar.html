@@ -244,6 +244,8 @@
         color: var(--text-primary); font-weight: 500; cursor: pointer; transition: background var(--dur-fast) ease;
     }
     .cal-card-action:hover { background: var(--surface-2); }
+    .cal-card-action.is-danger { color: var(--error-700); }
+    .cal-card-action.is-danger:hover { background: var(--error-50); }
     .cal-card-action.is-primary { background: var(--primary); color: #fff; font-weight: 600; margin: 0 0 4px; width: 100%; padding: 8px 10px; }
     .cal-card-action.is-primary:hover { background: var(--brand-800); }
     .cal-post-card-side { border-top: 1px solid #E5E7EB; }
@@ -670,10 +672,9 @@ function bulkBar() {
                     return;
                 }
                 store.clear();
-                // Refresh whichever view is mounted: the calendar shell reloads
-                // its grid on `calendarRefresh` (from body); publishList reloads
-                // the active tab on the `post-deleted` window event.
-                if (window.htmx) htmx.trigger(document.body, 'calendarRefresh');
+                // Whichever view is mounted refreshes on the `post-deleted`
+                // window event: the calendar shell reloads its grid, publishList
+                // the active tab, the board its columns.
                 window.dispatchEvent(new CustomEvent('post-deleted'));
             }).catch(() => { this.busy = false; });
         },

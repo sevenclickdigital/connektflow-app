@@ -127,6 +127,26 @@ class ProposedPublishAtSaveTests(TestCase):
         )
         self.assertEqual(resp.context["form"].initial["scheduled_time"], "12:00")
 
+    def test_a_new_post_without_a_day_starts_today_at_noon(self):
+        resp = self.client.get(reverse("composer:compose", kwargs={"workspace_id": self.ws.id}))
+
+        initial = resp.context["form"].initial
+        self.assertEqual(initial["scheduled_date"], timezone.now().astimezone(BERLIN).date().isoformat())
+        self.assertEqual(initial["scheduled_time"], "12:00")
+
+    def test_a_draft_made_without_a_day_opens_today_at_noon(self):
+        # As the Radar's "Schedule post" leaves it: a draft with no time at all.
+        post = Post.objects.create(workspace=self.ws, author=self.user, caption="offer")
+        PlatformPost.objects.create(post=post, social_account=self.sa, status="draft")
+
+        resp = self.client.get(
+            reverse("composer:compose_edit", kwargs={"workspace_id": self.ws.id, "post_id": post.id})
+        )
+
+        initial = resp.context["form"].initial
+        self.assertEqual(initial["scheduled_date"], timezone.now().astimezone(BERLIN).date().isoformat())
+        self.assertEqual(initial["scheduled_time"], "12:00")
+
     def test_save_draft_with_a_day_but_no_time_proposes_noon(self):
         self.client.post(
             self.save_url,
