@@ -39,6 +39,27 @@ extend base.html. Meta App Review requires this URL to resolve anonymously.
   </header>
 
   <main class="wrap">
+    {% if deletion_code %}
+    <div class="nota">
+      {% if deletion_request %}
+      <strong>Pedido {{ deletion_request.confirmation_code }}: concluído.</strong>
+      Recebemos o pedido de exclusão em {{ deletion_request.created_at|date:"d/m/Y" }} e ele foi
+      atendido na mesma hora.
+      {% if deletion_request.accounts_removed %}
+      O perfil conectado foi removido do {{ app_name }}, junto com o token de acesso, as
+      publicações feitas só nele, as mensagens e comentários armazenados e as métricas coletadas.
+      {% else %}
+      Não havia nenhum perfil conectado ao {{ app_name }} para essa conta, então não restou nada
+      a excluir.
+      {% endif %}
+      {% else %}
+      <strong>Não encontramos um pedido com o código {{ deletion_code }}.</strong>
+      Confira o código informado pela rede social ou escreva para
+      <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.
+      {% endif %}
+    </div>
+    {% endif %}
+
     <p>
       Você pode remover seus dados do {{ app_name }} a qualquer momento. Há três caminhos,
       conforme o que você precisa excluir.

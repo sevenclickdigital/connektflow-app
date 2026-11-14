@@ -454,6 +454,13 @@ Facebook and Instagram share the same Meta app credentials. Threads runs on the 
    PLATFORM_THREADS_APP_ID=your-threads-app-id
    PLATFORM_THREADS_APP_SECRET=your-threads-app-secret
    ```
+   On the same Settings page, fill in the two callbacks Threads sends about a person's grant. Both are signed with the Threads App Secret:
+   ```
+   Uninstall Callback URL: {APP_URL}/webhooks/threads/deauthorize/
+   Delete Callback URL:    {APP_URL}/webhooks/threads/data-deletion/
+   ```
+   The first marks that person's connection as needing a reconnect; the second deletes it with its stored data and answers with a confirmation code the person can check at `{APP_URL}/data-deletion/?code=…`.
+
    These have no fallback: until both are set, Threads shows as **Not Configured** on the connect page. Sending the Facebook App ID to Threads fails with error `4476002`.
 
 ### Meta App Review: permissions and features to request

@@ -690,6 +690,28 @@ class SocialAccount(models.Model):
         return icons.get(self.platform, self.platform[:2])
 
 
+class DataDeletionRequest(models.Model):
+    """A platform's "delete this person's data" callback, as it was answered.
+
+    The platform shows the person a confirmation code and a link; this row is
+    what that link reads. It records that the request came and what was
+    removed, and deliberately not who asked: keeping the platform user id
+    would be keeping the data we were told to delete.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    confirmation_code = models.CharField(max_length=32, unique=True)
+    platform = models.CharField(max_length=30, choices=PlatformCredential.Platform.choices)
+    accounts_removed = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "social_accounts_data_deletion_request"
+
+    def __str__(self):
+        return f"{self.platform} {self.confirmation_code}"
+
+
 class MastodonAppRegistration(models.Model):
     """Stores per-instance OAuth app registrations for Mastodon federation."""
 

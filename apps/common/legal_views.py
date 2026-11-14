@@ -25,8 +25,7 @@ def _context():
         # contact when one is configured.
         # Keep in step with the Meta app's "Email de contato": App Review
         # compares the two, and a mismatch reads as an inconsistent policy.
-        "contact_email": getattr(settings, "LEGAL_CONTACT_EMAIL", "")
-        or "robison@sevenclick.com.br",
+        "contact_email": getattr(settings, "LEGAL_CONTACT_EMAIL", "") or "robison@sevenclick.com.br",
     }
 
 
@@ -36,8 +35,19 @@ def privacy_policy(request):
 
 
 def data_deletion(request):
-    """Public data-deletion instructions, required by Meta App Review."""
-    return render(request, "legal/data_deletion.html", _context())
+    """Public data-deletion instructions, required by Meta App Review.
+
+    With ``?code=``, also the status of a deletion a platform asked for on
+    someone's behalf: the link its data-deletion callback hands back.
+    """
+    context = _context()
+    code = request.GET.get("code", "").strip()
+    if code:
+        from apps.social_accounts.models import DataDeletionRequest
+
+        context["deletion_code"] = code
+        context["deletion_request"] = DataDeletionRequest.objects.filter(confirmation_code=code).first()
+    return render(request, "legal/data_deletion.html", context)
 
 
 def terms_of_service(request):

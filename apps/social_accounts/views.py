@@ -34,6 +34,7 @@ from .models import MESSAGING_ONLY_PLATFORMS, MastodonAppRegistration, PlatformV
 from .oauth_aliases import from_url_slug, redirect_uri_from_request, to_url_slug
 from .oauth_pkce import issue_pkce_verifier, pkce_kwargs
 from .provider_factory import _get_provider_for_platform, apply_analytics_scope_flag
+from .services import remove_account_data
 from .webhooks import (
     subscribe_account_webhooks,
     subscribe_account_webhooks_task,
@@ -1095,26 +1096,8 @@ def disconnect(request, workspace_id, account_id):
             account,
         )
 
-    # Delete posts that ONLY target this account (will be fully orphaned).
-    # Multi-platform posts keep their other PlatformPost targets via cascade.
-    from django.db.models import Count
-
-    from apps.composer.models import PlatformPost, Post
-
-    orphan_post_ids = list(
-        PlatformPost.objects.filter(social_account=account)
-        .values("post_id")
-        # Distinct accounts, not rows: a post's Feed and Story on this one
-        # account are two rows and still nothing else to keep it alive.
-        .annotate(total_platforms=Count("post__platform_posts__social_account", distinct=True))
-        .filter(total_platforms=1)
-        .values_list("post_id", flat=True)
-    )
-    if orphan_post_ids:
-        Post.objects.filter(id__in=orphan_post_ids).delete()
-
     account_name = account.account_name or account.account_handle
-    account.delete()
+    remove_account_data(account)
 
     messages.success(request, _("Disconnected %(name)s.") % {"name": account_name})
     return _after_disconnect(request, workspace_id)

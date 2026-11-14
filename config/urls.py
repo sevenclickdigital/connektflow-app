@@ -49,6 +49,7 @@ urlpatterns = [
     path("workspace/<uuid:workspace_id>/analytics/", include("apps.analytics.urls")),
     path("webhooks/", include("apps.inbox.webhook_urls")),
     path("webhooks/", include("apps.common.webhook_urls")),
+    path("webhooks/", include("apps.social_accounts.webhook_urls")),
     # Payment gateway callbacks (Asaas). Public by necessity — Asaas
     # calls it anonymously and authenticates with its own header token.
     path("webhooks/", include("apps.billing.webhook_urls")),

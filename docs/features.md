@@ -146,6 +146,7 @@ X publishes text with up to 4 photos or one video/GIF through the v2 API (`provi
 - `SocialAccount` tracks a connection status (connected / token_expiring / disconnected / error) and a separate analytics status.
 - Token refresh runs ahead of expiry (`token_refresh.py`), and there is a periodic health check. Accounts can be reconnected, have their webhooks retried, or be disconnected, which revokes the token upstream where the platform supports it.
 - Meta webhook subscriptions are managed in `social_accounts/webhooks.py`.
+- Threads' uninstall and data-deletion callbacks (`platform_callbacks.py`): removing the app in Threads marks the connection as needing a reconnect; a deletion request removes it with its data and gives the person a confirmation code to check on the public data-deletion page.
 - The Social Accounts page (`social_accounts:list`; `social_accounts:connect` renders the same page on GET and starts OAuth on POST) shows stat cards, filter tabs (all / connected / available / with problems), search and a category filter, one card per account, the platforms still connectable (`apps/social_accounts/catalog.py` gives each its description and category) and the opportunity sources. An account's state is `SocialAccount.health` (ok / warning / error): a warning or an error turns the status pill into a button that opens a modal with the explanation and the way out (reconnect, retry webhooks, disconnect). Posting schedule and disconnect sit behind "Manage connection".
 
 ---
