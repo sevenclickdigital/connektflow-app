@@ -126,6 +126,24 @@ def _has_expired_token_code(exc: APIError) -> bool:
     return isinstance(error_code, str) and error_code in _EXPIRED_TOKEN_ERRORS
 
 
+# Meta's throttling codes: the app (4), the user (17), the Page (32), a custom
+# limit (613) and the per-business limits for Pages (80001) and Instagram
+# (80002). Graph sends them as HTTP 400 or 403, never as a 429.
+_META_THROTTLE_CODES = frozenset({4, 17, 32, 613, 80001, 80002})
+
+
+def has_throttle_code(exc: Exception) -> bool:
+    """Whether a Graph API error body says the request was throttled.
+
+    Without this a throttled 403 reads as a refused credential, and the user
+    is told to reconnect an account that is fine.
+    """
+    raw = getattr(exc, "raw_response", None)
+    error = raw.get("error") if isinstance(raw, dict) else None
+    code = error.get("code") if isinstance(error, dict) else None
+    return isinstance(code, int) and not isinstance(code, bool) and code in _META_THROTTLE_CODES
+
+
 def _classify(exc: Exception) -> str:
     """Reduce a provider exception to one of the failure shapes above."""
     if isinstance(exc, TokenExpiredError):
@@ -146,6 +164,8 @@ def _classify(exc: Exception) -> str:
         return _RATE_LIMITED
 
     if isinstance(exc, APIError):
+        if has_throttle_code(exc):
+            return _RATE_LIMITED
         if exc.status_code in (401, 403):
             return _RECONNECT
         if _has_expired_token_code(exc):

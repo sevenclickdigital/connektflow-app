@@ -57,7 +57,6 @@ def _dispatch_mocks(platform, *, needs_local_media, attachments=(), supported=(P
     provider.supported_post_types = list(supported)
     provider.needs_local_media = needs_local_media
     provider.publish_is_async = False
-    provider.album_threshold = None
     provider.publish_post.return_value = PublishResult(platform_post_id="p1", url=None, extra={})
     return PublishEngine(), platform_post, provider
 

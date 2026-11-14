@@ -183,6 +183,7 @@ def create_post(
         reason = publish_blocker(
             social_account,
             media_types=usable_media_types(asset_map.values()),
+            image_count=sum(1 for asset in asset_map.values() if asset.file and asset.media_type == "image"),
         )
         if reason:
             raise ValueError(reason)
@@ -562,6 +563,28 @@ def set_format_crop(platform_posts, cropped):
         pp.save(update_fields=["platform_specific_media", "updated_at"])
 
 
+def post_image_count(post) -> int:
+    """How many usable images ``post`` has attached."""
+    return _usable_attachments().filter(post_id=post.pk, media_asset__media_type="image").count()
+
+
+def image_count_blocker(social_account, *, image_count: int, format: str = "default") -> str:
+    """Why this many images can't go out as one feed post of ``social_account``, or "".
+
+    Only the feed post has the limit (``SocialProvider.max_images_per_post``):
+    a Story with several photos publishes them one by one.
+    """
+    from providers import max_images_per_post
+
+    limit = max_images_per_post(social_account.platform)
+    if format != "default" or limit is None or image_count <= limit:
+        return ""
+    return _(
+        "%(platform)s takes up to %(limit)d photos in one post and this one has %(count)d. "
+        "Remove some before scheduling it."
+    ) % {"platform": social_account.get_platform_display(), "limit": limit, "count": image_count}
+
+
 def publish_blocker(
     social_account,
     *,
@@ -569,6 +592,7 @@ def publish_blocker(
     platform_extra: dict | None = None,
     format: str = "default",
     ordered_media_types=None,
+    image_count: int | None = None,
 ) -> str:
     """Why a post can't publish to ``social_account`` as it stands, or "".
 
@@ -576,12 +600,17 @@ def publish_blocker(
     platform, and every path that schedules a post checks it first so the user
     hears about it then rather than after the post's other platforms have gone
     out. Only failures that are certain before the platform is ever called: the
-    media a platform can't do without (``media_blocker``), and a pin with no
-    board, which our own Pinterest provider refuses.
+    media a platform can't do without (``media_blocker``), more photos than a
+    feed post carries (``image_count_blocker``, when the caller knows the
+    count), and a pin with no board, which our own Pinterest provider refuses.
     """
     reason = media_blocker(social_account, media_types=media_types)
     if reason:
         return reason
+    if image_count is not None:
+        reason = image_count_blocker(social_account, image_count=image_count, format=format)
+        if reason:
+            return reason
     if ordered_media_types is not None:
         reason = format_blocker(format, ordered_media_types)
         if reason:
@@ -599,13 +628,17 @@ def require_publishable(platform_post, *, media_types=None) -> None:
     ``media_types`` lets a caller checking many rows answer it for all of them
     in one query (``media_types_by_post``) instead of one per row.
     """
+    from providers import max_images_per_post
+
     if media_types is None:
         media_types = post_media_types(platform_post.post)
+    limited = max_images_per_post(platform_post.social_account.platform) is not None
     reason = publish_blocker(
         platform_post.social_account,
         media_types=media_types,
         platform_extra=platform_post.platform_extra,
         format=platform_post.format,
+        image_count=post_image_count(platform_post.post) if limited else None,
         ordered_media_types=(
             post_ordered_media_types(platform_post.post) if platform_post.format != "default" else None
         ),

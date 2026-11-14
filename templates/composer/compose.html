@@ -1492,26 +1492,41 @@
                                   rows="3"></textarea>
 
                         {% comment %}
-                        Facebook-only extras. The marker is what tells the save
-                        these fields were on screen, so an empty place field
-                        means "remove it" rather than "never asked".
+                        Facebook-only extras, account-wide: shown once, in the
+                        card of the first chosen format that can carry them
+                        (facebookExtrasFormat). Each field is on screen only
+                        where Facebook takes it: a place on a feed post without
+                        video and on a Reel, a feeling on that feed post only.
+                        The marker is what tells the save these fields were on
+                        screen, so an empty or absent field means "remove it"
+                        rather than "never asked".
                         {% endcomment %}
-                        <template x-if="charLimits[accId]?.platform === 'facebook' && t.fmt === 'default'">
+                        <template x-if="charLimits[accId]?.platform === 'facebook' && t.fmt === facebookExtrasFormat(accId)">
                             <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3">
                                 <input type="hidden" :name="'facebook_custom_' + accId" value="1">
 
-                                {% include "composer/partials/_place_picker.html" with prefix="facebook" %}
+                                <p x-show="hasFormat(accId, 'default') && firstMediaIsVideo" class="text-[11px] text-neutral-500">{% translate "Facebook doesn't take a location or a feeling on a feed video. A Reel takes the location." %}</p>
 
-                                <div>
-                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Feeling / activity" %}</label>
-                                    <select :name="'facebook_feeling_' + accId" x-model="feeling"
-                                            class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
-                                        <option value="">{% translate "None" %}</option>
-                                        {% for item in facebook_feelings %}
-                                        <option value="{{ item.id }}">{{ item.label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
+                                <template x-if="facebookTakesPlace(accId)">
+                                    <div>
+                                        {% include "composer/partials/_place_picker.html" with prefix="facebook" %}
+                                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "Shown on the feed post and on Reels. Stories don't take a location." %}</p>
+                                    </div>
+                                </template>
+
+                                <template x-if="facebookTakesFeeling(accId)">
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Feeling / activity" %}</label>
+                                        <select :name="'facebook_feeling_' + accId" x-model="feeling"
+                                                class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                            <option value="">{% translate "None" %}</option>
+                                            {% for item in facebook_feelings %}
+                                            <option value="{{ item.id }}">{{ item.label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "Feed post only: text, link or up to 10 photos." %}</p>
+                                    </div>
+                                </template>
                             </div>
                         </template>
 
@@ -1519,26 +1534,35 @@
                         Instagram extras, account-wide like the Facebook place:
                         shown in the card of the account's first chosen format
                         only, so the fields are posted once. The provider sends
-                        each one only where Instagram takes it.
+                        each one only where Instagram takes it, and the ones a
+                        Story can't carry (collaborators, location) stay off
+                        screen while Stories is the only format chosen.
                         {% endcomment %}
                         <template x-if="charLimits[accId]?.platform === 'instagram' && t.fmt === (selectedFormats[accId] || [])[0]">
                             <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3">
                                 <input type="hidden" :name="'instagram_custom_' + accId" value="1">
-                                <div>
-                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Collaborators" %}</label>
-                                    <input type="text" :name="'instagram_collaborators_' + accId" x-model="igCollaborators"
-                                           placeholder="{% translate '@profile1, @profile2' %}"
-                                           class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
-                                    <p class="text-[11px] text-neutral-500 mt-1">{% translate "Up to 3 profiles. Each gets an invite and, once accepted, the post shows on their profile too. Feed and Reels only." %}</p>
-                                </div>
+                                <template x-if="instagramBeyondStories(accId)">
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Collaborators" %}</label>
+                                        <input type="text" :name="'instagram_collaborators_' + accId" x-model="igCollaborators"
+                                               placeholder="{% translate '@profile1, @profile2' %}"
+                                               class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "Up to 3 profiles. Each gets an invite and, once accepted, the post shows on their profile too. Feed and Reels only." %}</p>
+                                    </div>
+                                </template>
                                 <div>
                                     <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Tag people" %}</label>
                                     <input type="text" :name="'instagram_user_tags_' + accId" x-model="igUserTags"
                                            placeholder="{% translate '@profile1, @profile2' %}"
                                            class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
-                                    <p class="text-[11px] text-neutral-500 mt-1">{% translate "Public profiles only. Tagged on the photo (the first one in a carousel) and on Stories; Reels can't be tagged." %}</p>
+                                    <p class="text-[11px] text-neutral-500 mt-1">{% translate "Public profiles only. Tagged on the photo (the first one in a carousel), on Reels and on Stories." %}</p>
                                 </div>
-                                {% include "composer/partials/_place_picker.html" with prefix="instagram" %}
+                                <template x-if="instagramBeyondStories(accId)">
+                                    <div>
+                                        {% include "composer/partials/_place_picker.html" with prefix="instagram" %}
+                                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "Shown on the feed post and on Reels. Stories don't take a location." %}</p>
+                                    </div>
+                                </template>
                                 <template x-if="(selectedFormats[accId] || []).includes('reel')">
                                     <div class="space-y-3">
                                         {% include "composer/partials/_video_cover_picker.html" with field="instagram_reel_cover_ms" %}
@@ -2846,6 +2870,7 @@ function composerApp() {
         hasMediaAttached: false,
         hasVideoAttached: false,
         hasSingleVideoAttached: false,
+        firstMediaIsVideo: false,
         hasSingleImageAttached: false,
         showFramePicker: false,
         framePickerAccId: null,
@@ -3051,6 +3076,7 @@ function composerApp() {
                 this.hasMediaAttached = thumbs.length > 0;
                 this.hasVideoAttached = videoCount > 0;
                 this.hasSingleVideoAttached = thumbs.length === 1 && videoCount === 1;
+                this.firstMediaIsVideo = thumbs.length > 0 && !!thumbs[0].querySelector('video');
                 this.hasSingleImageAttached = thumbs.length === 1 && videoCount === 0;
                 this.mediaInfo = thumbs.filter(t => t.dataset.mediaId).map(t => ({
                     id: t.dataset.mediaId,
@@ -3278,6 +3304,25 @@ function composerApp() {
 
         hasFormat(accId, fmt) {
             return (this.selectedFormats[accId] || []).includes(fmt);
+        },
+        // Where Facebook takes the customize card's extras. A feed post whose
+        // first media is a video goes out through /videos, which refuses both
+        // a place and a feeling; a Reel takes the place and drops a feeling.
+        facebookTakesFeeling(accId) {
+            return this.hasFormat(accId, 'default') && !this.firstMediaIsVideo;
+        },
+        facebookTakesPlace(accId) {
+            return this.facebookTakesFeeling(accId) || this.hasFormat(accId, 'reel');
+        },
+        // Collaborators and a location go on a feed post and on a Reel,
+        // never on a Story.
+        instagramBeyondStories(accId) {
+            return (this.selectedFormats[accId] || []).some(fmt => fmt !== 'story');
+        },
+        // The format whose card shows those extras: they are account-wide,
+        // so their fields are posted once.
+        facebookExtrasFormat(accId) {
+            return ['default', 'reel'].find(fmt => this.hasFormat(accId, fmt)) || '';
         },
         // Picks or drops one format of an account. The account itself is
         // selected while it has any format, through toggleAccount so its

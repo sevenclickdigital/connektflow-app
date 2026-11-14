@@ -3,6 +3,14 @@
 A Facebook Page post: place and feeling. An Instagram post: collaborators,
 tagged people and location (``apply_instagram_extras``).
 
+Where Facebook takes each one, checked against the live API:
+
+- ``/feed`` (text, link, photos): place and feeling.
+- ``/video_reels``: place only. A feeling is accepted and silently dropped.
+- ``/videos``: neither. A feeling answers ``(#100) Invalid parameter``, a
+  place ``(#3) Application does not have the capability``.
+- Stories: neither.
+
 Both ride on ``PublishContent.extra`` rather than the publish signature, the
 same way ``page_id`` and ``post_type`` do, so adding them touched no provider
 that does not support them.
@@ -134,6 +142,11 @@ def has_feed_extras(extra: dict) -> bool:
     return bool(place_id) or object_id in FEELING_IDS
 
 
+def reel_place(extra: dict) -> str:
+    """The place a Facebook Reel carries, or "" when none was chosen."""
+    return str((extra or {}).get("place_id") or "").strip()
+
+
 def strip_feed_extras(payload: dict) -> dict:
     """Remove the decoration keys from ``payload``. Mutates and returns it.
 
@@ -189,8 +202,9 @@ def apply_instagram_extras(payload: dict, extra: dict, *, kind: str) -> dict:
     "carousel" (the parent) or "carousel_item" (the first photo of a
     carousel, which carries the tags). Each field goes only where the API
     takes it: collaborators and location on a Feed image, a Reel and the
-    carousel parent; tagged people on an image, the carousel's first photo
-    and a Story, positioned on images only; a Reel's cover moment
+    carousel parent; tagged people on an image, the carousel's first photo,
+    a Reel and a Story, positioned on images only (a position on a video is
+    refused, subcode 2207064); a Reel's cover moment
     (``thumb_offset``) and whether it stays off the profile grid
     (``share_to_feed``) on Reels. Mutates and returns ``payload``.
 
@@ -206,7 +220,7 @@ def apply_instagram_extras(payload: dict, extra: dict, *, kind: str) -> dict:
     tagged = parse_instagram_usernames(extra.get("user_tags"), limit=IG_MAX_USER_TAGS)
     if tagged and kind in ("image", "carousel_item"):
         payload["user_tags"] = [{"username": name, "x": _TAG_POSITION, "y": _TAG_POSITION} for name in tagged]
-    elif tagged and kind == "story":
+    elif tagged and kind in ("story", "reel"):
         payload["user_tags"] = [{"username": name} for name in tagged]
 
     location_id = str(extra.get("place_id") or "").strip()

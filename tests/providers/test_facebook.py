@@ -323,12 +323,12 @@ def test_publish_multi_photo_rejects_video_media():
 
 
 def test_publish_multi_photo_rejects_too_many_photos():
-    """Over Facebook's attached_media cap must fail before any photo is staged."""
+    """Over our photo limit must fail before any photo is staged."""
     provider = FacebookProvider({"client_id": "id", "client_secret": "secret"})
     provider._request = MagicMock()
 
-    urls = [f"https://cdn.example.com/{i}.jpg" for i in range(11)]
-    with pytest.raises(PublishError, match="at most 10 photos"):
+    urls = [f"https://cdn.example.com/{i}.jpg" for i in range(16)]
+    with pytest.raises(PublishError, match="at most 15 photos"):
         provider.publish_post(
             "page-token",
             PublishContent(media_urls=urls, post_type=PostType.IMAGE, extra={"page_id": "page-1"}),
@@ -1813,3 +1813,63 @@ def test_place_search_offers_only_pages_with_a_location():
     places = provider.search_places("page-token", "padaria central")
 
     assert places == [{"id": "1", "name": "Padaria Central", "where": "Recife, Brazil"}]
+
+
+def _reel_content(**extra):
+    return PublishContent(
+        text="Launch",
+        media_urls=["https://cdn.example.com/reel.mp4"],
+        media_types=["video"],
+        post_type=PostType.REEL,
+        extra={"page_id": "page-1", **extra},
+    )
+
+
+_REEL_SESSION = [
+    {"video_id": "vid-1", "upload_url": "https://rupload.facebook.com/video-upload/vid-1"},
+    {"success": True},
+]
+
+
+def test_publish_reel_sends_the_place_and_never_the_feeling():
+    provider = FacebookProvider({"client_id": "id", "client_secret": "secret"})
+    provider._request = MagicMock(
+        side_effect=[_resp(data) for data in [*_REEL_SESSION, {"success": True}, {"post_id": "page-1_9"}]]
+    )
+
+    provider.publish_post("page-token", _reel_content(place_id="place-99", feeling_object_id="528297480516636"))
+
+    finish = provider._request.call_args_list[2].kwargs["data"]
+    assert finish["place"] == "place-99"
+    assert not {"og_action_type_id", "og_object_id"} & finish.keys()
+
+
+def test_publish_reel_without_a_place_sends_none():
+    provider = FacebookProvider({"client_id": "id", "client_secret": "secret"})
+    provider._request = MagicMock(
+        side_effect=[_resp(data) for data in [*_REEL_SESSION, {"success": True}, {"post_id": "page-1_9"}]]
+    )
+
+    provider.publish_post("page-token", _reel_content())
+
+    assert "place" not in provider._request.call_args_list[2].kwargs["data"]
+
+
+def test_a_refused_place_costs_the_place_not_the_reel():
+    provider = FacebookProvider({"client_id": "id", "client_secret": "secret"})
+    refused = APIError("(#100) Param place is not a valid page ID", status_code=400, platform="Facebook")
+    provider._request = MagicMock(
+        side_effect=[
+            *[_resp(data) for data in _REEL_SESSION],
+            refused,
+            _resp({"success": True}),
+            _resp({"post_id": "page-1_9"}),
+        ]
+    )
+
+    result = provider.publish_post("page-token", _reel_content(place_id="not-a-place"))
+
+    retry = provider._request.call_args_list[3].kwargs["data"]
+    assert "place" not in retry
+    assert retry["video_id"] == "vid-1"
+    assert result.extra["video_id"] == "vid-1"

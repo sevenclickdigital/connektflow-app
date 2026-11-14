@@ -55,6 +55,19 @@ def test_api_error_401_maps_to_reconnect():
     assert friendly_health_check_error(exc) == RECONNECT_MESSAGE
 
 
+def test_a_throttled_meta_403_reads_as_a_rate_limit_not_a_reconnect():
+    """Graph answers "(#4) Application request limit reached" with HTTP 403."""
+    exc = APIError(
+        "Facebook API error 403",
+        status_code=403,
+        platform="Facebook",
+        raw_response={"error": {"message": "(#4) Application request limit reached", "code": 4}},
+    )
+
+    assert friendly_publish_error(exc) == PUBLISH_RATE_LIMIT_MESSAGE
+    assert friendly_first_comment_error(exc) == FIRST_COMMENT_TEMPORARY_MESSAGE
+
+
 def test_api_error_403_maps_to_reconnect():
     exc = APIError("forbidden", status_code=403)
     assert friendly_health_check_error(exc) == RECONNECT_MESSAGE

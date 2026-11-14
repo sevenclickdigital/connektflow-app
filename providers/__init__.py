@@ -108,6 +108,12 @@ def requires_media(platform: str) -> bool:
     return PostType.TEXT not in provider_cls().supported_post_types
 
 
+def max_images_per_post(platform: str) -> int | None:
+    """The most images one feed post of ``platform`` carries, or None for no limit."""
+    provider_cls = PROVIDER_REGISTRY.get(platform)
+    return getattr(provider_cls, "max_images_per_post", None)
+
+
 def offers_account_picker(platform: str) -> bool:
     """Whether connecting ``platform`` must let the author pick a target.
 

@@ -304,3 +304,76 @@ class PickerListingTests(MediaPickerTestCase):
 
         names = [a.filename for a in response.context["page"].object_list]
         self.assertEqual(names, ["mine.png"])
+
+
+class PickedBeforeThePostExistedTests(MediaPickerTestCase):
+    """The picker opened on an unsaved post inserts into the session.
+
+    When an autosave creates the post while the picker is open, those picks
+    stay in the session; the saved post has to claim them or it publishes
+    without its media.
+    """
+
+    def _save(self, post, **data):
+        return self.client.post(
+            reverse("composer:save_post_edit", kwargs={"workspace_id": self.workspace.id, "post_id": post.id}),
+            {"caption": "hi", "action": "save_draft", **data},
+        )
+
+    def _hold_pending(self, *assets):
+        session = self.client.session
+        session[f"pending_media_{self.workspace.id}"] = [str(asset.id) for asset in assets]
+        session.save()
+
+    def test_a_saved_post_takes_the_pending_media_its_form_lists(self):
+        post = self._post()
+        existing = self._asset("existing.png")
+        PostMedia.objects.create(post=post, media_asset=existing, position=0)
+        picked = self._asset("picked.png")
+        self._hold_pending(picked)
+
+        self._save(post, pending_media_ids=[str(picked.id)])
+
+        ordered = list(post.media_attachments.order_by("position").values_list("media_asset_id", flat=True))
+        self.assertEqual(ordered, [existing.id, picked.id])
+        self.assertNotIn(f"pending_media_{self.workspace.id}", self.client.session)
+
+    def test_a_saved_post_leaves_pending_media_its_form_does_not_list(self):
+        post = self._post()
+        other_tab = self._asset("other-tab.png")
+        self._hold_pending(other_tab)
+
+        self._save(post)
+
+        self.assertEqual(post.media_attachments.count(), 0)
+        self.assertEqual(self.client.session[f"pending_media_{self.workspace.id}"], [str(other_tab.id)])
+
+
+class PhotoLimitTests(MediaPickerTestCase):
+    def test_publishing_more_photos_than_facebook_takes_is_refused(self):
+        from apps.social_accounts.models import SocialAccount
+
+        account = SocialAccount.objects.create(
+            workspace=self.workspace,
+            platform="facebook",
+            account_platform_id="page-1",
+            account_name="Page",
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+        post = self._post()
+        for position in range(16):
+            PostMedia.objects.create(post=post, media_asset=self._asset(f"{position}.png"), position=position)
+
+        response = self.client.post(
+            reverse("composer:save_post_edit", kwargs={"workspace_id": self.workspace.id, "post_id": post.id}),
+            {
+                "caption": "hi",
+                "action": "publish_now",
+                "selected_accounts": str(account.id),
+                "selected_targets": f"{account.id}:default",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("media", response.json()["errors"])
+        self.assertFalse(post.platform_posts.exists())

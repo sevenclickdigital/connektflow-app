@@ -49,6 +49,14 @@ class PublishBlockerTest(TestCase):
     def test_pinterest_needs_a_board(self):
         assert "board" in publish_blocker(self._account("pinterest"), media_types=IMAGE)
 
+    def test_a_facebook_feed_post_takes_fifteen_photos(self):
+        facebook = self._account("facebook")
+        assert publish_blocker(facebook, media_types=IMAGE, image_count=15) == ""
+        assert "up to 15 photos" in publish_blocker(facebook, media_types=IMAGE, image_count=16)
+        # Stories publish one by one, and a platform without the limit is untouched.
+        assert publish_blocker(facebook, media_types=IMAGE, image_count=16, format="story") == ""
+        assert publish_blocker(self._account("threads"), media_types=IMAGE, image_count=16) == ""
+
     def test_text_platforms_are_not_blocked(self):
         for platform in ("facebook", "linkedin_personal", "bluesky", "threads"):
             with self.subTest(platform=platform):
@@ -97,6 +105,17 @@ class ServiceSchedulingTest(TestCase):
             self._create(self.tiktok, media=[self._asset(MediaAsset.MediaType.IMAGE)])
 
         assert not Post.objects.exists()
+
+    def test_scheduling_sixteen_photos_to_facebook_is_refused(self):
+        facebook = self._account("facebook")
+        photos = [self._asset(MediaAsset.MediaType.IMAGE) for _ in range(16)]
+
+        with self.assertRaisesMessage(ValueError, "up to 15 photos"):
+            self._create(facebook, media=photos)
+        assert Post.objects.count() == 0
+
+        self._create(facebook, media=photos[:15])
+        assert Post.objects.count() == 1
 
     def test_scheduling_tiktok_with_a_video_is_allowed(self):
         post = self._create(self.tiktok, media=[self._asset(MediaAsset.MediaType.VIDEO)])

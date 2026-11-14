@@ -78,13 +78,15 @@ def test_instagram_direct_account_is_listed_and_available(owner_client, workspac
 
 
 @pytest.mark.django_db
-def test_disabled_platform_account_stays_listed_with_a_reason(owner_client, workspace):
+def test_disabled_platform_account_stays_listed_with_a_reason(owner_client, workspace, settings):
     """The reported bug: the account vanished from the switcher entirely.
 
     It must still be listed, and selecting it must carry the admin note saying
     where the platform is switched on. Anchored on the note's id rather than its
     prose so the copy can be reworded without touching this test.
     """
+    # The marker below is translated; the project's default language is pt-br.
+    settings.LANGUAGE_CODE = "en-us"
     account = _account(workspace, "instagram_login", "Direct IG")
     _disable_analytics("instagram_login")
 

@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext as _
 
+from apps.social_accounts.error_messages import has_throttle_code
 from apps.social_accounts.models import SocialAccount
 from providers import get_provider
 from providers.exceptions import APIError, OAuthError, ProviderError, RateLimitError, TokenExpiredError
@@ -155,9 +156,9 @@ def describe_error(exc: ProviderError, *, kind: str) -> str:
     """
     if isinstance(exc, TokenExpiredError | OAuthError):
         return _("The Instagram connection has expired. Reconnect it in Social Accounts.")
-    if isinstance(exc, RateLimitError):
-        return _("Instagram is limiting requests right now. Wait a few minutes and try again.")
     code = _meta_error_code(exc)
+    if isinstance(exc, RateLimitError) or has_throttle_code(exc):
+        return _("Instagram is limiting requests right now. Wait a few minutes and try again.")
     if kind == "hashtag" and (code in _META_PERMISSION_CODES or isinstance(exc, APIError) and exc.status_code == 403):
         return _(
             "Hashtag search isn't enabled for this app on Meta yet: it needs the "

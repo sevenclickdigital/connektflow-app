@@ -43,7 +43,7 @@ from apps.members.models import WorkspaceMembership
 from apps.publisher.manual_delivery import NOTIFY_DELIVERY, is_notify_delivery
 from apps.social_accounts.models import PlatformVisibility, SocialAccount
 from apps.workspaces.models import Workspace
-from providers import is_video_only, requires_media
+from providers import is_video_only, max_images_per_post, requires_media
 from providers.exceptions import ProviderError
 from providers.google_business import PROFILE_PHOTO_CATEGORIES
 from providers.tiktok import VALID_PRIVACY_LEVELS as TIKTOK_PRIVACY_LEVELS
@@ -66,8 +66,10 @@ from .models import (
 from .services import (
     format_blocker,
     format_media_replacements,
+    image_count_blocker,
     media_blocker,
     media_change_blocker,
+    post_image_count,
     post_media_types,
     post_ordered_media_types,
     publish_blocker,
@@ -602,27 +604,43 @@ _PUBLISH_COMMITTING_ACTIONS = frozenset(
 )
 
 
+def _pending_media_ids(request, post, workspace) -> list:
+    """The session uploads this save will attach to ``post``.
+
+    A post that has never been saved takes all of them. A saved one takes only
+    those the form lists as ``pending_media_ids``: the media picker is loaded
+    before the post exists, so when an autosave creates the post while it is
+    open, what it inserts still lands in the session. The form shows those
+    thumbnails and names them; another tab's leftovers are not named.
+    """
+    pending_ids = request.session.get(f"pending_media_{workspace.id}", [])
+    if post._state.adding:
+        return list(pending_ids)
+    named = set(request.POST.getlist("pending_media_ids"))
+    return [asset_id for asset_id in pending_ids if str(asset_id) in named]
+
+
 def _composer_media_types(request, post, workspace) -> set[str]:
     """Usable media types on the post plus the uploads waiting to be attached."""
     media_types = post_media_types(post)
-    # A post that has never been saved keeps its uploads in the session until
-    # save_post attaches them, after this check has run.
-    if post._state.adding:
-        pending_ids = request.session.get(f"pending_media_{workspace.id}", [])
+    # The uploads are attached by save_post after this check has run.
+    pending_ids = _pending_media_ids(request, post, workspace)
+    if pending_ids:
         media_types |= usable_media_types(MediaAsset.objects.filter(id__in=pending_ids, workspace=workspace))
     return media_types
 
 
 def _composer_ordered_media_types(request, post, workspace) -> list[str]:
     """``post_ordered_media_types`` plus the uploads waiting to be attached."""
-    if not post._state.adding:
-        return post_ordered_media_types(post)
-    pending_ids = request.session.get(f"pending_media_{workspace.id}", [])
+    saved = [] if post._state.adding else post_ordered_media_types(post)
+    pending_ids = _pending_media_ids(request, post, workspace)
+    if not pending_ids:
+        return saved
     by_id = {
         str(asset.id): asset.media_type
         for asset in MediaAsset.objects.filter(id__in=pending_ids, workspace=workspace).exclude(file="")
     }
-    return [by_id[str(i)] for i in pending_ids if str(i) in by_id][:2]
+    return (saved + [by_id[str(i)] for i in pending_ids if str(i) in by_id])[:2]
 
 
 def _validate_formats(request, post, workspace, action):
@@ -669,6 +687,35 @@ def _validate_formats(request, post, workspace, action):
                 },
                 status=400,
             )
+    return None
+
+
+def _validate_image_count(request, post, workspace, action):
+    """Refuse to schedule more photos than a selected platform's feed post carries."""
+    if action not in _PUBLISH_COMMITTING_ACTIONS:
+        return None
+    selected_ids = _parse_selected_account_ids(request.POST.get("selected_accounts", ""))
+    accounts = [
+        account
+        for account in SocialAccount.objects.filter(id__in=selected_ids, workspace=workspace)
+        if max_images_per_post(account.platform) is not None
+    ]
+    if not accounts:
+        return None
+    image_count = 0 if post._state.adding else post_image_count(post)
+    pending_ids = _pending_media_ids(request, post, workspace)
+    if pending_ids:
+        image_count += (
+            MediaAsset.objects.filter(id__in=pending_ids, workspace=workspace, media_type="image")
+            .exclude(file="")
+            .count()
+        )
+    targets = _selected_targets(request, post, accounts)
+    for account in accounts:
+        for fmt in targets[str(account.id)]:
+            reason = image_count_blocker(account, image_count=image_count, format=fmt)
+            if reason:
+                return JsonResponse({"errors": {"media": reason}}, status=400)
     return None
 
 
@@ -1402,18 +1449,24 @@ def _reorder_saved_media(request, post):
         PostMedia.objects.bulk_update(changed, ["position"])
 
 
-def _attach_pending_media(request, post, workspace, session_key):
-    """Move the session's pending uploads onto a freshly created ``post``.
+def _attach_pending_media(request, post, workspace, session_key, *, pending_ids=None):
+    """Move the session's pending uploads onto ``post``.
+
+    All of them for a freshly created post; ``pending_ids`` (see
+    ``_pending_media_ids``) names the ones a saved post claims, which go after
+    its attachments and leave the rest of the session alone.
 
     Positions follow ``_ordered_pending_ids``, so the carousel publishes in
     the order the user arranged rather than the order they uploaded.
     """
     from apps.media_library.models import MediaAsset
 
-    pending_ids = request.session.get(session_key, [])
-    if not pending_ids:
+    session_ids = request.session.get(session_key, [])
+    claimed = session_ids if pending_ids is None else pending_ids
+    if not claimed:
         return
-    for idx, asset_id in enumerate(_ordered_pending_ids(request, pending_ids)):
+    offset = 0 if pending_ids is None else post.media_attachments.count()
+    for idx, asset_id in enumerate(_ordered_pending_ids(request, claimed)):
         try:
             asset = MediaAsset.objects.get(id=asset_id, workspace=workspace)
         except MediaAsset.DoesNotExist:
@@ -1421,9 +1474,13 @@ def _attach_pending_media(request, post, workspace, session_key):
         PostMedia.objects.get_or_create(
             post=post,
             media_asset=asset,
-            defaults={"position": idx},
+            defaults={"position": offset + idx},
         )
-    del request.session[session_key]
+    left = [asset_id for asset_id in session_ids if asset_id not in claimed]
+    if left:
+        request.session[session_key] = left
+    else:
+        del request.session[session_key]
 
 
 @login_required
@@ -1465,8 +1522,10 @@ def save_post(request, workspace_id, post_id=None):
     if pinterest_board_error is not None:
         return pinterest_board_error
 
-    media_error = _validate_required_media(request, post, workspace, action) or _validate_formats(
-        request, post, workspace, action
+    media_error = (
+        _validate_required_media(request, post, workspace, action)
+        or _validate_formats(request, post, workspace, action)
+        or _validate_image_count(request, post, workspace, action)
     )
     if media_error is not None:
         return media_error
@@ -1629,10 +1688,13 @@ def save_post(request, workspace_id, post_id=None):
 
     post.save()
 
-    # Attach pending session media for new posts
+    session_key = f"pending_media_{workspace.id}"
     if not post_id:
-        _attach_pending_media(request, post, workspace, f"pending_media_{workspace.id}")
+        _attach_pending_media(request, post, workspace, session_key)
     else:
+        _attach_pending_media(
+            request, post, workspace, session_key, pending_ids=_pending_media_ids(request, post, workspace)
+        )
         _reorder_saved_media(request, post)
 
     # Sync any new tags to the Tag model
@@ -1873,10 +1935,13 @@ def autosave(request, workspace_id, post_id=None):
 
     post.save()
 
-    # Attach pending session media when creating a new post
+    session_key = f"pending_media_{workspace.id}"
     if is_new:
-        _attach_pending_media(request, post, workspace, f"pending_media_{workspace.id}")
+        _attach_pending_media(request, post, workspace, session_key)
     else:
+        _attach_pending_media(
+            request, post, workspace, session_key, pending_ids=_pending_media_ids(request, post, workspace)
+        )
         _reorder_saved_media(request, post)
 
     # Sync platform selections

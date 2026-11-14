@@ -19,6 +19,7 @@ from .meta_feed_extras import (
     apply_feed_extras,
     has_feed_extras,
     parse_place_results,
+    reel_place,
     strip_feed_extras,
 )
 from .meta_insights import fetch_insights_safe, fetch_insights_series, parse_insights_response
@@ -105,14 +106,11 @@ FACEBOOK_COMMENT_FIELDS = "id,message,created_time,from,parent,permalink_url"
 FACEBOOK_REEL_MIN_DURATION_SEC = 3
 FACEBOOK_REEL_MAX_DURATION_SEC = 90
 
-# Facebook caps the ``attached_media`` array on a single feed post. Larger sets
-# go out as a Page album (``publish_album``).
-FACEBOOK_MAX_ATTACHED_MEDIA = 10
-# A published album is stored as ``album_<album id>``: it is no post, so post
-# insights must skip it, and comments go to the album node itself.
-FACEBOOK_ALBUM_ID_PREFIX = "album_"
-# Albums need a name; Facebook shows it as the album's title.
-FACEBOOK_ALBUM_NAME_MAX = 65
+# The most photos we attach to one feed post. A product choice, not Meta's
+# cap: ``attached_media`` took 50 staged photos when measured. There is no
+# album to overflow into — ``POST /{page-id}/albums`` answers ``(#3)
+# Application does not have the capability to make this API call``.
+FACEBOOK_MAX_ATTACHED_MEDIA = 15
 
 
 class FacebookProvider(SocialProvider):
@@ -126,7 +124,7 @@ class FacebookProvider(SocialProvider):
     # One login administers any number of Pages; see ``get_user_pages``.
     offers_account_picker = True
 
-    album_threshold = FACEBOOK_MAX_ATTACHED_MEDIA
+    max_images_per_post = FACEBOOK_MAX_ATTACHED_MEDIA
 
     def __init__(self, credentials: dict | None = None):
         creds = dict(credentials or {})
@@ -526,76 +524,6 @@ class FacebookProvider(SocialProvider):
             extra={**data, "photo_ids": photo_ids},
         )
 
-    def publish_album(
-        self, access_token: str, content: PublishContent, *, progress: dict, save_progress
-    ) -> PublishResult:
-        """Publish more photos than a feed post takes as a Page album.
-
-        The album is created first (named after the caption's first line,
-        which also becomes its description), then each photo is added in
-        order. Meta offers no way to delete an album through the API, so a
-        retry must reuse the one already made: ``progress`` carries its id and
-        the photos already in it. A place, when chosen, goes on the album; a
-        feeling has nowhere to go on one.
-        """
-        page_id = content.extra.get("page_id")
-        if not page_id:
-            raise PublishError(
-                "page_id is required in content.extra for Facebook publishing",
-                platform=self.platform_name,
-                retryable=False,
-            )
-        urls = content.media_urls
-        if any(content.is_video(index) for index in range(len(urls))):
-            raise PublishError(
-                "Facebook albums take photos only; post videos separately",
-                platform=self.platform_name,
-                retryable=False,
-            )
-
-        album_id = str(progress.get("album_id") or "")
-        photo_ids = list(progress.get("photo_ids") or [])
-        if not album_id:
-            payload: dict = {"name": self._album_name(content)}
-            if content.text:
-                payload["message"] = content.text
-            if content.extra.get("place_id"):
-                payload["place"] = content.extra["place_id"]
-            data = self._request("POST", f"{BASE_URL}/{page_id}/albums", access_token=access_token, json=payload).json()
-            album_id = str(data.get("id") or "")
-            if not album_id:
-                raise PublishError(
-                    "Failed to create the Facebook album", platform=self.platform_name, raw_response=data
-                )
-            photo_ids = []
-            save_progress({"album_id": album_id, "photo_ids": photo_ids})
-
-        for url in urls[len(photo_ids) :]:
-            data = self._request(
-                "POST", f"{BASE_URL}/{album_id}/photos", access_token=access_token, json={"url": url}
-            ).json()
-            if not data.get("id"):
-                raise PublishError(
-                    "Failed to add a photo to the Facebook album", platform=self.platform_name, raw_response=data
-                )
-            photo_ids.append(str(data["id"]))
-            save_progress({"album_id": album_id, "photo_ids": photo_ids})
-
-        return PublishResult(
-            platform_post_id=f"{FACEBOOK_ALBUM_ID_PREFIX}{album_id}",
-            url=f"https://www.facebook.com/media/set/?set=a.{album_id}",
-            extra={"album_id": album_id, "photo_ids": photo_ids},
-        )
-
-    @staticmethod
-    def _album_name(content: PublishContent) -> str:
-        first_line = (content.title or content.text or "").strip().split("\n", 1)[0].strip()
-        if not first_line:
-            return datetime.now(UTC).strftime("%d/%m/%Y")
-        if len(first_line) <= FACEBOOK_ALBUM_NAME_MAX:
-            return first_line
-        return first_line[: FACEBOOK_ALBUM_NAME_MAX - 1].rstrip() + "…"
-
     def _delete_staged_photos(self, access_token: str, photo_ids: list[str]) -> None:
         """Best-effort cleanup of unpublished photos staged for a multi-photo post.
 
@@ -682,12 +610,7 @@ class FacebookProvider(SocialProvider):
         # No "title": content.title is the composer's internal organizing label,
         # not copy written for Facebook, and _publish_video omits it for the
         # same reason. A Reel's caption is its description.
-        finish_data = self._request(
-            "POST",
-            f"{BASE_URL}/{page_id}/video_reels",
-            access_token=access_token,
-            data=finish_payload,
-        ).json()
+        finish_data = self._finish_reel(access_token, page_id, finish_payload, reel_place(content.extra))
         self._raise_for_upload_phase(finish_data, "publish the Reel")
 
         # Publishing already succeeded. Metadata is best-effort so a delayed
@@ -721,6 +644,22 @@ class FacebookProvider(SocialProvider):
                 **{k: v for k, v in video_fields.items() if k in ("post_id", "permalink_url")},
             },
         )
+
+    def _finish_reel(self, access_token: str, page_id: str, payload: dict, place_id: str) -> dict:
+        """The finish phase of a Reel, retried once without a refused place.
+
+        A Reel takes a place and nothing else from the feed decoration. A Page
+        that is not a location answers ``(#100) Param place is not a valid
+        page ID`` and leaves the upload session open, so the same ``video_id``
+        can be finished again: the refusal costs the place, not the Reel.
+        """
+        url = f"{BASE_URL}/{page_id}/video_reels"
+        if place_id:
+            try:
+                return self._request("POST", url, access_token=access_token, data={**payload, "place": place_id}).json()
+            except APIError:
+                logger.warning("Facebook refused the place on a Reel for page %s; retrying without it", page_id)
+        return self._request("POST", url, access_token=access_token, data=payload).json()
 
     def _start_hosted_video_upload(self, access_token: str, edge_url: str, video_url: str, label: str) -> str:
         """Open a resumable upload session on *edge_url* and hand Meta the hosted file.
@@ -843,8 +782,6 @@ class FacebookProvider(SocialProvider):
         the raw video node does accept the comments edge, so it is the fallback.
         """
         post_id = str(post_id or "")
-        if post_id.startswith(FACEBOOK_ALBUM_ID_PREFIX):
-            return [post_id.removeprefix(FACEBOOK_ALBUM_ID_PREFIX)]
         candidates = [self._page_scoped_post_id(post_id), post_id]
         return list(dict.fromkeys(candidate for candidate in candidates if candidate))
 

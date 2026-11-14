@@ -905,12 +905,7 @@ def _has_unusable_platform_post_id(post, platform: str) -> bool:
 
     A publish that half-failed can leave our own row id in the field; calling
     Meta with it is guaranteed to fail, so skip without spending the request.
-    A Facebook album (``FACEBOOK_ALBUM_ID_PREFIX``) has no post insights.
     """
-    from providers.facebook import FACEBOOK_ALBUM_ID_PREFIX
-
-    if platform == "facebook" and str(post.platform_post_id).startswith(FACEBOOK_ALBUM_ID_PREFIX):
-        return True
     if platform in {"facebook", "instagram", "instagram_login"} and _looks_like_uuid(post.platform_post_id):
         logger.warning(
             "Skipping %s analytics for PlatformPost %s because platform_post_id looks like an internal UUID.",

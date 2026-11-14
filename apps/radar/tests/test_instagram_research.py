@@ -37,8 +37,8 @@ def _resp(data):
     return MagicMock(json=MagicMock(return_value=data))
 
 
-def _meta_error(code):
-    return APIError("refused", status_code=400, platform="instagram", raw_response={"error": {"code": code}})
+def _meta_error(code, status=400):
+    return APIError("refused", status_code=status, platform="instagram", raw_response={"error": {"code": code}})
 
 
 class TestWatchedProfiles:
@@ -131,6 +131,10 @@ class TestResearchScreen:
             )
 
         assert "Instagram Public Content Access" in response.context["error"]
+
+    def test_a_throttled_app_is_told_to_wait(self):
+        for kind in ("profile", "hashtag"):
+            assert "limiting requests" in research.describe_error(_meta_error(4, status=403), kind=kind)
 
     def test_an_unknown_profile_says_only_professional_accounts_are_read(self):
         assert "business or creator" in research.describe_error(_meta_error(110), kind="profile")

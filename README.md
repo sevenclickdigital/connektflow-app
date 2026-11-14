@@ -476,7 +476,7 @@ These need **no new request**, only the permissions already in step 3 and the In
 - Instagram collaborators, tagged people, Reel cover and "show on profile grid" when publishing (`instagram_content_publish`).
 - Instagram mentions in the inbox with their real text, replies to them through `/{ig-user-id}/mentions`, and posts that tag the account (`/tags`, filed as *Tag*) (`instagram_basic`, `instagram_manage_comments`, `pages_read_engagement`; webhook field `mentions`). Meta lets no one reply to a post the account was only tagged in.
 - Radar → Instagram research → Watched profiles, through Business Discovery (`instagram_basic`, `instagram_manage_insights`, `pages_read_engagement`). Only business and creator accounts can be read.
-- Facebook posts with more than 10 photos, published as a Page album (`pages_manage_posts`).
+- Facebook feed posts with up to 15 photos, and a place on Facebook Reels (`pages_manage_posts`). Meta does not let this app create Page albums, so there is no larger set.
 
 Limits Meta applies whatever is approved: 30 distinct hashtags per Instagram account in a rolling 7 days; up to 3 collaborators and 20 tagged people per Instagram post.
 

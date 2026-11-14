@@ -1322,7 +1322,7 @@ def test_a_story_carries_only_unpositioned_tags():
     assert "location_id" not in payload
 
 
-def test_a_reel_carries_collaborators_and_location_but_no_tags():
+def test_a_reel_carries_collaborators_location_and_tags_without_a_position():
     [payload] = _captured_containers(
         PublishContent(
             media_urls=["https://cdn/a.mp4"], media_types=["video"], post_type=PostType.REEL, extra=_IG_EXTRAS
@@ -1331,7 +1331,8 @@ def test_a_reel_carries_collaborators_and_location_but_no_tags():
 
     assert payload["collaborators"] == ["ana", "bia"]
     assert payload["location_id"] == "loc-9"
-    assert "user_tags" not in payload
+    # Instagram refuses x/y on a video (subcode 2207064).
+    assert payload["user_tags"] == [{"username": "cris"}]
 
 
 def test_a_carousel_tags_its_first_photo_and_credits_on_the_parent():
