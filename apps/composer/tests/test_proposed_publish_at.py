@@ -9,7 +9,7 @@ proposal.
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -239,6 +239,8 @@ class ProposedPublishAtSaveTests(TestCase):
         body = resp.content.decode("utf-8")
         self.assertIn('value="2027-09-01"', body)
 
+    # The assertions read the English month and copy.
+    @override_settings(LANGUAGE_CODE="en-us")
     def test_drafts_list_renders_proposed_badge(self):
         post = create_post(
             workspace=self.ws,
