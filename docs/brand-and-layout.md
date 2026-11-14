@@ -8,7 +8,7 @@ The design source is the brand pack in `branding/` (logo, mascot poses and per-n
 
 - User-facing name: **Connekt Flow**, two words, with a K (masculine in Portuguese: "do Connekt Flow", "pelo Connekt Flow"). Identifiers that cannot hold a space use `connektflow` / `ConnektFlow`.
 - A workspace is called **marca** in Portuguese (feminine: "a marca", "esta marca", "todas as marcas"). Only the pt_BR catalogue says it; code, URLs, English text and the API keep `workspace`.
-- The Meta-facing legal name is still **Seven Automator** (`apps/common/legal_views.py`), because Meta App Review compares it with the app's configuration. Change it only together with the display name of the Meta app.
+- The legal pages (`/privacy/`, `/terms/`, `/data-deletion/`) name the product **ConnektFlow**, one word (`APP_NAME` in `apps/common/legal_views.py`): that is the display name of the Meta app, and Meta App Review compares the two. Change them only together.
 - Kept on purpose, because changing them breaks running installations or third-party contracts:
   - HKDF `info` strings in `apps/common/encryption.py` and `apps/api_keys/services.py` (changing them makes every stored secret and API key unreadable);
   - database names `brightbean` / `brightbean_test` (compose files, CI, settings);

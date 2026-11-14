@@ -12,7 +12,9 @@ from django.shortcuts import render
 # change when the text changes, not on every deploy.
 LAST_UPDATED = "2 de novembro de 2026"
 
-APP_NAME = "Seven Automator"
+# Written as the Meta app's display name: App Review compares the legal pages
+# with it, so the two change together.
+APP_NAME = "ConnektFlow"
 
 
 def _context():
