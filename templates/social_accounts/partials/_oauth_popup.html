@@ -1,0 +1,60 @@
+{% comment %}
+Runs a connection in a small window instead of taking the page away.
+A form marked ``data-oauth-popup`` is posted into a popup, with ``popup=1`` so
+the server ends the round trip on connect_done.html (views.finish_in_popup).
+That page announces, over a same-origin BroadcastChannel, where the flow
+continues; this page goes there, which is either itself reloaded with the new
+account or the account picker.
+The popup is skipped, and the form submits as it always did, on touch devices
+and narrow screens, where a second window is more trouble than help, and when
+the browser blocks it.
+{% endcomment %}
+<script nonce="{{ request.csp_nonce }}">
+(function () {
+    const POPUP_NAME = 'cf-social-connect';
+
+    function suitsPopup() {
+        return window.matchMedia('(min-width: 768px)').matches && !window.matchMedia('(pointer: coarse)').matches;
+    }
+
+    function markPopup(form, on) {
+        let field = form.querySelector('input[name="popup"]');
+        if (on && !field) {
+            field = document.createElement('input');
+            field.type = 'hidden';
+            field.name = 'popup';
+            field.value = '1';
+            form.appendChild(field);
+        }
+        if (!on && field) field.remove();
+        if (on) form.target = POPUP_NAME; else form.removeAttribute('target');
+    }
+
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('form[data-oauth-popup]');
+        if (!form) return;
+        let popup = null;
+        if (suitsPopup()) {
+            const width = 600, height = 720;
+            const left = Math.max(0, window.screenX + (window.outerWidth - width) / 2);
+            const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2);
+            popup = window.open('', POPUP_NAME, 'popup=yes,width=' + width + ',height=' + height + ',left=' + left + ',top=' + top);
+        }
+        markPopup(form, !!popup);
+    });
+
+    if ('BroadcastChannel' in window) {
+        const channel = new BroadcastChannel('cf-social-connect');
+        channel.onmessage = function (event) {
+            if (!event.data || event.data.type !== 'done') return;
+            channel.postMessage({ type: 'ack' });
+            const next = event.data.next;
+            if (typeof next === 'string' && next.startsWith('/') && !next.startsWith('//')) {
+                window.location.assign(next);
+            } else {
+                window.location.reload();
+            }
+        };
+    }
+})();
+</script>

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-14 21:28+0000\n"
+"POT-Creation-Date: 2026-11-15 02:41+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -971,8 +971,8 @@ msgstr "Movida para “%(column)s”."
 #: templates/media_library/shared_library.html:72
 #: templates/notifications/history.html:77
 #: templates/radar/partials/_offers.html:15
-#: templates/social_accounts/list.html:62
-#: templates/social_accounts/list.html:117
+#: templates/social_accounts/list.html:63
+#: templates/social_accounts/list.html:118
 msgid "All"
 msgstr "Todos"
 
@@ -1154,6 +1154,10 @@ msgid "In Progress"
 msgstr "Em andamento"
 
 #: apps/composer/models.py:183 apps/composer/views.py:3607
+#: apps/social_accounts/catalog.py:101 apps/social_accounts/catalog.py:112
+#: apps/social_accounts/catalog.py:128 apps/social_accounts/catalog.py:139
+#: apps/social_accounts/catalog.py:177 apps/social_accounts/catalog.py:185
+#: apps/social_accounts/catalog.py:193 apps/social_accounts/catalog.py:201
 #: apps/tasks/services.py:33 templates/media_library/library_index.html:263
 #: templates/notifications/unsubscribed.html:12
 msgid "Done"
@@ -1163,24 +1167,24 @@ msgstr "Pronto"
 msgid "On Hold"
 msgstr "Em espera"
 
-#: apps/composer/models.py:494 apps/social_accounts/models.py:589
+#: apps/composer/models.py:494 apps/social_accounts/models.py:603
 #: apps/tasks/creative_formats.py:112 templates/analytics/_post_table.html:50
 #: templates/base.html:475 templates/inbox/partials/_entry_facts.html:29
 msgid "Post"
 msgstr "Publicação"
 
-#: apps/composer/models.py:495 apps/social_accounts/models.py:590
+#: apps/composer/models.py:495 apps/social_accounts/models.py:604
 #: apps/tasks/creative_formats.py:80 apps/tasks/creative_formats.py:86
 msgctxt "publishing format"
 msgid "Story"
 msgstr "Story"
 
-#: apps/composer/models.py:496 apps/social_accounts/models.py:591
+#: apps/composer/models.py:496 apps/social_accounts/models.py:605
 #: apps/tasks/creative_formats.py:81 apps/tasks/creative_formats.py:87
 msgid "Reels"
 msgstr "Reels"
 
-#: apps/composer/models.py:497 apps/social_accounts/models.py:592
+#: apps/composer/models.py:497 apps/social_accounts/models.py:606
 #: apps/tasks/creative_formats.py:107 templates/accounts/settings.html:47
 msgid "Photo"
 msgstr "Foto"
@@ -3115,6 +3119,300 @@ msgstr "Publicações locais"
 msgid "Official API · chats in the inbox"
 msgstr "API oficial · conversas no inbox"
 
+#: apps/social_accounts/catalog.py:54
+msgid "Allow the access we ask for"
+msgstr "Autorize o acesso solicitado"
+
+#: apps/social_accounts/catalog.py:55
+msgid ""
+"Keep every permission ticked: each one powers a feature, and leaving one out "
+"breaks it later."
+msgstr ""
+"Mantenha todas as permissões marcadas: cada uma libera um recurso, e deixar "
+"alguma de fora faz esse recurso falhar depois."
+
+#: apps/social_accounts/catalog.py:61 apps/social_accounts/catalog.py:78
+msgid "Sign in with Facebook"
+msgstr "Entre com o Facebook"
+
+#: apps/social_accounts/catalog.py:62
+msgid ""
+"Use the Facebook profile that manages the Page, with full control or "
+"permission to create content."
+msgstr ""
+"Use o perfil do Facebook que administra a Página, com controle total ou "
+"permissão para criar conteúdo."
+
+#: apps/social_accounts/catalog.py:66
+msgid ""
+"When Facebook asks, select the Pages you want to use and keep every "
+"permission ticked."
+msgstr ""
+"Quando o Facebook perguntar, selecione as Páginas que quer usar e mantenha "
+"todas as permissões marcadas."
+
+#: apps/social_accounts/catalog.py:69
+msgid "Choose the Pages to connect"
+msgstr "Escolha as Páginas para conectar"
+
+#: apps/social_accounts/catalog.py:70
+msgid ""
+"We list the Pages that login reaches, and you pick which ones enter this "
+"brand."
+msgstr ""
+"Mostramos as Páginas que esse login alcança, e você escolhe quais entram "
+"nesta marca."
+
+#: apps/social_accounts/catalog.py:73
+msgid ""
+"Only Pages can be connected. Facebook does not let apps publish to a "
+"personal profile."
+msgstr ""
+"Só é possível conectar Páginas. O Facebook não permite que aplicativos "
+"publiquem em perfis pessoais."
+
+#: apps/social_accounts/catalog.py:80
+msgid ""
+"Instagram connects through the Facebook profile that manages the Page linked "
+"to the Instagram account."
+msgstr ""
+"O Instagram é conectado pelo perfil do Facebook que administra a Página "
+"vinculada à conta do Instagram."
+
+#: apps/social_accounts/catalog.py:85
+msgid ""
+"Select both the Instagram account and its Facebook Page, and keep every "
+"permission ticked."
+msgstr ""
+"Selecione a conta do Instagram e também a Página do Facebook vinculada a "
+"ela, e mantenha todas as permissões marcadas."
+
+#: apps/social_accounts/catalog.py:88
+msgid "Choose the Instagram accounts"
+msgstr "Escolha as contas do Instagram"
+
+#: apps/social_accounts/catalog.py:89
+msgid ""
+"We list the accounts that login reaches, and you pick which ones to connect."
+msgstr ""
+"Mostramos as contas que esse login alcança, e você escolhe quais conectar."
+
+#: apps/social_accounts/catalog.py:93
+msgid ""
+"The Instagram account has to be professional (Business or Creator) and "
+"linked to a Facebook Page. Personal accounts cannot be connected: switch the "
+"account type in the Instagram app first."
+msgstr ""
+"A conta do Instagram precisa ser profissional (Comercial ou Criador de "
+"conteúdo) e estar vinculada a uma Página do Facebook. Contas pessoais não "
+"podem ser conectadas: mude o tipo de conta no aplicativo do Instagram antes."
+
+#: apps/social_accounts/catalog.py:99
+msgid "Sign in with Instagram"
+msgstr "Entre com o Instagram"
+
+#: apps/social_accounts/catalog.py:99
+msgid "Use the Instagram account itself. No Facebook Page is needed."
+msgstr ""
+"Use a própria conta do Instagram. Não é preciso ter Página do Facebook."
+
+#: apps/social_accounts/catalog.py:101
+msgid ""
+"The account appears here, ready to publish and to receive comments and "
+"messages."
+msgstr ""
+"A conta aparece aqui, pronta para publicar e para receber comentários e "
+"mensagens."
+
+#: apps/social_accounts/catalog.py:104
+msgid ""
+"The account has to be professional (Business or Creator). Personal accounts "
+"cannot be connected: switch the account type in the Instagram app first."
+msgstr ""
+"A conta precisa ser profissional (Comercial ou Criador de conteúdo). Contas "
+"pessoais não podem ser conectadas: mude o tipo de conta no aplicativo do "
+"Instagram antes."
+
+#: apps/social_accounts/catalog.py:110
+msgid "Sign in with Threads"
+msgstr "Entre com o Threads"
+
+#: apps/social_accounts/catalog.py:110
+msgid "Use the Instagram login of the Threads profile you want to connect."
+msgstr "Use o login do Instagram do perfil do Threads que você quer conectar."
+
+#: apps/social_accounts/catalog.py:112
+msgid "The profile appears here, ready to publish and to receive replies."
+msgstr "O perfil aparece aqui, pronto para publicar e para receber respostas."
+
+#: apps/social_accounts/catalog.py:119
+msgid "Sign in with your Meta account"
+msgstr "Entre com sua conta da Meta"
+
+#: apps/social_accounts/catalog.py:120
+msgid ""
+"Use the Facebook profile that administers the company's business portfolio "
+"on Meta."
+msgstr ""
+"Use o perfil do Facebook que administra o portfólio empresarial da empresa "
+"na Meta."
+
+#: apps/social_accounts/catalog.py:123
+msgid "Choose the WhatsApp account and the number"
+msgstr "Escolha a conta do WhatsApp e o número"
+
+#: apps/social_accounts/catalog.py:125
+msgid ""
+"Pick or create the WhatsApp Business account and the phone number. Meta "
+"confirms the number by SMS or call."
+msgstr ""
+"Escolha ou crie a conta do WhatsApp Business e o número de telefone. A Meta "
+"confirma o número por SMS ou ligação."
+
+#: apps/social_accounts/catalog.py:128
+msgid "Messages sent to that number start arriving in the inbox."
+msgstr ""
+"As mensagens enviadas para esse número passam a chegar na caixa de entrada."
+
+#: apps/social_accounts/catalog.py:131
+msgid ""
+"A number already in use in the WhatsApp or WhatsApp Business app cannot be "
+"connected yet. Use a number that is not registered in the app."
+msgstr ""
+"Um número que já está em uso no aplicativo WhatsApp ou WhatsApp Business "
+"ainda não pode ser conectado. Use um número que não esteja registrado no "
+"aplicativo."
+
+#: apps/social_accounts/catalog.py:137 apps/social_accounts/catalog.py:145
+msgid "Sign in with LinkedIn"
+msgstr "Entre com o LinkedIn"
+
+#: apps/social_accounts/catalog.py:137
+msgid "Use the LinkedIn account of the profile you want to publish to."
+msgstr "Use a conta do LinkedIn do perfil em que você quer publicar."
+
+#: apps/social_accounts/catalog.py:139
+msgid "Your profile appears here, ready to publish."
+msgstr "Seu perfil aparece aqui, pronto para publicar."
+
+#: apps/social_accounts/catalog.py:145
+msgid "Use a LinkedIn account that is a super admin of the company page."
+msgstr ""
+"Use uma conta do LinkedIn que seja superadministradora da página da empresa."
+
+#: apps/social_accounts/catalog.py:148
+msgid "Choose the pages to connect"
+msgstr "Escolha as páginas para conectar"
+
+#: apps/social_accounts/catalog.py:149
+msgid ""
+"We list the company pages you administer, and you pick which ones to connect."
+msgstr ""
+"Mostramos as páginas de empresa que você administra, e você escolhe quais "
+"conectar."
+
+#: apps/social_accounts/catalog.py:152
+msgid ""
+"Other roles on the page, such as content admin or analyst, are not enough to "
+"connect it."
+msgstr ""
+"Outras funções na página, como administrador de conteúdo ou analista, não "
+"bastam para conectá-la."
+
+#: apps/social_accounts/catalog.py:157 apps/social_accounts/catalog.py:170
+msgid "Sign in with Google"
+msgstr "Entre com o Google"
+
+#: apps/social_accounts/catalog.py:158
+msgid ""
+"Use the Google account that is owner or manager of the Business Profile."
+msgstr ""
+"Use a conta do Google que é proprietária ou administradora do Perfil da "
+"Empresa."
+
+#: apps/social_accounts/catalog.py:162
+msgid "Choose the locations"
+msgstr "Escolha os locais"
+
+#: apps/social_accounts/catalog.py:163
+msgid ""
+"We list the locations that account manages, and you pick which ones to "
+"connect."
+msgstr ""
+"Mostramos os locais que essa conta administra, e você escolhe quais conectar."
+
+#: apps/social_accounts/catalog.py:166
+msgid ""
+"The Business Profile has to be verified by Google before it accepts posts."
+msgstr ""
+"O Perfil da Empresa precisa estar verificado pelo Google para aceitar "
+"publicações."
+
+#: apps/social_accounts/catalog.py:170
+msgid "Use the Google account that owns or manages the channel."
+msgstr "Use a conta do Google que é dona do canal ou o administra."
+
+#: apps/social_accounts/catalog.py:172
+msgid "Choose the channel"
+msgstr "Escolha o canal"
+
+#: apps/social_accounts/catalog.py:174
+msgid ""
+"If the account has more than one channel, Google asks which one. Then keep "
+"every permission ticked."
+msgstr ""
+"Se a conta tiver mais de um canal, o Google pergunta qual. Depois, mantenha "
+"todas as permissões marcadas."
+
+#: apps/social_accounts/catalog.py:177
+msgid "The channel appears here, ready to receive videos and Shorts."
+msgstr "O canal aparece aqui, pronto para receber vídeos e Shorts."
+
+#: apps/social_accounts/catalog.py:183
+msgid "Sign in with TikTok"
+msgstr "Entre com o TikTok"
+
+#: apps/social_accounts/catalog.py:183
+msgid "Use the TikTok account you want to publish to."
+msgstr "Use a conta do TikTok em que você quer publicar."
+
+#: apps/social_accounts/catalog.py:184
+msgid "Leave every option switched on in the TikTok window."
+msgstr "Deixe todas as opções ativadas na janela do TikTok."
+
+#: apps/social_accounts/catalog.py:185
+msgid "The account appears here, ready to receive videos."
+msgstr "A conta aparece aqui, pronta para receber vídeos."
+
+#: apps/social_accounts/catalog.py:191
+msgid "Sign in with Pinterest"
+msgstr "Entre com o Pinterest"
+
+#: apps/social_accounts/catalog.py:191
+msgid "Use the Pinterest account that owns the boards you want to publish to."
+msgstr "Use a conta do Pinterest dona das pastas em que você quer publicar."
+
+#: apps/social_accounts/catalog.py:193
+msgid ""
+"The account appears here, and you choose the board when creating each Pin."
+msgstr "A conta aparece aqui, e você escolhe a pasta ao criar cada Pin."
+
+#: apps/social_accounts/catalog.py:199
+msgid "Sign in with X"
+msgstr "Entre com o X"
+
+#: apps/social_accounts/catalog.py:199
+msgid "Use the X account you want to publish to."
+msgstr "Use a conta do X em que você quer publicar."
+
+#: apps/social_accounts/catalog.py:200
+msgid "Authorize the app in the X window."
+msgstr "Autorize o aplicativo na janela do X."
+
+#: apps/social_accounts/catalog.py:201
+msgid "The account appears here, ready to publish."
+msgstr "A conta aparece aqui, pronta para publicar."
+
 #: apps/social_accounts/error_messages.py:96
 msgid ""
 "The network refused to delete this post with the permissions this account "
@@ -3190,46 +3488,46 @@ msgstr "Token expirando"
 msgid "Disconnected"
 msgstr "Desconectada"
 
-#: apps/social_accounts/models.py:584
+#: apps/social_accounts/models.py:598
 #, python-format
 msgid "%(platform)s Stories"
 msgstr "%(platform)s Stories"
 
-#: apps/social_accounts/models.py:585
+#: apps/social_accounts/models.py:599
 #, python-format
 msgid "%(platform)s Reels"
 msgstr "%(platform)s Reels"
 
-#: apps/social_accounts/models.py:586
+#: apps/social_accounts/models.py:600
 #, python-format
 msgid "%(platform)s photo"
 msgstr "%(platform)s · Foto"
 
-#: apps/social_accounts/models.py:589
+#: apps/social_accounts/models.py:603
 msgid "Feed"
 msgstr "Feed"
 
-#: apps/social_accounts/platform_callbacks.py:113
+#: apps/social_accounts/platform_callbacks.py:152
 msgid ""
 "Access was removed in Threads. Reconnect the account to keep publishing."
 msgstr ""
 "O acesso foi removido no Threads. Reconecte a conta para continuar "
 "publicando."
 
-#: apps/social_accounts/views.py:267
+#: apps/social_accounts/views.py:272
 msgid "WhatsApp is still loading. Try again in a moment."
 msgstr "O WhatsApp ainda está carregando. Tente de novo em instantes."
 
-#: apps/social_accounts/views.py:268
+#: apps/social_accounts/views.py:273
 msgid "The WhatsApp connection was cancelled."
 msgstr "A conexão com o WhatsApp foi cancelada."
 
-#: apps/social_accounts/views.py:269
+#: apps/social_accounts/views.py:274
 msgid "Pick a phone number in the WhatsApp window to finish connecting."
 msgstr ""
 "Escolha um número de telefone na janela do WhatsApp para concluir a conexão."
 
-#: apps/social_accounts/views.py:271
+#: apps/social_accounts/views.py:276
 msgid ""
 "Numbers in use in the WhatsApp Business app can't be connected yet. Use a "
 "number that isn't on the app."
@@ -3238,7 +3536,7 @@ msgstr ""
 "um número que não esteja no app."
 
 #
-#: apps/social_accounts/views.py:273
+#: apps/social_accounts/views.py:278
 msgid ""
 "The WhatsApp window reported an error. Try again, or check the number in "
 "WhatsApp Manager."
@@ -3246,11 +3544,11 @@ msgstr ""
 "A janela do WhatsApp informou um erro. Tente de novo ou confira o número no "
 "Gerenciador do WhatsApp."
 
-#: apps/social_accounts/views.py:308
+#: apps/social_accounts/views.py:347
 msgid "This platform is not available."
 msgstr "Esta plataforma não está disponível."
 
-#: apps/social_accounts/views.py:314
+#: apps/social_accounts/views.py:353
 #, python-format
 msgid ""
 "Platform credentials for %(platform)s are not configured. Please contact "
@@ -3259,28 +3557,28 @@ msgstr ""
 "As credenciais da plataforma %(platform)s não estão configuradas. Fale com o "
 "administrador."
 
-#: apps/social_accounts/views.py:373
+#: apps/social_accounts/views.py:413
 #, python-format
 msgid "OAuth error: %(error)s"
 msgstr "Erro de OAuth: %(error)s"
 
-#: apps/social_accounts/views.py:384
+#: apps/social_accounts/views.py:424
 msgid "Missing authorization code or state parameter."
 msgstr "Código de autorização ou parâmetro de estado ausente."
 
-#: apps/social_accounts/views.py:391
+#: apps/social_accounts/views.py:431
 msgid "Invalid or expired OAuth state. Please try again."
 msgstr "Estado de OAuth inválido ou expirado. Tente novamente."
 
-#: apps/social_accounts/views.py:397
+#: apps/social_accounts/views.py:437
 msgid "OAuth session mismatch. Please try again."
 msgstr "A sessão de OAuth não confere. Tente novamente."
 
-#: apps/social_accounts/views.py:402
+#: apps/social_accounts/views.py:442
 msgid "Platform mismatch in OAuth callback."
 msgstr "A plataforma não confere no retorno do OAuth."
 
-#: apps/social_accounts/views.py:479
+#: apps/social_accounts/views.py:521
 msgid ""
 "No LinkedIn Company Pages were found for your account. Only Company Pages "
 "you administer can be connected — personal profiles connect via the LinkedIn "
@@ -3294,7 +3592,7 @@ msgstr ""
 "proprietário dela para conceder acesso de Admin em LinkedIn → Admin tools → "
 "Manage admins e conecte novamente."
 
-#: apps/social_accounts/views.py:488
+#: apps/social_accounts/views.py:530
 msgid ""
 "No Google Business locations were found for your account. Only verified "
 "locations can be connected. If you expected to see one, check that it is "
@@ -3306,7 +3604,7 @@ msgstr ""
 "confirme que ela está verificada e que esta conta do Google tem acesso a ela "
 "em Google Business Profile → Businesses e conecte novamente."
 
-#: apps/social_accounts/views.py:497
+#: apps/social_accounts/views.py:539
 msgid ""
 "No Instagram Business accounts were found for your account. Only Instagram "
 "Business or Creator accounts linked to a Facebook Page can be connected "
@@ -3318,7 +3616,7 @@ msgstr ""
 "uma página do Facebook. Se você esperava ver uma conta, confirme que ela "
 "está vinculada a uma página que você administra e conecte novamente."
 
-#: apps/social_accounts/views.py:504
+#: apps/social_accounts/views.py:546
 msgid ""
 "No Facebook Pages were found for your account. Only Pages can be connected — "
 "personal profiles are not supported by the Facebook API. If you expected to "
@@ -3331,24 +3629,24 @@ msgstr ""
 "remover o app em Configurações do Facebook → Integrações comerciais, depois "
 "conecte novamente."
 
-#: apps/social_accounts/views.py:526
+#: apps/social_accounts/views.py:568
 #, python-format
 msgid "Connected %(name)s successfully."
 msgstr "%(name)s conectada com sucesso."
 
-#: apps/social_accounts/views.py:546
+#: apps/social_accounts/views.py:588
 msgid "Failed to connect account. Please try again."
 msgstr "Não foi possível conectar a conta. Tente novamente."
 
-#: apps/social_accounts/views.py:562
+#: apps/social_accounts/views.py:604
 msgid "No accounts to select. Please start over."
 msgstr "Nenhuma conta para selecionar. Comece de novo."
 
-#: apps/social_accounts/views.py:601
+#: apps/social_accounts/views.py:643
 msgid "Please select at least one account."
 msgstr "Selecione ao menos uma conta."
 
-#: apps/social_accounts/views.py:619
+#: apps/social_accounts/views.py:661
 #, python-format
 msgid ""
 "Could not connect %(name)s: your Facebook access cannot create content for "
@@ -3357,7 +3655,7 @@ msgstr ""
 "Não foi possível conectar %(name)s: seu acesso no Facebook não permite criar "
 "conteúdo para esta página."
 
-#: apps/social_accounts/views.py:627
+#: apps/social_accounts/views.py:669
 #, python-format
 msgid ""
 "Could not connect %(name)s: the platform did not provide an account token."
@@ -3365,58 +3663,58 @@ msgstr ""
 "Não foi possível conectar %(name)s: a plataforma não forneceu um token de "
 "conta."
 
-#: apps/social_accounts/views.py:662
+#: apps/social_accounts/views.py:705
 #, python-format
 msgid "Could not connect %(name)s: %(reason)s"
 msgstr "Não foi possível conectar %(name)s: %(reason)s"
 
-#: apps/social_accounts/views.py:671
+#: apps/social_accounts/views.py:714
 #, python-format
 msgid "Connected: %(names)s"
 msgstr "Conectadas: %(names)s"
 
-#: apps/social_accounts/views.py:696
+#: apps/social_accounts/views.py:739
 msgid "Handle and app password are required."
 msgstr "Usuário e senha de app são obrigatórios."
 
-#: apps/social_accounts/views.py:717
+#: apps/social_accounts/views.py:760
 #, python-format
 msgid "Connected %(name)s on Bluesky."
 msgstr "%(name)s conectada no Bluesky."
 
-#: apps/social_accounts/views.py:732
+#: apps/social_accounts/views.py:775
 msgid "Failed to connect Bluesky account. Check your handle and app password."
 msgstr ""
 "Não foi possível conectar a conta do Bluesky. Confira o usuário e a senha de "
 "app."
 
-#: apps/social_accounts/views.py:761
+#: apps/social_accounts/views.py:804
 msgid "A DEV.to API key is required."
 msgstr "A chave de API do DEV.to é obrigatória."
 
-#: apps/social_accounts/views.py:777
+#: apps/social_accounts/views.py:820
 #, python-format
 msgid "Connected %(name)s on DEV.to."
 msgstr "%(name)s conectada no DEV.to."
 
-#: apps/social_accounts/views.py:783
+#: apps/social_accounts/views.py:826
 msgid "Failed to connect DEV.to account. Check your API key."
 msgstr "Não foi possível conectar a conta do DEV.to. Confira sua chave de API."
 
-#: apps/social_accounts/views.py:814
+#: apps/social_accounts/views.py:857
 msgid "WhatsApp did not finish the connection. Try again."
 msgstr "O WhatsApp não concluiu a conexão. Tente de novo."
 
-#: apps/social_accounts/views.py:817
+#: apps/social_accounts/views.py:860
 msgid "WhatsApp is not configured. Contact your administrator."
 msgstr "O WhatsApp não está configurado. Fale com o administrador."
 
-#: apps/social_accounts/views.py:829
+#: apps/social_accounts/views.py:872
 msgid ""
 "That phone number does not belong to the WhatsApp account you authorized."
 msgstr "Esse número não pertence à conta do WhatsApp que você autorizou."
 
-#: apps/social_accounts/views.py:851
+#: apps/social_accounts/views.py:894
 msgid ""
 "Meta refused the WhatsApp connection. Try again, or check the number in "
 "WhatsApp Manager."
@@ -3424,53 +3722,53 @@ msgstr ""
 "A Meta recusou a conexão do WhatsApp. Tente de novo ou confira o número no "
 "Gerenciador do WhatsApp."
 
-#: apps/social_accounts/views.py:857
+#: apps/social_accounts/views.py:900
 #, python-format
 msgid "WhatsApp %(number)s connected. New messages arrive in the inbox."
 msgstr "WhatsApp %(number)s conectado. As novas mensagens chegam no inbox."
 
-#: apps/social_accounts/views.py:882
+#: apps/social_accounts/views.py:925
 msgid "Instance URL is required."
 msgstr "A URL da instância é obrigatória."
 
-#: apps/social_accounts/views.py:891
+#: apps/social_accounts/views.py:934
 msgid "Invalid instance URL. Private or reserved addresses are not allowed."
 msgstr ""
 "URL de instância inválida. Endereços privados ou reservados não são "
 "permitidos."
 
-#: apps/social_accounts/views.py:924
+#: apps/social_accounts/views.py:967
 #, python-format
 msgid "Failed to register with %(url)s. Check the URL."
 msgstr "Não foi possível registrar em %(url)s. Confira a URL."
 
-#: apps/social_accounts/views.py:1028
+#: apps/social_accounts/views.py:1072
 #, python-format
 msgid "Reconnect %(label)s first — its connection isn't healthy."
 msgstr "Reconecte %(label)s primeiro — a conexão não está saudável."
 
-#: apps/social_accounts/views.py:1044
+#: apps/social_accounts/views.py:1088
 #, python-format
 msgid "Real-time updates are back on for %(label)s."
 msgstr "As atualizações em tempo real voltaram a funcionar para %(label)s."
 
-#: apps/social_accounts/views.py:1046
+#: apps/social_accounts/views.py:1090
 msgid "Couldn't set up real-time updates. Please try again."
 msgstr ""
 "Não foi possível ativar as atualizações em tempo real. Tente novamente."
 
-#: apps/social_accounts/views.py:1075
+#: apps/social_accounts/views.py:1119
 #, python-format
 msgid "Disconnected %(name)s. YouTube data was deleted immediately."
 msgstr ""
 "%(name)s desconectada. Os dados do YouTube foram excluídos imediatamente."
 
-#: apps/social_accounts/views.py:1102
+#: apps/social_accounts/views.py:1146
 #, python-format
 msgid "Disconnected %(name)s."
 msgstr "%(name)s desconectada."
 
-#: apps/social_accounts/views.py:1269
+#: apps/social_accounts/views.py:1333
 #, python-format
 msgid ""
 "This workspace already has a %(platform)s account. Disconnect it before "
@@ -3840,6 +4138,8 @@ msgstr ""
 "underline\" style=\"color: var(--primary);\">Política de Privacidade</a>"
 
 #: templates/account/accept_terms.html:68
+#: templates/social_accounts/partials/_connect_guide.html:43
+#: templates/social_accounts/partials/_connect_guide.html:48
 msgid "Continue"
 msgstr "Continuar"
 
@@ -4024,6 +4324,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/social_accounts/bluesky_connect.html:50
 #: templates/social_accounts/devto_connect.html:43
 #: templates/social_accounts/mastodon_connect.html:48
+#: templates/social_accounts/partials/_connect_guide.html:41
 #: templates/social_accounts/partials/_disconnect_confirm.html:47
 #: templates/social_accounts/partials/_posting_slots_grid.html:87
 #: templates/social_accounts/partials/_posting_slots_grid.html:121
@@ -4574,7 +4875,7 @@ msgstr "App ID %(label)s"
 #: templates/analytics/_page_header.html:43
 #: templates/api_keys/_key_row.html:138
 #: templates/api_keys/_workspace_options.html:11
-#: templates/social_accounts/list.html:83
+#: templates/social_accounts/list.html:84
 msgid "Connected accounts"
 msgstr "Contas conectadas"
 
@@ -5781,6 +6082,7 @@ msgstr "etapas"
 #: templates/social_accounts/partials/_account_card.html:162
 #: templates/social_accounts/partials/_account_card.html:181
 #: templates/social_accounts/partials/_account_card.html:202
+#: templates/social_accounts/partials/_connect_guide.html:14
 #: templates/tasks/partials/_request_arts_host.html:17
 #: templates/tasks/partials/_task_modal.html:5
 #: templates/workspaces/settings.html:108
@@ -9069,8 +9371,9 @@ msgstr "O que você quer compartilhar?"
 #: templates/composer/compose.html:785
 #: templates/composer/partials/kanban_board.html:20
 #: templates/funnels/partials/_pick_conversation.html:21
-#: templates/social_accounts/list.html:133
-#: templates/social_accounts/list.html:138
+#: templates/social_accounts/list.html:134
+#: templates/social_accounts/list.html:136
+#: templates/social_accounts/list.html:141
 #: templates/social_accounts/partials/_posting_slots_grid.html:116
 #: templates/tasks/partials/_board.html:20
 #: templates/tasks/partials/_column.html:57
@@ -9518,7 +9821,7 @@ msgstr "Configurar fluxo"
 
 #: templates/composer/compose.html:1669
 #: templates/social_accounts/account_select.html:74
-#: templates/social_accounts/list.html:72
+#: templates/social_accounts/list.html:73
 msgid "Category"
 msgstr "Categoria"
 
@@ -14033,8 +14336,9 @@ msgstr "Business e Creator"
 #: templates/radar/partials/_shopee_connect_form.html:43
 #: templates/radar/partials/_source_card.html:56
 #: templates/radar/partials/_source_card.html:63
-#: templates/social_accounts/list.html:133
-#: templates/social_accounts/list.html:138
+#: templates/social_accounts/list.html:134
+#: templates/social_accounts/list.html:136
+#: templates/social_accounts/list.html:141
 msgid "Connect"
 msgstr "Conectar"
 
@@ -14977,7 +15281,7 @@ msgid "Search account…"
 msgstr "Buscar conta…"
 
 #: templates/social_accounts/account_select.html:76
-#: templates/social_accounts/list.html:73
+#: templates/social_accounts/list.html:74
 msgid "All categories"
 msgstr "Todas as categorias"
 
@@ -15071,6 +15375,19 @@ msgstr ""
 "As senhas de app são separadas da sua senha principal. Elas podem ser "
 "revogadas a qualquer momento sem afetar sua conta do Bluesky."
 
+#: templates/social_accounts/connect_done.html:17
+#: templates/social_accounts/connect_done.html:28
+msgid "Connection finished"
+msgstr "Conexão concluída"
+
+#: templates/social_accounts/connect_done.html:29
+msgid "You can close this window and go back to Connekt Flow."
+msgstr "Você pode fechar esta janela e voltar ao Connekt Flow."
+
+#: templates/social_accounts/connect_done.html:30
+msgid "Continue in this window"
+msgstr "Continuar nesta janela"
+
 #: templates/social_accounts/devto_connect.html:3
 #: templates/social_accounts/devto_connect.html:16
 #: templates/social_accounts/devto_connect.html:40
@@ -15118,32 +15435,32 @@ msgstr ""
 msgid "Connect new platform"
 msgstr "Conectar nova plataforma"
 
-#: templates/social_accounts/list.html:43
-#: templates/social_accounts/list.html:63
+#: templates/social_accounts/list.html:44
+#: templates/social_accounts/list.html:64
 msgctxt "accounts, plural"
 msgid "Connected"
 msgstr "Conectadas"
 
-#: templates/social_accounts/list.html:47
-#: templates/social_accounts/list.html:64
+#: templates/social_accounts/list.html:48
+#: templates/social_accounts/list.html:65
 msgctxt "platforms, plural"
 msgid "Available"
 msgstr "Disponíveis"
 
-#: templates/social_accounts/list.html:51
-#: templates/social_accounts/list.html:65
+#: templates/social_accounts/list.html:52
+#: templates/social_accounts/list.html:66
 msgid "With problems"
 msgstr "Com problemas"
 
-#: templates/social_accounts/list.html:55
+#: templates/social_accounts/list.html:56
 msgid "Platforms in total"
 msgstr "Plataformas no total"
 
-#: templates/social_accounts/list.html:70
+#: templates/social_accounts/list.html:71
 msgid "Search platform…"
 msgstr "Buscar plataforma…"
 
-#: templates/social_accounts/list.html:92
+#: templates/social_accounts/list.html:93
 #, python-format
 msgid ""
 "%(counter)s account connected. Health checks run automatically every 6 hours."
@@ -15157,15 +15474,15 @@ msgstr[1] ""
 "%(counter)s contas conectadas. As verificações de saúde rodam "
 "automaticamente a cada 6 horas."
 
-#: templates/social_accounts/list.html:96
+#: templates/social_accounts/list.html:97
 msgid "Moti, the Connekt Flow robot, puzzled by a broken link"
 msgstr "Moti, o robô do Connekt Flow, intrigado com um link quebrado"
 
-#: templates/social_accounts/list.html:98
+#: templates/social_accounts/list.html:99
 msgid "No accounts connected yet"
 msgstr "Nenhuma conta conectada ainda"
 
-#: templates/social_accounts/list.html:99
+#: templates/social_accounts/list.html:100
 msgid ""
 "Connect your social media accounts to start publishing content, tracking "
 "engagement, and managing your inbox."
@@ -15173,23 +15490,23 @@ msgstr ""
 "Conecte suas contas de redes sociais para começar a publicar conteúdo, "
 "acompanhar o engajamento e gerenciar sua caixa de entrada."
 
-#: templates/social_accounts/list.html:102
+#: templates/social_accounts/list.html:103
 msgid "Connect Your First Account"
 msgstr "Conecte sua primeira conta"
 
-#: templates/social_accounts/list.html:114
+#: templates/social_accounts/list.html:115
 msgid "Connect other platforms"
 msgstr "Conectar outras plataformas"
 
-#: templates/social_accounts/list.html:141
+#: templates/social_accounts/list.html:144
 msgid "Platform credentials not configured. Contact your administrator."
 msgstr "Credenciais da plataforma não configuradas. Fale com o administrador."
 
-#: templates/social_accounts/list.html:141
+#: templates/social_accounts/list.html:144
 msgid "Not Configured"
 msgstr "Não configurada"
 
-#: templates/social_accounts/list.html:154
+#: templates/social_accounts/list.html:160
 msgid "Business & opportunities"
 msgstr "Negócios e oportunidades"
 
@@ -15336,6 +15653,20 @@ msgid ""
 msgstr ""
 "Defina horários recorrentes para a publicação automática das publicações em "
 "fila."
+
+#: templates/social_accounts/partials/_connect_guide.html:19
+#, python-format
+msgid "Connect %(name)s"
+msgstr "Conectar %(name)s"
+
+#: templates/social_accounts/partials/_connect_guide.html:37
+#, python-format
+msgid ""
+"%(name)s opens in a small window. If nothing opens, allow pop-ups for this "
+"site and try again."
+msgstr ""
+"O login de %(name)s abre em uma janela pequena. Se nada abrir, libere os "
+"pop-ups para este site e tente de novo."
 
 #: templates/social_accounts/partials/_disconnect_confirm.html:16
 #, python-format
@@ -15865,6 +16196,16 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 #: templates/workspaces/team.html:102
 msgid "Send invitation"
 msgstr "Enviar convite"
+
+#~ msgid ""
+#~ "A number already in use in the WhatsApp or WhatsApp Business app cannot "
+#~ "be connected yet. Use a number that is not registered in the app.Números "
+#~ "em uso no app WhatsApp Business ainda não podem ser conectados. Use um "
+#~ "número que não esteja no app."
+#~ msgstr ""
+#~ "Um número que já está em uso no aplicativo WhatsApp ou WhatsApp Business "
+#~ "ainda não pode ser conectado. Use um número que não esteja registrado no "
+#~ "aplicativo."
 
 #
 #~ msgid "Delete selected"

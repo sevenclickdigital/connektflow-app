@@ -1,0 +1,49 @@
+{% load i18n %}
+{% comment %}
+Last page of a connection that ran in a popup (views.finish_in_popup). It
+tells the Social Accounts page where the flow continues and closes itself.
+The two windows cannot reach each other directly: the app's
+Cross-Origin-Opener-Policy cuts the opener link as soon as the popup visits
+the platform, so they talk over a same-origin BroadcastChannel. If nobody
+answers (the page that opened the popup is gone), this window carries on with
+the flow itself. Extends nothing, so the queued messages stay for the page
+that will show them.
+{% endcomment %}
+{% get_current_language as LANGUAGE_CODE %}<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% translate "Connection finished" %} - Connekt Flow</title>
+    <style>
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #0F172A; background: #F8FAFF; }
+        main { text-align: center; padding: 24px; max-width: 320px; }
+        h1 { font-size: 18px; margin: 0 0 8px; }
+        p { font-size: 14px; color: #64748B; margin: 0 0 16px; }
+        a { color: #7C3AED; font-weight: 600; font-size: 14px; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>{% translate "Connection finished" %}</h1>
+    <p>{% translate "You can close this window and go back to Connekt Flow." %}</p>
+    <a href="{{ next_url }}">{% translate "Continue in this window" %}</a>
+</main>
+{{ next_url|json_script:"connect-next" }}
+<script nonce="{{ request.csp_nonce }}">
+(function () {
+    const next = JSON.parse(document.getElementById('connect-next').textContent);
+    if (!('BroadcastChannel' in window)) { window.location.replace(next); return; }
+    const channel = new BroadcastChannel('cf-social-connect');
+    let answered = false;
+    channel.onmessage = function (event) {
+        if (!event.data || event.data.type !== 'ack') return;
+        answered = true;
+        window.close();
+    };
+    channel.postMessage({ type: 'done', next: next });
+    setTimeout(function () { if (!answered) window.location.replace(next); }, 1200);
+})();
+</script>
+</body>
+</html>

@@ -127,7 +127,7 @@ the same shape whatever state the account is in.
                     {{ webhook_warning.message|default:_("We couldn't set up real-time updates for this account.") }}
                     {% translate "Activity with the required permissions can still arrive through polling." %}</p>
                     {% if webhook_warning.needs_reconnect %}
-                    <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=workspace_id account_id=account.id %}">
+                    <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=workspace_id account_id=account.id %}" {% if account.connect_flow == "oauth" %}data-oauth-popup{% endif %}>
                         {% csrf_token %}
                         <button type="submit" class="btn-brand">{% translate "Reconnect" %}</button>
                     </form>
@@ -159,7 +159,7 @@ the same shape whatever state the account is in.
                 <button type="button" class="btn-ghost" @click="detail = false">{% translate "Close" %}</button>
                 <button type="button" class="btn-danger-soft" @click="detail = false; confirmDisconnect = true">{% translate "Disconnect" %}</button>
                 {% if account.needs_reconnect or account.connection_missing_scopes or account.connection_status == "token_expiring" %}
-                <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=workspace_id account_id=account.id %}">
+                <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=workspace_id account_id=account.id %}" {% if account.connect_flow == "oauth" %}data-oauth-popup{% endif %}>
                     {% csrf_token %}
                     <button type="submit" class="btn-brand">{% translate "Reconnect" %}</button>
                 </form>
@@ -199,7 +199,7 @@ the same shape whatever state the account is in.
                 <button type="button" class="btn-ghost" @click="manage = false">{% translate "Close" %}</button>
                 <button type="button" class="btn-danger-soft" @click="manage = false; confirmDisconnect = true">{% translate "Disconnect" %}</button>
                 {% if account.needs_reconnect %}
-                <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=workspace_id account_id=account.id %}">
+                <form method="post" action="{% url 'social_accounts:reconnect' workspace_id=workspace_id account_id=account.id %}" {% if account.connect_flow == "oauth" %}data-oauth-popup{% endif %}>
                     {% csrf_token %}
                     <button type="submit" class="btn-brand">{% translate "Reconnect" %}</button>
                 </form>

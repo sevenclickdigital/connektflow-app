@@ -6,6 +6,7 @@ Handles OAuth flows, account listing, connect/reconnect/disconnect actions.
 import logging
 import secrets
 from datetime import timedelta
+from functools import wraps
 from urllib.parse import urlsplit
 
 from csp.decorators import csp_update
@@ -28,7 +29,7 @@ from apps.members.decorators import require_permission
 from apps.radar.sources import source_cards
 from providers.exceptions import ProviderError, QuotaExceededError
 
-from .catalog import CATEGORIES, platform_category, platform_description
+from .catalog import CATEGORIES, connect_flow, connect_guide, platform_category, platform_description
 from .error_messages import quota_connect_error
 from .models import MESSAGING_ONLY_PLATFORMS, MastodonAppRegistration, PlatformVisibility, SocialAccount
 from .oauth_aliases import from_url_slug, redirect_uri_from_request, to_url_slug
@@ -45,6 +46,8 @@ logger = logging.getLogger(__name__)
 
 OAUTH_STATE_MAX_AGE = 600  # 10 minutes
 OAUTH_SESSION_KEY = "social_oauth"
+# Set while an OAuth round trip runs in a popup opened by the Social Accounts page.
+OAUTH_POPUP_KEY = "social_oauth_popup"
 
 
 class AccountLimitReached(PermissionDenied):
@@ -219,6 +222,8 @@ def _overview_context(request, workspace_id):
             "label": label,
             "description": platform_description(value),
             "category": platform_category(value),
+            "guide": connect_guide(value),
+            "flow": connect_flow(value),
             "configured": value in configured_platforms,
             "has_accounts": value in accounts_by_platform,
         }
@@ -288,10 +293,44 @@ def account_list(request, workspace_id):
 # ------------------------------------------------------------------
 
 
+def finish_in_popup(view):
+    """Let an OAuth round trip run inside a small window opened by the page.
+
+    The Social Accounts page may open the platform's sign-in in a popup and
+    post the connect form into it with ``popup=1``. Everything then happens in
+    that window exactly as it would in the tab, until the flow would land back
+    on one of our own pages: instead of rendering the app inside the popup,
+    the window is told where the flow continues, hands that to the page that
+    opened it and closes (``connect_done.html``). A redirect that leaves the
+    site, towards the platform, goes through untouched.
+
+    Without ``popup=1`` nothing changes, which is what a phone or a blocked
+    popup gets.
+    """
+
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if request.method == "POST":
+            if request.POST.get("popup") == "1":
+                request.session[OAUTH_POPUP_KEY] = True
+            else:
+                request.session.pop(OAUTH_POPUP_KEY, None)
+        in_popup = request.session.get(OAUTH_POPUP_KEY, False)
+        response = view(request, *args, **kwargs)
+        location = response.get("Location", "") if 300 <= response.status_code < 400 else ""
+        if in_popup and location.startswith("/") and not location.startswith("//"):
+            request.session.pop(OAUTH_POPUP_KEY, None)
+            return render(request, "social_accounts/connect_done.html", {"next_url": location})
+        return response
+
+    return wrapped
+
+
 @csp_update(**_META_SDK_CSP)
 @login_required
 @require_permission("manage_social_accounts")
 @ratelimit(key="user", rate="20/m", method="POST", block=True)
+@finish_in_popup
 def connect_platform(request, workspace_id):
     """GET: the Social Accounts page. POST: initiate the OAuth flow."""
     if request.method == "GET":
@@ -357,6 +396,7 @@ def connect_platform(request, workspace_id):
 @login_required
 @ratelimit(key="user", rate="20/m", block=True)
 @require_GET
+@finish_in_popup
 def oauth_callback(request, platform):
     """Handle OAuth callback from the platform.
 
@@ -969,6 +1009,7 @@ def connect_mastodon(request, workspace_id):
 @login_required
 @require_permission("manage_social_accounts")
 @require_POST
+@finish_in_popup
 def reconnect(request, workspace_id, account_id):
     """Re-initiate OAuth for an existing account."""
     account = get_object_or_404(SocialAccount.objects.for_workspace(workspace_id), id=account_id)

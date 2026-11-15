@@ -24,6 +24,7 @@ data-category and data-name on each card: the whole page is already here.
         tab: 'all',
         category: 'all',
         query: '',
+        guide: null,
         matches(el) {
             const state = el.dataset.state;
             if (this.tab === 'connected' && state !== 'connected') return false;
@@ -129,10 +130,12 @@ data-category and data-name on each card: the whole page is already here.
                     <div class="text-sm font-semibold text-neutral-950 truncate">{{ platform.label }}</div>
                     <div class="text-xs text-neutral-500 truncate" title="{{ platform.description }}">{{ platform.description }}</div>
                 </div>
-                {% if platform.configured and platform.value == "whatsapp" %}
+                {% if platform.configured and platform.guide %}
+                <button type="button" class="btn-soft py-1.5 px-3" @click="guide = '{{ platform.value }}'">{% if platform.has_accounts %}{% translate "Add" %}{% else %}{% translate "Connect" %}{% endif %}</button>
+                {% elif platform.configured and platform.value == "whatsapp" %}
                 <button type="button" class="btn-soft py-1.5 px-3" data-whatsapp-signup>{% if platform.has_accounts %}{% translate "Add" %}{% else %}{% translate "Connect" %}{% endif %}</button>
                 {% elif platform.configured %}
-                <form method="post" action="{% url 'social_accounts:connect' workspace_id=workspace_id %}">
+                <form method="post" action="{% url 'social_accounts:connect' workspace_id=workspace_id %}" {% if platform.flow == "oauth" %}data-oauth-popup{% endif %}>
                     {% csrf_token %}
                     <input type="hidden" name="platform" value="{{ platform.value }}">
                     <button type="submit" class="btn-soft py-1.5 px-3">{% if platform.has_accounts %}{% translate "Add" %}{% else %}{% translate "Connect" %}{% endif %}</button>
@@ -143,6 +146,9 @@ data-category and data-name on each card: the whole page is already here.
             </div>
             {% endfor %}
         </div>
+        {% for platform in available_platforms %}
+        {% if platform.configured and platform.guide %}{% include "social_accounts/partials/_connect_guide.html" with platform=platform workspace_id=workspace_id %}{% endif %}
+        {% endfor %}
     </section>
     {% endif %}
 
@@ -164,5 +170,6 @@ data-category and data-name on each card: the whole page is already here.
 {% endblock %}
 
 {% block extra_js %}
+{% include "social_accounts/partials/_oauth_popup.html" %}
 {% if whatsapp_signup %}{% include "social_accounts/partials/_whatsapp_signup.html" %}{% endif %}
 {% endblock %}

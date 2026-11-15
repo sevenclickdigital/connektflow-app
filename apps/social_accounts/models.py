@@ -311,6 +311,13 @@ class SocialAccount(models.Model):
         return self.token_expires_within(timedelta(days=7))
 
     @property
+    def connect_flow(self) -> str:
+        """How this platform's connection starts (``catalog.connect_flow``)."""
+        from .catalog import connect_flow
+
+        return connect_flow(self.platform)
+
+    @property
     def needs_reconnect(self) -> bool:
         return self.connection_status in (
             self.ConnectionStatus.DISCONNECTED,
