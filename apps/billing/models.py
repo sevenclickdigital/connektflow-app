@@ -497,8 +497,19 @@ class OrganizationBillingProfile(models.Model):
     # person from taking a trial per account.
     tax_id = models.CharField(max_length=14, blank=True, default="", db_default="")
     phone = models.CharField(max_length=20, blank=True, default="", db_default="")
+    # Whose name the invoices carry. Empty = the organization's name.
+    payer_name = models.CharField(max_length=255, blank=True, default="", db_default="")
     # When this account used its one free trial. NULL = never.
     trial_started_at = models.DateTimeField(null=True, blank=True)
+    # The document that trial was taken with. Kept apart from ``tax_id``,
+    # which the customer may change afterwards: the trial stays spent for
+    # the document that spent it.
+    trial_tax_id = models.CharField(max_length=14, blank=True, default="", db_default="")
+    # The phone and the (normalized) email of whoever started that trial,
+    # kept for the same reason: another account presenting either one, or
+    # an address at the same company domain, has had its trial already.
+    trial_phone = models.CharField(max_length=20, blank=True, default="", db_default="")
+    trial_email = models.CharField(max_length=254, blank=True, default="", db_default="")
 
     # How many of this org's workspaces may be comped. 0 = none.
     courtesy_workspace_quota = models.PositiveIntegerField(default=0)

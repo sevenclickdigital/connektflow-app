@@ -140,3 +140,129 @@ def test_the_payer_document_is_never_shown_whole(client):
 
     assert response.context["payer"]["tax_id_ending"] == "4725"
     assert "52998224725" not in response.content.decode()
+
+
+class _PayerGateway:
+    """Stands in for Asaas when the payer's data is changed."""
+
+    def __init__(self, error=None):
+        self.error = error
+        self.updates = []
+
+    def update_customer(self, customer_id, **fields):
+        if self.error:
+            raise self.error
+        self.updates.append((customer_id, fields))
+        return {"id": customer_id}
+
+
+def _post_payer(client, **overrides):
+    data = {
+        "payer_name": "Aurora Comércio Ltda",
+        "tax_id": "11.222.333/0001-81",
+        "phone": "(11) 98888-7777",
+        "billing_email": "financeiro@aurora.com",
+    }
+    data.update(overrides)
+    return client.post(reverse("billing_account:update_payer"), data)
+
+
+@pytest.mark.django_db
+def test_the_owner_changes_who_the_invoices_are_issued_to(client):
+    from apps.billing import services
+
+    user, workspace = _owner_with_brand()
+    client.force_login(user)
+
+    _post_payer(client)
+
+    profile = services.ensure_billing_profile(workspace.organization)
+    workspace.organization.refresh_from_db()
+    assert (profile.payer_name, profile.tax_id, profile.phone) == (
+        "Aurora Comércio Ltda",
+        "11222333000181",
+        "11988887777",
+    )
+    assert workspace.organization.billing_email == "financeiro@aurora.com"
+
+
+@pytest.mark.django_db
+def test_an_existing_asaas_customer_receives_the_change(client):
+    from unittest import mock
+
+    from apps.billing import services
+
+    user, workspace = _owner_with_brand()
+    profile = services.ensure_billing_profile(workspace.organization)
+    profile.gateway, profile.gateway_customer_id, profile.tax_id = "asaas", "cus_1", "52998224725"
+    profile.save()
+    gateway = _PayerGateway()
+    client.force_login(user)
+
+    with mock.patch("apps.billing.contracting.AsaasClient", return_value=gateway):
+        _post_payer(client, tax_id="")
+
+    customer_id, fields = gateway.updates[0]
+    assert customer_id == "cus_1"
+    assert fields["name"] == "Aurora Comércio Ltda"
+    assert fields["cpf_cnpj"] == "52998224725"  # left empty: the document on file is kept
+
+
+@pytest.mark.django_db
+def test_a_refusal_from_asaas_changes_nothing_here(client):
+    from unittest import mock
+
+    from apps.billing import services
+    from apps.billing.gateways.asaas import AsaasAPIError
+
+    user, workspace = _owner_with_brand()
+    profile = services.ensure_billing_profile(workspace.organization)
+    profile.gateway, profile.gateway_customer_id, profile.tax_id = "asaas", "cus_1", "52998224725"
+    profile.save()
+    client.force_login(user)
+
+    with mock.patch(
+        "apps.billing.contracting.AsaasClient",
+        return_value=_PayerGateway(error=AsaasAPIError("bad", status_code=400)),
+    ):
+        _post_payer(client)
+
+    profile.refresh_from_db()
+    assert (profile.payer_name, profile.tax_id) == ("", "52998224725")
+
+
+@pytest.mark.django_db
+def test_an_invalid_document_is_not_saved(client):
+    from apps.billing import services
+
+    user, workspace = _owner_with_brand()
+    client.force_login(user)
+
+    _post_payer(client, tax_id="111.111.111-11")
+
+    assert services.ensure_billing_profile(workspace.organization).payer_name == ""
+
+
+@pytest.mark.django_db
+def test_a_plain_member_cannot_change_the_payer(client):
+    _owner, workspace = _owner_with_brand()
+    member = User.objects.create_user(email="member@a.com", password="x", tos_accepted_at=timezone.now())
+    OrgMembership.objects.filter(user=member).update(org_role=OrgMembership.OrgRole.MEMBER)
+    client.force_login(member)
+
+    assert _post_payer(client).status_code == 403
+
+
+@pytest.mark.django_db
+def test_changing_the_document_does_not_free_the_trial_it_spent(client, settings):
+    from apps.billing import services
+
+    settings.BILLING_TRIAL_DAYS = 7
+    user, workspace = _owner_with_brand()
+    services.start_trial(workspace, tax_id="52998224725", phone="11988887777")
+    client.force_login(user)
+    _post_payer(client)  # the account moves to another document
+
+    _other, other_workspace = _owner_with_brand("again@b.com")
+    with pytest.raises(services.TrialRefusedError):
+        services.start_trial(other_workspace, tax_id="52998224725", phone="11977776666")

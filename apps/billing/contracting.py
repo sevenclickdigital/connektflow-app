@@ -87,9 +87,11 @@ def ensure_customer(organization, *, client=None, email="", cpf_cnpj=""):
     existing = client.find_customer_by_reference(organization.pk)
     if existing is None:
         existing = client.create_customer(
-            name=organization.name,
+            name=profile.payer_name or organization.name,
             external_reference=organization.pk,
-            email=email or getattr(organization, "billing_email", "") or "",
+            # The billing email the account chose comes before the email of
+            # whoever happened to press Contract.
+            email=organization.billing_email or email,
             cpf_cnpj=cpf_cnpj,
             mobile_phone=profile.phone,
         )
@@ -102,6 +104,38 @@ def ensure_customer(organization, *, client=None, email="", cpf_cnpj=""):
     profile.gateway_customer_id = customer_id
     profile.tax_id = cpf_cnpj
     profile.save(update_fields=["gateway", "gateway_customer_id", "tax_id", "updated_at"])
+    return profile
+
+
+def update_payer(organization, *, name, tax_id, phone, email, client=None):
+    """Change who the organization's invoices are issued to.
+
+    An empty ``tax_id``, ``phone`` or ``email`` keeps what is stored. When the organization
+    already is a customer at Asaas the change is sent there first, and a
+    refusal (``AsaasError``) leaves the local data as it was: the two
+    must not disagree about who is being invoiced.
+    """
+    profile = services.ensure_billing_profile(organization)
+    tax_id = tax_id or profile.tax_id
+    phone = phone or profile.phone
+    email = email or organization.billing_email
+
+    if profile.gateway_customer_id and profile.gateway == GATEWAY:
+        (client or AsaasClient()).update_customer(
+            profile.gateway_customer_id,
+            name=name,
+            email=email,
+            cpf_cnpj=tax_id,
+            mobile_phone=phone,
+        )
+
+    with transaction.atomic():
+        profile.payer_name = name
+        profile.tax_id = tax_id
+        profile.phone = phone
+        profile.save(update_fields=["payer_name", "tax_id", "phone", "updated_at"])
+        organization.billing_email = email
+        organization.save(update_fields=["billing_email"])
     return profile
 
 

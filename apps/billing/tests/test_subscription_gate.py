@@ -309,9 +309,9 @@ class TestFreeTrial:
     def test_the_same_document_does_not_get_a_trial_on_another_account(self):
         client, workspace = _signed_up()
         self._start(client, workspace)
-        other, other_workspace = _signed_up("again@example.com")
+        other, other_workspace = _signed_up("again@other.example")
 
-        self._start(other, other_workspace)
+        self._start(other, other_workspace, phone="(11) 97777-6666")
 
         assert not _on_trial(other_workspace)
 
@@ -340,3 +340,35 @@ class TestFreeTrial:
         client, workspace = _signed_up()
         self._start(client, workspace)
         assert not _on_trial(workspace)
+
+
+@pytest.mark.django_db
+class TestTrialOncePerPerson:
+    """A second account does not get a trial by changing one detail."""
+
+    OTHER_CPF = "111.444.777-35"
+
+    @pytest.fixture(autouse=True)
+    def _trial(self, settings):
+        settings.BILLING_TRIAL_DAYS = 7
+
+    def _start(self, email, *, tax_id, phone):
+        client, workspace = _signed_up(email)
+        client.post(_url("billing:start_trial", workspace), {"tax_id": tax_id, "phone": phone})
+        return _on_trial(workspace)
+
+    def test_the_same_phone_is_refused(self):
+        assert self._start("ana@gmail.com", tax_id=VALID_CPF, phone="(11) 98888-7777")
+        assert not self._start("bia@hotmail.com", tax_id=self.OTHER_CPF, phone="11 98888 7777")
+
+    def test_another_address_at_the_same_company_domain_is_refused(self):
+        assert self._start("ana@agenciasol.com.br", tax_id=VALID_CPF, phone="(11) 98888-7777")
+        assert not self._start("contato@agenciasol.com.br", tax_id=self.OTHER_CPF, phone="(11) 97777-6666")
+
+    def test_two_people_at_a_free_mailbox_provider_both_get_one(self):
+        assert self._start("ana@gmail.com", tax_id=VALID_CPF, phone="(11) 98888-7777")
+        assert self._start("bia@gmail.com", tax_id=self.OTHER_CPF, phone="(11) 97777-6666")
+
+    def test_an_alias_of_the_same_inbox_is_the_same_email(self):
+        assert services.normalize_trial_email("Ana.Silva+teste@GoogleMail.com") == "anasilva@gmail.com"
+        assert services.normalize_trial_email("ana+2@agenciasol.com.br") == "ana@agenciasol.com.br"

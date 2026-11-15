@@ -188,7 +188,7 @@ there, and the overview links each brand to this page.
         </p>
         {% if can_manage_billing and addon_awaiting_payment %}
         <a href="{% url 'billing:pay_invoice' workspace_id=workspace.id %}" target="_blank" rel="noopener"
-           class="btn-secondary mt-3">
+           class="btn-soft mt-3">
           {% translate "Open the invoice and pay" %}
         </a>
         {% endif %}

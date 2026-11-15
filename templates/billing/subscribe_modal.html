@@ -192,7 +192,7 @@ apps.billing.middleware), so the ways out are another brand or signing out.
       apps.billing.services.start_trial).
       {% endcomment %}
       <div class="mt-5 pt-5 border-t border-neutral-200" x-data="{ open: false }">
-        <button type="button" class="btn-secondary w-full justify-center" @click="open = true" x-show="!open">
+        <button type="button" class="btn-soft w-full justify-center py-2.5" @click="open = true" x-show="!open">
           {% blocktranslate count days=trial_days %}Or try it free for {{ days }} day{% plural %}Or try it free for {{ days }} days{% endblocktranslate %}
         </button>
         <form method="post" action="{% url 'billing:start_trial' workspace_id=workspace.id %}" x-show="open" x-cloak>
@@ -209,10 +209,10 @@ apps.billing.middleware), so the ways out are another brand or signing out.
           <label for="trial_phone" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Phone with area code" %}</label>
           <input type="tel" id="trial_phone" name="phone" required autocomplete="tel" maxlength="20"
                  placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums mb-4">
-          <button type="submit" class="btn-secondary w-full justify-center">
+          <button type="submit" class="btn-soft w-full justify-center py-2.5">
             {% translate "Start free trial" %}
           </button>
-          <p class="text-xs text-neutral-500 mt-2">{% translate "One free trial per account and per CPF or CNPJ." %}</p>
+          <p class="text-xs text-neutral-500 mt-2">{% translate "One free trial per account, document, phone and email." %}</p>
         </form>
       </div>
       {% endif %}

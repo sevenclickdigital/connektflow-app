@@ -534,13 +534,87 @@ def trial_available(workspace):
     return ensure_billing_profile(workspace.organization).trial_started_at is None
 
 
-def start_trial(workspace, *, tax_id, phone):
+#: Mailbox providers anyone can open an address at. An address there says
+#: nothing about its owner's company, so two of them sharing a domain are
+#: not treated as the same customer.
+FREE_EMAIL_DOMAINS = frozenset(
+    {
+        "gmail.com",
+        "googlemail.com",
+        "hotmail.com",
+        "hotmail.com.br",
+        "outlook.com",
+        "outlook.com.br",
+        "live.com",
+        "live.com.br",
+        "msn.com",
+        "yahoo.com",
+        "yahoo.com.br",
+        "ymail.com",
+        "icloud.com",
+        "me.com",
+        "mac.com",
+        "uol.com.br",
+        "bol.com.br",
+        "terra.com.br",
+        "ig.com.br",
+        "globo.com",
+        "globomail.com",
+        "r7.com",
+        "zipmail.com.br",
+        "proton.me",
+        "protonmail.com",
+        "aol.com",
+        "zoho.com",
+        "gmx.com",
+        "mail.com",
+        "yandex.com",
+    }
+)
+
+
+def normalize_trial_email(email):
+    """An address reduced to the mailbox it reaches.
+
+    Lower case, without the ``+tag`` most providers ignore, and for Gmail
+    without the dots it ignores too — so ``Ana.Silva+teste@gmail.com`` and
+    ``anasilva@gmail.com`` count as the one inbox they are.
+    """
+    local, _at, domain = (email or "").strip().lower().rpartition("@")
+    if not local or not domain:
+        return ""
+    local = local.split("+", 1)[0]
+    if domain == "googlemail.com":
+        domain = "gmail.com"
+    if domain == "gmail.com":
+        local = local.replace(".", "")
+    return f"{local}@{domain}"
+
+
+def _trial_already_taken(profile, *, tax_id, phone, email):
+    """Whether another account has spent a trial with any of these."""
+    # The second arm of each pair covers trials started before the
+    # trial_* snapshots existed.
+    taken = models.Q(trial_tax_id=tax_id) | models.Q(tax_id=tax_id, trial_started_at__isnull=False)
+    taken |= models.Q(trial_phone=phone) | models.Q(phone=phone, trial_started_at__isnull=False)
+    if email:
+        taken |= models.Q(trial_email=email)
+        domain = email.rpartition("@")[2]
+        if domain not in FREE_EMAIL_DOMAINS:
+            taken |= models.Q(trial_email__endswith=f"@{domain}")
+    return OrganizationBillingProfile.objects.filter(taken).exclude(pk=profile.pk).exists()
+
+
+def start_trial(workspace, *, tax_id, phone, email=""):
     """Open the account's free trial on ``workspace``.
 
-    ``tax_id`` (CPF/CNPJ digits) and ``phone`` are what the trial costs:
-    they identify the person, and the document is refused when another
-    account already took a trial with it. Returns the subscription.
+    ``tax_id`` (CPF/CNPJ digits), ``phone`` and ``email`` are what the
+    trial costs: they identify the person, and the trial is refused when
+    another account already took one with the same document, phone or
+    email, or with an email at the same company domain. Returns the
+    subscription.
     """
+    email = normalize_trial_email(email)
     with transaction.atomic():
         # Locked so two submissions cannot both find the trial unused.
         profile = OrganizationBillingProfile.objects.select_for_update().get(
@@ -548,19 +622,32 @@ def start_trial(workspace, *, tax_id, phone):
         )
         if not trial_available(workspace):
             raise TrialRefusedError(_("This account has already used its free trial."))
-        taken = (
-            OrganizationBillingProfile.objects.filter(tax_id=tax_id, trial_started_at__isnull=False)
-            .exclude(pk=profile.pk)
-            .exists()
-        )
-        if taken:
-            raise TrialRefusedError(_("A free trial has already been used with this CPF or CNPJ."))
+        if _trial_already_taken(profile, tax_id=tax_id, phone=phone, email=email):
+            raise TrialRefusedError(
+                _(
+                    "A free trial has already been used with this document, phone or email. "
+                    "Contract the plan to start, or get in touch with us."
+                )
+            )
 
         now = timezone.now()
         profile.tax_id = tax_id
         profile.phone = phone
         profile.trial_started_at = now
-        profile.save(update_fields=["tax_id", "phone", "trial_started_at", "updated_at"])
+        profile.trial_tax_id = tax_id
+        profile.trial_phone = phone
+        profile.trial_email = email
+        profile.save(
+            update_fields=[
+                "tax_id",
+                "phone",
+                "trial_started_at",
+                "trial_tax_id",
+                "trial_phone",
+                "trial_email",
+                "updated_at",
+            ]
+        )
 
         sub = ensure_subscription(workspace)
         sub.trial_ends_at = now + datetime.timedelta(days=trial_days())

@@ -62,6 +62,7 @@ from apps.billing.models import BillingEvent, ProductPrice, WorkspaceAddon, Work
 from apps.billing.storage_usage import storage_status
 from apps.billing.webhooks import PAID_EVENTS, UNPAID_EVENTS
 from apps.contacts.forms import is_valid_cnpj, is_valid_cpf
+from apps.members.decorators import require_org_role
 from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
 from apps.workspaces.models import Workspace
@@ -368,6 +369,7 @@ def account_billing(request):
         profile = getattr(request.org, "billing_profile", None)
         payer = {
             "organization": request.org,
+            "name": (profile.payer_name if profile else "") or request.org.name,
             "tax_id_ending": profile.tax_id[-4:] if profile and profile.tax_id else "",
             "phone": _display_phone(profile.phone) if profile else "",
             "email": request.org.billing_email,
@@ -393,6 +395,54 @@ def account_billing(request):
             "settings_active": "billing",
         },
     )
+
+
+@login_required
+@require_org_role("admin")
+@require_POST
+def update_payer(request):
+    """Change who the organization's invoices are issued to.
+
+    Name, CPF or CNPJ, phone and billing email. The document field may be
+    left empty to keep the one on file, which is never sent back to the
+    page to be resubmitted.
+    """
+    name = (request.POST.get("payer_name") or "").strip()[:255]
+    raw_tax_id = (request.POST.get("tax_id") or "").strip()
+    raw_phone = (request.POST.get("phone") or "").strip()
+    email = (request.POST.get("billing_email") or "").strip()
+
+    tax_id = _valid_tax_id(raw_tax_id)
+    phone = _valid_phone(raw_phone)
+    error = None
+    if not name:
+        error = _("Enter the name or company name the invoices should carry.")
+    elif raw_tax_id and not tax_id:
+        error = _("Enter a valid CPF or CNPJ for the invoice.")
+    elif raw_phone and not phone:
+        error = _("Enter a phone with area code.")
+    elif email:
+        try:
+            validate_email(email)
+        except ValidationError:
+            error = _("Enter a valid billing email.")
+    if error:
+        messages.error(request, error)
+        return redirect("billing_account:overview")
+
+    try:
+        contracting.update_payer(request.org, name=name, tax_id=tax_id, phone=phone, email=email)
+    except AsaasError as exc:
+        logger.exception("Asaas refused the payer data of organization %s", request.org.pk)
+        messages.error(
+            request,
+            _gateway_refusal(exc)
+            or _("We could not reach the payment provider, so nothing was changed. Please try again in a moment."),
+        )
+        return redirect("billing_account:overview")
+
+    messages.success(request, _("Billing data updated. The next invoices will carry it."))
+    return redirect("billing_account:overview")
 
 
 #: How many of the latest charges the account's billing page lists.
@@ -552,7 +602,7 @@ def start_trial(request, workspace_id):
         return redirect("billing:subscribe_modal", workspace_id=workspace.id)
 
     try:
-        sub = services.start_trial(workspace, tax_id=tax_id, phone=phone)
+        sub = services.start_trial(workspace, tax_id=tax_id, phone=phone, email=request.user.email)
     except services.TrialRefusedError as exc:
         messages.error(request, str(exc))
         return redirect("billing:subscribe_modal", workspace_id=workspace.id)

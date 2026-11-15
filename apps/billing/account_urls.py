@@ -12,4 +12,5 @@ app_name = "billing_account"
 
 urlpatterns = [
     path("", views.account_billing, name="overview"),
+    path("payer/", views.update_payer, name="update_payer"),
 ]

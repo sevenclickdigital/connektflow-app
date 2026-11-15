@@ -223,6 +223,23 @@ class AsaasClient:
             payload["mobilePhone"] = mobile_phone
         return self._request("POST", "/customers", json=payload)
 
+    def update_customer(self, customer_id, *, name="", email="", cpf_cnpj="", mobile_phone=""):
+        """Change the payer's data on an existing customer.
+
+        Only what is given is sent: Asaas leaves the other fields as they
+        are, and rejects explicit nulls.
+        """
+        payload = {}
+        if name:
+            payload["name"] = name
+        if email:
+            payload["email"] = email
+        if cpf_cnpj:
+            payload["cpfCnpj"] = cpf_cnpj
+        if mobile_phone:
+            payload["mobilePhone"] = mobile_phone
+        return self._request("PUT", f"/customers/{customer_id}", json=payload)
+
     def get_customer(self, customer_id):
         return self._request("GET", f"/customers/{customer_id}")
 

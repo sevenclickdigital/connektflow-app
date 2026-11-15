@@ -143,23 +143,69 @@ detail: storage, add-ons, contracting.
 </section>
 
 {% if payer %}
-<section class="mb-8">
-    <h2 class="section-title">{% translate "Billing data" %}</h2>
-    <div class="a-card grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-neutral-300">
-        <div class="p-5 min-w-0">
-            <div class="text-sm text-neutral-600">{% translate "CPF or CNPJ" %}</div>
-            <div class="text-sm font-semibold text-neutral-950 tabular-nums mt-1">{% if payer.tax_id_ending %}{% blocktranslate with digits=payer.tax_id_ending %}ending in {{ digits }}{% endblocktranslate %}{% else %}—{% endif %}</div>
-        </div>
-        <div class="p-5 min-w-0">
-            <div class="text-sm text-neutral-600">{% translate "Phone" %}</div>
-            <div class="text-sm font-semibold text-neutral-950 tabular-nums mt-1">{{ payer.phone|default:"—" }}</div>
-        </div>
-        <div class="p-5 min-w-0">
-            <div class="text-sm text-neutral-600">{% translate "Billing email" %}</div>
-            <div class="text-sm font-semibold text-neutral-950 truncate mt-1">{{ payer.email|default:"—" }}</div>
-        </div>
+<section class="mb-8" x-data="{ editing: false }">
+    <div class="flex items-center justify-between gap-4">
+        <h2 class="section-title">{% translate "Billing data" %}</h2>
+        <button type="button" class="btn-soft py-1.5 px-3 text-xs mb-3" @click="editing = true" x-show="!editing">{% translate "Edit data" %}</button>
     </div>
-    <p class="text-xs text-neutral-500 mt-2">{% translate "The document and the phone are asked at the first contract or when the free trial starts. To change them, get in touch with us." %}</p>
+
+    <div x-show="!editing">
+        <div class="a-card grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-neutral-300">
+            <div class="p-5 min-w-0">
+                <div class="text-sm text-neutral-600">{% translate "Name or company name" %}</div>
+                <div class="text-sm font-semibold text-neutral-950 truncate mt-1">{{ payer.name }}</div>
+            </div>
+            <div class="p-5 min-w-0">
+                <div class="text-sm text-neutral-600">{% translate "CPF or CNPJ" %}</div>
+                <div class="text-sm font-semibold text-neutral-950 tabular-nums mt-1">{% if payer.tax_id_ending %}{% blocktranslate with digits=payer.tax_id_ending %}ending in {{ digits }}{% endblocktranslate %}{% else %}—{% endif %}</div>
+            </div>
+            <div class="p-5 min-w-0">
+                <div class="text-sm text-neutral-600">{% translate "Phone" %}</div>
+                <div class="text-sm font-semibold text-neutral-950 tabular-nums mt-1">{{ payer.phone|default:"—" }}</div>
+            </div>
+            <div class="p-5 min-w-0">
+                <div class="text-sm text-neutral-600">{% translate "Billing email" %}</div>
+                <div class="text-sm font-semibold text-neutral-950 truncate mt-1">{{ payer.email|default:"—" }}</div>
+            </div>
+        </div>
+        <p class="text-xs text-neutral-500 mt-2">{% translate "Who the invoices of every brand of this account are issued to." %}</p>
+    </div>
+
+    {% comment %}
+    The document on file is never written into the page: the field starts
+    empty and an empty field keeps it (apps.billing.contracting.update_payer).
+    {% endcomment %}
+    <form method="post" action="{% url 'billing_account:update_payer' %}" class="a-card p-6" x-show="editing" x-cloak>
+        {% csrf_token %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label for="payer_name" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Name or company name" %}</label>
+                <input type="text" id="payer_name" name="payer_name" required maxlength="255" value="{{ payer.name }}" class="form-input-styled w-full">
+            </div>
+            <div>
+                <label for="payer_tax_id" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "CPF or CNPJ" %}</label>
+                <input type="text" id="payer_tax_id" name="tax_id" inputmode="numeric" autocomplete="off" maxlength="18"
+                       placeholder="{% if payer.tax_id_ending %}{% blocktranslate with digits=payer.tax_id_ending %}ending in {{ digits }}{% endblocktranslate %}{% else %}000.000.000-00{% endif %}"
+                       class="form-input-styled w-full tabular-nums">
+                {% if payer.tax_id_ending %}
+                <p class="text-xs text-neutral-500 mt-1.5">{% translate "Leave it empty to keep the current document. Type a CPF or a CNPJ to change it." %}</p>
+                {% endif %}
+            </div>
+            <div>
+                <label for="payer_phone" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Phone with area code" %}</label>
+                <input type="tel" id="payer_phone" name="phone" autocomplete="tel" maxlength="20" value="{{ payer.phone }}" placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums">
+            </div>
+            <div>
+                <label for="payer_email" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Billing email" %}</label>
+                <input type="email" id="payer_email" name="billing_email" autocomplete="email" maxlength="254" value="{{ payer.email }}" class="form-input-styled w-full">
+            </div>
+        </div>
+        <div class="flex items-center gap-2 mt-5">
+            <button type="submit" class="btn-brand">{% translate "Save" %}</button>
+            <button type="button" class="btn-soft" @click="editing = false">{% translate "Cancel" %}</button>
+        </div>
+        <p class="text-xs text-neutral-500 mt-3">{% translate "The change applies to the next invoices. Invoices already issued keep the data they were issued with." %}</p>
+    </form>
 </section>
 {% endif %}
 {% endblock %}
