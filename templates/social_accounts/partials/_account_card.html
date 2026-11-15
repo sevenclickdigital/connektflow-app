@@ -76,7 +76,8 @@ that finds the job finished brings the toast with the result.
                 <button type="button" @click="menu = false; manage = true" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Manage connection" %}</button>
                 {% if account.can_import_inbox_history %}
                 <form method="post" action="{% url 'social_accounts:import_inbox_history' workspace_id=workspace_id account_id=account.id %}"
-                      data-confirm="{% translate 'Import the comments and conversations from before this account was connected? You can remove them again later with Remove old history.' %}"
+                      data-confirm="{% translate 'Import the history?' %}"
+                      data-confirm-body="{% translate 'The comments and conversations from before this account was connected come into the inbox, without notifications. You can take them out again with Remove old history.' %}"
                       data-confirm-label="{% translate 'Import history' %}">
                     {% csrf_token %}
                     <button type="submit" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Import history" %}</button>
@@ -84,7 +85,8 @@ that finds the job finished brings the toast with the result.
                 {% endif %}
                 {% if account.can_clear_inbox_history %}
                 <form method="post" action="{% url 'social_accounts:clear_inbox_history' workspace_id=workspace_id account_id=account.id %}"
-                      data-confirm="{% blocktranslate with date=account.connected_at|date:'SHORT_DATE_FORMAT' %}Remove from the inbox the comments and conversations from before {{ date }}, when this account was connected? Replies and notes written on them go too. Nothing is deleted on the network itself.{% endblocktranslate %}"
+                      data-confirm="{% translate 'Remove the old history?' %}"
+                      data-confirm-body="{% blocktranslate with date=account.connected_at|date:'SHORT_DATE_FORMAT' %}The comments and conversations from before {{ date }}, the day this account was connected, leave the inbox, with the replies and notes written on them. Nothing is deleted on the network itself.{% endblocktranslate %}"
                       data-confirm-label="{% translate 'Remove old history' %}" data-confirm-tone="danger">
                     {% csrf_token %}
                     <button type="submit" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Remove old history" %}</button>

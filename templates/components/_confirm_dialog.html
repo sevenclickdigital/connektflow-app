@@ -4,12 +4,15 @@ The app's confirmation dialog, in place of the browser's confirm(). Included
 once by base.html. It answers two things:
 - htmx `hx-confirm="Question?"`: the request goes out only after "Confirm".
 - a plain form with `data-confirm="Question?"`: it submits only after "Confirm".
-Optional on the same element: `data-confirm-label` (the confirm button's text)
-and `data-confirm-tone="danger"` (red icon and button, for deletions).
+Optional on the same element: `data-confirm-label` (the confirm button's text),
+`data-confirm-tone="danger"` (red icon and button, for deletions) and
+`data-confirm-body` (a sentence or two under the question: keep the question
+short and put what will happen here, since the question is set as a title).
 {% endcomment %}
-<div x-data="{ open: false, question: '', label: '', danger: false, proceed: null,
+<div x-data="{ open: false, question: '', body: '', label: '', danger: false, proceed: null,
               ask(el, question, proceed) {
                   this.question = question;
+                  this.body = (el && el.dataset.confirmBody) || '';
                   this.label = (el && el.dataset.confirmLabel) || '';
                   this.danger = !!el && el.dataset.confirmTone === 'danger';
                   this.proceed = proceed;
@@ -20,14 +23,15 @@ and `data-confirm-tone="danger"` (red icon and button, for deletions).
      @app-confirm.window="ask($event.detail.el, $event.detail.question, $event.detail.proceed)">
     <div x-show="open" x-cloak class="modal-overlay z-[80]" role="dialog" aria-modal="true" aria-labelledby="app-confirm-question"
          x-transition.opacity @keydown.escape.window="open && answer(false)">
-        <div class="modal-panel is-sm" @click.outside="answer(false)">
-            <div class="modal-header">
+        <div class="modal-panel" :class="body ? '' : 'is-sm'" @click.outside="answer(false)">
+            <div class="modal-header" :class="body ? 'items-center' : ''">
                 <div class="modal-icon" :class="danger ? 'is-error' : 'is-brand'">
                     <svg x-show="danger" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                     <svg x-show="!danger" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 </div>
                 <div class="modal-title" id="app-confirm-question" x-text="question"></div>
             </div>
+            <p class="modal-body" x-show="body" x-text="body"></p>
             <div class="modal-footer">
                 <button type="button" class="btn-ghost" @click="answer(false)">{% translate "Cancel" %}</button>
                 <button type="button" x-ref="confirm" :class="danger ? 'btn-danger-soft' : 'btn-brand'" @click="answer(true)"
