@@ -51,7 +51,9 @@
                 <div class="space-y-3 mb-6">
                     {% for provider in socialaccount_providers %}
                         {% provider_login_url provider process="login" as href %}
-                        <form method="post" action="{{ href }}">
+                        {% url 'accounts:login_popup_done' as popup_done %}
+                        {% provider_login_url provider process="login" next=popup_done as popup_href %}
+                        <form method="post" action="{{ href }}" data-oauth-popup data-popup-action="{{ popup_href }}">
                             {% csrf_token %}
                             <button type="submit" class="btn-social">
                                 {% if provider.id == "google" %}
@@ -131,6 +133,7 @@
         <a href="{{ login_url }}" class="font-semibold hover:underline" style="color: var(--primary);">{% translate "Sign in" %}</a>
     </p>
 </div>
+{% include "social_accounts/partials/_oauth_popup.html" %}
 {% endblock %}
 
 {% block extra_js %}

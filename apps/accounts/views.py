@@ -1,9 +1,11 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, resolve_url
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods, require_POST
 
@@ -241,6 +243,27 @@ def _handle_account_deletion(request, user):
     logout(request)
     messages.success(request, _("Your account has been deleted."))
     return redirect("account_login")
+
+
+@login_required
+def login_popup_done(request):
+    """Last page of a sign-in that ran in a popup.
+
+    The login and signup pages send the Google round trip into a small window
+    and name this address as where it ends. The page tells the window that
+    opened the popup to carry on, now signed in, and closes itself (see
+    social_accounts/connect_done.html, shared with the account connections).
+    """
+    next_url = request.GET.get("next", "")
+    if not url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        next_url = resolve_url(settings.LOGIN_REDIRECT_URL)
+    return render(
+        request,
+        "social_accounts/connect_done.html",
+        {"next_url": next_url, "title": _("You are signed in")},
+    )
 
 
 @login_required

@@ -19,6 +19,9 @@ AUTH_RATE_WINDOW = 60  # seconds
 
 EXEMPT_PATH_PREFIXES = (
     "/accounts/accept-terms/",
+    # The page that closes the sign-in popup: the terms are then asked in the
+    # window the person is actually working in.
+    "/accounts/popup-done/",
     "/accounts/logout/",
     "/accounts/google/",
     "/accounts/3rdparty/",

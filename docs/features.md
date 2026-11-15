@@ -240,7 +240,7 @@ People and companies the workspace talks to (sidebar: Engajar → Contatos, for 
 ## 5. Platform configuration
 
 ### F-5.1 Authentication — `apps/accounts/`
-- Email/password signup and login through django-allauth, Google SSO (`GOOGLE_AUTH_CLIENT_ID`), terms acceptance, and an account settings page.
+- Email/password signup and login through django-allauth, Google SSO (`GOOGLE_AUTH_CLIENT_ID`), terms acceptance, and an account settings page. On a desktop the Google round trip runs in a popup, like the account connections: the button posts to allauth with `next=/accounts/popup-done/`, and that page (`views.login_popup_done`, rendering `social_accounts/connect_done.html`) tells the login page to carry on and closes the window. On touch devices, narrow screens or a blocked popup the page navigates as before.
 - `SIGNUP_MODE` = `open` | `invite` | `closed`. `CUSTOM_SIGNUP_URL` replaces every "Sign up" link and, in `invite` or `closed` mode, is where blocked signups are sent (`signup_links.py`, `adapters.py`).
 - Auth POSTs are rate-limited per IP: 10 attempts per 60 s (`apps/accounts/middleware.py`). Sessions last 14 days (`SESSION_COOKIE_AGE`).
 - 2FA: the TOTP fields exist on `User`, but there is no setup or enforcement flow yet.

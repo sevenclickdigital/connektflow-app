@@ -5,6 +5,9 @@ the server ends the round trip on connect_done.html (views.finish_in_popup).
 That page announces, over a same-origin BroadcastChannel, where the flow
 continues; this page goes there, which is either itself reloaded with the new
 account or the account picker.
+A form may also carry ``data-popup-action``: the address to post to when the
+popup opens, for flows that take their return address in the URL (the Google
+sign-in on the login and signup pages).
 The popup is skipped, and the form submits as it always did, on touch devices
 and narrow screens, where a second window is more trouble than help, and when
 the browser blocks it.
@@ -28,6 +31,10 @@ the browser blocks it.
         }
         if (!on && field) field.remove();
         if (on) form.target = POPUP_NAME; else form.removeAttribute('target');
+        if (form.dataset.popupAction) {
+            if (!form.dataset.pageAction) form.dataset.pageAction = form.getAttribute('action');
+            form.setAttribute('action', on ? form.dataset.popupAction : form.dataset.pageAction);
+        }
     }
 
     document.addEventListener('submit', function (event) {
