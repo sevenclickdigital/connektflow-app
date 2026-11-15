@@ -325,7 +325,7 @@ People and companies the workspace talks to (sidebar: Engajar → Contatos, for 
 
 ## Operational and compliance
 
-- Public legal pages for Meta App Review: `/privacy/`, `/terms/` and `/data-deletion/` (`apps/common/legal_views.py`).
+- Public legal pages for Meta App Review: `/privacidade/`, `/termos/` and `/exclusao-de-dados/` (`apps/common/legal_views.py`); the English `/privacy/`, `/terms/` and `/data-deletion/` still answer.
 - YouTube compliance (`youtube_compliance.py`, `YouTubeRevocation`): handles grant revocation and the retention lifecycle of YouTube data.
 - Field-level encryption of tokens and credentials (`apps/common/encryption.py`, keyed by `ENCRYPTION_KEY_SALT`).
 - `/health/` endpoint. Stale task locks are released when the worker starts.

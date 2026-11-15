@@ -459,7 +459,7 @@ Facebook and Instagram share the same Meta app credentials. Threads runs on the 
    Uninstall Callback URL: {APP_URL}/webhooks/threads/deauthorize/
    Delete Callback URL:    {APP_URL}/webhooks/threads/data-deletion/
    ```
-   The first marks that person's connection as needing a reconnect; the second deletes it with its stored data and answers with a confirmation code the person can check at `{APP_URL}/data-deletion/?code=…`.
+   The first marks that person's connection as needing a reconnect; the second deletes it with its stored data and answers with a confirmation code the person can check at `{APP_URL}/exclusao-de-dados/?code=…`.
 
    These have no fallback: until both are set, Threads shows as **Not Configured** on the connect page. Sending the Facebook App ID to Threads fails with error `4476002`.
 

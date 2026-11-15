@@ -14,7 +14,7 @@ LAST_UPDATED = "2 de novembro de 2026"
 
 # Written as the Meta app's display name: App Review compares the legal pages
 # with it, so the two change together.
-APP_NAME = "ConnektFlow"
+APP_NAME = "Connekt Flow"
 
 
 def _context():

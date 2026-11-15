@@ -8,7 +8,7 @@ The design source is the brand pack in `branding/` (logo, mascot poses and per-n
 
 - User-facing name: **Connekt Flow**, two words, with a K (masculine in Portuguese: "do Connekt Flow", "pelo Connekt Flow"). Identifiers that cannot hold a space use `connektflow` / `ConnektFlow`.
 - A workspace is called **marca** in Portuguese (feminine: "a marca", "esta marca", "todas as marcas"). Only the pt_BR catalogue says it; code, URLs, English text and the API keep `workspace`.
-- The legal pages (`/privacy/`, `/terms/`, `/data-deletion/`) name the product **ConnektFlow**, one word (`APP_NAME` in `apps/common/legal_views.py`): that is the display name of the Meta app, and Meta App Review compares the two. Change them only together.
+- The legal pages (`/privacidade/`, `/termos/`, `/exclusao-de-dados/`) name the product with `APP_NAME` in `apps/common/legal_views.py`, which must equal the display name of the Meta app (today "Connekt Flow", the same as the interface): Meta App Review compares the two. Change them only together.
 - Kept on purpose, because changing them breaks running installations or third-party contracts:
   - HKDF `info` strings in `apps/common/encryption.py` and `apps/api_keys/services.py` (changing them makes every stored secret and API key unreadable);
   - database names `brightbean` / `brightbean_test` (compose files, CI, settings);
@@ -40,7 +40,7 @@ The design source is the brand pack in `branding/` (logo, mascot poses and per-n
 ## 3. Done
 
 - Rename in templates, Python messages, the `pt_BR` catalogue, API/MCP titles (`SERVER_NAME = "connektflow"`), Asaas charge descriptions, User-Agents, the mail-class header (`X-ConnektFlow-Email-Class`), the web manifest.
-- Sign-up and terms-acceptance link to our own `/terms/` and `/privacy/` instead of the upstream site. The Mastodon app registration advertises `APP_URL` as its website.
+- Sign-up and terms-acceptance link to our own `/termos/` and `/privacidade/` instead of the upstream site. The Mastodon app registration advertises `APP_URL` as its website.
 - Tokens from the pack in `styles.css`; `brand-green` removed (checkbox/toggle accent is now `--primary`); the undefined `--primary-rgb` fallbacks replaced by `color-mix()` on `--primary`.
 - Inter, self-hosted in `static/fonts/` (variable, latin + latin-ext, OFL licence alongside). `--font-display` is Inter too; no serif face is left.
 - Logos: `static/img/connektflow-symbol.svg` (auth pages, collapsed sidebar) and `connektflow-wordmark-dark.svg` (sidebar, mobile top bar), identical copies of the files in `branding/logo/`. Favicons and manifest icons are the symbol in white on a violet square, drawn from the symbol's three polygons.

@@ -20,11 +20,16 @@ urlpatterns = [
     # Django's own view: POSTs a language code, stores it on the session and
     # redirects back. The language picker in the sidebar posts here.
     path("i18n/", include("django.conf.urls.i18n")),
-    # Public legal pages. Required by Meta App Review, which fetches both
-    # anonymously, so they must stay outside any auth-gated include.
-    path("privacy/", legal_views.privacy_policy, name="privacy_policy"),
-    path("terms/", legal_views.terms_of_service, name="terms_of_service"),
-    path("data-deletion/", legal_views.data_deletion, name="data_deletion"),
+    # Public legal pages. Required by Meta App Review, which fetches them
+    # anonymously, so they must stay outside any auth-gated include. The
+    # Portuguese addresses are the ones the app links to; the English ones stay
+    # because platform app settings and sent emails may still point at them.
+    path("privacidade/", legal_views.privacy_policy, name="privacy_policy"),
+    path("termos/", legal_views.terms_of_service, name="terms_of_service"),
+    path("exclusao-de-dados/", legal_views.data_deletion, name="data_deletion"),
+    path("privacy/", legal_views.privacy_policy),
+    path("terms/", legal_views.terms_of_service),
+    path("data-deletion/", legal_views.data_deletion),
     path("accounts/", include("apps.accounts.urls")),
     path("accounts/", include("allauth.urls")),
     path("organizations/", include("apps.organizations.urls")),

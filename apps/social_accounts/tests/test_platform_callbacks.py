@@ -178,7 +178,7 @@ def test_data_deletion_removes_the_connection_and_answers_with_a_code_and_a_stat
     body = response.json()
     code = body["confirmation_code"]
     assert code.isalnum()
-    assert body["url"] == f"https://app.example.com/data-deletion/?code={code}"
+    assert body["url"] == f"https://app.example.com/exclusao-de-dados/?code={code}"
     assert not SocialAccount.objects.filter(id=account.id).exists()
     assert not Post.objects.filter(id=only_here.id).exists()
     assert Post.objects.filter(id=shared.id).exists()
