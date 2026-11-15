@@ -1,0 +1,16 @@
+{% load i18n %}
+{% comment %}
+The payer's CPF or CNPJ, asked once: the payment provider needs it to
+issue the first invoice of the organization. Shown only while
+``needs_tax_id`` is true (see apps.billing.views._needs_tax_id).
+{% endcomment %}
+<label for="tax_id" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">
+  {% translate "CPF or CNPJ for the invoice" %}
+</label>
+<input type="text" id="tax_id" name="tax_id" required
+       inputmode="numeric" autocomplete="off" maxlength="18"
+       placeholder="000.000.000-00"
+       class="form-input-styled w-full tabular-nums">
+<p class="text-xs text-neutral-500 mt-1.5">
+  {% translate "It goes on the invoice issued by our payment provider. We ask only once." %}
+</p>

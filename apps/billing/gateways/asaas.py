@@ -46,6 +46,7 @@ GATEWAY = "asaas"
 
 # Asaas's recurrence value for a monthly subscription.
 CYCLE_MONTHLY = "MONTHLY"
+CYCLE_YEARLY = "YEARLY"
 
 # Let the payer pick between card, boleto and Pix on the Asaas checkout
 # instead of us committing them to one method up front. Asaas treats
@@ -291,6 +292,15 @@ class AsaasClient:
         )
         data = body.get("data") or []
         return data[0] if data else None
+
+    def list_subscription_payments(self, subscription_id):
+        """The charges Asaas has generated for a subscription.
+
+        Each carries ``status``, ``dueDate`` and ``invoiceUrl`` — the page
+        where the customer picks Pix, boleto or card and pays.
+        """
+        body = self._request("GET", f"/subscriptions/{subscription_id}/payments")
+        return body.get("data") or []
 
     def cancel_subscription(self, subscription_id):
         """Stop a subscription's future charges.

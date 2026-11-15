@@ -41,23 +41,45 @@ from django.utils.translation import gettext_lazy as _
 from apps.billing import services
 from apps.billing.gateways import asaas as asaas_gateway
 from apps.billing.gateways.asaas import GATEWAY, AsaasClient, AsaasError
-from apps.billing.models import WorkspaceSubscription
+from apps.billing.models import WorkspaceAddon, WorkspaceSubscription
 
 logger = logging.getLogger(__name__)
 
+#: Asaas statuses of a subscription that will not charge again.
+ENDED_SUBSCRIPTION_STATUSES = frozenset({"INACTIVE", "EXPIRED"})
 
-def ensure_customer(organization, *, client=None, email=""):
+#: Asaas statuses of a charge the customer still has to pay.
+UNPAID_PAYMENT_STATUSES = frozenset({"PENDING", "OVERDUE"})
+
+
+def has_customer(organization):
+    """Whether the organization already exists as a customer in Asaas.
+
+    What the screens ask to decide if the CPF/CNPJ field is shown: Asaas
+    wants the document once, when the customer is created.
+    """
+    profile = services.ensure_billing_profile(organization)
+    return bool(profile.gateway_customer_id and profile.gateway == GATEWAY)
+
+
+def ensure_customer(organization, *, client=None, email="", cpf_cnpj=""):
     """Make sure the organization exists as a customer in Asaas.
 
     Returns the ``OrganizationBillingProfile`` carrying the id. Safe to
     call repeatedly: the stored id short-circuits, and a stored id that
     predates a gateway switch is replaced rather than reused.
+
+    Asaas refuses to create a customer without a CPF or CNPJ. It comes
+    from ``cpf_cnpj`` or, when the account already gave it (to start a
+    free trial), from the billing profile, where a new one is kept.
     """
     client = client or AsaasClient()
     profile = services.ensure_billing_profile(organization)
 
     if profile.gateway_customer_id and profile.gateway == GATEWAY:
         return profile
+
+    cpf_cnpj = cpf_cnpj or profile.tax_id
 
     # Asaas may already hold a customer for this org from a call whose
     # response we lost. Adopting it beats creating a duplicate, which
@@ -68,6 +90,8 @@ def ensure_customer(organization, *, client=None, email=""):
             name=organization.name,
             external_reference=organization.pk,
             email=email or getattr(organization, "billing_email", "") or "",
+            cpf_cnpj=cpf_cnpj,
+            mobile_phone=profile.phone,
         )
 
     customer_id = existing.get("id") or ""
@@ -76,16 +100,21 @@ def ensure_customer(organization, *, client=None, email=""):
 
     profile.gateway = GATEWAY
     profile.gateway_customer_id = customer_id
-    profile.save(update_fields=["gateway", "gateway_customer_id", "updated_at"])
+    profile.tax_id = cpf_cnpj
+    profile.save(update_fields=["gateway", "gateway_customer_id", "tax_id", "updated_at"])
     return profile
 
 
-def subscribe_workspace(workspace, *, client=None, email=""):
+def subscribe_workspace(workspace, *, client=None, email="", cpf_cnpj="", cycle=WorkspaceSubscription.Cycle.MONTHLY):
     """Contract the monthly subscription for one workspace.
 
     The call the contracting modal makes. Ensures the org's customer,
     creates the recurring subscription, and records both ids on the
     workspace's ``WorkspaceSubscription``.
+
+    This is the moment the price is fixed: the row takes today's quote
+    for the chosen ``cycle`` (list price, volume and yearly discounts) and
+    keeps it from then on.
 
     The row stays ``pending``: a created subscription is an agreement to
     pay, not a payment. Only ``PAYMENT_CONFIRMED`` on the webhook flips
@@ -98,8 +127,11 @@ def subscribe_workspace(workspace, *, client=None, email=""):
     sub = services.ensure_subscription(workspace)
 
     # Layer 1: already contracted. Returned as-is rather than re-POSTed,
-    # which is what makes a double-clicked modal harmless.
-    if sub.gateway_subscription_id:
+    # which is what makes a double-clicked modal harmless. A canceled row
+    # is the exception: its gateway subscription is gone, so contracting
+    # again has to create a new one.
+    was_canceled = sub.status == WorkspaceSubscription.Status.CANCELED
+    if sub.gateway_subscription_id and not was_canceled:
         return sub
 
     # A comped workspace has no gateway subscription behind it by
@@ -107,14 +139,27 @@ def subscribe_workspace(workspace, *, client=None, email=""):
     if sub.is_courtesy:
         return sub
 
-    profile = ensure_customer(workspace.organization, client=client, email=email)
+    profile = ensure_customer(workspace.organization, client=client, email=email, cpf_cnpj=cpf_cnpj)
 
-    # Layer 2: recover an id we may have failed to persist.
+    # Layer 2: recover an id we may have failed to persist. One that Asaas
+    # already ended is not recovered, or a returning customer would be
+    # tied to a subscription that never charges again.
     remote = client.find_subscription_by_reference(workspace.pk)
+    if remote is not None and (remote.get("deleted") or remote.get("status") in ENDED_SUBSCRIPTION_STATUSES):
+        remote = None
+    if remote is not None and remote.get("cycle") == asaas_gateway.CYCLE_YEARLY:
+        # Adopted from a call whose answer was lost: what Asaas holds decides.
+        cycle = WorkspaceSubscription.Cycle.YEARLY
+    quote = services.quote_workspace(workspace, cycle)
     if remote is None:
         remote = client.create_subscription(
             customer_id=profile.gateway_customer_id,
-            value_cents=sub.price_cents,
+            value_cents=quote["charge_cents"],
+            cycle=(
+                asaas_gateway.CYCLE_YEARLY
+                if quote["cycle"] == WorkspaceSubscription.Cycle.YEARLY
+                else asaas_gateway.CYCLE_MONTHLY
+            ),
             external_reference=workspace.pk,
             # Translated: it reaches the customer, on the Asaas invoice
             # and in the charge notification emails Asaas sends.
@@ -130,12 +175,19 @@ def subscribe_workspace(workspace, *, client=None, email=""):
         sub.gateway_customer_id = profile.gateway_customer_id
         sub.gateway_subscription_id = subscription_id
         sub.canceled_at = None
+        sub.price_cents = quote["monthly_cents"]
+        sub.billing_cycle = quote["cycle"]
+        if was_canceled:
+            sub.status = WorkspaceSubscription.Status.PENDING
         sub.save(
             update_fields=[
+                "price_cents",
+                "billing_cycle",
                 "gateway",
                 "gateway_customer_id",
                 "gateway_subscription_id",
                 "canceled_at",
+                "status",
                 "updated_at",
             ]
         )
@@ -143,7 +195,42 @@ def subscribe_workspace(workspace, *, client=None, email=""):
     return sub
 
 
-def subscribe_storage_addon(addon, *, client=None):
+def open_invoice_url(workspace, *, client=None):
+    """Where the customer pays what this workspace owes, or "".
+
+    The invoice page of the oldest unpaid charge among the workspace's
+    subscription and its storage add-ons, each of which is its own
+    subscription at Asaas. Asked from Asaas each time rather than stored:
+    the charges change every cycle and a paid one must stop being offered.
+    """
+    sub = services.ensure_subscription(workspace)
+    subscription_ids = []
+    if sub.gateway_subscription_id and sub.status != WorkspaceSubscription.Status.CANCELED:
+        subscription_ids.append(sub.gateway_subscription_id)
+    subscription_ids.extend(
+        WorkspaceAddon.objects.filter(workspace=workspace)
+        .exclude(status=WorkspaceAddon.Status.CANCELED)
+        .exclude(gateway_subscription_id="")
+        .values_list("gateway_subscription_id", flat=True)
+    )
+    if not subscription_ids:
+        return ""
+    client = client or AsaasClient()
+    unpaid = [
+        payment
+        for subscription_id in subscription_ids
+        for payment in client.list_subscription_payments(subscription_id)
+        if payment.get("status") in UNPAID_PAYMENT_STATUSES and payment.get("invoiceUrl")
+    ]
+    if not unpaid:
+        return ""
+    unpaid.sort(key=lambda payment: payment.get("dueDate") or "")
+    url = unpaid[0]["invoiceUrl"]
+    # The customer is redirected there, so it has to be a web address.
+    return url if url.startswith("https://") else ""
+
+
+def subscribe_storage_addon(addon, *, client=None, cpf_cnpj=""):
     """Contract an extra-storage add-on as its own Asaas subscription.
 
     Asaas has no concept of a line item on an existing subscription, so
@@ -159,7 +246,7 @@ def subscribe_storage_addon(addon, *, client=None):
         return addon
 
     workspace = addon.workspace
-    profile = ensure_customer(workspace.organization, client=client)
+    profile = ensure_customer(workspace.organization, client=client, cpf_cnpj=cpf_cnpj)
 
     # Namespaced so the add-on's reference can never collide with the
     # workspace subscription's, which is the bare workspace id.

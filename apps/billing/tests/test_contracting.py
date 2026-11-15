@@ -30,7 +30,8 @@ class StubAsaas:
     being the actual idempotency claim.
     """
 
-    def __init__(self, *, existing_customer=None, existing_subscription=None):
+    def __init__(self, *, existing_customer=None, existing_subscription=None, payments=None):
+        self.payments = payments or []
         self.customers = []
         self.subscriptions = []
         self.canceled = []
@@ -42,18 +43,24 @@ class StubAsaas:
         self._next += 1
         return f"{prefix}_{self._next}"
 
-    def create_customer(self, *, name, external_reference, email="", **_kwargs):
-        record = {"id": self._id("cus"), "name": name, "externalReference": str(external_reference)}
+    def create_customer(self, *, name, external_reference, email="", cpf_cnpj="", **_kwargs):
+        record = {
+            "id": self._id("cus"),
+            "name": name,
+            "externalReference": str(external_reference),
+            "cpfCnpj": cpf_cnpj,
+        }
         self.customers.append(record)
         return record
 
     def find_customer_by_reference(self, external_reference):
         return self.existing_customer
 
-    def create_subscription(self, *, customer_id, value_cents, external_reference, **_kwargs):
+    def create_subscription(self, *, customer_id, value_cents, external_reference, cycle="MONTHLY", **_kwargs):
         record = {
             "id": self._id("sub"),
             "customer": customer_id,
+            "cycle": cycle,
             "value_cents": value_cents,
             "externalReference": str(external_reference),
         }
@@ -62,6 +69,9 @@ class StubAsaas:
 
     def find_subscription_by_reference(self, external_reference):
         return self.existing_subscription
+
+    def list_subscription_payments(self, subscription_id):
+        return self.payments
 
     def cancel_subscription(self, subscription_id):
         self.canceled.append(subscription_id)
@@ -193,6 +203,28 @@ class SubscribeWorkspaceTests(TestCase):
         self.assertEqual(sub.gateway_subscription_id, "")
         self.assertEqual(client.subscriptions, [])
 
+    def test_the_payer_document_reaches_the_new_customer(self):
+        """Asaas refuses to create a customer without a CPF or CNPJ."""
+        client = StubAsaas()
+        contracting.subscribe_workspace(_workspace(), client=client, cpf_cnpj="52998224725")
+        self.assertEqual(client.customers[0]["cpfCnpj"], "52998224725")
+
+    def test_a_canceled_workspace_can_be_contracted_again(self):
+        """The old gateway subscription is gone, so a new one is created
+        and the row waits for its payment like a first contract."""
+        ws = _workspace()
+        client = StubAsaas()
+        first = contracting.subscribe_workspace(ws, client=client).gateway_subscription_id
+        contracting.cancel_workspace_subscription(ws, client=client)
+        client.existing_subscription = {"id": first, "deleted": True}
+
+        sub = contracting.subscribe_workspace(ws, client=client)
+
+        self.assertNotEqual(sub.gateway_subscription_id, first)
+        self.assertEqual(sub.status, WorkspaceSubscription.Status.PENDING)
+        self.assertIsNone(sub.canceled_at)
+        self.assertEqual(len(client.subscriptions), 2)
+
     def test_two_workspaces_get_distinct_subscriptions(self):
         org = Organization.objects.create(name="Acme")
         client = StubAsaas()
@@ -201,6 +233,39 @@ class SubscribeWorkspaceTests(TestCase):
         self.assertNotEqual(a.gateway_subscription_id, b.gateway_subscription_id)
         # Same payer, different subscriptions.
         self.assertEqual(a.gateway_customer_id, b.gateway_customer_id)
+
+
+@override_settings(BILLING_WORKSPACE_PRICE_CENTS=5000)
+class OpenInvoiceTests(TestCase):
+    """Which invoice the customer is sent to pay."""
+
+    def test_the_oldest_unpaid_charge_is_the_one_offered(self):
+        ws = _workspace()
+        client = StubAsaas(
+            payments=[
+                {"status": "RECEIVED", "dueDate": "2026-09-10", "invoiceUrl": "https://asaas.test/i/paid"},
+                {"status": "PENDING", "dueDate": "2026-11-10", "invoiceUrl": "https://asaas.test/i/next"},
+                {"status": "OVERDUE", "dueDate": "2026-10-10", "invoiceUrl": "https://asaas.test/i/late"},
+            ]
+        )
+        contracting.subscribe_workspace(ws, client=client)
+        self.assertEqual(contracting.open_invoice_url(ws, client=client), "https://asaas.test/i/late")
+
+    def test_nothing_is_offered_when_everything_is_paid(self):
+        ws = _workspace()
+        client = StubAsaas(payments=[{"status": "CONFIRMED", "dueDate": "2026-11-10", "invoiceUrl": "https://x.test"}])
+        contracting.subscribe_workspace(ws, client=client)
+        self.assertEqual(contracting.open_invoice_url(ws, client=client), "")
+
+    def test_an_uncontracted_workspace_asks_the_gateway_nothing(self):
+        client = StubAsaas(payments=[{"status": "PENDING", "invoiceUrl": "https://asaas.test/i/other"}])
+        self.assertEqual(contracting.open_invoice_url(_workspace(), client=client), "")
+
+    def test_an_address_that_is_not_https_is_not_followed(self):
+        ws = _workspace()
+        client = StubAsaas(payments=[{"status": "PENDING", "dueDate": "2026-11-10", "invoiceUrl": "javascript:x"}])
+        contracting.subscribe_workspace(ws, client=client)
+        self.assertEqual(contracting.open_invoice_url(ws, client=client), "")
 
 
 @override_settings(BILLING_WORKSPACE_PRICE_CENTS=5000)

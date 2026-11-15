@@ -57,7 +57,15 @@ there, and the overview links each brand to this page.
           <div class="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Status" %}</div>
           <span class="pill {% if subscription.status == 'active' %}pill-success{% elif subscription.status == 'courtesy' %}pill-brand{% elif subscription.status == 'past_due' %}pill-warning{% elif subscription.status == 'canceled' %}pill-neutral{% else %}pill-info{% endif %}"><i></i>{{ subscription.get_status_display }}</span>
 
-          {% if subscription.status == 'pending' %}
+          {% if subscription.in_trial %}
+          <p class="text-xs text-neutral-600 mt-2 max-w-sm">
+            {% blocktranslate with date=subscription.trial_ends_at|date:"d/m/Y" %}Free trial until {{ date }}. Contract before then and nothing stops.{% endblocktranslate %}
+          </p>
+          {% elif subscription.trial_expired %}
+          <p class="text-xs text-amber-700 mt-2 max-w-sm">
+            {% translate "The free trial has ended. Contract the subscription to use this workspace again." %}
+          </p>
+          {% elif subscription.status == 'pending' %}
           <p class="text-xs text-neutral-600 mt-2 max-w-sm">
             {% translate "This workspace has no subscription yet. It activates once the first payment is confirmed." %}
           </p>
@@ -81,6 +89,9 @@ there, and the overview links each brand to this page.
           <div class="text-xs text-neutral-600 mt-0.5">
             {% blocktranslate with price=subscription.price_cents|brl %}R$ {{ price }} for the workspace{% endblocktranslate %}
             {% if addons %} + {% translate "add-ons" %}{% endif %}
+            {% if subscription.is_yearly %}
+            <span class="block">{% blocktranslate with total=subscription.charge_cents|brl %}Yearly plan: R$ {{ total }} charged once a year.{% endblocktranslate %}</span>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -92,7 +103,14 @@ there, and the overview links each brand to this page.
       </div>
       {% endif %}
 
-      {% if can_manage_billing and not subscription.is_active %}
+      {% if can_manage_billing and awaiting_payment %}
+      <div class="mt-5 pt-4 border-t border-neutral-100">
+        <a href="{% url 'billing:pay_invoice' workspace_id=workspace.id %}" target="_blank" rel="noopener"
+           class="btn-brand">
+          {% translate "Open the invoice and pay" %}
+        </a>
+      </div>
+      {% elif can_manage_billing and not subscription.is_settled %}
       <div class="mt-5 pt-4 border-t border-neutral-100">
         <a href="{% url 'billing:subscribe_modal' workspace_id=workspace.id %}"
            class="btn-brand">
@@ -168,6 +186,12 @@ there, and the overview links each brand to this page.
         <p class="text-xs text-neutral-500 mt-2">
           {% translate "Space is released once each add-on's first payment is confirmed." %}
         </p>
+        {% if can_manage_billing and addon_awaiting_payment %}
+        <a href="{% url 'billing:pay_invoice' workspace_id=workspace.id %}" target="_blank" rel="noopener"
+           class="btn-secondary mt-3">
+          {% translate "Open the invoice and pay" %}
+        </a>
+        {% endif %}
       </div>
       {% endif %}
     </div>
@@ -233,11 +257,15 @@ there, and the overview links each brand to this page.
         {% include "billing/_storage_quote.html" %}
       </div>
 
+      {% if needs_tax_id %}
+      <div class="mb-4 max-w-xs">{% include "billing/_tax_id_field.html" %}</div>
+      {% endif %}
+
       <button type="submit" class="btn-brand">
         {% translate "Confirm and contract" %}
       </button>
       <p class="text-xs text-neutral-500 mt-2">
-        {% translate "Billed monthly alongside the workspace, on the same invoice date." %}
+        {% translate "Billed monthly, on an invoice of its own, starting today." %}
       </p>
     </form>
   </section>

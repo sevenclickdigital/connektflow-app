@@ -10,11 +10,14 @@ billing page. The dim backdrop and the single centred card give it the
 "you have one decision to make" feel of a modal without depending on a
 parent page having opened it.
 
-The only way out other than contracting is the small "later" link. It is
-deliberately unemphasised, not absent: a workspace with a pending
-subscription still works today (see storage_usage.enforce_workspace_storage
-on why pre-billing workspaces are not cut off), so trapping someone here
-would be a lie about the product's state.
+Two states. Before contracting it asks for the decision (and, the first
+time, the payer's CPF or CNPJ). After it, while the payment is not
+confirmed, it offers the invoice and asks the server every few seconds
+whether the workspace is active yet, leaving for the calendar when it is.
+
+The "later" link exists only while ``BILLING_REQUIRE_SUBSCRIPTION`` is off:
+with it on, every page of an unpaid workspace leads back here (see
+apps.billing.middleware), so the ways out are another brand or signing out.
 {% endcomment %}
 
 {% block title %}{% translate "Contract workspace" %} - {{ workspace.name }} - Connekt Flow{% endblock %}
@@ -25,7 +28,7 @@ would be a lie about the product's state.
 <div class="flex-1 flex items-center justify-center py-6">
   <div class="w-full max-w-md">
 
-    <div class="rounded-2xl border border-neutral-300 bg-white shadow-xl p-6 sm:p-7">
+    <div class="rounded-2xl border border-neutral-300 bg-white shadow-xl p-6 sm:p-7" x-data="{ cycle: 'monthly' }">
 
       <div class="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center mb-4">
         <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -34,20 +37,89 @@ would be a lie about the product's state.
         </svg>
       </div>
 
+      {% if awaiting_payment %}
+      <h1 class="text-lg font-semibold text-neutral-950" style="letter-spacing: -0.01em;">
+        {% translate "Waiting for the payment" %}
+      </h1>
+      <p class="text-sm text-neutral-600 mt-1.5">
+        {% blocktranslate with name=workspace.name %}The subscription of {{ name }} is contracted. Pay the invoice by Pix, boleto or card and this page opens the workspace as soon as the payment is confirmed.{% endblocktranslate %}
+      </p>
+      {% elif subscription.trial_expired %}
+      <h1 class="text-lg font-semibold text-neutral-950" style="letter-spacing: -0.01em;">
+        {% translate "Your free trial has ended" %}
+      </h1>
+      <p class="text-sm text-neutral-600 mt-1.5">
+        {% blocktranslate with name=workspace.name %}Everything you did in {{ name }} is kept. Contract the subscription to carry on from where you stopped.{% endblocktranslate %}
+      </p>
+      {% else %}
       <h1 class="text-lg font-semibold text-neutral-950" style="letter-spacing: -0.01em;">
         {% translate "Activate this workspace" %}
       </h1>
       <p class="text-sm text-neutral-600 mt-1.5">
+        {% if subscription.in_trial %}
+        {% blocktranslate with name=workspace.name date=subscription.trial_ends_at|date:"d/m/Y" %}The free trial of {{ name }} runs until {{ date }}. Contract now and nothing stops when it ends.{% endblocktranslate %}
+        {% elif subscription_required %}
+        {% blocktranslate with name=workspace.name %}{{ name }} is ready. Contract the monthly subscription to start using it.{% endblocktranslate %}
+        {% else %}
         {% blocktranslate with name=workspace.name %}{{ name }} is ready. Contract the monthly subscription to keep using it.{% endblocktranslate %}
+        {% endif %}
       </p>
+      {% endif %}
 
       {# Price. One plan, everything included — there is nothing to compare. #}
       <div class="mt-5 rounded-xl border border-neutral-300 bg-neutral-50 px-4 py-4">
+        {% if awaiting_payment %}
         <div class="flex items-baseline gap-1.5">
           <span class="text-sm text-neutral-600">R$</span>
           <span class="text-3xl font-semibold text-neutral-950 tabular-nums">{{ subscription.price_cents|brl }}</span>
           <span class="text-sm text-neutral-600">{% translate "/month" %}</span>
         </div>
+        {% if subscription.is_yearly %}
+        <p class="text-xs text-neutral-700 mt-1">{% blocktranslate with total=subscription.charge_cents|brl %}Yearly plan: R$ {{ total }} charged once a year.{% endblocktranslate %}</p>
+        {% endif %}
+        {% else %}
+        {% if quotes.yearly %}
+        {% comment %}
+        Monthly or yearly. The yearly price is the same plan paid a year at
+        a time; the choice travels in the hidden ``cycle`` field of the form
+        below and the server prices it again (services.quote_workspace).
+        {% endcomment %}
+        <div class="grid grid-cols-2 gap-2 mb-4" role="radiogroup" aria-label="{% translate 'Billing cycle' %}">
+          <button type="button" role="radio" :aria-checked="cycle === 'monthly'" @click="cycle = 'monthly'"
+                  :class="cycle === 'monthly' ? 'border-brand-700 bg-brand-50 text-brand-900' : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'"
+                  class="px-3 py-2 text-sm font-semibold rounded-full border transition-colors cursor-pointer">
+            {% translate "Monthly" %}
+          </button>
+          <button type="button" role="radio" :aria-checked="cycle === 'yearly'" @click="cycle = 'yearly'"
+                  :class="cycle === 'yearly' ? 'border-brand-700 bg-brand-50 text-brand-900' : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'"
+                  class="px-3 py-2 text-sm font-semibold rounded-full border transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5">
+            {% translate "Yearly" %}
+            <span class="pill pill-success">-{{ quotes.yearly.annual_percent }}%</span>
+          </button>
+        </div>
+        {% endif %}
+        <div x-show="cycle === 'monthly'">
+          <div class="flex items-baseline gap-1.5">
+            <span class="text-sm text-neutral-600">R$</span>
+            <span class="text-3xl font-semibold text-neutral-950 tabular-nums">{{ quotes.monthly.monthly_cents|brl }}</span>
+            <span class="text-sm text-neutral-600">{% translate "/month" %}</span>
+          </div>
+        </div>
+        {% if quotes.yearly %}
+        <div x-show="cycle === 'yearly'" x-cloak>
+          <div class="flex items-baseline gap-1.5">
+            <span class="text-sm text-neutral-600">R$</span>
+            <span class="text-3xl font-semibold text-neutral-950 tabular-nums">{{ quotes.yearly.monthly_cents|brl }}</span>
+            <span class="text-sm text-neutral-600">{% translate "/month" %}</span>
+          </div>
+          <p class="text-xs text-neutral-700 mt-1">{% blocktranslate with total=quotes.yearly.charge_cents|brl %}R$ {{ total }} charged once a year.{% endblocktranslate %}</p>
+          <p class="text-xs font-semibold text-green-700 mt-1">{% blocktranslate with saving=quotes.yearly.yearly_saving_cents|brl %}You save R$ {{ saving }} a year.{% endblocktranslate %}</p>
+        </div>
+        {% endif %}
+        {% if quotes.monthly.volume_percent %}
+        <p class="text-xs font-semibold text-green-700 mt-1">{% blocktranslate with percent=quotes.monthly.volume_percent position=quotes.monthly.position %}Includes {{ percent }}% off: this is paid brand number {{ position }} of your account.{% endblocktranslate %}</p>
+        {% endif %}
+        {% endif %}
         <p class="text-xs text-neutral-600 mt-1">{% translate "Per workspace. Every feature included." %}</p>
 
         <ul class="mt-3 space-y-1.5">
@@ -82,13 +154,68 @@ would be a lie about the product's state.
       </div>
       {% endif %}
 
+      {% if awaiting_payment %}
+      <div hx-get="{% url 'billing:subscribe_modal' workspace_id=workspace.id %}"
+           hx-trigger="every 5s" hx-swap="none"></div>
       {% if can_manage_billing %}
+      <a href="{% url 'billing:pay_invoice' workspace_id=workspace.id %}" target="_blank" rel="noopener"
+         class="btn-brand w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold mt-5">
+        {% translate "Open the invoice and pay" %}
+      </a>
+      <p class="text-xs text-neutral-500 mt-2 text-center">
+        {% translate "The invoice opens in another tab. Pix and card are confirmed in a few minutes; boleto can take up to three business days." %}
+      </p>
+      {% else %}
+      <p class="mt-5 text-xs text-neutral-600">
+        {% translate "The invoice is with whoever contracted this workspace. It opens for everyone once the payment is confirmed." %}
+      </p>
+      {% endif %}
+      {% elif can_manage_billing %}
       <form method="post" action="{% url 'billing:subscribe_confirm' workspace_id=workspace.id %}" class="mt-5">
         {% csrf_token %}
+        {% if needs_tax_id %}
+        <div class="mb-4">{% include "billing/_tax_id_field.html" %}</div>
+        {% endif %}
+        <input type="hidden" name="cycle" :value="cycle">
         <button type="submit" class="btn-brand w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold">
-          {% blocktranslate with price=subscription.price_cents|brl %}Contract for R$ {{ price }}/month{% endblocktranslate %}
+          <span x-show="cycle === 'monthly'">{% blocktranslate with price=quotes.monthly.monthly_cents|brl %}Contract for R$ {{ price }}/month{% endblocktranslate %}</span>
+          {% if quotes.yearly %}
+          <span x-show="cycle === 'yearly'" x-cloak>{% blocktranslate with price=quotes.yearly.charge_cents|brl %}Contract for R$ {{ price }}/year{% endblocktranslate %}</span>
+          {% endif %}
         </button>
       </form>
+
+      {% if trial_available %}
+      {% comment %}
+      The other way in: the account's one free trial. It costs the CPF or
+      CNPJ and a phone, which is what keeps it to one per person (see
+      apps.billing.services.start_trial).
+      {% endcomment %}
+      <div class="mt-5 pt-5 border-t border-neutral-200" x-data="{ open: false }">
+        <button type="button" class="btn-secondary w-full justify-center" @click="open = true" x-show="!open">
+          {% blocktranslate count days=trial_days %}Or try it free for {{ days }} day{% plural %}Or try it free for {{ days }} days{% endblocktranslate %}
+        </button>
+        <form method="post" action="{% url 'billing:start_trial' workspace_id=workspace.id %}" x-show="open" x-cloak>
+          {% csrf_token %}
+          <p class="text-sm font-semibold text-neutral-950">
+            {% blocktranslate count days=trial_days %}Free trial for {{ days }} day{% plural %}Free trial for {{ days }} days{% endblocktranslate %}
+          </p>
+          <p class="text-xs text-neutral-600 mt-1 mb-3">
+            {% translate "No card and no charge. Tell us who you are and start now; when the trial ends, you decide whether to contract." %}
+          </p>
+          <label for="trial_tax_id" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "CPF or CNPJ" %}</label>
+          <input type="text" id="trial_tax_id" name="tax_id" required inputmode="numeric" autocomplete="off" maxlength="18"
+                 placeholder="000.000.000-00" class="form-input-styled w-full tabular-nums mb-3">
+          <label for="trial_phone" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Phone with area code" %}</label>
+          <input type="tel" id="trial_phone" name="phone" required autocomplete="tel" maxlength="20"
+                 placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums mb-4">
+          <button type="submit" class="btn-secondary w-full justify-center">
+            {% translate "Start free trial" %}
+          </button>
+          <p class="text-xs text-neutral-500 mt-2">{% translate "One free trial per account and per CPF or CNPJ." %}</p>
+        </form>
+      </div>
+      {% endif %}
       {% else %}
       <p class="mt-5 text-xs text-neutral-600">
         {% translate "Only a workspace owner or manager, or an organization admin, can contract a subscription. Ask one of them to activate this workspace." %}
@@ -96,10 +223,27 @@ would be a lie about the product's state.
       {% endif %}
 
       <div class="mt-4 text-center">
+        {% if subscription.in_trial %}
+        <a href="{% url 'calendar:calendar' workspace_id=workspace.id %}"
+           class="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">
+          {% translate "Back to the workspace" %}
+        </a>
+        {% elif subscription_required %}
+        <a href="{% url 'billing_account:overview' %}"
+           class="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">
+          {% translate "See my other brands" %}
+        </a>
+        <span class="text-xs text-neutral-300 mx-1.5">·</span>
+        <a href="{% url 'accounts:logout' %}"
+           class="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">
+          {% translate "Log out" %}
+        </a>
+        {% else %}
         <a href="{% url 'calendar:calendar' workspace_id=workspace.id %}"
            class="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">
           {% translate "Decide later" %}
         </a>
+        {% endif %}
       </div>
 
     </div>

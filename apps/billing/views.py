@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import functools
 import logging
+import re
 
 from allauth.account.forms import ResetPasswordForm
 from django.conf import settings
@@ -44,7 +45,9 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
 from django.db.models import Prefetch, Q, Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.formats import date_format
@@ -54,9 +57,10 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.accounts import impersonation
 from apps.accounts.models import ImpersonationSession, User
 from apps.billing import contracting, services
-from apps.billing.gateways.asaas import AsaasError, AsaasNotConfigured
+from apps.billing.gateways.asaas import AsaasAPIError, AsaasError, AsaasNotConfigured
 from apps.billing.models import BillingEvent, ProductPrice, WorkspaceAddon, WorkspaceSubscription
 from apps.billing.storage_usage import storage_status
+from apps.contacts.forms import is_valid_cnpj, is_valid_cpf
 from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
 from apps.workspaces.models import Workspace
@@ -158,6 +162,79 @@ def _storage_quote(quantity_gb):
     }
 
 
+def _gateway_configured():
+    return bool(getattr(settings, "ASAAS_API_KEY", ""))
+
+
+def _needs_tax_id(workspace):
+    """Whether contracting has to ask for the payer's CPF or CNPJ.
+
+    Asaas wants it once, to create the customer. Not asked while the
+    gateway is unconfigured (nothing would be sent anywhere), nor when
+    the account already gave it to start a free trial.
+    """
+    if not _gateway_configured() or contracting.has_customer(workspace.organization):
+        return False
+    return not services.ensure_billing_profile(workspace.organization).tax_id
+
+
+def _valid_tax_id(raw):
+    """CPF or CNPJ digits from what was typed, or "" when it is not one."""
+    digits = re.sub(r"\D", "", raw or "")
+    if (len(digits) == 11 and is_valid_cpf(digits)) or (len(digits) == 14 and is_valid_cnpj(digits)):
+        return digits
+    return ""
+
+
+def _valid_phone(raw):
+    """Brazilian phone digits (area code + number), or "" when it is not one."""
+    digits = re.sub(r"\D", "", raw or "")
+    if len(digits) in (12, 13) and digits.startswith("55"):
+        digits = digits[2:]
+    return digits if len(digits) in (10, 11) else ""
+
+
+def _posted_tax_id(request, workspace):
+    """The CPF/CNPJ digits from a contracting form.
+
+    Returns ``(digits, error)``. ``digits`` is "" when the document is not
+    needed; ``error`` is a message for the customer when it is needed and
+    missing or does not pass its check digits.
+    """
+    if not _needs_tax_id(workspace):
+        return "", None
+    digits = _valid_tax_id(request.POST.get("tax_id"))
+    if digits:
+        return digits, None
+    return "", _("Enter a valid CPF or CNPJ for the invoice.")
+
+
+def _gateway_refusal(exc):
+    """What Asaas said was wrong with the request, for the customer.
+
+    Asaas describes a refused field in Portuguese ("O CPF ou CNPJ
+    informado é inválido"), which is more use to the customer than a
+    generic failure. "" for anything that is not a refusal of the data.
+    """
+    if not isinstance(exc, AsaasAPIError) or exc.status_code != 400:
+        return ""
+    descriptions = [str(error.get("description") or "") for error in exc.errors if isinstance(error, dict)]
+    return " ".join(d for d in descriptions if d)
+
+
+def _quotes(workspace):
+    """Today's price of contracting this workspace, per cycle on offer.
+
+    ``yearly`` is absent while no yearly discount is configured, which is
+    what hides the choice on the contracting page.
+    """
+    cycles = WorkspaceSubscription.Cycle
+    quotes = {"monthly": services.quote_workspace(workspace, cycles.MONTHLY)}
+    if services.annual_discount_percent() > 0:
+        quotes["yearly"] = services.quote_workspace(workspace, cycles.YEARLY)
+    return quotes
+
+
 def _billing_context(request, workspace):
     """Everything both the overview and the contracting modal need."""
     subscription = services.ensure_subscription(workspace)
@@ -185,7 +262,20 @@ def _billing_context(request, workspace):
         "can_manage_billing": _can_manage_billing(request, workspace),
         # Lets the page say "billing isn't configured yet" up front rather
         # than only after the customer presses Contract and fails.
-        "gateway_configured": bool(getattr(settings, "ASAAS_API_KEY", "")),
+        "gateway_configured": _gateway_configured(),
+        "needs_tax_id": _needs_tax_id(workspace),
+        "quotes": _quotes(workspace),
+        # A storage add-on contracted and not paid yet has an invoice too.
+        "addon_awaiting_payment": any(
+            addon.status == WorkspaceAddon.Status.PENDING and addon.gateway_subscription_id for addon in addons
+        ),
+        # Contracted at the gateway and not paid yet: the customer has an
+        # invoice to open rather than a contract to sign.
+        "awaiting_payment": bool(subscription.gateway_subscription_id)
+        and subscription.status in (WorkspaceSubscription.Status.PENDING, WorkspaceSubscription.Status.PAST_DUE),
+        "subscription_required": settings.BILLING_REQUIRE_SUBSCRIPTION,
+        "trial_available": services.trial_available(workspace),
+        "trial_days": services.trial_days(),
     }
 
 
@@ -260,8 +350,17 @@ def subscribe_modal(request, workspace_id):
     after a failed attempt.
     """
     workspace = _get_workspace(request, workspace_id)
+    if request.htmx:
+        # The page asking whether the payment has been confirmed yet. It
+        # leaves for the workspace as soon as the webhook has activated it.
+        response = HttpResponse(status=204)
+        if services.ensure_subscription(workspace).is_settled:
+            response["HX-Redirect"] = reverse("calendar:calendar", kwargs={"workspace_id": workspace.id})
+        return response
     context = _billing_context(request, workspace)
-    if context["subscription"].is_active:
+    # Settled, not merely active: a workspace on its free trial is in use
+    # and still has this page to open, to pay before the trial ends.
+    if context["subscription"].is_settled:
         return redirect("billing:workspace_billing", workspace_id=workspace.id)
     return render(request, "billing/subscribe_modal.html", context)
 
@@ -284,8 +383,17 @@ def subscribe_confirm(request, workspace_id):
     workspace = _get_workspace(request, workspace_id)
     _require_manage_billing(request, workspace)
 
+    tax_id, tax_id_error = _posted_tax_id(request, workspace)
+    if tax_id_error:
+        messages.error(request, tax_id_error)
+        return redirect("billing:subscribe_modal", workspace_id=workspace.id)
+
+    cycle = WorkspaceSubscription.Cycle.MONTHLY
+    if request.POST.get("cycle") == WorkspaceSubscription.Cycle.YEARLY and services.annual_discount_percent() > 0:
+        cycle = WorkspaceSubscription.Cycle.YEARLY
+
     try:
-        contracting.subscribe_workspace(workspace, email=request.user.email)
+        contracting.subscribe_workspace(workspace, email=request.user.email, cpf_cnpj=tax_id, cycle=cycle)
     except AsaasNotConfigured:
         # Expected without credentials. The local row stays pending, so
         # pressing Contract again once Asaas is configured just works.
@@ -298,11 +406,12 @@ def subscribe_confirm(request, workspace_id):
             ),
         )
         return redirect("billing:workspace_billing", workspace_id=workspace.id)
-    except AsaasError:
+    except AsaasError as exc:
         logger.exception("Asaas rejected contracting for workspace %s", workspace.pk)
         messages.error(
             request,
-            _("We could not reach the payment provider. Nothing was charged — please try again in a moment."),
+            _gateway_refusal(exc)
+            or _("We could not reach the payment provider. Nothing was charged — please try again in a moment."),
         )
         return redirect("billing:subscribe_modal", workspace_id=workspace.id)
 
@@ -310,7 +419,64 @@ def subscribe_confirm(request, workspace_id):
         request,
         _("Subscription contracted. It activates as soon as the first payment is confirmed."),
     )
-    return redirect("billing:workspace_billing", workspace_id=workspace.id)
+    # Back to the contracting page, which now offers the invoice and
+    # waits for the payment to be confirmed.
+    return redirect("billing:subscribe_modal", workspace_id=workspace.id)
+
+
+@login_required
+@require_POST
+def start_trial(request, workspace_id):
+    """Start the account's free trial on this workspace.
+
+    Asks for the CPF or CNPJ and a phone before opening it: the trial is
+    one per person, and those are what tell two accounts of the same
+    person apart.
+    """
+    workspace = _get_workspace(request, workspace_id)
+    _require_manage_billing(request, workspace)
+
+    tax_id = _valid_tax_id(request.POST.get("tax_id"))
+    phone = _valid_phone(request.POST.get("phone"))
+    if not tax_id or not phone:
+        messages.error(request, _("Enter a valid CPF or CNPJ and a phone with area code to start the free trial."))
+        return redirect("billing:subscribe_modal", workspace_id=workspace.id)
+
+    try:
+        sub = services.start_trial(workspace, tax_id=tax_id, phone=phone)
+    except services.TrialRefusedError as exc:
+        messages.error(request, str(exc))
+        return redirect("billing:subscribe_modal", workspace_id=workspace.id)
+
+    messages.success(
+        request,
+        _("Your free trial is on until %(date)s. Enjoy!")
+        % {"date": date_format(timezone.localtime(sub.trial_ends_at), "d/m/Y")},
+    )
+    return redirect("calendar:calendar", workspace_id=workspace.id)
+
+
+@login_required
+@require_GET
+def pay_invoice(request, workspace_id):
+    """Send the customer to the invoice of what this workspace owes."""
+    workspace = _get_workspace(request, workspace_id)
+    _require_manage_billing(request, workspace)
+
+    try:
+        url = contracting.open_invoice_url(workspace)
+    except AsaasError:
+        logger.exception("Could not read the invoice of workspace %s", workspace.pk)
+        messages.error(request, _("We could not reach the payment provider. Please try again in a moment."))
+        return redirect("billing:workspace_billing", workspace_id=workspace.id)
+
+    if not url:
+        messages.info(
+            request,
+            _("There is no open invoice for this workspace. A payment already made can take a few minutes to show."),
+        )
+        return redirect("billing:workspace_billing", workspace_id=workspace.id)
+    return redirect(url)
 
 
 @login_required
@@ -356,10 +522,17 @@ def contract_storage(request, workspace_id):
         )
         return redirect("billing:workspace_billing", workspace_id=workspace.id)
 
+    # Checked before the add-on row is written, so a mistyped document
+    # does not leave a pending request behind on every attempt.
+    tax_id, tax_id_error = _posted_tax_id(request, workspace)
+    if tax_id_error:
+        messages.error(request, tax_id_error)
+        return redirect("billing:workspace_billing", workspace_id=workspace.id)
+
     addon = services.contract_storage_addon(workspace, quantity)
 
     try:
-        contracting.subscribe_storage_addon(addon)
+        contracting.subscribe_storage_addon(addon, cpf_cnpj=tax_id)
     except AsaasNotConfigured:
         logger.info("Storage add-on %s created with Asaas unconfigured", addon.pk)
         messages.info(
@@ -371,11 +544,12 @@ def contract_storage(request, workspace_id):
             % {"gb": quantity},
         )
         return redirect("billing:workspace_billing", workspace_id=workspace.id)
-    except AsaasError:
+    except AsaasError as exc:
         logger.exception("Asaas rejected storage add-on %s", addon.pk)
         messages.error(
             request,
-            _("We could not reach the payment provider. Nothing was charged — please try again in a moment."),
+            _gateway_refusal(exc)
+            or _("We could not reach the payment provider. Nothing was charged — please try again in a moment."),
         )
         return redirect("billing:workspace_billing", workspace_id=workspace.id)
 

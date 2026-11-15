@@ -88,10 +88,26 @@ class WorkspaceSubscription(models.Model):
         db_index=True,
     )
 
-    # Price of the base subscription in cents, snapshotted on the row
-    # rather than read from settings at render time: raising the list
-    # price must not silently re-price workspaces already contracted.
+    class Cycle(models.TextChoices):
+        MONTHLY = "monthly", _("Monthly")
+        YEARLY = "yearly", _("Yearly")
+
+    # Price of the base subscription in cents PER MONTH, snapshotted on
+    # the row rather than read from settings at render time: raising the
+    # list price must not silently re-price workspaces already
+    # contracted. A yearly plan stores its monthly equivalent here, so
+    # every monthly total and report reads one unit; what is charged each
+    # cycle is ``charge_cents``.
     price_cents = models.PositiveIntegerField(default=0)
+
+    # How often the gateway charges. ``db_default`` because the release
+    # still running during a deploy inserts rows without this column.
+    billing_cycle = models.CharField(
+        max_length=8,
+        choices=Cycle.choices,
+        default=Cycle.MONTHLY,
+        db_default=Cycle.MONTHLY,
+    )
 
     # Gateway identifiers. Named for the role, not the vendor — Asaas
     # fills these today (customer_xxx / sub_xxx), and a future gateway
@@ -112,6 +128,11 @@ class WorkspaceSubscription(models.Model):
     # the quota of a workspace that is already storing files against it.
     base_storage_bytes = models.PositiveBigIntegerField(default=0)
 
+    # End of the free trial, when one was started. Until then a ``pending``
+    # workspace may be used; afterwards it has to be contracted. Read
+    # against the clock, so no job has to end a trial.
+    trial_ends_at = models.DateTimeField(null=True, blank=True)
+
     canceled_at = models.DateTimeField(null=True, blank=True)
     # Why a workspace was comped. Free text and admin-facing only; the
     # billing logic cares about status alone.
@@ -131,15 +152,46 @@ class WorkspaceSubscription(models.Model):
         return self.status == self.Status.COURTESY
 
     @property
+    def is_yearly(self):
+        return self.billing_cycle == self.Cycle.YEARLY
+
+    @property
+    def charge_cents(self):
+        """What the gateway charges each cycle for the base subscription."""
+        return self.price_cents * 12 if self.is_yearly else self.price_cents
+
+    @property
+    def is_settled(self):
+        """True when the workspace is paid for or comped."""
+        return self.status in self.ACTIVE_STATUSES
+
+    @property
+    def in_trial(self):
+        """True while a not yet paid workspace is inside its free trial."""
+        return (
+            self.status == self.Status.PENDING
+            and self.trial_ends_at is not None
+            and self.trial_ends_at > timezone.now()
+        )
+
+    @property
+    def trial_expired(self):
+        return (
+            self.status == self.Status.PENDING
+            and self.trial_ends_at is not None
+            and self.trial_ends_at <= timezone.now()
+        )
+
+    @property
     def is_active(self):
         """True when the workspace may be used.
 
-        Courtesy counts as active. Everything that gates a feature on
-        "is this workspace paid for?" should go through here instead of
-        comparing ``status`` to ``"active"``, so adding another
-        access-granting status later is a one-line change.
+        Courtesy and a running free trial count as active. Everything
+        that gates a feature on "may this workspace be used?" should go
+        through here instead of comparing ``status`` to ``"active"``, so
+        adding another access-granting state later is a one-line change.
         """
-        return self.status in self.ACTIVE_STATUSES
+        return self.is_settled or self.in_trial
 
     @property
     def is_current(self):
@@ -438,6 +490,15 @@ class OrganizationBillingProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="billing_profile",
     )
+
+    # The payer's CPF or CNPJ (digits only) and phone. Asked when a free
+    # trial starts or at the first contract, and sent to the gateway when
+    # the customer is created there. The document is also what stops one
+    # person from taking a trial per account.
+    tax_id = models.CharField(max_length=14, blank=True, default="", db_default="")
+    phone = models.CharField(max_length=20, blank=True, default="", db_default="")
+    # When this account used its one free trial. NULL = never.
+    trial_started_at = models.DateTimeField(null=True, blank=True)
 
     # How many of this org's workspaces may be comped. 0 = none.
     courtesy_workspace_quota = models.PositiveIntegerField(default=0)

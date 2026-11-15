@@ -113,6 +113,8 @@ MIDDLEWARE = [
     "apps.accounts.middleware.TosAcceptanceMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
     "apps.members.middleware.RBACMiddleware",
+    # After RBAC: it reads the workspace RBAC resolved from the URL.
+    "apps.billing.middleware.SubscriptionGateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "csp.middleware.CSPMiddleware",
@@ -751,6 +753,50 @@ BILLING_WORKSPACE_BASE_STORAGE_BYTES = env.int(
     "BILLING_WORKSPACE_BASE_STORAGE_BYTES",
     default=10 * 1_000_000_000,
 )
+
+# Discount for paying a year at once instead of month by month, as a whole
+# percentage of the monthly price. 0 means the yearly plan is not offered.
+BILLING_ANNUAL_DISCOUNT_PERCENT = env.int("BILLING_ANNUAL_DISCOUNT_PERCENT", default=0)
+if not 0 <= BILLING_ANNUAL_DISCOUNT_PERCENT <= 90:
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured("BILLING_ANNUAL_DISCOUNT_PERCENT must be between 0 and 90.")
+
+
+def _parse_volume_discounts(raw):
+    """``"5:10,10:20"`` → ``((5, 10), (10, 20))``: from the 5th workspace of
+    an organization each new one is 10% cheaper, from the 10th, 20%."""
+    from django.core.exceptions import ImproperlyConfigured
+
+    tiers = []
+    for part in filter(None, (piece.strip() for piece in raw.split(","))):
+        try:
+            minimum, percent = (int(number) for number in part.split(":"))
+        except ValueError:
+            raise ImproperlyConfigured(f"BILLING_VOLUME_DISCOUNTS must look like 5:10,10:20 — got {part!r}.") from None
+        if minimum < 2 or not 0 < percent <= 90:
+            raise ImproperlyConfigured(
+                f"BILLING_VOLUME_DISCOUNTS: {part!r} needs a workspace count of 2 or more and a percentage from 1 to 90."
+            )
+        tiers.append((minimum, percent))
+    return tuple(sorted(tiers))
+
+
+# Discount by how many workspaces the organization already pays for. Empty
+# means none. A workspace keeps the price it was contracted at: reaching a
+# tier makes the NEXT workspaces cheaper, it does not re-price the earlier
+# ones.
+BILLING_VOLUME_DISCOUNTS = _parse_volume_discounts(env("BILLING_VOLUME_DISCOUNTS", default=""))
+
+# Length of the free trial, in days. 0 means no trial is offered. One per
+# organization and per CPF/CNPJ, started from the contracting page.
+BILLING_TRIAL_DAYS = env.int("BILLING_TRIAL_DAYS", default=0)
+
+# Whether a workspace must be paid for (or comped) to be used. Off by
+# default because switching it on locks every workspace with no active
+# subscription, including the ones created before billing existed: comp
+# or contract those first. See ``apps.billing.middleware``.
+BILLING_REQUIRE_SUBSCRIPTION = env.bool("BILLING_REQUIRE_SUBSCRIPTION", default=False)
 
 # Price of one extra GB per month, in cents. PLACEHOLDER — the product
 # owner has not set this yet. R$ 2,00 is a stand-in so the add-on flow is

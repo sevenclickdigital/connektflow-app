@@ -219,6 +219,7 @@ Other inbound webhooks: `/webhooks/resend/` (Svix-signed bounces/suppressions â†
 - Webhook: `/webhooks/asaas/` authenticates with the `asaas-access-token` header. Asaas does not sign the body.
 - Storage enforcement: `apps/billing/storage_usage.py` (`BILLING_STORAGE_QUOTA_ENABLED`) is separate from the older per-org cap in `apps/media_library/quotas.py` (`STORAGE_QUOTA_*`).
 - UI: `/workspace/<id>/billing/` for customers and `/billing/staff/` for operators.
+- Access: `SubscriptionGateMiddleware` (`apps/billing/middleware.py`, after `RBACMiddleware`) redirects any URL carrying a `workspace_id` to the contracting page when `BILLING_REQUIRE_SUBSCRIPTION` is on and the workspace is not `active` or `courtesy`. HTMX requests get `204` + `HX-Redirect`. The `billing` URL namespace is exempt.
 
 ---
 
@@ -328,9 +329,10 @@ To restore: load the dump into an empty database, restore the media volume, and 
 - **Platform apps:** `PLATFORM_FACEBOOK_*`, `PLATFORM_INSTAGRAM_*`, `PLATFORM_THREADS_*`, `PLATFORM_LINKEDIN_{PERSONAL,COMPANY}_*`, `PLATFORM_TIKTOK_*`, `PLATFORM_GOOGLE_*`, `PLATFORM_PINTEREST_*`, `YOUTUBE_COMPLIANCE_ENFORCEMENT`, `UNSPLASH_ACCESS_KEY`
 - **Publisher:** `PUBLISHER_*` timeouts and concurrency
 - **Webhooks:** `FACEBOOK_WEBHOOK_VERIFY_TOKEN`, `INSTAGRAM_LOGIN_WEBHOOK_VERIFY_TOKEN`, `YOUTUBE_WEBHOOK_SECRET`
+- **Billing:** `BILLING_WORKSPACE_PRICE_CENTS`, `BILLING_ANNUAL_DISCOUNT_PERCENT`, `BILLING_VOLUME_DISCOUNTS`, `BILLING_TRIAL_DAYS`, `BILLING_REQUIRE_SUBSCRIPTION`, `ASAAS_API_KEY`, `ASAAS_API_BASE`, `ASAAS_WEBHOOK_TOKEN`
 - **Optional:** `INTELLIGENCE_*` / `STUDIO_*`, `MCP_PUBLIC_BASE_URL`, `MCP_OAUTH_ISSUER_URL`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`
 
-These are read in `config/settings/base.py` but missing from `.env.example`: `SENTRY_DSN`, `REDIS_URL`, `BB_TRUSTED_PROXIES`, `RESEND_WEBHOOK_SECRET`, `EMAIL_SENDING_ENABLED`, `EMAIL_*_LIMIT`, `INVITE_*`, `ASAAS_*`, `BILLING_*`, `STORAGE_QUOTA_ENABLED`, `MAX_ACCOUNTS_PER_PLATFORM`, `INBOX_YOUTUBE_MIN_POLL_SECONDS`, `INBOX_DEEP_SWEEP_SECONDS`, `PUBLISHER_FIRST_COMMENT_*`.
+These are read in `config/settings/base.py` but missing from `.env.example`: `SENTRY_DSN`, `REDIS_URL`, `BB_TRUSTED_PROXIES`, `RESEND_WEBHOOK_SECRET`, `EMAIL_SENDING_ENABLED`, `EMAIL_*_LIMIT`, `INVITE_*`, `ASAAS_TIMEOUT_SECONDS`, `BILLING_WORKSPACE_BASE_STORAGE_BYTES`, `BILLING_STORAGE_*`, `STORAGE_QUOTA_ENABLED`, `MAX_ACCOUNTS_PER_PLATFORM`, `INBOX_YOUTUBE_MIN_POLL_SECONDS`, `INBOX_DEEP_SWEEP_SECONDS`, `PUBLISHER_FIRST_COMMENT_*`.
 
 ---
 

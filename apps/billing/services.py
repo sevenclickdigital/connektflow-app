@@ -11,6 +11,7 @@ bytes.
 
 from __future__ import annotations
 
+import datetime
 import uuid
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
@@ -429,6 +430,142 @@ def recent_price_changes(limit=20):
     enough that a fixed window answers it for years.
     """
     return list(ProductPriceChange.objects.select_related("changed_by")[:limit])
+
+
+# ---------------------------------------------------------------------------
+# Quotes — what contracting a workspace costs right now
+# ---------------------------------------------------------------------------
+
+#: Statuses of a subscription that counts toward the volume discount once
+#: it has been contracted at the gateway. Courtesy and canceled do not:
+#: the discount rewards workspaces being paid for.
+_PAYING_STATUSES = (
+    WorkspaceSubscription.Status.PENDING,
+    WorkspaceSubscription.Status.ACTIVE,
+    WorkspaceSubscription.Status.PAST_DUE,
+)
+
+
+def annual_discount_percent():
+    """Discount of the yearly plan, in whole percent. 0 = not offered."""
+    return int(settings.BILLING_ANNUAL_DISCOUNT_PERCENT)
+
+
+def volume_discount_percent(position):
+    """Discount of an organization's ``position``-th paid workspace."""
+    percent = 0
+    for minimum, tier_percent in settings.BILLING_VOLUME_DISCOUNTS:
+        if position >= minimum:
+            percent = tier_percent
+    return percent
+
+
+def paid_workspace_count(organization_id, *, exclude_workspace_id=None):
+    """How many of an organization's workspaces are contracted and paying."""
+    queryset = WorkspaceSubscription.objects.filter(
+        workspace__organization_id=organization_id,
+        status__in=_PAYING_STATUSES,
+    ).exclude(gateway_subscription_id="")
+    if exclude_workspace_id is not None:
+        queryset = queryset.exclude(workspace_id=exclude_workspace_id)
+    return queryset.count()
+
+
+def quote_workspace(workspace, cycle=WorkspaceSubscription.Cycle.MONTHLY):
+    """What contracting ``workspace`` on ``cycle`` costs at today's list.
+
+    The one place the discounts are applied, so the figure shown on the
+    contracting page and the figure sent to the gateway cannot differ.
+    The volume discount is decided by the position this workspace would
+    take among the organization's paying ones; the yearly discount is
+    applied on top. ``monthly_cents`` is rounded to a whole cent first and
+    the yearly charge is twelve times it, so "R$ X a month" times twelve
+    is exactly what is charged.
+    """
+    list_cents = workspace_price_cents()
+    position = paid_workspace_count(workspace.organization_id, exclude_workspace_id=workspace.pk) + 1
+    volume_percent = volume_discount_percent(position)
+    yearly = cycle == WorkspaceSubscription.Cycle.YEARLY
+    annual_percent = annual_discount_percent() if yearly else 0
+
+    monthly = Decimal(list_cents) * (100 - volume_percent) * (100 - annual_percent) / 10000
+    monthly_cents = int(monthly.quantize(Decimal(1), rounding=ROUND_HALF_UP))
+    return {
+        "cycle": WorkspaceSubscription.Cycle.YEARLY if yearly else WorkspaceSubscription.Cycle.MONTHLY,
+        "list_cents": list_cents,
+        "position": position,
+        "volume_percent": volume_percent,
+        "annual_percent": annual_percent,
+        "monthly_cents": monthly_cents,
+        "charge_cents": monthly_cents * 12 if yearly else monthly_cents,
+        # Against paying the same workspace month by month for a year.
+        "yearly_saving_cents": (
+            int((Decimal(list_cents) * (100 - volume_percent) / 100).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+            - monthly_cents
+        )
+        * 12,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Free trial
+# ---------------------------------------------------------------------------
+
+
+class TrialRefusedError(ValueError):
+    """A free trial that must not start. The message is for the customer."""
+
+
+def trial_days():
+    """Length of the free trial in days. 0 = no trial is offered."""
+    return int(settings.BILLING_TRIAL_DAYS)
+
+
+def trial_available(workspace):
+    """Whether this workspace may start the account's free trial.
+
+    One trial per organization, for a workspace that was never contracted.
+    """
+    if trial_days() <= 0:
+        return False
+    sub = ensure_subscription(workspace)
+    if sub.status != WorkspaceSubscription.Status.PENDING or sub.gateway_subscription_id or sub.trial_ends_at:
+        return False
+    return ensure_billing_profile(workspace.organization).trial_started_at is None
+
+
+def start_trial(workspace, *, tax_id, phone):
+    """Open the account's free trial on ``workspace``.
+
+    ``tax_id`` (CPF/CNPJ digits) and ``phone`` are what the trial costs:
+    they identify the person, and the document is refused when another
+    account already took a trial with it. Returns the subscription.
+    """
+    with transaction.atomic():
+        # Locked so two submissions cannot both find the trial unused.
+        profile = OrganizationBillingProfile.objects.select_for_update().get(
+            pk=ensure_billing_profile(workspace.organization).pk
+        )
+        if not trial_available(workspace):
+            raise TrialRefusedError(_("This account has already used its free trial."))
+        taken = (
+            OrganizationBillingProfile.objects.filter(tax_id=tax_id, trial_started_at__isnull=False)
+            .exclude(pk=profile.pk)
+            .exists()
+        )
+        if taken:
+            raise TrialRefusedError(_("A free trial has already been used with this CPF or CNPJ."))
+
+        now = timezone.now()
+        profile.tax_id = tax_id
+        profile.phone = phone
+        profile.trial_started_at = now
+        profile.save(update_fields=["tax_id", "phone", "trial_started_at", "updated_at"])
+
+        sub = ensure_subscription(workspace)
+        sub.trial_ends_at = now + datetime.timedelta(days=trial_days())
+        sub.save(update_fields=["trial_ends_at", "updated_at"])
+    return sub
 
 
 # ---------------------------------------------------------------------------

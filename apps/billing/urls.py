@@ -19,6 +19,8 @@ urlpatterns = [
     path("", views.workspace_billing, name="workspace_billing"),
     path("subscribe/", views.subscribe_modal, name="subscribe_modal"),
     path("subscribe/confirm/", views.subscribe_confirm, name="subscribe_confirm"),
+    path("trial/", views.start_trial, name="start_trial"),
+    path("pay/", views.pay_invoice, name="pay_invoice"),
     path("storage/quote/", views.storage_quote, name="storage_quote"),
     path("storage/", views.contract_storage, name="contract_storage"),
 ]
