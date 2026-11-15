@@ -418,6 +418,7 @@ Facebook and Instagram share the same Meta app credentials. Threads runs on the 
    {APP_URL}/social-accounts/callback/instagram/
    ```
    > **Threads is separate.** Its callback does **not** belong here — the Threads use case keeps its own redirect URI list. See step 7.
+   Under **App settings → Basic → User data deletion**, choose **Data deletion callback URL** and enter `{APP_URL}/data-deletion/`. Facebook POSTs a signed request there when someone asks for their data to be deleted; the app removes the Pages and Instagram profiles that person granted and answers with a confirmation code. The same address opened in a browser is the instructions page.
 5. **Webhooks (required for the inbox).** In the App Dashboard, go to **Webhooks** (also reachable via **Use cases → Manage everything on your Page → Webhooks**) and subscribe to the **Page** object:
    - **Callback URL:** `{APP_URL}/webhooks/facebook/`
    - **Verify token:** the value of `FACEBOOK_WEBHOOK_VERIFY_TOKEN` from your `.env` (any random string; generate one and set the env var before clicking *Verify and save*)

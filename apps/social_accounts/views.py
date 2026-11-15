@@ -26,7 +26,7 @@ from apps.common.validators import is_safe_url as _is_safe_url
 from apps.credentials.models import PlatformCredential, derive_is_configured
 from apps.members.decorators import require_permission
 from apps.radar.sources import source_cards
-from providers.exceptions import QuotaExceededError
+from providers.exceptions import ProviderError, QuotaExceededError
 
 from .catalog import CATEGORIES, platform_category, platform_description
 from .error_messages import quota_connect_error
@@ -439,6 +439,7 @@ def oauth_callback(request, platform):
         if offers_account_picker(platform):
             tokens, promoted = promote_meta_user_token(provider, platform, tokens)
             pages = provider.get_user_pages(tokens.access_token)
+            granting_user_id = meta_granting_user_id(provider, platform, tokens.access_token)
             if pages:
                 # Filtered by workspace only: that set is bounded by what this
                 # workspace has connected, while the page list is bounded only
@@ -456,6 +457,7 @@ def oauth_callback(request, platform):
                 request.session["oauth_page_select"] = {
                     "workspace_id": workspace_id,
                     "platform": platform,
+                    "granting_user_id": granting_user_id,
                     "user_tokens": {
                         "access_token": tokens.access_token,
                         "refresh_token": tokens.refresh_token,
@@ -646,6 +648,7 @@ def select_account(request):
                     expires_in=user_tokens.get("expires_in"),
                     facebook_user_access_token=user_tokens.get("access_token", "") if platform == "instagram" else None,
                     facebook_user_token_expires_at=user_tokens.get("user_expires_at"),
+                    granted_by_platform_user_id=page_data.get("granting_user_id", ""),
                     # Instagram-via-Facebook receives its webhooks through the
                     # linked Page, so remember which Page to subscribe.
                     webhook_target_id=page.get("page_id", ""),
@@ -1119,6 +1122,25 @@ def _after_disconnect(request, workspace_id):
     return redirect("social_accounts:list", workspace_id=workspace_id)
 
 
+def meta_granting_user_id(provider, platform, access_token) -> str:
+    """The Facebook user behind a Facebook Login grant, or "" when unknown.
+
+    The connection itself is a Page or an Instagram profile; the grant belongs
+    to this person, and theirs is the id Meta sends with a data deletion
+    request. Failing to read it must not fail the connection: the account
+    works without it, it just cannot be found by that callback, so the miss is
+    logged for the operator instead.
+    """
+    if platform not in ("facebook", "instagram"):
+        return ""
+    try:
+        user_id = provider.debug_token(access_token).get("user_id")
+    except ProviderError as exc:
+        logger.warning("Could not read the granting Facebook user for a %s connection: %s", platform, exc)
+        return ""
+    return str(user_id) if isinstance(user_id, (str, int)) and user_id else ""
+
+
 def promote_meta_user_token(provider, platform, tokens) -> tuple[object, bool]:
     """Trade a Meta authorization-code token for a long-lived one, if we can.
 
@@ -1221,6 +1243,7 @@ def _create_or_update_account(
     facebook_user_token_expires_at=None,
     messaging_access=None,
     authorizing_user=None,
+    granted_by_platform_user_id="",
 ):
     """Create or update a SocialAccount from OAuth results."""
     token_expires_at = None
@@ -1293,6 +1316,7 @@ def _create_or_update_account(
             "instance_url": instance_url,
             "webhook_target_id": webhook_target_id or "",
             "messaging_access": messaging_access,
+            "granted_by_platform_user_id": granted_by_platform_user_id or "",
             "connection_status": SocialAccount.ConnectionStatus.CONNECTED,
             "last_error": "",
             # Fresh OAuth grant invalidates any prior analytics-scope failure.

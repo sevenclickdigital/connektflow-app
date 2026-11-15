@@ -30,7 +30,7 @@ urlpatterns = [
     path("exclusao-de-dados/", legal_views.data_deletion, name="data_deletion"),
     path("privacy/", legal_views.privacy_policy),
     path("terms/", legal_views.terms_of_service),
-    path("data-deletion/", legal_views.data_deletion),
+    path("data-deletion/", legal_views.data_deletion, name="data_deletion_en"),
     path("accounts/", include("apps.accounts.urls")),
     path("accounts/", include("allauth.urls")),
     path("organizations/", include("apps.organizations.urls")),

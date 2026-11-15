@@ -132,6 +132,13 @@ class SocialAccount(models.Model):
     last_health_check_at = models.DateTimeField(blank=True, null=True)
     last_error = models.TextField(blank=True, default="")
 
+    # The person on the platform who granted this connection, when that is not
+    # the account itself: with Facebook Login the account is a Page or an
+    # Instagram profile and the grant belongs to a Facebook user. It is the id
+    # Meta sends when that person asks for their data to be deleted. Empty when
+    # the platform did not tell us.
+    granted_by_platform_user_id = models.CharField(max_length=255, blank=True, default="", db_default="")
+
     connected_at = models.DateTimeField(auto_now_add=True)
     youtube_authorized_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

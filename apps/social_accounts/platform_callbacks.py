@@ -1,10 +1,12 @@
 """Callbacks a platform sends about a person's grant, not about their content.
 
-Threads calls these when someone removes the app from their account
-("uninstall") or asks for their data to be deleted. Both arrive as a POST with
-one form field, ``signed_request``: ``<signature>.<payload>``, each part
-base64url, the signature an HMAC-SHA256 of the encoded payload keyed with the
-Threads app secret. The payload's ``user_id`` is the Threads user.
+Meta calls these when someone removes the app from their account
+("uninstall", Threads only here) or asks for their data to be deleted. Both
+arrive as a POST with one form field, ``signed_request``:
+``<signature>.<payload>``, each part base64url, the signature an HMAC-SHA256
+of the encoded payload keyed with the app secret. The payload's ``user_id`` is
+the person: for Threads the connected account itself, for the Facebook app the
+Facebook user who granted the Pages and Instagram profiles.
 
 Public and CSRF-exempt by necessity; the signature is the only authentication.
 """
@@ -32,7 +34,10 @@ from .services import remove_account_data
 
 logger = logging.getLogger(__name__)
 
-PLATFORM = "threads"
+THREADS = ("threads",)
+# One Meta app serves both, and its data deletion request names the Facebook
+# user who granted the connections rather than any one of them.
+FACEBOOK_APP = ("facebook", "instagram")
 
 
 def _b64url_decode(value: str) -> bytes:
@@ -65,36 +70,70 @@ def _signed_with(secret: str, signature: bytes, signed_bytes: bytes) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
-def _accounts_named_by(request):
+def _accounts_named_by(request, platforms, id_field):
     """Authenticate the callback and return the accounts it is about.
 
-    Returns ``(accounts, error_response)``. The lookup crosses workspaces on
-    purpose: the person acted on Threads, which knows nothing of our tenants,
-    and every connection of that Threads user is affected. An account counts
-    only when the request is signed with its own organization's app secret, so
-    one organization's Threads app cannot touch another's connections.
+    ``id_field`` is where a connection of these platforms keeps the id the
+    signed request carries. Returns ``(accounts, error_response)``.
+
+    The lookup crosses workspaces on purpose: the person acted on the
+    platform, which knows nothing of our tenants, and every connection of
+    theirs is affected. An account counts only when the request is signed with
+    its own organization's app secret, so one organization's app cannot touch
+    another's connections.
     """
     parsed = _parse_signed_request(request.POST.get("signed_request", ""))
     if parsed is None:
         return [], HttpResponseBadRequest("Malformed signed_request")
     payload, signature, signed_bytes = parsed
 
-    if not any(_signed_with(secret, signature, signed_bytes) for secret in resolve_app_secrets(PLATFORM)):
-        logger.warning("Threads callback rejected: signature matches no configured app secret")
+    if not any(_signed_with(secret, signature, signed_bytes) for secret in resolve_app_secrets(*platforms)):
+        logger.warning("%s callback rejected: signature matches no configured app secret", platforms[0])
         return [], HttpResponseForbidden("Invalid signature")
 
+    # An empty id must match nothing: it is also the value of every
+    # connection whose granting user was never recorded.
     user_id = str(payload.get("user_id") or "")
     if not user_id:
         return [], None
-    candidates = SocialAccount.objects.filter(platform=PLATFORM, account_platform_id=user_id).select_related(
-        "workspace"
-    )
+    candidates = SocialAccount.objects.filter(platform__in=platforms, **{id_field: user_id}).select_related("workspace")
     accounts = [
         account
         for account in candidates
-        if _signed_with(resolve_app_secret(PLATFORM, account.workspace.organization_id), signature, signed_bytes)
+        if _signed_with(
+            resolve_app_secret(account.platform, account.workspace.organization_id), signature, signed_bytes
+        )
     ]
     return accounts, None
+
+
+def _delete_and_confirm(request, platforms, id_field):
+    """Remove what the request names and answer the way Meta requires.
+
+    That is a JSON body with a confirmation code and a URL where the person
+    can read the status of the request. Deletion happens here, before
+    answering, so that status is always "done". A user we hold nothing for
+    still gets a code: the answer to them is the same.
+    """
+    accounts, error = _accounts_named_by(request, platforms, id_field)
+    if error:
+        return error
+    code = secrets.token_hex(8).upper()
+    with transaction.atomic():
+        for account in accounts:
+            remove_account_data(account)
+        DataDeletionRequest.objects.create(
+            confirmation_code=code,
+            platform=platforms[0],
+            accounts_removed=len(accounts),
+        )
+    logger.info("%s data deletion callback %s: %d connection(s) removed", platforms[0], code, len(accounts))
+    return JsonResponse(
+        {
+            "url": f"{settings.APP_URL.rstrip('/')}{reverse('data_deletion')}?code={code}",
+            "confirmation_code": code,
+        }
+    )
 
 
 @csrf_exempt
@@ -105,7 +144,7 @@ def threads_deauthorize(request):
     The account stays, marked as needing a reconnect, so the workspace sees why
     its posts stopped instead of finding the connection gone.
     """
-    accounts, error = _accounts_named_by(request)
+    accounts, error = _accounts_named_by(request, THREADS, "account_platform_id")
     if error:
         return error
     for account in accounts:
@@ -119,29 +158,17 @@ def threads_deauthorize(request):
 @csrf_exempt
 @require_POST
 def threads_data_deletion(request):
-    """The person asked for their data to be deleted: remove it and say so.
+    """Someone asked Threads for their data to be deleted."""
+    return _delete_and_confirm(request, THREADS, "account_platform_id")
 
-    Meta requires a JSON answer with a confirmation code and a URL where the
-    person can read the status of the request. Deletion happens here, before
-    answering, so that status is always "done". A user we hold nothing for
-    still gets a code: the answer to them is the same.
+
+@csrf_exempt
+@require_POST
+def facebook_data_deletion(request):
+    """Someone asked Facebook for the data this app holds on them to be deleted.
+
+    Removes every Page and Instagram connection that person granted. A
+    connection made before the granting user was recorded cannot be found
+    this way until it is reconnected.
     """
-    accounts, error = _accounts_named_by(request)
-    if error:
-        return error
-    code = secrets.token_hex(8).upper()
-    with transaction.atomic():
-        for account in accounts:
-            remove_account_data(account)
-        DataDeletionRequest.objects.create(
-            confirmation_code=code,
-            platform=PLATFORM,
-            accounts_removed=len(accounts),
-        )
-    logger.info("Threads data deletion callback %s: %d connection(s) removed", code, len(accounts))
-    return JsonResponse(
-        {
-            "url": f"{settings.APP_URL.rstrip('/')}{reverse('data_deletion')}?code={code}",
-            "confirmation_code": code,
-        }
-    )
+    return _delete_and_confirm(request, FACEBOOK_APP, "granted_by_platform_user_id")

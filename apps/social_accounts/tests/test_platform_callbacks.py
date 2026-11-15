@@ -10,6 +10,7 @@ import base64
 import hashlib
 import hmac
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
 from django.test import override_settings
@@ -211,3 +212,127 @@ def test_the_status_page_reports_a_known_request_and_admits_an_unknown_code(clie
     assert "Pedido ABC123: concluído" in known
     assert "Não encontramos um pedido com o código NOPE" in unknown
     assert "Pedido" not in plain and "Não encontramos" not in plain
+
+
+# ------------------------------------------- facebook app: data deletion callback
+
+FB_SECRET = "facebook-app-secret"
+FB_ENV = {
+    "facebook": {"app_id": "fb-app", "app_secret": FB_SECRET},
+    "instagram": {"app_id": "fb-app", "app_secret": FB_SECRET},
+    "threads": {"app_id": "threads-app", "app_secret": SECRET},
+}
+FB_USER = "10230000000000001"
+
+
+def _meta_account(workspace, platform, platform_id, granted_by=FB_USER):
+    return SocialAccount.objects.create(
+        workspace=workspace,
+        platform=platform,
+        account_platform_id=platform_id,
+        account_name=f"{platform} {platform_id}",
+        oauth_access_token="token",
+        granted_by_platform_user_id=granted_by,
+    )
+
+
+@pytest.mark.parametrize("name", ["data_deletion", "data_deletion_en"])
+@override_settings(PLATFORM_CREDENTIALS_FROM_ENV=FB_ENV, APP_URL="https://app.example.com")
+def test_facebook_data_deletion_removes_every_connection_that_user_granted(client, workspace, name):
+    """The address saved in the Meta app is the public page's own: Facebook
+    POSTs the signed request there, in either language."""
+    page = _meta_account(workspace, "facebook", "page-1")
+    instagram = _meta_account(workspace, "instagram", "ig-1")
+    someone_elses = _meta_account(workspace, "facebook", "page-2", granted_by="999")
+    unrecorded = _meta_account(workspace, "facebook", "page-3", granted_by="")
+
+    response = _post(client, name, _signed_request(FB_USER, secret=FB_SECRET))
+
+    assert response.status_code == 200
+    code = response.json()["confirmation_code"]
+    assert response.json()["url"] == f"https://app.example.com/exclusao-de-dados/?code={code}"
+    assert not SocialAccount.objects.filter(id__in=[page.id, instagram.id]).exists()
+    assert SocialAccount.objects.filter(id__in=[someone_elses.id, unrecorded.id]).count() == 2
+    record = DataDeletionRequest.objects.get(confirmation_code=code)
+    assert (record.platform, record.accounts_removed) == ("facebook", 2)
+
+
+@override_settings(PLATFORM_CREDENTIALS_FROM_ENV=FB_ENV)
+def test_a_request_without_a_user_id_matches_no_connection(client, workspace):
+    """Every connection whose granting user was never recorded holds an empty
+    id; a signed request with an empty one must not sweep them all away."""
+    unrecorded = _meta_account(workspace, "facebook", "page-3", granted_by="")
+
+    response = _post(client, "data_deletion", _signed_request("", secret=FB_SECRET))
+
+    assert response.status_code == 200
+    assert SocialAccount.objects.filter(id=unrecorded.id).exists()
+    assert DataDeletionRequest.objects.get().accounts_removed == 0
+
+
+@override_settings(PLATFORM_CREDENTIALS_FROM_ENV=FB_ENV)
+def test_each_meta_app_secret_only_opens_its_own_callback(client, workspace):
+    page = _meta_account(workspace, "facebook", "page-1")
+    threads = _threads_account(workspace)
+
+    with_threads_secret = _post(client, "data_deletion", _signed_request(FB_USER, secret=SECRET))
+    with_facebook_secret = _post(client, "threads_data_deletion", _signed_request(THREADS_USER, secret=FB_SECRET))
+
+    assert (with_threads_secret.status_code, with_facebook_secret.status_code) == (403, 403)
+    assert SocialAccount.objects.filter(id__in=[page.id, threads.id]).count() == 2
+    assert not DataDeletionRequest.objects.exists()
+
+
+@override_settings(PLATFORM_CREDENTIALS_FROM_ENV=FB_ENV)
+def test_the_public_page_refuses_an_unsigned_post_and_other_methods(client, workspace):
+    page = _meta_account(workspace, "facebook", "page-1")
+
+    assert client.post(reverse("data_deletion"), {"signed_request": "x.y"}).status_code == 400
+    assert client.post(reverse("data_deletion"), {}).status_code == 400
+    assert client.delete(reverse("data_deletion")).status_code == 405
+    assert client.get(reverse("data_deletion")).status_code == 200
+    assert SocialAccount.objects.filter(id=page.id).exists()
+
+
+# ------------------------------------------------ recording who granted a connection
+
+
+def test_connecting_records_the_granting_user_and_reconnecting_updates_it(workspace):
+    from apps.social_accounts.views import _create_or_update_account
+    from providers.types import AccountProfile
+
+    profile = AccountProfile(platform_id="page-1", name="Page")
+    with patch("apps.social_accounts.views.subscribe_account_webhooks_task"):
+        account = _create_or_update_account(
+            workspace_id=workspace.id,
+            platform="facebook",
+            profile=profile,
+            access_token="t",
+            granted_by_platform_user_id="111",
+        )
+        assert account.granted_by_platform_user_id == "111"
+        account = _create_or_update_account(
+            workspace_id=workspace.id,
+            platform="facebook",
+            profile=profile,
+            access_token="t",
+            granted_by_platform_user_id="222",
+        )
+    assert account.granted_by_platform_user_id == "222"
+    assert SocialAccount.objects.filter(platform="facebook").count() == 1
+
+
+def test_the_granting_user_is_read_from_the_token_and_never_breaks_the_connection():
+    from apps.social_accounts.views import meta_granting_user_id
+    from providers.exceptions import APIError
+
+    def provider(result=None, error=None):
+        return MagicMock(debug_token=MagicMock(return_value=result, side_effect=error))
+
+    assert meta_granting_user_id(provider({"user_id": "123"}), "facebook", "t") == "123"
+    assert meta_granting_user_id(provider({"user_id": 123}), "instagram", "t") == "123"
+    assert meta_granting_user_id(provider({}), "facebook", "t") == ""
+    assert meta_granting_user_id(provider(error=APIError("nope", platform="facebook")), "facebook", "t") == ""
+    other = provider({"user_id": "123"})
+    assert meta_granting_user_id(other, "linkedin_company", "t") == ""
+    other.debug_token.assert_not_called()
