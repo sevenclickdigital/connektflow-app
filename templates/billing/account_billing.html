@@ -1,49 +1,165 @@
 {% extends "layouts/settings.html" %}
 {% load i18n billing_extras %}
+{% comment %}
+Account centre → Billing: the whole account at a glance. How many brands
+are active, on trial or stopped, what the active ones cost, each brand with
+the one action it needs, the charges the payment provider reported and the
+payer's data. Each brand's own page (workspace_billing.html) keeps the
+detail: storage, add-ons, contracting.
+{% endcomment %}
 {% block title %}{% translate "Billing" %} - Connekt Flow{% endblock %}
 
 {% block page_header %}
 <div class="page-header">
     <div>
         <h1 class="page-title">{% translate "Billing" %}</h1>
-        <p class="page-description">{% translate "Subscription and monthly cost of each brand you manage." %}</p>
+        <p class="page-description">{% translate "Your plan, the brands you pay for and their payments." %}</p>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 <section class="mb-8">
-    <h2 class="section-title">{% translate "Brands" %} ({{ rows|length }})</h2>
+    <h2 class="section-title">{% translate "Brands" %}</h2>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="a-card p-5">
+            <div class="text-sm text-neutral-600">{% translate "All brands" %}</div>
+            <div class="text-3xl font-semibold text-neutral-950 tabular-nums mt-1">{{ counts.all }}</div>
+        </div>
+        <div class="a-card p-5">
+            <div class="text-sm text-neutral-600">{% translate "Active brands" %}</div>
+            <div class="text-3xl font-semibold text-neutral-950 tabular-nums mt-1">{{ counts.active }}</div>
+        </div>
+        <div class="a-card p-5">
+            <div class="text-sm text-neutral-600">{% translate "Inactive brands" %}</div>
+            <div class="text-3xl font-semibold text-neutral-950 tabular-nums mt-1">{{ counts.inactive }}</div>
+        </div>
+        <div class="a-card p-5">
+            <div class="text-sm text-neutral-600">{% translate "Brands on trial" %}</div>
+            <div class="text-3xl font-semibold text-neutral-950 tabular-nums mt-1">{{ counts.trial }}</div>
+        </div>
+    </div>
+</section>
+
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Active plan" %}</h2>
+    <div class="a-card grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-neutral-300">
+        <div class="p-5">
+            <div class="text-sm text-neutral-600">{% translate "Paid brands" %}</div>
+            <div class="text-lg font-semibold text-neutral-950 tabular-nums mt-1">{{ plan.brands }}</div>
+        </div>
+        <div class="p-5">
+            <div class="text-sm text-neutral-600">{% translate "Next due date" %}</div>
+            <div class="text-lg font-semibold text-neutral-950 tabular-nums mt-1">{% if plan.next_due %}{{ plan.next_due|date:"d/m/Y" }}{% else %}—{% endif %}</div>
+        </div>
+        <div class="p-5">
+            <div class="text-sm text-neutral-600">{% translate "Recurring amount" %}</div>
+            <div class="text-lg font-semibold text-brand-700 tabular-nums mt-1">R$ {{ plan.recurring_cents|brl }} <span class="text-sm font-normal text-neutral-600">{% translate "/month" %}</span></div>
+        </div>
+    </div>
+    <p class="text-xs text-neutral-500 mt-2">{% translate "Each brand has its own invoice, paid by Pix, boleto or card. A yearly brand counts here by its monthly equivalent." %}</p>
+</section>
+
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Your brands" %}</h2>
     {% if rows %}
     <div class="a-card divide-y divide-neutral-300">
         {% for row in rows %}
+        {% with sub=row.subscription %}
         <div class="px-6 py-4 flex flex-wrap items-center gap-4">
             <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold bg-brand-100 text-brand-800">{{ row.workspace.name|first|upper }}</div>
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-semibold text-neutral-950 truncate">{{ row.workspace.name }}</div>
-                <div class="text-xs text-neutral-500 truncate">{{ row.workspace.organization.name }}</div>
+                <div class="text-xs text-neutral-500 truncate">
+                    {{ row.workspace.organization.name }}
+                    {% if sub.in_trial %}
+                    · {% blocktranslate with date=sub.trial_ends_at|date:"d/m/Y" %}free trial until {{ date }}{% endblocktranslate %}
+                    {% elif sub.trial_expired %}
+                    · {% translate "free trial ended" %}
+                    {% elif sub.status == 'active' and sub.current_period_end %}
+                    · {% blocktranslate with date=sub.current_period_end|date:"d/m/Y" %}paid until {{ date }}{% endblocktranslate %}
+                    {% endif %}
+                </div>
             </div>
-            {% with sub=row.subscription %}
-            <span class="pill {% if sub.status == 'active' %}pill-success{% elif sub.status == 'courtesy' %}pill-brand{% elif sub.status == 'past_due' %}pill-warning{% elif sub.status == 'canceled' %}pill-neutral{% else %}pill-info{% endif %}">
+            {% if row.state == 'trial' %}
+            <span class="pill pill-info"><i></i>{% translate "On trial" %}</span>
+            {% else %}
+            <span class="pill {% if sub.status == 'active' %}pill-success{% elif sub.status == 'courtesy' %}pill-brand{% elif sub.status == 'past_due' %}pill-warning{% else %}pill-neutral{% endif %}">
                 <i></i>{% if sub %}{{ sub.get_status_display }}{% else %}{% translate "Pending" %}{% endif %}
             </span>
-            {% endwith %}
+            {% endif %}
             <div class="w-32 text-right">
                 <div class="text-sm font-semibold text-neutral-950 tabular-nums">R$ {{ row.monthly_total_cents|brl }}</div>
-                <div class="text-xs text-neutral-500">{% translate "per month" %}</div>
+                <div class="text-xs text-neutral-500">{% if sub.is_yearly %}{% translate "per month, paid yearly" %}{% else %}{% translate "per month" %}{% endif %}</div>
             </div>
-            {% if row.can_open %}
-            <a href="{% url 'billing:workspace_billing' workspace_id=row.workspace.id %}" class="btn-soft py-1.5 px-3 text-xs">{% translate "View billing" %}</a>
-            {% endif %}
+            <div class="w-40 flex justify-end">
+                {% if not row.can_open %}
+                {% elif row.awaiting_payment %}
+                <a href="{% url 'billing:pay_invoice' workspace_id=row.workspace.id %}" target="_blank" rel="noopener" class="btn-brand py-1.5 px-3 text-xs">{% translate "Pay invoice" %}</a>
+                {% elif row.state == 'active' %}
+                <a href="{% url 'billing:workspace_billing' workspace_id=row.workspace.id %}" class="btn-soft py-1.5 px-3 text-xs">{% translate "Manage" %}</a>
+                {% else %}
+                <a href="{% url 'billing:subscribe_modal' workspace_id=row.workspace.id %}" class="btn-brand py-1.5 px-3 text-xs">{% translate "Contract" %}</a>
+                {% endif %}
+            </div>
         </div>
+        {% endwith %}
         {% endfor %}
-        <div class="px-6 py-4 flex items-center justify-between bg-[var(--surface-1)] rounded-b-[var(--radius-lg)]">
-            <span class="text-sm font-semibold text-neutral-700">{% translate "Monthly total" %}</span>
-            <span class="text-base font-semibold text-neutral-950 tabular-nums">R$ {{ total_cents|brl }}</span>
-        </div>
     </div>
     {% else %}
     <div class="a-card px-6 py-12 text-center text-sm text-neutral-500">{% translate "You don't manage the billing of any brand." %}</div>
     {% endif %}
 </section>
+
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Payments" %}</h2>
+    {% if payments %}
+    <div class="a-card divide-y divide-neutral-300">
+        {% for payment in payments %}
+        <div class="px-6 py-3.5 flex flex-wrap items-center gap-4">
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-neutral-950 truncate">
+                    {{ payment.workspace.name }}{% if payment.is_addon %} · {% translate "extra storage" %}{% endif %}
+                </div>
+                <div class="text-xs text-neutral-500 tabular-nums">{{ payment.date|date:"d/m/Y H:i" }}</div>
+            </div>
+            <span class="pill {% if payment.outcome == 'paid' %}pill-success{% elif payment.outcome == 'overdue' %}pill-warning{% else %}pill-neutral{% endif %}">
+                <i></i>{% if payment.outcome == 'paid' %}{% translate "Paid" %}{% elif payment.outcome == 'overdue' %}{% translate "Overdue" %}{% else %}{% translate "Reversed" %}{% endif %}
+            </span>
+            <div class="w-28 text-right text-sm font-semibold text-neutral-950 tabular-nums">
+                {% if payment.amount_cents is not None %}R$ {{ payment.amount_cents|brl }}{% else %}—{% endif %}
+            </div>
+            <div class="w-28 flex justify-end">
+                {% if payment.invoice_url %}
+                <a href="{{ payment.invoice_url }}" target="_blank" rel="noopener" class="btn-soft py-1.5 px-3 text-xs">{% translate "See invoice" %}</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="a-card px-6 py-10 text-center text-sm text-neutral-500">{% translate "No payment yet. They appear here as soon as the first invoice is paid." %}</div>
+    {% endif %}
+</section>
+
+{% if payer %}
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Billing data" %}</h2>
+    <div class="a-card grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-neutral-300">
+        <div class="p-5 min-w-0">
+            <div class="text-sm text-neutral-600">{% translate "CPF or CNPJ" %}</div>
+            <div class="text-sm font-semibold text-neutral-950 tabular-nums mt-1">{% if payer.tax_id_ending %}{% blocktranslate with digits=payer.tax_id_ending %}ending in {{ digits }}{% endblocktranslate %}{% else %}—{% endif %}</div>
+        </div>
+        <div class="p-5 min-w-0">
+            <div class="text-sm text-neutral-600">{% translate "Phone" %}</div>
+            <div class="text-sm font-semibold text-neutral-950 tabular-nums mt-1">{{ payer.phone|default:"—" }}</div>
+        </div>
+        <div class="p-5 min-w-0">
+            <div class="text-sm text-neutral-600">{% translate "Billing email" %}</div>
+            <div class="text-sm font-semibold text-neutral-950 truncate mt-1">{{ payer.email|default:"—" }}</div>
+        </div>
+    </div>
+    <p class="text-xs text-neutral-500 mt-2">{% translate "The document and the phone are asked at the first contract or when the free trial starts. To change them, get in touch with us." %}</p>
+</section>
+{% endif %}
 {% endblock %}

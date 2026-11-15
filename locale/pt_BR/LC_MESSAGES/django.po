@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-15 15:11+0000\n"
+"POT-Creation-Date: 2026-11-15 15:33+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -378,7 +378,7 @@ msgstr "Connekt Flow — %(gb)s GB de armazenamento extra para %(name)s"
 #: apps/billing/models.py:68 apps/billing/models.py:270
 #: apps/composer/models.py:501 apps/composer/models.py:924
 #: apps/notifications/models.py:40 apps/radar/reports.py:53
-#: templates/automations/log.html:71 templates/billing/account_billing.html:28
+#: templates/automations/log.html:71 templates/billing/account_billing.html:88
 #: templates/billing/staff_console.html:125
 #: templates/billing/staff_subscriptions.html:198
 msgid "Pending"
@@ -546,11 +546,11 @@ msgstr ""
 "Esta marca usou todos os %(limit)s GB de armazenamento. Exclua arquivos que "
 "você não precisa mais ou contrate espaço extra para continuar enviando."
 
-#: apps/billing/views.py:209
+#: apps/billing/views.py:210
 msgid "Enter a valid CPF or CNPJ for the invoice."
 msgstr "Digite um CPF ou CNPJ válido para a fatura."
 
-#: apps/billing/views.py:404
+#: apps/billing/views.py:513
 msgid ""
 "Billing is not set up on this installation yet, so no charge was created. "
 "Your workspace is registered and we will contact you to finish the "
@@ -560,7 +560,7 @@ msgstr ""
 "pagamento foi criado. Sua marca está registrada e entraremos em contato para "
 "concluir a assinatura."
 
-#: apps/billing/views.py:414 apps/billing/views.py:552
+#: apps/billing/views.py:523 apps/billing/views.py:661
 msgid ""
 "We could not reach the payment provider. Nothing was charged — please try "
 "again in a moment."
@@ -568,7 +568,7 @@ msgstr ""
 "Não conseguimos acessar o provedor de pagamento. Nada foi cobrado — tente "
 "novamente em instantes."
 
-#: apps/billing/views.py:420
+#: apps/billing/views.py:529
 msgid ""
 "Subscription contracted. It activates as soon as the first payment is "
 "confirmed."
@@ -576,25 +576,25 @@ msgstr ""
 "Assinatura contratada. Ela é ativada assim que o primeiro pagamento for "
 "confirmado."
 
-#: apps/billing/views.py:442
+#: apps/billing/views.py:551
 msgid ""
 "Enter a valid CPF or CNPJ and a phone with area code to start the free trial."
 msgstr ""
 "Digite um CPF ou CNPJ válido e um telefone com DDD para começar o teste "
 "grátis."
 
-#: apps/billing/views.py:453
+#: apps/billing/views.py:562
 #, python-format
 msgid "Your free trial is on until %(date)s. Enjoy!"
 msgstr "Seu teste grátis vai até %(date)s. Aproveite!"
 
-#: apps/billing/views.py:470
+#: apps/billing/views.py:579
 msgid "We could not reach the payment provider. Please try again in a moment."
 msgstr ""
 "Não conseguimos acessar o provedor de pagamento. Tente novamente em "
 "instantes."
 
-#: apps/billing/views.py:476
+#: apps/billing/views.py:585
 msgid ""
 "There is no open invoice for this workspace. A payment already made can take "
 "a few minutes to show."
@@ -602,13 +602,13 @@ msgstr ""
 "Não há fatura em aberto para esta marca. Um pagamento já feito pode levar "
 "alguns minutos para aparecer."
 
-#: apps/billing/views.py:520
+#: apps/billing/views.py:629
 #, python-format
 msgid ""
 "Choose how much extra storage to contract, between %(min)s GB and %(max)s GB."
 msgstr "Escolha quanto espaço extra contratar, entre %(min)s GB e %(max)s GB."
 
-#: apps/billing/views.py:541
+#: apps/billing/views.py:650
 #, python-format
 msgid ""
 "Billing is not set up on this installation yet, so no charge was created. "
@@ -618,7 +618,7 @@ msgstr ""
 "pagamento foi criado. Seu pedido de %(gb)s GB foi registrado e entraremos em "
 "contato para concluí-lo."
 
-#: apps/billing/views.py:558
+#: apps/billing/views.py:667
 #, python-format
 msgid ""
 "%(gb)s GB contracted. The space is released as soon as the payment is "
@@ -627,11 +627,11 @@ msgstr ""
 "%(gb)s GB contratados. O espaço é liberado assim que o pagamento for "
 "confirmado."
 
-#: apps/billing/views.py:954
+#: apps/billing/views.py:1063
 msgid "The prices were already those values, so nothing changed."
 msgstr "Os preços já eram esses valores, então nada foi alterado."
 
-#: apps/billing/views.py:969
+#: apps/billing/views.py:1078
 msgid ""
 "Prices updated. Only subscriptions and add-ons contracted from now on use "
 "the new values — nobody who already bought is re-priced."
@@ -639,19 +639,19 @@ msgstr ""
 "Preços atualizados. Somente assinaturas e adicionais contratados de agora em "
 "diante usam os novos valores — ninguém que já comprou é reprecificado."
 
-#: apps/billing/views.py:1256
+#: apps/billing/views.py:1365
 #, python-format
 msgid "Workspace \"%(name)s\" is now exempt and will not be charged."
 msgstr "A marca \"%(name)s\" agora é isenta e não será cobrada."
 
-#: apps/billing/views.py:1261
+#: apps/billing/views.py:1370
 #, python-format
 msgid ""
 "Account \"%(org)s\" now has more exempt workspaces than its limit allows."
 msgstr ""
 "A conta \"%(org)s\" agora tem mais marcas isentas do que o limite permite."
 
-#: apps/billing/views.py:1268
+#: apps/billing/views.py:1377
 #, python-format
 msgid ""
 "Workspace \"%(name)s\" will be charged again. It needs a subscription to "
@@ -660,18 +660,18 @@ msgstr ""
 "A marca \"%(name)s\" voltará a ser cobrada. Agora é necessária uma "
 "assinatura para mantê-la ativa."
 
-#: apps/billing/views.py:1272 apps/billing/views.py:1569
+#: apps/billing/views.py:1381 apps/billing/views.py:1678
 #: apps/workspaces/views.py:259
 msgid "Unknown action."
 msgstr "Ação desconhecida."
 
-#: apps/billing/views.py:1296 apps/billing/views.py:1359
+#: apps/billing/views.py:1405 apps/billing/views.py:1468
 msgid ""
 "The number of exempt workspaces must be zero or a positive whole number."
 msgstr ""
 "O número de marcas isentas deve ser zero ou um número inteiro positivo."
 
-#: apps/billing/views.py:1307
+#: apps/billing/views.py:1416
 #, python-format
 msgid ""
 "Account \"%(org)s\" may now have up to %(quota)s workspace(s) exempt from "
@@ -680,7 +680,7 @@ msgstr ""
 "A conta \"%(org)s\" agora pode ter até %(quota)s marca(s) isenta(s) de "
 "cobrança."
 
-#: apps/billing/views.py:1313
+#: apps/billing/views.py:1422
 msgid ""
 "Workspaces already exempt above the new limit were kept — nobody starts "
 "being charged retroactively."
@@ -688,17 +688,17 @@ msgstr ""
 "As marcas já isentas acima do novo limite foram mantidas — ninguém passa a "
 "ser cobrado retroativamente."
 
-#: apps/billing/views.py:1367
+#: apps/billing/views.py:1476
 msgid "Enter the end date as a valid date, or leave it empty for no end date."
 msgstr ""
 "Informe a data de término em um formato válido, ou deixe em branco para não "
 "ter data de término."
 
-#: apps/billing/views.py:1373
+#: apps/billing/views.py:1482
 msgid "The end date is in the past. Choose today or a later date."
 msgstr "A data de término está no passado. Escolha hoje ou uma data posterior."
 
-#: apps/billing/views.py:1387
+#: apps/billing/views.py:1496
 #, python-format
 msgid ""
 "Account \"%(org)s\" has %(quota)s workspace(s) exempt from charges, with no "
@@ -707,7 +707,7 @@ msgstr ""
 "A conta \"%(org)s\" tem %(quota)s marca(s) isenta(s) de cobrança, sem data "
 "de término."
 
-#: apps/billing/views.py:1394
+#: apps/billing/views.py:1503
 #, python-format
 msgid ""
 "Account \"%(org)s\" has %(quota)s workspace(s) exempt from charges until "
@@ -716,7 +716,7 @@ msgstr ""
 "A conta \"%(org)s\" tem %(quota)s marca(s) isenta(s) de cobrança até "
 "%(date)s; depois dessa data ela volta a ser cobrada automaticamente."
 
-#: apps/billing/views.py:1416
+#: apps/billing/views.py:1525
 #, python-format
 msgid ""
 "Account \"%(org)s\" is billed again. Each workspace needs a subscription to "
@@ -725,29 +725,29 @@ msgstr ""
 "A conta \"%(org)s\" voltou a ser cobrada. Cada marca precisa de uma "
 "assinatura para continuar ativa."
 
-#: apps/billing/views.py:1439
+#: apps/billing/views.py:1548
 msgid "The account needs a name."
 msgstr "A conta precisa de um nome."
 
-#: apps/billing/views.py:1458
+#: apps/billing/views.py:1567
 msgid "The account owner needs an e-mail address."
 msgstr "O responsável pela conta precisa de um e-mail."
 
-#: apps/billing/views.py:1463
+#: apps/billing/views.py:1572
 msgid "That is not a valid e-mail address."
 msgstr "Esse e-mail não é válido."
 
-#: apps/billing/views.py:1469
+#: apps/billing/views.py:1578
 #, python-format
 msgid "Another account already uses %(email)s. Nothing was changed."
 msgstr "Outra conta já usa %(email)s. Nada foi alterado."
 
-#: apps/billing/views.py:1480
+#: apps/billing/views.py:1589
 #, python-format
 msgid "Account \"%(org)s\" updated."
 msgstr "Conta \"%(org)s\" atualizada."
 
-#: apps/billing/views.py:1523
+#: apps/billing/views.py:1632
 #, python-format
 msgid ""
 "A password reset e-mail was sent to %(email)s. Only they can set the new "
@@ -756,7 +756,7 @@ msgstr ""
 "Um e-mail de redefinição de senha foi enviado para %(email)s. Só a própria "
 "pessoa pode definir a nova senha."
 
-#: apps/billing/views.py:1560
+#: apps/billing/views.py:1669
 #, python-format
 msgid ""
 "%(email)s can no longer sign in. Nothing was deleted — reactivate to restore "
@@ -765,7 +765,7 @@ msgstr ""
 "%(email)s não consegue mais entrar. Nada foi excluído — reative para "
 "restaurar o acesso."
 
-#: apps/billing/views.py:1567
+#: apps/billing/views.py:1676
 #, python-format
 msgid "%(email)s can sign in again."
 msgstr "%(email)s pode entrar novamente."
@@ -1706,7 +1706,7 @@ msgstr "Não foi possível ler o arquivo de imagem."
 msgid "Email"
 msgstr "E-mail"
 
-#: apps/contacts/models.py:37
+#: apps/contacts/models.py:37 templates/billing/account_billing.html:154
 msgid "Phone"
 msgstr "Telefone"
 
@@ -7337,6 +7337,7 @@ msgid "%(gb_amount)s GB × R$ %(unit)s/GB"
 msgstr "%(gb_amount)s GB × R$ %(unit)s/GB"
 
 #: templates/billing/_storage_quote.html:19
+#: templates/billing/account_billing.html:57
 #: templates/billing/subscribe_modal.html:75
 #: templates/billing/subscribe_modal.html:106
 #: templates/billing/subscribe_modal.html:114
@@ -7391,8 +7392,8 @@ msgstr ""
 "Ele vai na fatura emitida pelo nosso provedor de pagamento. Pedimos uma "
 "única vez."
 
-#: templates/billing/account_billing.html:3
-#: templates/billing/account_billing.html:8
+#: templates/billing/account_billing.html:10
+#: templates/billing/account_billing.html:15
 #: templates/billing/workspace_billing.html:12
 #: templates/billing/workspace_billing.html:21
 #: templates/intelligence/billing_settings.html:9
@@ -7400,30 +7401,161 @@ msgstr ""
 msgid "Billing"
 msgstr "Cobrança"
 
-#: templates/billing/account_billing.html:9
-msgid "Subscription and monthly cost of each brand you manage."
-msgstr "Assinatura e custo mensal de cada marca que você gerencia."
-
 #: templates/billing/account_billing.html:16
+msgid "Your plan, the brands you pay for and their payments."
+msgstr "Seu plano, as marcas que você paga e os pagamentos delas."
+
+#: templates/billing/account_billing.html:23
 msgid "Brands"
 msgstr "Marcas"
 
-#: templates/billing/account_billing.html:33
+#: templates/billing/account_billing.html:26
+#: templates/billing/workspace_billing.html:17
+msgid "All brands"
+msgstr "Todas as marcas"
+
+#: templates/billing/account_billing.html:30
+msgid "Active brands"
+msgstr "Marcas ativas"
+
+#
+#: templates/billing/account_billing.html:34
+msgid "Inactive brands"
+msgstr "Marcas inativas"
+
+#: templates/billing/account_billing.html:38
+msgid "Brands on trial"
+msgstr "Marcas em teste"
+
+#: templates/billing/account_billing.html:45
+msgid "Active plan"
+msgstr "Plano ativo"
+
+#: templates/billing/account_billing.html:48
+msgid "Paid brands"
+msgstr "Marcas pagas"
+
+#: templates/billing/account_billing.html:52
+msgid "Next due date"
+msgstr "Próximo vencimento"
+
+#: templates/billing/account_billing.html:56
+msgid "Recurring amount"
+msgstr "Valor recorrente"
+
+#: templates/billing/account_billing.html:60
+msgid ""
+"Each brand has its own invoice, paid by Pix, boleto or card. A yearly brand "
+"counts here by its monthly equivalent."
+msgstr ""
+"Cada marca tem a própria fatura, paga por Pix, boleto ou cartão. Uma marca "
+"no plano anual entra aqui pelo equivalente mensal."
+
+#: templates/billing/account_billing.html:64
+msgid "Your brands"
+msgstr "Suas marcas"
+
+#: templates/billing/account_billing.html:76
+#, python-format
+msgid "free trial until %(date)s"
+msgstr "teste grátis até %(date)s"
+
+#: templates/billing/account_billing.html:78
+msgid "free trial ended"
+msgstr "teste grátis encerrado"
+
+#: templates/billing/account_billing.html:80
+#, python-format
+msgid "paid until %(date)s"
+msgstr "paga até %(date)s"
+
+#: templates/billing/account_billing.html:85
+msgid "On trial"
+msgstr "Em teste"
+
+#: templates/billing/account_billing.html:93
+msgid "per month, paid yearly"
+msgstr "por mês, pago por ano"
+
+#: templates/billing/account_billing.html:93
 msgid "per month"
 msgstr "por mês"
 
-#: templates/billing/account_billing.html:36
-msgid "View billing"
-msgstr "Ver cobrança"
+#: templates/billing/account_billing.html:98
+msgid "Pay invoice"
+msgstr "Pagar fatura"
 
-#: templates/billing/account_billing.html:41
-#: templates/billing/workspace_billing.html:86
-msgid "Monthly total"
-msgstr "Total mensal"
+#: templates/billing/account_billing.html:100
+#: templates/billing/staff_console.html:168
+#: templates/layouts/admin_shell.html:41
+msgid "Manage"
+msgstr "Gerenciar"
 
-#: templates/billing/account_billing.html:46
+#: templates/billing/account_billing.html:102
+msgid "Contract"
+msgstr "Contratar"
+
+#: templates/billing/account_billing.html:110
 msgid "You don't manage the billing of any brand."
 msgstr "Você não gerencia a cobrança de nenhuma marca."
+
+#: templates/billing/account_billing.html:115
+msgid "Payments"
+msgstr "Pagamentos"
+
+#: templates/billing/account_billing.html:122
+msgid "extra storage"
+msgstr "armazenamento extra"
+
+#: templates/billing/account_billing.html:127
+msgid "Paid"
+msgstr "Pago"
+
+#: templates/billing/account_billing.html:127
+#: templates/billing/staff_subscriptions.html:65
+#: templates/billing/staff_subscriptions.html:112
+msgid "Overdue"
+msgstr "Em atraso"
+
+#: templates/billing/account_billing.html:127
+msgid "Reversed"
+msgstr "Estornado"
+
+#: templates/billing/account_billing.html:134
+msgid "See invoice"
+msgstr "Ver fatura"
+
+#: templates/billing/account_billing.html:141
+msgid "No payment yet. They appear here as soon as the first invoice is paid."
+msgstr ""
+"Nenhum pagamento ainda. Eles aparecem aqui assim que a primeira fatura for "
+"paga."
+
+#: templates/billing/account_billing.html:147
+msgid "Billing data"
+msgstr "Dados de cobrança"
+
+#: templates/billing/account_billing.html:150
+#: templates/billing/subscribe_modal.html:209
+msgid "CPF or CNPJ"
+msgstr "CPF ou CNPJ"
+
+#: templates/billing/account_billing.html:151
+#, python-format
+msgid "ending in %(digits)s"
+msgstr "final %(digits)s"
+
+#: templates/billing/account_billing.html:158
+msgid "Billing email"
+msgstr "E-mail de cobrança"
+
+#: templates/billing/account_billing.html:162
+msgid ""
+"The document and the phone are asked at the first contract or when the free "
+"trial starts. To change them, get in touch with us."
+msgstr ""
+"O documento e o telefone são pedidos no primeiro contrato ou ao começar o "
+"teste grátis. Para alterar, fale com a gente."
 
 #: templates/billing/staff_console.html:40
 #: templates/billing/staff_console.html:45
@@ -7478,11 +7610,6 @@ msgstr "até %(date)s"
 #, python-format
 msgid "%(used)s / %(limit)s GB"
 msgstr "%(used)s / %(limit)s GB"
-
-#: templates/billing/staff_console.html:168
-#: templates/layouts/admin_shell.html:41
-msgid "Manage"
-msgstr "Gerenciar"
 
 #: templates/billing/staff_console.html:221
 #: templates/billing/staff_console.html:290
@@ -7871,11 +7998,6 @@ msgstr "Assinaturas ativas, adicionais incluídos."
 msgid "What the exemptions would bill if they were charged."
 msgstr "O que as isenções cobrariam se fossem cobradas."
 
-#: templates/billing/staff_subscriptions.html:65
-#: templates/billing/staff_subscriptions.html:112
-msgid "Overdue"
-msgstr "Em atraso"
-
 #: templates/billing/staff_subscriptions.html:66
 msgid "Subscriptions the provider failed to charge."
 msgstr "Assinaturas que o provedor não conseguiu cobrar."
@@ -8188,10 +8310,6 @@ msgstr ""
 "Sem cartão e sem cobrança. Diga quem você é e comece agora; quando o teste "
 "terminar, você decide se contrata."
 
-#: templates/billing/subscribe_modal.html:209
-msgid "CPF or CNPJ"
-msgstr "CPF ou CNPJ"
-
 #: templates/billing/subscribe_modal.html:212
 msgid "Phone with area code"
 msgstr "Telefone com DDD"
@@ -8228,10 +8346,6 @@ msgstr "Decidir depois"
 #: templates/billing/subscribe_modal.html:256
 msgid "See billing details"
 msgstr "Ver detalhes da cobrança"
-
-#: templates/billing/workspace_billing.html:17
-msgid "All brands"
-msgstr "Todas as marcas"
 
 #: templates/billing/workspace_billing.html:22
 #, python-format
@@ -8286,6 +8400,10 @@ msgid ""
 "The last payment failed. Access returns as soon as the payment goes through."
 msgstr ""
 "O último pagamento falhou. O acesso volta assim que o pagamento for aprovado."
+
+#: templates/billing/workspace_billing.html:86
+msgid "Monthly total"
+msgstr "Total mensal"
 
 #: templates/billing/workspace_billing.html:91
 #, python-format
@@ -16498,6 +16616,12 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 #: templates/workspaces/team.html:102
 msgid "Send invitation"
 msgstr "Enviar convite"
+
+#~ msgid "Subscription and monthly cost of each brand you manage."
+#~ msgstr "Assinatura e custo mensal de cada marca que você gerencia."
+
+#~ msgid "View billing"
+#~ msgstr "Ver cobrança"
 
 #~ msgid "Billed monthly alongside the workspace, on the same invoice date."
 #~ msgstr "Cobrado mensalmente junto com a marca, na mesma data da fatura."

@@ -60,6 +60,7 @@ from apps.billing import contracting, services
 from apps.billing.gateways.asaas import AsaasAPIError, AsaasError, AsaasNotConfigured
 from apps.billing.models import BillingEvent, ProductPrice, WorkspaceAddon, WorkspaceSubscription
 from apps.billing.storage_usage import storage_status
+from apps.billing.webhooks import PAID_EVENTS, UNPAID_EVENTS
 from apps.contacts.forms import is_valid_cnpj, is_valid_cpf
 from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
@@ -209,6 +210,13 @@ def _posted_tax_id(request, workspace):
     return "", _("Enter a valid CPF or CNPJ for the invoice.")
 
 
+def _display_phone(digits):
+    """Stored phone digits as people write them: (11) 98888-7777."""
+    if len(digits) not in (10, 11):
+        return digits
+    return f"({digits[:2]}) {digits[2:-4]}-{digits[-4:]}"
+
+
 def _gateway_refusal(exc):
     """What Asaas said was wrong with the request, for the customer.
 
@@ -318,25 +326,126 @@ def account_billing(request):
         .order_by("organization__name", "name")
     )
     member_of = set(WorkspaceMembership.objects.filter(user=request.user).values_list("workspace_id", flat=True))
-    rows = [
-        {
-            "workspace": ws,
-            "subscription": getattr(ws, "billing_subscription", None),
-            "monthly_total_cents": services.workspace_monthly_total_cents(ws),
-            # Billing pages need brand membership (_get_workspace).
-            "can_open": ws.id in member_of,
+    list_price_cents = services.workspace_price_cents()
+    rows = []
+    for ws in workspaces:
+        sub = getattr(ws, "billing_subscription", None)
+        if sub is not None and sub.is_settled:
+            state = "active"
+        elif sub is not None and sub.in_trial:
+            state = "trial"
+        else:
+            state = "inactive"
+        rows.append(
+            {
+                "workspace": ws,
+                "subscription": sub,
+                "state": state,
+                # A brand never contracted has no price of its own yet: it
+                # would be contracted at today's list price.
+                "monthly_total_cents": (
+                    services.workspace_monthly_total_cents(ws)
+                    if sub is not None and (sub.is_settled or sub.gateway_subscription_id)
+                    else list_price_cents
+                ),
+                # Billing pages need brand membership (_get_workspace).
+                "can_open": ws.id in member_of,
+                # Contracted at the gateway and waiting for the money.
+                "awaiting_payment": bool(sub and sub.gateway_subscription_id)
+                and sub.status in (WorkspaceSubscription.Status.PENDING, WorkspaceSubscription.Status.PAST_DUE),
+            }
+        )
+
+    paying = [r for r in rows if r["subscription"] and r["subscription"].status == WorkspaceSubscription.Status.ACTIVE]
+    due_dates = [r["subscription"].current_period_end for r in paying if r["subscription"].current_period_end]
+    # Only where the user runs the organization: the payer's data is the
+    # organization's, not a brand manager's.
+    payer = None
+    if request.org_membership and request.org_membership.org_role in (
+        OrgMembership.OrgRole.OWNER,
+        OrgMembership.OrgRole.ADMIN,
+    ):
+        profile = getattr(request.org, "billing_profile", None)
+        payer = {
+            "organization": request.org,
+            "tax_id_ending": profile.tax_id[-4:] if profile and profile.tax_id else "",
+            "phone": _display_phone(profile.phone) if profile else "",
+            "email": request.org.billing_email,
         }
-        for ws in workspaces
-    ]
     return render(
         request,
         "billing/account_billing.html",
         {
             "rows": rows,
-            "total_cents": sum(r["monthly_total_cents"] for r in rows),
+            "counts": {
+                "all": len(rows),
+                "active": sum(1 for r in rows if r["state"] == "active"),
+                "inactive": sum(1 for r in rows if r["state"] == "inactive"),
+                "trial": sum(1 for r in rows if r["state"] == "trial"),
+            },
+            "plan": {
+                "brands": len(paying),
+                "next_due": min(due_dates) if due_dates else None,
+                "recurring_cents": sum(r["monthly_total_cents"] for r in paying),
+            },
+            "payments": _payment_history([r["workspace"].id for r in rows]),
+            "payer": payer,
             "settings_active": "billing",
         },
     )
+
+
+#: How many of the latest charges the account's billing page lists.
+PAYMENT_HISTORY_LIMIT = 12
+
+
+def _payment_history(workspace_ids):
+    """The latest charges Asaas reported for these workspaces, newest first.
+
+    Read from the webhook log, so it shows what the provider said happened
+    and nothing we assumed. A charge sends several events along its life
+    (confirmed, then received; overdue, then confirmed): only the newest
+    event of each charge is kept, which is its current state.
+    """
+    events = (
+        BillingEvent.objects.filter(
+            Q(subscription__workspace_id__in=workspace_ids) | Q(addon__workspace_id__in=workspace_ids),
+            status=BillingEvent.Status.PROCESSED,
+            event_type__in=PAID_EVENTS | UNPAID_EVENTS,
+        )
+        .select_related("subscription__workspace", "addon__workspace")
+        .order_by("-created_at")[: PAYMENT_HISTORY_LIMIT * 4]
+    )
+    seen = set()
+    history = []
+    for event in events:
+        payment = event.payload.get("payment") if isinstance(event.payload, dict) else None
+        payment_id = payment.get("id") if isinstance(payment, dict) else None
+        if payment_id in seen:
+            continue
+        seen.add(payment_id)
+        invoice_url = payment.get("invoiceUrl") if isinstance(payment, dict) else ""
+        if event.event_type in PAID_EVENTS:
+            outcome = "paid"
+        elif event.event_type == "PAYMENT_OVERDUE":
+            outcome = "overdue"
+        else:
+            outcome = "reversed"
+        history.append(
+            {
+                "date": event.created_at,
+                "workspace": event.subscription.workspace if event.subscription else event.addon.workspace,
+                "is_addon": event.addon_id is not None,
+                "amount_cents": _event_amount_cents(event.payload),
+                "outcome": outcome,
+                "invoice_url": invoice_url
+                if isinstance(invoice_url, str) and invoice_url.startswith("https://")
+                else "",
+            }
+        )
+        if len(history) == PAYMENT_HISTORY_LIMIT:
+            break
+    return history
 
 
 @login_required

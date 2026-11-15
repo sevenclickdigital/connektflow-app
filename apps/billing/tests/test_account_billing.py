@@ -1,5 +1,7 @@
 """Account centre → Billing: the brands whose billing the user manages, only."""
 
+import datetime
+
 import pytest
 from django.urls import reverse
 from django.utils import timezone
@@ -51,3 +53,90 @@ def test_listing_creates_no_subscription_rows(client):
     client.get(reverse("billing_account:overview"))
 
     assert WorkspaceSubscription.objects.count() == before
+
+
+def _owner_with_brand(email="payer@a.com"):
+    """A signed-up user: own organization, one brand, owner of both."""
+    user = User.objects.create_user(email=email, password="x", tos_accepted_at=timezone.now())
+    workspace = WorkspaceMembership.objects.get(user=user).workspace
+    return user, workspace
+
+
+def _payment_event(event_id, event_type, subscription, payment_id="pay_1", value=49.9):
+    from apps.billing.models import BillingEvent
+
+    return BillingEvent.objects.create(
+        gateway_event_id=event_id,
+        event_type=event_type,
+        status=BillingEvent.Status.PROCESSED,
+        subscription=subscription,
+        payload={"payment": {"id": payment_id, "value": value, "invoiceUrl": "https://asaas.test/i/1"}},
+    )
+
+
+@pytest.mark.django_db
+def test_brands_are_counted_by_what_the_customer_can_do_with_them(client):
+    from apps.billing import services
+
+    user, trial = _owner_with_brand()
+    org = trial.organization
+    paid = Workspace.objects.create(organization=org, name="Paid")
+    Workspace.objects.create(organization=org, name="Stopped")
+    sub = services.ensure_subscription(trial)
+    sub.trial_ends_at = timezone.now() + datetime.timedelta(days=3)
+    sub.save(update_fields=["trial_ends_at"])
+    sub = services.ensure_subscription(paid)
+    sub.status = "active"
+    sub.price_cents = 4990
+    sub.save(update_fields=["status", "price_cents"])
+    client.force_login(user)
+
+    context = client.get(reverse("billing_account:overview")).context
+
+    assert context["counts"] == {"all": 3, "active": 1, "inactive": 1, "trial": 1}
+    assert context["plan"]["brands"] == 1
+    assert context["plan"]["recurring_cents"] == 4990
+
+
+@pytest.mark.django_db
+def test_a_charge_is_listed_once_in_its_latest_state(client):
+    from apps.billing import services
+
+    user, workspace = _owner_with_brand()
+    sub = services.ensure_subscription(workspace)
+    _payment_event("evt_1", "PAYMENT_OVERDUE", sub)
+    _payment_event("evt_2", "PAYMENT_CONFIRMED", sub)
+    client.force_login(user)
+
+    payments = client.get(reverse("billing_account:overview")).context["payments"]
+
+    assert [(p["outcome"], p["amount_cents"]) for p in payments] == [("paid", 4990)]
+    assert payments[0]["invoice_url"] == "https://asaas.test/i/1"
+
+
+@pytest.mark.django_db
+def test_payments_of_other_accounts_are_not_listed(client):
+    from apps.billing import services
+
+    user, _workspace = _owner_with_brand()
+    _other, foreign = _owner_with_brand("other@a.com")
+    _payment_event("evt_9", "PAYMENT_CONFIRMED", services.ensure_subscription(foreign))
+    client.force_login(user)
+
+    assert client.get(reverse("billing_account:overview")).context["payments"] == []
+
+
+@pytest.mark.django_db
+def test_the_payer_document_is_never_shown_whole(client):
+    from apps.billing import services
+
+    user, workspace = _owner_with_brand()
+    profile = services.ensure_billing_profile(workspace.organization)
+    profile.tax_id = "52998224725"
+    profile.save(update_fields=["tax_id"])
+    client.force_login(user)
+
+    response = client.get(reverse("billing_account:overview"))
+
+    assert response.context["payer"]["tax_id_ending"] == "4725"
+    assert "52998224725" not in response.content.decode()
