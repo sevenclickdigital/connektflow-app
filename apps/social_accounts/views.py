@@ -1174,8 +1174,10 @@ def meta_granting_user_id(provider, platform, access_token) -> str:
     """
     if platform not in ("facebook", "instagram"):
         return ""
+    # Same Graph call on both; each provider grew its own name for it.
+    inspect = provider.inspect_token if platform == "instagram" else provider.debug_token
     try:
-        user_id = provider.debug_token(access_token).get("user_id")
+        user_id = (inspect(access_token) or {}).get("user_id")
     except ProviderError as exc:
         logger.warning("Could not read the granting Facebook user for a %s connection: %s", platform, exc)
         return ""

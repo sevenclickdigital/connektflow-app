@@ -322,17 +322,33 @@ def test_connecting_records_the_granting_user_and_reconnecting_updates_it(worksp
     assert SocialAccount.objects.filter(platform="facebook").count() == 1
 
 
-def test_the_granting_user_is_read_from_the_token_and_never_breaks_the_connection():
+@pytest.mark.parametrize("platform", ["facebook", "instagram"])
+def test_the_granting_user_is_read_from_the_token_and_never_breaks_the_connection(platform):
+    """Built on the real provider classes: the two name their token
+    inspection differently, and a mock answers to any name."""
     from apps.social_accounts.views import meta_granting_user_id
+    from providers import get_provider
     from providers.exceptions import APIError
 
     def provider(result=None, error=None):
-        return MagicMock(debug_token=MagicMock(return_value=result, side_effect=error))
+        instance = get_provider(platform, {"client_id": "app", "client_secret": "secret"})
+        instance._request = MagicMock(
+            return_value=MagicMock(json=MagicMock(return_value={"data": result})), side_effect=error
+        )
+        return instance
 
-    assert meta_granting_user_id(provider({"user_id": "123"}), "facebook", "t") == "123"
-    assert meta_granting_user_id(provider({"user_id": 123}), "instagram", "t") == "123"
-    assert meta_granting_user_id(provider({}), "facebook", "t") == ""
-    assert meta_granting_user_id(provider(error=APIError("nope", platform="facebook")), "facebook", "t") == ""
-    other = provider({"user_id": "123"})
+    assert meta_granting_user_id(provider({"user_id": "123"}), platform, "t") == "123"
+    assert meta_granting_user_id(provider({"user_id": 123}), platform, "t") == "123"
+    assert meta_granting_user_id(provider({}), platform, "t") == ""
+    assert meta_granting_user_id(provider(None), platform, "t") == ""
+    assert meta_granting_user_id(provider(error=APIError("nope", platform=platform)), platform, "t") == ""
+
+
+def test_other_platforms_are_never_asked_who_granted_the_connection():
+    from apps.social_accounts.views import meta_granting_user_id
+
+    other = MagicMock()
+
     assert meta_granting_user_id(other, "linkedin_company", "t") == ""
     other.debug_token.assert_not_called()
+    other.inspect_token.assert_not_called()
