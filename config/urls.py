@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", health_check, name="health_check"),
+    path("robots.txt", legal_views.robots_txt, name="robots_txt"),
     # Django's own view: POSTs a language code, stores it on the session and
     # redirects back. The language picker in the sidebar posts here.
     path("i18n/", include("django.conf.urls.i18n")),

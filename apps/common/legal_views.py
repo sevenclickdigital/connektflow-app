@@ -6,6 +6,7 @@ read nothing from the database — App Review fetches them with no session.
 """
 
 from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import render
 
 # Shown in the page header. Static rather than auto-updated: the date should
@@ -53,3 +54,27 @@ def data_deletion(request):
 def terms_of_service(request):
     """Public Terms of Service, linked from the Meta app configuration."""
     return render(request, "legal/terms_of_service.html", _context())
+
+
+# Meta reads the legal pages, and every image or video a post publishes, with
+# its own crawlers, and reports a site without an explicit rule for them as
+# "blocked by robots.txt". Everyone else keeps what having no robots.txt
+# meant: nothing is disallowed (the app itself sits behind the login).
+ROBOTS_TXT = """\
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Facebot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: *
+Disallow:
+"""
+
+
+def robots_txt(request):
+    """The site's robots.txt."""
+    return HttpResponse(ROBOTS_TXT, content_type="text/plain; charset=utf-8")
