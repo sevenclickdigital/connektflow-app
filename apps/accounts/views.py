@@ -16,15 +16,10 @@ def health_check(request):
     return JsonResponse({"status": "ok"})
 
 
+@login_required
 def dashboard(request):
-    """Site root: the last used workspace or the org overview for a signed-in
-    user, the public presentation page for everyone else."""
+    """Main dashboard - redirects to last used workspace or shows org overview."""
     from apps.members.models import WorkspaceMembership
-
-    if not request.user.is_authenticated:
-        from apps.common.legal_views import home
-
-        return home(request)
 
     user = request.user
 

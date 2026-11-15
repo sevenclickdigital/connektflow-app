@@ -13,7 +13,7 @@ from django.views.decorators.http import require_http_methods
 
 # Shown in the page header. Static rather than auto-updated: the date should
 # change when the text changes, not on every deploy.
-LAST_UPDATED = "2 de novembro de 2026"
+LAST_UPDATED = "15 de novembro de 2026"
 
 # Written as the Meta app's display name: App Review compares the legal pages
 # with it, so the two change together.
@@ -30,17 +30,6 @@ def _context():
         # compares the two, and a mismatch reads as an inconsistent policy.
         "contact_email": getattr(settings, "LEGAL_CONTACT_EMAIL", "") or "robison@sevenclick.com.br",
     }
-
-
-def home(request):
-    """Public presentation of the product, shown at the site root to visitors
-    who are not signed in.
-
-    Google's OAuth brand verification and Meta's App Review open the app's home
-    page with no session: it has to say what the app does and link to the
-    privacy policy without asking for a login.
-    """
-    return render(request, "legal/home.html", _context())
 
 
 def privacy_policy(request):
