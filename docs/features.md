@@ -328,6 +328,7 @@ People and companies the workspace talks to (sidebar: Engajar → Contatos, for 
 
 ## Operational and compliance
 
+- Public home page at `/` for visitors who are not signed in (`legal_views.home`, `templates/legal/home.html`): what the product does and how it uses connected accounts' data, with links to the legal pages. Google's OAuth brand verification and Meta's App Review open the root anonymously; a signed-in user is sent to their workspace as before.
 - Public legal pages for Meta App Review: `/privacidade/`, `/termos/` and `/exclusao-de-dados/` (`apps/common/legal_views.py`); the English `/privacy/`, `/terms/` and `/data-deletion/` still answer. `/robots.txt` (same module) allows Meta's crawlers by name, which read these pages and the media of every post.
 - YouTube compliance (`youtube_compliance.py`, `YouTubeRevocation`): handles grant revocation and the retention lifecycle of YouTube data.
 - Field-level encryption of tokens and credentials (`apps/common/encryption.py`, keyed by `ENCRYPTION_KEY_SALT`).

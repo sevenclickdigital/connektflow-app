@@ -32,6 +32,17 @@ def _context():
     }
 
 
+def home(request):
+    """Public presentation of the product, shown at the site root to visitors
+    who are not signed in.
+
+    Google's OAuth brand verification and Meta's App Review open the app's home
+    page with no session: it has to say what the app does and link to the
+    privacy policy without asking for a login.
+    """
+    return render(request, "legal/home.html", _context())
+
+
 def privacy_policy(request):
     """Public Privacy Policy, linked from the Meta app configuration."""
     return render(request, "legal/privacy_policy.html", _context())
