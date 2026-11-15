@@ -1,7 +1,6 @@
 import calendar as cal_mod
 from collections import defaultdict
 from datetime import date, timedelta
-from zoneinfo import available_timezones
 
 from django.contrib import messages
 from django.contrib.auth import logout
@@ -23,33 +22,6 @@ from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.social_accounts.models import SocialAccount
 from apps.workspaces.models import Workspace
 
-COMMON_TIMEZONES = [
-    "US/Eastern",
-    "US/Central",
-    "US/Mountain",
-    "US/Pacific",
-    "Canada/Eastern",
-    "Canada/Central",
-    "Canada/Pacific",
-    "Europe/London",
-    "Europe/Paris",
-    "Europe/Berlin",
-    "Europe/Amsterdam",
-    "Europe/Madrid",
-    "Europe/Rome",
-    "Europe/Zurich",
-    "Europe/Stockholm",
-    "Europe/Istanbul",
-    "Asia/Dubai",
-    "Asia/Kolkata",
-    "Asia/Singapore",
-    "Asia/Tokyo",
-    "Asia/Shanghai",
-    "Australia/Sydney",
-    "Australia/Melbourne",
-    "Pacific/Auckland",
-]
-
 
 @login_required
 @require_org_role(OrgMembership.OrgRole.ADMIN)
@@ -61,10 +33,10 @@ def settings_view(request):
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "update_name":
+            # The name is edited on the brands page; back to where it was typed.
             _handle_name_update(request, org)
-        elif action == "update_timezone":
-            _handle_tz_update(request, org)
-        elif action == "delete_organization":
+            return redirect("organizations:workspaces")
+        if action == "delete_organization":
             return _handle_org_deletion(request, org)
         elif action == "delete_organization_now":
             return _handle_immediate_org_deletion(request, org)
@@ -74,10 +46,9 @@ def settings_view(request):
 
     context = {
         "organization": org,
-        "settings_active": "general",
+        # Reached from the brands page, so that is what stays lit in the menu.
+        "settings_active": "workspaces",
         "is_owner": is_owner,
-        "common_timezones": COMMON_TIMEZONES,
-        "all_timezones": sorted(available_timezones()),
     }
     return render(request, "organizations/settings.html", context)
 
@@ -148,6 +119,9 @@ def workspaces_view(request):
         "archived_data": archived_data,
         "external_data": external_data,
         "settings_active": "workspaces",
+        "organization": org,
+        "can_admin_org": request.org_membership.org_role in org_admin_roles,
+        "is_org_owner": request.org_membership.org_role == OrgMembership.OrgRole.OWNER,
     }
     return render(request, "organizations/workspaces.html", context)
 
@@ -168,18 +142,6 @@ def _handle_name_update(request, org):
     org.name = name
     org.save(update_fields=["name"])
     messages.success(request, _("Organization name updated."))
-
-
-def _handle_tz_update(request, org):
-    """Handle default timezone change."""
-    tz = request.POST.get("timezone", "").strip()
-    if tz not in available_timezones():
-        messages.error(request, _("Invalid timezone."))
-        return
-
-    org.default_timezone = tz
-    org.save(update_fields=["default_timezone"])
-    messages.success(request, _("Default timezone updated."))
 
 
 @transaction.atomic
@@ -291,7 +253,8 @@ def cross_workspace_calendar(request):
 
     # Social accounts across filtered workspaces (for channel filter)
     social_accounts = (
-        SocialAccount.objects.publishable().filter(
+        SocialAccount.objects.publishable()
+        .filter(
             workspace__in=filtered_workspaces,
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,
         )

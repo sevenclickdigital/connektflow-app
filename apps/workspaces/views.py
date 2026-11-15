@@ -1,3 +1,5 @@
+from zoneinfo import available_timezones
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -11,6 +13,20 @@ from apps.members.decorators import require_org_role
 from apps.members.models import OrgMembership, WorkspaceMembership
 
 from .models import Workspace
+
+#: Brazil's timezones, offered first in a brand's settings and named the way
+#: people there call them (city names, the same in every language).
+#: Brasília time comes first: it is the default.
+BRAZIL_TIMEZONES = (
+    ("America/Sao_Paulo", "Brasília (UTC-3)"),
+    ("America/Manaus", "Manaus (UTC-4)"),
+    ("America/Cuiaba", "Cuiabá (UTC-4)"),
+    ("America/Campo_Grande", "Campo Grande (UTC-4)"),
+    ("America/Porto_Velho", "Porto Velho (UTC-4)"),
+    ("America/Boa_Vista", "Boa Vista (UTC-4)"),
+    ("America/Rio_Branco", "Rio Branco (UTC-5)"),
+    ("America/Noronha", "Fernando de Noronha (UTC-2)"),
+)
 
 
 @login_required
@@ -115,6 +131,16 @@ def workspace_settings(request, workspace_id):
             )
             return redirect("organizations:workspaces")
 
+        if action == "update_timezone" and is_owner_or_manager:
+            tz = request.POST.get("timezone", "").strip()
+            if tz not in available_timezones():
+                messages.error(request, _("Invalid timezone."))
+            else:
+                workspace.timezone = tz
+                workspace.save(update_fields=["timezone"])
+                messages.success(request, _("Timezone updated."))
+            return redirect("workspaces:settings", workspace_id=workspace.id)
+
         name = request.POST.get("name", "").strip()
 
         if name:
@@ -163,6 +189,9 @@ def workspace_settings(request, workspace_id):
             "is_owner_or_manager": is_owner_or_manager,
             "can_archive": can_archive,
             "can_delete": can_delete,
+            "brazil_timezones": BRAZIL_TIMEZONES,
+            "timezone_is_brazilian": workspace.effective_timezone in dict(BRAZIL_TIMEZONES),
+            "all_timezones": sorted(available_timezones()),
         },
     )
 

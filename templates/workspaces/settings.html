@@ -26,6 +26,30 @@
             </div>
         </form>
 
+        {% if is_owner_or_manager %}
+        <form method="POST" class="p-6">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_timezone">
+            <label for="timezone" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Timezone" %}</label>
+            <p class="text-xs mb-2 text-neutral-500">{% translate "The calendar and the times of the posts of this brand follow it." %}</p>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <select id="timezone" name="timezone" class="form-input-styled bb-select flex-1 cursor-pointer">
+                    <optgroup label="{% translate 'Brazil' %}">
+                        {% for tz, label in brazil_timezones %}
+                        <option value="{{ tz }}" {% if tz == workspace.effective_timezone %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="{% translate 'All Timezones' %}">
+                        {% for tz in all_timezones %}
+                        <option value="{{ tz }}" {% if tz == workspace.effective_timezone and not timezone_is_brazilian %}selected{% endif %}>{{ tz }}</option>
+                        {% endfor %}
+                    </optgroup>
+                </select>
+                <button type="submit" class="btn-brand">{% translate "Save Changes" %}</button>
+            </div>
+        </form>
+        {% endif %}
+
         <!-- Logo -->
         <form method="POST" enctype="multipart/form-data" class="p-6" x-data="{
             preview: '{% if workspace.icon %}{{ workspace.icon.url }}{% endif %}',

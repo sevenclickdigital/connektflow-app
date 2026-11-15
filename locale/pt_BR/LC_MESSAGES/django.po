@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-15 15:47+0000\n"
+"POT-Creation-Date: 2026-11-15 16:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -69,67 +69,67 @@ msgstr "Informe um CEP com 8 dígitos, como 01310-100."
 msgid "Required to complete the address."
 msgstr "Obrigatório para completar o endereço."
 
-#: apps/accounts/signals.py:38
+#: apps/accounts/signals.py:43
 msgid "My brand"
 msgstr "Minha marca"
 
-#: apps/accounts/signals.py:39
+#: apps/accounts/signals.py:44
 msgid "Your default brand. Rename it anytime."
 msgstr "Sua marca padrão. Renomeie quando quiser."
 
-#: apps/accounts/views.py:87
+#: apps/accounts/views.py:86
 msgid "Profile updated."
 msgstr "Perfil atualizado."
 
-#: apps/accounts/views.py:124
+#: apps/accounts/views.py:123
 msgid "Photo removed."
 msgstr "Foto removida."
 
-#: apps/accounts/views.py:136
+#: apps/accounts/views.py:135
 msgid "Photo must be a JPEG, PNG, WebP, or GIF image."
 msgstr "A foto deve ser uma imagem JPEG, PNG, WebP ou GIF."
 
-#: apps/accounts/views.py:142
+#: apps/accounts/views.py:141
 msgid "Photo must be under 2 MB."
 msgstr "A foto deve ter menos de 2 MB."
 
-#: apps/accounts/views.py:158
+#: apps/accounts/views.py:157
 msgid "Photo must be at least 180×180 pixels."
 msgstr "A foto deve ter no mínimo 180×180 pixels."
 
-#: apps/accounts/views.py:161
+#: apps/accounts/views.py:160
 msgid "Could not read image file."
 msgstr "Não foi possível ler o arquivo de imagem."
 
-#: apps/accounts/views.py:172
+#: apps/accounts/views.py:171
 msgid "Photo updated."
 msgstr "Foto atualizada."
 
-#: apps/accounts/views.py:182
+#: apps/accounts/views.py:181
 msgid "Current password is required."
 msgstr "A senha atual é obrigatória."
 
-#: apps/accounts/views.py:186
+#: apps/accounts/views.py:185
 msgid "Current password is incorrect."
 msgstr "A senha atual está incorreta."
 
-#: apps/accounts/views.py:190
+#: apps/accounts/views.py:189
 msgid "New password cannot be empty."
 msgstr "A nova senha não pode ficar em branco."
 
-#: apps/accounts/views.py:194
+#: apps/accounts/views.py:193
 msgid "New password must be at least 8 characters."
 msgstr "A nova senha deve ter no mínimo 8 caracteres."
 
-#: apps/accounts/views.py:198
+#: apps/accounts/views.py:197
 msgid "New passwords do not match."
 msgstr "As senhas não coincidem."
 
-#: apps/accounts/views.py:204
+#: apps/accounts/views.py:203
 msgid "Password changed."
 msgstr "Senha alterada."
 
-#: apps/accounts/views.py:234
+#: apps/accounts/views.py:233
 #, python-format
 msgid ""
 "You are the sole owner of: %(orgs)s. Transfer ownership or delete the "
@@ -138,15 +138,15 @@ msgstr ""
 "Você é o único proprietário de: %(orgs)s. Transfira a propriedade ou exclua "
 "a organização antes de excluir sua conta."
 
-#: apps/accounts/views.py:244
+#: apps/accounts/views.py:243
 msgid "Your account has been deleted."
 msgstr "Sua conta foi excluída."
 
-#: apps/accounts/views.py:265
+#: apps/accounts/views.py:264
 msgid "You are signed in"
 msgstr "Você entrou"
 
-#: apps/accounts/views.py:281
+#: apps/accounts/views.py:280
 msgid "You must agree to the Terms of Service and Privacy Policy to continue."
 msgstr ""
 "Você precisa aceitar os Termos de Serviço e a Política de Privacidade para "
@@ -537,7 +537,9 @@ msgstr "Esta conta já usou o teste grátis."
 msgid ""
 "A free trial has already been used with this document, phone or email. "
 "Contract the plan to start, or get in touch with us."
-msgstr "Já foi usado um teste grátis com este documento, telefone ou e-mail. Contrate o plano para começar ou fale com a gente."
+msgstr ""
+"Já foi usado um teste grátis com este documento, telefone ou e-mail. "
+"Contrate o plano para começar ou fale com a gente."
 
 #: apps/billing/storage_usage.py:89
 #, python-format
@@ -687,7 +689,7 @@ msgstr ""
 "assinatura para mantê-la ativa."
 
 #: apps/billing/views.py:1431 apps/billing/views.py:1728
-#: apps/workspaces/views.py:259
+#: apps/workspaces/views.py:288
 msgid "Unknown action."
 msgstr "Ação desconhecida."
 
@@ -2401,7 +2403,7 @@ msgstr ""
 "Já existe uma pasta com esse nome aqui.Não foi possível criar a pasta. "
 "Talvez já exista uma pasta com esse nome."
 
-#: apps/members/services.py:528 apps/workspaces/views.py:251
+#: apps/members/services.py:528 apps/workspaces/views.py:280
 msgid "This person is not a member of the organization that owns this brand."
 msgstr "Essa pessoa não é membro da organização dona desta marca."
 
@@ -2409,7 +2411,7 @@ msgstr "Essa pessoa não é membro da organização dona desta marca."
 msgid "Unknown role."
 msgstr "Função desconhecida."
 
-#: apps/members/services.py:534 apps/workspaces/views.py:236
+#: apps/members/services.py:534 apps/workspaces/views.py:265
 msgid "You cannot grant a role higher than your own in this brand."
 msgstr "Você não pode dar uma função acima da sua nesta marca."
 
@@ -2550,27 +2552,19 @@ msgstr "Não foi possível enviar o link agora. Tente novamente em instantes."
 msgid "Connection link sent to %(email)s."
 msgstr "Link de conexão enviado para %(email)s."
 
-#: apps/organizations/views.py:165
+#: apps/organizations/views.py:139
 msgid "Organization name cannot be empty."
 msgstr "O nome da organização não pode ficar em branco."
 
-#: apps/organizations/views.py:170
+#: apps/organizations/views.py:144
 msgid "Organization name updated."
 msgstr "Nome da organização atualizado."
 
-#: apps/organizations/views.py:177
-msgid "Invalid timezone."
-msgstr "Fuso horário inválido."
-
-#: apps/organizations/views.py:182
-msgid "Default timezone updated."
-msgstr "Fuso horário padrão atualizado."
-
-#: apps/organizations/views.py:204
+#: apps/organizations/views.py:166
 msgid "Organization scheduled for deletion in 14 days."
 msgstr "Organização agendada para exclusão em 14 dias."
 
-#: apps/organizations/views.py:253
+#: apps/organizations/views.py:215
 msgid ""
 "Organization deletion cancelled. Reconnect any YouTube channels removed when "
 "deletion was requested."
@@ -4054,58 +4048,66 @@ msgid ""
 "Deliver a publishable format for an account connected to this workspace."
 msgstr "Entregue um formato publicável para uma conta conectada a esta marca."
 
-#: apps/workspaces/views.py:88
+#: apps/workspaces/views.py:104
 msgid "Cannot archive the last workspace in the organization."
 msgstr "Não é possível arquivar a última marca da organização."
 
-#: apps/workspaces/views.py:92
+#: apps/workspaces/views.py:108
 #, python-format
 msgid "Workspace \"%(name)s\" has been archived."
 msgstr "Marca \"%(name)s\" arquivada."
 
-#: apps/workspaces/views.py:98
+#: apps/workspaces/views.py:114
 #, python-format
 msgid "Workspace \"%(name)s\" has been restored."
 msgstr "Marca \"%(name)s\" restaurada."
 
-#: apps/workspaces/views.py:109
+#: apps/workspaces/views.py:125
 msgid "Cannot delete the last workspace in the organization."
 msgstr "Não é possível excluir a última marca da organização."
 
-#: apps/workspaces/views.py:114
+#: apps/workspaces/views.py:130
 #, python-format
 msgid "Workspace \"%(name)s\" has been permanently deleted."
 msgstr "Marca \"%(name)s\" excluída permanentemente."
 
-#: apps/workspaces/views.py:134
+#: apps/workspaces/views.py:137
+msgid "Invalid timezone."
+msgstr "Fuso horário inválido."
+
+#: apps/workspaces/views.py:141
+msgid "Timezone updated."
+msgstr "Fuso horário atualizado."
+
+#: apps/workspaces/views.py:160
 msgid "Logo must be a JPEG, PNG, WebP, or GIF image."
 msgstr "O logo deve ser uma imagem JPEG, PNG, WebP ou GIF."
 
-#: apps/workspaces/views.py:140
+#: apps/workspaces/views.py:166
 msgid "Logo must be under 2 MB."
 msgstr "O logo deve ter menos de 2 MB."
 
-#: apps/workspaces/views.py:149
+#: apps/workspaces/views.py:175
 msgid "Workspace settings updated."
 msgstr "Configurações da marca atualizadas."
 
-#: apps/workspaces/views.py:194
+#: apps/workspaces/views.py:223
 msgid "Invalid approval workflow mode."
 msgstr "Modo de fluxo de aprovação inválido."
 
-#: apps/workspaces/views.py:199
+#: apps/workspaces/views.py:228
 msgid "Approval workflow updated."
 msgstr "Fluxo de aprovação atualizado."
 
-#: apps/workspaces/views.py:245
+#: apps/workspaces/views.py:274
 msgid "Invitation sent."
 msgstr "Convite enviado."
 
-#: apps/workspaces/views.py:254
+#: apps/workspaces/views.py:283
 msgid "Removed from the brand."
 msgstr "Removido da marca."
 
-#: apps/workspaces/views.py:257
+#: apps/workspaces/views.py:286
 msgid "Team updated."
 msgstr "Equipe atualizada."
 
@@ -4425,8 +4427,8 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/oauth2_provider/authorize.html:40
 #: templates/onboarding/connection_page.html:200
 #: templates/onboarding/connection_page.html:261
-#: templates/organizations/settings.html:91
-#: templates/organizations/settings.html:127
+#: templates/organizations/settings.html:54
+#: templates/organizations/settings.html:90
 #: templates/radar/partials/_shopee_connect_form.html:48
 #: templates/radar/partials/_shopee_connect_form.html:50
 #: templates/social_accounts/account_select.html:161
@@ -4439,8 +4441,8 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/social_accounts/partials/_posting_slots_grid.html:121
 #: templates/tasks/partials/_board.html:21
 #: templates/tasks/partials/_column.html:58
-#: templates/workspaces/settings.html:121
-#: templates/workspaces/settings.html:178
+#: templates/workspaces/settings.html:145
+#: templates/workspaces/settings.html:202
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -4736,10 +4738,9 @@ msgstr "Usado em contratos e cobranças. Preencha completo ou deixe em branco."
 
 #: templates/accounts/settings.html:96
 #: templates/calendar/partials/event_form.html:130
-#: templates/organizations/settings.html:24
-#: templates/organizations/settings.html:46
+#: templates/organizations/workspaces.html:25
 #: templates/workspaces/approvals_settings.html:72
-#: templates/workspaces/settings.html:25
+#: templates/workspaces/settings.html:25 templates/workspaces/settings.html:48
 msgid "Save Changes"
 msgstr "Salvar alterações"
 
@@ -4764,8 +4765,9 @@ msgid "Change Password"
 msgstr "Alterar senha"
 
 #: templates/accounts/settings.html:126
-#: templates/organizations/settings.html:54
-#: templates/workspaces/settings.html:76
+#: templates/organizations/settings.html:17
+#: templates/organizations/workspaces.html:75
+#: templates/workspaces/settings.html:100
 msgid "Danger zone"
 msgstr "Zona de risco"
 
@@ -5453,7 +5455,7 @@ msgstr ""
 msgid "API Keys - Settings"
 msgstr "Chaves de API - Configurações"
 
-#: templates/api_keys/list.html:7 templates/layouts/settings.html:60
+#: templates/api_keys/list.html:7 templates/layouts/settings.html:51
 msgid "API Keys"
 msgstr "Chaves de API"
 
@@ -5718,7 +5720,7 @@ msgstr "Modelos"
 #: templates/billing/staff_impersonations.html:19
 #: templates/billing/staff_plans.html:25
 #: templates/billing/staff_subscriptions.html:32
-#: templates/layouts/admin_shell.html:38 templates/layouts/settings.html:75
+#: templates/layouts/admin_shell.html:38 templates/layouts/settings.html:66
 msgid "Administration"
 msgstr "Administração"
 
@@ -6195,7 +6197,7 @@ msgstr "etapas"
 #: templates/social_accounts/partials/_connect_guide.html:14
 #: templates/tasks/partials/_request_arts_host.html:17
 #: templates/tasks/partials/_task_modal.html:5
-#: templates/workspaces/settings.html:108
+#: templates/workspaces/settings.html:132
 msgid "Close"
 msgstr "Fechar"
 
@@ -7425,7 +7427,7 @@ msgstr ""
 #: templates/billing/workspace_billing.html:12
 #: templates/billing/workspace_billing.html:21
 #: templates/intelligence/billing_settings.html:9
-#: templates/layouts/settings.html:65
+#: templates/layouts/settings.html:56
 msgid "Billing"
 msgstr "Cobrança"
 
@@ -7630,7 +7632,7 @@ msgstr ""
 "GB extra."
 
 #: templates/billing/staff_console.html:68
-#: templates/billing/staff_console.html:236 templates/layouts/settings.html:52
+#: templates/billing/staff_console.html:236 templates/layouts/settings.html:43
 #: templates/members/accept_invite.html:107
 #: templates/members/partials/member_row.html:135
 #: templates/organizations/cross_calendar.html:222
@@ -13956,32 +13958,27 @@ msgstr ""
 msgid "Back to the product"
 msgstr "Voltar para o produto"
 
-#: templates/layouts/settings.html:29 templates/notifications/history.html:21
-msgid "Preferences"
-msgstr "Preferências"
-
-#: templates/layouts/settings.html:45 templates/members/accept_invite.html:99
-#: templates/organizations/settings.html:16
+#: templates/layouts/settings.html:40 templates/members/accept_invite.html:99
+#: templates/organizations/workspaces.html:17
 msgid "Organization"
 msgstr "Organização"
 
-#: templates/layouts/settings.html:48
-#: templates/layouts/workspace_settings.html:21
-#: templates/organizations/settings.html:8 templates/workspaces/settings.html:8
-msgid "General"
-msgstr "Geral"
-
-#: templates/layouts/settings.html:56 templates/members/list.html:7
+#: templates/layouts/settings.html:47 templates/members/list.html:7
 msgid "Team Members"
 msgstr "Membros da equipe"
 
-#: templates/layouts/settings.html:78
+#: templates/layouts/settings.html:69
 msgid "Administrative area"
 msgstr "Área administrativa"
 
 #: templates/layouts/workspace_settings.html:15
 msgid "Workspace Settings"
 msgstr "Configurações da marca"
+
+#: templates/layouts/workspace_settings.html:21
+#: templates/workspaces/settings.html:8
+msgid "General"
+msgstr "Geral"
 
 #: templates/layouts/workspace_settings.html:33
 #: templates/workspaces/team.html:3 templates/workspaces/team.html:8
@@ -14502,6 +14499,10 @@ msgid_plural "%(counter)s notifications total"
 msgstr[0] "%(counter)s notificação no total"
 msgstr[1] "%(counter)s notificações no total"
 
+#: templates/notifications/history.html:21
+msgid "Preferences"
+msgstr "Preferências"
+
 #: templates/notifications/history.html:27
 msgid "Mark all notifications as read?"
 msgstr "Marcar todas as notificações como lidas?"
@@ -14606,6 +14607,7 @@ msgid "End time"
 msgstr "Horário de término"
 
 #: templates/notifications/preferences.html:112
+#: templates/workspaces/settings.html:33
 msgid "Timezone"
 msgstr "Fuso horário"
 
@@ -15027,7 +15029,7 @@ msgid "+%(n)s more"
 msgstr "+%(n)s mais"
 
 #: templates/organizations/partials/_deletion_contents.html:4
-#: templates/workspaces/settings.html:168
+#: templates/workspaces/settings.html:192
 msgid "All of the following will be permanently removed:"
 msgstr "Tudo o que segue será removido permanentemente:"
 
@@ -15036,7 +15038,7 @@ msgid "All workspaces and their settings"
 msgstr "Todas as marcas e suas configurações"
 
 #: templates/organizations/partials/_deletion_contents.html:7
-#: templates/workspaces/settings.html:170
+#: templates/workspaces/settings.html:194
 msgid "All scheduled and published posts"
 msgstr "Todas as publicações agendadas e publicadas"
 
@@ -15045,7 +15047,7 @@ msgid "Connected social accounts and credentials"
 msgstr "Contas sociais conectadas e credenciais"
 
 #: templates/organizations/partials/_deletion_contents.html:9
-#: templates/workspaces/settings.html:172
+#: templates/workspaces/settings.html:196
 msgid "Media assets and files"
 msgstr "Arquivos e itens de mídia"
 
@@ -15079,38 +15081,20 @@ msgid "No members assigned"
 msgstr "Nenhum membro atribuído"
 
 #: templates/organizations/settings.html:3
-msgid "General - Settings"
-msgstr "Geral - Configurações"
+#: templates/organizations/settings.html:8
+#: templates/organizations/workspaces.html:81
+msgid "Delete organization"
+msgstr "Excluir organização"
 
 #: templates/organizations/settings.html:9
-msgid "Name and default timezone of your organization."
-msgstr "Nome e fuso horário padrão da sua organização."
+msgid "Close this account and remove everything in it."
+msgstr "Encerre esta conta e remova tudo o que há nela."
 
-#: templates/organizations/settings.html:21
-msgid "Organization Name"
-msgstr "Nome da organização"
-
-#: templates/organizations/settings.html:31
-msgid "Default Timezone"
-msgstr "Fuso horário padrão"
-
-#: templates/organizations/settings.html:32
-msgid "Used as the fallback for workspaces that don't set their own."
-msgstr "Usado como padrão para as marcas que não definem o próprio."
-
-#: templates/organizations/settings.html:35
-msgid "Common"
-msgstr "Comuns"
-
-#: templates/organizations/settings.html:40
-msgid "All Timezones"
-msgstr "Todos os fusos horários"
-
-#: templates/organizations/settings.html:59
+#: templates/organizations/settings.html:22
 msgid "Deletion scheduled"
 msgstr "Exclusão agendada"
 
-#: templates/organizations/settings.html:61
+#: templates/organizations/settings.html:24
 #, python-format
 msgid ""
 "This organization is scheduled for deletion on <strong>%(date)s</strong>.\n"
@@ -15125,19 +15109,19 @@ msgstr ""
 "                    As conexões e os dados de API do YouTube já foram "
 "excluídos. Cancelar a exclusão exigirá reconectar o YouTube."
 
-#: templates/organizations/settings.html:70
+#: templates/organizations/settings.html:33
 msgid "Cancel Deletion"
 msgstr "Cancelar exclusão"
 
-#: templates/organizations/settings.html:72
+#: templates/organizations/settings.html:35
 msgid "Delete Now"
 msgstr "Excluir agora"
 
-#: templates/organizations/settings.html:84
+#: templates/organizations/settings.html:47
 msgid "Delete immediately?"
 msgstr "Excluir imediatamente?"
 
-#: templates/organizations/settings.html:87
+#: templates/organizations/settings.html:50
 #, python-format
 msgid ""
 "This will permanently delete <strong>%(org)s</strong> right now, bypassing "
@@ -15146,16 +15130,17 @@ msgstr ""
 "Isto exclui <strong>%(org)s</strong> permanentemente agora, sem o prazo de "
 "carência de 14 dias. Esta ação não pode ser desfeita."
 
-#: templates/organizations/settings.html:95
+#: templates/organizations/settings.html:58
 msgid "Yes, delete permanently"
 msgstr "Sim, excluir permanentemente"
 
-#: templates/organizations/settings.html:106
-#: templates/organizations/settings.html:120
+#: templates/organizations/settings.html:69
+#: templates/organizations/settings.html:83
+#: templates/organizations/workspaces.html:78
 msgid "Delete this organization"
 msgstr "Excluir esta organização"
 
-#: templates/organizations/settings.html:107
+#: templates/organizations/settings.html:70
 msgid ""
 "Request deletion of this organization and its workspaces, posts, media and "
 "team memberships. YouTube connections and API data are removed immediately. "
@@ -15167,11 +15152,11 @@ msgstr ""
 "removidos imediatamente. Os demais dados têm um prazo de carência de 14 "
 "dias. Cancelar a exclusão exige reconectar o YouTube."
 
-#: templates/organizations/settings.html:109
+#: templates/organizations/settings.html:72
 msgid "Delete Organization"
 msgstr "Excluir organização"
 
-#: templates/organizations/settings.html:123
+#: templates/organizations/settings.html:86
 #, python-format
 msgid ""
 "Are you sure you want to delete <strong>%(org)s</strong>? This will schedule "
@@ -15184,9 +15169,13 @@ msgstr ""
 "dados de API e as cópias de notificação são excluídos imediatamente. "
 "Cancelar a exclusão exigirá reconectar o YouTube."
 
-#: templates/organizations/settings.html:131
+#: templates/organizations/settings.html:94
 msgid "Yes, delete this organization"
 msgstr "Sim, excluir esta organização"
+
+#: templates/organizations/settings.html:104
+msgid "Only the owner of the organization can delete it."
+msgstr "Só o proprietário da organização pode excluí-la."
 
 #: templates/organizations/workspaces.html:3
 msgid "Workspaces - Settings"
@@ -15200,23 +15189,36 @@ msgstr ""
 "Todas as marcas a que você tem acesso: as da sua organização e as em que "
 "você foi incluído."
 
-#: templates/organizations/workspaces.html:16
+#: templates/organizations/workspaces.html:21
+msgid "Organization Name"
+msgstr "Nome da organização"
+
+#: templates/organizations/workspaces.html:22
+msgid ""
+"The account that holds your brands. It appears in the invitations you send."
+msgstr "A conta que reúne as suas marcas. O nome aparece nos convites que você envia."
+
+#: templates/organizations/workspaces.html:32
 msgctxt "workspaces, plural"
 msgid "Active"
 msgstr "Ativas"
 
-#: templates/organizations/workspaces.html:27
+#: templates/organizations/workspaces.html:43
 msgid "No workspaces yet."
 msgstr "Nenhuma marca ainda."
 
-#: templates/organizations/workspaces.html:34
+#: templates/organizations/workspaces.html:50
 msgid "In other organizations"
 msgstr "Em outras organizações"
 
-#: templates/organizations/workspaces.html:47
+#: templates/organizations/workspaces.html:63
 msgctxt "workspaces, plural"
 msgid "Archived"
 msgstr "Arquivadas"
+
+#: templates/organizations/workspaces.html:79
+msgid "Closes the account with every brand, post and file in it."
+msgstr "Encerra a conta com todas as marcas, publicações e arquivos."
 
 #: templates/partials/_review_banner.html:30
 msgid "Enjoying Connekt Flow?"
@@ -16501,35 +16503,48 @@ msgstr "Identidade"
 msgid "Workspace Name"
 msgstr "Nome da marca"
 
-#: templates/workspaces/settings.html:43
+#: templates/workspaces/settings.html:34
+msgid "The calendar and the times of the posts of this brand follow it."
+msgstr "O calendário e os horários das publicações desta marca seguem este fuso."
+
+#: templates/workspaces/settings.html:37
+msgid "Brazil"
+msgstr "Brasil"
+
+#: templates/workspaces/settings.html:42
+msgid "All Timezones"
+msgstr "Todos os fusos horários"
+
+#: templates/workspaces/settings.html:67
 msgid "Workspace logo"
 msgstr "Logo da marca"
 
-#: templates/workspaces/settings.html:47
+#: templates/workspaces/settings.html:71
 msgid "Remove logo"
 msgstr "Remover logo"
 
-#: templates/workspaces/settings.html:58
+#: templates/workspaces/settings.html:82
 msgid "Logo"
 msgstr "Logo"
 
-#: templates/workspaces/settings.html:59
+#: templates/workspaces/settings.html:83
 msgid "JPEG, PNG, WebP, or GIF. Max 2 MB."
 msgstr "JPEG, PNG, WebP ou GIF. No máximo 2 MB."
 
-#: templates/workspaces/settings.html:65
+#: templates/workspaces/settings.html:89
 msgid "Upload Logo"
 msgstr "Enviar logo"
 
-#: templates/workspaces/settings.html:82
+#: templates/workspaces/settings.html:106
 msgid "Restore this workspace"
 msgstr "Restaurar esta marca"
 
-#: templates/workspaces/settings.html:82 templates/workspaces/settings.html:115
+#: templates/workspaces/settings.html:106
+#: templates/workspaces/settings.html:139
 msgid "Archive this workspace"
 msgstr "Arquivar esta marca"
 
-#: templates/workspaces/settings.html:86
+#: templates/workspaces/settings.html:110
 msgid ""
 "This workspace is currently archived. Restoring it will make it visible in "
 "the sidebar and accessible to all members again."
@@ -16537,7 +16552,7 @@ msgstr ""
 "Esta marca está arquivada. Restaurá-la a torna visível na barra lateral e "
 "acessível a todos os membros novamente."
 
-#: templates/workspaces/settings.html:88
+#: templates/workspaces/settings.html:112
 msgid ""
 "Archiving hides this workspace from the sidebar and prevents new posts. All "
 "existing data is preserved and the workspace can be restored at any time."
@@ -16546,7 +16561,7 @@ msgstr ""
 "Todos os dados são preservados e a marca pode ser restaurada a qualquer "
 "momento."
 
-#: templates/workspaces/settings.html:90
+#: templates/workspaces/settings.html:114
 msgid ""
 "You cannot archive the last active workspace in the organization. Create "
 "another workspace first."
@@ -16554,15 +16569,15 @@ msgstr ""
 "Não é possível arquivar a última marca ativa da organização. Crie outra "
 "antes."
 
-#: templates/workspaces/settings.html:99
+#: templates/workspaces/settings.html:123
 msgid "Restore Workspace"
 msgstr "Restaurar marca"
 
-#: templates/workspaces/settings.html:102
+#: templates/workspaces/settings.html:126
 msgid "Archive Workspace"
 msgstr "Arquivar marca"
 
-#: templates/workspaces/settings.html:118
+#: templates/workspaces/settings.html:142
 #, python-format
 msgid ""
 "Are you sure you want to archive <strong>%(ws)s</strong>? The workspace will "
@@ -16573,16 +16588,16 @@ msgstr ""
 "oculta na barra lateral e não será possível criar novas publicações. Todos "
 "os dados existentes serão preservados."
 
-#: templates/workspaces/settings.html:125
+#: templates/workspaces/settings.html:149
 msgid "Yes, archive this workspace"
 msgstr "Sim, arquivar esta marca"
 
-#: templates/workspaces/settings.html:137
-#: templates/workspaces/settings.html:163
+#: templates/workspaces/settings.html:161
+#: templates/workspaces/settings.html:187
 msgid "Delete this workspace"
 msgstr "Excluir esta marca"
 
-#: templates/workspaces/settings.html:140
+#: templates/workspaces/settings.html:164
 msgid ""
 "Permanently delete this workspace and all of its data. This includes all "
 "posts, connected social accounts, media assets, and workspace memberships. "
@@ -16592,18 +16607,18 @@ msgstr ""
 "as publicações, contas sociais conectadas, arquivos de mídia e participações "
 "na marca. Esta ação não pode ser desfeita."
 
-#: templates/workspaces/settings.html:142
+#: templates/workspaces/settings.html:166
 msgid ""
 "You cannot delete the last active workspace in the organization. Create "
 "another workspace first."
 msgstr ""
 "Não é possível excluir a última marca ativa da organização. Crie outra antes."
 
-#: templates/workspaces/settings.html:148
+#: templates/workspaces/settings.html:172
 msgid "Delete Workspace"
 msgstr "Excluir marca"
 
-#: templates/workspaces/settings.html:166
+#: templates/workspaces/settings.html:190
 #, python-format
 msgid ""
 "Are you sure you want to permanently delete <strong>%(ws)s</strong>? This "
@@ -16612,15 +16627,15 @@ msgstr ""
 "Tem certeza de que deseja excluir permanentemente <strong>%(ws)s</strong>? "
 "Esta ação não pode ser desfeita."
 
-#: templates/workspaces/settings.html:171
+#: templates/workspaces/settings.html:195
 msgid "Connected social accounts"
 msgstr "Contas sociais conectadas"
 
-#: templates/workspaces/settings.html:173
+#: templates/workspaces/settings.html:197
 msgid "Workspace memberships"
 msgstr "Participações na marca"
 
-#: templates/workspaces/settings.html:182
+#: templates/workspaces/settings.html:206
 msgid "Yes, delete this workspace"
 msgstr "Sim, excluir esta marca"
 
@@ -16669,6 +16684,21 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 #: templates/workspaces/team.html:102
 msgid "Send invitation"
 msgstr "Enviar convite"
+
+#~ msgid "General - Settings"
+#~ msgstr "Geral - Configurações"
+
+#~ msgid "Name and default timezone of your organization."
+#~ msgstr "Nome e fuso horário padrão da sua organização."
+
+#~ msgid "Default Timezone"
+#~ msgstr "Fuso horário padrão"
+
+#~ msgid "Used as the fallback for workspaces that don't set their own."
+#~ msgstr "Usado como padrão para as marcas que não definem o próprio."
+
+#~ msgid "Common"
+#~ msgstr "Comuns"
 
 #~ msgid "A free trial has already been used with this CPF or CNPJ."
 #~ msgstr "Já foi usado um teste grátis com este CPF ou CNPJ."

@@ -4,6 +4,11 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext
 
+#: Timezone a new organization starts in: the product is sold in Brazil,
+#: and most of it keeps Brasília time. The browser's own timezone replaces
+#: it at sign-up when the browser reports one.
+SIGNUP_TIMEZONE = "America/Sao_Paulo"
+
 
 def provision_organization_and_workspace(user):
     """Create a default Organization, Workspace, and memberships for a new user.
@@ -21,7 +26,7 @@ def provision_organization_and_workspace(user):
 
     org = Organization.objects.create(
         name="My Organization",
-        default_timezone="UTC",
+        default_timezone=SIGNUP_TIMEZONE,
     )
 
     OrgMembership.objects.create(
@@ -66,7 +71,7 @@ def _set_org_timezone_from_browser(request, user):
     if len(browser_tz) > 64 or browser_tz not in available_timezones():
         return
     membership = OrgMembership.objects.filter(user=user).select_related("organization").first()
-    if membership and membership.organization.default_timezone == "UTC":
+    if membership and membership.organization.default_timezone == SIGNUP_TIMEZONE:
         membership.organization.default_timezone = browser_tz
         membership.organization.save(update_fields=["default_timezone"])
 

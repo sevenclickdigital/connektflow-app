@@ -1,54 +1,17 @@
 {% extends "layouts/settings.html" %}
 {% load i18n %}
-{% block title %}{% translate "General - Settings" %} - Connekt Flow{% endblock %}
+{% block title %}{% translate "Delete organization" %} - Connekt Flow{% endblock %}
 
 {% block page_header %}
 <div class="page-header">
     <div>
-        <h1 class="page-title">{% translate "General" %}</h1>
-        <p class="page-description">{% translate "Name and default timezone of your organization." %}</p>
+        <h1 class="page-title">{% translate "Delete organization" %}</h1>
+        <p class="page-description">{% translate "Close this account and remove everything in it." %}</p>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<section class="mb-8">
-    <h2 class="section-title">{% translate "Organization" %}</h2>
-    <div class="a-card divide-y divide-neutral-300">
-        <form method="POST" class="p-6">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="update_name">
-            <label for="name" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Organization Name" %}</label>
-            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-                <input type="text" id="name" name="name" value="{{ organization.name }}" required maxlength="100" class="form-input-styled flex-1">
-                <button type="submit" class="btn-brand">{% translate "Save Changes" %}</button>
-            </div>
-        </form>
-
-        <form method="POST" class="p-6">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="update_timezone">
-            <label for="timezone" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Default Timezone" %}</label>
-            <p class="text-xs mb-2 text-neutral-500">{% translate "Used as the fallback for workspaces that don't set their own." %}</p>
-            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-                <select id="timezone" name="timezone" class="form-input-styled bb-select flex-1 cursor-pointer">
-                    <optgroup label="{% translate 'Common' %}">
-                        {% for tz in common_timezones %}
-                        <option value="{{ tz }}" {% if tz == organization.default_timezone %}selected{% endif %}>{{ tz }}</option>
-                        {% endfor %}
-                    </optgroup>
-                    <optgroup label="{% translate 'All Timezones' %}">
-                        {% for tz in all_timezones %}
-                        <option value="{{ tz }}" {% if tz == organization.default_timezone %}selected{% endif %}>{{ tz }}</option>
-                        {% endfor %}
-                    </optgroup>
-                </select>
-                <button type="submit" class="btn-brand">{% translate "Save Changes" %}</button>
-            </div>
-        </form>
-    </div>
-</section>
-
 {% if is_owner %}
 <section class="mb-8">
     <h2 class="section-title">{% translate "Danger zone" %}</h2>
@@ -137,5 +100,7 @@
     </div>
     {% endif %}
 </section>
+{% else %}
+<div class="a-card px-6 py-10 text-center text-sm text-neutral-500">{% translate "Only the owner of the organization can delete it." %}</div>
 {% endif %}
 {% endblock %}

@@ -12,6 +12,22 @@
 {% endblock %}
 
 {% block content %}
+{% if can_admin_org %}
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Organization" %}</h2>
+    <form method="POST" action="{% url 'organizations:settings' %}" class="a-card p-6">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_name">
+        <label for="org_name" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Organization Name" %}</label>
+        <p class="text-xs mb-2 text-neutral-500">{% translate "The account that holds your brands. It appears in the invitations you send." %}</p>
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <input type="text" id="org_name" name="name" value="{{ organization.name }}" required maxlength="100" class="form-input-styled flex-1">
+            <button type="submit" class="btn-brand">{% translate "Save Changes" %}</button>
+        </div>
+    </form>
+</section>
+{% endif %}
+
 <section class="mb-8">
     <h2 class="section-title">{% translate "Active" context "workspaces, plural" %} ({{ workspace_data|length }})</h2>
     {% if workspace_data %}
@@ -51,6 +67,18 @@
             {% include "organizations/partials/workspace_card.html" with item=item %}
         </div>
         {% endfor %}
+    </div>
+</section>
+{% endif %}
+{% if is_org_owner %}
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Danger zone" %}</h2>
+    <div class="a-card p-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <p class="text-sm font-semibold text-neutral-950">{% translate "Delete this organization" %}</p>
+            <p class="text-xs mt-0.5 text-neutral-500">{% translate "Closes the account with every brand, post and file in it." %}</p>
+        </div>
+        <a href="{% url 'organizations:settings' %}" class="btn-danger-soft">{% translate "Delete organization" %}</a>
     </div>
 </section>
 {% endif %}

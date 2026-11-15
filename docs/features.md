@@ -42,7 +42,8 @@ X publishes text with up to 4 photos or one video/GIF through the v2 API (`provi
 
 ### F-1.1 Organizations — `apps/organizations/`
 - `Organization`: name, logo URL, default timezone, billing email.
-- Settings page `/organizations/settings/`. The workspace list is at `/organizations/workspaces/`.
+- The account centre menu has Profile, Workspaces, Team Members, API Keys and Billing. The organization's name is edited on the workspace list (`/organizations/workspaces/`, admins only), which also links the owner to the deletion page (`/organizations/settings/`, no longer in the menu and now only about deleting the organization).
+- `default_timezone` is the fallback for workspaces without a timezone of their own and is no longer edited anywhere: the timezone is set per workspace (workspace settings, owner or manager, Brazil's timezones listed first). A new organization starts on `America/Sao_Paulo` (`apps/accounts/signals.SIGNUP_TIMEZONE`) unless the browser reports another at sign-up.
 - Deletion: the owner requests it. That sets `deletion_requested_at` and schedules `execute_scheduled_org_deletion` (`apps/organizations/tasks.py`) for **14 days** later, and the deletion can be cancelled during that window. YouTube connections and copied YouTube API data are removed immediately when deletion is requested (`apps/social_accounts/youtube_compliance.py`). After deletion the owner is redirected to `CUSTOM_SIGNUP_URL` if it is set.
 
 ### F-1.2 Workspaces — `apps/workspaces/`
