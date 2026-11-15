@@ -781,7 +781,7 @@ Posts publish as DEV.to articles (title + Markdown body). The key can be revoked
 
 See the [Supported Platforms](#supported-platforms) matrix above for per-platform inbox capabilities.
 
-To import historical messages (e.g., from the last 7 days):
+An account connected in the app starts with an empty inbox; the person can bring the older messages in with **Import history** in the account's menu on the Social Accounts page. From the command line, to import historical messages (e.g., from the last 7 days):
 
 ```bash
 python manage.py backfill_inbox --days 7

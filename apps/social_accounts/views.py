@@ -1091,6 +1091,38 @@ def retry_webhooks(request, workspace_id, account_id):
     return redirect("social_accounts:list", workspace_id=workspace_id)
 
 
+@login_required
+@require_permission("manage_social_accounts")
+@require_POST
+@ratelimit(key="user", rate="10/m", method="POST", block=True)
+def import_inbox_history(request, workspace_id, account_id):
+    """Bring in the comments and conversations from before the account was connected.
+
+    A new connection starts with an empty inbox (``inbox_history_cutoff``).
+    This lifts that floor, so the polls stop dropping what is older, and
+    queues the walk that goes back for it: reading a whole inbox is too slow
+    for a request. Pressing it on an account with no floor left does nothing.
+    """
+    from apps.inbox.tasks import import_inbox_history as import_inbox_history_task
+
+    account = get_object_or_404(SocialAccount.objects.for_workspace(workspace_id), id=account_id)
+    if account.can_import_inbox_history:
+        if account.needs_reconnect:
+            messages.error(
+                request,
+                _("Reconnect %(label)s first — its connection isn't healthy.") % {"label": account.display_label},
+            )
+        else:
+            SocialAccount.objects.filter(pk=account.pk).update(inbox_history_cutoff=None)
+            import_inbox_history_task(str(account.id))
+            messages.success(
+                request,
+                _("Importing the history of %(label)s. Older messages and comments reach the inbox in a few minutes.")
+                % {"label": account.display_label},
+            )
+    return redirect("social_accounts:list", workspace_id=workspace_id)
+
+
 def _render_account_card(request, account, workspace_id):
     """Render one account card for an htmx ``outerHTML`` swap of ``#account-<id>``."""
     return render(
@@ -1343,38 +1375,42 @@ def _create_or_update_account(
                 }
             )
 
+    defaults = {
+        **analytics_defaults,
+        "account_name": profile.name,
+        "account_handle": profile.handle or "",
+        "avatar_url": profile.avatar_url or "",
+        "follower_count": profile.follower_count,
+        "oauth_access_token": access_token,
+        "oauth_refresh_token": refresh_token or "",
+        "token_expires_at": token_expires_at,
+        "instance_url": instance_url,
+        "webhook_target_id": webhook_target_id or "",
+        "messaging_access": messaging_access,
+        "granted_by_platform_user_id": granted_by_platform_user_id or "",
+        "connection_status": SocialAccount.ConnectionStatus.CONNECTED,
+        "last_error": "",
+        # Fresh OAuth grant invalidates any prior analytics-scope failure.
+        "analytics_needs_reconnect": False,
+        # Likewise the webhook verdict: the subscription is about to be
+        # retried below, and subscribe_account_webhooks returns early
+        # without recording when the provider has no webhooks at all — so
+        # without this reset a stale failure would outlive the reconnect
+        # that was supposed to clear it.
+        "webhooks_active": None,
+        "webhook_error": "",
+        "webhook_needs_reconnect": False,
+        "webhook_error_detail": "",
+        "webhook_retry_count": 0,
+    }
     account, created = SocialAccount.objects.update_or_create(
         workspace_id=workspace_id,
         platform=platform,
         account_platform_id=profile.platform_id,
-        defaults={
-            **analytics_defaults,
-            "account_name": profile.name,
-            "account_handle": profile.handle or "",
-            "avatar_url": profile.avatar_url or "",
-            "follower_count": profile.follower_count,
-            "oauth_access_token": access_token,
-            "oauth_refresh_token": refresh_token or "",
-            "token_expires_at": token_expires_at,
-            "instance_url": instance_url,
-            "webhook_target_id": webhook_target_id or "",
-            "messaging_access": messaging_access,
-            "granted_by_platform_user_id": granted_by_platform_user_id or "",
-            "connection_status": SocialAccount.ConnectionStatus.CONNECTED,
-            "last_error": "",
-            # Fresh OAuth grant invalidates any prior analytics-scope failure.
-            "analytics_needs_reconnect": False,
-            # Likewise the webhook verdict: the subscription is about to be
-            # retried below, and subscribe_account_webhooks returns early
-            # without recording when the provider has no webhooks at all — so
-            # without this reset a stale failure would outlive the reconnect
-            # that was supposed to clear it.
-            "webhooks_active": None,
-            "webhook_error": "",
-            "webhook_needs_reconnect": False,
-            "webhook_error_detail": "",
-            "webhook_retry_count": 0,
-        },
+        defaults=defaults,
+        # A first connection starts with an empty inbox (see the field);
+        # reconnecting never moves that line, in either direction.
+        create_defaults={**defaults, "inbox_history_cutoff": timezone.now()},
     )
 
     if created and platform not in MESSAGING_ONLY_PLATFORMS:

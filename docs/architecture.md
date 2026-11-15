@@ -165,7 +165,7 @@ One-off `@background` jobs include media processing (`apps/media_library/tasks.p
 
 `InboxMessage` (`apps/inbox/models.py`) has types `comment|mention|tag|dm|review` (`tag`: an Instagram post that tagged the account, read from the `/tags` edge, which cannot be answered). No provider produces `review` yet. Messages arrive two ways:
 
-- **Polling:** `InboxSyncEngine` (`apps/inbox/tasks.py`) calls `provider.get_messages()` every 5 minutes. YouTube is rate-limited per account, and a weekly deep sweep (`INBOX_DEEP_SWEEP_SECONDS`) catches replies on old threads. Polling always runs. Webhooks only make delivery faster.
+- **Polling:** `InboxSyncEngine` (`apps/inbox/tasks.py`) calls `provider.get_messages()` every 5 minutes. YouTube is rate-limited per account, and a weekly deep sweep (`INBOX_DEEP_SWEEP_SECONDS`) catches replies on old threads. Polling always runs. Webhooks only make delivery faster. A newly connected account starts with an empty inbox: `SocialAccount.inbox_history_cutoff` is set at first connect, the first poll asks only for what came after it, and every poll drops older messages (providers read with an overlap, and the sweeps walk whole threads). "Import history" on the account's card (`social_accounts:import_inbox_history`) clears the floor and queues `import_inbox_history`, which runs the same uncapped walk as `manage.py backfill_inbox` (`InboxSyncEngine.import_history`). A null floor means no filtering, which is also what accounts connected before the floor existed have.
 - **Webhooks** (`apps/inbox/webhook_urls.py`, CSRF-exempt, rate-limited):
 
 | Endpoint | Source | Verification |

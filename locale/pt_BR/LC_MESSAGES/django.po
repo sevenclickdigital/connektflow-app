@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-15 02:41+0000\n"
+"POT-Creation-Date: 2026-11-15 02:56+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -1167,24 +1167,24 @@ msgstr "Pronto"
 msgid "On Hold"
 msgstr "Em espera"
 
-#: apps/composer/models.py:494 apps/social_accounts/models.py:603
+#: apps/composer/models.py:494 apps/social_accounts/models.py:616
 #: apps/tasks/creative_formats.py:112 templates/analytics/_post_table.html:50
 #: templates/base.html:475 templates/inbox/partials/_entry_facts.html:29
 msgid "Post"
 msgstr "Publicação"
 
-#: apps/composer/models.py:495 apps/social_accounts/models.py:604
+#: apps/composer/models.py:495 apps/social_accounts/models.py:617
 #: apps/tasks/creative_formats.py:80 apps/tasks/creative_formats.py:86
 msgctxt "publishing format"
 msgid "Story"
 msgstr "Story"
 
-#: apps/composer/models.py:496 apps/social_accounts/models.py:605
+#: apps/composer/models.py:496 apps/social_accounts/models.py:618
 #: apps/tasks/creative_formats.py:81 apps/tasks/creative_formats.py:87
 msgid "Reels"
 msgstr "Reels"
 
-#: apps/composer/models.py:497 apps/social_accounts/models.py:606
+#: apps/composer/models.py:497 apps/social_accounts/models.py:619
 #: apps/tasks/creative_formats.py:107 templates/accounts/settings.html:47
 msgid "Photo"
 msgstr "Foto"
@@ -2185,7 +2185,7 @@ msgid "Reconnect this account before sending DMs."
 msgstr "Reconecte esta conta antes de enviar mensagens diretas."
 
 #: apps/inbox/reply_policy.py:63
-#: templates/social_accounts/partials/_account_card.html:115
+#: templates/social_accounts/partials/_account_card.html:123
 msgid ""
 "Instagram DM access is unavailable for this connection. Contact your "
 "administrator to enable it."
@@ -3488,22 +3488,22 @@ msgstr "Token expirando"
 msgid "Disconnected"
 msgstr "Desconectada"
 
-#: apps/social_accounts/models.py:598
+#: apps/social_accounts/models.py:611
 #, python-format
 msgid "%(platform)s Stories"
 msgstr "%(platform)s Stories"
 
-#: apps/social_accounts/models.py:599
+#: apps/social_accounts/models.py:612
 #, python-format
 msgid "%(platform)s Reels"
 msgstr "%(platform)s Reels"
 
-#: apps/social_accounts/models.py:600
+#: apps/social_accounts/models.py:613
 #, python-format
 msgid "%(platform)s photo"
 msgstr "%(platform)s · Foto"
 
-#: apps/social_accounts/models.py:603
+#: apps/social_accounts/models.py:616
 msgid "Feed"
 msgstr "Feed"
 
@@ -3742,7 +3742,7 @@ msgstr ""
 msgid "Failed to register with %(url)s. Check the URL."
 msgstr "Não foi possível registrar em %(url)s. Confira a URL."
 
-#: apps/social_accounts/views.py:1072
+#: apps/social_accounts/views.py:1072 apps/social_accounts/views.py:1113
 #, python-format
 msgid "Reconnect %(label)s first — its connection isn't healthy."
 msgstr "Reconecte %(label)s primeiro — a conexão não está saudável."
@@ -3757,18 +3757,25 @@ msgid "Couldn't set up real-time updates. Please try again."
 msgstr ""
 "Não foi possível ativar as atualizações em tempo real. Tente novamente."
 
-#: apps/social_accounts/views.py:1119
+#: apps/social_accounts/views.py:1120
+#, python-format
+msgid ""
+"Importing the history of %(label)s. Older messages and comments reach the "
+"inbox in a few minutes."
+msgstr "Importando o histórico de %(label)s. As mensagens e os comentários antigos chegam à caixa de entrada em alguns minutos."
+
+#: apps/social_accounts/views.py:1151
 #, python-format
 msgid "Disconnected %(name)s. YouTube data was deleted immediately."
 msgstr ""
 "%(name)s desconectada. Os dados do YouTube foram excluídos imediatamente."
 
-#: apps/social_accounts/views.py:1146
+#: apps/social_accounts/views.py:1178
 #, python-format
 msgid "Disconnected %(name)s."
 msgstr "%(name)s desconectada."
 
-#: apps/social_accounts/views.py:1333
+#: apps/social_accounts/views.py:1367
 #, python-format
 msgid ""
 "This workspace already has a %(platform)s account. Disconnect it before "
@@ -4382,7 +4389,7 @@ msgstr "Não recebeu o e-mail?"
 #: templates/account/password_reset_done.html:35
 #: templates/analytics/_shopee_page.html:16
 #: templates/calendar/partials/_board_columns.html:83
-#: templates/social_accounts/partials/_account_card.html:154
+#: templates/social_accounts/partials/_account_card.html:162
 msgid "Try again"
 msgstr "Tentar novamente"
 
@@ -4844,9 +4851,9 @@ msgstr ""
 #: templates/analytics/_page.html:16
 #: templates/radar/partials/_source_card.html:56
 #: templates/radar/partials/_source_card.html:63
-#: templates/social_accounts/partials/_account_card.html:134
-#: templates/social_accounts/partials/_account_card.html:167
-#: templates/social_accounts/partials/_account_card.html:207
+#: templates/social_accounts/partials/_account_card.html:142
+#: templates/social_accounts/partials/_account_card.html:175
+#: templates/social_accounts/partials/_account_card.html:215
 msgid "Reconnect"
 msgstr "Reconectar"
 
@@ -6078,10 +6085,10 @@ msgstr "etapas"
 #: templates/funnels/board.html:212 templates/inbox/feed.html:142
 #: templates/radar/partials/_share_dialog.html:18
 #: templates/radar/partials/_source_card.html:89
-#: templates/social_accounts/partials/_account_card.html:85
-#: templates/social_accounts/partials/_account_card.html:162
-#: templates/social_accounts/partials/_account_card.html:181
-#: templates/social_accounts/partials/_account_card.html:202
+#: templates/social_accounts/partials/_account_card.html:93
+#: templates/social_accounts/partials/_account_card.html:170
+#: templates/social_accounts/partials/_account_card.html:189
+#: templates/social_accounts/partials/_account_card.html:210
 #: templates/social_accounts/partials/_connect_guide.html:14
 #: templates/tasks/partials/_request_arts_host.html:17
 #: templates/tasks/partials/_task_modal.html:5
@@ -8708,7 +8715,7 @@ msgstr "Horários de publicação"
 
 #: templates/calendar/posting_slots.html:5
 #: templates/calendar/posting_slots.html:10
-#: templates/social_accounts/partials/_account_card.html:195
+#: templates/social_accounts/partials/_account_card.html:203
 msgid "Posting Schedule"
 msgstr "Agenda de publicação"
 
@@ -15572,27 +15579,39 @@ msgid "Attention"
 msgstr "Atenção"
 
 #: templates/social_accounts/partials/_account_card.html:70
-#: templates/social_accounts/partials/_account_card.html:187
+#: templates/social_accounts/partials/_account_card.html:195
 msgid "Manage connection"
 msgstr "Gerenciar conexão"
 
-#: templates/social_accounts/partials/_account_card.html:71
-#: templates/social_accounts/partials/_account_card.html:163
-#: templates/social_accounts/partials/_account_card.html:203
+#: templates/social_accounts/partials/_account_card.html:73
+msgid ""
+"This account started with an empty inbox. Import the comments and "
+"conversations from before it was connected? They cannot be removed in bulk "
+"afterwards."
+msgstr "Esta conta começou com a caixa de entrada vazia. Importar os comentários e as conversas de antes da conexão? Depois não dá para removê-los de uma vez."
+
+#: templates/social_accounts/partials/_account_card.html:74
+#: templates/social_accounts/partials/_account_card.html:76
+msgid "Import history"
+msgstr "Importar histórico"
+
+#: templates/social_accounts/partials/_account_card.html:79
+#: templates/social_accounts/partials/_account_card.html:171
+#: templates/social_accounts/partials/_account_card.html:211
 #: templates/social_accounts/partials/_disconnect_button.html:12
 #: templates/social_accounts/partials/_disconnect_confirm.html:56
 msgid "Disconnect"
 msgstr "Desconectar"
 
-#: templates/social_accounts/partials/_account_card.html:93
+#: templates/social_accounts/partials/_account_card.html:101
 msgid "The connection was lost"
 msgstr "A conexão foi perdida"
 
-#: templates/social_accounts/partials/_account_card.html:93
+#: templates/social_accounts/partials/_account_card.html:101
 msgid "Some features are unavailable."
 msgstr "Alguns recursos estão indisponíveis."
 
-#: templates/social_accounts/partials/_account_card.html:99
+#: templates/social_accounts/partials/_account_card.html:107
 msgid ""
 "Connekt Flow can no longer reach this account. Scheduled posts for it will "
 "fail and new comments stop arriving until you reconnect."
@@ -15601,7 +15620,7 @@ msgstr ""
 "agendadas para ela vão falhar e novos comentários deixam de chegar até você "
 "reconectar."
 
-#: templates/social_accounts/partials/_account_card.html:101
+#: templates/social_accounts/partials/_account_card.html:109
 msgid ""
 "The access to this account expires soon. Reconnect to renew it before "
 "scheduled posts start failing."
@@ -15609,7 +15628,7 @@ msgstr ""
 "O acesso a esta conta expira em breve. Reconecte para renová-lo antes que as "
 "publicações agendadas comecem a falhar."
 
-#: templates/social_accounts/partials/_account_card.html:112
+#: templates/social_accounts/partials/_account_card.html:120
 #, python-format
 msgid ""
 "This account was connected without %(scopes)s. Anything relying on them will "
@@ -15618,7 +15637,7 @@ msgstr ""
 "Esta conta foi conectada sem %(scopes)s. Tudo o que depende disso vai falhar "
 "até a permissão ser concedida — reconecte para tentar de novo."
 
-#: templates/social_accounts/partials/_account_card.html:117
+#: templates/social_accounts/partials/_account_card.html:125
 msgid ""
 "DMs unavailable: grant messaging access on the linked Facebook Page, then "
 "reconnect this account."
@@ -15626,28 +15645,28 @@ msgstr ""
 "DMs indisponíveis: conceda acesso a mensagens na página do Facebook "
 "vinculada e reconecte esta conta."
 
-#: templates/social_accounts/partials/_account_card.html:128
+#: templates/social_accounts/partials/_account_card.html:136
 msgid "Some real-time inbox updates are unavailable."
 msgstr ""
 "Algumas atualizações em tempo real da caixa de entrada não estão disponíveis."
 
-#: templates/social_accounts/partials/_account_card.html:129
+#: templates/social_accounts/partials/_account_card.html:137
 msgid "We couldn't set up real-time updates for this account."
 msgstr ""
 "Não conseguimos configurar as atualizações em tempo real para esta conta."
 
-#: templates/social_accounts/partials/_account_card.html:130
+#: templates/social_accounts/partials/_account_card.html:138
 msgid ""
 "Activity with the required permissions can still arrive through polling."
 msgstr ""
 "A atividade com as permissões necessárias ainda pode chegar por "
 "sincronização periódica."
 
-#: templates/social_accounts/partials/_account_card.html:154
+#: templates/social_accounts/partials/_account_card.html:162
 msgid "Trying…"
 msgstr "Tentando…"
 
-#: templates/social_accounts/partials/_account_card.html:196
+#: templates/social_accounts/partials/_account_card.html:204
 msgid ""
 "Set recurring time slots for when queued posts are automatically published."
 msgstr ""
@@ -15665,8 +15684,8 @@ msgid ""
 "%(name)s opens in a small window. If nothing opens, allow pop-ups for this "
 "site and try again."
 msgstr ""
-"O login de %(name)s abre em uma janela pequena. Se nada abrir, libere os "
-"pop-ups para este site e tente de novo."
+"O login de %(name)s abre em uma janela pequena. Se nada abrir, libere os pop-"
+"ups para este site e tente de novo."
 
 #: templates/social_accounts/partials/_disconnect_confirm.html:16
 #, python-format

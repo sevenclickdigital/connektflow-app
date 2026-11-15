@@ -68,6 +68,14 @@ the same shape whatever state the account is in.
             <div x-show="menu" x-cloak @click.away="menu = false" x-transition
                  class="absolute right-0 top-full mt-1 z-20 w-48 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1">
                 <button type="button" @click="menu = false; manage = true" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Manage connection" %}</button>
+                {% if account.can_import_inbox_history %}
+                <form method="post" action="{% url 'social_accounts:import_inbox_history' workspace_id=workspace_id account_id=account.id %}"
+                      data-confirm="{% translate 'This account started with an empty inbox. Import the comments and conversations from before it was connected? They cannot be removed in bulk afterwards.' %}"
+                      data-confirm-label="{% translate 'Import history' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Import history" %}</button>
+                </form>
+                {% endif %}
                 <button type="button" @click="menu = false; confirmDisconnect = true" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer">{% translate "Disconnect" %}</button>
             </div>
             {% include "social_accounts/partials/_disconnect_confirm.html" with account=account workspace_id=workspace_id position="right-0 top-full mt-1" %}

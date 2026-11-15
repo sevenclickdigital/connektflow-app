@@ -44,7 +44,7 @@ class TestBackfillInbox:
         provider = MagicMock()
         provider.get_messages.return_value = []
 
-        with patch("apps.inbox.management.commands.backfill_inbox.get_provider", return_value=provider):
+        with patch("apps.inbox.tasks.get_provider", return_value=provider):
             call_command("backfill_inbox", "--days", "90", stdout=StringIO())
 
         assert provider.get_messages.call_args.kwargs["deep"] is True
@@ -55,7 +55,7 @@ class TestBackfillInbox:
         provider = MagicMock()
         provider.get_messages.return_value = []
 
-        with patch("apps.inbox.management.commands.backfill_inbox.get_provider", return_value=provider):
+        with patch("apps.inbox.tasks.get_provider", return_value=provider):
             call_command("backfill_inbox", "--days", "90", stdout=StringIO())
 
         assert provider.get_messages.call_args.kwargs["channel_id"] == "yt-backfill"
@@ -67,7 +67,7 @@ class TestBackfillInbox:
         provider = MagicMock()
         provider.get_messages.side_effect = [YouTubeMessageBatch([], "next-page"), YouTubeMessageBatch([])]
 
-        with patch("apps.inbox.management.commands.backfill_inbox.get_provider", return_value=provider):
+        with patch("apps.inbox.tasks.get_provider", return_value=provider):
             call_command("backfill_inbox", "--days", "90", stdout=StringIO())
 
         assert provider.get_messages.call_count == 2
@@ -79,7 +79,7 @@ class TestBackfillInbox:
         provider = MagicMock()
         provider.get_messages.return_value = []
 
-        with patch("apps.inbox.management.commands.backfill_inbox.get_provider", return_value=provider):
+        with patch("apps.inbox.tasks.get_provider", return_value=provider):
             call_command("backfill_inbox", "--days", "90", stdout=StringIO())
 
         assert "deep" not in provider.get_messages.call_args.kwargs

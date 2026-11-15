@@ -147,6 +147,23 @@ def offers_account_picker(platform: str) -> bool:
     return provider_cls.offers_account_picker
 
 
+def polls_inbox(platform: str) -> bool:
+    """Whether ``platform`` has an inbox we read by asking for it.
+
+    True where the provider implements ``get_messages``: those are the
+    platforms that can hand over what was said before the account was
+    connected. One that only pushes (WhatsApp) or has no inbox answers False.
+    Read from the registered class, for the reasons ``offers_account_picker``
+    gives.
+    """
+    from .base import SocialProvider as BaseProvider
+
+    provider_cls = PROVIDER_REGISTRY.get(platform)
+    if provider_cls is None:
+        return False
+    return provider_cls.get_messages is not BaseProvider.get_messages
+
+
 def get_provider(platform: str, credentials: dict | None = None) -> SocialProvider:
     """Instantiate and return a provider for the given platform.
 

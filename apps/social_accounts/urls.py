@@ -60,6 +60,11 @@ urlpatterns = [
         name="retry_webhooks",
     ),
     path(
+        "<uuid:workspace_id>/<uuid:account_id>/import-inbox-history/",
+        views.import_inbox_history,
+        name="import_inbox_history",
+    ),
+    path(
         "<uuid:workspace_id>/<uuid:account_id>/disconnect/",
         views.disconnect,
         name="disconnect",

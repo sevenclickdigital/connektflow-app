@@ -175,6 +175,12 @@ class SocialAccount(models.Model):
     # different budgets — see settings.INBOX_PLATFORM_MIN_POLL_SECONDS. The
     # sweep stamp paces the deep walk that catches a reply on a thread too old
     # for the routine poll's lookback (providers.youtube.get_messages).
+    # Where this account's inbox begins. A new connection starts empty: the
+    # polls drop anything said before this moment, so the workspace is not
+    # handed years of old comments and conversations it never asked for. Null
+    # means no floor: an account connected before the floor existed, or one
+    # whose history was asked for ("Import history" on its card).
+    inbox_history_cutoff = models.DateTimeField(blank=True, null=True)
     inbox_last_polled_at = models.DateTimeField(blank=True, null=True)
     inbox_last_deep_sweep_at = models.DateTimeField(blank=True, null=True)
     inbox_initial_backfill_cursor = models.TextField(blank=True, default="")
@@ -309,6 +315,13 @@ class SocialAccount(models.Model):
         from datetime import timedelta
 
         return self.token_expires_within(timedelta(days=7))
+
+    @property
+    def can_import_inbox_history(self) -> bool:
+        """Whether "Import history" has anything to do for this account."""
+        from providers import polls_inbox
+
+        return self.inbox_history_cutoff is not None and polls_inbox(self.platform)
 
     @property
     def connect_flow(self) -> str:

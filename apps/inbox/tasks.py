@@ -155,6 +155,15 @@ def _is_recent(ts):
     return ts >= timezone.now() - INBOX_BACKLOG_NOTIFY_WINDOW
 
 
+def _before(ts, cutoff) -> bool:
+    """True if a provider message timestamp is older than the account's inbox floor."""
+    if ts is None or cutoff is None:
+        return False
+    if timezone.is_naive(ts):
+        ts = timezone.make_aware(ts, timezone.get_default_timezone())
+    return ts < cutoff
+
+
 def _related_post_key(extra: dict | None) -> str:
     """The post id a message hangs off, as PlatformPost stores it.
 
@@ -392,7 +401,10 @@ class InboxSyncEngine:
         # messages out again after paying for the whole walk, leaving a sweep
         # that costs everything and recovers nothing. The window that matters is
         # "since we last walked the history", so use that.
-        since = account.inbox_last_deep_sweep_at if deep else last_msg
+        # An account that starts empty has no newest message yet; its floor
+        # is the furthest back a routine poll has any reason to look.
+        cutoff = account.inbox_history_cutoff
+        since = account.inbox_last_deep_sweep_at if deep else (last_msg or cutoff)
         page_token = (account.inbox_deep_sweep_cursor or None) if deep else None
         next_page_token = None
         history_message_ids: set[int] = set()
@@ -460,6 +472,11 @@ class InboxSyncEngine:
         related_posts = resolve_related_posts(account, messages)
 
         for msg in messages:
+            # Providers read with an overlap behind ``since`` and the sweeps
+            # walk whole threads, so what predates the floor is dropped here,
+            # the one place every poll passes through.
+            if _before(msg.timestamp, cutoff):
+                continue
             # Suppress notifications for the historical backlog pulled the first
             # time we see a message type, but still alert for genuinely recent
             # messages: a long-quiet account's first real message also looks like
@@ -482,6 +499,43 @@ class InboxSyncEngine:
             next_page_token=next_page_token,
             instagram_dm_poll_state=getattr(messages, "poll_state", None),
         )
+
+    def import_history(self, account, *, since=None) -> int:
+        """Read what the account's inbox held before now, and return how many messages came.
+
+        A deliberate one-off, so it does not stop early the way a routine poll
+        does: that poll's cutoff and its page cap protect a daily budget across
+        hundreds of automatic polls, and applying them here would seed a
+        fraction of what was asked for. Providers without a deep walk ignore
+        the flag. Never notifies: this is history, not news.
+        """
+        from apps.publisher.engine import _resolve_publish_credentials
+
+        provider = get_provider(account.platform, _resolve_publish_credentials(account))
+        base_kwargs = (
+            youtube_message_kwargs(account, since=since, deep=True, skip_stored_replies=False)
+            if account.platform == "youtube"
+            else {"since": since}
+        )
+        count = 0
+        page_token = None
+        while True:
+            kwargs = dict(base_kwargs)
+            if page_token:
+                kwargs["page_token"] = page_token
+            messages = provider.get_messages(access_token=account.oauth_access_token, **kwargs)
+            related_posts = resolve_related_posts(account, messages)
+            for msg in messages:
+                self._upsert_message(
+                    account,
+                    msg,
+                    notify=False,
+                    related_post_id=related_posts.get(_related_post_key(msg.extra)),
+                )
+                count += 1
+            page_token = getattr(messages, "next_page_token", None)
+            if not page_token:
+                return count
 
     def _record_spend(self, provider, account, spend) -> None:
         """Add what this account's poll cost to the cycle's running total.
@@ -717,6 +771,25 @@ def run_inbox_sync_cycle():
     ``run_inbox_sync`` management command uses — so the two never diverge.
     """
     InboxSyncEngine().run_cycle()
+
+
+@background(schedule=0)
+def import_inbox_history(account_id: str):
+    """Bring in what an account's inbox held before it was connected.
+
+    Queued by "Import history" on the account's card, after its floor was
+    lifted. Safe to run twice: messages are matched on the platform's id. A
+    provider failure is left to raise, so the worker records it and retries.
+    """
+    account = (
+        SocialAccount.objects.filter(id=account_id, connection_status=SocialAccount.ConnectionStatus.CONNECTED)
+        .select_related("workspace")
+        .first()
+    )
+    if account is None:
+        return
+    count = InboxSyncEngine().import_history(account)
+    logger.info("Inbox history imported for account %s (%s): %s messages", account.id, account.platform, count)
 
 
 @background(schedule=0)
