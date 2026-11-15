@@ -773,23 +773,61 @@ def run_inbox_sync_cycle():
     InboxSyncEngine().run_cycle()
 
 
+def _history_job_account(account_id: str):
+    return SocialAccount.objects.filter(id=account_id).select_related("workspace").first()
+
+
 @background(schedule=0)
 def import_inbox_history(account_id: str):
     """Bring in what an account's inbox held before it was connected.
 
-    Queued by "Import history" on the account's card, after its floor was
-    lifted. Safe to run twice: messages are matched on the platform's id. A
-    provider failure is left to raise, so the worker records it and retries.
+    Queued by "Import history" on the account's card. The floor is lifted only
+    once the walk succeeded, so a failure leaves the account as it was and the
+    action on offer again; how it ended goes to ``inbox_history_job`` for the
+    card to show. Safe to run twice: messages are matched on the platform's id.
     """
-    account = (
-        SocialAccount.objects.filter(id=account_id, connection_status=SocialAccount.ConnectionStatus.CONNECTED)
-        .select_related("workspace")
-        .first()
-    )
+    from apps.social_accounts.error_messages import friendly_health_check_error
+
+    account = _history_job_account(account_id)
     if account is None:
         return
-    count = InboxSyncEngine().import_history(account)
+    try:
+        count = InboxSyncEngine().import_history(account)
+    except Exception as exc:
+        logger.exception("Inbox history import failed for account %s (%s)", account.id, account.platform)
+        account.set_inbox_history_job("import", "failed", error=str(friendly_health_check_error(exc)))
+        return
+    SocialAccount.objects.filter(pk=account.pk).update(inbox_history_cutoff=None)
+    account.set_inbox_history_job("import", "done", count=count)
     logger.info("Inbox history imported for account %s (%s): %s messages", account.id, account.platform, count)
+
+
+@background(schedule=0)
+def clear_inbox_history(account_id: str):
+    """Remove what an account's inbox holds from before it was connected.
+
+    The reverse of ``import_inbox_history``, queued by "Remove old history":
+    the floor goes back to the day the account was connected, first, so no
+    poll brings an old message back while the rest are being deleted. Only our
+    copies go; nothing is touched on the platform. Replies and notes written
+    on those messages go with them.
+    """
+    account = _history_job_account(account_id)
+    if account is None:
+        return
+    floor = account.connected_at
+    try:
+        SocialAccount.objects.filter(pk=account.pk).update(inbox_history_cutoff=floor)
+        # delete() also reports the replies and notes that went along; the
+        # count shown to the person is of messages.
+        _, deleted = InboxMessage.objects.filter(social_account=account, received_at__lt=floor).delete()
+        count = deleted.get(InboxMessage._meta.label, 0)
+    except Exception:
+        logger.exception("Inbox history removal failed for account %s (%s)", account.id, account.platform)
+        account.set_inbox_history_job("clear", "failed", error="")
+        return
+    account.set_inbox_history_job("clear", "done", count=count)
+    logger.info("Inbox history removed for account %s (%s): %s messages", account.id, account.platform, count)
 
 
 @background(schedule=0)

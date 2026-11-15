@@ -3,6 +3,7 @@
 Handles OAuth flows, account listing, connect/reconnect/disconnect actions.
 """
 
+import json
 import logging
 import secrets
 from datetime import timedelta
@@ -1091,36 +1092,101 @@ def retry_webhooks(request, workspace_id, account_id):
     return redirect("social_accounts:list", workspace_id=workspace_id)
 
 
-@login_required
-@require_permission("manage_social_accounts")
-@require_POST
-@ratelimit(key="user", rate="10/m", method="POST", block=True)
-def import_inbox_history(request, workspace_id, account_id):
-    """Bring in the comments and conversations from before the account was connected.
+def _start_inbox_history_job(request, workspace_id, account_id, *, action, offered, task, started_message):
+    """Shared body of the two history actions on an account's menu.
 
-    A new connection starts with an empty inbox (``inbox_history_cutoff``).
-    This lifts that floor, so the polls stop dropping what is older, and
-    queues the walk that goes back for it: reading a whole inbox is too slow
-    for a request. Pressing it on an account with no floor left does nothing.
+    Marks the job as running, so the card shows it and stops offering either
+    action, and queues the work: reading or deleting a whole inbox is too
+    slow for a request. An account the action is not on offer for (already
+    running, nothing to do) is left alone.
     """
-    from apps.inbox.tasks import import_inbox_history as import_inbox_history_task
-
     account = get_object_or_404(SocialAccount.objects.for_workspace(workspace_id), id=account_id)
-    if account.can_import_inbox_history:
-        if account.needs_reconnect:
+    if offered(account):
+        if account.needs_reconnect and action == "import":
             messages.error(
                 request,
                 _("Reconnect %(label)s first — its connection isn't healthy.") % {"label": account.display_label},
             )
         else:
-            SocialAccount.objects.filter(pk=account.pk).update(inbox_history_cutoff=None)
-            import_inbox_history_task(str(account.id))
-            messages.success(
-                request,
-                _("Importing the history of %(label)s. Older messages and comments reach the inbox in a few minutes.")
-                % {"label": account.display_label},
-            )
+            account.set_inbox_history_job(action, "running")
+            task(str(account.id))
+            messages.success(request, started_message % {"label": account.display_label})
     return redirect("social_accounts:list", workspace_id=workspace_id)
+
+
+@login_required
+@require_permission("manage_social_accounts")
+@require_POST
+@ratelimit(key="user", rate="10/m", method="POST", block=True)
+def import_inbox_history(request, workspace_id, account_id):
+    """Bring in the comments and conversations from before the account was connected."""
+    from apps.inbox.tasks import import_inbox_history as task
+
+    return _start_inbox_history_job(
+        request,
+        workspace_id,
+        account_id,
+        action="import",
+        offered=lambda account: account.can_import_inbox_history,
+        task=task,
+        started_message=_("Importing the history of %(label)s. This card shows when it is done."),
+    )
+
+
+@login_required
+@require_permission("manage_social_accounts")
+@require_POST
+@ratelimit(key="user", rate="10/m", method="POST", block=True)
+def clear_inbox_history(request, workspace_id, account_id):
+    """Remove from the inbox what the account held before it was connected."""
+    from apps.inbox.tasks import clear_inbox_history as task
+
+    return _start_inbox_history_job(
+        request,
+        workspace_id,
+        account_id,
+        action="clear",
+        offered=lambda account: account.can_clear_inbox_history,
+        task=task,
+        started_message=_("Removing the old history of %(label)s. This card shows when it is done."),
+    )
+
+
+@login_required
+@require_permission("manage_social_accounts")
+@require_GET
+def account_card(request, workspace_id, account_id):
+    """One account's card, for the card to refresh itself while a history job runs.
+
+    The card polls this with ``was=running``; the answer that finds the job
+    finished also carries the toast that says how it ended, so the person
+    learns it without watching the card.
+    """
+    account = get_object_or_404(SocialAccount.objects.for_workspace(workspace_id), id=account_id)
+    response = _render_account_card(request, account, workspace_id)
+    job = account.inbox_history_job or {}
+    if request.GET.get("was") != "running" or job.get("state") not in ("done", "failed"):
+        return response
+    count = job.get("count", 0)
+    clearing = job.get("action") == "clear"
+    if job["state"] == "failed":
+        tone = "error"
+        title = (
+            _("The old history could not be removed. Try again.")
+            if clearing
+            else _("The history could not be imported. Try again.")
+        )
+        body = job.get("error") or account.display_label
+    else:
+        tone = "success"
+        title = (
+            ngettext("Old history removed: %(count)s message.", "Old history removed: %(count)s messages.", count)
+            if clearing
+            else ngettext("History imported: %(count)s message.", "History imported: %(count)s messages.", count)
+        ) % {"count": count}
+        body = account.display_label
+    response["HX-Trigger"] = json.dumps({"showToast": {"tone": tone, "title": str(title), "body": str(body)}})
+    return response
 
 
 def _render_account_card(request, account, workspace_id):

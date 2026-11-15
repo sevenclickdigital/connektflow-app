@@ -65,6 +65,16 @@ urlpatterns = [
         name="import_inbox_history",
     ),
     path(
+        "<uuid:workspace_id>/<uuid:account_id>/clear-inbox-history/",
+        views.clear_inbox_history,
+        name="clear_inbox_history",
+    ),
+    path(
+        "<uuid:workspace_id>/<uuid:account_id>/card/",
+        views.account_card,
+        name="account_card",
+    ),
+    path(
         "<uuid:workspace_id>/<uuid:account_id>/disconnect/",
         views.disconnect,
         name="disconnect",

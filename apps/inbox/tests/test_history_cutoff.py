@@ -128,17 +128,41 @@ def _import_url(account):
     )
 
 
-def test_import_history_lifts_the_floor_and_queues_the_walk(manager, account):
+def _clear_url(account):
+    return reverse(
+        "social_accounts:clear_inbox_history",
+        kwargs={"workspace_id": account.workspace_id, "account_id": account.id},
+    )
+
+
+def _card(client, account, **params):
+    url = reverse(
+        "social_accounts:account_card", kwargs={"workspace_id": account.workspace_id, "account_id": account.id}
+    )
+    return client.get(url, params)
+
+
+def _history(provider_messages):
+    """Patch the provider the walk reads from."""
+    patcher = patch("apps.inbox.tasks.get_provider")
+    get_provider = patcher.start()
+    get_provider.return_value.get_messages.return_value = provider_messages
+    return patcher
+
+
+def test_import_history_marks_the_job_running_and_queues_the_walk(manager, account):
     with patch("apps.inbox.tasks.import_inbox_history") as task:
         response = manager.post(_import_url(account))
 
     assert response.status_code == 302
     account.refresh_from_db()
-    assert account.inbox_history_cutoff is None
+    assert account.inbox_history_job_state == "running"
+    # The floor stays until the walk succeeds, so a failure changes nothing.
+    assert account.inbox_history_cutoff is not None
     task.assert_called_once_with(str(account.id))
 
 
-def test_import_history_does_nothing_twice(manager, account):
+def test_a_running_job_cannot_be_started_again(manager, account):
     with patch("apps.inbox.tasks.import_inbox_history") as task:
         manager.post(_import_url(account))
         manager.post(_import_url(account))
@@ -146,19 +170,24 @@ def test_import_history_does_nothing_twice(manager, account):
     assert task.call_count == 1
 
 
-def test_import_history_is_refused_for_another_workspaces_account(manager, account, organization):
+@pytest.mark.parametrize("url_name", ["import_inbox_history", "clear_inbox_history", "account_card"])
+def test_the_history_actions_are_refused_for_another_workspaces_account(manager, account, organization, url_name):
     from apps.workspaces.models import Workspace
 
     other = Workspace.objects.create(name="Other WS", organization=organization)
-    url = reverse("social_accounts:import_inbox_history", kwargs={"workspace_id": other.id, "account_id": account.id})
+    url = reverse(f"social_accounts:{url_name}", kwargs={"workspace_id": other.id, "account_id": account.id})
 
-    with patch("apps.inbox.tasks.import_inbox_history") as task:
-        response = manager.post(url)
+    with (
+        patch("apps.inbox.tasks.import_inbox_history") as importing,
+        patch("apps.inbox.tasks.clear_inbox_history") as clearing,
+    ):
+        response = manager.get(url) if url_name == "account_card" else manager.post(url)
 
     assert response.status_code in (403, 404)
-    task.assert_not_called()
+    importing.assert_not_called()
+    clearing.assert_not_called()
     account.refresh_from_db()
-    assert account.inbox_history_cutoff is not None
+    assert account.inbox_history_job is None
 
 
 def test_import_history_waits_for_a_healthy_connection(manager, account):
@@ -170,21 +199,156 @@ def test_import_history_waits_for_a_healthy_connection(manager, account):
 
     task.assert_not_called()
     account.refresh_from_db()
-    assert account.inbox_history_cutoff is not None
+    assert account.inbox_history_job is None
 
 
-def test_the_walk_brings_in_what_the_polls_had_dropped(account):
+def test_the_walk_brings_in_what_the_polls_had_dropped_and_lifts_the_floor(account):
     _poll(account, [_msg("old", hours_ago=30), _msg("new", hours_ago=0)])
     assert _stored(account) == {"new"}
-    SocialAccount.objects.filter(pk=account.pk).update(inbox_history_cutoff=None)
+    account.set_inbox_history_job("import", "running")
 
-    with patch("apps.inbox.tasks.get_provider") as get_provider:
-        get_provider.return_value.get_messages.return_value = [_msg("old", hours_ago=30), _msg("new", hours_ago=0)]
+    patcher = _history([_msg("old", hours_ago=30), _msg("new", hours_ago=0)])
+    try:
         with patch.object(InboxSyncEngine, "_notify_new_message") as notify:
             import_inbox_history.now(str(account.id))
+    finally:
+        patcher.stop()
 
     assert _stored(account) == {"old", "new"}
     notify.assert_not_called()
+    account.refresh_from_db()
+    assert account.inbox_history_cutoff is None
+    assert account.inbox_history_job["state"] == "done"
+    assert account.inbox_history_job["count"] == 2
+
+
+def test_a_failed_walk_leaves_the_floor_and_says_why(account):
+    from providers.exceptions import APIError
+
+    floor = account.inbox_history_cutoff
+    account.set_inbox_history_job("import", "running")
+
+    with patch("apps.inbox.tasks.get_provider") as get_provider:
+        get_provider.return_value.get_messages.side_effect = APIError("boom", platform="facebook")
+        import_inbox_history.now(str(account.id))
+
+    account.refresh_from_db()
+    assert account.inbox_history_cutoff == floor
+    assert account.inbox_history_job["state"] == "failed"
+    assert account.inbox_history_job["error"]
+    # Offered again, so the person can retry.
+    assert account.can_import_inbox_history
+
+
+# ------------------------------------------------------------ removing history
+
+
+@pytest.fixture
+def account_with_history(inbox_account):
+    """Connected a day ago, holding one message from before that and one from after."""
+    inbox_account.connection_status = SocialAccount.ConnectionStatus.CONNECTED
+    inbox_account.save()
+    SocialAccount.objects.filter(pk=inbox_account.pk).update(connected_at=timezone.now() - timedelta(days=1))
+    inbox_account.refresh_from_db()
+    for message_id, hours_ago in (("before", 72), ("after", 2)):
+        InboxMessage.objects.create(
+            workspace=inbox_account.workspace,
+            social_account=inbox_account,
+            platform_message_id=message_id,
+            message_type=InboxMessage.MessageType.COMMENT,
+            sender_name="Ada",
+            body="hi",
+            received_at=timezone.now() - timedelta(hours=hours_ago),
+        )
+    return inbox_account
+
+
+def test_an_account_without_a_floor_is_offered_removal_not_import(account_with_history):
+    assert account_with_history.can_clear_inbox_history
+    assert not account_with_history.can_import_inbox_history
+
+
+def test_an_account_with_a_floor_is_offered_import_not_removal(account):
+    assert account.can_import_inbox_history
+    assert not account.can_clear_inbox_history
+
+
+def test_remove_old_history_marks_the_job_running_and_queues_it(manager, account_with_history):
+    with patch("apps.inbox.tasks.clear_inbox_history") as task:
+        response = manager.post(_clear_url(account_with_history))
+
+    assert response.status_code == 302
+    task.assert_called_once_with(str(account_with_history.id))
+    account_with_history.refresh_from_db()
+    assert account_with_history.inbox_history_job_state == "running"
+    assert _stored(account_with_history) == {"before", "after"}
+
+
+def test_removing_keeps_what_came_after_the_connection_and_puts_the_floor_back(account_with_history):
+    from apps.inbox.models import InboxReply
+    from apps.inbox.tasks import clear_inbox_history
+
+    old = InboxMessage.objects.get(social_account=account_with_history, platform_message_id="before")
+    InboxReply.objects.create(inbox_message=old, body="thanks")
+    someone_elses = SocialAccount.objects.create(
+        workspace=account_with_history.workspace, platform="instagram", account_platform_id="ig-1", account_name="IG"
+    )
+    untouched = InboxMessage.objects.create(
+        workspace=someone_elses.workspace,
+        social_account=someone_elses,
+        platform_message_id="other-old",
+        message_type=InboxMessage.MessageType.COMMENT,
+        sender_name="Bo",
+        body="hey",
+        received_at=timezone.now() - timedelta(days=30),
+    )
+
+    clear_inbox_history.now(str(account_with_history.id))
+
+    assert _stored(account_with_history) == {"after"}
+    assert not InboxReply.objects.filter(inbox_message_id=old.id).exists()
+    assert InboxMessage.objects.filter(pk=untouched.pk).exists()
+    account_with_history.refresh_from_db()
+    assert account_with_history.inbox_history_cutoff == account_with_history.connected_at
+    assert account_with_history.inbox_history_job == {"action": "clear", "state": "done", "count": 1}
+    # And a later poll no longer brings the old message back.
+    _poll(account_with_history, [_msg("before", hours_ago=72), _msg("later", hours_ago=0)])
+    assert _stored(account_with_history) == {"after", "later"}
+
+
+# ------------------------------------------------------------------- the card
+
+
+def test_the_card_polls_while_a_job_runs_and_announces_how_it_ended(manager, account):
+    import json
+
+    account.set_inbox_history_job("import", "running")
+    running = _card(manager, account, was="running")
+    assert "every 4s" in running.content.decode()
+    assert "HX-Trigger" not in running
+
+    account.set_inbox_history_job("import", "done", count=3)
+    done = _card(manager, account, was="running")
+    assert "every 4s" not in done.content.decode()
+    toast = json.loads(done["HX-Trigger"])["showToast"]
+    assert toast["tone"] == "success" and "3" in toast["title"]
+    # Only the poll that was waiting announces it; opening the page later does not.
+    assert "HX-Trigger" not in _card(manager, account)
+
+    account.set_inbox_history_job("clear", "failed", error="")
+    failed = json.loads(_card(manager, account, was="running")["HX-Trigger"])["showToast"]
+    assert failed["tone"] == "error"
+
+
+def test_a_job_whose_worker_died_stops_blocking_the_account(account):
+    account.inbox_history_job = {
+        "action": "import",
+        "state": "running",
+        "started_at": (timezone.now() - timedelta(hours=2)).isoformat(),
+    }
+
+    assert account.inbox_history_job_state == ""
+    assert account.can_import_inbox_history
 
 
 def test_the_card_offers_the_import_only_while_there_is_a_floor_and_an_inbox_to_read(account):

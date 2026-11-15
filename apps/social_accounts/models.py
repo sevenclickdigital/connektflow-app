@@ -1,9 +1,11 @@
 import uuid
+from datetime import timedelta
 from typing import Any
 
 from django.conf import settings
 from django.db import models, router, transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext_lazy
 
@@ -181,6 +183,11 @@ class SocialAccount(models.Model):
     # means no floor: an account connected before the floor existed, or one
     # whose history was asked for ("Import history" on its card).
     inbox_history_cutoff = models.DateTimeField(blank=True, null=True)
+    # The last "Import history" / "Remove old history" asked of this account,
+    # so its card can say it is running, how it ended, or why it failed:
+    # {"action": "import"|"clear", "state": "running"|"done"|"failed",
+    #  "started_at": iso, "count": int, "error": str}. Null when never asked.
+    inbox_history_job = models.JSONField(blank=True, null=True)
     inbox_last_polled_at = models.DateTimeField(blank=True, null=True)
     inbox_last_deep_sweep_at = models.DateTimeField(blank=True, null=True)
     inbox_initial_backfill_cursor = models.TextField(blank=True, default="")
@@ -316,12 +323,45 @@ class SocialAccount(models.Model):
 
         return self.token_expires_within(timedelta(days=7))
 
+    # A job still "running" after this long lost its worker; the card stops
+    # waiting for it and offers the action again.
+    INBOX_HISTORY_JOB_TIMEOUT = timedelta(minutes=30)
+
     @property
-    def can_import_inbox_history(self) -> bool:
-        """Whether "Import history" has anything to do for this account."""
+    def inbox_history_job_state(self) -> str:
+        """``running``, ``done``, ``failed`` or "" for the account's last history job."""
+        job = self.inbox_history_job or {}
+        state = job.get("state", "")
+        if state != "running":
+            return state
+        started = parse_datetime(job.get("started_at") or "")
+        if started is None or started < timezone.now() - self.INBOX_HISTORY_JOB_TIMEOUT:
+            return ""
+        return "running"
+
+    def set_inbox_history_job(self, action: str, state: str, **details) -> None:
+        """Record where a history job stands, without touching the rest of the row."""
+        job = {"action": action, "state": state, **details}
+        if state == "running":
+            job["started_at"] = timezone.now().isoformat()
+        type(self).objects.filter(pk=self.pk).update(inbox_history_job=job)
+        self.inbox_history_job = job
+
+    @property
+    def _reads_inbox_history(self) -> bool:
         from providers import polls_inbox
 
-        return self.inbox_history_cutoff is not None and polls_inbox(self.platform)
+        return polls_inbox(self.platform) and self.inbox_history_job_state != "running"
+
+    @property
+    def can_import_inbox_history(self) -> bool:
+        """Whether "Import history" has anything to do: the inbox still has a floor."""
+        return self.inbox_history_cutoff is not None and self._reads_inbox_history
+
+    @property
+    def can_clear_inbox_history(self) -> bool:
+        """Whether "Remove old history" has anything to do: the inbox has no floor."""
+        return self.inbox_history_cutoff is None and self._reads_inbox_history
 
     @property
     def connect_flow(self) -> str:
