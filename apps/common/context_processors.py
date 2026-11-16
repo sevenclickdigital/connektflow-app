@@ -6,6 +6,7 @@ def sidebar_context(request):
 
     Provides:
         sidebar_workspaces: list of workspace objects the user belongs to
+        sidebar_org_groups: those workspaces by organization, for the switcher
         sidebar_unread_inbox_count: unread inbox messages, for the badge
     """
     if not hasattr(request, "user") or not request.user.is_authenticated:
@@ -22,10 +23,33 @@ def sidebar_context(request):
             user=request.user,
             workspace__is_archived=False,
         )
-        .select_related("workspace")
+        .select_related("workspace__organization")
         .order_by("workspace__name")
     )
     sidebar_workspaces = [wm.workspace for wm in workspace_memberships]
+
+    # The same brands under the organization each belongs to. The user's own
+    # organizations come first, in the order they joined them, each with
+    # whether they may create a brand in it; organizations they only visit
+    # as a guest of a brand follow.
+    groups = {}
+    for membership in getattr(request, "org_memberships", []):
+        groups[membership.organization_id] = {
+            "organization": membership.organization,
+            "workspaces": [],
+            "can_create": membership.org_role in ("owner", "admin"),
+        }
+    for ws in sidebar_workspaces:
+        group = groups.setdefault(
+            ws.organization_id, {"organization": ws.organization, "workspaces": [], "can_create": False}
+        )
+        group["workspaces"].append(ws)
+    # Whether the create-brand form is on the page at all: the user may
+    # create one in at least one of their organizations.
+    can_create_workspace = any(group["can_create"] for group in groups.values())
+    # The switcher only switches, so an organization with no brand to open
+    # is left out of it (it is still listed in the account centre).
+    sidebar_org_groups = [g for g in groups.values() if g["workspaces"]]
 
     workspace = getattr(request, "workspace", None)
 
@@ -63,12 +87,6 @@ def sidebar_context(request):
         sidebar_idea_columns = [{"id": str(g.id), "label": g.name} for g in groups] if groups.exists() else []
         sidebar_idea_tags = list(Tag.objects.for_workspace(workspace.id).values_list("name", flat=True))
 
-    # Workspace creation permission (org owners and admins only)
-    can_create_workspace = False
-    org_membership = getattr(request, "org_membership", None)
-    if org_membership and org_membership.org_role in ("owner", "admin"):
-        can_create_workspace = True
-
     # Trustpilot review ask: only for users with at least one connected channel,
     # in any of their workspaces, so pages without a workspace (settings,
     # members) don't make it flicker in and out. Closing it lasts until the
@@ -84,6 +102,8 @@ def sidebar_context(request):
 
     return {
         "sidebar_workspaces": sidebar_workspaces,
+        "sidebar_org_groups": sidebar_org_groups,
+        "can_create_organization": bool(getattr(request, "org_memberships", [])),
         "can_create_workspace": can_create_workspace,
         "sidebar_unread_inbox_count": sidebar_unread_inbox_count,
         "sidebar_pending_approvals": sidebar_pending_approvals,

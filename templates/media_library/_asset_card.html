@@ -10,7 +10,8 @@ checkbox shows its position in the selection, and the star button is dropped
 
 <div class="ml-asset-card group cursor-pointer overflow-hidden relative"
      {% if picker_mode %}
-     @click="toggle('{{ asset.id }}')"
+     data-asset-url="{% if asset.file %}{{ asset.file.url }}{% endif %}" data-asset-type="{{ asset.media_type }}"
+     @click="toggle('{{ asset.id }}', $el.dataset)"
      {% comment %}
      ``ml-asset-card-picked`` rather than a ring utility: the ring drew
      outside the border, so a picked card showed two outlines at once. This

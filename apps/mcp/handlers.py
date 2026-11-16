@@ -117,8 +117,8 @@ def _can_view_internal_notes(context: dict[str, Any]) -> bool:
     """Whether this MCP caller may see a post's team-only ``internal_notes``.
 
     Mirrors the REST router's check: visibility is gated on ``create_posts``,
-    the permission held by exactly the workspace roles the composer lets view
-    internal notes (i.e. not client/viewer). ``get_post`` isn't permission-
+    the permission held by exactly the workspace roles that may see internal
+    notes (i.e. not client/viewer). ``get_post`` isn't permission-
     gated, so without this an OAuth client/viewer could read team notes.
     """
     membership = context.get("membership")

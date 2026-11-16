@@ -1,0 +1,50 @@
+{% comment %}
+The media library as a window, opened by ``showMediaPicker`` on the page's
+Alpine scope and filled by HTMX the first time it is shown.
+
+Context: picker_open_url (the picker view for this page: the composer's or
+the idea board's), picker_layer (optional z-index class, when the window has
+to sit above another one).
+{% endcomment %}
+{% load i18n %}
+<div x-show="showMediaPicker" x-cloak
+     class="fixed inset-0 {{ picker_layer|default:"z-[60]" }} flex items-center justify-center"
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0">
+    <div class="absolute inset-0 bg-neutral-950/40 backdrop-blur-sm" @click="showMediaPicker = false"></div>
+    {% comment %}
+    Sized like the media library screen rather than a small dialog: this
+    holds the same search, folders, grid and pagination, and a selection
+    of several images needs the room. The body is a flex column so the
+    picker's own footer stays put while the grid scrolls under it.
+    {% endcomment %}
+    {% comment %}
+    Width is a plain max-w: Tailwind drops the inner calc() out of
+    w-[min(1100px,calc(100vw-4rem))], emitting the invalid
+    `min(1100px,100vw - 4rem)` and losing the width entirely.
+    {% endcomment %}
+    <div class="relative bg-white rounded-2xl shadow-xl border border-neutral-300 flex flex-col w-full max-w-[1100px] h-[calc(100vh-2rem)] sm:h-[85vh] mx-2 sm:mx-4 overflow-hidden"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100">
+        <div class="px-4 sm:px-6 py-4 border-b border-neutral-100 flex items-center justify-between shrink-0">
+            <h2 class="text-base font-semibold text-neutral-950">{% translate "Media Library" %}</h2>
+            <button @click="showMediaPicker = false"
+                    class="w-8 h-8 rounded-lg border border-neutral-300 text-neutral-500 hover:text-neutral-700 hover:border-neutral-400 flex items-center justify-center transition-all duration-150 cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="flex-1 min-h-0 flex flex-col"
+             hx-get="{{ picker_open_url }}"
+             hx-trigger="intersect once"
+             hx-swap="innerHTML">
+            <div class="flex items-center justify-center py-12 text-neutral-500">
+                <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            </div>
+        </div>
+    </div>
+</div>

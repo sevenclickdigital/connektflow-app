@@ -377,3 +377,91 @@ class PhotoLimitTests(MediaPickerTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("media", response.json()["errors"])
         self.assertFalse(post.platform_posts.exists())
+
+
+class IdeaMediaPickerTests(MediaPickerTestCase):
+    """The same window on the idea board hands the selection back to the page."""
+
+    def _url(self, workspace=None):
+        return reverse("composer:idea_media_picker", kwargs={"workspace_id": (workspace or self.workspace).id})
+
+    def test_the_window_and_its_grid_stay_on_the_idea_picker(self):
+        asset = self._asset()
+
+        response = self.client.get(self._url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["picker_target"], "idea")
+        page = response.content.decode()
+        # Each card says what the idea's window needs to show it once picked.
+        self.assertIn(f'data-asset-url="{asset.file.url}"', page)
+        # Uploads go to the idea's endpoint and nothing is attached to a post.
+        self.assertIn(reverse("composer:idea_upload_media", kwargs={"workspace_id": self.workspace.id}), page)
+        self.assertNotIn(reverse("composer:attach_media_batch", kwargs={"workspace_id": self.workspace.id}), page)
+        # Paginating or refreshing the grid must not fall back to the composer's picker.
+        grid = self.client.get(self._url(), headers={"HX-Target": "picker-asset-grid"}).content.decode()
+        self.assertIn(self._url(), grid)
+        self.assertNotIn(reverse("composer:media_picker", kwargs={"workspace_id": self.workspace.id}), grid)
+
+    def test_another_brand_cannot_open_it(self):
+        other_org = Organization.objects.create(name="Other Org")
+        other = Workspace.objects.create(organization=other_org, name="Other")
+
+        response = self.client.get(self._url(other))
+
+        self.assertIn(response.status_code, (403, 404))
+
+
+class IdeaCropTests(MediaPickerTestCase):
+    """Cropping an image of an idea makes a copy and describes it to the page."""
+
+    def _url(self, asset, workspace=None):
+        return reverse(
+            "composer:idea_crop_media",
+            kwargs={"workspace_id": (workspace or self.workspace).id, "asset_id": asset.id},
+        )
+
+    def test_a_missing_area_is_refused_and_nothing_is_created(self):
+        asset = self._asset()
+
+        response = self.client.post(self._url(asset), {})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(MediaAsset.objects.count(), 1)
+
+    def test_a_video_is_refused(self):
+        asset = self._asset("a.mp4", media_type=MediaAsset.MediaType.VIDEO)
+
+        response = self.client.post(self._url(asset), {"x": 0, "y": 0, "width": 10, "height": 10})
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_an_image_of_another_brand_is_not_found(self):
+        other_org = Organization.objects.create(name="Other Org")
+        other = Workspace.objects.create(organization=other_org, name="Other")
+        foreign = MediaAsset(
+            organization=other_org,
+            workspace=other,
+            filename="b.png",
+            media_type=MediaAsset.MediaType.IMAGE,
+            file_size=1,
+            processing_status=MediaAsset.ProcessingStatus.COMPLETED,
+        )
+        foreign.file = "media_library/2026/01/b.png"
+        foreign.save()
+
+        response = self.client.post(self._url(foreign), {"x": 0, "y": 0, "width": 10, "height": 10})
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(MediaAsset.objects.count(), 1)
+
+    def test_a_viewer_cannot_crop(self):
+        WorkspaceMembership.objects.filter(user=self.user, workspace=self.workspace).update(
+            workspace_role=WorkspaceMembership.WorkspaceRole.VIEWER
+        )
+        OrgMembership.objects.filter(user=self.user).update(org_role=OrgMembership.OrgRole.MEMBER)
+        asset = self._asset()
+
+        response = self.client.post(self._url(asset), {"x": 0, "y": 0, "width": 10, "height": 10})
+
+        self.assertEqual(response.status_code, 403)

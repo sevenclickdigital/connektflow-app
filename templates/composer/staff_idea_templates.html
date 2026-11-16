@@ -1,0 +1,81 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n idea_icons %}
+{% comment %}
+The shelf of idea templates: the ready-made starting points every brand sees
+in the create page's Templates tab. A table, because the operator is
+auditing a list (what is there, in which category, what is hidden), with a
+search and a category filter that reload the page.
+
+Access is is_staff (apps.composer.staff_views, through _staff_required).
+{% endcomment %}
+
+{% block title %}{% translate "Content templates" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="mb-4 lg:mb-[25px] flex flex-wrap items-start justify-between gap-4">
+  <div>
+    <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Content templates" %}</h1>
+    <p class="text-sm text-neutral-600 mt-1">{% translate "The ideas every brand finds in the Templates tab of the create page." %}</p>
+  </div>
+  <a href="{% url 'composer_staff:idea_template_create' %}" class="btn-brand whitespace-nowrap">
+    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    {% translate "New template" %}
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+{# The shell lays its content out as a column that shrinks its children; this keeps the table at full height. #}
+<div class="flex-shrink-0">
+<form method="get" class="flex flex-col sm:flex-row gap-3 mb-5">
+  <div class="relative flex-1">
+    <svg class="w-4 h-4 text-neutral-500 absolute pointer-events-none" style="left: 0.875rem; top: 50%; transform: translateY(-50%);" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <label for="idea_template_search" class="sr-only">{% translate "Search templates" %}</label>
+    <input type="search" id="idea_template_search" name="q" value="{{ query }}" placeholder="{% translate 'Search templates' %}…" class="form-input-styled w-full" style="padding-left: 2.5rem;">
+  </div>
+  <label for="idea_template_category" class="sr-only">{% translate "Category" %}</label>
+  <select id="idea_template_category" name="category" class="form-input-styled sm:w-64" onchange="this.form.submit()">
+    <option value="">{% translate "All categories" %} ({{ total }})</option>
+    {% for item in categories %}
+    <option value="{{ item.slug }}" {% if item.slug == category %}selected{% endif %}>{{ item.label }} ({{ item.count }})</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn-soft">{% translate "Search" %}</button>
+</form>
+
+<section class="a-card overflow-hidden">
+  <div class="px-5 py-4 border-b border-neutral-300">
+    <h2 class="text-base font-semibold text-neutral-950">{% blocktranslate count counter=templates|length %}{{ counter }} template{% plural %}{{ counter }} templates{% endblocktranslate %}</h2>
+    {% if hidden %}<p class="text-xs text-neutral-600 mt-0.5">{% blocktranslate count counter=hidden %}{{ counter }} is hidden from customers.{% plural %}{{ counter }} are hidden from customers.{% endblocktranslate %}</p>{% endif %}
+  </div>
+  {% if templates %}
+  <ul class="divide-y divide-neutral-200">
+    {% for item in templates %}
+    <li class="px-5 py-3 flex items-center gap-4 {% if not item.is_active %}opacity-60{% endif %}">
+      <span class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 icon-tone-{{ item.category|category_tone }}">
+        {% include "composer/partials/_template_category_icon.html" with slug=item.category size="w-5 h-5" %}
+      </span>
+      <div class="min-w-0 flex-1">
+        <div class="text-sm font-semibold text-neutral-950 truncate">{% if item.emoji %}<span aria-hidden="true">{{ item.emoji }}</span> {% endif %}{{ item.title }}</div>
+        <div class="text-xs text-neutral-600 truncate">{{ item.description }}</div>
+      </div>
+      <span class="pill icon-tone-{{ item.category|category_tone }} hidden sm:inline-flex">{{ item.get_category_display }}</span>
+      {% if not item.is_active %}<span class="pill pill-neutral"><i></i>{% translate "Hidden" %}</span>{% endif %}
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <a href="{% url 'composer_staff:idea_template_edit' template_id=item.id %}" class="btn-ghost py-1.5 px-3 text-xs">{% translate "Edit" %}</a>
+        <form method="post" action="{% url 'composer_staff:idea_template_toggle' template_id=item.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-ghost py-1.5 px-3 text-xs">{% if item.is_active %}{% translate "Hide" %}{% else %}{% translate "Show" %}{% endif %}</button>
+        </form>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="px-6 py-10 text-center">
+    <p class="text-sm text-neutral-500">{% translate "No template matches this search." %}</p>
+  </div>
+  {% endif %}
+</section>
+</div>
+{% endblock %}

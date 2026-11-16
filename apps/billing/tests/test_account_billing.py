@@ -22,6 +22,8 @@ def _names(response):
 def test_lists_the_brands_the_user_pays_for_and_nothing_else(client):
     user = User.objects.create_user(email="owner@a.com", password="x", tos_accepted_at=timezone.now())
     own_org = Organization.objects.create(name="Mine")
+    # The organization in use: the page is about one organization at a time.
+    OrgMembership.objects.filter(user=user).delete()
     OrgMembership.objects.create(user=user, organization=own_org, org_role=OrgMembership.OrgRole.OWNER)
     Workspace.objects.create(organization=own_org, name="Own brand")  # org owner, not a brand member
 

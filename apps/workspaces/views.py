@@ -2,6 +2,7 @@ from zoneinfo import available_timezones
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import Http404
 from django.shortcuts import redirect, render
@@ -9,7 +10,6 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.billing import services
-from apps.members.decorators import require_org_role
 from apps.members.models import OrgMembership, WorkspaceMembership
 
 from .models import Workspace
@@ -38,18 +38,24 @@ def workspace_list(request):
 
 @login_required
 @require_POST
-@require_org_role(OrgMembership.OrgRole.ADMIN)
 def workspace_create(request):
-    """Create a new workspace in the user's organization."""
+    """Create a new workspace in one of the user's organizations.
+
+    ``organization`` in the form names which one (the brand switcher lists
+    the brands by organization and creates inside each); without it, the
+    organization in use. Either way the user has to be its owner or admin.
+    """
     name = request.POST.get("name", "").strip()
     if not name:
         return redirect("dashboard")
 
-    if not request.org:
-        return redirect("dashboard")
+    wanted = request.POST.get("organization") or (str(request.org.id) if request.org else "")
+    membership = next((m for m in request.org_memberships if str(m.organization_id) == wanted), None)
+    if membership is None or membership.org_role not in (OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN):
+        raise PermissionDenied("Insufficient organization role.")
 
     workspace = Workspace.objects.create(
-        organization=request.org,
+        organization=membership.organization,
         name=name,
     )
 
@@ -141,6 +147,19 @@ def workspace_settings(request, workspace_id):
                 messages.success(request, _("Timezone updated."))
             return redirect("workspaces:settings", workspace_id=workspace.id)
 
+        if action == "update_segments" and is_owner_or_manager:
+            from django.core.exceptions import ValidationError
+
+            from apps.calendar.services import set_date_segments
+
+            try:
+                set_date_segments(workspace, request.POST.getlist("segments"))
+            except (ValidationError, ValueError):
+                messages.error(request, _("Invalid segment."))
+            else:
+                messages.success(request, _("Segments updated."))
+            return redirect("workspaces:settings", workspace_id=workspace.id)
+
         name = request.POST.get("name", "").strip()
 
         if name:
@@ -180,6 +199,8 @@ def workspace_settings(request, workspace_id):
     can_archive = is_owner_or_manager and not workspace.is_archived and not is_last_active
     can_delete = is_owner_or_manager and not is_last_active
 
+    from apps.calendar.services import date_segments_for
+
     return render(
         request,
         "workspaces/settings.html",
@@ -192,6 +213,7 @@ def workspace_settings(request, workspace_id):
             "brazil_timezones": BRAZIL_TIMEZONES,
             "timezone_is_brazilian": workspace.effective_timezone in dict(BRAZIL_TIMEZONES),
             "all_timezones": sorted(available_timezones()),
+            "date_segments": date_segments_for(workspace),
         },
     )
 

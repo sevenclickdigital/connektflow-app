@@ -1,0 +1,107 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+The shelf of special dates. Two kinds: global dates, which every brand sees
+on its calendar, and dates of a segment, which reach only the brands that
+chose it. The holidays that ship with the product are listed read-only at
+the end, so the operator does not add what is already there.
+
+Access is is_staff (apps.calendar.staff_views, through _staff_required).
+{% endcomment %}
+
+{% block title %}{% translate "Special dates" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="mb-4 lg:mb-[25px] flex flex-wrap items-start justify-between gap-4">
+  <div>
+    <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Special dates" %}</h1>
+    <p class="text-sm text-neutral-600 mt-1">{% translate "General dates reach every brand. A segment's dates reach the brands that chose it." %}</p>
+  </div>
+  <form method="post" action="{% url 'calendar_staff:segment_create' %}" class="flex items-center gap-2 shrink-0">
+    {% csrf_token %}
+    <label for="new_segment_emoji" class="sr-only">{% translate "Emoji" %}</label>
+    <input type="text" id="new_segment_emoji" name="emoji" maxlength="8" placeholder="🙂" class="form-input-styled w-16 text-center">
+    <label for="new_segment_name" class="sr-only">{% translate "Name of the new segment" %}</label>
+    <input type="text" id="new_segment_name" name="name" required maxlength="100" placeholder="{% translate 'Name of the new segment' %}" class="form-input-styled w-56">
+    <button type="submit" class="btn-brand whitespace-nowrap">{% translate "New segment" %}</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block content %}
+{# The shell lays its content out as a column that shrinks its children; this keeps the shelves at full height. #}
+<div class="flex-shrink-0">
+<section class="a-card overflow-hidden mb-6">
+  <div class="px-5 py-4 border-b border-neutral-300 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h2 class="text-base font-semibold text-neutral-950">{% translate "General dates" %}</h2>
+      <p class="text-xs text-neutral-600 mt-0.5">{% translate "Shown on every brand's calendar, like the holidays that come with the product." %}</p>
+    </div>
+  </div>
+  {% include "calendar/partials/_staff_date_rows.html" with dates=global_dates segment=None %}
+</section>
+
+{% for segment in segments %}
+<section class="a-card overflow-hidden mb-6 {% if not segment.is_active %}opacity-75{% endif %}" x-data="{ editing: false }">
+  <div class="px-5 py-4 border-b border-neutral-300 flex flex-wrap items-center gap-3">
+    <div class="flex-1 min-w-0" x-show="!editing">
+      <h2 class="text-base font-semibold text-neutral-950 flex flex-wrap items-center gap-2">
+        {% if segment.emoji %}<span aria-hidden="true">{{ segment.emoji }}</span>{% endif %}
+        <span class="truncate">{{ segment.name }}</span>
+        {% if segment.is_active %}
+        <span class="pill pill-success"><i></i>{% translate "On offer" %}</span>
+        {% else %}
+        <span class="pill pill-neutral"><i></i>{% translate "Hidden" %}</span>
+        {% endif %}
+      </h2>
+      <p class="text-xs text-neutral-600 mt-0.5">{% blocktranslate count counter=segment.brand_count %}{{ counter }} brand follows it.{% plural %}{{ counter }} brands follow it.{% endblocktranslate %}</p>
+    </div>
+    <form method="post" action="{% url 'calendar_staff:segment_update' segment_id=segment.id %}" x-show="editing" x-cloak class="flex-1 flex flex-wrap items-center gap-2">
+      {% csrf_token %}
+      <label for="segment_emoji_{{ segment.id }}" class="sr-only">{% translate "Emoji" %}</label>
+      <input type="text" id="segment_emoji_{{ segment.id }}" name="emoji" value="{{ segment.emoji }}" maxlength="8" class="form-input-styled w-16 text-center">
+      <label for="segment_name_{{ segment.id }}" class="sr-only">{% translate "Segment name" %}</label>
+      <input type="text" id="segment_name_{{ segment.id }}" name="name" value="{{ segment.name }}" required maxlength="100" class="form-input-styled flex-1 min-w-40">
+      <button type="submit" class="btn-brand">{% translate "Save" %}</button>
+      <button type="button" class="btn-ghost" @click="editing = false">{% translate "Cancel" %}</button>
+    </form>
+    <div class="flex items-center gap-2" x-show="!editing">
+      <button type="button" class="btn-ghost py-1.5 px-3 text-xs" @click="editing = true">{% translate "Edit" %}</button>
+      <form method="post" action="{% url 'calendar_staff:segment_update' segment_id=segment.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="is_active" value="{% if segment.is_active %}0{% else %}1{% endif %}">
+        <button type="submit" class="btn-ghost py-1.5 px-3 text-xs">{% if segment.is_active %}{% translate "Hide" %}{% else %}{% translate "Put on offer" %}{% endif %}</button>
+      </form>
+      <form method="post" action="{% url 'calendar_staff:segment_delete' segment_id=segment.id %}"
+            data-confirm="{% translate 'Delete this segment and all its dates? Brands that follow it lose them.' %}"
+            @submit="if (!confirm($el.dataset.confirm)) $event.preventDefault()">
+        {% csrf_token %}
+        <button type="submit" class="btn-danger-soft py-1.5 px-3 text-xs">{% translate "Delete" %}</button>
+      </form>
+    </div>
+  </div>
+  {% include "calendar/partials/_staff_date_rows.html" with dates=segment.dates.all segment=segment %}
+</section>
+{% empty %}
+<div class="a-card px-6 py-10 text-center mb-6">
+  <p class="text-sm text-neutral-500">{% translate "No segments yet. Create the first one above." %}</p>
+</div>
+{% endfor %}
+
+<section class="a-card overflow-hidden">
+  <div class="px-5 py-4 border-b border-neutral-300">
+    <h2 class="text-base font-semibold text-neutral-950">{% blocktranslate %}Dates that come with the product ({{ year }}){% endblocktranslate %}</h2>
+    <p class="text-xs text-neutral-600 mt-0.5">{% translate "Holidays and commercial dates built into the product, shown to every brand. They are not edited here." %}</p>
+  </div>
+  <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 px-5 py-3 text-sm text-neutral-800">
+    {% for entry in built_in_dates %}
+    <li class="py-1.5 flex items-center gap-2">
+      <span class="w-12 text-neutral-500 tabular-nums">{{ entry.date|date:"d/m" }}</span>
+      <span aria-hidden="true">{{ entry.emoji }}</span>
+      <span class="truncate">{{ entry.name }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+</div>
+{% endblock %}

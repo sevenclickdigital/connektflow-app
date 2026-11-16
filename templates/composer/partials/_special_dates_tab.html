@@ -1,0 +1,319 @@
+{% load i18n %}
+{% comment %}
+The special dates of the coming year for this brand. Three columns: a small
+month calendar with the categories and the brand's segments; the list of
+upcoming dates; and the panel of the date picked, with content ideas and the
+shortcut to start an idea for that day.
+
+Global dates are always there; a segment's dates join the list and the
+calendar once the brand chooses it.
+
+Expects: date_segments (apps.calendar.services.date_segments_for),
+special_dates_ahead and special_date_categories (same module), workspace.
+Runs inside the create page's Alpine scope (createIdeaForDate). The dates
+are drawn in the browser from the json_script below; every label in it was
+translated on the server.
+{% endcomment %}
+{{ special_dates_ahead|json_script:"special-dates-data" }}
+{{ special_date_categories|json_script:"special-dates-categories" }}
+
+<div x-data="specialDatesTab()" x-cloak>
+    {# Search and category filters #}
+    <div class="flex flex-col xl:flex-row xl:items-center gap-3 mb-5">
+        <div class="flex flex-wrap items-center gap-2 flex-1">
+            <button type="button" class="chip cursor-pointer" :class="category === '' && 'active'" @click="category = ''">{% translate "All" context "special dates" %}</button>
+            <template x-for="item in categories" :key="item.key">
+                <button type="button" class="chip cursor-pointer" :class="category === item.key && 'active'"
+                        x-show="count(item.key) > 0" @click="category = item.key">
+                    <span x-text="item.label"></span>
+                </button>
+            </template>
+        </div>
+        <div class="relative xl:w-80">
+            <svg class="w-4 h-4 text-neutral-500 absolute pointer-events-none" style="left: 0.875rem; top: 50%; transform: translateY(-50%);" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <label for="special_date_search" class="sr-only">{% translate "Search special date" %}</label>
+            <input type="search" id="special_date_search" x-model="query" placeholder="{% translate 'Search special date' %}…"
+                   class="form-input-styled w-full" style="padding-left: 2.5rem;">
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {# Left: month calendar, categories, segments #}
+        <div class="lg:col-span-3 flex flex-col gap-5">
+            <div class="a-card p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm font-semibold text-neutral-950 first-letter:uppercase" x-text="monthTitle"></span>
+                    <span class="flex items-center gap-1">
+                        <button type="button" class="btn-ghost p-1.5" @click="shiftMonth(-1)" :disabled="!canGoBack" aria-label="{% translate 'Previous month' %}">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                        </button>
+                        <button type="button" class="btn-ghost p-1.5" @click="shiftMonth(1)" :disabled="!canGoForward" aria-label="{% translate 'Next month' %}">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+                        </button>
+                    </span>
+                </div>
+                <div class="grid grid-cols-7 gap-y-1 text-center">
+                    {# Keyed by position: narrow weekday names repeat (two days start with the same letter). #}
+                    <template x-for="(name, index) in weekdays" :key="index">
+                        <span class="text-[10px] font-semibold uppercase text-neutral-500 pb-1" x-text="name"></span>
+                    </template>
+                    <template x-for="cell in monthCells" :key="cell.key">
+                        <button type="button" class="relative h-8 text-xs tabular-nums rounded-full"
+                                :class="cell.blank ? 'invisible' : (cell.iso === selectedIso ? 'bg-brand-700 text-white font-semibold' : (cell.dates.length ? 'text-neutral-950 font-semibold hover:bg-brand-50 cursor-pointer' : 'text-neutral-500 cursor-default'))"
+                                :disabled="cell.blank || !cell.dates.length"
+                                @click="select(cell.dates[0])">
+                            <span x-text="cell.day"></span>
+                            <span x-show="cell.dates.length && cell.iso !== selectedIso" class="absolute left-1/2 -translate-x-1/2 bottom-0.5 w-1 h-1 rounded-full bg-brand-700"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <div class="a-card p-4">
+                <h2 class="text-sm font-semibold text-neutral-950 mb-2">{% translate "Categories" %}</h2>
+                <ul class="flex flex-col">
+                    <template x-for="item in categories" :key="item.key">
+                        <li x-show="count(item.key) > 0">
+                            <button type="button" class="w-full flex items-center justify-between gap-2 py-1.5 text-sm cursor-pointer"
+                                    :class="category === item.key ? 'text-brand-800 font-semibold' : 'text-neutral-800 hover:text-neutral-950'"
+                                    @click="category = category === item.key ? '' : item.key">
+                                <span x-text="item.label"></span>
+                                <span class="pill pill-neutral tabular-nums" x-text="count(item.key)"></span>
+                            </button>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+            <div class="a-card p-4">
+                <h2 class="text-sm font-semibold text-neutral-950">{% translate "Your segments" %}</h2>
+                <p class="text-xs text-neutral-600 mt-0.5 mb-3">{% translate "Choose the segments your brand works in. Their dates join this list and your calendar." %}</p>
+                {% if date_segments %}
+                <div class="flex flex-wrap gap-2">
+                    {% for item in date_segments %}
+                    <form method="post" action="{% url 'calendar:date_segment_toggle' workspace_id=workspace.id segment_id=item.segment.id %}">
+                        {% csrf_token %}
+                        <button type="submit" aria-pressed="{{ item.chosen|yesno:'true,false' }}"
+                                class="chip cursor-pointer {% if item.chosen %}active{% endif %}">
+                            {% if item.segment.emoji %}<span aria-hidden="true">{{ item.segment.emoji }}</span>{% endif %}
+                            <span>{{ item.segment.name }}</span>
+                            {% if item.chosen %}
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
+                            {% endif %}
+                        </button>
+                    </form>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-neutral-500">{% translate "No segments available yet." %}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Centre: upcoming dates #}
+        <div class="lg:col-span-5">
+            <div class="flex items-baseline gap-2 mb-3">
+                <h2 class="text-sm font-semibold text-neutral-950">{% translate "Upcoming dates" %}</h2>
+                <span class="text-xs text-neutral-500 tabular-nums" x-text="visible.length"></span>
+            </div>
+            <div class="flex flex-col gap-3">
+                <template x-for="entry in visible" :key="entry.iso + entry.name">
+                    <div class="a-card a-card-hover p-4 flex items-center gap-4 cursor-pointer"
+                         :class="isSelected(entry) && 'ring-2 ring-brand-300'"
+                         @click="select(entry)">
+                        <div class="w-11 text-center flex-shrink-0">
+                            <div class="text-xl font-semibold text-neutral-950 tabular-nums leading-none" x-text="entry.day"></div>
+                            <div class="text-[10px] font-semibold uppercase text-neutral-500 mt-1" x-text="entry.month"></div>
+                        </div>
+                        <div class="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center text-xl flex-shrink-0" aria-hidden="true" x-text="entry.emoji"></div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span class="text-sm font-semibold text-neutral-950 truncate" x-text="entry.name"></span>
+                                <svg x-show="entry.favorite" class="w-3.5 h-3.5 text-brand-700 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                                <span class="pill" :class="pillClass(entry.kind)"><i></i><span x-text="entry.kind_label"></span></span>
+                                <span class="pill pill-neutral" x-show="entry.segment" x-text="entry.segment"></span>
+                                <span class="text-[11px] text-neutral-500" x-text="entry.when"></span>
+                            </div>
+                            <p class="text-xs text-neutral-600 mt-1 truncate" x-show="entry.description" x-text="entry.description"></p>
+                        </div>
+                        <button type="button" class="btn-soft py-1.5 px-3 text-xs flex-shrink-0"
+                                @click.stop="createIdeaForDate(entry.name, entry.iso, '')">{% translate "Create idea" %}</button>
+                    </div>
+                </template>
+                <div class="a-card px-6 py-10 text-center" x-show="!visible.length">
+                    <p class="text-sm text-neutral-500">{% translate "No date matches this search." %}</p>
+                </div>
+            </div>
+        </div>
+
+        {# Right: the date picked #}
+        <div class="lg:col-span-4 lg:sticky lg:top-4">
+            <template x-if="selected">
+                <div class="a-card overflow-hidden">
+                    {# The date's picture when the operator sent one; its emoji on the brand colour otherwise. #}
+                    <div class="h-40 relative flex items-center justify-center bg-brand-700 overflow-hidden">
+                        <template x-if="selected.image">
+                            <img :src="selected.image" alt="" class="absolute inset-0 w-full h-full object-cover">
+                        </template>
+                        <template x-if="!selected.image">
+                            <span class="text-7xl" aria-hidden="true" x-text="selected.emoji"></span>
+                        </template>
+                        <span class="pill absolute top-3 right-3 shadow-sm" :class="pillClass(selected.kind)"><i></i><span x-text="selected.kind_label"></span></span>
+                    </div>
+                    <div class="p-5">
+                        <h2 class="text-xl font-semibold text-neutral-950" x-text="selected.name"></h2>
+                        <p class="text-sm text-neutral-600 mt-1.5 flex flex-wrap items-center gap-x-2">
+                            <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                            <span x-text="selected.full_date"></span>
+                            <span aria-hidden="true">·</span>
+                            <span x-text="selected.when"></span>
+                        </p>
+                        <p class="text-sm text-neutral-700 mt-3 leading-relaxed" x-show="selected.description" x-text="selected.description"></p>
+
+                        <div class="mt-5 pt-5 border-t border-neutral-200" x-show="selected.suggestions.length">
+                            <h3 class="flex items-center gap-2 text-sm font-semibold text-neutral-950 mb-3">
+                                <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
+                                {% translate "Content suggestions" %}
+                            </h3>
+                            <ul class="flex flex-col gap-2">
+                                <template x-for="(text, index) in selected.suggestions" :key="text">
+                                    <li>
+                                        <button type="button" class="w-full flex items-center gap-3 text-left text-sm text-neutral-800 px-3 py-2.5 rounded-lg bg-brand-50 hover:bg-brand-100 hover:text-brand-900 cursor-pointer transition-colors"
+                                                @click="createIdeaForDate(selected.name + ' · ' + text, selected.iso, '')">
+                                            <svg class="w-4 h-4 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="suggestionIcon(index)"></svg>
+                                            <span x-text="text"></span>
+                                        </button>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+
+                        <div class="mt-5 pt-5 border-t border-neutral-200" x-show="selected.tags.length">
+                            <h3 class="flex items-center gap-2 text-sm font-semibold text-neutral-950 mb-3">
+                                <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01"/></svg>
+                                {% translate "Suggested tags" %}
+                            </h3>
+                            <div class="flex flex-wrap gap-1.5">
+                                <template x-for="tag in selected.tags" :key="tag">
+                                    <span class="pill pill-neutral" x-text="tag"></span>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="mt-5 pt-5 border-t border-neutral-200" x-show="selected.segment">
+                            <h3 class="flex items-center gap-2 text-sm font-semibold text-neutral-950 mb-3">
+                                <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1"/></svg>
+                                {% translate "Segment" %}
+                            </h3>
+                            <span class="pill pill-brand" x-text="selected.segment"></span>
+                        </div>
+
+                        <button type="button" class="btn-brand w-full mt-6" @click="createIdeaForDate(selected.name, selected.iso, '')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"/></svg>
+                            {% translate "Create idea with this theme" %}
+                        </button>
+                        <button type="button" class="btn-ghost w-full mt-2" @click="toggleFavorite(selected)" :aria-pressed="selected.favorite">
+                            <svg class="w-4 h-4" :fill="selected.favorite ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                            <span x-show="!selected.favorite">{% translate "Save to favorites" %}</span>
+                            <span x-show="selected.favorite">{% translate "Saved to favorites" %}</span>
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+function specialDatesTab() {
+    const dates = JSON.parse(document.getElementById('special-dates-data').textContent) || [];
+    const lang = document.documentElement.lang || undefined;
+    const monthFormat = new Intl.DateTimeFormat(lang, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    const weekdayFormat = new Intl.DateTimeFormat(lang, { weekday: 'narrow', timeZone: 'UTC' });
+    const monthOf = (iso) => iso.slice(0, 7);
+    const months = [...new Set(dates.map(d => monthOf(d.iso)))];
+    return {
+        dates,
+        categories: JSON.parse(document.getElementById('special-dates-categories').textContent) || [],
+        category: '',
+        query: '',
+        selected: dates[0] || null,
+        month: dates.length ? monthOf(dates[0].iso) : new Date().toISOString().slice(0, 7),
+        // 2024-01-01 was a Monday: seven days from it name the week.
+        weekdays: [...Array(7).keys()].map(i => weekdayFormat.format(new Date(Date.UTC(2024, 0, 1 + i)))),
+
+        get selectedIso() { return this.selected ? this.selected.iso : ''; },
+        isSelected(entry) { return this.selected === entry; },
+        inCategory(entry, key) {
+            if (key === 'segment') return !!entry.segment;
+            if (key === 'favorite') return entry.favorite;
+            return entry.kind === key;
+        },
+        // The inner paths of the icons beside the suggestions, taken in turn.
+        suggestionIcon(index) {
+            const icons = [
+                '<path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0012 2z"/>',
+                '<path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01"/>',
+                '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>',
+                '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/>',
+            ];
+            return icons[index % icons.length];
+        },
+        toggleFavorite(entry) {
+            const body = new URLSearchParams({ key: entry.key });
+            fetch('{% url "calendar:special_date_favorite" workspace_id=workspace.id %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+                body,
+            })
+                .then(response => (response.ok ? response.json() : null))
+                .then(data => {
+                    if (!data) return;
+                    // A date that repeats inside the 12 months is one favorite.
+                    this.dates.filter(d => d.key === entry.key).forEach(d => { d.favorite = data.favorite; });
+                });
+        },
+        count(key) { return this.dates.filter(d => this.inCategory(d, key)).length; },
+        get visible() {
+            const query = this.query.trim().toLowerCase();
+            return this.dates.filter(d =>
+                (!this.category || this.inCategory(d, this.category)) &&
+                (!query || (d.name + ' ' + d.segment + ' ' + d.description).toLowerCase().includes(query)));
+        },
+        pillClass(kind) {
+            return { commercial: 'pill-success', seasonal: 'pill-warning', national: 'pill-info', international: 'pill-brand' }[kind] || 'pill-neutral';
+        },
+        select(entry) {
+            if (!entry) return;
+            this.selected = entry;
+            this.month = monthOf(entry.iso);
+        },
+
+        get monthTitle() {
+            const [year, month] = this.month.split('-').map(Number);
+            return monthFormat.format(new Date(Date.UTC(year, month - 1, 1)));
+        },
+        get canGoBack() { return months.indexOf(this.month) > 0; },
+        get canGoForward() { const i = months.indexOf(this.month); return i > -1 && i < months.length - 1; },
+        shiftMonth(step) {
+            const next = months[months.indexOf(this.month) + step];
+            if (next) this.month = next;
+        },
+        get monthCells() {
+            const [year, month] = this.month.split('-').map(Number);
+            const first = new Date(Date.UTC(year, month - 1, 1));
+            const lead = (first.getUTCDay() + 6) % 7;
+            const length = new Date(Date.UTC(year, month, 0)).getUTCDate();
+            const cells = [];
+            for (let i = 0; i < lead; i++) cells.push({ key: 'blank-' + i, blank: true, day: '', iso: '', dates: [] });
+            for (let day = 1; day <= length; day++) {
+                const iso = this.month + '-' + String(day).padStart(2, '0');
+                cells.push({ key: iso, blank: false, day, iso, dates: this.dates.filter(d => d.iso === iso) });
+            }
+            return cells;
+        },
+    };
+}
+</script>

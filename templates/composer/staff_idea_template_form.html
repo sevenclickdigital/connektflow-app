@@ -1,0 +1,72 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+One idea template, created or edited by the operator. Deleting sits at the
+bottom, apart from saving. Access is is_staff (apps.composer.staff_views).
+{% endcomment %}
+
+{% block title %}{% if template %}{{ template.title }}{% else %}{% translate "New template" %}{% endif %} - {% translate "Content templates" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="mb-4 lg:mb-[25px]">
+  <a href="{% url 'composer_staff:idea_templates' %}" class="text-sm font-semibold text-brand-800 hover:text-brand-900">← {% translate "Content templates" %}</a>
+  <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950 mt-2" style="letter-spacing: -0.01em;">{% if template %}{% translate "Edit template" %}{% else %}{% translate "New template" %}{% endif %}</h1>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="flex-shrink-0 max-w-3xl">
+  <form method="post" class="a-card p-6 flex flex-col gap-5">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="flex flex-col sm:flex-row gap-4">
+      <div>
+        <label for="{{ form.emoji.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.emoji.label }}</label>
+        {{ form.emoji }}
+      </div>
+      <div class="flex-1">
+        <label for="{{ form.title.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.title.label }}</label>
+        {{ form.title }}
+        {% for error in form.title.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="sm:w-56">
+        <label for="{{ form.category.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.category.label }}</label>
+        {{ form.category }}
+      </div>
+    </div>
+    <div>
+      <label for="{{ form.description.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.description.label }}</label>
+      {{ form.description }}
+      <p class="text-xs text-neutral-600 mt-1">{{ form.description.help_text }}</p>
+      {% for error in form.description.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+    </div>
+    <div>
+      <label for="{{ form.body.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.body.label }}</label>
+      {{ form.body }}
+      <p class="text-xs text-neutral-600 mt-1">{{ form.body.help_text }}</p>
+    </div>
+    <label class="flex items-center gap-2 text-sm text-neutral-900 cursor-pointer">
+      {{ form.is_active }} {{ form.is_active.label }}
+    </label>
+    <div class="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200">
+      <a href="{% url 'composer_staff:idea_templates' %}" class="btn-ghost">{% translate "Cancel" %}</a>
+      <button type="submit" class="btn-brand">{% translate "Save" %}</button>
+    </div>
+  </form>
+
+  {% if template %}
+  <div class="a-card p-6 mt-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <p class="text-sm font-semibold text-neutral-950">{% translate "Delete this template" %}</p>
+      <p class="text-xs text-neutral-600 mt-0.5">{% translate "It leaves the Templates tab of every brand. To take it out for a while, hide it instead." %}</p>
+    </div>
+    <form method="post" action="{% url 'composer_staff:idea_template_delete' template_id=template.id %}"
+          data-confirm="{% translate 'Delete this template for every brand?' %}"
+          @submit="if (!confirm($el.dataset.confirm)) $event.preventDefault()">
+      {% csrf_token %}
+      <button type="submit" class="btn-danger-soft">{% translate "Delete" %}</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

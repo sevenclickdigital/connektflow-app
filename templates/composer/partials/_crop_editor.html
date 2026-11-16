@@ -1,0 +1,140 @@
+{% load i18n static %}
+{% comment %}
+The image editor: the window that crops one image, with the aspect-ratio
+presets. It sits inside a page's Alpine component, which takes the editor's
+state and gestures from ``window.cropEditorBase()`` (spread into it) and says
+itself what saving does, in its own ``saveCrop()`` — the composer swaps the
+copy into the post, the idea window into the idea. A component may also
+replace ``cropFormatNote()`` to say what the crop applies to.
+
+Opened with ``openCrop({ url, ... })``. Context: crop_layer (optional z-index
+class, when the window has to sit above another one).
+{% endcomment %}
+<link rel="stylesheet" href="{% static 'js/vendor/cropper.min.css' %}">
+<script src="{% static 'js/vendor/cropper.min.js' %}"></script>
+
+<div x-show="crop.open" x-cloak class="fixed inset-0 {{ crop_layer|default:"z-[70]" }} flex items-center justify-center"
+     @keydown.escape.window="crop.open && closeCrop()">
+    <div class="absolute inset-0 bg-neutral-950/40 backdrop-blur-sm" @click="closeCrop()"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl border border-neutral-300 flex flex-col overflow-hidden" style="width: calc(100vw - 1rem); max-width: 720px; max-height: 92vh;">
+        <div class="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-neutral-950">{% translate "Adjust image" %}</h2>
+            <button type="button" @click="closeCrop()" aria-label="{% translate 'Close' %}"
+                    class="w-8 h-8 rounded-lg border border-neutral-300 text-neutral-500 hover:text-neutral-700 flex items-center justify-center cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="px-5 pt-4 space-y-3 overflow-y-auto">
+            <p x-show="crop.target" class="text-xs text-neutral-600"
+               x-text="cropFormatNote()"></p>
+            <div class="rounded-xl bg-brand-50 border border-brand-100 px-4 py-2.5">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-brand-800">{% translate "Current size" %}</p>
+                <p class="text-sm font-semibold text-neutral-900 tabular-nums" x-text="crop.size"></p>
+            </div>
+            <div>
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-2">{% translate "Aspect ratio" %}</p>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <template x-for="preset in cropPresets()" :key="preset.key">
+                        <button type="button" @click="setCropRatio(preset)"
+                                class="rounded-lg border px-3 py-2 text-center cursor-pointer transition-colors"
+                                :class="crop.ratio === preset.key ? 'border-brand-500 bg-brand-50' : 'border-neutral-300 hover:border-neutral-400'">
+                            <span class="block text-sm font-semibold text-neutral-900" x-text="preset.label"></span>
+                            <span class="block text-[11px] text-neutral-500" x-text="preset.hint"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+            <div class="rounded-xl overflow-hidden bg-neutral-950" style="height: 360px;">
+                <img x-ref="cropImage" alt="" class="block max-w-full" style="max-height: 360px;">
+            </div>
+            <p x-show="crop.error" class="text-xs font-medium text-red-600" x-text="crop.error"></p>
+        </div>
+        <div class="px-5 py-4 border-t border-neutral-100 flex justify-end gap-2 mt-4">
+            <button type="button" @click="closeCrop()"
+                    class="px-4 py-2 rounded-full text-sm font-semibold text-neutral-800 bg-neutral-100 hover:bg-neutral-300 cursor-pointer">{% translate "Cancel" %}</button>
+            <button type="button" @click="saveCrop()" :disabled="crop.saving"
+                    class="px-4 py-2 rounded-full text-sm font-semibold text-white bg-brand-700 hover:bg-brand-800 cursor-pointer disabled:opacity-50">
+                <span x-text="crop.saving ? cropLabel('saving') : cropLabel('confirm')"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+{% translate "Confirm" as lbl_crop_confirm %}
+{% translate "Saving…" as lbl_crop_saving %}
+{% translate "Free" context "aspect ratio" as lbl_crop_free %}
+{% translate "Square" as lbl_crop_square %}
+{% translate "Stories" as lbl_crop_story %}
+{% translate "Portrait 4:5" as lbl_crop_portrait %}
+{% translate "Landscape 1.91:1" as lbl_crop_landscape %}
+{% translate "Landscape 4:3" as lbl_crop_landscape43 %}
+{% translate "Any size" as lbl_crop_any %}
+{{ lbl_crop_confirm|json_script:"crop-confirm" }}
+{{ lbl_crop_saving|json_script:"crop-saving" }}
+{{ lbl_crop_free|json_script:"crop-free" }}
+{{ lbl_crop_square|json_script:"crop-square" }}
+{{ lbl_crop_story|json_script:"crop-story" }}
+{{ lbl_crop_portrait|json_script:"crop-portrait" }}
+{{ lbl_crop_landscape|json_script:"crop-landscape" }}
+{{ lbl_crop_landscape43|json_script:"crop-landscape43" }}
+{{ lbl_crop_any|json_script:"crop-any" }}
+<script nonce="{{ request.csp_nonce }}">
+window.cropEditorBase = function () {
+    return {
+        crop: { open: false, url: '', cropUrl: '', assetId: '', target: '', size: '', ratio: 'free', saving: false, error: '' },
+        cropper: null,
+        cropLabel(id) {
+            const node = document.getElementById('crop-' + id);
+            return node ? JSON.parse(node.textContent) : '';
+        },
+        cropPresets() {
+            return [
+                { key: 'free', ratio: NaN, label: this.cropLabel('free'), hint: this.cropLabel('any') },
+                { key: 'square', ratio: 1, label: this.cropLabel('square'), hint: '1080 × 1080' },
+                { key: 'story', ratio: 9 / 16, label: this.cropLabel('story'), hint: '1080 × 1920' },
+                { key: 'portrait', ratio: 4 / 5, label: this.cropLabel('portrait'), hint: '1080 × 1350' },
+                { key: 'landscape', ratio: 1.91, label: this.cropLabel('landscape'), hint: '1080 × 566' },
+                { key: 'landscape43', ratio: 4 / 3, label: this.cropLabel('landscape43'), hint: '1080 × 810' },
+            ];
+        },
+        // What the crop applies to, when it is not the whole thing.
+        cropFormatNote() { return ''; },
+        // detail: { url, cropUrl?, assetId?, target?, ratio? }; ratio
+        // preselects a preset (e.g. 'story'). The rest is the page's own.
+        openCrop(detail) {
+            this.crop = {
+                open: true, url: detail.url, cropUrl: detail.cropUrl || '', assetId: detail.assetId || '',
+                target: detail.target || '', size: '', ratio: detail.ratio || 'free', saving: false, error: '',
+            };
+            this.$nextTick(() => {
+                const img = this.$refs.cropImage;
+                if (this.cropper) { this.cropper.destroy(); this.cropper = null; }
+                img.onload = () => {
+                    this.crop.size = img.naturalWidth + ' × ' + img.naturalHeight + ' · ' + this.ratioName(img.naturalWidth, img.naturalHeight);
+                    const preset = this.cropPresets().find(p => p.key === this.crop.ratio);
+                    this.cropper = new Cropper(img, {
+                        viewMode: 1,
+                        autoCropArea: 1,
+                        aspectRatio: preset ? preset.ratio : NaN,
+                        background: true,
+                    });
+                };
+                img.src = detail.url;
+            });
+        },
+        ratioName(w, h) {
+            const gcd = (a, b) => b ? gcd(b, a % b) : a;
+            const d = gcd(w, h) || 1;
+            return (w / d) + ':' + (h / d);
+        },
+        setCropRatio(preset) {
+            this.crop.ratio = preset.key;
+            if (this.cropper) this.cropper.setAspectRatio(preset.ratio);
+        },
+        closeCrop() {
+            if (this.cropper) { this.cropper.destroy(); this.cropper = null; }
+            this.crop.open = false;
+        },
+    };
+};
+</script>

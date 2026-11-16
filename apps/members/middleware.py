@@ -15,15 +15,16 @@ class RBACMiddleware:
     """Attach org and workspace context to the request.
 
     Sets:
-        request.org - the user's Organization (or None)
-        request.org_membership - the user's OrgMembership (or None)
+        request.org - the Organization in use (or None)
+        request.org_membership - the user's OrgMembership in it (or None)
+        request.org_memberships - every OrgMembership of the user
         request.workspace - the current Workspace (or None, set by views)
         request.workspace_membership - the WorkspaceMembership (or None)
 
-    Note: v1 supports one org per user. The query uses .first() which is
-    correct since unique_together=("user", "organization") and v1 only
-    creates one org membership per user. If multi-org is added later,
-    this must resolve org from URL or session context.
+    A user may belong to several organizations. The one in use is the
+    organization of the workspace they are in (from the URL, else the last
+    one they opened); without such a workspace, or when they are only a
+    guest of its organization, it is the organization they joined first.
 
     Resolution happens in process_view (not __call__) because
     request.resolver_match is only available after URL resolution,
@@ -37,6 +38,7 @@ class RBACMiddleware:
         # Initialize attributes; actual resolution happens in process_view
         request.org = None
         request.org_membership = None
+        request.org_memberships = []
         request.workspace = None
         request.workspace_membership = None
 
@@ -48,12 +50,9 @@ class RBACMiddleware:
         # resolution). Here we only resolve org directly and fall back to
         # last_workspace_id for global pages that have no workspace_id in the URL.
         if hasattr(request, "user") and request.user.is_authenticated:
-            # Resolve org membership.
-            # In v1, each user belongs to exactly one organization.
-            org_membership = OrgMembership.objects.filter(user=request.user).select_related("organization").first()
-            if org_membership:
-                request.org = org_membership.organization
-                request.org_membership = org_membership
+            request.org_memberships = list(
+                OrgMembership.objects.filter(user=request.user).select_related("organization").order_by("invited_at")
+            )
 
             # Fall back to last_workspace_id so global pages
             # (e.g. /notifications/) can still show workspace nav.
@@ -71,6 +70,17 @@ class RBACMiddleware:
                 if ws_membership:
                     request.workspace = ws_membership.workspace
                     request.workspace_membership = ws_membership
+
+            # The organization of that workspace when the user belongs to
+            # it, otherwise the first they joined.
+            current_org_id = request.workspace.organization_id if request.workspace else None
+            org_membership = next(
+                (m for m in request.org_memberships if m.organization_id == current_org_id),
+                request.org_memberships[0] if request.org_memberships else None,
+            )
+            if org_membership:
+                request.org = org_membership.organization
+                request.org_membership = org_membership
 
         return self.get_response(request)
 
@@ -113,16 +123,9 @@ class RBACMiddleware:
             request.user.last_workspace_id = ws_membership.workspace_id
             request.user.save(update_fields=["last_workspace_id"])
 
-        # Also resolve org from workspace for consistency
-        org = ws_membership.workspace.organization
-        org_membership = (
-            OrgMembership.objects.filter(
-                user=request.user,
-                organization=org,
-            )
-            .select_related("organization")
-            .first()
-        )
+        # The organization in use follows the workspace in the URL.
+        org_id = ws_membership.workspace.organization_id
+        org_membership = next((m for m in request.org_memberships if m.organization_id == org_id), None)
         if org_membership:
             request.org = org_membership.organization
             request.org_membership = org_membership

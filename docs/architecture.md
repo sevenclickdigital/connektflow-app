@@ -75,7 +75,7 @@ docker-compose.dokploy.yml                         # production
 
 - **Hierarchy:** `Organization` → `Workspace` → content (posts, accounts, media, inbox). A workspace is also the billable unit (§11).
 - **Roles** (`apps/members/models.py`): org roles `owner|admin|member`. Workspace roles `owner|manager|editor|contributor|client|viewer`.
-- **`RBACMiddleware`** (`apps/members/middleware.py`) attaches `request.org`, `request.org_membership`, `request.workspace` and `request.workspace_membership`. v1 assumes one org per user. It skips `/static/` and `/media/`.
+- **`RBACMiddleware`** (`apps/members/middleware.py`) attaches `request.org`, `request.org_membership`, `request.workspace` and `request.workspace_membership`. A user may belong to several organizations (`request.org_memberships`); `request.org` is the one of the workspace in the URL, else of the last workspace opened, else the first joined. It skips `/static/` and `/media/`.
 - **Data isolation is explicit, not automatic.** `apps/common/managers.py` provides `OrgScopedManager.for_org()` and `WorkspaceScopedManager.for_workspace()`. Views must call these themselves (or filter by workspace). Nothing filters querysets implicitly, and there is no PostgreSQL row-level security.
 - Workspace-scoped URLs follow the pattern `/workspace/<uuid:workspace_id>/...` (`config/urls.py`).
 - **Staff-only surfaces** (gated on `is_staff`, outside any workspace prefix): `/billing/staff/` (billing console, courtesy grants, impersonation log) and `/automations/staff/templates/` (flow template library). The impersonation rules are in `apps/accounts/impersonation.py`.

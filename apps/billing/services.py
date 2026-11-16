@@ -12,6 +12,7 @@ bytes.
 from __future__ import annotations
 
 import datetime
+import re
 import uuid
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
@@ -29,6 +30,7 @@ from apps.billing.models import (
     WorkspaceAddon,
     WorkspaceSubscription,
 )
+from apps.contacts.forms import is_valid_cnpj, is_valid_cpf
 
 # ---------------------------------------------------------------------------
 # Price list
@@ -508,6 +510,46 @@ def quote_workspace(workspace, cycle=WorkspaceSubscription.Cycle.MONTHLY):
 
 
 # ---------------------------------------------------------------------------
+# Payer identity — the organization's document and phone
+# ---------------------------------------------------------------------------
+
+
+def valid_tax_id(raw):
+    """CPF or CNPJ digits from what was typed, or "" when it is not one."""
+    digits = re.sub(r"\D", "", raw or "")
+    if (len(digits) == 11 and is_valid_cpf(digits)) or (len(digits) == 14 and is_valid_cnpj(digits)):
+        return digits
+    return ""
+
+
+def valid_phone(raw):
+    """Brazilian phone digits (area code + number), or "" when it is not one."""
+    digits = re.sub(r"\D", "", raw or "")
+    if len(digits) in (12, 13) and digits.startswith("55"):
+        digits = digits[2:]
+    return digits if len(digits) in (10, 11) else ""
+
+
+def set_payer_identity(organization, *, tax_id, phone):
+    """Record the organization's document and phone, given when it is named.
+
+    They are what its invoices are issued to and what the free trial asks
+    for, so they are collected once, with the organization's name.
+    """
+    profile = ensure_billing_profile(organization)
+    profile.tax_id = tax_id
+    profile.phone = phone
+    profile.save(update_fields=["tax_id", "phone", "updated_at"])
+    return profile
+
+
+def payer_identity_known(organization):
+    """Whether the organization's document and phone are on file."""
+    profile = ensure_billing_profile(organization)
+    return bool(profile.tax_id and profile.phone)
+
+
+# ---------------------------------------------------------------------------
 # Free trial
 # ---------------------------------------------------------------------------
 
@@ -521,17 +563,32 @@ def trial_days():
     return int(settings.BILLING_TRIAL_DAYS)
 
 
-def trial_available(workspace):
-    """Whether this workspace may start the account's free trial.
+def trial_available(workspace, user=None):
+    """Whether this workspace may start a free trial.
 
-    One trial per organization, for a workspace that was never contracted.
+    One trial per organization, for a workspace that was never contracted,
+    and one per person: ``user`` gets none when an organization they own
+    has already had its trial.
     """
     if trial_days() <= 0:
         return False
     sub = ensure_subscription(workspace)
     if sub.status != WorkspaceSubscription.Status.PENDING or sub.gateway_subscription_id or sub.trial_ends_at:
         return False
-    return ensure_billing_profile(workspace.organization).trial_started_at is None
+    profile = ensure_billing_profile(workspace.organization)
+    if profile.trial_started_at is not None:
+        return False
+    if user is None:
+        return True
+    return not (
+        OrganizationBillingProfile.objects.filter(
+            trial_started_at__isnull=False,
+            organization__memberships__user=user,
+            organization__memberships__org_role="owner",
+        )
+        .exclude(pk=profile.pk)
+        .exists()
+    )
 
 
 #: Mailbox providers anyone can open an address at. An address there says
@@ -605,7 +662,7 @@ def _trial_already_taken(profile, *, tax_id, phone, email):
     return OrganizationBillingProfile.objects.filter(taken).exclude(pk=profile.pk).exists()
 
 
-def start_trial(workspace, *, tax_id, phone, email=""):
+def start_trial(workspace, *, tax_id, phone, email="", user=None):
     """Open the account's free trial on ``workspace``.
 
     ``tax_id`` (CPF/CNPJ digits), ``phone`` and ``email`` are what the
@@ -620,7 +677,7 @@ def start_trial(workspace, *, tax_id, phone, email=""):
         profile = OrganizationBillingProfile.objects.select_for_update().get(
             pk=ensure_billing_profile(workspace.organization).pk
         )
-        if not trial_available(workspace):
+        if not trial_available(workspace, user):
             raise TrialRefusedError(_("This account has already used its free trial."))
         if _trial_already_taken(profile, tax_id=tax_id, phone=phone, email=email):
             raise TrialRefusedError(

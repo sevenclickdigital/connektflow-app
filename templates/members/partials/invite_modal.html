@@ -23,9 +23,28 @@
                   hx-target="#invitations-list"
                   hx-swap="beforeend"
                   data-inline-error="#invite-error"
-                  @htmx:after-request.window="if(event.detail.successful) { showInviteModal = false; document.getElementById('no-invites-placeholder')?.remove(); document.getElementById('invite-error').textContent = ''; }"
+                  @htmx:after-request="if(event.detail.successful) { showInviteModal = false; if (event.detail.xhr.status === 200) document.getElementById('no-invites-placeholder')?.remove(); document.getElementById('invite-error').textContent = ''; $el.reset(); organization = '{{ invite_orgs.0.organization.id }}'; }"
+                  x-data="{ organization: '{{ invite_orgs.0.organization.id }}' }"
                   class="px-6 py-5 overflow-y-auto">
                 {% csrf_token %}
+
+                {% comment %}
+                The organization comes first: it decides which brands can be
+                assigned below. With a single organization there is nothing
+                to choose, so it travels hidden.
+                {% endcomment %}
+                {% if invite_orgs|length > 1 %}
+                <div class="mb-5">
+                    <label for="invite-organization" class="block text-sm font-medium mb-1.5" style="color: var(--text-primary);">{% translate "Organization" %}</label>
+                    <select id="invite-organization" name="organization" x-model="organization" class="form-input-styled w-full">
+                        {% for group in invite_orgs %}
+                        <option value="{{ group.organization.id }}">{{ group.organization.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% else %}
+                <input type="hidden" name="organization" value="{{ invite_orgs.0.organization.id }}">
+                {% endif %}
 
                 <!-- Email -->
                 <div class="mb-5">
@@ -39,17 +58,19 @@
                 <div class="mb-5">
                     <label class="block text-sm font-medium mb-1.5" style="color: var(--text-primary);">{% translate "Organization Role" %}</label>
                     <div class="flex gap-4">
-                        {% for value, label in org_role_choices %}
-                        <div class="flex items-center">
-                            <input type="radio" name="org_role" value="{{ value }}" {% if value == "member" %}checked{% endif %}
-                                   id="invite-role-{{ value }}"
-                                   class="w-4 h-4 cursor-pointer"
-                                   style="accent-color: var(--primary);">
-                            <label for="invite-role-{{ value }}" class="select-none ms-2 text-sm font-medium cursor-pointer" style="color: var(--text-primary);">
-                                {{ label }}
-                            </label>
+                        {% for group in invite_orgs %}{% if group.can_grant_admin %}
+                        <div class="flex items-center" x-show="organization === '{{ group.organization.id }}'" x-cloak>
+                            <input type="radio" name="org_role" value="admin" id="invite-role-admin-{{ group.organization.id }}"
+                                   :disabled="organization !== '{{ group.organization.id }}'"
+                                   class="w-4 h-4 cursor-pointer" style="accent-color: var(--primary);">
+                            <label for="invite-role-admin-{{ group.organization.id }}" class="select-none ms-2 text-sm font-medium cursor-pointer" style="color: var(--text-primary);">{% translate "Admin" %}</label>
                         </div>
-                        {% endfor %}
+                        {% endif %}{% endfor %}
+                        <div class="flex items-center">
+                            <input type="radio" name="org_role" value="member" checked id="invite-role-member"
+                                   class="w-4 h-4 cursor-pointer" style="accent-color: var(--primary);">
+                            <label for="invite-role-member" class="select-none ms-2 text-sm font-medium cursor-pointer" style="color: var(--text-primary);">{% translate "Member" %}</label>
+                        </div>
                     </div>
                 </div>
 
@@ -58,10 +79,13 @@
                     <label class="block text-sm font-medium mb-1.5" style="color: var(--text-primary);">{% translate "Assign to Workspaces" %}</label>
                     <p class="text-xs mb-3" style="color: var(--text-tertiary);">{% translate "Select workspaces and roles for this team member." %}</p>
 
-                    <div class="space-y-2 max-h-48 overflow-y-auto">
-                        {% for ws in org_workspaces %}
+                    {% for group in invite_orgs %}
+                    {# Only the chosen organization's brands are sent: the others are disabled. #}
+                    <div class="space-y-2 max-h-48 overflow-y-auto" x-show="organization === '{{ group.organization.id }}'" x-cloak>
+                        {% for ws in group.workspaces %}
                         <div class="flex items-center gap-3 py-2 px-3 rounded-lg" style="background: var(--neutral-50);">
                             <input type="checkbox" name="ws_{{ ws.id }}" value="1" id="invite-ws-{{ ws.id }}"
+                                   :disabled="organization !== '{{ group.organization.id }}'"
                                    class="accent-brand-700 cursor-pointer">
                             <label for="invite-ws-{{ ws.id }}" class="flex-1 text-sm cursor-pointer" style="color: var(--text-primary);">
                                 {{ ws.name }}
@@ -74,8 +98,11 @@
                                 {% endfor %}
                             </select>
                         </div>
+                        {% empty %}
+                        <p class="text-sm py-2" style="color: var(--text-tertiary);">{% translate "This organization has no brands yet." %}</p>
                         {% endfor %}
                     </div>
+                    {% endfor %}
 
                     <p class="text-xs mt-2" style="color: var(--text-tertiary);">
                         {% translate "Tip: For external clients who only need portal access, use the Client Portal invite from workspace settings instead." %}

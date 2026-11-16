@@ -112,3 +112,66 @@ class WatchedProfile(WorkspaceScopedModel):
 
     def __str__(self):
         return f"@{self.username}"
+
+
+class MarketHashtag(models.Model):
+    """A hashtag in circulation in a line of business, offered to the brands
+    that follow that segment (or to every brand, without one).
+
+    Two sources. A ``manual`` one was typed by the operator; it is shown as
+    it is and is also a *seed*: the weekly collection reads the most popular
+    public posts carrying it on Instagram. A ``meta`` one came out of that
+    reading: a hashtag found beside the seeds, with ``posts`` saying in how
+    many of the posts read it appeared.
+    """
+
+    class Source(models.TextChoices):
+        MANUAL = "manual", _("Added by hand")
+        META = "meta", _("Found on Instagram")
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    segment = models.ForeignKey(
+        "calendar.DateSegment", on_delete=models.CASCADE, null=True, blank=True, related_name="market_hashtags"
+    )
+    tag = models.CharField(max_length=100)
+    source = models.CharField(max_length=8, choices=Source.choices, default=Source.MANUAL)
+    posts = models.PositiveIntegerField(default=0)
+    # For a seed: when it was last read on Instagram, and what went wrong if it could not be.
+    collected_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=300, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "radar_market_hashtag"
+        ordering = ["-posts", "tag"]
+        constraints = [
+            # One row per tag in a segment; the global shelf (no segment) counts as one too.
+            models.UniqueConstraint(fields=["segment", "tag"], name="uniq_market_hashtag", nulls_distinct=False),
+        ]
+
+    def __str__(self):
+        return f"#{self.tag}"
+
+
+class MarketHashtagCollector(models.Model):
+    """The one Instagram account the market hashtags are read through, and
+    how the last reading went. A single row (``load``).
+
+    Meta serves hashtag search only to an account connected with Facebook
+    Login, on an app with Instagram Public Content Access approved, and
+    counts 30 distinct hashtags per account in a rolling seven days.
+    """
+
+    account = models.ForeignKey(
+        "social_accounts.SocialAccount", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=300, blank=True, default="")
+
+    class Meta:
+        db_table = "radar_market_hashtag_collector"
+
+    @classmethod
+    def load(cls) -> "MarketHashtagCollector":
+        collector, _created = cls.objects.get_or_create(pk=1)
+        return collector

@@ -1,3 +1,4 @@
+{% load i18n idea_icons %}
 <div class="idea-card relative"
      data-idea-id="{{ idea.id }}"
      data-tags="{{ idea.tags_payload_json|escape }}"
@@ -6,7 +7,9 @@
      @dragstart="startDrag($event, '{{ idea.id }}')"
      @dragend="endDrag($event)"
      data-target-date="{{ idea.target_date|date:'Y-m-d' }}"
-     @click="openEdit('{{ idea.id }}', '{{ idea.title|escapejs }}', '{{ idea.description|escapejs }}', $el.dataset.tags, '{{ group_id }}', $el.dataset.media, $el.dataset.targetDate)">
+     data-icon="{{ idea.icon }}"
+     data-icon-tone="{{ idea.icon_tone }}"
+     @click="openEdit('{{ idea.id }}', '{{ idea.title|escapejs }}', '{{ idea.description|escapejs }}', $el.dataset.tags, '{{ group_id }}', $el.dataset.media, $el.dataset.targetDate, $el.dataset.icon, $el.dataset.iconTone)">
     {% if idea.cover_media and idea.cover_media.file %}
     <div class="-mx-3 -mt-3 mb-2 rounded-t-lg overflow-hidden flex items-center justify-center h-[120px]">
         {% if idea.cover_media.media_type == 'video' %}
@@ -21,21 +24,50 @@
         +{{ idea.media_count|add:"-1" }}
     </div>
     {% endif %}
-    <h4 class="text-sm font-semibold text-neutral-900 mb-1">{{ idea.title }}</h4>
-    {% if idea.description %}
-    <p class="text-xs text-neutral-600 line-clamp-2">{{ idea.description|truncatechars:120 }}</p>
-    {% endif %}
-    {% if idea.target_date %}
-    <div class="mt-2 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10.5px] font-semibold rounded bg-brand-50 text-brand-900">
-        <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        {{ idea.target_date|date:"d/m/Y" }}{% if idea.calendar_event %} · {{ idea.calendar_event.title }}{% endif %}
+    {% comment %}
+    The card: the idea's icon from the library (a lightbulb when none was
+    picked) on the colour picked for it, or the column's, the title, a menu, the tags as
+    pills and, at the foot, the date the idea is for and whether it already
+    went into production (became a post or an art request). The description
+    is read in the idea's own window.
+    {% endcomment %}
+    <div class="flex items-start gap-3">
+        <span class="idea-card-icon {% if idea.icon_tone %}icon-tone-{{ idea.icon_tone }}{% endif %}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{% idea_icon_markup idea.icon %}</svg>
+        </span>
+        <h4 class="flex-1 min-w-0 text-sm font-semibold text-neutral-950 leading-snug line-clamp-3 pt-0.5">{{ idea.title }}</h4>
+        {# The menu moves the card without dragging, which is how it reaches a closed column on a touch screen. #}
+        <div class="relative -mr-2 -mt-1 flex-shrink-0" x-data="{ open: false }" @click.stop>
+            <button type="button" class="w-7 h-7 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 flex items-center justify-center cursor-pointer"
+                    @click="open = !open" :aria-expanded="open.toString()" aria-label="{% translate 'Idea options' %}">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+            </button>
+            <div x-show="open" x-cloak @click.outside="open = false" x-transition
+                 class="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 min-w-[180px]">
+                <button type="button" class="w-full text-left px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50 cursor-pointer"
+                        @click="open = false; $el.closest('.idea-card').click()">{% translate "Open idea" %}</button>
+                <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500 border-t border-neutral-200 mt-1">{% translate "Move to" %}</div>
+                <template x-for="[groupId, label] in Object.entries(_columnMap)" :key="groupId">
+                    <button type="button" class="w-full text-left px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50 cursor-pointer"
+                            x-show="groupId !== $el.closest('.kanban-column').dataset.groupId"
+                            @click="open = false; moveIdeaTo('{{ idea.id }}', groupId)" x-text="label"></button>
+                </template>
+            </div>
+        </div>
     </div>
-    {% endif %}
     {% if idea.tags %}
-    <div class="flex flex-wrap gap-1 mt-2">
+    <div class="flex flex-wrap gap-1.5 mt-3">
         {% for tag in idea.tags %}
-        <span class="inline-block px-1.5 py-0.5 text-[10px] font-medium bg-neutral-100 text-neutral-600 rounded">{{ tag }}</span>
+        <span class="pill pill-brand">{{ tag }}</span>
         {% endfor %}
     </div>
     {% endif %}
+    <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-neutral-600">
+        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        {% if idea.target_date %}
+        <span class="tabular-nums">{{ idea.target_date|date:"j M" }}{% if idea.calendar_event %} · {{ idea.calendar_event.title }}{% endif %}</span>
+        {% else %}
+        <span>{% translate "No date" %}</span>
+        {% endif %}
+    </div>
 </div>

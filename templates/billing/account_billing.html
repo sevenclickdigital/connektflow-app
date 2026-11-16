@@ -12,15 +12,35 @@ detail: storage, add-ons, contracting.
 {% block page_header %}
 <div class="page-header">
     <div>
-        <h1 class="page-title">{% translate "Billing" %}</h1>
-        <p class="page-description">{% translate "Your plan, the brands you pay for and their payments." %}</p>
+        <h1 class="page-title">{% translate "Billing" %}{% if request.org %} · {{ request.org.name }}{% endif %}</h1>
+        <p class="page-description">{% translate "The organization pays; each of its brands is contracted on its own." %}</p>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
+{% if request.org %}
+{% comment %}
+Who is who on this page, said once at the top: the organization is the
+payer, the brands are what is paid for. Without it the two were easy to
+take for each other.
+{% endcomment %}
 <section class="mb-8">
-    <h2 class="section-title">{% translate "Brands" %}</h2>
+    <div class="a-card p-5 flex flex-wrap items-center gap-4">
+        <div class="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1"/></svg>
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="text-xs font-semibold uppercase tracking-wide text-neutral-500">{% translate "Organization" %}</div>
+            <div class="text-base font-semibold text-neutral-950 truncate">{{ request.org.name }}</div>
+            <p class="text-xs text-neutral-600 mt-0.5">{% translate "The invoices of the brands below are issued to this organization. To see another organization, open one of its brands." %}</p>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Brands of this organization" %}</h2>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="a-card p-5">
             <div class="text-sm text-neutral-600">{% translate "All brands" %}</div>
@@ -42,7 +62,7 @@ detail: storage, add-ons, contracting.
 </section>
 
 <section class="mb-8">
-    <h2 class="section-title">{% translate "Active plan" %}</h2>
+    <h2 class="section-title">{% translate "Plan of the organization" %}</h2>
     <div class="a-card grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-neutral-300">
         <div class="p-5">
             <div class="text-sm text-neutral-600">{% translate "Paid brands" %}</div>
@@ -61,7 +81,7 @@ detail: storage, add-ons, contracting.
 </section>
 
 <section class="mb-8">
-    <h2 class="section-title">{% translate "Your brands" %}</h2>
+    <h2 class="section-title">{% translate "Subscription of each brand" %}</h2>
     {% if rows %}
     <div class="a-card divide-y divide-neutral-300">
         {% for row in rows %}
@@ -71,13 +91,18 @@ detail: storage, add-ons, contracting.
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-semibold text-neutral-950 truncate">{{ row.workspace.name }}</div>
                 <div class="text-xs text-neutral-500 truncate">
-                    {{ row.workspace.organization.name }}
-                    {% if sub.in_trial %}
-                    · {% blocktranslate with date=sub.trial_ends_at|date:"d/m/Y" %}free trial until {{ date }}{% endblocktranslate %}
+                    {% if row.workspace.organization_id != request.org.id %}
+                    {% blocktranslate with name=row.workspace.organization.name %}Brand of another organization: {{ name }}{% endblocktranslate %}
+                    {% elif sub.in_trial %}
+                    {% blocktranslate with date=sub.trial_ends_at|date:"d/m/Y" %}Free trial until {{ date }}{% endblocktranslate %}
                     {% elif sub.trial_expired %}
-                    · {% translate "free trial ended" %}
+                    {% translate "Free trial ended" %}
                     {% elif sub.status == 'active' and sub.current_period_end %}
-                    · {% blocktranslate with date=sub.current_period_end|date:"d/m/Y" %}paid until {{ date }}{% endblocktranslate %}
+                    {% blocktranslate with date=sub.current_period_end|date:"d/m/Y" %}Paid until {{ date }}{% endblocktranslate %}
+                    {% elif sub.status == 'courtesy' %}
+                    {% translate "Not charged" %}
+                    {% else %}
+                    {% translate "Not contracted yet" %}
                     {% endif %}
                 </div>
             </div>
@@ -145,7 +170,7 @@ detail: storage, add-ons, contracting.
 {% if payer %}
 <section class="mb-8" x-data="{ editing: false }">
     <div class="flex items-center justify-between gap-4">
-        <h2 class="section-title">{% translate "Billing data" %}</h2>
+        <h2 class="section-title">{% translate "Billing data of the organization" %}</h2>
         <button type="button" class="btn-soft py-1.5 px-3 text-xs mb-3" @click="editing = true" x-show="!editing">{% translate "Edit data" %}</button>
     </div>
 

@@ -1,0 +1,6 @@
+{% load idea_icons %}
+{% comment %}
+The icon of a template category, from the idea icon library. Expects: slug
+(a value of IdeaTemplate.Category, or "all"), size (CSS classes, e.g. "w-5 h-5").
+{% endcomment %}
+<svg class="{{ size }}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{% category_icon_markup slug %}</svg>

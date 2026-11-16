@@ -1,0 +1,88 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+Market hashtags: what the operator typed for each segment, what the weekly
+reading found beside them on Instagram, and the account that reading goes
+through. The status card says plainly when Meta refuses the reading, since
+the feature it needs is granted in App Review.
+
+Access is is_staff (apps.radar.staff_views, through _staff_required).
+{% endcomment %}
+
+{% block title %}{% translate "Market hashtags" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="mb-4 lg:mb-[25px]">
+  <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Market hashtags" %}</h1>
+  <p class="text-sm text-neutral-600 mt-1">{% translate "The hashtags in circulation in each segment, shown to the brands that follow it in the Templates tab." %}</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="flex-shrink-0">
+<section class="a-card p-5 mb-6">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div class="min-w-0 flex-1">
+      <h2 class="text-base font-semibold text-neutral-950 flex flex-wrap items-center gap-2">
+        {% translate "Reading on Instagram" %}
+        {% if status.ok %}<span class="pill pill-success"><i></i>{% translate "Working" %}</span>{% else %}<span class="pill pill-warning"><i></i>{% translate "Not reading" %}</span>{% endif %}
+      </h2>
+      <p class="text-xs text-neutral-600 mt-1 max-w-2xl">{% blocktranslate %}Once a week, up to {{ seed_budget }} of the hashtags added by hand are read on Instagram: the most popular public posts of each, and which other hashtags appear beside it. Meta only allows this with the Instagram Public Content Access feature approved for the app, and limits each account to 30 hashtags a week.{% endblocktranslate %}</p>
+      {% if status.state %}<p class="alert-info mt-3 text-sm">{{ status.state }}</p>{% endif %}
+      {% if status.collector.last_run_at %}<p class="text-xs text-neutral-600 mt-2">{% blocktranslate with when=status.collector.last_run_at|date:"SHORT_DATETIME_FORMAT" %}Last reading: {{ when }}{% endblocktranslate %}</p>{% endif %}
+    </div>
+    <div class="flex flex-col gap-2 w-full sm:w-80">
+      <form method="post" action="{% url 'radar_staff:market_hashtag_account' %}" class="flex items-center gap-2">
+        {% csrf_token %}
+        <label for="collector_account" class="sr-only">{% translate "Instagram account to read through" %}</label>
+        <select id="collector_account" name="account" class="form-input-styled flex-1 min-w-0">
+          <option value="">{% translate "No account" %}</option>
+          {% for account in accounts %}
+          <option value="{{ account.id }}" {% if account.id == status.collector.account_id %}selected{% endif %}>{{ account.account_name }} · {{ account.workspace.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn-soft">{% translate "Save" %}</button>
+      </form>
+      <form method="post" action="{% url 'radar_staff:market_hashtag_collect' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-ghost w-full">{% translate "Read now" %}</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+{% for shelf in shelves %}
+<section class="a-card overflow-hidden mb-6">
+  <div class="px-5 py-4 border-b border-neutral-300">
+    <h2 class="text-base font-semibold text-neutral-950">
+      {% if shelf.segment %}{% if shelf.segment.emoji %}<span aria-hidden="true">{{ shelf.segment.emoji }}</span> {% endif %}{{ shelf.segment.name }}{% else %}{% translate "Every brand" %}{% endif %}
+    </h2>
+    {% if not shelf.segment %}<p class="text-xs text-neutral-600 mt-0.5">{% translate "Shown to every brand, whatever its segments." %}</p>{% endif %}
+  </div>
+  <div class="px-5 py-4 flex flex-wrap gap-2">
+    {% for item in shelf.hashtags %}
+    <form method="post" action="{% url 'radar_staff:market_hashtag_delete' hashtag_id=item.id %}" class="inline-flex">
+      {% csrf_token %}
+      <span class="pill {% if item.source == 'meta' %}pill-info{% else %}pill-brand{% endif %}"
+            title="{% if item.source == 'meta' %}{% blocktranslate count counter=item.posts %}Found in {{ counter }} popular post{% plural %}Found in {{ counter }} popular posts{% endblocktranslate %}{% elif item.last_error %}{{ item.last_error }}{% elif item.collected_at %}{% blocktranslate with when=item.collected_at|date:"SHORT_DATE_FORMAT" %}Read on {{ when }}{% endblocktranslate %}{% else %}{% translate "Added by hand, not read yet" %}{% endif %}">
+        #{{ item.tag }}
+        {% if item.source == 'meta' %}<span class="tabular-nums">{{ item.posts }}</span>{% endif %}
+        <button type="submit" class="cursor-pointer opacity-70 hover:opacity-100" aria-label="{% blocktranslate with name=item.tag %}Remove {{ name }}{% endblocktranslate %}">&times;</button>
+      </span>
+    </form>
+    {% empty %}
+    <p class="text-sm text-neutral-500">{% translate "No hashtags here yet." %}</p>
+    {% endfor %}
+  </div>
+  <form method="post" action="{% url 'radar_staff:market_hashtag_add' %}" class="px-5 py-3 border-t border-neutral-300 bg-neutral-50 flex flex-wrap items-center gap-2">
+    {% csrf_token %}
+    {% if shelf.segment %}<input type="hidden" name="segment" value="{{ shelf.segment.id }}">{% endif %}
+    <input type="text" name="tag" required maxlength="100" placeholder="#{% translate 'hashtag' %}" aria-label="{% translate 'Hashtag' %}" class="form-input-styled flex-1 min-w-40">
+    <button type="submit" class="btn-soft">{% translate "Add hashtag" %}</button>
+  </form>
+</section>
+{% endfor %}
+
+<p class="text-xs text-neutral-600 mb-6"><span class="pill pill-brand">#</span> {% translate "added by hand" %} &nbsp; <span class="pill pill-info">#</span> {% translate "found on Instagram, with the number of popular posts it appeared in" %}</p>
+</div>
+{% endblock %}

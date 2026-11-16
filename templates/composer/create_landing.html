@@ -7,31 +7,40 @@
 
 {% block extra_head %}
 <style>
-    /* Tab switcher (matches publish-tab pattern) */
-    .create-tab {
-        padding: 10px 16px; border-radius: 0;
-        font-size: 13px; font-weight: 600;
-        color: #64748B; background: transparent;
-        border: none; cursor: pointer;
-        transition: all 150ms ease;
-        position: relative;
-        border-bottom: 2px solid transparent;
-        margin-bottom: -1px;
-    }
-    .create-tab:hover { color: #0F172A; border-bottom-color: #CBD5E1; }
-    .create-tab.active { color: #5B21B6; border-bottom-color: #7C3AED; }
-
     /* Kanban board */
+    /* Open columns share the width of the board, never narrower than 220px
+       (below that the board scrolls sideways). */
     .kanban-column {
-        min-width: 260px;
-        width: 260px;
-        flex-shrink: 0;
+        min-width: 220px;
+        flex: 1 1 220px;
         display: flex;
         flex-direction: column;
-        background: #F5F3FF;
+        background: var(--kanban-tone-bg);
         border-radius: 12px;
-        min-height: 50vh;
-        max-height: calc(100vh - 200px);
+        /* The column runs to the bottom of the window without making the page
+           scroll: 244px are the header, the tag filter and the paddings under
+           the board. Its cards scroll inside it. */
+        height: calc(100vh - 244px);
+        min-height: 360px;
+    }
+    /* One soft tone per column, from the semantic tokens. */
+    .kanban-tone-brand   { --kanban-tone-bg: var(--brand-50);   --kanban-tone-badge: var(--brand-100);   --kanban-tone-ink: var(--brand-800); }
+    .kanban-tone-warning { --kanban-tone-bg: var(--warning-50); --kanban-tone-badge: color-mix(in srgb, var(--warning-500) 22%, white); --kanban-tone-ink: var(--warning-700); }
+    .kanban-tone-success { --kanban-tone-bg: var(--success-50); --kanban-tone-badge: color-mix(in srgb, var(--success-500) 20%, white); --kanban-tone-ink: var(--success-700); }
+    .kanban-tone-error   { --kanban-tone-bg: var(--error-50);   --kanban-tone-badge: color-mix(in srgb, var(--error-500) 18%, white);   --kanban-tone-ink: var(--error-700); }
+    .kanban-count { background: var(--kanban-tone-badge); color: var(--kanban-tone-ink); }
+    /* A closed column: a narrow strip with its name written downwards. */
+    .kanban-column.is-closed { min-width: 56px; flex: 0 0 56px; }
+    .kanban-column-strip {
+        flex: 1; width: 100%;
+        display: flex; flex-direction: column; align-items: center; gap: 12px;
+        padding: 14px 0; border-radius: 12px; cursor: pointer;
+    }
+    .kanban-column-strip:hover { background: var(--kanban-tone-badge); }
+    .kanban-column-strip-label {
+        writing-mode: vertical-rl;
+        font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+        color: var(--text-primary);
     }
     .kanban-cards {
         flex: 1;
@@ -59,6 +68,38 @@
         cursor: grab;
         transition: all 150ms ease;
     }
+    /* The card's icon takes the colour of the column it is in. */
+    .idea-card-icon {
+        width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+    }
+    /* Without a colour of its own, the icon takes the column's. */
+    .idea-card-icon:not([class*="icon-tone-"]) { background: var(--kanban-tone-badge); color: var(--kanban-tone-ink); }
+    /* The icon library, opened from the idea's window. */
+    .idea-icon-popup {
+        position: absolute; top: calc(100% + 6px); left: 0; z-index: 120;
+        padding: 10px; background: white; border: 1px solid var(--border);
+        border-radius: 12px; box-shadow: var(--shadow-lg);
+    }
+    .idea-icon-grid { display: grid; grid-template-columns: repeat(7, 36px); gap: 4px; }
+    .idea-icon-tones {
+        display: flex; align-items: center; gap: 8px;
+        margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border);
+    }
+    .idea-icon-tone {
+        width: 22px; height: 22px; border-radius: 9999px; cursor: pointer;
+        border: 2px solid white; box-shadow: 0 0 0 1px var(--border);
+    }
+    .idea-icon-tone.is-picked { box-shadow: 0 0 0 2px var(--brand-700); }
+    /* "The column's colour": neither tone, half and half. */
+    .idea-icon-tone-auto { background: linear-gradient(135deg, var(--neutral-100) 50%, var(--neutral-300) 50%); }
+    .idea-icon-option {
+        width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        color: var(--text-secondary);
+    }
+    .idea-icon-option:hover { background: var(--brand-50); color: var(--brand-700); }
+    .idea-icon-option.is-picked { background: var(--brand-100); color: var(--brand-800); }
     .idea-card:hover {
         border-color: #CBD5E1;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -155,12 +196,12 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 20px 50px 16px 24px;
+        padding: 20px 50px 12px 24px;
     }
     .idea-modal-body {
         flex: 1;
         overflow-y: auto;
-        padding: 0 24px 16px;
+        padding: 4px 24px 16px;
     }
     .idea-modal-footer {
         padding: 16px 24px;
@@ -170,82 +211,13 @@
         justify-content: flex-end;
         gap: 8px;
     }
-    .idea-media-zone {
-        border: 2px dashed var(--border);
-        border-radius: 12px;
-        padding: 24px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        color: var(--text-tertiary);
-        font-size: 0.8125rem;
-        max-width: 150px;
-        margin-top: 16px;
-        cursor: pointer;
-        transition: border-color 150ms, background 150ms;
-    }
-    .idea-media-zone.drag-over {
-        border-color: var(--primary);
-        background: color-mix(in srgb, var(--primary) 5%, transparent);
-    }
-    .idea-media-strip-layout {
-        margin-top: 16px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        align-items: flex-start;
-    }
-    .idea-media-zone.idea-media-zone-tile {
-        margin-top: 0;
-        width: 130px;
-        max-width: 130px;
-        min-height: 130px;
-        height: 130px;
-        padding: 14px 10px;
-    }
-    .idea-media-existing-card {
-        position: relative;
-        border-radius: 12px;
-        overflow: hidden;
-        border: 1px solid var(--border);
-        width: 130px;
-        height: 130px;
-        background: var(--neutral-100);
-    }
-    .idea-media-existing-card img,
-    .idea-media-existing-card video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-    }
-    .idea-media-existing-card .remove-btn {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        width: 38px;
-        height: 38px;
-        border: 2px solid #fff;
-        border-radius: 9999px;
-        background: rgba(38, 38, 38, 0.78);
-        color: #fff;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-        transition: background 150ms;
-    }
-    .idea-media-existing-card .remove-btn:hover {
-        background: rgba(23, 23, 23, 0.9);
-    }
-    @media (max-width: 640px) {
-        .idea-media-strip-layout {
-            gap: 10px;
-        }
-    }
+    {% include "composer/partials/_media_thumb_styles.html" %}
+    /* The idea's media row: the composer's thumbnails and "Add" tile. */
+    .idea-media-row { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+    .idea-media-row .media-thumb { cursor: default; background: var(--neutral-100); }
+    .idea-media-row .media-thumb video { width: 100%; height: 100%; object-fit: cover; }
+    .idea-media-row .media-thumb.is-moving { opacity: 0.4; }
+    .idea-media-row .media-thumb.is-drop-target { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-ring); }
     .idea-selected-tags {
         display: flex;
         flex-wrap: wrap;
@@ -315,41 +287,50 @@
 {% endblock %}
 
 {% block content %}
+{{ idea_icons|json_script:"idea-icons-data" }}
 <div x-data="kanbanBoard()" class="-m-6"
+     @media-picked.camel.window="addPickedMedia($event.detail.assets)"
      @use-builtin-template.window="openTemplate($event.detail.id)">
 
-    <!-- Page header -->
-    <div class="w-full min-h-[60px] inline-flex flex-row justify-between items-center px-6 pt-6 pb-0 mb-6">
-        <h1 class="text-2xl font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Create" %}</h1>
-
-        <!-- + New Idea -->
-        <button x-show="activeTab === 'ideas'" x-cloak
-                @click="showCreateModal = true; createSelectedGroup = _defaultGroupId"
-                class="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-brand-800 bg-brand-50 border border-brand-200 rounded-full hover:bg-brand-100 hover:border-brand-300 active:bg-brand-100 transition-all duration-150 cursor-pointer">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            {% translate "New Idea" %}
-        </button>        
-    </div>
-
-    <!-- Toolbar -->
-    <div class="px-6 pb-0 flex items-center gap-4 border-b border-neutral-300">
-
-        <!-- Tab switcher -->
-        <div class="flex items-center gap-1 -mb-px">
-            <button @click="activeTab = 'ideas'"
-                    class="create-tab" :class="activeTab === 'ideas' && 'active'">
-                {% translate "Ideas" %}
-            </button>
-            <button @click="activeTab = 'templates'"
-                    class="create-tab" :class="activeTab === 'templates' && 'active'">
-                {% translate "Templates" %}
-            </button>
-            <button @click="activeTab = 'feeds'"
-                    class="create-tab" :class="activeTab === 'feeds' && 'active'">
-                {% translate "Feeds" %}
-            </button>
+    {% comment %}
+    Ideas, Templates and Special dates are three pages of the same area: each
+    has its own address and its own header, and the links below move between
+    them. Only the page asked for is rendered.
+    {% endcomment %}
+    <div class="w-full flex flex-wrap items-center justify-between gap-4 px-6 pt-6 pb-0 mb-5">
+        <div class="flex items-center gap-4 min-w-0">
+            <div class="min-w-0">
+                <h1 class="text-2xl font-semibold text-neutral-950" style="letter-spacing: -0.01em;">
+                    {% if tab == "templates" %}{% translate "Content templates" %}{% elif tab == "dates" %}{% translate "Special dates" %}{% else %}{% translate "Idea hub" %}{% endif %}
+                </h1>
+                <p class="text-sm text-neutral-600 mt-0.5">
+                    {% if tab == "templates" %}{% translate "Ready-made starting points to make your own and publish." %}{% elif tab == "dates" %}{% translate "Find special dates and use them to create content that matters to your audience." %}{% else %}{% translate "Keep, organise and develop the ideas for your next content." %}{% endif %}
+                </p>
+            </div>
         </div>
 
+        <div class="flex flex-wrap items-center gap-3">
+            {# The three pages of the area, switched like the calendar's List / Calendar / Board. #}
+            <nav class="a-pill-group" aria-label="{% translate 'Pages of the create area' %}">
+                <a href="{% url 'composer:create_landing' workspace_id=workspace.id %}" class="{% if tab == 'ideas' %}active{% endif %}" {% if tab == 'ideas' %}aria-current="page"{% endif %}>
+                    <svg class="w-3.5 h-3.5 inline -mt-px mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0012 2z"/></svg>
+                    {% translate "Ideas" %}
+                </a>
+                <a href="{% url 'composer:create_templates' workspace_id=workspace.id %}" class="{% if tab == 'templates' %}active{% endif %}" {% if tab == 'templates' %}aria-current="page"{% endif %}>
+                    <svg class="w-3.5 h-3.5 inline -mt-px mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    {% translate "Templates" %}
+                </a>
+                <a href="{% url 'composer:create_dates' workspace_id=workspace.id %}" class="{% if tab == 'dates' %}active{% endif %}" {% if tab == 'dates' %}aria-current="page"{% endif %}>
+                    <svg class="w-3.5 h-3.5 inline -mt-px mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                    {% translate "Special dates" %}
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    {# The tag filter belongs to the idea board only. #}
+    {% if tab == "ideas" %}
+    <div class="px-6 flex items-center gap-4">
         <div class="flex items-center gap-3 ml-auto">
             <!-- Tag filter -->
             {% if active_tag %}
@@ -361,7 +342,7 @@
             </div>
             {% endif %}
 
-            <div class="relative" x-show="activeTab === 'ideas'" x-data="{ tagFilterOpen: false, tagFilterSearch: '', showCreateTagModal: false, newTagName: '' }">
+            <div class="relative" x-data="{ tagFilterOpen: false, tagFilterSearch: '', showCreateTagModal: false, newTagName: '' }">
                 <button @click="tagFilterOpen = !tagFilterOpen; if(tagFilterOpen) $nextTick(() => $refs.tagFilterSearchInput.focus())"
                         class="flex items-center gap-1.5 px-3 py-1.5 mb-2 text-xs font-semibold text-neutral-600 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-all duration-150 cursor-pointer">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
@@ -430,36 +411,28 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
-    <!-- Tab content -->
+    <!-- The page asked for -->
     <div class="p-6">
-        <!-- Ideas tab -->
-        <div x-show="activeTab === 'ideas'">
-            {% include "composer/partials/_upcoming_dates.html" %}
-            <div id="kanban-board">
+        {% if tab == "templates" %}
+        {% include "composer/partials/template_gallery.html" %}
+        {% elif tab == "dates" %}
+        {% include "composer/partials/_special_dates_tab.html" %}
+        {% else %}
+        {% comment %}
+        The board and, beside it, the dates and tags. The panel sits outside
+        #kanban-board, which is replaced whole when the board is refreshed.
+        {% endcomment %}
+        <div class="flex flex-col xl:flex-row gap-5 items-start">
+            <div id="kanban-board" class="flex-1 min-w-0 w-full">
                 {% include "composer/partials/kanban_board.html" %}
             </div>
+            <aside class="w-full xl:w-[300px] flex-shrink-0 flex flex-col gap-5">
+                {% include "composer/partials/_ideas_side_panel.html" %}
+            </aside>
         </div>
-
-        <!-- Templates tab -->
-        <div x-show="activeTab === 'templates'" x-cloak
-             class="overflow-y-auto -mx-6 -mb-6 px-6 pb-6"
-             style="max-height: calc(100vh - 160px);">
-            {% include "composer/partials/template_gallery.html" %}
-        </div>
-
-        <!-- Feeds tab -->
-        <div x-show="activeTab === 'feeds'" x-cloak
-             class="h-[calc(100vh-160px)] overflow-hidden"
-             @open-explore.window="showExploreModal = true; $nextTick(() => htmx.trigger(document.getElementById('explore-feeds-content'), 'load'))">
-            <div id="feeds-tab-content"
-                 class="h-full"
-                 hx-get="{% url 'composer:feed_list' workspace_id=workspace.id %}"
-                 hx-trigger="intersect once, feedsUpdated from:body"
-                 hx-swap="innerHTML">
-                {% include "composer/partials/feeds_tab.html" %}
-            </div>
-        </div>
+        {% endif %}
     </div>
 
     <!-- Explore Feeds Modal -->
@@ -510,129 +483,182 @@
                 <!-- Header -->
                 <div class="idea-modal-header">
                     <h2 class="text-lg font-semibold" style="color: var(--text-primary);">{% translate "Create Idea" %}</h2>
-                    <div class="flex items-center gap-2">
-                        <!-- Column selector dropdown -->
-                        <div class="relative" @click.away="createGroupDropdownOpen = false">
-                            <button type="button" class="idea-pill-btn" @click="createGroupDropdownOpen = !createGroupDropdownOpen; createTagDropdownOpen = false">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                                <span x-text="createGroupLabel()"></span>
-                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                            </button>
-                            <div x-show="createGroupDropdownOpen" x-cloak x-transition class="idea-pill-dropdown">
-                                {% for col in columns %}
-                                <button type="button"
-                                        @click="createSelectedGroup = '{{ col.id }}'; createGroupDropdownOpen = false"
-                                        :class="createSelectedGroup === '{{ col.id }}' && 'font-semibold'">
-                                    <span>{{ col.label }}</span>
-                                    <svg x-show="createSelectedGroup === '{{ col.id }}'" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" class="ml-auto" style="color: var(--primary);"><polyline points="20 6 9 17 4 12"/></svg>
-                                </button>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <!-- Tags dropdown -->
-                        <div class="relative" @click.away="createTagDropdownOpen = false">
-                            <button type="button" class="idea-pill-btn" @click="createTagDropdownOpen = !createTagDropdownOpen; createGroupDropdownOpen = false; if(createTagDropdownOpen) $nextTick(() => $refs.createTagSearchInput.focus())">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                                <span>{% translate "Tags" %}</span>
-                                <span x-show="createSelectedTags.length" class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold text-white" style="background: var(--primary);" x-text="createSelectedTags.length"></span>
-                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                            </button>
-                            <div x-show="createTagDropdownOpen" x-cloak x-transition class="idea-pill-dropdown">
-                                <!-- Search input -->
-                                <div style="padding: 4px 6px; border-bottom: 1px solid var(--border);">
-                                    <input type="text" x-ref="createTagSearchInput" x-model="createTagSearch"
-                                           @keydown.enter.prevent="if (createTagSearch.trim() && !filteredCreateTags.includes(createTagSearch.trim())) { persistAndToggleCreateTag(createTagSearch.trim()); } else if (filteredCreateTags.length === 1) { toggleCreateTag(filteredCreateTags[0]); createTagSearch = ''; }"
-                                           class="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                                           style="border-color: var(--border);"
-                                           placeholder="{% translate 'Search or create tag...' %}">
-                                </div>
-                                <!-- Filtered tag list -->
-                                <template x-for="tag in filteredCreateTags" :key="tag">
-                                    <label>
-                                        <input type="checkbox" class="rounded accent-brand-700"
-                                               :checked="createSelectedTags.includes(tag)"
-                                               @change="toggleCreateTag(tag)">
-                                        <span x-text="tag"></span>
-                                    </label>
-                                </template>
-                                <template x-if="!createTagSearch.trim() && !allTags.length">
-                                    <div class="px-3 py-2 text-xs" style="color: var(--text-tertiary);">{% translate "No tags yet. Type to create one." %}</div>
-                                </template>
-                                <!-- Create new tag -->
-                                <template x-if="createTagSearch.trim() && !filteredCreateTags.includes(createTagSearch.trim())">
-                                    <div class="border-t" style="border-color: var(--border); margin-top: 2px; padding-top: 2px;">
-                                        <button type="button" @click="persistAndToggleCreateTag(createTagSearch.trim())"
-                                                style="color: var(--primary);">
-                                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                            {% translate "Create" %} “<span x-text="createTagSearch.trim()"></span>”
-                                        </button>
-                                    </div>
-                                </template>
-                                <div class="border-t border-neutral-100 px-1 py-1">
-                                    <button type="button" @click="openIdeaCreateTagModal('create')"
-                                            class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
-                                        <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                        {% translate "Create new tag" %}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
-
-                <!-- Selected tags chips -->
-                <template x-if="createSelectedTags.length > 0">
-                    <div class="idea-selected-tags" style="padding: 0 24px 8px;">
-                        <template x-for="tag in createSelectedTags" :key="tag">
-                            <span class="idea-tag-chip">
-                                <span x-text="tag"></span>
-                                <button type="button" @click="toggleCreateTag(tag)">
-                                    <svg width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                </button>
-                            </span>
-                        </template>
-                    </div>
-                </template>
 
                 <!-- Body -->
                 <div class="idea-modal-body" @click="createGroupDropdownOpen = false; createTagDropdownOpen = false">
-                    <input type="text" name="title" required class="idea-title-input" placeholder="{% translate 'Give your idea a title' %}">
-                    <label class="idea-date-row">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        <span>{% translate "Content date" %}</span>
-                        <input type="date" name="target_date" :value="createTargetDate">
-                    </label>
-                    <textarea name="description" class="idea-desc-input" placeholder="{% translate 'Let it flow... or' %}"></textarea>
-                    <input type="file" name="media" x-ref="ideaFileInput" accept="image/*,video/*,.gif" style="display:none" multiple
-                           @change="_handleFileSelect($event)">
-
-                    <div class="idea-media-strip-layout">
-                        <template x-for="(media, index) in createMediaAssets" :key="media.asset_id + '-' + index">
-                            <div class="idea-media-existing-card">
-                                <template x-if="media.media_type === 'video'">
-                                    <video :src="media.url" muted playsinline preload="metadata"></video>
+                    {% comment %}
+                    The idea's icon, beside its title: a button showing the one
+                    picked (the default one when none) that opens the icon library.
+                    Its slug travels in the hidden ``icon`` field.
+                    {% endcomment %}
+                    <div class="flex items-start gap-3">
+                        <div class="relative flex-shrink-0" @click.stop>
+                            <input type="hidden" name="icon" :value="createIcon">
+                            <input type="hidden" name="icon_tone" :value="createIconTone">
+                            <button type="button" class="w-10 h-10 rounded-xl hover:brightness-95 flex items-center justify-center cursor-pointer"
+                                    :class="'icon-tone-' + ((createIconTone) || 'brand')"
+                                    @click="iconPickerOpen = iconPickerOpen === 'create' ? '' : 'create'"
+                                    title="{% translate 'Choose an icon' %}" aria-label="{% translate 'Choose an icon' %}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="ideaIconMarkup(createIcon)"></svg>
+                            </button>
+                            <div x-show="iconPickerOpen === 'create'" x-cloak @click.away="iconPickerOpen = ''" class="idea-icon-popup">
+                                <div class="idea-icon-grid">
+                                <template x-for="item in _ideaIcons" :key="'create-' + item.slug">
+                                    <button type="button" class="idea-icon-option" :class="(createIcon || '') === item.slug && 'is-picked'"
+                                            @click.stop="createIcon = item.slug; iconPickerOpen = ''" :title="item.label" :aria-label="item.label">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="item.markup"></svg>
+                                    </button>
                                 </template>
-                                <template x-if="media.media_type !== 'video'">
-                                    <img :src="media.url" alt="{% translate 'Preview' %}">
-                                </template>
-                                <button type="button" class="remove-btn" @click="_removeCreateMedia(index)" title="{% translate 'Remove' %}">
-                                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                </button>
+                                </div>
+                                {# The colour: one of the tones, or the column's (the first swatch). #}
+                                <div class="idea-icon-tones">
+                                    <span class="text-xs font-semibold text-neutral-600 mr-1">{% translate "Colour" %}</span>
+                                    <button type="button" class="idea-icon-tone idea-icon-tone-auto" :class="!(createIconTone) && 'is-picked'"
+                                            @click.stop="createIconTone = ''" title="{% translate 'Colour of the column' %}" aria-label="{% translate 'Colour of the column' %}"></button>
+                                    {% for tone in idea_icon_tones %}
+                                    <button type="button" class="idea-icon-tone icon-tone-{{ tone }}" :class="(createIconTone) === '{{ tone }}' && 'is-picked'"
+                                            @click.stop="createIconTone = '{{ tone }}'" aria-label="{% translate 'Colour' %} {{ forloop.counter }}"></button>
+                                    {% endfor %}
+                                </div>
                             </div>
-                        </template>
-                        <div class="idea-media-zone"
-                             :class="{ 'idea-media-zone-tile': true, 'drag-over': _mediaDragOver }"
-                             @click="$refs.ideaFileInput.click()"
-                             @dragover.prevent="_mediaDragOver = true"
-                             @dragleave.prevent="_mediaDragOver = false"
-                             @drop.prevent="_mediaDragOver = false; _handleMediaDrop($event)">
-                            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                            <span x-show="!createMediaAssets.length">{% translate "Drag &amp; drop" %}</span>
-                            <span x-show="createMediaAssets.length">{% translate "Add another file" %}</span>
-                            <span>{% translate "or" %} <strong style="color: var(--primary); cursor: pointer;">{% translate "select a file" %}</strong></span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <input type="text" name="title" required class="form-input-styled font-semibold" placeholder="{% translate 'Give your idea a title' %}">
                         </div>
                     </div>
+                    <textarea name="description" data-idea-desc rows="6" class="form-input-styled mt-3" style="resize: vertical;" aria-label="{% translate 'Description' %}" placeholder="{% translate 'Let it flow... or' %}"></textarea>
+
+                    {% comment %}
+                    The media row of the composer: each thumbnail has a settings
+                    button whose menu deletes or crops it, and a move handle
+                    (thumbnails are dragged into another place; the first one
+                    leads). The "Add" tile opens the media library and takes
+                    dropped files.
+                    {% endcomment %}
+                    <div class="idea-media-row">
+                        <template x-for="(media, index) in createMediaAssets" :key="media.asset_id">
+                            <div class="media-thumb" x-data="{ menu: false }"
+                                 :draggable="createMediaAssets.length > 1"
+                                 :class="{ 'is-moving': mediaMove.target === 'create' && mediaMove.from === index, 'is-drop-target': mediaMove.target === 'create' && mediaMove.over === index && mediaMove.from !== index }"
+                                 @dragstart="startMediaMove('create', index, $event)"
+                                 @dragover.prevent="mediaMove.target === 'create' && (mediaMove.over = index)"
+                                 @drop.prevent.stop="dropMediaMove('create', index)"
+                                 @dragend="endMediaMove()">
+                                <template x-if="media.media_type === 'video'">
+                                    <video :src="media.url + '#t=0.5'" muted playsinline preload="metadata"></video>
+                                </template>
+                                <template x-if="media.media_type !== 'video'">
+                                    <img :src="media.url" :alt="media.filename || ''" draggable="false">
+                                </template>
+                                <span class="order-badge" x-show="createMediaAssets.length > 1" x-text="index + 1"></span>
+                                <div class="thumb-actions">
+                                    <button type="button" class="thumb-action" title="{% translate 'Settings' %}" aria-label="{% translate 'Settings' %}"
+                                            @click.stop="menu = true">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    </button>
+                                    <span class="thumb-action thumb-move" x-show="createMediaAssets.length > 1" title="{% translate 'Drag to reorder' %}" aria-hidden="true">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M3 12h18M12 3l-3 3m3-3l3 3M12 21l-3-3m3 3l3-3M3 12l3-3m-3 3l3 3m15-3l-3-3m3 3l-3 3"/></svg>
+                                    </span>
+                                </div>
+                                <div class="thumb-menu" x-show="menu" x-cloak @click.outside="menu = false" @keydown.escape.window="menu = false">
+                                    <button type="button" class="thumb-menu-item text-red-600" @click.stop="menu = false; removeIdeaMedia('create', index)">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                        {% translate "Delete" %}
+                                    </button>
+                                    <button type="button" class="thumb-menu-item" @click.stop="menu = false" aria-label="{% translate 'Close' %}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                    <template x-if="media.media_type === 'image'">
+                                        <button type="button" class="thumb-menu-item" @click.stop="menu = false; cropIdeaMedia('create', index)">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2v14a2 2 0 002 2h14M2 6h14a2 2 0 012 2v14"/></svg>
+                                            {% translate "Crop" %}
+                                        </button>
+                                    </template>
+                                    <template x-if="media.media_type !== 'image'"><span></span></template>
+                                    <span></span>
+                                </div>
+                            </div>
+                        </template>
+                        <button type="button" class="media-dropzone-inline" :class="_mediaDragOver && 'dragover'"
+                                @click="openIdeaMediaPicker('create')"
+                                @dragover.prevent="_mediaDragOver = mediaMove.from === null"
+                                @dragleave.prevent="_mediaDragOver = false"
+                                @drop.prevent="_mediaDragOver = false; mediaMove.from === null && _handleMediaDrop($event)">
+                            <svg class="w-6 h-6 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            <span class="text-[12px] text-neutral-600 leading-tight">{% translate "Add" %}</span>
+                        </button>
+                    </div>
+                </div>
+
+                {% comment %}
+                The idea's date and tags, in a row of their own above the
+                actions: outside the scrolling body, so the tag list opens
+                upwards over it without being cut.
+                {% endcomment %}
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-2" style="padding: 4px 24px 14px;">
+                        <label class="idea-date-row" style="margin: 0;">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <span>{% translate "Content date" %}</span>
+                            <input type="date" name="target_date" :value="createTargetDate">
+                        </label>
+                        <div class="idea-selected-tags items-center" style="margin: 0;">
+                            <div class="relative" @click.away="createTagDropdownOpen = false">
+                                <button type="button" class="idea-pill-btn" @click="createTagDropdownOpen = !createTagDropdownOpen; createGroupDropdownOpen = false; if(createTagDropdownOpen) $nextTick(() => $refs.createTagSearchInput.focus())">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                                    <span>{% translate "Tags" %}</span>
+                                    <span x-show="createSelectedTags.length" class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold text-white" style="background: var(--primary);" x-text="createSelectedTags.length"></span>
+                                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                                </button>
+                                <div x-show="createTagDropdownOpen" x-cloak x-transition class="idea-pill-dropdown" style="left: 0; right: auto; top: auto; bottom: calc(100% + 6px);">
+                                    <!-- Search input -->
+                                    <div style="padding: 4px 6px; border-bottom: 1px solid var(--border);">
+                                        <input type="text" x-ref="createTagSearchInput" x-model="createTagSearch"
+                                               @keydown.enter.prevent="if (createTagSearch.trim() && !filteredCreateTags.includes(createTagSearch.trim())) { persistAndToggleCreateTag(createTagSearch.trim()); } else if (filteredCreateTags.length === 1) { toggleCreateTag(filteredCreateTags[0]); createTagSearch = ''; }"
+                                               class="w-full text-xs px-2 py-1.5 rounded border outline-none"
+                                               style="border-color: var(--border);"
+                                               placeholder="{% translate 'Search or create tag...' %}">
+                                    </div>
+                                    <!-- Filtered tag list -->
+                                    <template x-for="tag in filteredCreateTags" :key="tag">
+                                        <label>
+                                            <input type="checkbox" class="rounded accent-brand-700"
+                                                   :checked="createSelectedTags.includes(tag)"
+                                                   @change="toggleCreateTag(tag)">
+                                            <span x-text="tag"></span>
+                                        </label>
+                                    </template>
+                                    <template x-if="!createTagSearch.trim() && !allTags.length">
+                                        <div class="px-3 py-2 text-xs" style="color: var(--text-tertiary);">{% translate "No tags yet. Type to create one." %}</div>
+                                    </template>
+                                    <!-- Create new tag -->
+                                    <template x-if="createTagSearch.trim() && !filteredCreateTags.includes(createTagSearch.trim())">
+                                        <div class="border-t" style="border-color: var(--border); margin-top: 2px; padding-top: 2px;">
+                                            <button type="button" @click="persistAndToggleCreateTag(createTagSearch.trim())"
+                                                    style="color: var(--primary);">
+                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                                {% translate "Create" %} “<span x-text="createTagSearch.trim()"></span>”
+                                            </button>
+                                        </div>
+                                    </template>
+                                    <div class="border-t border-neutral-100 px-1 py-1">
+                                        <button type="button" @click="openIdeaCreateTagModal('create')"
+                                                class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
+                                            <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                            {% translate "Create new tag" %}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <template x-for="tag in createSelectedTags" :key="tag">
+                                <span class="idea-tag-chip">
+                                    <span x-text="tag"></span>
+                                    <button type="button" @click="toggleCreateTag(tag)">
+                                        <svg width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    </button>
+                                </span>
+                            </template>
+                        </div>
                 </div>
 
                 <!-- Footer -->
@@ -712,132 +738,185 @@
                 <!-- Header -->
                 <div class="idea-modal-header">
                     <h2 class="text-lg font-semibold" style="color: var(--text-primary);">{% translate "Edit Idea" %}</h2>
-                    <div class="flex items-center gap-2">
-                        <!-- Column selector dropdown -->
-                        <div class="relative" @click.away="editGroupDropdownOpen = false">
-                            <button type="button" class="idea-pill-btn" @click="editGroupDropdownOpen = !editGroupDropdownOpen; editTagDropdownOpen = false">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                                <span x-text="editGroupLabel()"></span>
-                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                            </button>
-                            <div x-show="editGroupDropdownOpen" x-cloak x-transition class="idea-pill-dropdown">
-                                {% for col in columns %}
-                                <button type="button"
-                                        @click="editSelectedGroup = '{{ col.id }}'; editGroupDropdownOpen = false"
-                                        :class="editSelectedGroup === '{{ col.id }}' && 'font-semibold'">
-                                    <span>{{ col.label }}</span>
-                                    <svg x-show="editSelectedGroup === '{{ col.id }}'" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" class="ml-auto" style="color: var(--primary);"><polyline points="20 6 9 17 4 12"/></svg>
-                                </button>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <!-- Tags dropdown -->
-                        <div class="relative" @click.away="editTagDropdownOpen = false">
-                            <button type="button" class="idea-pill-btn" @click="editTagDropdownOpen = !editTagDropdownOpen; editGroupDropdownOpen = false; if(editTagDropdownOpen) $nextTick(() => $refs.editTagSearchInput.focus())">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                                <span>{% translate "Tags" %}</span>
-                                <span x-show="editSelectedTags.length" class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold text-white" style="background: var(--primary);" x-text="editSelectedTags.length"></span>
-                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                            </button>
-                            <div x-show="editTagDropdownOpen" x-cloak x-transition class="idea-pill-dropdown">
-                                <!-- Search input -->
-                                <div style="padding: 4px 6px; border-bottom: 1px solid var(--border);">
-                                    <input type="text" x-ref="editTagSearchInput" x-model="editTagSearch"
-                                           @keydown.enter.prevent="if (editTagSearch.trim() && !filteredEditTags.includes(editTagSearch.trim())) { persistAndToggleEditTag(editTagSearch.trim()); } else if (filteredEditTags.length === 1) { toggleEditTag(filteredEditTags[0]); editTagSearch = ''; }"
-                                           class="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                                           style="border-color: var(--border);"
-                                           placeholder="{% translate 'Search or create tag...' %}">
-                                </div>
-                                <!-- Filtered tag list -->
-                                <template x-for="tag in filteredEditTags" :key="tag">
-                                    <label>
-                                        <input type="checkbox" class="rounded accent-brand-700"
-                                               :checked="editSelectedTags.includes(tag)"
-                                               @change="toggleEditTag(tag)">
-                                        <span x-text="tag"></span>
-                                    </label>
-                                </template>
-                                <template x-if="!editTagSearch.trim() && !allTags.length">
-                                    <div class="px-3 py-2 text-xs" style="color: var(--text-tertiary);">{% translate "No tags yet. Type to create one." %}</div>
-                                </template>
-                                <!-- Create new tag -->
-                                <template x-if="editTagSearch.trim() && !filteredEditTags.includes(editTagSearch.trim())">
-                                    <div class="border-t" style="border-color: var(--border); margin-top: 2px; padding-top: 2px;">
-                                        <button type="button" @click="persistAndToggleEditTag(editTagSearch.trim())"
-                                                style="color: var(--primary);">
-                                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                            {% translate "Create" %} “<span x-text="editTagSearch.trim()"></span>”
-                                        </button>
-                                    </div>
-                                </template>
-                                <div class="border-t border-neutral-100 px-1 py-1">
-                                    <button type="button" @click="openIdeaCreateTagModal('edit')"
-                                            class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
-                                        <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                        {% translate "Create new tag" %}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
-
-                <!-- Selected tags chips -->
-                <template x-if="editSelectedTags.length > 0">
-                    <div class="idea-selected-tags" style="padding: 0 24px 8px;">
-                        <template x-for="tag in editSelectedTags" :key="tag">
-                            <span class="idea-tag-chip">
-                                <span x-text="tag"></span>
-                                <button type="button" @click="toggleEditTag(tag)">
-                                    <svg width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                </button>
-                            </span>
-                        </template>
-                    </div>
-                </template>
 
                 <!-- Body -->
                 <div class="idea-modal-body" @click="editGroupDropdownOpen = false; editTagDropdownOpen = false">
-                    <input type="text" name="title" required
-                           :value="editingIdea?.title || ''"
-                           class="idea-title-input" placeholder="{% translate 'Give your idea a title' %}">
-                    <label class="idea-date-row">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        <span>{% translate "Content date" %}</span>
-                        <input type="date" name="target_date" :value="editingIdea?.target_date || ''">
-                    </label>
-                    <textarea name="description" class="idea-desc-input" placeholder="{% translate 'Let it flow... or' %}"
-                              x-text="editingIdea?.description || ''"></textarea>
-                    <input type="file" name="media" x-ref="editIdeaFileInput" accept="image/*,video/*,.gif" style="display:none" multiple
-                           @change="_handleEditFileSelect($event)">
-
-                    <div class="idea-media-strip-layout">
-                        <template x-for="(media, index) in editMediaAssets" :key="media.asset_id + '-' + index">
-                            <div class="idea-media-existing-card">
-                                <template x-if="media.media_type === 'video'">
-                                    <video :src="media.url" muted playsinline preload="metadata"></video>
+                    {% comment %}
+                    The idea's icon, beside its title: a button showing the one
+                    picked (the default one when none) that opens the icon library.
+                    Its slug travels in the hidden ``icon`` field.
+                    {% endcomment %}
+                    <div class="flex items-start gap-3">
+                        <div class="relative flex-shrink-0" @click.stop>
+                            <input type="hidden" name="icon" :value="editingIdea?.icon">
+                            <input type="hidden" name="icon_tone" :value="editingIdea?.icon_tone">
+                            <button type="button" class="w-10 h-10 rounded-xl hover:brightness-95 flex items-center justify-center cursor-pointer"
+                                    :class="'icon-tone-' + ((editingIdea?.icon_tone) || 'brand')"
+                                    @click="iconPickerOpen = iconPickerOpen === 'edit' ? '' : 'edit'"
+                                    title="{% translate 'Choose an icon' %}" aria-label="{% translate 'Choose an icon' %}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="ideaIconMarkup(editingIdea?.icon)"></svg>
+                            </button>
+                            <div x-show="iconPickerOpen === 'edit'" x-cloak @click.away="iconPickerOpen = ''" class="idea-icon-popup">
+                                <div class="idea-icon-grid">
+                                <template x-for="item in _ideaIcons" :key="'edit-' + item.slug">
+                                    <button type="button" class="idea-icon-option" :class="(editingIdea?.icon || '') === item.slug && 'is-picked'"
+                                            @click.stop="editingIdea.icon = item.slug; iconPickerOpen = ''" :title="item.label" :aria-label="item.label">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="item.markup"></svg>
+                                    </button>
                                 </template>
-                                <template x-if="media.media_type !== 'video'">
-                                    <img :src="media.url" alt="{% translate 'Preview' %}">
-                                </template>
-                                <button type="button" class="remove-btn" @click="_removeEditMedia(index)" title="{% translate 'Remove' %}">
-                                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                </button>
+                                </div>
+                                {# The colour: one of the tones, or the column's (the first swatch). #}
+                                <div class="idea-icon-tones">
+                                    <span class="text-xs font-semibold text-neutral-600 mr-1">{% translate "Colour" %}</span>
+                                    <button type="button" class="idea-icon-tone idea-icon-tone-auto" :class="!(editingIdea?.icon_tone) && 'is-picked'"
+                                            @click.stop="editingIdea.icon_tone = ''" title="{% translate 'Colour of the column' %}" aria-label="{% translate 'Colour of the column' %}"></button>
+                                    {% for tone in idea_icon_tones %}
+                                    <button type="button" class="idea-icon-tone icon-tone-{{ tone }}" :class="(editingIdea?.icon_tone) === '{{ tone }}' && 'is-picked'"
+                                            @click.stop="editingIdea.icon_tone = '{{ tone }}'" aria-label="{% translate 'Colour' %} {{ forloop.counter }}"></button>
+                                    {% endfor %}
+                                </div>
                             </div>
-                        </template>
-                        <div class="idea-media-zone"
-                             :class="{ 'idea-media-zone-tile': true, 'drag-over': _editMediaDragOver }"
-                             @click="$refs.editIdeaFileInput.click()"
-                             @dragover.prevent="_editMediaDragOver = true"
-                             @dragleave.prevent="_editMediaDragOver = false"
-                             @drop.prevent="_editMediaDragOver = false; _handleEditMediaDrop($event)">
-                            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                            <span x-show="!editMediaAssets.length">{% translate "Drag &amp; drop" %}</span>
-                            <span x-show="editMediaAssets.length">{% translate "Add another file" %}</span>
-                            <span>{% translate "or" %} <strong style="color: var(--primary); cursor: pointer;">{% translate "select a file" %}</strong></span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <input type="text" name="title" required
+                                   :value="editingIdea?.title || ''"
+                                   class="form-input-styled font-semibold" placeholder="{% translate 'Give your idea a title' %}">
                         </div>
                     </div>
+                    <textarea name="description" data-idea-desc rows="6" class="form-input-styled mt-3" style="resize: vertical;" aria-label="{% translate 'Description' %}" placeholder="{% translate 'Let it flow... or' %}"
+                              x-text="editingIdea?.description || ''"></textarea>
+
+                    {% comment %}
+                    The media row of the composer: each thumbnail has a settings
+                    button whose menu deletes or crops it, and a move handle
+                    (thumbnails are dragged into another place; the first one
+                    leads). The "Add" tile opens the media library and takes
+                    dropped files.
+                    {% endcomment %}
+                    <div class="idea-media-row">
+                        <template x-for="(media, index) in editMediaAssets" :key="media.asset_id">
+                            <div class="media-thumb" x-data="{ menu: false }"
+                                 :draggable="editMediaAssets.length > 1"
+                                 :class="{ 'is-moving': mediaMove.target === 'edit' && mediaMove.from === index, 'is-drop-target': mediaMove.target === 'edit' && mediaMove.over === index && mediaMove.from !== index }"
+                                 @dragstart="startMediaMove('edit', index, $event)"
+                                 @dragover.prevent="mediaMove.target === 'edit' && (mediaMove.over = index)"
+                                 @drop.prevent.stop="dropMediaMove('edit', index)"
+                                 @dragend="endMediaMove()">
+                                <template x-if="media.media_type === 'video'">
+                                    <video :src="media.url + '#t=0.5'" muted playsinline preload="metadata"></video>
+                                </template>
+                                <template x-if="media.media_type !== 'video'">
+                                    <img :src="media.url" :alt="media.filename || ''" draggable="false">
+                                </template>
+                                <span class="order-badge" x-show="editMediaAssets.length > 1" x-text="index + 1"></span>
+                                <div class="thumb-actions">
+                                    <button type="button" class="thumb-action" title="{% translate 'Settings' %}" aria-label="{% translate 'Settings' %}"
+                                            @click.stop="menu = true">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    </button>
+                                    <span class="thumb-action thumb-move" x-show="editMediaAssets.length > 1" title="{% translate 'Drag to reorder' %}" aria-hidden="true">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M3 12h18M12 3l-3 3m3-3l3 3M12 21l-3-3m3 3l3-3M3 12l3-3m-3 3l3 3m15-3l-3-3m3 3l-3 3"/></svg>
+                                    </span>
+                                </div>
+                                <div class="thumb-menu" x-show="menu" x-cloak @click.outside="menu = false" @keydown.escape.window="menu = false">
+                                    <button type="button" class="thumb-menu-item text-red-600" @click.stop="menu = false; removeIdeaMedia('edit', index)">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                        {% translate "Delete" %}
+                                    </button>
+                                    <button type="button" class="thumb-menu-item" @click.stop="menu = false" aria-label="{% translate 'Close' %}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                    <template x-if="media.media_type === 'image'">
+                                        <button type="button" class="thumb-menu-item" @click.stop="menu = false; cropIdeaMedia('edit', index)">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2v14a2 2 0 002 2h14M2 6h14a2 2 0 012 2v14"/></svg>
+                                            {% translate "Crop" %}
+                                        </button>
+                                    </template>
+                                    <template x-if="media.media_type !== 'image'"><span></span></template>
+                                    <span></span>
+                                </div>
+                            </div>
+                        </template>
+                        <button type="button" class="media-dropzone-inline" :class="_editMediaDragOver && 'dragover'"
+                                @click="openIdeaMediaPicker('edit')"
+                                @dragover.prevent="_editMediaDragOver = mediaMove.from === null"
+                                @dragleave.prevent="_editMediaDragOver = false"
+                                @drop.prevent="_editMediaDragOver = false; mediaMove.from === null && _handleEditMediaDrop($event)">
+                            <svg class="w-6 h-6 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            <span class="text-[12px] text-neutral-600 leading-tight">{% translate "Add" %}</span>
+                        </button>
+                    </div>
+                </div>
+
+                {% comment %}
+                The idea's date and tags, in a row of their own above the
+                actions: outside the scrolling body, so the tag list opens
+                upwards over it without being cut.
+                {% endcomment %}
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-2" style="padding: 4px 24px 14px;">
+                        <label class="idea-date-row" style="margin: 0;">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <span>{% translate "Content date" %}</span>
+                            <input type="date" name="target_date" :value="editingIdea?.target_date || ''">
+                        </label>
+                        <div class="idea-selected-tags items-center" style="margin: 0;">
+                            <div class="relative" @click.away="editTagDropdownOpen = false">
+                                <button type="button" class="idea-pill-btn" @click="editTagDropdownOpen = !editTagDropdownOpen; editGroupDropdownOpen = false; if(editTagDropdownOpen) $nextTick(() => $refs.editTagSearchInput.focus())">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                                    <span>{% translate "Tags" %}</span>
+                                    <span x-show="editSelectedTags.length" class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold text-white" style="background: var(--primary);" x-text="editSelectedTags.length"></span>
+                                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                                </button>
+                                <div x-show="editTagDropdownOpen" x-cloak x-transition class="idea-pill-dropdown" style="left: 0; right: auto; top: auto; bottom: calc(100% + 6px);">
+                                    <!-- Search input -->
+                                    <div style="padding: 4px 6px; border-bottom: 1px solid var(--border);">
+                                        <input type="text" x-ref="editTagSearchInput" x-model="editTagSearch"
+                                               @keydown.enter.prevent="if (editTagSearch.trim() && !filteredEditTags.includes(editTagSearch.trim())) { persistAndToggleEditTag(editTagSearch.trim()); } else if (filteredEditTags.length === 1) { toggleEditTag(filteredEditTags[0]); editTagSearch = ''; }"
+                                               class="w-full text-xs px-2 py-1.5 rounded border outline-none"
+                                               style="border-color: var(--border);"
+                                               placeholder="{% translate 'Search or create tag...' %}">
+                                    </div>
+                                    <!-- Filtered tag list -->
+                                    <template x-for="tag in filteredEditTags" :key="tag">
+                                        <label>
+                                            <input type="checkbox" class="rounded accent-brand-700"
+                                                   :checked="editSelectedTags.includes(tag)"
+                                                   @change="toggleEditTag(tag)">
+                                            <span x-text="tag"></span>
+                                        </label>
+                                    </template>
+                                    <template x-if="!editTagSearch.trim() && !allTags.length">
+                                        <div class="px-3 py-2 text-xs" style="color: var(--text-tertiary);">{% translate "No tags yet. Type to create one." %}</div>
+                                    </template>
+                                    <!-- Create new tag -->
+                                    <template x-if="editTagSearch.trim() && !filteredEditTags.includes(editTagSearch.trim())">
+                                        <div class="border-t" style="border-color: var(--border); margin-top: 2px; padding-top: 2px;">
+                                            <button type="button" @click="persistAndToggleEditTag(editTagSearch.trim())"
+                                                    style="color: var(--primary);">
+                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                                {% translate "Create" %} “<span x-text="editTagSearch.trim()"></span>”
+                                            </button>
+                                        </div>
+                                    </template>
+                                    <div class="border-t border-neutral-100 px-1 py-1">
+                                        <button type="button" @click="openIdeaCreateTagModal('edit')"
+                                                class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
+                                            <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                            {% translate "Create new tag" %}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <template x-for="tag in editSelectedTags" :key="tag">
+                                <span class="idea-tag-chip">
+                                    <span x-text="tag"></span>
+                                    <button type="button" @click="toggleEditTag(tag)">
+                                        <svg width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    </button>
+                                </span>
+                            </template>
+                        </div>
                 </div>
 
                 <!-- Footer -->
@@ -872,6 +951,15 @@
             </form>
         </div>
     </div>
+
+    {% include "composer/partials/_crop_editor.html" with crop_layer="z-[130]" %}
+
+    {% comment %}
+    The media library, as in the composer: what is chosen or uploaded there
+    comes back in ``mediaPicked`` and joins the idea being written.
+    {% endcomment %}
+    {% url 'composer:idea_media_picker' workspace_id=workspace.id as picker_open_url %}
+    {% include "composer/partials/_media_picker_modal.html" with picker_layer="z-[130]" %}
 
     <!-- Delete Idea Confirmation Modal -->
     <template x-teleport="body">
@@ -998,6 +1086,17 @@
                                 title="{% translate 'Copy to clipboard' %}">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                         </button>
+                        {% comment %}
+                        Straight to the idea board: the template becomes an
+                        idea with its icon, colour, title, text and tag.
+                        {% endcomment %}
+                        <form method="post" :action="'/workspace/{{ workspace.id }}/create/templates/' + (viewingTemplate ? viewingTemplate.id : 0) + '/idea/'">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-brand text-sm">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                                {% translate "Add to my ideas" %}
+                            </button>
+                        </form>
                         <button type="button" @click="useTemplate()"
                                 class="btn-primary-tint inline-flex items-center border gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg cursor-pointer"
                                 style="background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary);border-color: var(--primary); ">
@@ -1120,10 +1219,19 @@ function kanbanBoard() {
     };
 
     return {
-        activeTab: '{{ tab }}',
         activeTag: '{{ active_tag|default_if_none:""|escapejs }}',
         showCreateModal: false,
         createTargetDate: '',
+        createIcon: '',
+        createIconTone: '',
+        // Which idea window has its icon list open: 'create', 'edit' or ''.
+        iconPickerOpen: '',
+        // The icon library (apps.composer.idea_icons), for the picker.
+        _ideaIcons: JSON.parse(document.getElementById('idea-icons-data').textContent) || [],
+        ideaIconMarkup(slug) {
+            var found = this._ideaIcons.find(function(item) { return item.slug === slug; }) || this._ideaIcons[0];
+            return found ? found.markup : '';
+        },
         createEventId: '',
         showExploreModal: false,
         createGroupId: '',
@@ -1152,6 +1260,10 @@ function kanbanBoard() {
         isEditSaving: false,
         _editMediaDragOver: false,
         showDeleteIdeaConfirm: false,
+        // The media library window, shared by the two idea windows: which
+        // one asked for it decides where the chosen files go.
+        showMediaPicker: false,
+        mediaPickerTarget: 'create',
         deletingIdea: false,
         allTags: [{% for tag in all_tags %}'{{ tag|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
         draggedIdeaId: null,
@@ -1171,9 +1283,7 @@ function kanbanBoard() {
                 title: "{{ tpl.title|escapejs }}",
                 description: "{{ tpl.description|escapejs }}",
                 body: "{{ tpl.body|default:''|escapejs }}",
-                tags: [{% for tag in tpl.tags %}"{{ tag|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
-                category: "{{ tpl.category }}",
-                color: "{{ tpl.color }}"
+                category: "{{ tpl.category }}"
             }{% if not forloop.last %},{% endif %}
             {% endfor %}
         },
@@ -1308,6 +1418,9 @@ function kanbanBoard() {
         closeCreateModal() {
             this.showCreateModal = false;
             this.createTargetDate = '';
+            this.createIcon = '';
+            this.createIconTone = '';
+            this.iconPickerOpen = '';
             this.createEventId = '';
             this.createGroupId = '';
             this.createSelectedGroup = this._defaultGroupId;
@@ -1321,7 +1434,6 @@ function kanbanBoard() {
             this.createMediaAssets = [];
             this.createMediaUploadCount = 0;
             this.isCreateSaving = false;
-            if (this.$refs.ideaFileInput) this.$refs.ideaFileInput.value = '';
         },
 
         createMediaAssetIdsCsv() {
@@ -1371,7 +1483,7 @@ function kanbanBoard() {
         },
 
         _insertEmoji(emoji) {
-            var desc = document.querySelector('textarea.idea-desc-input');
+            var desc = document.querySelector('textarea[data-idea-desc]');
             if (desc) {
                 var start = desc.selectionStart;
                 var end = desc.selectionEnd;
@@ -1385,9 +1497,94 @@ function kanbanBoard() {
 
         // --- Media file handling ---
 
-        _handleFileSelect(event) {
-            this._enqueueMediaFiles(event.target.files, 'create');
-            event.target.value = '';
+        // Thumbnail gestures of the media row. ``mediaMove`` is the thumbnail
+        // being dragged to another place; ``from`` is null when nothing is.
+        mediaMove: { target: '', from: null, over: null },
+
+        _ideaMedia(target) {
+            return target === 'edit' ? this.editMediaAssets : this.createMediaAssets;
+        },
+
+        removeIdeaMedia(target, index) {
+            if (target === 'edit') this._removeEditMedia(index);
+            else this._removeCreateMedia(index);
+        },
+
+        startMediaMove(target, index, event) {
+            this.mediaMove = { target: target, from: index, over: index };
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(index));
+        },
+
+        dropMediaMove(target, index) {
+            var move = this.mediaMove;
+            if (move.target === target && move.from !== null && move.from !== index) {
+                var items = this._ideaMedia(target);
+                items.splice(index, 0, items.splice(move.from, 1)[0]);
+            }
+            this.endMediaMove();
+        },
+
+        endMediaMove() {
+            this.mediaMove = { target: '', from: null, over: null };
+        },
+
+        // Image editor: the composer's, saving into the idea being written.
+        ...window.cropEditorBase(),
+        cropFor: { target: '', assetId: '' },
+
+        cropIdeaMedia(target, index) {
+            var media = this._ideaMedia(target)[index];
+            if (!media) return;
+            this.cropFor = { target: target, assetId: media.asset_id };
+            this.openCrop({ url: media.url, assetId: media.asset_id });
+        },
+
+        // Makes a cropped copy (the library keeps the original) and puts it
+        // where the image was.
+        saveCrop() {
+            if (!this.cropper || this.crop.saving) return;
+            var data = this.cropper.getData(true);
+            var cropFor = this.cropFor;
+            this.crop.saving = true;
+            this.crop.error = '';
+            fetch('{% url "composer:idea_crop_media" workspace_id=workspace.id asset_id="00000000-0000-0000-0000-000000000000" %}'.replace('00000000-0000-0000-0000-000000000000', cropFor.assetId), {
+                method: 'POST',
+                headers: { 'X-CSRFToken': this._getCsrfToken(), 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ x: data.x, y: data.y, width: data.width, height: data.height }),
+            }).then(async (response) => {
+                var plain = (response.headers.get('Content-Type') || '').startsWith('text/plain');
+                if (!response.ok) {
+                    // Our refusals are plain text or JSON with ``error``;
+                    // anything else (an error page) is not for the user.
+                    var reason = plain ? await response.text() : ((await response.json().catch(() => ({}))).error || '');
+                    throw new Error(reason || clLabel('request-failed'));
+                }
+                var cropped = await response.json();
+                var items = this._ideaMedia(cropFor.target);
+                var at = items.findIndex(function(item) { return item.asset_id === cropFor.assetId; });
+                if (at !== -1) {
+                    items.splice(at, 1, {
+                        asset_id: cropped.asset_id, url: cropped.url,
+                        filename: cropped.filename, media_type: cropped.media_type,
+                    });
+                }
+                this.closeCrop();
+            }).catch((err) => {
+                this.crop.error = err.message;
+            }).finally(() => { this.crop.saving = false; });
+        },
+
+        openIdeaMediaPicker(target) {
+            this.mediaPickerTarget = target;
+            this.showMediaPicker = true;
+        },
+
+        // Files chosen (or uploaded) in the media library window.
+        addPickedMedia(assets) {
+            for (var i = 0; i < (assets || []).length; i += 1) {
+                this._appendUploadedMedia(this.mediaPickerTarget, assets[i], null);
+            }
         },
 
         _handleMediaDrop(event) {
@@ -1412,10 +1609,6 @@ function kanbanBoard() {
         },
 
         // --- Edit media handlers ---
-        _handleEditFileSelect(event) {
-            this._enqueueMediaFiles(event.target.files, 'edit');
-            event.target.value = '';
-        },
 
         _handleEditMediaDrop(event) {
             this._enqueueMediaFiles(event.dataTransfer.files, 'edit');
@@ -1917,16 +2110,22 @@ function kanbanBoard() {
         dropOnColumn(event, groupId) {
             if (this.draggedColumnId) return; // Ignore during column drag
             event.preventDefault();
-            var dropZone = event.currentTarget;
-            dropZone.classList.remove('drag-over');
-            var ideaId = event.dataTransfer.getData('text/plain');
-            if (!ideaId) return;
+            event.currentTarget.classList.remove('drag-over');
+            this.moveIdeaTo(event.dataTransfer.getData('text/plain'), groupId);
+        },
+
+        // Move a card to the top of a column: from a drop (on the column's
+        // cards or on its closed strip) or from the card's menu.
+        moveIdeaTo(ideaId, groupId) {
+            if (!ideaId || !groupId) return;
+            var column = document.querySelector('.kanban-column[data-group-id="' + groupId + '"]');
+            var cards = column ? column.querySelector('.kanban-cards') : null;
 
             // Optimistic UI: move the card in the DOM immediately
             var card = this._findCardById(ideaId);
-            if (card) {
+            if (card && cards) {
                 card.classList.remove('dragging');
-                dropZone.prepend(card);
+                cards.prepend(card);
                 this._updateColumnCounts();
             }
 
@@ -1946,12 +2145,12 @@ function kanbanBoard() {
         _updateColumnCounts() {
             document.querySelectorAll('.kanban-column').forEach(function(col) {
                 var count = col.querySelectorAll('.idea-card').length;
-                var badge = col.querySelector('.column-count');
-                if (badge) badge.textContent = count;
+                // Two badges: the open column's header and its closed strip.
+                col.querySelectorAll('.column-count').forEach(function(badge) { badge.textContent = count; });
             });
         },
 
-        openEdit(ideaId, title, description, tagsJson, groupId, mediaJson, targetDate) {
+        openEdit(ideaId, title, description, tagsJson, groupId, mediaJson, targetDate, icon, iconTone) {
             var parsedMedia = [];
             if (mediaJson) {
                 try {
@@ -1971,7 +2170,8 @@ function kanbanBoard() {
             }
             if (!Array.isArray(parsedTags)) parsedTags = [];
 
-            this.editingIdea = { id: ideaId, title: title, description: description, tags: parsedTags, target_date: targetDate || '' };
+            this.editingIdea = { id: ideaId, title: title, description: description, tags: parsedTags, target_date: targetDate || '', icon: icon || '', icon_tone: iconTone || '' };
+            this.iconPickerOpen = '';
             this.editSelectedGroup = groupId || this._defaultGroupId;
             this.editSelectedTags = parsedTags.slice();
             this.editGroupDropdownOpen = false;
@@ -1991,7 +2191,6 @@ function kanbanBoard() {
             this.isEditSaving = false;
             this._editMediaDragOver = false;
             this.closeIdeaCreateTagModal();
-            if (this.$refs.editIdeaFileInput) this.$refs.editIdeaFileInput.value = '';
         }
     };
 }

@@ -12,6 +12,12 @@ urlpatterns = [
     path("day/", views.day_posts, name="day_posts"),
     path("post-card/<uuid:platform_post_id>/", views.post_card, name="post_card"),
     path("special-dates/toggle/", views.special_dates_toggle, name="special_dates_toggle"),
+    path("special-dates/favorite/", views.special_date_favorite, name="special_date_favorite"),
+    path(
+        "special-dates/segments/<uuid:segment_id>/toggle/",
+        views.date_segment_toggle,
+        name="date_segment_toggle",
+    ),
     path("events/toggle/", views.custom_events_toggle, name="custom_events_toggle"),
     path("drafts/toggle/", views.drafts_toggle, name="drafts_toggle"),
     path("status-board/<uuid:platform_post_id>/move/", views.status_board_move, name="status_board_move"),

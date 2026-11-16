@@ -20,14 +20,33 @@ losing the navigation you were using and having to find your way back.
 {% include "media_library/_library_styles.html" %}
 {% endblock %}
 
-{% block page_title %}{% translate "Media Library" %}{% endblock %}
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% translate "Gallery" %}</h1>
+    <p class="page-description">{% translate "Your images, videos and documents, organised in folders and ready to use in your posts." %}</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <button type="button" class="btn-soft" @click="$dispatch('ml-new-folder')">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/><path d="M12 11v6m-3-3h6"/></svg>
+      {% translate "New folder" %}
+    </button>
+    <button type="button" class="btn-brand" @click="$dispatch('ml-upload')">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m-4-8l4-4 4 4"/></svg>
+      {% translate "Upload" %}
+    </button>
+  </div>
+</div>
+{% endblock %}
 
 {% block content %}
 {% comment %}
 ``ml-shell`` is a card that fills the page column and owns the scrolling of
 the folder list and the grid, like ``inbox/feed.html``.
 {% endcomment %}
-<div x-data="{ ...mediaLibrary(), folderSidebarOpen: false }" class="ml-shell flex">
+<div x-data="{ ...mediaLibrary(), folderSidebarOpen: false }" class="ml-shell flex"
+     @ml-new-folder.window="showNewFolder = true"
+     @ml-upload.window="$refs.fileInput.click()">
 
   <!-- Mobile folder sidebar toggle -->
   <button @click="folderSidebarOpen = !folderSidebarOpen"
@@ -82,11 +101,6 @@ the folder list and the grid, like ``inbox/feed.html``.
            hx-trigger="folderUpdated from:body"
            hx-target="#folder-tree">
         {% include "media_library/_folder_tree.html" %}
-      </div>
-
-      <!-- New folder form -->
-      <div x-show="showNewFolder" x-cloak class="mt-2">
-        {% include "media_library/_folder_form.html" %}
       </div>
     </div>
   </div>
@@ -202,18 +216,12 @@ the folder list and the grid, like ``inbox/feed.html``.
         </button>
       </div>
 
-      <!-- Upload button -->
-      <button @click="$refs.fileInput.click()"
-              class="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-brand-800 bg-brand-50 border border-brand-200 rounded-full hover:bg-brand-100 hover:border-brand-300 active:bg-brand-100 transition-all duration-150 cursor-pointer">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        {% translate "Upload" %}
-      </button>
       <input type="file" x-ref="fileInput" @change="handleFiles($event.target.files)" multiple
              accept="{{ accepted_file_types }}" class="hidden">
     </div>
 
     {% comment %}
-    The 90% disk warning, directly under the Upload button — this is the
+    The 90% disk warning, at the top of the library — this is the
     screen where someone is about to add the file that doesn't fit, and
     where the "delete old files" half of the remedy actually happens.
     Renders nothing unless the workspace is near or at its limit.
@@ -273,11 +281,24 @@ the folder list and the grid, like ``inbox/feed.html``.
          @dragleave.self.prevent="dragOver = false"
          @drop.prevent="handleDrop($event)">
 
+      <h2 class="text-sm font-semibold text-neutral-900 truncate mb-4">
+          {% if current_folder_name %}{{ current_folder_name }}{% elif is_starred %}{% translate "Starred" %}{% else %}{% translate "All Media" %}{% endif %}
+      </h2>
+
       <!-- Asset Grid -->
       <div id="asset-grid">
         {% include "media_library/_asset_grid.html" %}
       </div>
     </div>
+  </div>
+
+  {% comment %}
+  New-folder modal, at the card's root: inside the folder sidebar it would be
+  positioned against the sidebar (its translate makes it the containing block
+  for fixed children) instead of the screen.
+  {% endcomment %}
+  <div x-show="showNewFolder" x-cloak>
+    {% include "media_library/_folder_form.html" %}
   </div>
 
   <!-- ═══════ DETAIL SLIDE-OVER ═══════ -->

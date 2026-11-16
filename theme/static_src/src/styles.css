@@ -926,7 +926,7 @@ button.target-card { cursor: pointer; }
 .target-card.is-connect .target-card-name { color: inherit; }
 
 /* Modal form pieces shared by the idea modal and the task card: borderless
-   title and text, a small labelled date row, and pill dropdowns. */
+   title, a small labelled date row, and pill dropdowns. */
 .idea-date-row {
     display: inline-flex; align-items: center; gap: 6px; margin: -4px 0 12px;
     font-size: 12px; font-weight: 600; color: var(--text-secondary, #475569);
@@ -947,21 +947,6 @@ input.idea-title-input {
     background: transparent;
 }
 input.idea-title-input::placeholder {
-    color: var(--neutral-300);
-}
-textarea.idea-desc-input {
-    width: 100%;
-    min-height: 160px;
-    font-size: 0.875rem;
-    color: var(--text-primary);
-    border: none;
-    outline: none;
-    padding: 0;
-    resize: none;
-    background: transparent;
-    line-height: 1.7;
-}
-textarea.idea-desc-input::placeholder {
     color: var(--neutral-300);
 }
 .idea-pill-btn {
@@ -1077,6 +1062,15 @@ textarea.idea-desc-input::placeholder {
 .pill-info    { background: var(--info-50);    color: var(--info-700); }    .pill-info i    { background: var(--info-500); }
 .pill-brand   { background: var(--primary-soft); color: var(--brand-800); } .pill-brand i   { background: var(--primary); }
 .pill-neutral { background: var(--surface-2);  color: var(--text-secondary); } .pill-neutral i { background: var(--text-ghost); }
+
+/* Icon tones: the colours an icon tile or its pill can take (the template
+   categories and the icon a brand picks for an idea). Only the semantic
+   tokens, so the set stays on the palette. */
+.icon-tone-brand   { background: var(--brand-100);  color: var(--brand-800); }
+.icon-tone-warning { background: var(--warning-50); color: var(--warning-700); }
+.icon-tone-success { background: var(--success-50); color: var(--success-700); }
+.icon-tone-info    { background: var(--info-50);    color: var(--info-700); }
+.icon-tone-error   { background: var(--error-50);   color: var(--error-700); }
 .pill.is-action { cursor: pointer; padding-right: 7px; font-family: inherit; transition: filter var(--dur-fast) ease, box-shadow var(--dur-fast) ease; }
 .pill.is-action:hover { filter: brightness(0.96); box-shadow: 0 0 0 1px currentColor; }
 .pill.is-action svg { width: 10px; height: 10px; opacity: .7; margin-left: -1px; }

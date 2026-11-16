@@ -86,11 +86,11 @@ def _resolve_account(request: HttpRequest, social_account_id: uuid.UUID) -> Soci
 def _can_view_internal_notes(request: HttpRequest) -> bool:
     """Whether this caller may see a post's team-only ``internal_notes``.
 
-    The composer hides ``internal_notes`` from the ``client`` / ``viewer``
-    workspace roles ([views.py](apps/composer/views.py): ``can_view_internal_notes``).
-    Those are exactly the builtin roles without ``create_posts`` (see
+    Notes are for the team, not for the ``client`` / ``viewer`` workspace
+    roles. Those are exactly the builtin roles without ``create_posts`` (see
     ``BUILTIN_ROLE_PERMISSIONS``), so gating visibility on ``create_posts``
-    reproduces that rule uniformly for both API keys and OAuth members. Reads
+    applies that rule uniformly for both API keys and OAuth members. (The
+    composer has no notes field; they are written and read here and in MCP.) Reads
     (`GET /posts/{id}`) aren't otherwise permission-gated, so without this the
     shared serializer would leak notes to any read-capable client/viewer.
     """

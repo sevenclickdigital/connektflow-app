@@ -226,6 +226,13 @@ class Idea(models.Model):
 
     # The day the content is for (a special date, a launch). Art requests made
     # from the idea are due a few days before it.
+    # The icon the brand picked for the card: a slug of the library in
+    # ``idea_icons.py``; empty shows the default one. db_default keeps inserts
+    # from code that predates the column working during a rolling deploy.
+    icon = models.CharField(max_length=32, blank=True, default="", db_default="")
+    # The colour picked for the icon (``idea_icons.TONES``); empty takes the
+    # colour of the column the card is in.
+    icon_tone = models.CharField(max_length=16, blank=True, default="", db_default="")
     target_date = models.DateField(null=True, blank=True)
     calendar_event = models.ForeignKey(
         "calendar.CustomCalendarEvent",
@@ -1008,3 +1015,40 @@ class Feed(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class IdeaTemplate(models.Model):
+    """A ready-made starting point shown in the create page's Templates tab.
+
+    The same for every brand, and kept by the operator in the administrative
+    area. The integer id is what the composer receives as ``?template=<id>``;
+    the rows that shipped with the product keep the ids they had in
+    ``builtin_templates.py``, from which the table was first filled.
+    """
+
+    class Category(models.TextChoices):
+        TIP = "tip", _("Tip")
+        CASE_STUDY = "case-study", _("Case Study")
+        STORY = "story", _("Story")
+        HOW_TO = "how-to", _("How-to")
+        QUESTION = "question", _("Question")
+        OPINION = "opinion", _("Opinion")
+        LIST = "list", _("List")
+        BEHIND_THE_SCENES = "behind-the-scenes", _("Behind the Scenes")
+
+    id = models.AutoField(primary_key=True)
+    emoji = models.CharField(max_length=8, blank=True, default="")
+    title = models.CharField(max_length=160)
+    description = models.CharField(max_length=400, blank=True, default="")
+    body = models.TextField(blank=True, default="")
+    category = models.CharField(max_length=24, choices=Category.choices, default=Category.TIP)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "composer_idea_template"
+        ordering = ["-id"]
+
+    def __str__(self):
+        return self.title

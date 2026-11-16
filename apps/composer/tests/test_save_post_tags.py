@@ -185,3 +185,42 @@ class YouTubePlatformTagsTests(TestCase):
         total = sum(len(t) for t in stored_tags) + max(0, len(stored_tags) - 1)
         self.assertLessEqual(total, MAX_YT_TAGS_TOTAL_CHARS)
         self.assertGreater(len(stored_tags), 0)
+
+
+class SavePostKeepsNotesTests(TestCase):
+    """The composer has no notes field, so saving there must not erase notes
+    written through the API or MCP."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="notes@example.com", password="testpass123", tos_accepted_at=timezone.now()
+        )
+        org = Organization.objects.create(name="Notes Org")
+        self.workspace = Workspace.objects.create(organization=org, name="Notes Workspace")
+        OrgMembership.objects.create(user=self.user, organization=org, org_role=OrgMembership.OrgRole.OWNER)
+        WorkspaceMembership.objects.create(
+            user=self.user, workspace=self.workspace, workspace_role=WorkspaceMembership.WorkspaceRole.OWNER
+        )
+        self.client.force_login(self.user)
+        self.post = Post.objects.create(
+            workspace=self.workspace, author=self.user, caption="before", internal_notes="check with legal"
+        )
+        self.kwargs = {"workspace_id": self.workspace.id, "post_id": self.post.id}
+
+    def test_saving_keeps_the_notes(self):
+        self.client.post(
+            reverse("composer:save_post_edit", kwargs=self.kwargs),
+            {"action": "save_draft", "title": "", "caption": "after", "tags": ""},
+        )
+        self.post.refresh_from_db()
+        assert self.post.caption == "after"
+        assert self.post.internal_notes == "check with legal"
+
+    def test_autosaving_keeps_the_notes(self):
+        self.client.post(
+            reverse("composer:autosave_edit", kwargs=self.kwargs),
+            {"title": "", "caption": "autosaved", "tags": ""},
+        )
+        self.post.refresh_from_db()
+        assert self.post.caption == "autosaved"
+        assert self.post.internal_notes == "check with legal"

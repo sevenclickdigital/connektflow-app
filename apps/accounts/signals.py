@@ -16,16 +16,36 @@ def provision_organization_and_workspace(user):
     Skips if the user already belongs to an organization (e.g. invited users).
     Safe to call multiple times - the guard is idempotent.
     """
-    from apps.members.models import OrgMembership, WorkspaceMembership
+    from apps.members.models import OrgMembership
     from apps.organizations.models import Organization
-    from apps.workspaces.models import Workspace
 
     # Skip if user was invited to an existing org or already provisioned
     if OrgMembership.objects.filter(user=user).exists():
         return
 
+    # Its name is stored, so the brand's is written in the language active at
+    # sign-up (pt-br by default) rather than translated on display.
+    create_organization_with_brand(
+        user,
+        organization_name=Organization.DEFAULT_NAME,
+        brand_name=gettext("My brand"),
+        brand_description=gettext("Your default brand. Rename it anytime."),
+    )
+
+
+def create_organization_with_brand(user, *, organization_name, brand_name, brand_description=""):
+    """Create an organization owned by ``user`` with its first brand.
+
+    An organization is always born with a brand: the brand is what the
+    user opens, and what puts the organization in the brand switcher.
+    Returns the brand (a Workspace), now the user's current one.
+    """
+    from apps.members.models import OrgMembership, WorkspaceMembership
+    from apps.organizations.models import Organization
+    from apps.workspaces.models import Workspace
+
     org = Organization.objects.create(
-        name="My Organization",
+        name=organization_name,
         default_timezone=SIGNUP_TIMEZONE,
     )
 
@@ -35,13 +55,10 @@ def provision_organization_and_workspace(user):
         org_role=OrgMembership.OrgRole.OWNER,
     )
 
-    # Create a default workspace so the user can start immediately. Its name
-    # is stored, so it is written in the language active at sign-up (pt-br by
-    # default) rather than translated on display.
     workspace = Workspace.objects.create(
         organization=org,
-        name=gettext("My brand"),
-        description=gettext("Your default brand. Rename it anytime."),
+        name=brand_name,
+        description=brand_description,
     )
 
     WorkspaceMembership.objects.create(
@@ -53,6 +70,7 @@ def provision_organization_and_workspace(user):
     # Set as last workspace so dashboard redirects here
     user.last_workspace_id = workspace.id
     user.save(update_fields=["last_workspace_id"])
+    return workspace
 
 
 def _set_org_timezone_from_browser(request, user):
@@ -115,7 +133,7 @@ def _join_invited_org(token, user):
         membership.delete()
         # Only delete the org if it's the auto-provisioned one and has no
         # other members.
-        if org.name == "My Organization" and not org.memberships.exists():
+        if org.is_unnamed and not org.memberships.exists():
             Workspace.objects.filter(organization=org).delete()
             org.delete()
     return True

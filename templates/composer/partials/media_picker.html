@@ -6,13 +6,20 @@ folders, sort and pagination, reusing media_library/_asset_grid.html and
 _asset_card.html with ``picker_mode``. Clicking a thumbnail toggles it; the
 footer inserts the whole selection at once, in the order it was picked.
 
-Context: page, workspace, post (optional), folders, file_types,
+With ``picker_target`` "idea" the selection is not attached to a post: it is
+handed to the page in a ``mediaPicked`` event (and so is what is uploaded
+here), for the idea's window to keep.
+
+Context: page, workspace, post (optional), picker_target (optional), folders, file_types,
 accepted_file_types, picker_mode, plus the filter params from
 media_library.views.filtered_assets.
 {% endcomment %}
 {% load i18n %}
 
-{% if post %}
+{% if picker_target == "idea" %}
+  {% url 'composer:idea_media_picker' workspace_id=workspace.id as picker_url %}
+  {% url 'composer:idea_upload_media' workspace_id=workspace.id as picker_upload_url %}
+{% elif post %}
   {% url 'composer:media_picker_post' workspace_id=workspace.id post_id=post.id as picker_url %}
   {% url 'composer:attach_media_batch_post' workspace_id=workspace.id post_id=post.id as insert_url %}
   {% url 'composer:upload_media_post' workspace_id=workspace.id post_id=post.id as picker_upload_url %}
@@ -278,6 +285,7 @@ rules have to arrive with it.
     return {
       // Ordered: index 0 is the first thumbnail clicked and leads the carousel.
       picked: [],
+      pickedMedia: {},
       type: '{{ current_type|default:"" }}',
       folder: '{{ current_folder|default:"" }}',
       newFolderOpen: false,
@@ -292,8 +300,11 @@ rules have to arrive with it.
         return i === -1 ? '' : i + 1;
       },
 
-      toggle(id) {
+      // ``data`` is the card's dataset: what the page needs to show a picked
+      // file when the selection is handed over instead of attached.
+      toggle(id, data) {
         const i = this.picked.indexOf(id);
+        if (data) this.pickedMedia[id] = { asset_id: id, url: data.assetUrl || '', media_type: data.assetType || 'image' };
         if (i === -1) {
           this.picked.push(id);
         } else {
@@ -304,6 +315,12 @@ rules have to arrive with it.
 
       insert(url) {
         if (!this.picked.length) return;
+        if (!url) {
+          this.handOver(this.picked.map(id => this.pickedMedia[id]).filter(Boolean));
+          this.picked = [];
+          this.showMediaPicker = false;
+          return;
+        }
         {% comment %}
         Posted by hand rather than through htmx.ajax: the IDs have to arrive
         as a repeated media_asset_ids field for request.POST.getlist to see
@@ -331,6 +348,11 @@ rules have to arrive with it.
             this.picked = [];
             this.showMediaPicker = false;
           });
+      },
+
+      // Gives the page the chosen files, when nothing here attaches them.
+      handOver(assets) {
+        if (assets.length) document.body.dispatchEvent(new CustomEvent('mediaPicked', { detail: { assets }, bubbles: true }));
       },
 
       // Creates a top-level folder through the gallery's endpoint, refreshes
@@ -375,8 +397,21 @@ rules have to arrive with it.
             body,
           });
         });
-        Promise.all(uploads).then(() => {
+        Promise.all(uploads).then(responses => {
           htmx.trigger('body', 'uploadsComplete');
+          {% if picker_target == "idea" %}
+          // Nothing attaches an upload made here, so each stored file is
+          // handed over like a picked one; a refused one says why.
+          Promise.all(responses.map(r => r.json().catch(() => ({})))).then(results => {
+            this.handOver(results.filter(data => data.asset_id));
+            const refused = results.find(data => !data.asset_id);
+            if (refused) {
+              document.body.dispatchEvent(new CustomEvent('showToast', {
+                detail: { tone: 'error', title: refused.error || '{% translate "Upload failed" %}' },
+              }));
+            }
+          });
+          {% endif %}
           // The upload endpoint already attached each file, so the composer's
           // own media list needs refreshing too.
           document.body.dispatchEvent(new CustomEvent('previewUpdate'));

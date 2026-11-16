@@ -1,0 +1,51 @@
+{% load i18n %}
+{% comment %}
+The dates of one shelf in the operator's special-dates screen, and the form
+that adds one to it. Expects: dates, segment (None for the general dates),
+kind_choices. A date is not edited in place: it is removed and added again.
+{% endcomment %}
+<ul class="divide-y divide-neutral-200">
+  {% for item in dates %}
+  <li class="px-5 py-2.5 flex items-center gap-3 text-sm">
+    <span class="w-12 text-neutral-500 tabular-nums">{{ item.day|stringformat:"02d" }}/{{ item.month|stringformat:"02d" }}</span>
+    {% if item.image %}<img src="{{ item.image.url }}" alt="" class="w-9 h-9 rounded-lg object-cover flex-shrink-0">{% else %}<span aria-hidden="true">{{ item.emoji }}</span>{% endif %}
+    <div class="flex-1 min-w-0">
+      <div class="truncate text-neutral-900">{{ item.name }} <span class="pill pill-neutral ml-1">{{ item.get_kind_display }}</span></div>
+      {% if item.description %}<div class="text-xs text-neutral-600 truncate">{{ item.description }}</div>{% endif %}
+    </div>
+    <form method="post" action="{% url 'calendar_staff:date_delete' date_id=item.id %}">
+      {% csrf_token %}
+      <button type="submit" class="btn-link text-xs text-neutral-600" aria-label="{% blocktranslate with name=item.name %}Remove {{ name }}{% endblocktranslate %}">{% translate "Remove" %}</button>
+    </form>
+  </li>
+  {% empty %}
+  <li class="px-5 py-4 text-sm text-neutral-500">{% translate "No dates here yet." %}</li>
+  {% endfor %}
+</ul>
+<form method="post" enctype="multipart/form-data" action="{% url 'calendar_staff:date_create' %}" class="px-5 py-3 border-t border-neutral-300 bg-neutral-50" x-data="{ more: false }">
+  {% csrf_token %}
+  {% if segment %}<input type="hidden" name="segment" value="{{ segment.id }}">{% endif %}
+  <div class="flex flex-wrap items-center gap-2">
+    <input type="number" name="day" min="1" max="31" required placeholder="{% translate 'Day' %}" aria-label="{% translate 'Day' %}" class="form-input-styled w-20">
+    <input type="number" name="month" min="1" max="12" required placeholder="{% translate 'Month' %}" aria-label="{% translate 'Month' %}" class="form-input-styled w-20">
+    <input type="text" name="emoji" maxlength="8" placeholder="🙂" aria-label="{% translate 'Emoji' %}" class="form-input-styled w-16 text-center">
+    <input type="text" name="name" required maxlength="120" placeholder="{% translate 'Name of the date' %}" aria-label="{% translate 'Name of the date' %}" class="form-input-styled flex-1 min-w-40">
+    <select name="kind" aria-label="{% translate 'Category' %}" class="form-input-styled w-44">
+      {% for value, label in kind_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+    </select>
+    <button type="button" class="btn-ghost" @click="more = !more" :aria-expanded="more">{% translate "Details" %}</button>
+    <button type="submit" class="btn-soft">{% translate "Add date" %}</button>
+  </div>
+  {# Optional: what fills the date's panel for the customer. #}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2" x-show="more" x-cloak>
+    <input type="text" name="description" maxlength="300" placeholder="{% translate 'Short description (optional)' %}" aria-label="{% translate 'Short description (optional)' %}" class="form-input-styled w-full md:col-span-2">
+    <textarea name="suggestions" rows="3" placeholder="{% translate 'Content suggestions, one per line (optional)' %}" aria-label="{% translate 'Content suggestions, one per line (optional)' %}" class="form-input-styled w-full"></textarea>
+    <div class="flex flex-col gap-2">
+      <input type="text" name="tags" maxlength="200" placeholder="{% translate 'Tags, separated by commas (optional)' %}" aria-label="{% translate 'Tags, separated by commas (optional)' %}" class="form-input-styled w-full">
+      <label class="text-xs text-neutral-600">
+        {% translate "Image for the date's panel (optional, JPEG, PNG or WebP up to 2 MB)" %}
+        <input type="file" name="image" accept="image/jpeg,image/png,image/webp" class="block mt-1 text-xs">
+      </label>
+    </div>
+  </div>
+</form>

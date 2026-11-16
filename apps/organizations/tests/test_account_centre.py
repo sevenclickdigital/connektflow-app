@@ -27,11 +27,13 @@ def test_a_new_account_starts_on_brasilia_time():
 
 
 @pytest.mark.django_db
-def test_the_organization_name_is_changed_from_the_brands_page(client):
+def test_the_organization_name_is_changed_from_the_organizations_page(client):
     user, workspace = _owner()
     client.force_login(user)
 
-    response = client.post(reverse("organizations:settings"), {"action": "update_name", "name": "Agência Sol"})
+    response = client.post(
+        reverse("organizations:rename"), {"organization": workspace.organization_id, "name": "Agência Sol"}
+    )
 
     assert response.headers["Location"] == reverse("organizations:workspaces")
     workspace.organization.refresh_from_db()
@@ -72,13 +74,13 @@ def test_a_viewer_cannot_set_the_brand_timezone(client):
 
 
 @pytest.mark.django_db
-def test_only_an_admin_sees_the_organization_card_on_the_brands_page(client):
+def test_only_an_admin_may_edit_the_organization_on_its_page(client):
     user, _workspace = _owner()
     client.force_login(user)
-    assert client.get(reverse("organizations:workspaces")).context["can_admin_org"] is True
+    assert client.get(reverse("organizations:workspaces")).context["org_groups"][0]["can_edit"] is True
 
     OrgMembership.objects.filter(user=user).update(org_role=OrgMembership.OrgRole.MEMBER)
-    assert client.get(reverse("organizations:workspaces")).context["can_admin_org"] is False
+    assert client.get(reverse("organizations:workspaces")).context["org_groups"][0]["can_edit"] is False
 
 
 @pytest.mark.django_db

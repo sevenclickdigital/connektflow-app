@@ -1,0 +1,83 @@
+{% comment %}
+The media row of a composer-like form, as plain CSS for a page's own style
+block: a square thumbnail, the controls over it (settings and move, the menu
+they open, the position badge) and the "Add" tile that ends the row. Shared
+by the composer and the idea window, so both rows are one thing.
+{% endcomment %}
+    /* "Add" tile - square, always last in the media row; opens the media library and takes dropped files */
+    .media-dropzone-inline {
+        width: 96px; height: 96px;
+        border: 1.5px dashed #CBD5E1;
+        border-radius: 8px;
+        padding: 8px;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 4px; text-align: center;
+        transition: all 200ms ease;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .media-dropzone-inline:hover,
+    .media-dropzone-inline.dragover {
+        border-color: #7C3AED;
+        background: #F9F5FF;
+    }
+
+    /* Media thumbnail grid */
+    .media-thumb {
+        width: 96px; height: 96px;
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+        border: 1px solid #E5E7EB;
+    }
+    .media-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .media-thumb .remove-btn {
+        position: absolute; top: 4px; right: 4px;
+        width: 20px; height: 20px; border-radius: 50%;
+        background: rgba(0,0,0,0.55); color: white;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10px; cursor: pointer;
+        transition: background 150ms ease;
+        z-index: 2;
+    }
+    .media-thumb .remove-btn:hover { background: #EF4444; }
+
+    /* Thumbnail controls: settings + move, bottom-right; the menu covers the thumbnail */
+    .media-thumb .thumb-actions {
+        position: absolute; right: 4px; bottom: 4px; z-index: 3;
+        display: flex; flex-direction: column; gap: 3px;
+        opacity: 0; transition: opacity 150ms ease;
+    }
+    .media-thumb:hover .thumb-actions,
+    .media-thumb:focus-within .thumb-actions { opacity: 1; }
+    @media (hover: none) { .media-thumb .thumb-actions { opacity: 1; } }
+    .media-thumb .thumb-action {
+        width: 24px; height: 24px; border-radius: 6px;
+        display: flex; align-items: center; justify-content: center;
+        background: #E9D5FF; color: #6D28D9; border: none; cursor: pointer;
+    }
+    .media-thumb .thumb-action:hover { background: #D8B4FE; }
+    .media-thumb .thumb-move { cursor: grab; }
+    .media-thumb .thumb-menu {
+        position: absolute; inset: 0; z-index: 4;
+        display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+        background: #F5F3FF; border-radius: 8px; overflow: hidden;
+    }
+    .media-thumb .thumb-menu > * { border: 0.5px solid #CBD5E1; }
+    .media-thumb .thumb-menu-item {
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+        font-size: 10px; font-weight: 600; color: #334155; background: transparent; cursor: pointer;
+    }
+    .media-thumb .thumb-menu-item:hover { background: #E5E7EB; }
+
+    /* Position badge — which slot this image takes in the published carousel. */
+    .media-thumb .order-badge {
+        position: absolute; bottom: 4px; left: 4px;
+        min-width: 16px; height: 16px; padding: 0 4px;
+        border-radius: 8px;
+        background: rgba(0,0,0,0.55); color: white;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10px; font-weight: 600; line-height: 1;
+        pointer-events: none; z-index: 2;
+    }

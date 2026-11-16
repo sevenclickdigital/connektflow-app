@@ -3,6 +3,7 @@
 import uuid
 
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -252,3 +253,115 @@ def _shift_months(day, months):
     month_index = day.month - 1 + months
     year, month = day.year + month_index // 12, month_index % 12 + 1
     return day.replace(year=year, month=month, day=min(day.day, _calendar.monthrange(year, month)[1]))
+
+
+class DateSegment(models.Model):
+    """A line of business whose special dates a brand may follow (restaurants,
+    beauty, health…). Kept by the operator in the administrative area."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True)
+    emoji = models.CharField(max_length=8, blank=True, default="")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "calendar_date_segment"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class SpecialDate(models.Model):
+    """A special date kept by the operator, on the same day every year.
+
+    Without a segment it is global: every brand sees it, like the built-in
+    holidays in ``holidays.py``. With one it is optional: shown only to the
+    brands that chose that segment.
+
+    ``description``, ``suggestions`` (one content idea per line), ``tags``
+    (comma-separated) and ``image`` fill the date's panel in the special-dates
+    tab; all four are optional.
+    """
+
+    class Kind(models.TextChoices):
+        COMMERCIAL = "commercial", _("Commercial")
+        SEASONAL = "seasonal", _("Seasonal")
+        NATIONAL = "national", _("National")
+        INTERNATIONAL = "international", _("International")
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    segment = models.ForeignKey(DateSegment, on_delete=models.CASCADE, null=True, blank=True, related_name="dates")
+    name = models.CharField(max_length=120)
+    emoji = models.CharField(max_length=8, blank=True, default="")
+    month = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
+    day = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(31)])
+    kind = models.CharField(max_length=16, choices=Kind.choices, default=Kind.COMMERCIAL)
+    description = models.CharField(max_length=300, blank=True, default="")
+    suggestions = models.TextField(blank=True, default="")
+    tags = models.CharField(max_length=200, blank=True, default="")
+    image = models.ImageField(upload_to="special_dates/", blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "calendar_special_date"
+        ordering = ["month", "day", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.day:02d}/{self.month:02d})"
+
+    @property
+    def suggestion_list(self) -> list[str]:
+        return [line.strip() for line in self.suggestions.splitlines() if line.strip()]
+
+    @property
+    def tag_list(self) -> list[str]:
+        return [tag.strip().lstrip("#") for tag in self.tags.split(",") if tag.strip().lstrip("#")]
+
+
+class WorkspaceDateSegment(models.Model):
+    """A segment a brand chose to follow: its dates join the brand's calendar."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workspace = models.ForeignKey("workspaces.Workspace", on_delete=models.CASCADE, related_name="date_segments")
+    segment = models.ForeignKey(DateSegment, on_delete=models.CASCADE, related_name="workspace_choices")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = WorkspaceScopedManager()
+
+    class Meta:
+        db_table = "calendar_workspace_date_segment"
+        constraints = [
+            models.UniqueConstraint(fields=["workspace", "segment"], name="uniq_workspace_date_segment"),
+        ]
+
+    def __str__(self):
+        return f"{self.workspace_id} → {self.segment_id}"
+
+
+class FavoriteSpecialDate(models.Model):
+    """A special date a brand saved to find again.
+
+    ``key`` names the date whatever its source: ``b:<slug>`` for one built
+    into ``holidays.py``, ``d:<uuid>`` for one of the operator's.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workspace = models.ForeignKey(
+        "workspaces.Workspace", on_delete=models.CASCADE, related_name="favorite_special_dates"
+    )
+    key = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = WorkspaceScopedManager()
+
+    class Meta:
+        db_table = "calendar_favorite_special_date"
+        constraints = [
+            models.UniqueConstraint(fields=["workspace", "key"], name="uniq_workspace_favorite_special_date"),
+        ]
+
+    def __str__(self):
+        return f"{self.workspace_id} ★ {self.key}"

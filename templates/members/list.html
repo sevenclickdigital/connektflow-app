@@ -4,7 +4,7 @@
 {% block page_header %}
 <div class="page-header">
     <div>
-        <h1 class="page-title">{% translate "Team Members" %}</h1>
+        <h1 class="page-title">{% translate "Team Members" %}{% if request.org %} · {{ request.org.name }}{% endif %}</h1>
         <p class="page-description">{% translate "Who has access to your organization and its workspaces." %}</p>
     </div>
     {% if is_admin %}

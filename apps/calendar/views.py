@@ -2,6 +2,7 @@
 
 import calendar as cal_mod
 import json
+import re
 import uuid
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
@@ -23,7 +24,7 @@ from apps.social_accounts.models import SocialAccount
 from apps.workspaces.models import Workspace
 
 from .holidays import get_holidays_for_range
-from .models import CustomCalendarEvent, PostingSlot, Queue, QueueEntry
+from .models import CustomCalendarEvent, DateSegment, PostingSlot, Queue, QueueEntry
 from .services import (
     custom_events_enabled,
     day_label,
@@ -933,7 +934,7 @@ def _month_view_data(request, workspace, target_date, context):
     # Holiday overlay
     holidays_by_date = {}
     if context.get("show_holidays"):
-        holidays_by_date = get_holidays_for_range(weeks[0][0], weeks[-1][6])
+        holidays_by_date = get_holidays_for_range(weeks[0][0], weeks[-1][6], workspace)
 
     # Custom calendar events
     events_by_day = events_by_date(workspace, weeks[0][0], weeks[-1][6]) if context.get("show_events") else {}
@@ -1013,7 +1014,7 @@ def _side_panel_data(request, workspace, target_date, context):
 
     special_dates = 0
     if context.get("show_holidays"):
-        special_dates = sum(len(entries) for entries in get_holidays_for_range(first, last).values())
+        special_dates = sum(len(entries) for entries in get_holidays_for_range(first, last, workspace).values())
 
     context.update(
         {
@@ -2266,3 +2267,31 @@ def status_board_move(request, workspace_id, platform_post_id):
         body=pp.get_status_display() if pp.status not in target.statuses else "",
         events={"statusBoardChanged": True},
     )
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def date_segment_toggle(request, workspace_id, segment_id):
+    """Follow or stop following a segment's special dates, for the whole brand."""
+    from .services import toggle_date_segment
+
+    workspace = _get_workspace(request, workspace_id)
+    segment = get_object_or_404(DateSegment, id=segment_id, is_active=True)
+    toggle_date_segment(workspace, segment)
+    return redirect("composer:create_dates", workspace_id=workspace.id)
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def special_date_favorite(request, workspace_id):
+    """Save or drop a special date among the brand's favorites."""
+    from .services import toggle_favorite_date
+
+    workspace = _get_workspace(request, workspace_id)
+    key = request.POST.get("key", "")
+    # ``b:<slug>`` of a built-in date or ``d:<uuid>`` of one of the operator's.
+    if not re.fullmatch(r"[bd]:[a-z0-9-]{1,60}", key):
+        return JsonResponse({"error": "invalid key"}, status=400)
+    return JsonResponse({"favorite": toggle_favorite_date(workspace, key)})

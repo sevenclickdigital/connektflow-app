@@ -679,7 +679,7 @@ def upcoming_dates(workspace, start, days=60) -> list[dict]:
     end = start + timedelta(days=days)
     entries = []
     if special_dates_enabled(workspace):
-        entries.extend({**d, "event": None} for d in special_dates_between(start, end))
+        entries.extend({**d, "event": None} for d in special_dates_between(start, end, workspace))
     seen = set()
     for _day, events in sorted(events_by_date(workspace, start, end).items()):
         for event in events:
@@ -691,3 +691,111 @@ def upcoming_dates(workspace, start, days=60) -> list[dict]:
     for entry in entries:
         entry["days"] = (entry["date"] - start).days
     return sorted(entries, key=lambda e: e["date"])
+
+
+def date_segments_for(workspace) -> list[dict]:
+    """Every segment on offer, with whether ``workspace`` follows it:
+    ``[{"segment", "chosen", "date_count"}]``, by name."""
+    from django.db.models import Count, Q
+
+    from .models import DateSegment, WorkspaceDateSegment
+
+    chosen = set(WorkspaceDateSegment.objects.for_workspace(workspace.id).values_list("segment_id", flat=True))
+    segments = DateSegment.objects.filter(is_active=True).annotate(
+        date_count=Count("dates", filter=Q(dates__is_active=True))
+    )
+    return [{"segment": s, "chosen": s.id in chosen, "date_count": s.date_count} for s in segments]
+
+
+def toggle_date_segment(workspace, segment) -> bool:
+    """Follow ``segment`` if the brand does not, stop if it does. Returns whether it now does."""
+    from .models import WorkspaceDateSegment
+
+    deleted, _rows = WorkspaceDateSegment.objects.filter(workspace=workspace, segment=segment).delete()
+    if deleted:
+        return False
+    WorkspaceDateSegment.objects.get_or_create(workspace=workspace, segment=segment)
+    return True
+
+
+def special_dates_ahead(workspace, start, days=365) -> list[dict]:
+    """The special dates of the coming year for the brand, whether or not the
+    calendar is showing them: the global ones and those of its segments.
+
+    Shaped for the special-dates tab, which draws them in the browser: every
+    value is a string, a list of strings or the ``favorite`` flag, already in
+    the user's language (``day``, ``month``, ``full_date``, ``when``,
+    ``kind_label``).
+    """
+    from django.utils.formats import date_format
+    from django.utils.translation import gettext, ngettext
+
+    from .holidays import special_dates_between
+    from .models import FavoriteSpecialDate, SpecialDate
+
+    kind_labels = dict(SpecialDate.Kind.choices)
+    favorites = set(FavoriteSpecialDate.objects.for_workspace(workspace.id).values_list("key", flat=True))
+    entries = []
+    for entry in special_dates_between(start, start + timedelta(days=days), workspace):
+        ahead = (entry["date"] - start).days
+        entries.append(
+            {
+                "key": entry["key"],
+                "favorite": entry["key"] in favorites,
+                "image": entry["image"],
+                "iso": entry["date"].isoformat(),
+                "day": f"{entry['date'].day:02d}",
+                "month": date_format(entry["date"], "M"),
+                "full_date": date_format(entry["date"], "DATE_FORMAT"),
+                "when": gettext("today")
+                if ahead == 0
+                else ngettext("in %(days)s day", "in %(days)s days", ahead) % {"days": ahead},
+                "name": entry["name"],
+                "emoji": entry["emoji"],
+                "kind": entry["kind"],
+                "kind_label": str(kind_labels.get(entry["kind"], "")),
+                "segment": entry["segment"],
+                "description": entry["description"],
+                "suggestions": entry["suggestions"],
+                "tags": entry["tags"],
+            }
+        )
+    return entries
+
+
+def special_date_categories() -> list[dict]:
+    """The filters of the special-dates tab: each category of date, then the
+    dates that came from one of the brand's segments and the ones it saved."""
+    from django.utils.translation import gettext
+
+    from .models import SpecialDate
+
+    categories = [{"key": key, "label": str(label)} for key, label in SpecialDate.Kind.choices]
+    categories.append({"key": "segment", "label": gettext("From your segments")})
+    categories.append({"key": "favorite", "label": gettext("Favorites")})
+    return categories
+
+
+def toggle_favorite_date(workspace, key) -> bool:
+    """Save the special date ``key`` for the brand, or drop it if it was
+    saved. Returns whether it is now a favorite."""
+    from .models import FavoriteSpecialDate
+
+    deleted, _rows = FavoriteSpecialDate.objects.filter(workspace=workspace, key=key).delete()
+    if deleted:
+        return False
+    FavoriteSpecialDate.objects.get_or_create(workspace=workspace, key=key)
+    return True
+
+
+def set_date_segments(workspace, segment_ids) -> None:
+    """Make the brand follow exactly these segments (those on offer among
+    them); the others it followed are dropped."""
+    from .models import DateSegment, WorkspaceDateSegment
+
+    wanted = set(DateSegment.objects.filter(id__in=segment_ids, is_active=True).values_list("id", flat=True))
+    current = set(WorkspaceDateSegment.objects.for_workspace(workspace.id).values_list("segment_id", flat=True))
+    WorkspaceDateSegment.objects.filter(workspace=workspace, segment_id__in=current - wanted).delete()
+    WorkspaceDateSegment.objects.bulk_create(
+        WorkspaceDateSegment(workspace=workspace, segment_id=segment_id) for segment_id in wanted - current
+    )

@@ -2,8 +2,9 @@
 {% comment %}
 One brand in the account centre's brand list.
 ``item``: workspace, can_manage, is_member and either members/member_count
-(a brand of this organization) or organization/role (a brand of another
-organization the user was added to, whose other members are not shown).
+(a brand of an organization the user belongs to) or role (a brand the user
+was added to in someone else's organization, whose other members are not
+shown).
 {% endcomment %}
 <div class="flex flex-wrap items-center gap-3">
     {% if item.workspace.icon %}
@@ -22,9 +23,9 @@ organization the user was added to, whose other members are not shown).
             {% endif %}
         </div>
         <div class="text-xs text-neutral-500">
-            {% if item.organization %}
+            {% if item.role %}
             {% if item.role == "owner" %}{% translate "Owner" as role %}{% elif item.role == "manager" %}{% translate "Manager" as role %}{% elif item.role == "editor" %}{% translate "Editor" as role %}{% elif item.role == "contributor" %}{% translate "Contributor" as role %}{% elif item.role == "client" %}{% translate "Client" as role %}{% elif item.role == "admin" %}{% translate "Admin" as role %}{% elif item.role == "member" %}{% translate "Member" as role %}{% else %}{% translate "Viewer" as role %}{% endif %}
-            {% blocktranslate with org=item.organization.name %}{{ org }} · your role: {{ role }}{% endblocktranslate %}
+            {% blocktranslate %}Your role: {{ role }}{% endblocktranslate %}
             {% else %}
             {% blocktranslate count counter=item.member_count %}{{ counter }} member{% plural %}{{ counter }} members{% endblocktranslate %}
             {% endif %}
@@ -44,7 +45,7 @@ organization the user was added to, whose other members are not shown).
     </div>
 </div>
 
-{% if not item.organization %}
+{% if not item.role %}
 {% if item.members %}
 <div class="flex items-center flex-wrap gap-2 mt-3">
     {% for membership in item.members %}

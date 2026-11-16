@@ -36,7 +36,6 @@ from __future__ import annotations
 
 import functools
 import logging
-import re
 
 from allauth.account.forms import ResetPasswordForm
 from django.conf import settings
@@ -61,10 +60,10 @@ from apps.billing.gateways.asaas import AsaasAPIError, AsaasError, AsaasNotConfi
 from apps.billing.models import BillingEvent, ProductPrice, WorkspaceAddon, WorkspaceSubscription
 from apps.billing.storage_usage import storage_status
 from apps.billing.webhooks import PAID_EVENTS, UNPAID_EVENTS
-from apps.contacts.forms import is_valid_cnpj, is_valid_cpf
 from apps.members.decorators import require_org_role
 from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
+from apps.organizations.views import needs_welcome
 from apps.workspaces.models import Workspace
 
 logger = logging.getLogger(__name__)
@@ -180,22 +179,6 @@ def _needs_tax_id(workspace):
     return not services.ensure_billing_profile(workspace.organization).tax_id
 
 
-def _valid_tax_id(raw):
-    """CPF or CNPJ digits from what was typed, or "" when it is not one."""
-    digits = re.sub(r"\D", "", raw or "")
-    if (len(digits) == 11 and is_valid_cpf(digits)) or (len(digits) == 14 and is_valid_cnpj(digits)):
-        return digits
-    return ""
-
-
-def _valid_phone(raw):
-    """Brazilian phone digits (area code + number), or "" when it is not one."""
-    digits = re.sub(r"\D", "", raw or "")
-    if len(digits) in (12, 13) and digits.startswith("55"):
-        digits = digits[2:]
-    return digits if len(digits) in (10, 11) else ""
-
-
 def _posted_tax_id(request, workspace):
     """The CPF/CNPJ digits from a contracting form.
 
@@ -205,7 +188,7 @@ def _posted_tax_id(request, workspace):
     """
     if not _needs_tax_id(workspace):
         return "", None
-    digits = _valid_tax_id(request.POST.get("tax_id"))
+    digits = services.valid_tax_id(request.POST.get("tax_id"))
     if digits:
         return digits, None
     return "", _("Enter a valid CPF or CNPJ for the invoice.")
@@ -283,8 +266,9 @@ def _billing_context(request, workspace):
         "awaiting_payment": bool(subscription.gateway_subscription_id)
         and subscription.status in (WorkspaceSubscription.Status.PENDING, WorkspaceSubscription.Status.PAST_DUE),
         "subscription_required": settings.BILLING_REQUIRE_SUBSCRIPTION,
-        "trial_available": services.trial_available(workspace),
+        "trial_available": services.trial_available(workspace, request.user),
         "trial_days": services.trial_days(),
+        "payer_known": services.payer_identity_known(workspace.organization),
     }
 
 
@@ -308,8 +292,10 @@ def workspace_billing(request, workspace_id):
 def account_billing(request):
     """Account centre → Billing: every brand whose billing this user manages.
 
-    Brands of organizations where they are owner/admin, plus brands where
-    they are owner/manager (which may belong to another organization). Read
+    Brands of the organization in use when they are its owner/admin, plus
+    brands they own or manage there or in organizations they are only a
+    guest of. Brands of their other organizations are left to that
+    organization's own page. Read
     only: rows are not created here, so a brand with no subscription row yet
     shows as pending, which is what it is.
     """
@@ -320,9 +306,15 @@ def account_billing(request):
         user=request.user,
         workspace_role__in=(WorkspaceMembership.WorkspaceRole.OWNER, WorkspaceMembership.WorkspaceRole.MANAGER),
     ).values_list("workspace_id", flat=True)
+    # The user's other organizations have this same page of their own, reached
+    # by opening one of their brands; mixing their brands in here would put
+    # them under the wrong organization's name and payer.
+    current_org_id = request.org.id if request.org else None
+    other_org_ids = [m.organization_id for m in request.org_memberships if m.organization_id != current_org_id]
     workspaces = (
         Workspace.objects.filter(is_archived=False)
         .filter(Q(organization_id__in=admin_org_ids) | Q(id__in=managed_ids))
+        .exclude(organization_id__in=other_org_ids)
         .select_related("organization", "billing_subscription")
         .order_by("organization__name", "name")
     )
@@ -412,8 +404,8 @@ def update_payer(request):
     raw_phone = (request.POST.get("phone") or "").strip()
     email = (request.POST.get("billing_email") or "").strip()
 
-    tax_id = _valid_tax_id(raw_tax_id)
-    phone = _valid_phone(raw_phone)
+    tax_id = services.valid_tax_id(raw_tax_id)
+    phone = services.valid_phone(raw_phone)
     error = None
     if not name:
         error = _("Enter the name or company name the invoices should carry.")
@@ -517,6 +509,8 @@ def subscribe_modal(request, workspace_id):
             response["HX-Redirect"] = reverse("calendar:calendar", kwargs={"workspace_id": workspace.id})
         return response
     context = _billing_context(request, workspace)
+    # A new account names its organization and brand before seeing the plan.
+    context["welcome"] = needs_welcome(request, workspace)
     # Settled, not merely active: a workspace on its free trial is in use
     # and still has this page to open, to pay before the trial ends.
     if context["subscription"].is_settled:
@@ -595,14 +589,17 @@ def start_trial(request, workspace_id):
     workspace = _get_workspace(request, workspace_id)
     _require_manage_billing(request, workspace)
 
-    tax_id = _valid_tax_id(request.POST.get("tax_id"))
-    phone = _valid_phone(request.POST.get("phone"))
+    # Normally given on the welcome step, with the organization's name; asked
+    # here only from an account that predates that step.
+    profile = services.ensure_billing_profile(workspace.organization)
+    tax_id = services.valid_tax_id(request.POST.get("tax_id")) or profile.tax_id
+    phone = services.valid_phone(request.POST.get("phone")) or profile.phone
     if not tax_id or not phone:
         messages.error(request, _("Enter a valid CPF or CNPJ and a phone with area code to start the free trial."))
         return redirect("billing:subscribe_modal", workspace_id=workspace.id)
 
     try:
-        sub = services.start_trial(workspace, tax_id=tax_id, phone=phone, email=request.user.email)
+        sub = services.start_trial(workspace, tax_id=tax_id, phone=phone, email=request.user.email, user=request.user)
     except services.TrialRefusedError as exc:
         messages.error(request, str(exc))
         return redirect("billing:subscribe_modal", workspace_id=workspace.id)

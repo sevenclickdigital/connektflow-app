@@ -10,7 +10,9 @@ library's alone — picking happens on thumbnails.
 {% endcomment %}
 
 {% if picker_mode %}
-  {% if post %}
+  {% if picker_target == "idea" %}
+    {% url 'composer:idea_media_picker' workspace_id=workspace.id as grid_url %}
+  {% elif post %}
     {% url 'composer:media_picker_post' workspace_id=workspace.id post_id=post.id as grid_url %}
   {% else %}
     {% url 'composer:media_picker' workspace_id=workspace.id as grid_url %}
@@ -81,6 +83,11 @@ library's alone — picking happens on thumbnails.
 </div>
 {% endif %}
 
+{% elif picker_mode %}
+  {# An empty picker still has to show what is uploaded from it. #}
+  <div hx-get="{{ grid_url }}?page=1" hx-trigger="uploadsComplete from:body" hx-target="#picker-asset-grid" hx-swap="innerHTML">
+    {% include "media_library/_empty_state.html" %}
+  </div>
 {% else %}
   {% include "media_library/_empty_state.html" %}
 {% endif %}

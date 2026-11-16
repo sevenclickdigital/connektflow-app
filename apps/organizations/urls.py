@@ -7,5 +7,8 @@ app_name = "organizations"
 urlpatterns = [
     path("settings/", views.settings_view, name="settings"),
     path("workspaces/", views.workspaces_view, name="workspaces"),
+    path("rename/", views.rename_view, name="rename"),
+    path("create/", views.create_view, name="create"),
+    path("welcome/", views.welcome_view, name="welcome"),
     path("calendar/", views.cross_workspace_calendar, name="cross_workspace_calendar"),
 ]

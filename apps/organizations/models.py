@@ -5,6 +5,10 @@ from django.db import models
 
 
 class Organization(models.Model):
+    #: The name every organization is created with at sign-up, until its
+    #: owner gives it a real one on the welcome step.
+    DEFAULT_NAME = "My Organization"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     logo_url = models.URLField(blank=True, default="")
@@ -57,12 +61,19 @@ class Organization(models.Model):
         sub = getattr(self, "intelligence_subscription", None)
         return bool(sub and sub.status == "active")
 
+    @property
+    def is_unnamed(self):
+        """True while the organization still has the name it was created with."""
+        return self.name == self.DEFAULT_NAME
+
     def hard_delete(self, requesting_user=None):
         """Hard-delete this org and settle every member's account.
 
         - `requesting_user` (optional): the user who triggered the immediate-
-          delete flow. Their account is deleted along with the org so they
-          get a truly fresh start on re-signup. Pass `None` (the default) for
+          delete flow. When this was their only organization their account
+          is deleted along with it, so they get a truly fresh start on
+          re-signup; one who belongs to another organization keeps the
+          account. Pass `None` (the default) for
           the scheduled-grace-period path and the management-command sweeper
           — those don't carry request context and we don't want to silently
           delete accounts from a background job.
@@ -88,7 +99,7 @@ class Organization(models.Model):
 
         requesting_user_id = requesting_user.pk if requesting_user else None
         for uid in member_ids:
-            if uid == requesting_user_id:
+            if uid == requesting_user_id and not OrgMembership.objects.filter(user_id=uid).exists():
                 User.objects.filter(pk=uid).delete()
                 continue
             try:

@@ -350,9 +350,9 @@ class PostResponse(Schema):
         cannot drift. ``post.platform_posts`` should be prefetched with
         ``social_account`` to avoid an N+1.
 
-        ``internal_notes`` is a team-only field. The composer hides it from
-        ``client`` / ``viewer`` workspace roles, so the API/MCP mirror that by
-        redacting it to ``""`` unless ``include_internal_notes`` is set. Call
+        ``internal_notes`` is a team-only field, not for the ``client`` /
+        ``viewer`` workspace roles, so the API/MCP redact it to ``""`` unless
+        ``include_internal_notes`` is set. Call
         sites derive that flag from the caller's ``create_posts`` permission
         (see ``_can_view_internal_notes`` in the REST router and MCP handlers).
         It defaults to ``False`` so a new, unconverted call site fails closed —

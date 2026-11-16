@@ -1,17 +1,23 @@
 """Views for team member management."""
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 from django_ratelimit.decorators import ratelimit
 
+from apps.common.htmx import toast_response
 from apps.workspaces.models import Workspace
 
 from . import services
 from .decorators import require_org_role
 from .models import Invitation, OrgMembership, WorkspaceMembership
+
+#: Organization roles that may invite people into it.
+_INVITING_ROLES = (OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN)
 
 
 def _org_role_choices_for(membership):
@@ -87,6 +93,28 @@ def member_list(request):
 
     # Role choices for forms: only owners may assign Admin (see helper).
     org_role_choices = _org_role_choices_for(request.org_membership)
+
+    # The invitation picks the organization first, then brands of it: every
+    # organization the user may invite into, the one in use first.
+    invite_orgs = []
+    if is_admin:
+        manageable = sorted(
+            (m for m in request.org_memberships if m.org_role in _INVITING_ROLES),
+            key=lambda m: m.organization_id != org.id,
+        )
+        brands_by_org = {}
+        for ws in Workspace.objects.filter(
+            organization_id__in=[m.organization_id for m in manageable], is_archived=False
+        ).order_by("name"):
+            brands_by_org.setdefault(ws.organization_id, []).append(ws)
+        invite_orgs = [
+            {
+                "organization": m.organization,
+                "workspaces": brands_by_org.get(m.organization_id, []),
+                "can_grant_admin": m.org_role == OrgMembership.OrgRole.OWNER,
+            }
+            for m in manageable
+        ]
     workspace_role_choices = WorkspaceMembership.WorkspaceRole.choices
 
     return render(
@@ -98,6 +126,7 @@ def member_list(request):
             "pending_invites": pending_invites,
             "is_admin": is_admin,
             "org_workspaces": org_workspaces,
+            "invite_orgs": invite_orgs,
             "org_role_choices": org_role_choices,
             "workspace_role_choices": workspace_role_choices,
             "current_user": request.user,
@@ -111,12 +140,23 @@ def member_list(request):
 
 
 @login_required
-@require_org_role("admin")
 @require_POST
 @ratelimit(key="user", rate="10/m", method="POST", block=True)
 def invite_member(request):
-    """Create and send a team member invitation."""
-    org = request.org
+    """Create and send a team member invitation.
+
+    The form names the organization, since someone with several chooses
+    which one to invite into; only one they own or administer is accepted.
+    Without it, the organization in use.
+    """
+    wanted = request.POST.get("organization") or str(getattr(request.org, "id", ""))
+    membership = next(
+        (m for m in request.org_memberships if str(m.organization_id) == wanted and m.org_role in _INVITING_ROLES),
+        None,
+    )
+    if membership is None:
+        raise PermissionDenied("Only an owner or admin of the organization can invite into it.")
+    org = membership.organization
     email = request.POST.get("email", "").strip()
     org_role = request.POST.get("org_role", OrgMembership.OrgRole.MEMBER)
 
@@ -150,6 +190,15 @@ def invite_member(request):
         )
 
     if request.headers.get("HX-Request"):
+        if org.id != request.org.id:
+            # The page lists the invitations of the organization in use, so
+            # one sent into another is confirmed without a row here.
+            return toast_response(
+                tone="success",
+                title=_("Invitation sent"),
+                body=_("%(email)s was invited to %(organization)s.")
+                % {"email": invitation.email, "organization": org.name},
+            )
         return render(
             request,
             "members/partials/invitation_row.html",

@@ -105,6 +105,9 @@ urlpatterns = [
     # the shelf belongs to the product, not to a workspace, so there is no
     # workspace in the path for a membership check to key on.
     path("automations/staff/templates/", include("apps.automations.staff_urls")),
+    path("calendar/staff/dates/", include("apps.calendar.staff_urls")),
+    path("composer/staff/ideas/", include("apps.composer.staff_urls")),
+    path("radar/staff/hashtags/", include("apps.radar.staff_urls")),
     # Client Portal (Stream F)
     path("portal/", include("apps.client_portal.urls")),
     path("notifications/", include("apps.notifications.urls")),

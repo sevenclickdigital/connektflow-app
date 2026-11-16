@@ -7,18 +7,22 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import redirect, render
 from django.utils import timezone as django_tz
 from django.utils.translation import gettext as _
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 
+from apps.accounts.models import User
+from apps.accounts.signals import create_organization_with_brand
 from apps.accounts.signup_links import custom_signup_url, signup_allowed
+from apps.billing import services as billing_services
 from apps.calendar.services import day_label, month_label, week_label, weekday_names
 from apps.common.validators import clean_display_name
 from apps.composer.models import PlatformPost, Post, Tag
 from apps.members.decorators import require_org_role
 from apps.members.models import OrgMembership, WorkspaceMembership
+from apps.organizations.models import Organization
 from apps.social_accounts.models import SocialAccount
 from apps.workspaces.models import Workspace
 
@@ -32,10 +36,6 @@ def settings_view(request):
 
     if request.method == "POST":
         action = request.POST.get("action")
-        if action == "update_name":
-            # The name is edited on the brands page; back to where it was typed.
-            _handle_name_update(request, org)
-            return redirect("organizations:workspaces")
         if action == "delete_organization":
             return _handle_org_deletion(request, org)
         elif action == "delete_organization_now":
@@ -46,84 +46,233 @@ def settings_view(request):
 
     context = {
         "organization": org,
-        # Reached from the brands page, so that is what stays lit in the menu.
+        # Reached from the organizations page, so that is what stays lit in the menu.
         "settings_active": "workspaces",
         "is_owner": is_owner,
     }
     return render(request, "organizations/settings.html", context)
 
 
+def needs_welcome(request, workspace):
+    """Whether the user should name their organization and brand first.
+
+    True for the owner of an organization that still has its sign-up name,
+    looking at one of its brands. Asked by the contracting page, which
+    shows the welcome step before the plan, and by the dashboard.
+    """
+    membership = request.org_membership
+    return bool(
+        membership
+        and membership.org_role == OrgMembership.OrgRole.OWNER
+        and membership.organization_id == workspace.organization_id
+        and membership.organization.is_unnamed
+    )
+
+
+@login_required
+@require_POST
+def welcome_view(request):
+    """Name the organization and its first brand, right after sign-up.
+
+    The first thing a new account is asked: both were created with
+    placeholder names, and the organization's goes on invitations and
+    invoices. Then on to choosing between the free trial and the plan.
+    """
+    workspace = Workspace.objects.filter(
+        id=request.POST.get("workspace") or None,
+        memberships__user=request.user,
+    ).first()
+    if workspace is None or not needs_welcome(request, workspace):
+        return redirect("dashboard")
+
+    organization_name = clean_display_name(request.POST.get("organization_name", ""))
+    brand_name = clean_display_name(request.POST.get("brand_name", ""))
+    if not organization_name or not brand_name or organization_name == Organization.DEFAULT_NAME:
+        messages.error(request, _("Enter the name of your organization and of your brand."))
+        return redirect("billing:subscribe_modal", workspace_id=workspace.id)
+    tax_id = billing_services.valid_tax_id(request.POST.get("tax_id"))
+    phone = billing_services.valid_phone(request.POST.get("phone"))
+    if not tax_id or not phone:
+        messages.error(request, _("Enter a valid CPF or CNPJ and a phone with area code."))
+        return redirect("billing:subscribe_modal", workspace_id=workspace.id)
+
+    with transaction.atomic():
+        organization = workspace.organization
+        organization.name = organization_name
+        organization.save(update_fields=["name"])
+        workspace.name = brand_name
+        workspace.save(update_fields=["name"])
+        billing_services.set_payer_identity(organization, tax_id=tax_id, phone=phone)
+    return redirect("billing:subscribe_modal", workspace_id=workspace.id)
+
+
+#: How many organizations one person may own. Far above any real need (a
+#: group of companies has a handful); it only stops a script from filling
+#: the database with empty ones.
+MAX_OWNED_ORGANIZATIONS = 20
+
+
+@login_required
+@require_POST
+def create_view(request):
+    """Create another organization for the user, with its first brand.
+
+    For someone who runs separate businesses: each organization has its own
+    brands, team, API keys and payer. Not offered to an account that owns
+    nothing on purpose (an operator has no organization at all).
+    """
+    if not request.org_memberships:
+        raise PermissionDenied("Only accounts with an organization can create another.")
+
+    organization_name = clean_display_name(request.POST.get("organization_name", ""))
+    brand_name = clean_display_name(request.POST.get("brand_name", ""))
+    if not organization_name or not brand_name:
+        messages.error(request, _("Enter the name of the organization and of its first brand."))
+        return redirect("organizations:workspaces")
+    tax_id = billing_services.valid_tax_id(request.POST.get("tax_id"))
+    phone = billing_services.valid_phone(request.POST.get("phone"))
+    if not tax_id or not phone:
+        messages.error(request, _("Enter a valid CPF or CNPJ and a phone with area code."))
+        return redirect("organizations:workspaces")
+
+    owned = sum(1 for m in request.org_memberships if m.org_role == OrgMembership.OrgRole.OWNER)
+    if owned >= MAX_OWNED_ORGANIZATIONS:
+        messages.error(request, _("You have reached the number of organizations one account can own."))
+        return redirect("organizations:workspaces")
+
+    with transaction.atomic():
+        workspace = create_organization_with_brand(
+            request.user, organization_name=organization_name, brand_name=brand_name
+        )
+        # Same as a brand created in an existing organization: the row is
+        # there for the quota and the staff console, and contracting is next.
+        billing_services.ensure_subscription(workspace)
+        billing_services.set_payer_identity(workspace.organization, tax_id=tax_id, phone=phone)
+    return redirect("billing:subscribe_modal", workspace_id=workspace.id)
+
+
 @login_required
 @require_org_role(OrgMembership.OrgRole.MEMBER)
 def workspaces_view(request):
+    """Account centre → Organizations: each one with its brands underneath.
+
+    Lists the organizations the user belongs to, newest first, then those
+    where they were only added to a brand. Read only from the user's own
+    memberships, so nothing they don't belong to can appear. The numbers of
+    an organization (members, connected channels, owner) and the members of
+    its brands are shown only to someone who belongs to it.
+    """
     org = request.org
-    workspaces = (
-        Workspace.objects.filter(organization=org).prefetch_related("memberships__user").order_by("is_archived", "name")
-    )
-
-    # Build workspace data with members and current user's role
-    workspace_data = []
-    archived_data = []
-    for ws in workspaces:
-        members = list(ws.memberships.all())
-        user_membership = next((m for m in members if m.user_id == request.user.id), None)
-        can_manage = user_membership and user_membership.workspace_role in (
-            WorkspaceMembership.WorkspaceRole.OWNER,
-            WorkspaceMembership.WorkspaceRole.MANAGER,
-        )
-        entry = {
-            "workspace": ws,
-            "members": members,
-            "member_count": len(members),
-            "is_member": user_membership is not None,
-            "can_manage": can_manage,
-        }
-        if ws.is_archived:
-            archived_data.append(entry)
-        else:
-            workspace_data.append(entry)
-
-    # Brands outside this organization that the user still reaches: as a
-    # member of the brand, or as a member of the organization that owns it
-    # (someone in two organizations). Read only from the user's own
-    # memberships, so nothing they don't belong to can appear; other members
-    # aren't listed, since that organization isn't this one.
+    org_roles = {m.organization_id: m.org_role for m in request.org_memberships}
     brand_roles = dict(
         WorkspaceMembership.objects.filter(user=request.user).values_list("workspace_id", "workspace_role")
     )
-    org_roles = dict(OrgMembership.objects.filter(user=request.user).values_list("organization_id", "org_role"))
     managing_roles = (WorkspaceMembership.WorkspaceRole.OWNER, WorkspaceMembership.WorkspaceRole.MANAGER)
     org_admin_roles = (OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN)
-    external_data = []
-    for ws in (
-        Workspace.objects.filter(is_archived=False)
-        .filter(Q(id__in=brand_roles.keys()) | Q(organization_id__in=org_roles.keys()))
-        .exclude(organization=org)
-        .select_related("organization")
-        .order_by("name")
-    ):
-        brand_role = brand_roles.get(ws.id)
-        org_role = org_roles.get(ws.organization_id)
-        external_data.append(
-            {
-                "workspace": ws,
-                "organization": ws.organization,
-                "role": brand_role or org_role,
-                "is_member": brand_role is not None,
-                "can_manage": brand_role in managing_roles or org_role in org_admin_roles,
-            }
-        )
 
+    def group_for(organization):
+        org_role = org_roles.get(organization.id)
+        return {
+            "organization": organization,
+            "is_current": organization.id == org.id,
+            "is_member": org_role is not None,
+            "can_edit": org_role in org_admin_roles,
+            "brands": [],
+        }
+
+    memberships = sorted(request.org_memberships, key=lambda m: m.organization.created_at, reverse=True)
+    groups = {m.organization_id: group_for(m.organization) for m in memberships}
+
+    people = defaultdict(set)
+    for organization_id, user_id, org_role, name, email in OrgMembership.objects.filter(
+        organization_id__in=org_roles.keys()
+    ).values_list("organization_id", "user_id", "org_role", "user__name", "user__email"):
+        people[organization_id].add(user_id)
+        if org_role == OrgMembership.OrgRole.OWNER:
+            groups[organization_id].setdefault("owner_name", name or email.split("@")[0])
+    channels = dict(
+        SocialAccount.objects.filter(
+            workspace__organization_id__in=org_roles.keys(),
+            workspace__is_archived=False,
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+        .values_list("workspace__organization_id")
+        .annotate(total=Count("id"))
+    )
+    for organization_id, group in groups.items():
+        group["member_count"] = len(people[organization_id])
+        group["channel_count"] = channels.get(organization_id, 0)
+        group["brand_count"] = 0
+
+    workspaces = (
+        Workspace.objects.filter(
+            Q(organization_id__in=org_roles.keys()) | Q(id__in=brand_roles.keys(), is_archived=False)
+        )
+        .select_related("organization")
+        .prefetch_related("memberships__user")
+        .order_by("organization__name", "is_archived", "name")
+    )
+    for ws in workspaces:
+        group = groups.get(ws.organization_id)
+        if group is None:
+            group = groups[ws.organization_id] = group_for(ws.organization)
+        brand_role = brand_roles.get(ws.id)
+        entry = {
+            "workspace": ws,
+            "is_member": brand_role is not None,
+            "can_manage": brand_role in managing_roles or org_roles.get(ws.organization_id) in org_admin_roles,
+        }
+        if group["is_member"]:
+            members = list(ws.memberships.all())
+            entry.update(members=members, member_count=len(members))
+        else:
+            entry["role"] = brand_role
+        group["brands"].append(entry)
+        if group["is_member"] and not ws.is_archived:
+            group["brand_count"] += 1
+
+    org_groups = list(groups.values())
+    # Position of each card under the "by name" order, applied in the page.
+    by_name = sorted(org_groups, key=lambda g: (not g["is_member"], g["organization"].name.casefold()))
+    for position, group in enumerate(by_name):
+        group["name_position"] = position
+    own = [g for g in org_groups if g["is_member"]]
     context = {
-        "workspace_data": workspace_data,
-        "archived_data": archived_data,
-        "external_data": external_data,
+        "org_groups": org_groups,
+        "totals": {
+            "organizations": len(own),
+            # Someone in two organizations is one person.
+            "members": len(set().union(*people.values())) if people else 0,
+            "brands": sum(g["brand_count"] for g in own),
+            "channels": sum(g["channel_count"] for g in own),
+        },
         "settings_active": "workspaces",
-        "organization": org,
-        "can_admin_org": request.org_membership.org_role in org_admin_roles,
-        "is_org_owner": request.org_membership.org_role == OrgMembership.OrgRole.OWNER,
     }
     return render(request, "organizations/workspaces.html", context)
+
+
+@login_required
+@require_POST
+def rename_view(request):
+    """Rename one of the user's organizations, from the organizations page.
+
+    The organization comes in the form, since the page lists several; only
+    one the user owns or administers is accepted.
+    """
+    wanted = request.POST.get("organization", "")
+    membership = next(
+        (
+            m
+            for m in request.org_memberships
+            if str(m.organization_id) == wanted
+            and m.org_role in (OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN)
+        ),
+        None,
+    )
+    if membership is None:
+        raise PermissionDenied("Only an owner or admin of the organization can rename it.")
+    _handle_name_update(request, membership.organization)
+    return redirect("organizations:workspaces")
 
 
 def _handle_name_update(request, org):
@@ -170,9 +319,10 @@ def _handle_org_deletion(request, org):
 def _handle_immediate_org_deletion(request, org):
     """Permanently delete an organization right now (owner only).
 
-    Since v1 is one-org-per-user, deleting the org leaves the user with no
-    workspace/org context. Log them out and send them to signup so they can
-    start fresh.
+    When it was the owner's only organization their account goes with it
+    (``Organization.hard_delete``): they are logged out and sent to sign-up
+    to start fresh. An owner who keeps another organization stays signed
+    in and lands on it.
     """
     if request.org_membership.org_role != OrgMembership.OrgRole.OWNER:
         raise PermissionDenied
@@ -185,6 +335,11 @@ def _handle_immediate_org_deletion(request, org):
     ).delete()
 
     org.hard_delete(requesting_user=request.user)
+    if User.objects.filter(pk=request.user.pk).exists():
+        # They keep another organization, so the account stays and so does
+        # the session: back to what is left.
+        messages.success(request, _("The organization was deleted."))
+        return redirect("dashboard")
     logout(request)
     # With SIGNUP_MODE invite/closed and no custom URL, the signup page would only
     # say sign-up is closed, so send them to log in instead.

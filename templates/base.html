@@ -84,23 +84,13 @@
         }
         .idea-modal-close:hover { color: var(--text-primary); background: var(--neutral-100); }
         .idea-modal-header {
-            display: flex; align-items: center; justify-content: space-between; padding: 20px 50px 16px 24px;
+            display: flex; align-items: center; justify-content: space-between; padding: 20px 50px 12px 24px;
         }
-        .idea-modal-body { flex: 1; overflow-y: auto; padding: 0 24px 16px; }
+        .idea-modal-body { flex: 1; overflow-y: auto; padding: 4px 24px 16px; }
         .idea-modal-footer {
             padding: 16px 24px; border-top: 1px solid var(--border);
             display: flex; align-items: center; justify-content: flex-end; gap: 8px;
         }
-        .idea-modal-body input.idea-title-input {
-            width: 100%; font-size: 1.25rem; font-weight: 700; color: var(--text-primary);
-            border: none; outline: none; padding: 0; margin-bottom: 12px; background: transparent;
-        }
-        .idea-modal-body input.idea-title-input::placeholder { color: var(--neutral-300); }
-        .idea-modal-body textarea.idea-desc-input {
-            width: 100%; min-height: 160px; font-size: 0.875rem; color: var(--text-primary);
-            border: none; outline: none; padding: 0; resize: none; background: transparent; line-height: 1.7;
-        }
-        .idea-modal-body textarea.idea-desc-input::placeholder { color: var(--neutral-300); }
         .idea-pill-btn {
             display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
             border: 1px solid var(--border); border-radius: 9999px; font-size: 0.8125rem;
@@ -383,7 +373,18 @@
                      x-transition:leave-start="opacity-100"
                      x-transition:leave-end="opacity-0"
                      class="absolute left-3 right-3 top-full mt-1 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 py-1 z-50">
-                    {% for ws in sidebar_workspaces %}
+                    {% comment %}
+                    The brands under the organization each belongs to. Opening a
+                    brand is what changes the organization in use (see
+                    apps.members.middleware), so this list is also how someone
+                    with several organizations moves between them.
+                    {% endcomment %}
+                    {# A fixed height: past it the list scrolls instead of growing down the screen. #}
+                    <div class="overflow-y-auto overscroll-contain" style="max-height: 320px;" data-brand-list>
+                    {% for group in sidebar_org_groups %}
+                    <div class="{% if not forloop.first %}border-t border-neutral-100 mt-1 pt-1{% endif %}">
+                    <div class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 truncate">{{ group.organization.name }}</div>
+                    {% for ws in group.workspaces %}
                     <a href="{% url 'calendar:calendar' workspace_id=ws.id %}"
                        class="flex items-center gap-2.5 px-3 py-2 text-sm rounded-md hover:bg-black/[0.04] transition-colors {% if request.workspace and ws.id == request.workspace.id %}bg-neutral-50 font-semibold text-neutral-950{% else %}text-neutral-800{% endif %}">
                         {% if ws.icon %}
@@ -399,28 +400,24 @@
                         <svg class="w-4 h-4 text-neutral-500 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         {% endif %}
                     </a>
+                    {% endfor %}
+                    </div>
                     {% empty %}
                     <p class="px-3 py-2 text-sm text-neutral-500">{% translate "No workspaces" %}</p>
                     {% endfor %}
-                    {% if can_create_workspace %}
-                    <div class="border-t border-neutral-100 mt-1 pt-1">
-                        <button @click="wsOpen = false; $dispatch('open-create-ws')"
-                                class="flex items-center gap-2.5 px-3 py-2 text-sm text-neutral-700 rounded-md hover:bg-black/[0.04] transition-colors w-full cursor-pointer">
-                            <div class="w-7 h-7 rounded-md flex items-center justify-center border border-dashed border-neutral-400 flex-shrink-0">
-                                <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-                            </div>
-                            <span>{% translate "Create workspace" %}</span>
-                        </button>
                     </div>
-                    {% endif %}
-                    {% if request.workspace %}
+                    {% comment %}
+                    Creating and editing organizations and brands happens in one
+                    place, the account centre; the switcher only switches.
+                    {% endcomment %}
+                    {% if can_create_organization %}
                     <div class="border-t border-neutral-100 mt-1 pt-1">
-                        <a href="{% url 'workspaces:settings' workspace_id=request.workspace.id %}"
+                        <a href="{% url 'organizations:workspaces' %}"
                            class="flex items-center gap-2.5 px-3 py-2 text-sm text-neutral-700 rounded-md hover:bg-black/[0.04] transition-colors w-full cursor-pointer">
                             <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0">
-                                <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                                <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1"/></svg>
                             </div>
-                            <span>{% translate "Workspace settings" %}</span>
+                            <span>{% translate "Manage organizations" %}</span>
                         </a>
                     </div>
                     {% endif %}
@@ -593,8 +590,8 @@
 
                                 <!-- Body -->
                                 <div class="idea-modal-body" @click="createGroupDropdownOpen = false; createTagDropdownOpen = false">
-                                    <input type="text" name="title" required class="idea-title-input" placeholder="{% translate 'Give your idea a title' %}">
-                                    <textarea name="description" class="idea-desc-input" placeholder="{% translate 'Let it flow... or' %}"></textarea>
+                                    <input type="text" name="title" required class="form-input-styled font-semibold" placeholder="{% translate 'Give your idea a title' %}">
+                                    <textarea name="description" data-idea-desc rows="6" class="form-input-styled mt-3" style="resize: vertical;" aria-label="{% translate 'Description' %}" placeholder="{% translate 'Let it flow... or' %}"></textarea>
                                     <input type="file" name="media" x-ref="sidebarIdeaFileInput" accept="image/*,video/*,.gif" style="display:none" multiple
                                            @change="_handleFileSelect($event)">
 
@@ -720,9 +717,9 @@
                 </a>
                 {% if request.workspace %}
                 {% with app=request.resolver_match.app_name url_name=request.resolver_match.url_name %}
-                <div class="mb-0.5" x-data="{ open: {% if app == 'calendar' or app == 'composer' and url_name == 'compose' or app == 'tasks' %}true{% else %}localStorage.getItem('nav:publish') === 'open'{% endif %} }"
+                <div class="mb-0.5" x-data="{ open: {% if app == 'calendar' or app == 'composer' or app == 'tasks' %}true{% else %}localStorage.getItem('nav:publish') === 'open'{% endif %} }"
                      x-effect="localStorage.setItem('nav:publish', open ? 'open' : 'closed')">
-                    <button type="button" class="sidebar-nav-item sidebar-nav-group-toggle {% if app == 'calendar' or app == 'composer' and url_name == 'compose' or app == 'tasks' %}has-active{% endif %}"
+                    <button type="button" class="sidebar-nav-item sidebar-nav-group-toggle {% if app == 'calendar' or app == 'composer' or app == 'tasks' %}has-active{% endif %}"
                             :aria-expanded="open.toString()"
                             @click="if (sidebarCollapsed) { sidebarCollapsed = false; open = true } else { open = !open }">
                         <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M12 14v4M10 16l2 2 2-2"/></svg>
@@ -735,6 +732,7 @@
                     {% if request.workspace_membership and request.workspace_membership.workspace_role != "client" %}
                     <a href="{% url 'tasks:board' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'tasks' %}active{% endif %}">{% translate "Task management" context "menu" %}</a>
                     {% endif %}
+                    <a href="{% url 'composer:create_landing' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'composer' and url_name != 'compose' %}active{% endif %}">{% translate "Idea hub" %}</a>
                     </div>
                 </div>
                 <div class="mb-0.5" x-data="{ open: {% if app == 'inbox' or app == 'funnels' or app == 'automations' or app == 'contacts' %}true{% else %}localStorage.getItem('nav:engage') === 'open'{% endif %} }"
@@ -752,10 +750,6 @@
                     <a href="{% url 'contacts:list' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'contacts' %}active{% endif %}">{% translate "Contacts" context "menu" %}</a>
                     </div>
                 </div>
-                <a href="{% url 'composer:create_landing' workspace_id=request.workspace.id %}" class="mb-0.5 sidebar-nav-item {% if app == 'composer' and url_name != 'compose' %}active{% endif %}">
-                    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-                    <span class="sidebar-nav-label">{% translate "Content (AI)" %}</span>
-                </a>
                 {% if analytics_enabled_platforms %}
                 <a href="{% url 'analytics:index' workspace_id=request.workspace.id %}" class="mb-0.5 sidebar-nav-item {% if app == 'analytics' %}active{% endif %}">
                     <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -856,32 +850,12 @@
                         {% endif %}
                     </div>
 
-                    {% comment %}
-                    Manage Team — shown only where it works. ``members:list``
-                    sits behind ``require_org_role`` (apps/members/decorators.py),
-                    so for a session with no OrgMembership it answers 403:
-                    the only button on the menu that refused the person who
-                    pressed it. Keyed on the membership that carries it, the
-                    same condition layouts/settings.html uses for its whole
-                    Organization section.
-                    {% endcomment %}
-                    {% if request.org_membership %}
-                    <!-- Manage Team button -->
-                    <div class="px-4 pb-3">
-                        <a href="{% url 'members:list' %}"
-                           class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-neutral-800 bg-white border border-neutral-300 rounded-lg hover:bg-black/[0.04] transition-colors">
-                            <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-                            {% translate "Manage Team" %}
-                        </a>
-                    </div>
-                    {% endif %}
-
                     <div class="border-t border-neutral-100">
-                        <!-- Settings -->
+                        <!-- My profile -->
                         <a href="{% url 'accounts:settings' %}"
                            class="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-800 hover:bg-black/[0.04] transition-colors">
-                            <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-                            {% translate "Settings" %}
+                            <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            {% translate "My profile" %}
                         </a>
                     </div>
 
@@ -1379,7 +1353,7 @@
                 },
 
                 _insertEmoji(emoji) {
-                    var desc = document.querySelector('.idea-modal textarea.idea-desc-input');
+                    var desc = document.querySelector('.idea-modal textarea[data-idea-desc]');
                     if (desc) {
                         var start = desc.selectionStart;
                         var end = desc.selectionEnd;
@@ -1465,8 +1439,8 @@
     {% block extra_js %}{% endblock %}
     {% if can_create_workspace %}
     <!-- Create workspace modal -->
-    <div x-data="{ createWsOpen: false }"
-         @open-create-ws.window="createWsOpen = true; $nextTick(() => $refs.newWsName.focus())">
+    <div x-data="{ createWsOpen: false, organization: '' }"
+         @open-create-ws.window="organization = ($event.detail && $event.detail.organization) || ''; createWsOpen = true; $nextTick(() => $refs.newWsName.focus())">
         <div x-show="createWsOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center">
             <div class="absolute inset-0 bg-black/40" @click="createWsOpen = false"></div>
             <div class="relative bg-white rounded-xl shadow-xl ring-1 ring-neutral-300 w-full max-w-md mx-4 p-6"
@@ -1481,6 +1455,7 @@
                 <h3 class="text-base font-semibold text-neutral-950 mb-4">{% translate "Create workspace" %}</h3>
                 <form method="post" action="{% url 'workspaces:create' %}">
                     {% csrf_token %}
+                    <input type="hidden" name="organization" :value="organization">
                     <input type="text" name="name" x-ref="newWsName" required placeholder="{% translate 'Workspace name' %}"
                            class="form-input-styled w-full mb-4">
                     <div class="flex justify-end gap-2">
@@ -1490,6 +1465,61 @@
                         </button>
                         <button type="submit"
                                 class="btn-brand px-4 py-2 text-sm cursor-pointer">
+                            {% translate "Create" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if can_create_organization %}
+    {% comment %}
+    Another organization for the same person: its own brands, team and payer.
+    It is born with a first brand, which is what the user lands on.
+    {% endcomment %}
+    <div x-data="{ createOrgOpen: false }"
+         @open-create-org.window="createOrgOpen = true; $nextTick(() => $refs.newOrgName.focus())">
+        <div x-show="createOrgOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/40" @click="createOrgOpen = false"></div>
+            <div class="relative bg-white rounded-xl shadow-xl ring-1 ring-neutral-300 w-full max-w-md mx-4 p-6"
+                 x-show="createOrgOpen"
+                 x-transition:enter="transition ease-out duration-150"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-100"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 @keydown.escape.window="createOrgOpen = false">
+                <h3 class="text-base font-semibold text-neutral-950 mb-1">{% translate "Create organization" %}</h3>
+                <p class="text-sm text-neutral-600 mb-4">{% translate "For another company of yours. It has its own brands, team and billing data, separate from the others." %}</p>
+                <form method="post" action="{% url 'organizations:create' %}">
+                    {% csrf_token %}
+                    <label for="new_org_name" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Organization Name" %}</label>
+                    <input type="text" id="new_org_name" name="organization_name" x-ref="newOrgName" required maxlength="100"
+                           class="form-input-styled w-full mb-4">
+                                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-1">
+                                    <div>
+                                      <label for="new_org_tax_id" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "CPF or CNPJ" %}</label>
+                                      <input type="text" id="new_org_tax_id" name="tax_id" required inputmode="numeric" autocomplete="off" maxlength="18"
+                 placeholder="000.000.000-00" class="form-input-styled w-full tabular-nums">
+                                    </div>
+                                    <div>
+                                      <label for="new_org_phone" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Phone with area code" %}</label>
+                                      <input type="tel" id="new_org_phone" name="phone" required autocomplete="tel" maxlength="20"
+                 placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums">
+                                    </div>
+                                  </div>
+                                  <p class="text-xs text-neutral-600 mb-4">{% translate "Of the organization. They go on its invoices and are what the free trial asks for." %}</p>
+                    <label for="new_org_brand" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Name of its first brand" %}</label>
+                    <input type="text" id="new_org_brand" name="brand_name" required maxlength="100"
+                           class="form-input-styled w-full mb-4">
+                    <div class="flex justify-end gap-2">
+                        <button type="button" @click="createOrgOpen = false"
+                                class="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer">
+                            {% translate "Cancel" %}
+                        </button>
+                        <button type="submit" class="btn-brand px-4 py-2 text-sm cursor-pointer">
                             {% translate "Create" %}
                         </button>
                     </div>

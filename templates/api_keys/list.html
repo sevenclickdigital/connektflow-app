@@ -4,7 +4,7 @@
 {% block page_header %}
 <div class="page-header">
     <div class="max-w-2xl">
-        <h1 class="page-title">{% translate "API Keys" %}</h1>
+        <h1 class="page-title">{% translate "API Keys" %}{% if request.org %} · {{ request.org.name }}{% endif %}</h1>
         <p class="page-description">
             {% translate "Used by AI agents and external scripts to act in your workspaces." %}
             {% translate "Each key can be scoped to one workspace and an explicit list of social accounts." %}

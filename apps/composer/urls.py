@@ -7,8 +7,13 @@ app_name = "composer"
 urlpatterns = [
     # Create landing page
     path("create/", views.create_landing, name="create_landing"),
+    path("create/templates/", views.create_landing, {"tab": "templates"}, name="create_templates"),
+    path("create/templates/<int:template_id>/idea/", views.idea_from_template, name="idea_from_template"),
+    path("create/dates/", views.create_landing, {"tab": "dates"}, name="create_dates"),
     # Idea CRUD (HTMX endpoints)
     path("ideas/upload-media/", views.idea_upload_media, name="idea_upload_media"),
+    path("ideas/media-picker/", views.media_picker, {"target": "idea"}, name="idea_media_picker"),
+    path("ideas/media/<uuid:asset_id>/crop/", views.idea_crop_media, name="idea_crop_media"),
     path("ideas/create/", views.idea_create, name="idea_create"),
     path("ideas/<uuid:idea_id>/create-post/", views.idea_create_post, name="idea_create_post"),
     path("ideas/<uuid:idea_id>/edit/", views.idea_edit, name="idea_edit"),
@@ -30,6 +35,11 @@ urlpatterns = [
     # Save actions
     path("compose/save/", views.save_post, name="save_post"),
     path("compose/<uuid:post_id>/save/", views.save_post, name="save_post_edit"),
+    path(
+        "compose/<uuid:post_id>/automation-targets/",
+        views.automation_targets,
+        name="automation_targets",
+    ),
     # Per-platform status transition (one PlatformPost at a time)
     path(
         "compose/<uuid:post_id>/platform-posts/<uuid:platform_post_id>/transition/",

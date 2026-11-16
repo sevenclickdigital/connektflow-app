@@ -1,85 +1,87 @@
-{% load i18n %}
+{% load i18n idea_icons %}
 {% comment %}
-Template gallery - featured templates banner + category filter + card grid.
-Uses Alpine.js for client-side category filtering.
+The Templates page: a banner across the page, the categories as tiles, a
+search and the grid of ready-made starting points. Search and category
+filter in the browser.
+
+Expects: builtin_templates (the active IdeaTemplate rows) and
+template_categories (its Category choices). Runs inside the create page's
+Alpine scope (showCreateModal, the use-builtin-template event).
 {% endcomment %}
 
-<div x-data="{ activeCategory: 'all' }">
+<div x-data="{ activeCategory: 'all', query: '', matches(text) { return text.includes(this.query.trim().toLowerCase()) } }"
+     class="min-w-0">
 
-    <!-- Featured templates banner -->
-    <div class="rounded-2xl bg-gradient-to-br from-green-50 via-green-50/60 to-white border border-green-100 p-6 mb-8">
-        <div class="flex flex-col lg:flex-row gap-6">
-            <!-- Aside -->
-            <div class="flex-shrink-0 lg:w-48 flex flex-col justify-center">
-                <span class="text-xs font-semibold text-green-700 tracking-wide">{% translate "Featured templates" %}</span>
-                <h2 class="text-xl font-bold text-neutral-950 mt-1" style="letter-spacing: -0.01em;">{% translate "Our top picks" %}</h2>
-                <p class="text-sm text-neutral-600 mt-1">{% translate "Helpful starting points to plan your next post." %}</p>
-            </div>
-            <!-- Featured cards -->
-            <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {% for tpl in featured_templates %}
-                <button type="button"
-                        @click="$dispatch('use-builtin-template', { id: {{ tpl.id }} })"
-                        class="text-left bg-white rounded-xl border border-neutral-300 p-4 hover:border-neutral-400 hover:shadow-sm transition-all group cursor-pointer"
-                        style="border-top: 3px solid rgba({{ tpl.color }}, 0.6);">
-                    <div class="text-2xl mb-2">{{ tpl.emoji }}</div>
-                    <h3 class="text-base font-semibold text-neutral-900 mb-1 line-clamp-2">{{ tpl.title }}</h3>
-                    <p class="text-sm text-neutral-600 line-clamp-3">{{ tpl.description }}</p>
+    <div class="min-w-0">
+        <!-- Banner -->
+        <div class="rounded-2xl border border-brand-100 p-6 sm:p-8 mb-6 flex items-center gap-6 overflow-hidden" style="background: linear-gradient(135deg, var(--brand-50), var(--brand-100));">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-2xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Never run out of ideas" %}</h2>
+                <p class="text-sm text-neutral-700 mt-2 max-w-md">{% translate "Content starting points, the dates of your calendar and ready-made templates to make your own and publish." %}</p>
+                <button type="button" class="btn-brand mt-5"
+                        @click="showCreateModal = true; createSelectedGroup = _defaultGroupId">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                    {% translate "New Idea" %}
                 </button>
-                {% endfor %}
+            </div>
+            <div class="hidden md:flex w-28 h-28 rounded-3xl bg-brand-700 items-center justify-center flex-shrink-0 shadow-lg" style="transform: rotate(-6deg);" aria-hidden="true">
+                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" stroke-width="1.5"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0012 2z"/></svg>
             </div>
         </div>
-    </div>
 
-    <!-- Category filter chips -->
-    <div class="flex items-center gap-2 mb-6 overflow-x-auto pb-1 -mx-1 px-1">
-        {% for cat in template_categories %}
-        <button type="button"
-                @click="activeCategory = '{{ cat.slug }}'"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full border whitespace-nowrap transition-all duration-150 cursor-pointer"
-                :class="activeCategory === '{{ cat.slug }}'
-                    ? 'bg-neutral-600 text-white border-neutral-700'
-                    : 'bg-white text-neutral-600 border-neutral-300 hover:border-neutral-400 hover:text-neutral-800'">
-            {% if cat.slug == "all" %}
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-            {% elif cat.slug == "tip" %}
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 006 8c0 1 .2 2.2 1.5 3.5.7.7 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
-            {% elif cat.slug == "case-study" %}
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12H10M15 8H10M19 17V5a2 2 0 00-2-2H4M4 3a2 2 0 00-2 2v2a1 1 0 001 1h3m2 13a2 2 0 01-2-2v-1a1 1 0 011-1h10a1 1 0 011 1v1a2 2 0 01-2 2H8z"/></svg>
-            {% elif cat.slug == "story" %}
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7V21M12 7C12 5.9 11.6 4.9 10.8 4.2 10.1 3.4 9.1 3 8 3H3a1 1 0 00-1 1v13a1 1 0 001 1h6c1.6 0 3 1.3 3 3M12 7c0-1.1.4-2.1 1.2-2.8C13.9 3.4 14.9 3 16 3h5a1 1 0 011 1v13a1 1 0 01-1 1h-6c-1.6 0-3 1.3-3 3"/></svg>
-            {% elif cat.slug == "how-to" %}
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 12.5L6.6 20.4a2 2 0 01-2.8 0 2 2 0 010-2.8l7.9-7.9M15.7 4.3a1.4 1.4 0 012 0l2 2a1.4 1.4 0 010 2l-4.6 4.6-4-4 4.6-4.6z"/></svg>
-            {% elif cat.slug == "question" %}
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-            {% elif cat.slug == "opinion" %}
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M8 12h2v-2H8zM14 12h2v-2h-2z"/></svg>
-            {% elif cat.slug == "list" %}
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/><path d="M9 6h6"/></svg>
-            {% elif cat.slug == "behind-the-scenes" %}
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l7-5 4 4 7-5M3 11v8a2 2 0 002 2h14a2 2 0 002-2v-8"/></svg>
-            {% endif %}
-            {{ cat.label }}
-        </button>
-        {% endfor %}
-    </div>
+        <!-- Categories -->
+        <h3 class="text-sm font-semibold text-neutral-950 mb-3">{% translate "Explore by category" %}</h3>
+        <div class="flex gap-3 mb-5 overflow-x-auto pb-1" style="scrollbar-width: thin;">
+            <button type="button" @click="activeCategory = 'all'"
+                    class="flex-shrink-0 w-[104px] flex flex-col items-center gap-2 px-2 py-3 rounded-xl border text-xs font-semibold transition-colors cursor-pointer"
+                    :class="activeCategory === 'all'
+                        ? 'bg-brand-50 border-brand-300 text-brand-800'
+                        : 'bg-white border-neutral-300 text-neutral-700 hover:border-neutral-400'">
+                <span class="w-10 h-10 rounded-xl flex items-center justify-center icon-tone-brand">
+                    {% include "composer/partials/_template_category_icon.html" with slug="all" size="w-5 h-5" %}
+                </span>
+                <span class="w-full text-center leading-tight truncate">{% translate "All" %}</span>
+            </button>
+            {% for cat in template_categories %}
+            <button type="button" @click="activeCategory = '{{ cat.slug }}'"
+                    class="flex-shrink-0 w-[104px] flex flex-col items-center gap-2 px-2 py-3 rounded-xl border text-xs font-semibold transition-colors cursor-pointer"
+                    :class="activeCategory === '{{ cat.slug }}'
+                        ? 'bg-brand-50 border-brand-300 text-brand-800'
+                        : 'bg-white border-neutral-300 text-neutral-700 hover:border-neutral-400'">
+                <span class="w-10 h-10 rounded-xl flex items-center justify-center icon-tone-{{ cat.slug|category_tone }}">
+                    {% include "composer/partials/_template_category_icon.html" with slug=cat.slug size="w-5 h-5" %}
+                </span>
+                <span class="w-full text-center leading-tight truncate" title="{{ cat.label }}">{{ cat.label }}</span>
+            </button>
+            {% endfor %}
+        </div>
 
-    <!-- Template grid -->
-    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {% for tpl in builtin_templates %}
-        <button type="button"
-                x-show="activeCategory === 'all' || activeCategory === '{{ tpl.category }}'"
-                x-transition:enter="transition ease-out duration-150"
-                x-transition:enter-start="opacity-0 scale-95"
-                x-transition:enter-end="opacity-100 scale-100"
-                @click="$dispatch('use-builtin-template', { id: {{ tpl.id }} })"
-                class="text-left bg-white rounded-xl border border-neutral-300 p-4 hover:border-neutral-400 hover:shadow-sm transition-all group cursor-pointer"
-                style="border-top: 3px solid rgba({{ tpl.color }}, 0.45);">
-            <div class="text-2xl mb-2">{{ tpl.emoji }}</div>
-            <h3 class="text-base font-semibold text-neutral-900 mb-1 line-clamp-2 group-hover:text-neutral-950">{{ tpl.title }}</h3>
-            <p class="text-sm text-neutral-600 line-clamp-3">{{ tpl.description }}</p>
-        </button>
-        {% endfor %}
-    </div>
+        <!-- Search -->
+        <div class="relative mb-5">
+            <svg class="w-4 h-4 text-neutral-500 absolute pointer-events-none" style="left: 0.875rem; top: 50%; transform: translateY(-50%);" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <label for="template_search" class="sr-only">{% translate "Search templates" %}</label>
+            <input type="search" id="template_search" x-model="query" placeholder="{% translate 'Search templates' %}…"
+                   class="form-input-styled w-full" style="padding-left: 2.5rem;">
+        </div>
 
+        <!-- Template grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+            {% for tpl in builtin_templates %}
+            <button type="button"
+                    data-search="{{ tpl.title|lower }} {{ tpl.description|lower }}"
+                    x-show="(activeCategory === 'all' || activeCategory === '{{ tpl.category }}') && matches($el.dataset.search)"
+                    @click="$dispatch('use-builtin-template', { id: {{ tpl.id }} })"
+                    class="a-card a-card-hover text-left p-4 flex flex-col cursor-pointer">
+                <span class="w-11 h-11 rounded-xl flex items-center justify-center mb-3 icon-tone-{{ tpl.category|category_tone }}">
+                    {% include "composer/partials/_template_category_icon.html" with slug=tpl.category size="w-5 h-5" %}
+                </span>
+                <span class="text-sm font-semibold text-neutral-950 line-clamp-2">{{ tpl.title }}</span>
+                <span class="text-xs text-neutral-600 mt-1 line-clamp-3 flex-1">{{ tpl.description }}</span>
+                <span class="flex flex-wrap gap-1.5 mt-4">
+                    <span class="pill icon-tone-{{ tpl.category|category_tone }}">{{ tpl.get_category_display }}</span>
+                </span>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
 </div>

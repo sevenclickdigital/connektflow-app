@@ -1,5 +1,6 @@
-"""Account centre → Brands: the organization's brands plus those of other
-organizations the user was added to — and never one they don't belong to."""
+"""Account centre → Organizations: each organization with its brands, plus
+those of organizations the user was only added to a brand of — and never one
+they don't belong to."""
 
 import pytest
 from django.urls import reverse
@@ -7,6 +8,13 @@ from django.urls import reverse
 from apps.members.models import WorkspaceMembership
 from apps.organizations.models import Organization
 from apps.workspaces.models import Workspace
+
+
+def _brands(response):
+    """Every brand entry on the page by name, with the group it sits in."""
+    return {
+        entry["workspace"].name: (group, entry) for group in response.context["org_groups"] for entry in group["brands"]
+    }
 
 
 @pytest.fixture
@@ -28,12 +36,13 @@ def test_lists_own_brands_and_brands_the_user_was_added_to(client, org_owner, or
     assert response.status_code == 200
     # The user is in two organizations (creating a user provisions one), so
     # whichever is current, both brands must be on the page.
-    listed = [e["workspace"].name for e in response.context["workspace_data"]]
-    external = {e["workspace"].name: e for e in response.context["external_data"]}
-    assert "Own Brand" in listed + list(external)
-    assert "Client Brand" in external
-    assert external["Client Brand"]["organization"] == other_org
-    assert external["Client Brand"]["can_manage"] is True
+    brands = _brands(response)
+    assert brands["Own Brand"][0]["organization"] == organization
+    group, entry = brands["Client Brand"]
+    assert group["organization"] == other_org
+    # A guest of the brand, not of the organization: nothing to rename.
+    assert group["can_edit"] is False
+    assert entry["can_manage"] is True
 
 
 @pytest.mark.django_db
@@ -43,8 +52,8 @@ def test_never_lists_a_brand_of_another_organization_without_membership(client, 
 
     response = client.get(reverse("organizations:workspaces"))
 
-    names = [e["workspace"].name for e in response.context["external_data"]]
-    assert "Someone Else's Brand" not in names
+    assert "Someone Else's Brand" not in _brands(response)
+    assert other_org not in [g["organization"] for g in response.context["org_groups"]]
     assert b"Someone Else&#x27;s Brand" not in response.content
     assert b"Someone Else's Brand" not in response.content
 
@@ -65,5 +74,4 @@ def test_other_members_of_an_outside_brand_are_not_shown(client, org_owner, othe
 
     assert b"Client Brand" in response.content
     assert b"Stranger Person" not in response.content
-    external = {e["workspace"].name: e for e in response.context["external_data"]}
-    assert external["Client Brand"]["can_manage"] is False
+    assert _brands(response)["Client Brand"][1]["can_manage"] is False

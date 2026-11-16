@@ -26,7 +26,7 @@ from django.utils.dateparse import parse_date
 from django.utils.html import format_html, strip_tags
 from django.utils.text import get_text_list
 from django.utils.translation import gettext as _
-from django.utils.translation import gettext_lazy, ngettext, override
+from django.utils.translation import gettext_lazy, ngettext, override, pgettext
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from apps.billing.storage_usage import WorkspaceStorageExceededError
@@ -48,6 +48,7 @@ from providers.exceptions import ProviderError
 from providers.google_business import PROFILE_PHOTO_CATEGORIES
 from providers.tiktok import VALID_PRIVACY_LEVELS as TIKTOK_PRIVACY_LEVELS
 
+from . import idea_icons
 from .emoji import emoji_catalogue, facebook_feeling_choices
 from .forms import ContentCategoryForm, PostForm
 from .models import (
@@ -56,6 +57,7 @@ from .models import (
     Idea,
     IdeaGroup,
     IdeaMedia,
+    IdeaTemplate,
     PlatformPost,
     Post,
     PostMedia,
@@ -64,6 +66,7 @@ from .models import (
     Tag,
 )
 from .services import (
+    brand_hashtags,
     format_blocker,
     format_media_replacements,
     image_count_blocker,
@@ -879,8 +882,8 @@ def _resolve_queues_for_post(queue_id, workspace, post_data):
 def _resolve_template_data(template_id, workspace):
     """Resolve a ?template= value into a template_data dict.
 
-    Accepts either a numeric ID for a built-in template (defined in
-    apps.composer.builtin_templates.TEMPLATES) or a UUID for a saved
+    Accepts either the numeric id of an ``IdeaTemplate`` (the shelf the
+    operator keeps, shown in the create page) or a UUID for a saved
     PostTemplate row. Returns ``None`` if the value is missing, malformed,
     or does not match any template.
     """
@@ -892,21 +895,65 @@ def _resolve_template_data(template_id, workspace):
     except (TypeError, ValueError):
         numeric_id = None
     if numeric_id is not None:
-        from apps.composer.builtin_templates import TEMPLATES as BUILTIN_TEMPLATES
-
-        for tpl in BUILTIN_TEMPLATES:
-            if tpl.get("id") == numeric_id:
-                return {
-                    "caption": tpl.get("body", ""),
-                    "tags": list(tpl.get("tags", [])),
-                }
-        return None
+        idea_template = IdeaTemplate.objects.filter(id=numeric_id, is_active=True).first()
+        if idea_template is None:
+            return None
+        return {"caption": idea_template.body, "tags": []}
     # Fall back to PostTemplate UUID lookup.
     try:
         tpl = PostTemplate.objects.get(id=template_id, workspace=workspace)
     except (PostTemplate.DoesNotExist, ValidationError):
         return None
     return tpl.template_data
+
+
+def _automation_targets(platform_posts):
+    """Where the composer's "set up flow" button of each account leads.
+
+    The flow builder is reached per *platform post*, which only exists once
+    the post has been saved at least once. Keyed "<account>:<format>" so the
+    page can look one up from the account card the author is looking at; an
+    account with no entry shows the "save first" state rather than a dead
+    link. The flow's status rides along so the button can read "Edit flow ·
+    Running" without a second query per account.
+    """
+    from apps.automations.models import PostAutomation
+
+    platform_posts = list(platform_posts)
+    flows = {}
+    if platform_posts:
+        flows = {
+            flow.platform_post_id: flow
+            for flow in PostAutomation.objects.filter(platform_post__in=[pp.id for pp in platform_posts])
+        }
+    targets = {}
+    for pp in platform_posts:
+        # A Story has no comment thread to automate.
+        if pp.is_story:
+            continue
+        flow = flows.get(pp.id)
+        targets[f"{pp.social_account_id}:{pp.format}"] = {
+            "platform_post_id": str(pp.id),
+            "status": flow.status if flow else "",
+            "status_label": flow.get_status_display() if flow else "",
+            "has_flow": flow is not None,
+        }
+    return targets
+
+
+@login_required
+@require_permission("create_posts")
+@require_GET
+def automation_targets(request, workspace_id, post_id):
+    """The automation targets of a saved post, as JSON.
+
+    Asked by the composer after each save that stays on the page: the
+    platform posts are created by that save, so the targets rendered with
+    the page are out of date until then.
+    """
+    workspace = _get_workspace(request, workspace_id)
+    post = get_object_or_404(Post, id=post_id, workspace=workspace)
+    return JsonResponse(_automation_targets(post.platform_posts.all()))
 
 
 @login_required
@@ -1073,33 +1120,7 @@ def compose(request, workspace_id, post_id=None):
             **cfg,
         }
 
-    # The flow builder is reached per *platform post*, which only exists once the
-    # post has been saved at least once. Keyed by account id so the template can
-    # look one up from the account chip the author is already looking at; an
-    # account with no entry renders the "save first" state rather than a dead
-    # link. ``automation_status`` is carried alongside so the button can read
-    # "Edit automation · Running" without a second query per account.
-    automation_targets = {}
-    if post is not None:
-        flows = {}
-        if platform_post_list:
-            from apps.automations.models import PostAutomation
-
-            flows = {
-                flow.platform_post_id: flow
-                for flow in PostAutomation.objects.filter(platform_post__in=[pp.id for pp in platform_post_list])
-            }
-        for pp in platform_post_list:
-            # A Story has no comment thread to automate.
-            if pp.is_story:
-                continue
-            flow = flows.get(pp.id)
-            automation_targets[f"{pp.social_account_id}:{pp.format}"] = {
-                "platform_post_id": str(pp.id),
-                "status": flow.status if flow else "",
-                "status_label": flow.get_status_display() if flow else "",
-                "has_flow": flow is not None,
-            }
+    automation_targets = _automation_targets(platform_post_list)
 
     # Workspace defaults
     default_first_comment = workspace.default_first_comment
@@ -1120,8 +1141,6 @@ def compose(request, workspace_id, post_id=None):
     perms = membership.effective_permissions if membership else {}
     can_publish = perms.get("publish_directly", False)
     can_approve = perms.get("approve_posts", False)
-    ws_role = membership.workspace_role if membership else None
-    can_view_internal_notes = ws_role not in ("client", "viewer") if ws_role else True
 
     # "Read-only" describes what the composer is actually *showing*. Opened
     # scoped to one account (``?account=``) only that child's status counts, so
@@ -1262,7 +1281,6 @@ def compose(request, workspace_id, post_id=None):
         "default_hashtags": json.dumps(default_hashtags),
         "can_publish": can_publish,
         "can_approve": can_approve,
-        "can_view_internal_notes": can_view_internal_notes,
         "is_edit": post is not None,
         **_network_delete_context(_gated_children(platform_post_list, account_filter) if post else []),
         "post_is_scheduled": post_is_scheduled,
@@ -1935,7 +1953,10 @@ def autosave(request, workspace_id, post_id=None):
     post.title = request.POST.get("title", "")
     post.caption = request.POST.get("caption", "")
     post.first_comment = request.POST.get("first_comment", "")
-    post.internal_notes = request.POST.get("internal_notes", "")
+    # The composer has no notes field; notes written through the API or MCP
+    # are kept when the post is saved here.
+    if "internal_notes" in request.POST:
+        post.internal_notes = request.POST["internal_notes"]
 
     post.tags = parse_and_truncate_tag_string(request.POST.get("tags", ""))
 
@@ -2126,7 +2147,7 @@ def preview(request, workspace_id):
 
 @login_required
 @require_GET
-def media_picker(request, workspace_id, post_id=None):
+def media_picker(request, workspace_id, post_id=None, target=""):
     """Modal picker for selecting media from the library.
 
     Runs the library's own search/filter/sort/paginate pipeline
@@ -2135,6 +2156,9 @@ def media_picker(request, workspace_id, post_id=None):
     knows instead of a parallel one. ``picker_mode`` turns the shared partials
     from a manager into a selector: the cards carry a checkbox and no
     star/detail actions, and every HTMX URL points back here.
+
+    ``target`` "idea" is the same window on the idea board: the selection goes
+    back to the page instead of being attached to a post.
 
     Responds with the grid alone for HTMX requests driven by search, a filter
     pill, sort or pagination; the full modal body otherwise.
@@ -2157,6 +2181,7 @@ def media_picker(request, workspace_id, post_id=None):
         "workspace": workspace,
         "post": post,
         "picker_mode": True,
+        "picker_target": target,
         "file_types": MediaAsset.MediaType.choices,
         "accepted_file_types": get_accepted_file_types(),
         **filters,
@@ -3595,6 +3620,31 @@ def _workspace_event(workspace, event_id):
         return None
 
 
+#: One tone per column the idea board is created with, in order: where ideas
+#: arrive, are weighed, are approved and are discarded (`.kanban-tone-*`).
+_IDEA_COLUMN_TONES = ("brand", "warning", "success", "error")
+
+
+def _default_idea_column_names():
+    """The names the idea board's columns are created with, in the active language."""
+    return [
+        _("Brainstorming"),
+        pgettext("idea column", "Under review"),
+        pgettext("idea column", "Approved"),
+        pgettext("idea column", "Discarded"),
+    ]
+
+
+def _idea_tasks():
+    """The tasks of the idea in the outer query (imported here: the task
+    board depends on the composer, not the other way round)."""
+    from django.db.models import OuterRef
+
+    from apps.tasks.models import Task
+
+    return Task.objects.filter(idea_id=OuterRef("pk"))
+
+
 def _idea_columns(workspace, tag=None):
     """Build Kanban columns from IdeaGroup for a workspace, optionally filtered by tag."""
     groups = IdeaGroup.objects.for_workspace(workspace.id).order_by("position", "created_at")
@@ -3604,12 +3654,12 @@ def _idea_columns(workspace, tag=None):
         # Names are stored as data (users rename them), so they are seeded once
         # in the site's language, not in that of whoever opens the board first.
         with override(settings.LANGUAGE_CODE):
-            default_names = [_("Unassigned"), _("To Do"), _("In Progress"), _("Done")]
+            default_names = _default_idea_column_names()
         created_groups = [
             IdeaGroup.objects.create(workspace=workspace, name=name, position=pos)
             for pos, name in enumerate(default_names)
         ]
-        # Seed an introductory idea in the first (unassigned) column
+        # Seed an introductory idea in the first column
         Idea.objects.create(
             workspace=workspace,
             group=created_groups[0],
@@ -3627,6 +3677,9 @@ def _idea_columns(workspace, tag=None):
         Idea.objects.for_workspace(workspace.id)
         .select_related("author", "media_asset", "calendar_event")
         .prefetch_related("media_attachments__media_asset")
+        # Whether the idea already went on to the task board (an art request);
+        # with ``post``, what tells an idea already in production.
+        .annotate(has_task=models.Exists(_idea_tasks()))
         .order_by("position", "-created_at")
     )
     if tag:
@@ -3640,13 +3693,29 @@ def _idea_columns(workspace, tag=None):
         if group_key in grouped_ideas:
             grouped_ideas[group_key].append(idea)
 
+    # What each column is for, shown only under a column that still has the
+    # name it is created with, in its place: a brand's own column (or an old
+    # "Done" still holding ideas) does not get a description that is not its.
+    hints = (
+        _("First ideas to explore."),
+        _("Weighing whether it works and in which format."),
+        _("Ideas ready for production."),
+        _("Ideas that will not be used."),
+    )
+    with override(settings.LANGUAGE_CODE):
+        default_names = _default_idea_column_names()
     columns = []
-    for grp in groups:
+    for index, grp in enumerate(groups):
+        is_default = index < len(hints) and grp.name == default_names[index]
         columns.append(
             {
                 "id": str(grp.id),
                 "key": str(grp.id),
                 "label": grp.name,
+                "hint": hints[index] if is_default else "",
+                # The colour says what the column means, so it follows the same
+                # rule as the description; any other column takes the brand's.
+                "tone": _IDEA_COLUMN_TONES[index] if is_default else "brand",
                 "ideas": grouped_ideas.get(str(grp.id), []),
             }
         )
@@ -3880,35 +3949,93 @@ def _create_idea_media_asset(workspace, user, uploaded_file):
 
 @login_required
 @require_permission("create_posts")
-def create_landing(request, workspace_id):
-    """Render the Create landing page with Ideas Kanban board."""
-    from apps.composer.builtin_templates import (
-        CATEGORIES,
-        get_all_templates,
-        get_featured_templates,
+@require_POST
+def idea_from_template(request, workspace_id, template_id):
+    """Put a template on the idea board, as an idea of the brand's own.
+
+    The idea arrives in the first column drawn like the template: its
+    category's icon and colour, its title, its text as the description and
+    the category as a tag. From there it is sorted like any other idea.
+    """
+    workspace = _get_workspace(request, workspace_id)
+    template = get_object_or_404(IdeaTemplate, id=template_id, is_active=True)
+    _idea_columns(workspace)  # creates the board on a brand that never opened it
+    icon, tone = idea_icons.category_style(template.category)
+    Idea.objects.create(
+        workspace=workspace,
+        author=request.user,
+        title=template.title[:255],
+        description=template.body or template.description,
+        tags=parse_and_truncate_tag_string(str(template.get_category_display())),
+        group=IdeaGroup.objects.for_workspace(workspace.id).order_by("position", "created_at").first(),
+        status=Idea.Status.UNASSIGNED,
+        icon=icon,
+        icon_tone=tone,
     )
+    messages.success(request, _("The template is now one of your ideas."))
+    return redirect("composer:create_landing", workspace_id=workspace.id)
+
+
+#: The pages of the create area and the route of each.
+_CREATE_PAGES = {
+    "ideas": "composer:create_landing",
+    "templates": "composer:create_templates",
+    "dates": "composer:create_dates",
+}
+
+
+@login_required
+@require_permission("create_posts")
+def create_landing(request, workspace_id, tab="ideas"):
+    """The create area: the idea board, the templates and the special dates.
+
+    Three pages of one area, each with its own address (``tab`` comes from the
+    route). An old link with ``?tab=`` is sent to the page it meant. Each page
+    loads only what it shows.
+    """
+    from apps.calendar.services import (
+        date_segments_for,
+        special_date_categories,
+        special_dates_ahead,
+    )
+    from apps.radar.market_hashtags import market_hashtags_for
 
     workspace = _get_workspace(request, workspace_id)
-    tab = request.GET.get("tab", "ideas")
+    asked = request.GET.get("tab")
+    if asked in _CREATE_PAGES and asked != tab:
+        return redirect(_CREATE_PAGES[asked], workspace_id=workspace.id)
     tag = request.GET.get("tag")
 
     columns, all_tags = _idea_columns(workspace, tag)
-
-    feeds = Feed.objects.for_workspace(workspace.id)
-    from apps.calendar.services import upcoming_dates
-
+    today = timezone.localdate()
     context = {
-        "upcoming_dates": upcoming_dates(workspace, timezone.localdate()),
         "workspace": workspace,
         "tab": tab,
         "columns": columns,
         "all_tags": all_tags,
         "active_tag": tag,
-        "featured_templates": get_featured_templates(),
-        "builtin_templates": get_all_templates(),
-        "template_categories": CATEGORIES,
-        "feeds": feeds,
+        "feeds": Feed.objects.for_workspace(workspace.id),
+        "builtin_templates": [],
+        "idea_icons": idea_icons.icon_library(),
+        "idea_icon_tones": idea_icons.TONES,
     }
+    if tab in ("ideas", "dates"):
+        context["special_dates_ahead"] = special_dates_ahead(workspace, today)
+    if tab == "ideas":
+        context.update(
+            brand_hashtags=brand_hashtags(workspace.id),
+            market_hashtags=market_hashtags_for(workspace),
+        )
+    if tab == "templates":
+        context.update(
+            builtin_templates=IdeaTemplate.objects.filter(is_active=True),
+            template_categories=[{"slug": slug, "label": label} for slug, label in IdeaTemplate.Category.choices],
+        )
+    if tab == "dates":
+        context.update(
+            date_segments=date_segments_for(workspace),
+            special_date_categories=special_date_categories(),
+        )
     return render(request, "composer/create_landing.html", context)
 
 
@@ -3926,15 +4053,38 @@ def idea_upload_media(request, workspace_id):
         asset = _create_idea_media_asset(workspace, request.user, uploaded_file)
     except (StorageQuotaExceededError, WorkspaceStorageExceededError) as exc:
         return _quota_error_response(exc)
-    return JsonResponse(
-        {
-            "asset_id": str(asset.id),
-            "filename": asset.filename,
-            "url": asset.file.url if asset.file else "",
-            "size": asset.file_size,
-            "media_type": asset.media_type,
-        }
-    )
+    return JsonResponse(_idea_asset_payload(asset))
+
+
+def _idea_asset_payload(asset):
+    """What an idea's window needs to show and keep one media file."""
+    return {
+        "asset_id": str(asset.id),
+        "filename": asset.filename,
+        "url": asset.file.url if asset.file else "",
+        "size": asset.file_size,
+        "media_type": asset.media_type,
+    }
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def idea_crop_media(request, workspace_id, asset_id):
+    """Crop one image of an idea being written into a new asset, and describe it.
+
+    The idea keeps its media in the page until it is saved, so nothing is
+    attached here: the window swaps the copy in where the image was. The
+    library keeps the original.
+    """
+    from apps.media_library.models import MediaAsset
+
+    workspace = _get_workspace(request, workspace_id)
+    asset = get_object_or_404(MediaAsset, id=asset_id, workspace=workspace)
+    cropped, error = _crop_asset(request, workspace, asset)
+    if error is not None:
+        return error
+    return JsonResponse(_idea_asset_payload(cropped))
 
 
 @login_required
@@ -3989,6 +4139,8 @@ def idea_create(request, workspace_id):
             group=group,
             status=Idea.Status.UNASSIGNED,
             media_asset_id=media_asset_ids[0] if media_asset_ids else None,
+            icon=idea_icons.clean_icon(request.POST.get("icon")),
+            icon_tone=idea_icons.clean_tone(request.POST.get("icon_tone")),
             target_date=parse_date(request.POST.get("target_date") or "") or None,
             calendar_event=_workspace_event(workspace, request.POST.get("calendar_event")),
         )
@@ -4036,6 +4188,10 @@ def idea_edit(request, workspace_id, idea_id):
     idea.tags = parse_and_truncate_tag_string(request.POST.get("tags", ""))
     if "target_date" in request.POST:
         idea.target_date = parse_date(request.POST["target_date"] or "") or None
+    if "icon" in request.POST:
+        idea.icon = idea_icons.clean_icon(request.POST["icon"])
+    if "icon_tone" in request.POST:
+        idea.icon_tone = idea_icons.clean_tone(request.POST["icon_tone"])
 
     group_id = request.POST.get("group", "").strip()
     if group_id:
@@ -4059,7 +4215,9 @@ def idea_edit(request, workspace_id, idea_id):
     media_asset_ids = _normalize_media_asset_ids(media_asset_ids)
 
     with transaction.atomic():
-        idea.save(update_fields=["title", "description", "tags", "group", "target_date", "updated_at"])
+        idea.save(
+            update_fields=["title", "description", "tags", "group", "target_date", "icon", "icon_tone", "updated_at"]
+        )
 
         if has_multi_media_payload:
             _sync_idea_media_attachments(idea, workspace, media_asset_ids)

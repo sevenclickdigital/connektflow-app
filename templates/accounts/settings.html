@@ -121,44 +121,4 @@
         </form>
     </section>
 </div>
-
-<section class="mb-8" x-data="{ showDeleteModal: false }">
-    <h2 class="section-title">{% translate "Danger zone" %}</h2>
-    <div class="a-card p-6 flex flex-wrap items-start justify-between gap-4">
-        <div class="min-w-0 max-w-2xl">
-            <h3 class="text-base font-semibold text-neutral-950 mb-1">{% translate "Delete your account" %}</h3>
-            <p class="text-sm text-neutral-600">{% translate "When you delete your account, you lose access to Connekt Flow account services, and we permanently delete your personal data." %}</p>
-        </div>
-        <button type="button" @click="showDeleteModal = true" class="btn-danger-soft">{% translate "Delete Account" %}</button>
-    </div>
-
-    {% comment %}
-    A destructive confirmation: it closes only through its buttons, not on a
-    click outside, so a stray click cannot be read as a decision.
-    {% endcomment %}
-    <template x-teleport="body">
-        <div x-show="showDeleteModal" x-cloak class="modal-overlay" role="dialog" aria-modal="true"
-             x-transition.opacity @keydown.escape.window="showDeleteModal = false">
-            <div class="modal-panel">
-                <div class="modal-header">
-                    <div class="modal-icon is-error">
-                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    </div>
-                    <div class="modal-title">{% translate "Delete your account" %}</div>
-                </div>
-                <div class="modal-body">
-                    <p>{% translate "Are you sure you want to delete your account? This action is permanent and cannot be undone. You will lose access to all Connekt Flow services, and your personal data will be permanently deleted." %}</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-ghost" @click="showDeleteModal = false">{% translate "Cancel" %}</button>
-                    <form method="POST">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="delete_account">
-                        <button type="submit" class="btn-danger-soft">{% translate "Yes, delete my account" %}</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </template>
-</section>
 {% endblock %}

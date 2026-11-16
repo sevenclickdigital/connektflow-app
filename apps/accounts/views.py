@@ -11,6 +11,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.accounts import impersonation
 from apps.accounts.forms import ProfileForm
+from apps.billing import services as billing_services
 
 
 def health_check(request):
@@ -34,6 +35,19 @@ def dashboard(request):
             workspace_id=user.last_workspace_id,
             workspace__is_archived=False,
         ).exists():
+            # A new account starts by naming its organization and brand (the
+            # welcome step of the contracting page), whether or not unpaid
+            # brands are locked. Once the brand is in use it is not asked again.
+            org = request.org
+            if (
+                org is not None
+                and org.is_unnamed
+                and request.org_membership.org_role == "owner"
+                and request.workspace is not None
+                and request.workspace.organization_id == org.id
+                and not billing_services.is_workspace_active(request.workspace)
+            ):
+                return redirect("billing:subscribe_modal", workspace_id=user.last_workspace_id)
             return redirect("calendar:calendar", workspace_id=user.last_workspace_id)
         user.last_workspace_id = None
         user.save(update_fields=["last_workspace_id"])
@@ -95,10 +109,8 @@ def account_settings(request):
 
 
 def _render_account_settings(request, user, settings_active, profile_form):
-    from apps.members.models import OrgMembership
-
-    # The organization membership, for the role shown on the page.
-    org_membership = OrgMembership.objects.filter(user=user).select_related("organization").first()
+    # The membership in the organization in use, for the role shown on the page.
+    org_membership = request.org_membership
     return render(
         request,
         "accounts/settings.html",

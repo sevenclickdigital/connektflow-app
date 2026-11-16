@@ -25,8 +25,76 @@ apps.billing.middleware), so the ways out are another brand or signing out.
 {% block page_header %}{% endblock %}
 
 {% block content %}
-<div class="flex-1 flex items-center justify-center py-6">
-  <div class="w-full max-w-md">
+{% comment %}
+Drawn as a window over the calendar: the blurred grid behind is decoration
+(the real calendar of an unpaid brand is not rendered), dimmed so the card
+reads as the one thing to do.
+{% endcomment %}
+<div class="relative flex-1 flex items-center justify-center py-6 px-3 rounded-xl overflow-hidden min-h-[calc(100vh-7rem)]">
+  {% include "calendar/partials/_blurred_calendar.html" %}
+  <div class="absolute inset-0 bg-neutral-950/30" aria-hidden="true"></div>
+  <div class="relative w-full max-w-md">
+{% if welcome %}
+    {% comment %}
+    A new account, in steps: first the organization (its name and whose
+    document and phone its invoices carry), then its first brand, then the
+    plan below. Both were created with placeholder names at sign-up. One
+    form, sent at the end of the second step; the steps only split what is
+    asked into two screens.
+    {% endcomment %}
+    <form method="post" action="{% url 'organizations:welcome' %}"
+          class="rounded-2xl border border-neutral-300 bg-white shadow-xl p-6 sm:p-7"
+          x-data="{ step: 1, next() { const fields = [...$refs.organization.querySelectorAll('input')]; if (fields.every(f => f.reportValidity())) { this.step = 2; $nextTick(() => $refs.brand.focus()); } } }"
+          @submit="if (step === 1) { $event.preventDefault(); next(); }">
+      {% csrf_token %}
+      <input type="hidden" name="workspace" value="{{ workspace.id }}">
+
+      <div x-ref="organization" x-show="step === 1">
+        <p class="text-xs font-semibold uppercase tracking-wide text-brand-700 mb-2">{% translate "Step 1 of 3 · Organization" %}</p>
+        <h1 class="text-lg font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Welcome! Start with your organization" %}</h1>
+        <p class="text-sm text-neutral-600 mt-1.5 mb-5">{% translate "The organization is your company or agency. It holds your brands, your team and the billing data, and appears on invitations and invoices." %}</p>
+
+        <label for="welcome_org" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Name of your organization" %}</label>
+        <input type="text" id="welcome_org" name="organization_name" required maxlength="100" autofocus
+               placeholder="{% translate 'e.g. Sol Agency' %}" class="form-input-styled w-full mb-4">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-1">
+          <div>
+            <label for="welcome_tax_id" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "CPF or CNPJ" %}</label>
+            <input type="text" id="welcome_tax_id" name="tax_id" required inputmode="numeric" autocomplete="off" maxlength="18"
+                   placeholder="000.000.000-00" class="form-input-styled w-full tabular-nums">
+          </div>
+          <div>
+            <label for="welcome_phone" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Phone with area code" %}</label>
+            <input type="tel" id="welcome_phone" name="phone" required autocomplete="tel" maxlength="20"
+                   placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums">
+          </div>
+        </div>
+        <p class="text-xs text-neutral-600 mb-6">{% translate "Of the organization. They go on its invoices and are what the free trial asks for." %}</p>
+
+        <button type="button" @click="next()" class="btn-brand w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold">{% translate "Continue" %}</button>
+      </div>
+
+      <div x-show="step === 2" x-cloak>
+        <p class="text-xs font-semibold uppercase tracking-wide text-brand-700 mb-2">{% translate "Step 2 of 3 · Brand" %}</p>
+        <h1 class="text-lg font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Now your first brand" %}</h1>
+        <p class="text-sm text-neutral-600 mt-1.5 mb-5">{% translate "A brand is one business whose social networks you manage: your own or a client's. Each brand has its own accounts, calendar and inbox. You can add more later." %}</p>
+
+        <label for="welcome_brand" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Name of your first brand" %}</label>
+        <input type="text" id="welcome_brand" name="brand_name" required maxlength="100" value="{{ workspace.name }}" x-ref="brand"
+               class="form-input-styled w-full mb-6">
+
+        <div class="flex items-center gap-2">
+          <button type="button" @click="step = 1" class="btn-soft px-4 py-2.5 text-sm font-semibold">{% translate "Back" %}</button>
+          <button type="submit" class="btn-brand flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold">{% translate "Continue to the plan" %}</button>
+        </div>
+      </div>
+
+      <div class="mt-4 text-center">
+        <a href="{% url 'accounts:logout' %}" class="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">{% translate "Log out" %}</a>
+      </div>
+    </form>
+{% else %}
 
     <div class="rounded-2xl border border-neutral-300 bg-white shadow-xl p-6 sm:p-7" x-data="{ cycle: 'monthly' }">
 
@@ -52,6 +120,10 @@ apps.billing.middleware), so the ways out are another brand or signing out.
         {% blocktranslate with name=workspace.name %}Everything you did in {{ name }} is kept. Contract the subscription to carry on from where you stopped.{% endblocktranslate %}
       </p>
       {% else %}
+      {% if trial_available %}
+      {# Only a brand that was never used gets here straight from the welcome steps. #}
+      <p class="text-xs font-semibold uppercase tracking-wide text-brand-700 mb-2">{% translate "Step 3 of 3 · Plan" %}</p>
+      {% endif %}
       <h1 class="text-lg font-semibold text-neutral-950" style="letter-spacing: -0.01em;">
         {% translate "Activate this workspace" %}
       </h1>
@@ -192,6 +264,16 @@ apps.billing.middleware), so the ways out are another brand or signing out.
       apps.billing.services.start_trial).
       {% endcomment %}
       <div class="mt-5 pt-5 border-t border-neutral-200" x-data="{ open: false }">
+        {% if payer_known %}
+        {# The organization's document and phone are on file: nothing left to ask. #}
+        <form method="post" action="{% url 'billing:start_trial' workspace_id=workspace.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-soft w-full justify-center py-2.5">
+            {% blocktranslate count days=trial_days %}Or try it free for {{ days }} day{% plural %}Or try it free for {{ days }} days{% endblocktranslate %}
+          </button>
+          <p class="text-xs text-neutral-500 mt-2 text-center">{% translate "No card and no charge. When the trial ends, you decide whether to contract." %}</p>
+        </form>
+        {% else %}
         <button type="button" class="btn-soft w-full justify-center py-2.5" @click="open = true" x-show="!open">
           {% blocktranslate count days=trial_days %}Or try it free for {{ days }} day{% plural %}Or try it free for {{ days }} days{% endblocktranslate %}
         </button>
@@ -214,6 +296,7 @@ apps.billing.middleware), so the ways out are another brand or signing out.
           </button>
           <p class="text-xs text-neutral-500 mt-2">{% translate "One free trial per account, document, phone and email." %}</p>
         </form>
+        {% endif %}
       </div>
       {% endif %}
       {% else %}
@@ -248,11 +331,12 @@ apps.billing.middleware), so the ways out are another brand or signing out.
 
     </div>
 
-    <p class="text-center text-xs text-neutral-500 mt-4">
-      <a href="{% url 'billing:workspace_billing' workspace_id=workspace.id %}" class="hover:text-neutral-700 transition-colors">
+    <p class="text-center text-xs text-white mt-4">
+      <a href="{% url 'billing:workspace_billing' workspace_id=workspace.id %}" class="underline underline-offset-2 hover:no-underline">
         {% translate "See billing details" %}
       </a>
     </p>
+{% endif %}
 
   </div>
 </div>

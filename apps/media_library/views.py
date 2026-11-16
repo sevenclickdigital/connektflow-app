@@ -8,8 +8,10 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from apps.common.htmx import toast_response
 from apps.common.validators import normalize_tags
 from apps.members.decorators import require_org_role, require_permission
 
@@ -119,6 +121,11 @@ def library_index(request, workspace_id):
         workspace=workspace,
         parent_folder__isnull=True,
     ).prefetch_related("subfolders__subfolders")
+    current_folder_name = (
+        MediaFolder.objects.filter(workspace=workspace, pk=folder_id).values_list("name", flat=True).first()
+        if folder_id
+        else None
+    )
 
     # HTMX partial response
     if request.htmx:
@@ -139,6 +146,7 @@ def library_index(request, workspace_id):
         "folders": folders,
         "query": query,
         "current_folder": folder_id,
+        "current_folder_name": current_folder_name,
         "current_type": file_type,
         "current_sort": sort,
         "is_starred": filters["is_starred"],
@@ -581,6 +589,8 @@ def folder_create(request, workspace_id):
 
     name = request.POST.get("name", "").strip()
     if not name:
+        if request.htmx:
+            return toast_response(tone="error", title=_("Give the folder a name."))
         return JsonResponse({"error": "Folder name is required"}, status=400)
 
     parent_id = request.POST.get("parent_folder_id")
@@ -596,6 +606,8 @@ def folder_create(request, workspace_id):
             parent_folder=parent,
         )
     except ValidationError as e:
+        if request.htmx:
+            return toast_response(tone="error", title=" ".join(e.messages))
         return JsonResponse({"error": str(e)}, status=400)
 
     if request.htmx:

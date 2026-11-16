@@ -685,3 +685,57 @@ def media_change_blocker(post, *, media_types_after, ordered_media_types_after=N
                 )
             return template % {"platform": platform}
     return ""
+
+
+def brand_hashtags(workspace_id, *, limit: int = 12, sample: int = 200) -> list[dict]:
+    """The hashtags the brand publishes with, most used first.
+
+    Read from the captions and first comments of its latest ``sample``
+    published platform posts, as they went out (tags published with the post
+    included). ``[{"tag", "posts", "reach"}]``: ``posts`` is how many
+    different posts carried the tag; ``reach`` is the average reach of the
+    publications that have that number, or ``None`` where no platform
+    reported it. Nothing is asked of any platform here.
+    """
+    import re
+    from collections import defaultdict
+
+    from apps.analytics.models import PostInsightsSnapshot
+
+    from .models import PlatformPost
+
+    platform_posts = list(
+        PlatformPost.objects.filter(post__workspace_id=workspace_id, status="published")
+        .select_related("post")
+        .order_by("-published_at")[:sample]
+    )
+    if not platform_posts:
+        return []
+
+    # The latest reach each publication reported (the value is cumulative).
+    reach = {}
+    for platform_post_id, value in (
+        PostInsightsSnapshot.objects.filter(platform_post__in=platform_posts, metric_key="reach")
+        .order_by("platform_post_id", "date")
+        .values_list("platform_post_id", "value")
+    ):
+        reach[platform_post_id] = value
+
+    posts = defaultdict(set)
+    reaches = defaultdict(list)
+    for platform_post in platform_posts:
+        text = f"{platform_post.effective_caption}\n{platform_post.effective_first_comment or ''}"
+        for tag in {match.lower() for match in re.findall(r"#(\w{2,100})", text)}:
+            posts[tag].add(platform_post.post_id)
+            if platform_post.id in reach:
+                reaches[tag].append(reach[platform_post.id])
+
+    ranked = sorted(posts, key=lambda tag: (-len(posts[tag]), tag))[:limit]
+    return [
+        {
+            "tag": tag,
+            "posts": len(posts[tag]),
+            "reach": round(sum(reaches[tag]) / len(reaches[tag])) if reaches[tag] else None,
+        }
+        for tag in ranked
+    ]

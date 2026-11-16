@@ -1,0 +1,86 @@
+{% load i18n %}
+{% comment %}
+Beside the idea board: the brand's next special dates and the popular tags
+(those of its market, then the ones it publishes with the most).
+
+Expects: special_dates_ahead (apps.calendar.services), brand_hashtags
+(apps.composer.services), market_hashtags (apps.radar.market_hashtags),
+workspace.
+{% endcomment %}
+{% if special_dates_ahead %}
+<div class="a-card p-4">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="flex items-center gap-2 text-sm font-semibold text-neutral-950">
+            <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            {% translate "Upcoming dates" %}
+        </h3>
+        <a href="{% url 'calendar:calendar' workspace_id=workspace.id %}" class="text-xs font-semibold text-brand-800 hover:text-brand-900">{% translate "Open calendar" %}</a>
+    </div>
+    <ul class="flex flex-col gap-3">
+        {% for entry in special_dates_ahead|slice:":3" %}
+        <li class="flex items-center gap-3">
+            <span class="w-11 py-1.5 rounded-lg bg-brand-50 text-center flex-shrink-0">
+                <span class="block text-sm font-semibold text-neutral-950 tabular-nums leading-none">{{ entry.day }}</span>
+                <span class="block text-[10px] font-semibold uppercase text-neutral-500 mt-0.5">{{ entry.month }}</span>
+            </span>
+            <span class="text-lg leading-none flex-shrink-0" aria-hidden="true">{{ entry.emoji }}</span>
+            <span class="min-w-0">
+                <span class="block text-sm font-semibold text-neutral-950 truncate">{{ entry.name }}</span>
+                <span class="block text-xs text-neutral-600 first-letter:uppercase">{{ entry.when }}</span>
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
+    <a href="{% url 'composer:create_dates' workspace_id=workspace.id %}" class="btn-ghost w-full mt-4">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        {% translate "See all dates" %}
+    </a>
+</div>
+{% endif %}
+
+{% comment %}
+Popular tags, from two places: the market (the hashtags of the brand's
+segments, typed by the operator or found beside them on Instagram)
+and the brand's own published posts. Clicking one copies it, ready to
+paste into a caption.
+{% endcomment %}
+<div class="a-card p-4" x-data="{ copy(el) { navigator.clipboard.writeText(el.dataset.tag).then(() => document.body.dispatchEvent(new CustomEvent('showToast', { detail: { tone: 'success', title: $root.dataset.copied } }))) } }"
+     data-copied="{% translate 'Hashtag copied.' %}">
+    <h3 class="flex items-center gap-2 text-sm font-semibold text-neutral-950">
+        <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01"/></svg>
+        {% translate "Popular tags" %}
+    </h3>
+    <p class="text-xs text-neutral-600 mt-0.5">{% translate "Click a tag to copy it." %}</p>
+
+    <h4 class="text-xs font-semibold uppercase tracking-wide text-neutral-500 mt-4 mb-2">{% translate "In your market" %}</h4>
+    {% if market_hashtags %}
+    <div class="flex flex-wrap gap-2">
+        {% for item in market_hashtags %}
+        <button type="button" class="pill pill-info cursor-pointer hover:brightness-95" data-tag="#{{ item.tag }}" @click="copy($el)"
+                {% if item.found %}title="{% blocktranslate count counter=item.posts %}Seen in {{ counter }} popular post on Instagram{% plural %}Seen in {{ counter }} popular posts on Instagram{% endblocktranslate %}"{% endif %}>
+            #{{ item.tag }}
+        </button>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-xs text-neutral-600">
+        {% translate "Choose your segments to see the tags of your market." %}
+        <a href="{% url 'workspaces:settings' workspace_id=workspace.id %}" class="font-semibold text-brand-800 hover:text-brand-900">{% translate "Choose segments" %}</a>
+    </p>
+    {% endif %}
+
+    <h4 class="text-xs font-semibold uppercase tracking-wide text-neutral-500 mt-4 mb-2">{% translate "The ones you use the most" %}</h4>
+    {% if brand_hashtags %}
+    <div class="flex flex-wrap gap-2">
+        {% for item in brand_hashtags %}
+        <button type="button" class="pill pill-brand cursor-pointer hover:brightness-95" data-tag="#{{ item.tag }}" @click="copy($el)"
+                title="{% blocktranslate count counter=item.posts %}Used in {{ counter }} post{% plural %}Used in {{ counter }} posts{% endblocktranslate %}{% if item.reach is not None %} · {% blocktranslate with reach=item.reach %}average reach {{ reach }}{% endblocktranslate %}{% endif %}">
+            #{{ item.tag }}
+            <span class="text-neutral-600 tabular-nums">{{ item.posts }}</span>
+        </button>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-xs text-neutral-600">{% translate "The hashtags of your published posts will appear here." %}</p>
+    {% endif %}
+</div>

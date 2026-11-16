@@ -1,85 +1,188 @@
 {% extends "layouts/settings.html" %}
 {% load i18n %}
-{% block title %}{% translate "Workspaces - Settings" %} - Connekt Flow{% endblock %}
+{% block title %}{% translate "Organizations - Settings" %} - Connekt Flow{% endblock %}
 
 {% block page_header %}
 <div class="page-header">
     <div>
-        <h1 class="page-title">{% translate "Workspaces" %}</h1>
-        <p class="page-description">{% translate "Every workspace you have access to: those of your organization and those you were added to." %}</p>
+        <h1 class="page-title">{% translate "Organizations" %}</h1>
+        <p class="page-description">{% translate "Your organizations and the brands in each. Organizations and brands are created and edited here." %}</p>
     </div>
+    {% if can_create_organization %}
+    <div x-data>
+        <button type="button" class="btn-brand" @click="$dispatch('open-create-org')">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            {% translate "Create organization" %}
+        </button>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block content %}
-{% if can_admin_org %}
-<section class="mb-8">
-    <h2 class="section-title">{% translate "Organization" %}</h2>
-    <form method="POST" action="{% url 'organizations:settings' %}" class="a-card p-6">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="update_name">
-        <label for="org_name" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Organization Name" %}</label>
-        <p class="text-xs mb-2 text-neutral-500">{% translate "The account that holds your brands. It appears in the invitations you send." %}</p>
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-            <input type="text" id="org_name" name="name" value="{{ organization.name }}" required maxlength="100" class="form-input-styled flex-1">
-            <button type="submit" class="btn-brand">{% translate "Save Changes" %}</button>
+<section class="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="a-card p-5 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1"/></svg>
         </div>
-    </form>
+        <div class="min-w-0">
+            <div class="text-2xl font-semibold text-neutral-950 tabular-nums leading-tight">{{ totals.organizations }}</div>
+            <div class="text-sm text-neutral-600">{% translate "Organizations" %}</div>
+        </div>
+    </div>
+    <div class="a-card p-5 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-2xl font-semibold text-neutral-950 tabular-nums leading-tight">{{ totals.members }}</div>
+            <div class="text-sm text-neutral-600">{% translate "Members in total" %}</div>
+        </div>
+    </div>
+    <div class="a-card p-5 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-2xl font-semibold text-neutral-950 tabular-nums leading-tight">{{ totals.brands }}</div>
+            <div class="text-sm text-neutral-600">{% translate "Workspaces" %}</div>
+        </div>
+    </div>
+    <div class="a-card p-5 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-2xl font-semibold text-neutral-950 tabular-nums leading-tight">{{ totals.channels }}</div>
+            <div class="text-sm text-neutral-600">{% translate "Connected channels" %}</div>
+        </div>
+    </div>
 </section>
-{% endif %}
 
-<section class="mb-8">
-    <h2 class="section-title">{% translate "Active" context "workspaces, plural" %} ({{ workspace_data|length }})</h2>
-    {% if workspace_data %}
-    <div class="a-card divide-y divide-neutral-300">
-        {% for item in workspace_data %}
-        <div class="px-6 py-4">
+{% comment %}
+Search and order work on the cards already on the page: the list is as
+long as the user's organizations, a handful at most.
+{% endcomment %}
+<div x-data="{ q: '', sort: 'recent', matches(text) { return text.includes(this.q.trim().toLowerCase()) } }">
+<div class="mb-6 flex flex-col sm:flex-row gap-3">
+    <div class="relative flex-1">
+        <svg class="w-4 h-4 text-neutral-500 absolute pointer-events-none" style="left: 0.875rem; top: 50%; transform: translateY(-50%);" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <label for="org_search" class="sr-only">{% translate "Search organization or brand" %}</label>
+        <input type="search" id="org_search" x-model="q" placeholder="{% translate 'Search organization or brand' %}…"
+               class="form-input-styled w-full" style="padding-left: 2.5rem;">
+    </div>
+    <div class="sm:w-64">
+        <label for="org_sort" class="sr-only">{% translate "Sort by" %}</label>
+        <select id="org_sort" x-model="sort" class="form-input-styled w-full">
+            <option value="recent">{% translate "Sort by: most recent" %}</option>
+            <option value="name">{% translate "Sort by: name" %}</option>
+        </select>
+    </div>
+</div>
+
+<div class="flex flex-col gap-5 mb-8">
+{% for group in org_groups %}
+<section class="a-card overflow-hidden" x-data="{ editing: false }"
+         data-search="{{ group.organization.name|lower }}{% for item in group.brands %} {{ item.workspace.name|lower }}{% endfor %}"
+         x-show="matches($el.dataset.search)"
+         :style="{ order: sort === 'name' ? {{ group.name_position }} : {{ forloop.counter0 }} }">
+    <div class="p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center gap-5">
+        <div class="flex items-center gap-4 flex-1 min-w-0">
+            <div class="w-14 h-14 rounded-2xl bg-brand-700 text-white flex items-center justify-center text-xl font-semibold flex-shrink-0">
+                {{ group.organization.name|first|upper }}
+            </div>
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2" x-show="!editing">
+                    <h2 class="text-lg font-semibold text-neutral-950 truncate">{{ group.organization.name }}</h2>
+                    {% if group.organization.deletion_scheduled_for %}
+                    <span class="pill pill-warning"><i></i>{% translate "Deletion scheduled" %}</span>
+                    {% elif group.is_member %}
+                    <span class="pill pill-success"><i></i>{% translate "Active" context "organization" %}</span>
+                    {% else %}
+                    <span class="pill pill-neutral"><i></i>{% translate "Guest" %}</span>
+                    {% endif %}
+                </div>
+                {% if group.can_edit %}
+                <form method="POST" action="{% url 'organizations:rename' %}" x-show="editing" x-cloak
+                      class="flex flex-col sm:flex-row sm:items-center gap-2" @keydown.escape="editing = false">
+                    {% csrf_token %}
+                    <input type="hidden" name="organization" value="{{ group.organization.id }}">
+                    <label for="org_name_{{ group.organization.id }}" class="sr-only">{% translate "Organization Name" %}</label>
+                    <input type="text" id="org_name_{{ group.organization.id }}" name="name" x-ref="name"
+                           value="{{ group.organization.name }}" required maxlength="100" class="form-input-styled flex-1">
+                    <div class="flex items-center gap-2">
+                        <button type="submit" class="btn-brand">{% translate "Save" %}</button>
+                        <button type="button" class="btn-ghost" @click="editing = false">{% translate "Cancel" %}</button>
+                    </div>
+                </form>
+                {% endif %}
+                {% if group.is_member %}
+                <div class="flex flex-wrap items-center gap-2 mt-2" x-show="!editing">
+                    {% if group.owner_name %}
+                    <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-700">
+                        <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        {{ group.owner_name }}
+                    </span>
+                    {% endif %}
+                    <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-700">
+                        <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                        {% blocktranslate with date=group.organization.created_at|date:"SHORT_DATE_FORMAT" %}Created on {{ date }}{% endblocktranslate %}
+                    </span>
+                </div>
+                {% else %}
+                <p class="text-xs text-neutral-500 mt-1">{% translate "You were added to brands of this organization." %}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if group.is_member %}
+        <div class="flex items-stretch divide-x divide-neutral-300 text-center flex-shrink-0">
+            <div class="px-5">
+                <div class="text-lg font-semibold text-neutral-950 tabular-nums">{{ group.member_count }}</div>
+                <div class="text-xs text-neutral-600">{% blocktranslate count counter=group.member_count context "label under a number" %}Member{% plural %}Members{% endblocktranslate %}</div>
+            </div>
+            <div class="px-5">
+                <div class="text-lg font-semibold text-neutral-950 tabular-nums">{{ group.brand_count }}</div>
+                <div class="text-xs text-neutral-600">{% blocktranslate count counter=group.brand_count context "label under a number" %}Workspace{% plural %}Workspaces{% endblocktranslate %}</div>
+            </div>
+            <div class="px-5">
+                <div class="text-lg font-semibold text-neutral-950 tabular-nums">{{ group.channel_count }}</div>
+                <div class="text-xs text-neutral-600">{% blocktranslate count counter=group.channel_count context "label under a number" %}Channel{% plural %}Channels{% endblocktranslate %}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if group.can_edit %}
+        <div class="flex items-center gap-2 flex-shrink-0">
+            <button type="button" class="btn-soft"
+                    @click="$dispatch('open-create-ws', { organization: '{{ group.organization.id }}' })">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                {% translate "Create workspace" %}
+            </button>
+            <button type="button" class="btn-ghost"
+                    @click="editing = true; $nextTick(() => { $refs.name.focus(); $refs.name.select() })">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                {% translate "Edit" %}
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if group.brands %}
+    <div class="border-t border-neutral-300 divide-y divide-neutral-300 bg-neutral-50">
+        {% for item in group.brands %}
+        <div class="px-5 sm:px-6 py-4 {% if item.workspace.is_archived %}opacity-75{% endif %}">
             {% include "organizations/partials/workspace_card.html" with item=item %}
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <div class="a-card px-6 py-12 text-center">
+    <div class="border-t border-neutral-300 px-6 py-8 text-center bg-neutral-50">
         <p class="text-sm text-neutral-500">{% translate "No workspaces yet." %}</p>
     </div>
     {% endif %}
 </section>
-
-{% if external_data %}
-<section class="mb-8">
-    <h2 class="section-title">{% translate "In other organizations" %} ({{ external_data|length }})</h2>
-    <div class="a-card divide-y divide-neutral-300">
-        {% for item in external_data %}
-        <div class="px-6 py-4">
-            {% include "organizations/partials/workspace_card.html" with item=item %}
-        </div>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
-
-{% if archived_data %}
-<section class="mb-8">
-    <h2 class="section-title">{% translate "Archived" context "workspaces, plural" %} ({{ archived_data|length }})</h2>
-    <div class="a-card divide-y divide-neutral-300 opacity-75">
-        {% for item in archived_data %}
-        <div class="px-6 py-4">
-            {% include "organizations/partials/workspace_card.html" with item=item %}
-        </div>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
-{% if is_org_owner %}
-<section class="mb-8">
-    <h2 class="section-title">{% translate "Danger zone" %}</h2>
-    <div class="a-card p-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-            <p class="text-sm font-semibold text-neutral-950">{% translate "Delete this organization" %}</p>
-            <p class="text-xs mt-0.5 text-neutral-500">{% translate "Closes the account with every brand, post and file in it." %}</p>
-        </div>
-        <a href="{% url 'organizations:settings' %}" class="btn-danger-soft">{% translate "Delete organization" %}</a>
-    </div>
-</section>
-{% endif %}
+{% endfor %}
+</div>
+</div>
 {% endblock %}

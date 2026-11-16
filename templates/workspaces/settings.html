@@ -50,6 +50,30 @@
         </form>
         {% endif %}
 
+        {% comment %}
+        The lines of business the brand works in. They decide which special
+        dates join its calendar and which market hashtags it is shown in the
+        create page; the same choice can be changed there.
+        {% endcomment %}
+        {% if is_owner_or_manager and date_segments %}
+        <form method="POST" class="p-6">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_segments">
+            <span class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Segments" %}</span>
+            <p class="text-xs mb-3 text-neutral-500">{% translate "The segments this brand works in. They bring the special dates and the market hashtags of each one to the create page and the calendar." %}</p>
+            <div class="flex flex-wrap gap-2 mb-3">
+                {% for item in date_segments %}
+                <label class="chip cursor-pointer has-[:checked]:border-brand-300 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800">
+                    <input type="checkbox" name="segments" value="{{ item.segment.id }}" class="accent-brand-700" {% if item.chosen %}checked{% endif %}>
+                    {% if item.segment.emoji %}<span aria-hidden="true">{{ item.segment.emoji }}</span>{% endif %}
+                    <span>{{ item.segment.name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn-brand">{% translate "Save Changes" %}</button>
+        </form>
+        {% endif %}
+
         <!-- Logo -->
         <form method="POST" enctype="multipart/form-data" class="p-6" x-data="{
             preview: '{% if workspace.icon %}{{ workspace.icon.url }}{% endif %}',

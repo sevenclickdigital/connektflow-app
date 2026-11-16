@@ -1,16 +1,34 @@
 {% load i18n %}
-<div class="kanban-column" data-group-id="{{ col.id }}"
-     draggable="true"
-     @dragstart="startColumnDrag($event, '{{ col.id }}')"
-     @dragend="endColumnDrag($event)"
-     @dragover.prevent="columnDragOver($event)"
-     @dragleave="columnDragLeave($event)"
-     @drop="dropColumn($event, '{{ col.id }}')">
-    <div class="flex items-center justify-between px-3 py-2.5 column-header" style="cursor: grab;"
-         @mousedown="columnHeaderMouseDown()">
-        <div class="flex items-center gap-2">
-            <span class="group-label text-[13px] font-bold text-neutral-900">{{ col.label }}</span>
-            <span class="column-count inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold bg-neutral-300/70 text-neutral-600">{{ col.ideas|length }}</span>
+{% comment %}
+One column of the idea board. Columns stay where they are (only cards are
+dragged). It can be closed to a narrow strip (chevron,
+the name written downwards, the count) and opened again; the choice is kept
+in the browser, per column. A closed column still takes a card dropped on it.
+
+Expects: col (id, label, hint, tone, ideas) and, optionally, closed_by_default (the last
+column starts closed for someone who has not chosen yet).
+{% endcomment %}
+<div class="kanban-column kanban-tone-{{ col.tone|default:'brand' }}" data-group-id="{{ col.id }}"
+     x-data="{ closed: (localStorage.getItem('idea-column:{{ col.id }}') || '{% if closed_by_default %}closed{% else %}open{% endif %}') === 'closed' }"
+     x-effect="localStorage.setItem('idea-column:{{ col.id }}', closed ? 'closed' : 'open')"
+     :class="closed && 'is-closed'">
+
+    {# Closed: the whole strip opens the column, and a card can be dropped on it. #}
+    <button type="button" class="kanban-column-strip" x-show="closed" x-cloak
+            @click="closed = false"
+            @dragover.prevent="dragOver($event)"
+            @dragleave="dragLeave($event)"
+            @drop="dropOnColumn($event, '{{ col.id }}')"
+            aria-label="{% blocktranslate with name=col.label %}Open the column {{ name }}{% endblocktranslate %}">
+        <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+        <span class="kanban-column-strip-label">{{ col.label }}</span>
+        <span class="column-count inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold bg-white text-neutral-600">{{ col.ideas|length }}</span>
+    </button>
+
+    <div class="flex items-center justify-between px-3 py-2.5 column-header" x-show="!closed">
+        <div class="flex items-center gap-2 min-w-0">
+            <span class="group-label text-[13px] font-bold text-neutral-900 truncate">{{ col.label }}</span>
+            <span class="column-count inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold kanban-count">{{ col.ideas|length }}</span>
         </div>
         <div class="flex items-center gap-0.5">
             <button @click="showCreateModal = true; createGroupId = '{{ col.id }}'; createSelectedGroup = '{{ col.id }}'"
@@ -18,32 +36,19 @@
                     title="{% translate 'Add idea' %}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
-            <div class="relative" x-data="{ menuOpen: false }">
-                <button @click="menuOpen = !menuOpen"
-                        class="w-6 h-6 rounded-md text-neutral-600 hover:text-neutral-700 hover:bg-white/80 flex items-center justify-center transition-colors cursor-pointer">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="6" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18" r="1.5"/></svg>
-                </button>
-                <div x-show="menuOpen" @click.away="menuOpen = false" x-cloak
-                     x-transition:enter="transition ease-out duration-100"
-                     x-transition:enter-start="opacity-0 scale-95"
-                     x-transition:enter-end="opacity-100 scale-100"
-                     class="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 min-w-[140px]">
-                    {% if col.ideas|length == 0 %}
-                    <button @click="menuOpen = false; deleteGroup('{{ col.id }}')"
-                            class="w-full text-left px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors">
-                        {% translate "Delete column" %}
-                    </button>
-                    {% else %}
-                    <span class="block px-3 py-1.5 text-xs text-neutral-500">
-                        {% translate "Remove all ideas first" %}
-                    </span>
-                    {% endif %}
-                </div>
-            </div>
+            <button type="button" @click="closed = true"
+                    class="w-6 h-6 rounded-md text-neutral-600 hover:text-neutral-700 hover:bg-white/80 flex items-center justify-center transition-colors cursor-pointer"
+                    title="{% translate 'Close column' %}" aria-label="{% blocktranslate with name=col.label %}Close the column {{ name }}{% endblocktranslate %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
         </div>
     </div>
 
-    <div class="kanban-cards"
+    {% if col.hint %}
+    <p class="px-3 -mt-1.5 pb-2.5 text-xs text-neutral-600" x-show="!closed">{{ col.hint }}</p>
+    {% endif %}
+
+    <div class="kanban-cards" x-show="!closed"
          @dragover.prevent="dragOver($event)"
          @dragleave="dragLeave($event)"
          @drop="dropOnColumn($event, '{{ col.id }}')">
@@ -53,7 +58,7 @@
     </div>
 
     <button @click="showCreateModal = true; createGroupId = '{{ col.id }}'; createSelectedGroup = '{{ col.id }}'"
-            class="new-idea-inline">
+            class="new-idea-inline" x-show="!closed">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         {% translate "New Idea" %}
     </button>
