@@ -6,7 +6,8 @@ the name written downwards, the count) and opened again; the choice is kept
 in the browser, per column. A closed column still takes a card dropped on it.
 
 Expects: col (id, label, hint, tone, ideas) and, optionally, closed_by_default (the last
-column starts closed for someone who has not chosen yet).
+column, where discarded ideas go: it starts closed for someone who has not
+chosen yet and offers no "new idea", since nobody starts an idea there).
 {% endcomment %}
 <div class="kanban-column kanban-tone-{{ col.tone|default:'brand' }}" data-group-id="{{ col.id }}"
      x-data="{ closed: (localStorage.getItem('idea-column:{{ col.id }}') || '{% if closed_by_default %}closed{% else %}open{% endif %}') === 'closed' }"
@@ -31,11 +32,13 @@ column starts closed for someone who has not chosen yet).
             <span class="column-count inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold kanban-count">{{ col.ideas|length }}</span>
         </div>
         <div class="flex items-center gap-0.5">
+            {% if not closed_by_default %}
             <button @click="showCreateModal = true; createGroupId = '{{ col.id }}'; createSelectedGroup = '{{ col.id }}'"
                     class="w-6 h-6 rounded-md text-neutral-600 hover:text-neutral-700 hover:bg-white/80 flex items-center justify-center transition-colors cursor-pointer"
                     title="{% translate 'Add idea' %}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
+            {% endif %}
             <button type="button" @click="closed = true"
                     class="w-6 h-6 rounded-md text-neutral-600 hover:text-neutral-700 hover:bg-white/80 flex items-center justify-center transition-colors cursor-pointer"
                     title="{% translate 'Close column' %}" aria-label="{% blocktranslate with name=col.label %}Close the column {{ name }}{% endblocktranslate %}">
@@ -57,9 +60,11 @@ column starts closed for someone who has not chosen yet).
         {% endfor %}
     </div>
 
+    {% if not closed_by_default %}
     <button @click="showCreateModal = true; createGroupId = '{{ col.id }}'; createSelectedGroup = '{{ col.id }}'"
             class="new-idea-inline" x-show="!closed">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         {% translate "New Idea" %}
     </button>
+    {% endif %}
 </div>

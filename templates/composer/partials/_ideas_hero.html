@@ -1,0 +1,56 @@
+{% load i18n static %}
+{% comment %}
+The hero card at the top of each page of the create area (ideas, templates,
+special dates): what the page is for and a pose of Moti.
+
+Closing it is remembered per page in this browser (localStorage
+"cf:ideas-hero-closed:<tab>") and announced with the "ideas-hero-toggled"
+window event, which the lightbulb button in the page header listens to; that
+button sends "ideas-hero-open" to bring the card back.
+
+Expects: tab.
+{% endcomment %}
+<section x-data="{
+            key: 'cf:ideas-hero-closed:{{ tab }}',
+            closed: false,
+            init() { this.closed = localStorage.getItem(this.key) === '1' },
+            setClosed(value) {
+                this.closed = value;
+                localStorage.setItem(this.key, value ? '1' : '0');
+                window.dispatchEvent(new CustomEvent('ideas-hero-toggled', { detail: { closed: value } }));
+            },
+         }"
+         @ideas-hero-open.window="setClosed(false)"
+         x-show="!closed" x-cloak
+         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+         class="relative rounded-2xl border border-brand-200/70 mb-6 overflow-hidden flex items-center gap-6 px-6 sm:px-8 py-6"
+         style="background: linear-gradient(100deg, color-mix(in srgb, var(--brand-50) 45%, white) 0%, var(--brand-50) 45%, var(--brand-100) 100%);">
+
+    <button type="button" @click="setClosed(true)"
+            class="absolute top-3 right-3 z-10 w-8 h-8 rounded-full flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white/70 transition-colors cursor-pointer"
+            title="{% translate 'Hide' %}" aria-label="{% translate 'Hide' %}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+
+    <div class="flex-1 min-w-0">
+        {% if tab == "templates" %}
+        <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Start from a ready-made template" %}</h2>
+        <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "Pick a starting point by category, make it your own and publish." %}</p>
+        {% elif tab == "dates" %}
+        <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Be ready for every special date" %}</h2>
+        <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "See the dates that matter to your segment ahead of time and plan the content for each one." %}</p>
+        {% else %}
+        <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Never run out of ideas" %}</h2>
+        <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "Write ideas down the moment they come, sort them on the board and turn the good ones into posts." %}</p>
+        {% endif %}
+    </div>
+
+    {% if tab == "templates" %}
+    <img src="{% static 'img/moti/moti-modelos.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
+    {% elif tab == "dates" %}
+    <img src="{% static 'img/moti/moti-datas.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
+    {% else %}
+    <img src="{% static 'img/moti/moti-ideia.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
+    {% endif %}
+</section>

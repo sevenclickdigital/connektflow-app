@@ -105,6 +105,10 @@ urlpatterns = [
     # Tags
     path("tags/", views.tag_list, name="tag_list"),
     path("tags/create/", views.tag_create, name="tag_create"),
+    path("tags/manage/", views.tag_manage_list, name="tag_manage_list"),
+    path("tags/delete/", views.tag_delete, name="tag_delete"),
+    path("tag-groups/save/", views.tag_group_save, name="tag_group_save"),
+    path("tag-groups/<uuid:group_id>/delete/", views.tag_group_delete, name="tag_group_delete"),
     # Feeds
     path("feeds/", views.feed_list, name="feed_list"),
     path("feeds/add/", views.feed_add, name="feed_add"),

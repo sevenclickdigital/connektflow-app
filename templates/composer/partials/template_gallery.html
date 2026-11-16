@@ -1,7 +1,7 @@
 {% load i18n idea_icons %}
 {% comment %}
-The Templates page: a banner across the page, the categories as tiles, a
-search and the grid of ready-made starting points. Search and category
+The Templates page: the categories as tiles, a search and the grid of
+ready-made starting points (the banner above is composer/partials/_ideas_hero.html). Search and category
 filter in the browser.
 
 Expects: builtin_templates (the active IdeaTemplate rows) and
@@ -13,22 +13,6 @@ Alpine scope (showCreateModal, the use-builtin-template event).
      class="min-w-0">
 
     <div class="min-w-0">
-        <!-- Banner -->
-        <div class="rounded-2xl border border-brand-100 p-6 sm:p-8 mb-6 flex items-center gap-6 overflow-hidden" style="background: linear-gradient(135deg, var(--brand-50), var(--brand-100));">
-            <div class="flex-1 min-w-0">
-                <h2 class="text-2xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Never run out of ideas" %}</h2>
-                <p class="text-sm text-neutral-700 mt-2 max-w-md">{% translate "Content starting points, the dates of your calendar and ready-made templates to make your own and publish." %}</p>
-                <button type="button" class="btn-brand mt-5"
-                        @click="showCreateModal = true; createSelectedGroup = _defaultGroupId">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                    {% translate "New Idea" %}
-                </button>
-            </div>
-            <div class="hidden md:flex w-28 h-28 rounded-3xl bg-brand-700 items-center justify-center flex-shrink-0 shadow-lg" style="transform: rotate(-6deg);" aria-hidden="true">
-                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" stroke-width="1.5"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0012 2z"/></svg>
-            </div>
-        </div>
-
         <!-- Categories -->
         <h3 class="text-sm font-semibold text-neutral-950 mb-3">{% translate "Explore by category" %}</h3>
         <div class="flex gap-3 mb-5 overflow-x-auto pb-1" style="scrollbar-width: thin;">

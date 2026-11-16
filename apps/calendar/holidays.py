@@ -16,41 +16,122 @@ from django.utils.translation import gettext_lazy as _
 HOLIDAY = "holiday"
 COMMERCIAL = "commercial"
 
-# Content ideas offered for a date that brings none of its own, by category
-# (``SpecialDate.Kind``; a built-in holiday counts as national).
+# Content ideas offered for a date that brings none of its own: the title of
+# the idea and the brief that opens in its description, telling the brand how
+# to develop it.
+_OFFER = (
+    _("Special offer for the date"),
+    _(
+        "Announce one clear offer for the date: what is on offer, the price or discount, and until when. "
+        "Show the product in use and end with how to buy (link, WhatsApp or store). "
+        "Ideas: a carousel with the items on offer, a short video of the product, a reminder in Stories on the last day."
+    ),
+)
+_COUNTDOWN = (
+    _("Countdown in Stories"),
+    _(
+        "Post one Story a day in the days before the date, each with one product or one reason to buy, "
+        "and add the countdown sticker so people get a reminder. "
+        "On the last day, show what is still available and how to order."
+    ),
+)
+_GUIDE = (
+    _("Gift or product guide"),
+    _(
+        "Put together a selection of products for the date, grouped by who they are for or by price range. "
+        "One slide per suggestion, with photo, name and price, and how to order at the end."
+    ),
+)
+_TESTIMONIAL = (
+    _("Customer testimonial"),
+    _(
+        "Share what a customer said about buying from you around this date: their words, a photo or a short video, "
+        "with their permission. Say which product or service it was and invite others to tell their story."
+    ),
+)
+_SEASON_TIPS = (
+    _("Tips for the season"),
+    _(
+        "Teach something useful for this time of year that has to do with what you sell: "
+        "three to five short tips, one per slide or per scene. End by showing how your product or service helps."
+    ),
+)
+_FITTING_PRODUCTS = (
+    _("Products or services that fit the moment"),
+    _(
+        "Show what in your catalogue makes the most sense now, and why. Explain the situation it solves "
+        "at this time of year, with photos of real use, and say how to buy or book."
+    ),
+)
+_BACKSTAGE = (
+    _("Behind the scenes of the preparation"),
+    _(
+        "Show how the brand gets ready for the date: the team, the production, the packaging, the decoration. "
+        "Short videos or photos with little editing work well, and bring people closer to who is behind the brand."
+    ),
+)
+_MESSAGE = (
+    _("Message from the brand for the date"),
+    _(
+        "Write a short, sincere message about what the date means, in the brand's own tone of voice. "
+        "A photo of the team or an image in the brand's colours goes well with it. Avoid selling in this post."
+    ),
+)
+_FACT = (
+    _("A fact about the date"),
+    _(
+        "Tell something few people know about the date: its origin, a number or a tradition. "
+        "Link it to your line of business where it fits naturally, "
+        "and close with a question to start a conversation in the comments."
+    ),
+)
+_OPENING_HOURS = (
+    _("Opening hours on the holiday"),
+    _(
+        "Tell your customers whether you open on the holiday and at what times, and how to reach you meanwhile "
+        "(delivery, WhatsApp, online orders). Post a day or two before and repeat it in Stories on the day."
+    ),
+)
+_MEANING = (
+    _("What the date means to your brand"),
+    _(
+        "Explain why the brand cares about this date: a story, a value you share or something you do in practice. "
+        "Concrete examples are worth more than slogans."
+    ),
+)
+_TAKE_PART = (
+    _("Invite your audience to take part"),
+    _(
+        "Ask people to join in: answer a question, share a photo, tag someone or use a hashtag. "
+        "Say exactly what to do, and repost the best answers in Stories."
+    ),
+)
+
+# By category (``SpecialDate.Kind``; a built-in holiday counts as national).
 GENERIC_SUGGESTIONS = {
-    "commercial": (
-        _("Special offer for the date"),
-        _("Countdown in Stories"),
-        _("Gift or product guide"),
-        _("Customer testimonial"),
-    ),
-    "seasonal": (
-        _("Tips for the season"),
-        _("Products or services that fit the moment"),
-        _("Behind the scenes of the preparation"),
-    ),
-    "national": (
-        _("Message from the brand for the date"),
-        _("A fact about the date"),
-        _("Behind the scenes of the preparation"),
-    ),
+    "commercial": (_OFFER, _COUNTDOWN, _GUIDE, _TESTIMONIAL),
+    "seasonal": (_SEASON_TIPS, _FITTING_PRODUCTS, _BACKSTAGE),
+    "national": (_MESSAGE, _FACT, _BACKSTAGE),
     # Not a category: the built-in public holidays, where the shop may close.
-    HOLIDAY: (
-        _("Message from the brand for the date"),
-        _("Opening hours on the holiday"),
-        _("A fact about the date"),
-    ),
-    "international": (
-        _("What the date means to your brand"),
-        _("A fact about the date"),
-        _("Invite your audience to take part"),
-    ),
+    HOLIDAY: (_MESSAGE, _OPENING_HOURS, _FACT),
+    "international": (_MEANING, _FACT, _TAKE_PART),
 }
 
 
-def suggestions_for(kind: str) -> list[str]:
-    return [str(text) for text in GENERIC_SUGGESTIONS.get(kind, ())]
+def suggestions_for(kind: str) -> list[dict]:
+    """``[{"title", "brief"}]`` for a category, in the user's language."""
+    return [{"title": str(title), "brief": str(brief)} for title, brief in GENERIC_SUGGESTIONS.get(kind, ())]
+
+
+def _own_suggestions(row) -> list[dict]:
+    """The operator's suggestions for a date: one per line, as ``title`` or
+    ``title | brief``."""
+    result = []
+    for line in row.suggestion_list:
+        title, _sep, brief = line.partition("|")
+        if title.strip():
+            result.append({"title": title.strip(), "brief": brief.strip()})
+    return result
 
 
 # (month, day, slug, name, emoji, kind). The slug names the date for good:
@@ -74,6 +155,45 @@ FIXED = (
     (12, 25, "christmas", _("Christmas"), "🎄", HOLIDAY),
     (12, 31, "new-years-eve", _("New Year's Eve"), "🥂", COMMERCIAL),
 )
+
+# The icon each built-in date is drawn with: slug → a slug of the app's icon
+# library (``apps.composer.idea_icons.ICONS``).
+BUILT_IN_ICONS = {
+    "new-year": "star",
+    "womens-day": "heart",
+    "consumer-day": "shopping-bag",
+    "tiradentes": "flag",
+    "labour-day": "tools",
+    "valentines": "heart",
+    "saint-john": "flame",
+    "independence": "flag",
+    "customer-day": "users",
+    "childrens-day": "smile",
+    "teachers-day": "book",
+    "halloween": "zap",
+    "all-souls": "flame",
+    "republic": "flag",
+    "black-consciousness": "users",
+    "christmas": "gift",
+    "new-years-eve": "clock",
+    "carnival": "smile",
+    "good-friday": "calendar",
+    "easter": "gift",
+    "mothers-day": "heart",
+    "corpus-christi": "calendar",
+    "fathers-day": "award",
+    "black-friday": "tag",
+}
+
+# The icon of a date that has none of its own (the operator's dates), by
+# category (``SpecialDate.Kind``).
+KIND_ICONS = {
+    "commercial": "shopping-bag",
+    "seasonal": "clock",
+    "national": "flag",
+    "international": "globe",
+}
+DEFAULT_DATE_ICON = "calendar"
 
 # What the special-dates tab says about each built-in date: slug →
 # (description, tags as one comma-separated string). Both are translated.
@@ -249,6 +369,7 @@ def _managed_between(start_date, end_date, workspace) -> list[dict]:
                         "date": day,
                         "name": row.name,
                         "emoji": row.emoji,
+                        "icon": KIND_ICONS.get(row.kind, DEFAULT_DATE_ICON),
                         "type": COMMERCIAL,
                         "segment": row.segment.name if row.segment else "",
                         "built_in": False,
@@ -256,7 +377,7 @@ def _managed_between(start_date, end_date, workspace) -> list[dict]:
                         "image": row.image.url if row.image else "",
                         "kind": row.kind,
                         "description": row.description,
-                        "suggestions": row.suggestion_list or suggestions_for(row.kind),
+                        "suggestions": _own_suggestions(row) or suggestions_for(row.kind),
                         "tags": row.tag_list,
                     }
                 )
@@ -264,8 +385,8 @@ def _managed_between(start_date, end_date, workspace) -> list[dict]:
 
 
 def special_dates_between(start_date, end_date, workspace=None) -> list[dict]:
-    """``[{"date", "name", "emoji", "type", "segment", "built_in", "key",
-    "image", "kind", "description", "suggestions", "tags"}]`` from
+    """``[{"date", "name", "emoji", "icon", "type", "segment", "built_in",
+    "key", "image", "kind", "description", "suggestions", "tags"}]`` from
     ``start_date`` to ``end_date`` inclusive, by date.
 
     Global dates (the built-in ones and those the operator added without a
@@ -274,6 +395,9 @@ def special_dates_between(start_date, end_date, workspace=None) -> list[dict]:
     ``built_in`` tells the dates in this module from the operator's.
     ``type`` is what the calendar grid styles by (holiday / commercial);
     ``kind`` is the category of the special-dates tab (``SpecialDate.Kind``).
+    ``suggestions`` is ``[{"title", "brief"}]``.
+    ``emoji`` is what the calendar grid prints; ``icon`` (a slug of the icon
+    library) is what the idea hub draws.
     """
     result = []
     for year in range(start_date.year, end_date.year + 1):
@@ -285,6 +409,7 @@ def special_dates_between(start_date, end_date, workspace=None) -> list[dict]:
                         "date": day,
                         "name": str(name),
                         "emoji": emoji,
+                        "icon": BUILT_IN_ICONS.get(slug, DEFAULT_DATE_ICON),
                         "type": kind,
                         "segment": "",
                         "built_in": True,

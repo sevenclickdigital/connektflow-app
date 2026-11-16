@@ -739,3 +739,109 @@ def brand_hashtags(workspace_id, *, limit: int = 12, sample: int = 200) -> list[
         }
         for tag in ranked
     ]
+
+
+class TagGroupNameTakenError(ValueError):
+    """Another group of the brand already has that name."""
+
+
+def _tags_named(workspace, names):
+    """The brand's ``Tag`` rows for ``names``, creating (as internal) the
+    ones it does not have yet."""
+    from .models import Tag
+
+    names = list(dict.fromkeys(names))
+    existing = set(Tag.objects.for_workspace(workspace.id).filter(name__in=names).values_list("name", flat=True))
+    missing = [Tag(workspace=workspace, name=name) for name in names if name not in existing]
+    if missing:
+        Tag.objects.bulk_create(missing, ignore_conflicts=True)
+    return Tag.objects.for_workspace(workspace.id).filter(name__in=names)
+
+
+def tag_group_payload(group) -> dict:
+    """``{"id", "name", "tags"}`` of one group, tags by name."""
+    return {"id": str(group.id), "name": group.name, "tags": sorted(tag.name for tag in group.tags.all())}
+
+
+def tag_groups_payload(workspace_id) -> list[dict]:
+    """The brand's tag groups for the tag pickers, by name."""
+    from .models import TagGroup
+
+    groups = TagGroup.objects.for_workspace(workspace_id).prefetch_related("tags")
+    return [tag_group_payload(group) for group in groups]
+
+
+def save_tag_group(workspace, name, tag_names, group=None):
+    """Create a group, or rename ``group`` and set its tags to ``tag_names``.
+
+    Raises ``TagGroupNameTakenError`` when another group of the brand has the name.
+    """
+    from django.db import transaction
+
+    from .models import TagGroup
+
+    taken = TagGroup.objects.for_workspace(workspace.id).filter(name=name)
+    if group is not None:
+        taken = taken.exclude(id=group.id)
+    if taken.exists():
+        raise TagGroupNameTakenError(name)
+    with transaction.atomic():
+        if group is None:
+            group = TagGroup.objects.create(workspace=workspace, name=name)
+        elif group.name != name:
+            group.name = name
+            group.save(update_fields=["name"])
+        group.tags.set(_tags_named(workspace, tag_names))
+    return group
+
+
+def add_to_tag_group(workspace, name, tag_names) -> None:
+    """Put ``tag_names`` in the brand's group called ``name``, creating it
+    when needed and keeping what it already holds. Safe to repeat."""
+    from .models import TagGroup
+
+    if not name or not tag_names:
+        return
+    group, _created = TagGroup.objects.get_or_create(workspace=workspace, name=name)
+    group.tags.add(*_tags_named(workspace, tag_names))
+
+
+def tag_usage(workspace) -> list[dict]:
+    """The brand's saved tags by name, each with how many ideas and posts carry it.
+
+    ``[{"name", "kind", "ideas", "posts"}]``.
+    """
+    from collections import Counter
+
+    from .models import Idea, Post, Tag
+
+    ideas = Counter(
+        name for tags in Idea.objects.for_workspace(workspace.id).values_list("tags", flat=True) for name in tags or []
+    )
+    posts = Counter(
+        name for tags in Post.objects.for_workspace(workspace.id).values_list("tags", flat=True) for name in tags or []
+    )
+    return [
+        {"name": tag.name, "kind": tag.kind, "ideas": ideas[tag.name], "posts": posts[tag.name]}
+        for tag in Tag.objects.for_workspace(workspace.id)
+    ]
+
+
+def delete_tag(workspace, name) -> bool:
+    """Delete the brand's tag ``name`` and take it off its ideas and posts.
+
+    Leaving it on them would bring it back: saving one of those ideas or posts
+    recreates the tags it carries. Its groups lose it with the row. Returns
+    whether the tag existed.
+    """
+    from django.db import transaction
+
+    from .models import Idea, Post, Tag
+
+    with transaction.atomic():
+        deleted, _rows = Tag.objects.for_workspace(workspace.id).filter(name=name).delete()
+        for model in (Idea, Post):
+            for item in model.objects.for_workspace(workspace.id).filter(tags__contains=[name]):
+                item.tags = [tag for tag in item.tags if tag != name]
+                item.save(update_fields=["tags"])
+    return bool(deleted)

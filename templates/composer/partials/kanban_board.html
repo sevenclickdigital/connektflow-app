@@ -3,7 +3,7 @@ The idea board's columns. Their set is fixed: the page offers neither a new
 column nor deleting one. Each can be closed to a strip; the last one, where
 the discarded ideas go, starts closed.
 {% endcomment %}
-<div class="flex gap-4 overflow-x-auto pb-4" style="min-height: 400px;">
+<div class="flex-1 flex gap-4 overflow-x-auto pb-1" style="min-height: 400px;">
     {% for col in columns %}
         {% include "composer/partials/kanban_column.html" with col=col closed_by_default=forloop.last %}
     {% endfor %}

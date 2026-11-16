@@ -39,7 +39,7 @@ kind_choices. A date is not edited in place: it is removed and added again.
   {# Optional: what fills the date's panel for the customer. #}
   <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2" x-show="more" x-cloak>
     <input type="text" name="description" maxlength="300" placeholder="{% translate 'Short description (optional)' %}" aria-label="{% translate 'Short description (optional)' %}" class="form-input-styled w-full md:col-span-2">
-    <textarea name="suggestions" rows="3" placeholder="{% translate 'Content suggestions, one per line (optional)' %}" aria-label="{% translate 'Content suggestions, one per line (optional)' %}" class="form-input-styled w-full"></textarea>
+    <textarea name="suggestions" rows="3" placeholder="{% translate 'Content suggestions, one per line (optional). To add a helper text: Title | text' %}" aria-label="{% translate 'Content suggestions, one per line (optional). To add a helper text: Title | text' %}" class="form-input-styled w-full"></textarea>
     <div class="flex flex-col gap-2">
       <input type="text" name="tags" maxlength="200" placeholder="{% translate 'Tags, separated by commas (optional)' %}" aria-label="{% translate 'Tags, separated by commas (optional)' %}" class="form-input-styled w-full">
       <label class="text-xs text-neutral-600">

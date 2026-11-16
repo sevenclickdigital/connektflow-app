@@ -1,0 +1,45 @@
+{% load i18n %}
+{% comment %}
+The list of a tag picker: each tag group as a header that applies all its
+tags, its tags under it, then the tags in no group.
+
+Runs inside a component that spread `window.tagGroupsBase()`
+(composer/partials/_tag_groups.html). Every argument is JavaScript of that
+component, written by the including template:
+  query      the search text
+  selected   the array of selected tag names (changed in place)
+  toggle     the function that selects or drops one tag by name
+  on_group   optional: what to run after a whole group was applied or dropped
+  row_class  optional: classes of a tag row, for a picker that has none of its own
+  previews   optional: show what a published tag will read like (`tagPreview`, `tagKindByName`)
+{% endcomment %}
+<template x-for="row in tagRows({{ query }})" :key="row.key">
+    <div>
+        <template x-if="row.group">
+            <button type="button" class="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm font-semibold text-neutral-950 hover:bg-neutral-50 rounded-md cursor-pointer"
+                    :aria-pressed="tagGroupIsOn(row.group, {{ selected }}).toString()"
+                    title="{% translate 'Apply every tag of the group' %}"
+                    @click="toggleTagGroup(row.group, {{ selected }}){% if on_group %}; {{ on_group }}{% endif %}">
+                <svg class="w-3.5 h-3.5 flex-shrink-0 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                <span class="min-w-0 flex-1 truncate" x-text="row.group.name"></span>
+                <svg x-show="tagGroupIsOn(row.group, {{ selected }})" class="w-3.5 h-3.5 flex-shrink-0 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
+            </button>
+        </template>
+        <template x-if="row.heading">
+            <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Other tags" %}</div>
+        </template>
+        <template x-if="row.tag">
+            <label class="{{ row_class }}" :style="row.grouped ? 'padding-left: 30px' : ''">
+                <input type="checkbox" class="rounded accent-brand-700"
+                       :checked="{{ selected }}.includes(row.tag)"
+                       @change="{{ toggle }}(row.tag)">
+                <span x-text="row.tag"></span>
+                {% if previews %}
+                <span class="ml-auto text-[10px] font-semibold text-brand-800"
+                      x-show="tagPreview(row.tag, tagKindByName[row.tag])"
+                      x-text="tagPreview(row.tag, tagKindByName[row.tag])"></span>
+                {% endif %}
+            </label>
+        </template>
+    </div>
+</template>

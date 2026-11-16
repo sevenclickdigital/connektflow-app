@@ -1,0 +1,112 @@
+{% load i18n %}
+{% comment %}
+"Manage tags": the brand's saved tags, with how many ideas and posts carry
+each, and a way to delete them. Deleting takes the tag off those ideas and
+posts too (composer.services.delete_tag). Opened by the "open-tag-manager"
+window event; each deletion announces "tag-deleted" with the tag's name so
+the page drops it from its pickers and board.
+
+The deletion is confirmed on the row itself: the app's confirm dialog sits
+below the idea modals this opens over.
+
+Expects: workspace.
+{% endcomment %}
+<div x-data="{
+        open: false,
+        loading: false,
+        error: '',
+        query: '',
+        tags: [],
+        confirming: '',
+        deleting: '',
+        show() {
+            this.open = true; this.query = ''; this.confirming = ''; this.error = ''; this.loading = true;
+            fetch('{% url "composer:tag_manage_list" workspace_id=workspace.id %}', { headers: { 'Accept': 'application/json' } })
+                .then(response => response.ok ? response.json() : Promise.reject())
+                .then(data => { this.tags = data.tags || []; })
+                .catch(() => { this.error = this.$root.dataset.loadFailed; })
+                .finally(() => { this.loading = false; });
+        },
+        get visible() {
+            const q = this.query.trim().toLowerCase();
+            return this.tags.filter(tag => !q || tag.name.toLowerCase().includes(q));
+        },
+        remove(tag) {
+            this.deleting = tag.name; this.error = '';
+            fetch('{% url "composer:tag_delete" workspace_id=workspace.id %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+                body: new URLSearchParams({ name: tag.name }),
+            })
+                .then(response => response.json().catch(() => ({})).then(body => ({ ok: response.ok, body })))
+                .then(({ ok, body }) => {
+                    if (!ok) { this.error = body.error || this.$root.dataset.deleteFailed; return; }
+                    this.tags = this.tags.filter(other => other.name !== tag.name);
+                    window.dispatchEvent(new CustomEvent('tag-deleted', { detail: { name: tag.name, used: tag.ideas + tag.posts > 0 } }));
+                })
+                .catch(() => { this.error = this.$root.dataset.deleteFailed; })
+                .finally(() => { this.deleting = ''; this.confirming = ''; });
+        },
+     }"
+     data-load-failed="{% translate 'Could not load the tags.' %}"
+     data-delete-failed="{% translate 'Could not delete the tag.' %}"
+     data-ideas-one="{% translate '1 idea' %}" data-ideas-many="{% translate '{n} ideas' %}"
+     data-posts-one="{% translate '1 post' %}" data-posts-many="{% translate '{n} posts' %}"
+     data-unused="{% translate 'Not in use' %}"
+     @open-tag-manager.window="show()">
+    <div x-show="open" x-cloak class="modal-overlay" style="z-index: 230;" role="dialog" aria-modal="true" aria-labelledby="tag-manager-title"
+         x-transition.opacity @keydown.escape.window="open && (confirming ? confirming = '' : open = false)">
+        <div class="modal-panel" style="max-width: 32rem;" @click.outside="open = false">
+            <button type="button" class="modal-close" @click="open = false" aria-label="{% translate 'Close' %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <div class="modal-header">
+                <div class="modal-icon is-brand">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01"/></svg>
+                </div>
+                <div>
+                    <div class="modal-title" id="tag-manager-title">{% translate "Manage tags" %}</div>
+                    <p class="modal-meta">{% translate "Deleting a tag also takes it off the ideas and posts that use it." %}</p>
+                </div>
+            </div>
+
+            <div class="relative mb-3">
+                <svg class="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <label for="tag_manager_search" class="sr-only">{% translate "Search tags" %}</label>
+                <input type="search" id="tag_manager_search" x-model="query" placeholder="{% translate 'Search tags' %}…"
+                       class="form-input-styled w-full h-9 py-0 pl-9 text-sm focus:ring-2 focus:ring-inset focus:ring-brand-200">
+            </div>
+
+            <p x-show="error" x-cloak class="text-sm text-red-600 mb-3" x-text="error"></p>
+
+            <div class="max-h-80 overflow-y-auto -mx-2">
+                <p x-show="loading" class="px-2 py-6 text-center text-sm text-neutral-500">{% translate "Loading…" %}</p>
+                <p x-show="!loading && !visible.length" x-cloak class="px-2 py-6 text-center text-sm text-neutral-500">{% translate "No tags found." %}</p>
+                <template x-for="tag in visible" :key="tag.name">
+                    <div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-neutral-50">
+                        <div class="min-w-0 flex-1">
+                            <span class="block text-sm font-medium text-neutral-950 truncate" x-text="tag.name"></span>
+                            <span class="block text-xs text-neutral-500"
+                                  x-text="tag.ideas + tag.posts === 0 ? $root.dataset.unused : [
+                                      tag.ideas ? (tag.ideas === 1 ? $root.dataset.ideasOne : $root.dataset.ideasMany.replace('{n}', tag.ideas)) : '',
+                                      tag.posts ? (tag.posts === 1 ? $root.dataset.postsOne : $root.dataset.postsMany.replace('{n}', tag.posts)) : '',
+                                  ].filter(Boolean).join(' · ')"></span>
+                        </div>
+                        <template x-if="confirming !== tag.name">
+                            <button type="button" class="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-500 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-colors"
+                                    @click="confirming = tag.name" title="{% translate 'Delete' %}" aria-label="{% translate 'Delete' %}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                            </button>
+                        </template>
+                        <template x-if="confirming === tag.name">
+                            <div class="flex items-center gap-1.5 flex-shrink-0">
+                                <button type="button" class="btn-ghost px-3 py-1.5 text-xs" @click="confirming = ''">{% translate "Cancel" %}</button>
+                                <button type="button" class="btn-danger-soft px-3 py-1.5 text-xs" :disabled="deleting === tag.name" @click="remove(tag)">{% translate "Delete" %}</button>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>

@@ -280,7 +280,8 @@ class SpecialDate(models.Model):
     holidays in ``holidays.py``. With one it is optional: shown only to the
     brands that chose that segment.
 
-    ``description``, ``suggestions`` (one content idea per line), ``tags``
+    ``description``, ``suggestions`` (one content idea per line, as ``title``
+    or ``title | brief``), ``tags``
     (comma-separated) and ``image`` fill the date's panel in the special-dates
     tab; all four are optional.
     """

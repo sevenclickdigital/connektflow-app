@@ -64,9 +64,13 @@ from .models import (
     PostTemplate,
     PostVersion,
     Tag,
+    TagGroup,
 )
 from .services import (
+    TagGroupNameTakenError,
+    add_to_tag_group,
     brand_hashtags,
+    delete_tag,
     format_blocker,
     format_media_replacements,
     image_count_blocker,
@@ -77,6 +81,10 @@ from .services import (
     post_ordered_media_types,
     publish_blocker,
     require_publishable,
+    save_tag_group,
+    tag_group_payload,
+    tag_groups_payload,
+    tag_usage,
     usable_media_types,
 )
 from .status import READONLY_STATUSES, derive_post_status
@@ -1299,6 +1307,7 @@ def compose(request, workspace_id, post_id=None):
         "all_tags": all_tags,
         # name -> kind, so the composer can mark which tags also get published.
         "tag_kinds_json": json.dumps({t.name: t.kind for t in all_tags}),
+        "tag_groups": tag_groups_payload(workspace.id),
         # When opened scoped to one account (?account=), the form only renders
         # that account — the save endpoints use this to leave siblings alone.
         "account_scope": account_filter if (post_id and account_filter) else "",
@@ -4013,6 +4022,7 @@ def create_landing(request, workspace_id, tab="ideas"):
         "tab": tab,
         "columns": columns,
         "all_tags": all_tags,
+        "tag_groups": tag_groups_payload(workspace.id),
         "active_tag": tag,
         "feeds": Feed.objects.for_workspace(workspace.id),
         "builtin_templates": [],
@@ -4032,8 +4042,10 @@ def create_landing(request, workspace_id, tab="ideas"):
             template_categories=[{"slug": slug, "label": label} for slug, label in IdeaTemplate.Category.choices],
         )
     if tab == "dates":
+        date_segments = date_segments_for(workspace)
         context.update(
-            date_segments=date_segments_for(workspace),
+            date_segments=date_segments,
+            chosen_segment_count=sum(1 for item in date_segments if item["chosen"]),
             special_date_categories=special_date_categories(),
         )
     return render(request, "composer/create_landing.html", context)
@@ -4150,6 +4162,14 @@ def idea_create(request, workspace_id):
 
     # Sync any new tags to the Tag model
     _sync_tags_to_model(workspace, tags)
+    # An idea started from a special date files the date's tags it kept under
+    # a group named after the date.
+    date_tags = parse_and_truncate_tag_string(request.POST.get("tag_group_tags", ""))
+    add_to_tag_group(
+        workspace,
+        request.POST.get("tag_group", "").strip()[:100],
+        [name for name in date_tags if name in tags],
+    )
 
     if _wants_json_response(request):
         idea = (
@@ -4164,6 +4184,7 @@ def idea_create(request, workspace_id):
                 "idea_id": str(idea.id),
                 "group_id": str(idea.group_id) if idea.group_id else "",
                 "tags": idea.tags or [],
+                "tag_groups": tag_groups_payload(workspace.id),
                 "card_html": _render_idea_card_fragment(request, idea),
             }
         )
@@ -5025,6 +5046,60 @@ def tag_create(request, workspace_id):
     # An existing tag keeps its kind: the dropdown reaches here for tags that
     # are merely being reused, and that must not rewrite how they publish.
     return JsonResponse({"id": str(tag.id), "name": tag.name, "kind": tag.kind, "created": created})
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def tag_group_save(request, workspace_id):
+    """Create a tag group, or rename one and set its tags (``group_id``)."""
+    workspace = _get_workspace(request, workspace_id)
+    name = request.POST.get("name", "").strip()[:100]
+    if not name:
+        return JsonResponse({"error": _("Group name is required.")}, status=400)
+    group = None
+    group_id = request.POST.get("group_id", "")
+    if group_id:
+        if not _is_valid_uuid(group_id):
+            raise Http404
+        group = get_object_or_404(TagGroup, id=group_id, workspace=workspace)
+    tag_names = parse_and_truncate_tag_string(request.POST.get("tags", ""))
+    try:
+        group = save_tag_group(workspace, name, tag_names, group)
+    except TagGroupNameTakenError:
+        return JsonResponse({"error": _("A group with this name already exists.")}, status=400)
+    return JsonResponse(tag_group_payload(group))
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def tag_group_delete(request, workspace_id, group_id):
+    """Delete a tag group. Its tags stay, on the brand and where they were applied."""
+    workspace = _get_workspace(request, workspace_id)
+    get_object_or_404(TagGroup, id=group_id, workspace=workspace).delete()
+    return JsonResponse({"ok": True})
+
+
+@login_required
+@require_permission("create_posts")
+@require_GET
+def tag_manage_list(request, workspace_id):
+    """The brand's saved tags with how many ideas and posts use each, for the tag manager."""
+    workspace = _get_workspace(request, workspace_id)
+    return JsonResponse({"tags": tag_usage(workspace)})
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def tag_delete(request, workspace_id):
+    """Delete a saved tag of the brand, taking it off the ideas and posts that carry it."""
+    workspace = _get_workspace(request, workspace_id)
+    name = request.POST.get("name", "").strip()
+    if not name or not delete_tag(workspace, name):
+        return JsonResponse({"error": _("This tag no longer exists.")}, status=404)
+    return JsonResponse({"ok": True, "name": name})
 
 
 # ── Feeds ──────────────────────────────────────────────────────────────────

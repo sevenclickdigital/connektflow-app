@@ -185,16 +185,25 @@ def test_the_tab_gets_each_date_with_its_category_and_content_ideas(pizza):
 
     _user, workspace = _brand("a@example.com")
     WorkspaceDateSegment.objects.create(workspace=workspace, segment=pizza)
-    SpecialDate.objects.filter(segment=pizza).update(suggestions="Forno aceso ao vivo", tags="pizza")
+    SpecialDate.objects.filter(segment=pizza).update(
+        suggestions="Forno aceso ao vivo\nMassa do dia | Mostre a massa descansando.", tags="pizza"
+    )
 
     entries = {e["name"]: e for e in special_dates_ahead(workspace, date(2027, 1, 1))}
 
     oven = entries["Dia do Forno a Lenha"]
     assert (oven["iso"], oven["kind"], oven["segment"]) == ("2027-03-03", "commercial", "Pizzarias")
-    assert (oven["suggestions"], oven["tags"]) == (["Forno aceso ao vivo"], ["pizza"])
-    # A date with no ideas of its own gets the generic ones of its category.
+    assert oven["tags"] == ["pizza"]
+    # The operator writes a suggestion as its title, or as "title | brief".
+    assert oven["suggestions"] == [
+        {"title": "Forno aceso ao vivo", "brief": ""},
+        {"title": "Massa do dia", "brief": "Mostre a massa descansando."},
+    ]
+    # A date with no ideas of its own gets the generic ones of its category,
+    # each with the brief that opens in the idea's description.
     built_in = next(e for e in entries.values() if not e["segment"])
-    assert built_in["suggestions"] and built_in["kind"] in ("national", "commercial")
+    assert built_in["kind"] in ("national", "commercial")
+    assert built_in["suggestions"] and all(s["title"] and s["brief"] for s in built_in["suggestions"])
 
 
 @pytest.mark.django_db
@@ -205,6 +214,20 @@ def test_every_built_in_date_says_what_it_is():
 
     assert {d["key"] for d in built_in} == {f"b:{slug}" for slug in BUILT_IN_CONTENT}
     assert all(d["description"] and d["tags"] and d["suggestions"] for d in built_in)
+
+
+@pytest.mark.django_db
+def test_every_date_is_drawn_with_an_icon_of_the_library(pizza):
+    from apps.calendar.holidays import BUILT_IN_CONTENT, BUILT_IN_ICONS, KIND_ICONS
+    from apps.composer.idea_icons import ICONS
+
+    SpecialDate.objects.create(name="Dia da Pizza", month=7, day=10, kind=SpecialDate.Kind.INTERNATIONAL)
+
+    assert set(BUILT_IN_ICONS) == set(BUILT_IN_CONTENT)
+    assert set(KIND_ICONS) == set(SpecialDate.Kind.values)
+    dates = special_dates_between(*YEAR)
+    assert all(d["icon"] in ICONS for d in dates)
+    assert next(d for d in dates if d["name"] == "Dia da Pizza")["icon"] == "globe"
 
 
 @pytest.mark.django_db

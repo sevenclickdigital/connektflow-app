@@ -1547,6 +1547,7 @@
                     </div>
                     <!-- Tags (dropdown with search & create) -->
                     <div class="relative" :class="anyPlatformSupportsFirstComment ? '' : 'md:col-span-2'" x-data="{
+                        ...window.tagGroupsBase(),
                         tags: {{ post.tags|json_attr }},
                         tagDropdownOpen: false,
                         tagSearch: '',
@@ -1648,17 +1649,7 @@
                                        placeholder="{% translate 'Search or create tag...' %}">
                             </div>
                             <!-- Tag list -->
-                            <template x-for="tag in filteredTags" :key="tag">
-                                <label class="flex items-center gap-2 px-3 py-1.5 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer rounded-md mx-1">
-                                    <input type="checkbox" class="rounded accent-brand-700"
-                                           :checked="tags.includes(tag)"
-                                           @change="toggleTag(tag)">
-                                    <span x-text="tag"></span>
-                                    <span class="ml-auto text-[10px] font-semibold text-brand-800"
-                                          x-show="tagPreview(tag, tagKindByName[tag])"
-                                          x-text="tagPreview(tag, tagKindByName[tag])"></span>
-                                </label>
-                            </template>
+                            {% include "composer/partials/_tag_picker_rows.html" with query="tagSearch" selected="tags" toggle="toggleTag" on_group="triggerPreviewUpdate()" previews=True row_class="flex items-center gap-2 px-3 py-1.5 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer rounded-md mx-1" %}
                             <!-- No results / Create -->
                             <template x-if="tagSearch.trim() && !filteredTags.length">
                                 <button type="button" @click="createTag()"
@@ -1686,8 +1677,14 @@
                                     <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                                     {% translate "Create new tag" %}
                                 </button>
+                                <button type="button" @click="tagDropdownOpen = false; openTagGroups()"
+                                        class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
+                                    <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                                    {% translate "Tag groups" %}
+                                </button>
                             </div>
                         </div>
+                        {% include "composer/partials/_tag_groups.html" %}
 
                         <!-- Create Tag Modal (teleported to body to escape stacking contexts) -->
                         <template x-teleport="body">

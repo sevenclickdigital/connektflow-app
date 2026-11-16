@@ -1,0 +1,195 @@
+{% load i18n %}
+{% comment %}
+Tag groups for a tag picker: the brand's groups, the rows a picker lists
+(composer/partials/_tag_picker_rows.html) and the window where groups are
+created, renamed, filled and deleted.
+
+Include it inside the Alpine component that owns the picker, and spread
+`window.tagGroupsBase()` into that component. The component must have
+`allTags` (the brand's tag names).
+
+Expects: tag_groups (composer.services.tag_groups_payload), workspace.
+{% endcomment %}
+{{ tag_groups|json_script:"tag-groups-data" }}
+{% translate "Delete this group? Its tags are kept." as lbl_tg_confirm_delete %}{{ lbl_tg_confirm_delete|json_script:"tg-confirm-delete" }}
+{% translate "Could not save the group." as lbl_tg_save_failed %}{{ lbl_tg_save_failed|json_script:"tg-save-failed" }}
+{% translate "Could not delete the group." as lbl_tg_delete_failed %}{{ lbl_tg_delete_failed|json_script:"tg-delete-failed" }}
+<script>
+window.tagGroupsBase = function () {
+    const label = (id) => JSON.parse(document.getElementById('tg-' + id).textContent);
+    const post = (url, data) => fetch(url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+        body: new URLSearchParams(data),
+    }).then(response => response.json().catch(() => ({})).then(body => ({ ok: response.ok, body })));
+    const deleteUrl = '{% url "composer:tag_group_delete" workspace_id=workspace.id group_id="00000000-0000-0000-0000-000000000000" %}';
+
+    return {
+        tagGroups: JSON.parse(document.getElementById('tag-groups-data').textContent) || [],
+        tagGroupsOpen: false,
+        // The group being created or edited: { id, name, tags, newTag }.
+        tagGroupForm: null,
+        tagGroupError: '',
+        tagGroupSaving: false,
+
+        // What a picker lists for a search: each group as a header followed by
+        // its tags, then the tags in no group. A search matches a tag by its
+        // name, or every tag of a group by the group's name.
+        tagRows(query) {
+            const q = (query || '').trim().toLowerCase();
+            const known = new Set(this.allTags);
+            const rows = [];
+            const grouped = new Set();
+            this.tagGroups.forEach(group => {
+                group.tags.forEach(tag => grouped.add(tag));
+                const whole = !q || group.name.toLowerCase().includes(q);
+                const tags = group.tags.filter(tag => known.has(tag) && (whole || tag.toLowerCase().includes(q)));
+                if (!tags.length) return;
+                rows.push({ key: 'g:' + group.id, group });
+                tags.forEach(tag => rows.push({ key: 'g:' + group.id + ':' + tag, tag, grouped: true }));
+            });
+            const loose = this.allTags.filter(tag => !grouped.has(tag) && (!q || tag.toLowerCase().includes(q)));
+            if (rows.length && loose.length) rows.push({ key: 'loose', heading: true });
+            loose.forEach(tag => rows.push({ key: 't:' + tag, tag }));
+            return rows;
+        },
+        tagGroupIsOn(group, selected) {
+            return group.tags.length > 0 && group.tags.every(tag => selected.includes(tag));
+        },
+        // Applies the whole group to `selected`, or takes it off when it is all there.
+        toggleTagGroup(group, selected) {
+            if (this.tagGroupIsOn(group, selected)) {
+                group.tags.forEach(tag => { const at = selected.indexOf(tag); if (at > -1) selected.splice(at, 1); });
+            } else {
+                group.tags.forEach(tag => { if (!selected.includes(tag)) selected.push(tag); });
+            }
+        },
+
+        openTagGroups() {
+            this.tagGroupsOpen = true;
+            this.tagGroupForm = null;
+            this.tagGroupError = '';
+        },
+        editTagGroup(group) {
+            this.tagGroupError = '';
+            this.tagGroupForm = group
+                ? { id: group.id, name: group.name, tags: group.tags.slice(), newTag: '' }
+                : { id: '', name: '', tags: [], newTag: '' };
+        },
+        toggleTagGroupFormTag(name) {
+            const at = this.tagGroupForm.tags.indexOf(name);
+            if (at > -1) this.tagGroupForm.tags.splice(at, 1);
+            else this.tagGroupForm.tags.push(name);
+        },
+        addTagGroupFormTag() {
+            const name = this.tagGroupForm.newTag.trim();
+            if (name && !this.tagGroupForm.tags.includes(name)) this.tagGroupForm.tags.push(name);
+            this.tagGroupForm.newTag = '';
+        },
+        // The tags the group's form offers: the brand's, plus the ones typed here.
+        tagGroupFormChoices() {
+            return [...new Set([...this.allTags, ...this.tagGroupForm.tags])].sort((a, b) => a.localeCompare(b));
+        },
+        saveTagGroup() {
+            const form = this.tagGroupForm;
+            if (!form || !form.name.trim() || this.tagGroupSaving) return;
+            this.addTagGroupFormTag();
+            this.tagGroupSaving = true;
+            this.tagGroupError = '';
+            post('{% url "composer:tag_group_save" workspace_id=workspace.id %}', {
+                group_id: form.id, name: form.name.trim(), tags: form.tags.join(','),
+            }).then(({ ok, body }) => {
+                if (!ok) { this.tagGroupError = body.error || label('save-failed'); return; }
+                this.tagGroups = [...this.tagGroups.filter(group => group.id !== body.id && group.name !== body.name), body]
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                body.tags.forEach(tag => { if (!this.allTags.includes(tag)) this.allTags.push(tag); });
+                this.allTags.sort();
+                this.tagGroupForm = null;
+            }).catch(() => { this.tagGroupError = label('save-failed'); })
+              .finally(() => { this.tagGroupSaving = false; });
+        },
+        deleteTagGroup(group) {
+            if (!window.confirm(label('confirm-delete'))) return;
+            this.tagGroupError = '';
+            // A group still only shown in the page (an idea not saved yet) has no id.
+            if (!group.id) { this.tagGroups = this.tagGroups.filter(other => other !== group); return; }
+            post(deleteUrl.replace('00000000-0000-0000-0000-000000000000', group.id), {})
+                .then(({ ok }) => {
+                    if (!ok) { this.tagGroupError = label('delete-failed'); return; }
+                    this.tagGroups = this.tagGroups.filter(other => other.id !== group.id);
+                })
+                .catch(() => { this.tagGroupError = label('delete-failed'); });
+        },
+    };
+};
+</script>
+
+<template x-teleport="body">
+    <div x-show="tagGroupsOpen" x-cloak class="fixed inset-0 z-[200] flex items-center justify-center" @keydown.escape.window="tagGroupsOpen = false">
+        <div class="fixed inset-0 bg-black/30" @click="tagGroupsOpen = false"></div>
+        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 max-h-[85vh] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="tag-groups-title" @click.stop>
+            <div class="flex items-start justify-between gap-3 mb-1">
+                <h3 id="tag-groups-title" class="text-base font-semibold text-neutral-950">{% translate "Tag groups" %}</h3>
+                <button type="button" class="btn-ghost p-1.5 -mt-1 -mr-1" @click="tagGroupsOpen = false" aria-label="{% translate 'Close' %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="text-xs text-neutral-600 mb-4">{% translate "A group keeps tags together: pick the group and all its tags are applied at once. A tag can be in more than one group." %}</p>
+            <p class="alert-error text-sm mb-3" x-show="tagGroupError" x-text="tagGroupError" role="alert"></p>
+
+            {# The brand's groups #}
+            <div class="flex flex-col min-h-0" x-show="!tagGroupForm">
+                <ul class="flex flex-col gap-2 overflow-y-auto min-h-0">
+                    <template x-for="group in tagGroups" :key="group.id">
+                        <li class="flex items-center gap-2 rounded-lg border border-neutral-300 px-3 py-2">
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-sm font-semibold text-neutral-950 truncate" x-text="group.name"></span>
+                                <span class="block text-xs text-neutral-600 truncate" x-text="group.tags.join(', ')"></span>
+                            </span>
+                            <button type="button" class="btn-ghost p-1.5" @click="editTagGroup(group)" aria-label="{% translate 'Edit group' %}" title="{% translate 'Edit group' %}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                            </button>
+                            <button type="button" class="btn-ghost p-1.5" style="color: var(--error-700);" @click="deleteTagGroup(group)" aria-label="{% translate 'Delete group' %}" title="{% translate 'Delete group' %}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                            </button>
+                        </li>
+                    </template>
+                </ul>
+                <p class="text-sm text-neutral-600" x-show="!tagGroups.length">{% translate "No groups yet. A group is also created when you save an idea started from a special date." %}</p>
+                <button type="button" class="btn-brand w-full mt-4" @click="editTagGroup(null)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                    {% translate "New group" %}
+                </button>
+            </div>
+
+            {# One group: its name and its tags #}
+            <template x-if="tagGroupForm">
+                <div class="flex flex-col min-h-0">
+                    <label for="tag_group_name" class="block text-xs font-semibold text-neutral-800 mb-1">{% translate "Group name" %}</label>
+                    <input type="text" id="tag_group_name" x-model="tagGroupForm.name" maxlength="100" class="form-input-styled w-full"
+                           @keydown.enter.prevent="saveTagGroup()">
+                    <span class="block text-xs font-semibold text-neutral-800 mt-4 mb-1">{% translate "Tags in this group" %}</span>
+                    <div class="overflow-y-auto min-h-0 rounded-lg border border-neutral-300 p-1" style="max-height: 200px;">
+                        <template x-for="tag in tagGroupFormChoices()" :key="tag">
+                            <label class="flex items-center gap-2 px-2 py-1.5 text-sm text-neutral-800 hover:bg-neutral-50 rounded-md cursor-pointer">
+                                <input type="checkbox" class="rounded accent-brand-700" :checked="tagGroupForm.tags.includes(tag)" @change="toggleTagGroupFormTag(tag)">
+                                <span x-text="tag"></span>
+                            </label>
+                        </template>
+                        <p class="px-2 py-1.5 text-xs text-neutral-600" x-show="!tagGroupFormChoices().length">{% translate "No tags yet. Type to create one." %}</p>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <label for="tag_group_new_tag" class="sr-only">{% translate "Add a tag to the group" %}</label>
+                        <input type="text" id="tag_group_new_tag" x-model="tagGroupForm.newTag" maxlength="100" class="form-input-styled flex-1"
+                               placeholder="{% translate 'Add a tag to the group' %}" @keydown.enter.prevent="addTagGroupFormTag()">
+                        <button type="button" class="btn-outline" @click="addTagGroupFormTag()">{% translate "Add" %}</button>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-5">
+                        <button type="button" class="btn-ghost" @click="tagGroupForm = null; tagGroupError = ''">{% translate "Back" %}</button>
+                        <button type="button" class="btn-brand" :disabled="!tagGroupForm.name.trim() || tagGroupSaving" @click="saveTagGroup()">{% translate "Save group" %}</button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</template>

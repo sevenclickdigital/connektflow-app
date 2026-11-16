@@ -725,10 +725,13 @@ def special_dates_ahead(workspace, start, days=365) -> list[dict]:
     Shaped for the special-dates tab, which draws them in the browser: every
     value is a string, a list of strings or the ``favorite`` flag, already in
     the user's language (``day``, ``month``, ``full_date``, ``when``,
-    ``kind_label``).
+    ``kind_label``). ``icon_markup`` is the inner markup of the date's icon,
+    from the app's own library.
     """
     from django.utils.formats import date_format
     from django.utils.translation import gettext, ngettext
+
+    from apps.composer.idea_icons import icon_markup
 
     from .holidays import special_dates_between
     from .models import FavoriteSpecialDate, SpecialDate
@@ -751,7 +754,8 @@ def special_dates_ahead(workspace, start, days=365) -> list[dict]:
                 if ahead == 0
                 else ngettext("in %(days)s day", "in %(days)s days", ahead) % {"days": ahead},
                 "name": entry["name"],
-                "emoji": entry["emoji"],
+                "icon": entry["icon"],
+                "icon_markup": icon_markup(entry["icon"]),
                 "kind": entry["kind"],
                 "kind_label": str(kind_labels.get(entry["kind"], "")),
                 "segment": entry["segment"],

@@ -148,6 +148,36 @@ class Tag(models.Model):
         return " ".join(rendered)
 
 
+class TagGroup(models.Model):
+    """A named set of a brand's tags, of any kind.
+
+    The tag pickers list the tags under their groups and apply a whole group
+    at once. A tag may sit in several groups ("culture" under two dates) or
+    in none. A group is made by hand, or when an idea started from a special
+    date is saved: the date's name becomes the group, its tags the content.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workspace = models.ForeignKey(
+        "workspaces.Workspace",
+        on_delete=models.CASCADE,
+        related_name="tag_groups",
+    )
+    name = models.CharField(max_length=100)
+    tags = models.ManyToManyField(Tag, related_name="groups", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = WorkspaceScopedManager()
+
+    class Meta:
+        db_table = "composer_tag_group"
+        unique_together = ("workspace", "name")
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class IdeaGroup(models.Model):
     """A Kanban column/group for organising ideas, scoped to a workspace."""
 
