@@ -1,7 +1,9 @@
 {% load i18n %}
 {% comment %}
-The list of a tag picker: each tag group as a header that applies all its
-tags, its tags under it, then the tags in no group.
+The list of a tag picker: each tag group as a header whose name applies all
+its tags and whose arrow opens it to show them (open by itself while
+searching), then the tags in no group. With the component's `tagLimit` set
+(ideas and tasks: 5), no more can be ticked once it is reached.
 
 Runs inside a component that spread `window.tagGroupsBase()`
 (composer/partials/_tag_groups.html). Every argument is JavaScript of that
@@ -13,25 +15,41 @@ component, written by the including template:
   row_class  optional: classes of a tag row, for a picker that has none of its own
   previews   optional: show what a published tag will read like (`tagPreview`, `tagKindByName`)
 {% endcomment %}
+{% translate "Remove some tags to add others." as lbl_limit_hint %}
+<p class="mx-1 mb-1 px-2.5 py-1.5 rounded-md text-[11px] font-semibold text-amber-800 bg-amber-50" x-show="tagLimitReached({{ selected }})" x-cloak>
+    {% blocktranslate %}At most <span x-text="tagLimit"></span> tags: networks ignore the rest.{% endblocktranslate %} {{ lbl_limit_hint }}
+</p>
 <template x-for="row in tagRows({{ query }})" :key="row.key">
-    <div>
+    <div x-show="!row.grouped || isTagGroupOpen(row.parent, {{ query }})">
         <template x-if="row.group">
-            <button type="button" class="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm font-semibold text-neutral-950 hover:bg-neutral-50 rounded-md cursor-pointer"
-                    :aria-pressed="tagGroupIsOn(row.group, {{ selected }}).toString()"
-                    title="{% translate 'Apply every tag of the group' %}"
-                    @click="toggleTagGroup(row.group, {{ selected }}){% if on_group %}; {{ on_group }}{% endif %}">
-                <svg class="w-3.5 h-3.5 flex-shrink-0 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-                <span class="min-w-0 flex-1 truncate" x-text="row.group.name"></span>
-                <svg x-show="tagGroupIsOn(row.group, {{ selected }})" class="w-3.5 h-3.5 flex-shrink-0 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
-            </button>
+            <div class="flex items-center gap-1 pr-1 rounded-md hover:bg-neutral-50">
+                {# The name applies (or takes off) the whole group; the arrow shows its tags, to untick some. #}
+                <button type="button" class="flex items-center gap-2 flex-1 min-w-0 px-3 py-1.5 text-left text-sm font-semibold text-neutral-950 cursor-pointer"
+                        :aria-pressed="tagGroupIsOn(row.group, {{ selected }}).toString()"
+                        title="{% translate 'Apply every tag of the group' %}"
+                        @click="toggleTagGroup(row.group, {{ selected }}){% if on_group %}; {{ on_group }}{% endif %}">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                    <span class="min-w-0 flex-1 truncate" x-text="row.group.name"></span>
+                    <svg x-show="tagGroupIsOn(row.group, {{ selected }})" class="w-3.5 h-3.5 flex-shrink-0 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
+                </button>
+                {# Fixed width: the list's own button style (.idea-pill-dropdown button) would stretch it across the row. #}
+                <button type="button" class="h-7 flex-shrink-0 rounded-md flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 cursor-pointer"
+                        style="width: 28px; padding: 0; flex: 0 0 28px;"
+                        @click.stop="toggleTagGroupOpen(row.group)" :aria-expanded="isTagGroupOpen(row.group, {{ query }}).toString()"
+                        :aria-label="row.group.name" title="{% translate 'Show the tags of the group' %}">
+                    <svg class="w-3.5 h-3.5 transition-transform" :class="isTagGroupOpen(row.group, {{ query }}) && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+            </div>
         </template>
         <template x-if="row.heading">
             <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Other tags" %}</div>
         </template>
         <template x-if="row.tag">
-            <label class="{{ row_class }}" :style="row.grouped ? 'padding-left: 30px' : ''">
+            <label class="{{ row_class }}" :style="row.grouped ? 'padding-left: 30px' : ''"
+                   :class="!{{ selected }}.includes(row.tag) && tagLimitReached({{ selected }}) && 'opacity-50'">
                 <input type="checkbox" class="rounded accent-brand-700"
                        :checked="{{ selected }}.includes(row.tag)"
+                       :disabled="!{{ selected }}.includes(row.tag) && tagLimitReached({{ selected }})"
                        @change="{{ toggle }}(row.tag)">
                 <span x-text="row.tag"></span>
                 {% if previews %}

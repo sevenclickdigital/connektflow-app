@@ -771,11 +771,19 @@ def tag_groups_payload(workspace_id) -> list[dict]:
     return [tag_group_payload(group) for group in groups]
 
 
+#: Networks ignore hashtags past about five, so an idea and a tag group carry at most this many
+#: tags (the pickers stop there too: ``tagLimit`` in composer/partials/_tag_groups.html).
+MAX_IDEA_TAGS = 5
+MAX_GROUP_TAGS = 5
+
+
 def save_tag_group(workspace, name, tag_names, group=None):
-    """Create a group, or rename ``group`` and set its tags to ``tag_names``.
+    """Create a group, or rename ``group`` and set its tags to ``tag_names`` (the first
+    ``MAX_GROUP_TAGS`` of them).
 
     Raises ``TagGroupNameTakenError`` when another group of the brand has the name.
     """
+    tag_names = list(dict.fromkeys(tag_names))[:MAX_GROUP_TAGS]
     from django.db import transaction
 
     from .models import TagGroup
@@ -797,13 +805,18 @@ def save_tag_group(workspace, name, tag_names, group=None):
 
 def add_to_tag_group(workspace, name, tag_names) -> None:
     """Put ``tag_names`` in the brand's group called ``name``, creating it
-    when needed and keeping what it already holds. Safe to repeat."""
+    when needed and keeping what it already holds, up to ``MAX_GROUP_TAGS``.
+    Safe to repeat."""
     from .models import TagGroup
 
     if not name or not tag_names:
         return
     group, _created = TagGroup.objects.get_or_create(workspace=workspace, name=name)
-    group.tags.add(*_tags_named(workspace, tag_names))
+    held = set(group.tags.values_list("name", flat=True))
+    room = MAX_GROUP_TAGS - len(held)
+    new_names = [n for n in dict.fromkeys(tag_names) if n not in held][: max(room, 0)]
+    if new_names:
+        group.tags.add(*_tags_named(workspace, new_names))
 
 
 #: How many of the most used templates lately are shown as popular, and over how many days.
@@ -1172,3 +1185,50 @@ def delete_tag(workspace, name) -> bool:
                 item.tags = [tag for tag in item.tags if tag != name]
                 item.save(update_fields=["tags"])
     return bool(deleted)
+
+
+# ---------------------------------------------------------------------------
+# Channels an idea or a task is meant for
+# ---------------------------------------------------------------------------
+
+
+def channel_accounts(workspace):
+    """The brand's accounts content can be meant for: the connected ones it can publish to."""
+    from apps.social_accounts.models import SocialAccount
+
+    return (
+        SocialAccount.objects.for_workspace(workspace.id)
+        .publishable()
+        .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
+        .order_by("platform", "account_name", "id")
+    )
+
+
+def parse_channel_formats(raw) -> dict:
+    """A posted ``channel_formats`` field (JSON ``{"<account id>": [formats]}``), or {}."""
+    import json
+
+    try:
+        value = json.loads(raw or "{}")
+    except (TypeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def clean_channel_formats(workspace, picked) -> dict:
+    """``picked`` (``{"<account id>": [formats]}``) kept to the brand's connected accounts,
+    each on the formats it offers among those asked; accounts left without one are dropped."""
+    picked = picked if isinstance(picked, dict) else {}
+    ids = []
+    for key in picked:
+        try:
+            ids.append(str(uuid.UUID(str(key))))
+        except ValueError:
+            continue
+    cleaned = {}
+    for account in channel_accounts(workspace).filter(id__in=ids):
+        asked = picked.get(str(account.id)) or []
+        formats = [fmt for fmt in account.formats if fmt in asked]
+        if formats:
+            cleaned[str(account.id)] = formats
+    return cleaned

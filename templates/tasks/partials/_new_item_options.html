@@ -1,0 +1,65 @@
+{% load i18n %}
+{% comment %}
+The task windows' two switches, under the description (tasks/partials/_task_fields.html's
+after_description), in the new task window and in a task's own. Switched off, none of a
+switch's fields is sent (its fieldset is disabled). With ``task`` (its own window) they
+start from it: its briefing, its arts already asked for (ticked and fixed: ticking more
+adds them, tasks.services.add_arts), its caption and channels; "post_sent" tells the save
+that "Create a post" was there, so switching it off clears the caption and the channels.
+
+- "Request arts": asks the creative team for the formats ticked here
+  (tasks/partials/_art_formats.html), with how to make them (the briefing).
+  State: wantsArt and artPicker() in newItemForm() (tasks/board.html).
+- "Create a post": the task becomes a post, with its caption and the channels
+  it goes out on (partials/_channel_picker.html). State: wantsPost and channels.
+{% endcomment %}
+<div class="new-item-art" :class="wantsArt && 'is-on'">
+    <label class="new-item-art-switch">
+        <span class="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center flex-shrink-0" aria-hidden="true">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        </span>
+        <span class="flex-1 min-w-0">
+            <span class="block text-sm font-bold text-neutral-950">{% translate "Request arts" %}</span>
+            <span class="block text-[13px] text-neutral-600 mt-0.5">{% translate "Pick the networks and formats; each one becomes an item for the designer to deliver the art." %}</span>
+        </span>
+        <span class="bb-toggle flex-shrink-0">
+            <input type="checkbox" x-model="wantsArt" @change="if (wantsArt) $nextTick(() => recount())">
+            <span class="bb-toggle-track"></span>
+        </span>
+    </label>
+    <fieldset class="new-item-art-body min-w-0" x-show="wantsArt" :disabled="!wantsArt" @change="recount()">
+        <input type="hidden" name="request_art" value="1">
+        <div class="mb-5">
+            <label class="new-item-label" for="{{ prefix }}-briefing">{% translate "Briefing for creating the arts" %}</label>
+            <textarea id="{{ prefix }}-briefing" name="briefing" rows="4" class="form-input-styled block w-full text-sm"
+                      placeholder="{% translate 'How the arts should be made: what they say and show' %}">{{ task.briefing|default:'' }}</textarea>
+        </div>
+        {% include "tasks/partials/_art_formats.html" %}
+    </fieldset>
+</div>
+
+<div class="new-item-art mt-3" :class="wantsPost && 'is-on'">
+    <input type="hidden" name="post_sent" value="1">
+    <label class="new-item-art-switch">
+        <span class="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center flex-shrink-0" aria-hidden="true">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </span>
+        <span class="flex-1 min-w-0">
+            <span class="block text-sm font-bold text-neutral-950">{% translate "Create a post" %}</span>
+            <span class="block text-[13px] text-neutral-600 mt-0.5">{% translate "Write the caption and choose the channels the post goes out on." %}</span>
+        </span>
+        <span class="bb-toggle flex-shrink-0">
+            <input type="checkbox" x-model="wantsPost">
+            <span class="bb-toggle-track"></span>
+        </span>
+    </label>
+    <fieldset class="new-item-art-body min-w-0" x-show="wantsPost" :disabled="!wantsPost">
+        <input type="hidden" name="make_post" value="1">
+        <div class="mb-5">
+            <label class="new-item-label" for="{{ prefix }}-caption">{% translate "Post caption" %}</label>
+            <textarea id="{{ prefix }}-caption" name="post_caption" rows="4" class="form-input-styled block w-full text-sm"
+                      placeholder="{% translate 'The text the post goes out with' %}">{{ task.post_caption|default:'' }}</textarea>
+        </div>
+        {% include "partials/_channel_picker.html" with options=channel_options model="channels" toggle="toggleChannelFormat" ref="postChannelRow" %}
+    </fieldset>
+</div>

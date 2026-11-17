@@ -68,11 +68,14 @@ from .models import (
     TagGroup,
 )
 from .services import (
+    MAX_IDEA_TAGS,
     MAX_PENDING_TEMPLATE_SUBMISSIONS,
     TagGroupNameTakenError,
     TemplateSubmissionLimitError,
     add_to_tag_group,
     brand_hashtags,
+    channel_accounts,
+    clean_channel_formats,
     delete_tag,
     ensure_tags,
     format_blocker,
@@ -80,6 +83,7 @@ from .services import (
     image_count_blocker,
     media_blocker,
     media_change_blocker,
+    parse_channel_formats,
     platforms_for_template_networks,
     post_image_count,
     post_media_types,
@@ -3790,40 +3794,12 @@ def _build_idea_media_payload(idea):
     return media_payload, attachments
 
 
-def _idea_channel_accounts(workspace):
-    """The brand's accounts an idea can be meant for: the connected ones it can publish to."""
-    return (
-        SocialAccount.objects.for_workspace(workspace.id)
-        .publishable()
-        .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
-        .order_by("platform", "account_name", "id")
-    )
-
-
 def _set_idea_channel_formats(idea, workspace, picked):
-    """Point ``idea`` at the brand's accounts in ``picked`` (``{"<account id>":
-    [formats]}``), each on the formats it offers among those asked. Accounts of
-    other brands, not connected, or left without a format are dropped."""
-    picked = picked if isinstance(picked, dict) else {}
-    ids = [key for key in picked if _is_valid_uuid(key)]
-    channel_formats = {}
-    for account in _idea_channel_accounts(workspace).filter(id__in=ids):
-        asked = picked.get(str(account.id)) or []
-        formats = [fmt for fmt in account.formats if fmt in asked]
-        if formats:
-            channel_formats[str(account.id)] = formats
-    idea.channel_formats = channel_formats
+    """Point ``idea`` at the brand's accounts in ``picked`` (``{"<account id>": [formats]}``),
+    cleaned by ``services.clean_channel_formats``."""
+    idea.channel_formats = clean_channel_formats(workspace, picked)
     idea.save(update_fields=["channel_formats"])
-    idea.channels.set(list(channel_formats))
-
-
-def _parse_channel_formats(raw):
-    """The ``channel_formats`` field of an idea's form: a JSON object, or {}."""
-    try:
-        value = json.loads(raw or "{}")
-    except (TypeError, ValueError):
-        return {}
-    return value if isinstance(value, dict) else {}
+    idea.channels.set(list(idea.channel_formats))
 
 
 def _prepare_idea_for_kanban(idea):
@@ -4034,7 +4010,7 @@ def idea_from_template(request, workspace_id, template_id):
     )
     # Meant for the brand's accounts on the networks the template suits, on its formats there.
     _set_idea_channel_formats(
-        idea, workspace, template_account_formats(template.network_formats, _idea_channel_accounts(workspace))
+        idea, workspace, template_account_formats(template.network_formats, channel_accounts(workspace))
     )
     record_template_use(workspace, template)
     messages.success(request, _("The template is now one of your ideas."))
@@ -4085,7 +4061,7 @@ def create_landing(request, workspace_id, tab="ideas"):
         "idea_icons": idea_icons.icon_library(),
         "idea_icon_tones": idea_icons.TONES,
         # The accounts the idea windows offer as its channels.
-        "idea_channel_options": list(_idea_channel_accounts(workspace)),
+        "idea_channel_options": list(channel_accounts(workspace)),
     }
     if tab in ("ideas", "dates"):
         context["special_dates_ahead"] = special_dates_ahead(workspace, today)
@@ -4167,7 +4143,7 @@ def idea_create(request, workspace_id):
     workspace = _get_workspace(request, workspace_id)
     title = request.POST.get("title", "").strip()
     description = request.POST.get("description", "").strip()
-    tags = parse_and_truncate_tag_string(request.POST.get("tags", ""))
+    tags = parse_and_truncate_tag_string(request.POST.get("tags", ""))[:MAX_IDEA_TAGS]
 
     if not title:
         return HttpResponse("Title is required.", status=400)
@@ -4220,7 +4196,7 @@ def idea_create(request, workspace_id):
         if has_multi_media_payload or media_asset_ids:
             _sync_idea_media_attachments(idea, workspace, media_asset_ids)
         if "channel_formats" in request.POST:
-            _set_idea_channel_formats(idea, workspace, _parse_channel_formats(request.POST["channel_formats"]))
+            _set_idea_channel_formats(idea, workspace, parse_channel_formats(request.POST["channel_formats"]))
 
     # Sync any new tags to the Tag model
     _sync_tags_to_model(workspace, tags)
@@ -4268,7 +4244,7 @@ def idea_edit(request, workspace_id, idea_id):
 
     idea.title = request.POST.get("title", idea.title).strip()
     idea.description = request.POST.get("description", idea.description).strip()
-    idea.tags = parse_and_truncate_tag_string(request.POST.get("tags", ""))
+    idea.tags = parse_and_truncate_tag_string(request.POST.get("tags", ""))[:MAX_IDEA_TAGS]
     if "target_date" in request.POST:
         idea.target_date = parse_date(request.POST["target_date"] or "") or None
     if "icon" in request.POST:
@@ -4302,7 +4278,7 @@ def idea_edit(request, workspace_id, idea_id):
             update_fields=["title", "description", "tags", "group", "target_date", "icon", "icon_tone", "updated_at"]
         )
         if "channel_formats" in request.POST:
-            _set_idea_channel_formats(idea, workspace, _parse_channel_formats(request.POST["channel_formats"]))
+            _set_idea_channel_formats(idea, workspace, parse_channel_formats(request.POST["channel_formats"]))
 
         if has_multi_media_payload:
             _sync_idea_media_attachments(idea, workspace, media_asset_ids)
@@ -4382,7 +4358,7 @@ def idea_create_post(request, workspace_id, idea_id):
 
     # The post starts on the idea's channels that are still connected, or on
     # every connected account when the idea names none.
-    connected_accounts = list(_idea_channel_accounts(workspace))
+    connected_accounts = list(channel_accounts(workspace))
     idea_channels = {account.id for account in idea.channels.all()}
     if idea_channels:
         connected_accounts = [account for account in connected_accounts if account.id in idea_channels]

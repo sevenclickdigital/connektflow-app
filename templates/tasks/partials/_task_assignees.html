@@ -1,0 +1,42 @@
+{% load i18n %}
+{% comment %}
+The task's responsible (tasks/partials/_task_fields.html): the picked members as chips,
+the rest in the dropdown; they post as hidden "assignees" inputs, with "assignees_sent".
+State: assignees, peopleOpen and toggleAssignee() of taskFields() (tasks/board.html).
+Expects: prefix, members.
+{% endcomment %}
+{% if members %}
+<div class="min-w-0">
+    <div class="new-item-label" id="{{ prefix }}-assignees-label">
+        {% translate "Responsible" %}
+    </div>
+    <div class="relative" @click.outside="peopleOpen = false">
+        {# The chips stay on one line (scrolling sideways when they don't fit), as the tag field's. #}
+        <div class="new-item-chipbox !flex-nowrap !min-h-[42px] !py-1" @click="if (!$el.closest('fieldset').disabled) peopleOpen = !peopleOpen" role="button" tabindex="0"
+             aria-labelledby="{{ prefix }}-assignees-label" @keydown.enter.prevent="peopleOpen = !peopleOpen" :aria-expanded="peopleOpen.toString()">
+            <span class="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto" style="scrollbar-width: none;">
+            {% for member in members %}
+            <span class="new-item-chip is-person flex-shrink-0 whitespace-nowrap" x-show="assignees.includes('{{ member.pk }}')">
+                <span class="task-avatar !ml-0" aria-hidden="true">{{ member.display_name|make_list|first|upper }}</span>
+                {{ member.display_name }}
+                <button type="button" @click.stop="toggleAssignee('{{ member.pk }}')" aria-label="{% blocktranslate with name=member.display_name %}Remove {{ name }}{% endblocktranslate %}">×</button>
+            </span>
+            {% endfor %}
+            <span class="text-sm text-neutral-500 whitespace-nowrap" x-show="!assignees.length">{% translate "Nobody yet" %}</span>
+            </span>
+            <svg class="w-4 h-4 text-neutral-600 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <input type="hidden" name="assignees_sent" value="1">
+        <template x-for="id in assignees" :key="id"><input type="hidden" name="assignees" :value="id"></template>
+        <div x-show="peopleOpen" x-transition class="new-item-dropdown">
+            {% for member in members %}
+            <label>
+                <input type="checkbox" class="bb-checkbox" :checked="assignees.includes('{{ member.pk }}')" @change="toggleAssignee('{{ member.pk }}')">
+                <span class="task-avatar !ml-0" aria-hidden="true">{{ member.display_name|make_list|first|upper }}</span>
+                <span class="truncate">{{ member.display_name }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}

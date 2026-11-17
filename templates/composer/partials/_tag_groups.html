@@ -15,6 +15,9 @@ Expects: tag_groups (composer.services.tag_groups_payload), workspace.
 {% translate "Could not save the group." as lbl_tg_save_failed %}{{ lbl_tg_save_failed|json_script:"tg-save-failed" }}
 {% translate "Could not delete the group." as lbl_tg_delete_failed %}{{ lbl_tg_delete_failed|json_script:"tg-delete-failed" }}
 <script nonce="{{ request.csp_nonce }}">
+// A group holds at most this many tags (composer.services.MAX_GROUP_TAGS): networks ignore
+// hashtags past about five, so neither a group nor an idea or task carries more.
+var MAX_GROUP_TAGS = 5;
 window.tagGroupsBase = function () {
     const label = (id) => JSON.parse(document.getElementById('tg-' + id).textContent);
     const post = (url, data) => fetch(url, {
@@ -46,7 +49,7 @@ window.tagGroupsBase = function () {
                 const tags = group.tags.filter(tag => known.has(tag) && (whole || tag.toLowerCase().includes(q)));
                 if (!tags.length) return;
                 rows.push({ key: 'g:' + group.id, group });
-                tags.forEach(tag => rows.push({ key: 'g:' + group.id + ':' + tag, tag, grouped: true }));
+                tags.forEach(tag => rows.push({ key: 'g:' + group.id + ':' + tag, tag, grouped: true, parent: group }));
             });
             const loose = this.allTags.filter(tag => !grouped.has(tag) && (!q || tag.toLowerCase().includes(q)));
             if (rows.length && loose.length) rows.push({ key: 'loose', heading: true });
@@ -56,14 +59,22 @@ window.tagGroupsBase = function () {
         tagGroupIsOn(group, selected) {
             return group.tags.length > 0 && group.tags.every(tag => selected.includes(tag));
         },
-        // Applies the whole group to `selected`, or takes it off when it is all there.
+        // Applies the whole group to `selected` (as far as `tagLimit` allows), or takes it off
+        // when it is all there.
         toggleTagGroup(group, selected) {
             if (this.tagGroupIsOn(group, selected)) {
                 group.tags.forEach(tag => { const at = selected.indexOf(tag); if (at > -1) selected.splice(at, 1); });
             } else {
-                group.tags.forEach(tag => { if (!selected.includes(tag)) selected.push(tag); });
+                group.tags.forEach(tag => { if (!selected.includes(tag) && !this.tagLimitReached(selected)) selected.push(tag); });
             }
         },
+        // How many tags an item may carry: 0 for no limit. A page sets it (ideas and tasks: 5).
+        tagLimit: 0,
+        tagLimitReached(selected) { return this.tagLimit > 0 && selected.length >= this.tagLimit; },
+        // A group's tags show under it when it is opened by its arrow, or while searching.
+        tagGroupExpanded: {},
+        isTagGroupOpen(group, query) { return !!(query || '').trim() || !!this.tagGroupExpanded[group.id]; },
+        toggleTagGroupOpen(group) { this.tagGroupExpanded = { ...this.tagGroupExpanded, [group.id]: !this.tagGroupExpanded[group.id] }; },
 
         openTagGroups() {
             this.tagGroupsOpen = true;
@@ -79,11 +90,11 @@ window.tagGroupsBase = function () {
         toggleTagGroupFormTag(name) {
             const at = this.tagGroupForm.tags.indexOf(name);
             if (at > -1) this.tagGroupForm.tags.splice(at, 1);
-            else this.tagGroupForm.tags.push(name);
+            else if (this.tagGroupForm.tags.length < MAX_GROUP_TAGS) this.tagGroupForm.tags.push(name);
         },
         addTagGroupFormTag() {
             const name = this.tagGroupForm.newTag.trim();
-            if (name && !this.tagGroupForm.tags.includes(name)) this.tagGroupForm.tags.push(name);
+            if (name && !this.tagGroupForm.tags.includes(name) && this.tagGroupForm.tags.length < MAX_GROUP_TAGS) this.tagGroupForm.tags.push(name);
             this.tagGroupForm.newTag = '';
         },
         // The tags the group's form offers: the brand's, plus the ones typed here.
@@ -168,11 +179,15 @@ window.tagGroupsBase = function () {
                     <label for="tag_group_name" class="block text-xs font-semibold text-neutral-800 mb-1">{% translate "Group name" %}</label>
                     <input type="text" id="tag_group_name" x-model="tagGroupForm.name" maxlength="100" class="form-input-styled w-full"
                            @keydown.enter.prevent="saveTagGroup()">
-                    <span class="block text-xs font-semibold text-neutral-800 mt-4 mb-1">{% translate "Tags in this group" %}</span>
+                    <span class="flex items-center justify-between text-xs font-semibold text-neutral-800 mt-4 mb-1">
+                        {% translate "Tags in this group" %}
+                        <span class="font-medium text-neutral-500 tabular-nums" x-text="tagGroupForm.tags.length + '/' + MAX_GROUP_TAGS"></span>
+                    </span>
                     <div class="overflow-y-auto min-h-0 rounded-lg border border-neutral-300 p-1" style="max-height: 200px;">
                         <template x-for="tag in tagGroupFormChoices()" :key="tag">
                             <label class="flex items-center gap-2 px-2 py-1.5 text-sm text-neutral-800 hover:bg-neutral-50 rounded-md cursor-pointer">
-                                <input type="checkbox" class="rounded accent-brand-700" :checked="tagGroupForm.tags.includes(tag)" @change="toggleTagGroupFormTag(tag)">
+                                <input type="checkbox" class="rounded accent-brand-700" :checked="tagGroupForm.tags.includes(tag)" @change="toggleTagGroupFormTag(tag)"
+                                       :disabled="!tagGroupForm.tags.includes(tag) && tagGroupForm.tags.length >= MAX_GROUP_TAGS">
                                 <span x-text="tag"></span>
                             </label>
                         </template>

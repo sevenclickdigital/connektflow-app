@@ -16,7 +16,7 @@ from .models import Task, TaskChecklist, TaskChecklistItem, TaskColumn
 
 
 def ensure_columns(workspace) -> list[TaskColumn]:
-    """The board's columns, seeding the default four the first time.
+    """The board's columns, seeding the default five the first time.
 
     Column names are data (users rename them), so they are written once, in
     the site's language rather than that of whoever happens to open the board
@@ -28,16 +28,23 @@ def ensure_columns(workspace) -> list[TaskColumn]:
     tone = TaskColumn.Tone
     with override(settings.LANGUAGE_CODE):
         defaults = [
-            (_("To do"), tone.BRAND, False, False),
-            (_("In progress"), tone.INFO, False, False),
-            (_("In review"), tone.WARNING, True, False),
-            (_("Done"), tone.SUCCESS, False, True),
+            (_("To do"), tone.BRAND, False, False, False),
+            (_("In progress"), tone.INFO, False, False, False),
+            (_("In review"), tone.WARNING, True, False, False),
+            (_("Changes requested"), tone.ERROR, False, True, False),
+            (_("Done"), tone.SUCCESS, False, False, True),
         ]
     return [
         TaskColumn.objects.create(
-            workspace=workspace, name=name, tone=colour, position=pos, is_review=review, is_done=done
+            workspace=workspace,
+            name=name,
+            tone=colour,
+            position=pos,
+            is_review=review,
+            is_changes_requested=changes,
+            is_done=done,
         )
-        for pos, (name, colour, review, done) in enumerate(defaults)
+        for pos, (name, colour, review, changes, done) in enumerate(defaults)
     ]
 
 
@@ -101,7 +108,7 @@ def assignable_members(workspace):
     return [m.user for m in memberships if m.effective_permissions.get("create_posts")]
 
 
-MAX_TASK_TAGS = 20
+MAX_TASK_TAGS = 5  # networks ignore hashtags past about five (as composer.services.MAX_IDEA_TAGS)
 MAX_TAG_LENGTH = 50
 
 
@@ -239,7 +246,9 @@ def create_task(
     title,
     column=None,
     description="",
+    briefing="",
     post_caption="",
+    channel_formats=None,
     priority=Task.Priority.MEDIUM,
     due_date=None,
     assignees=(),
@@ -253,6 +262,8 @@ def create_task(
 
     ``items`` are dicts of ``TaskChecklistItem`` fields, in order, outside any named
     checklist; ``checklists`` are ``{"title", "items": [text, …]}`` (clean_checklists).
+    ``channel_formats`` are the post's channels, already cleaned
+    (``composer.services.clean_channel_formats``).
     """
     column = column or ensure_columns(workspace)[0]
     task = Task.objects.create(
@@ -261,7 +272,9 @@ def create_task(
         position=_next_position(column),
         title=title[:255],
         description=description,
+        briefing=briefing,
         post_caption=post_caption,
+        channel_formats=channel_formats or {},
         priority=priority,
         due_date=due_date,
         tags=clean_tags(tags),
@@ -325,7 +338,34 @@ def set_item_done(item, done, actor) -> None:
     item.done_at = timezone.now() if done else None
     item.save(update_fields=["is_done", "done_by", "done_at"])
     if done:
+        start_work(item.task, actor)
         advance_to_review(item.task, actor)
+
+
+def start_work(task, actor) -> bool:
+    """Move a task from the board's first column to the next one once an item is ticked.
+
+    The work has started: the card goes from "To do" to "In progress" (whatever the
+    team named them), unless the next column is the review or the done one. Tasks
+    in any other column stay where they are. Returns whether it moved.
+    """
+    following = _work_column(task)
+    if following is None:
+        return False
+    move_task(task, following, _next_position(following), actor)
+    return True
+
+
+def _work_column(task):
+    """Where a task in the board's first column goes once its work starts: the next
+    column, when it is a working one (not review, changes requested or done); else None."""
+    columns = list(TaskColumn.objects.for_workspace(task.workspace_id).order_by("position", "id"))
+    if len(columns) < 2 or task.column_id != columns[0].id:
+        return None
+    following = columns[1]
+    if following.is_review or following.is_changes_requested or following.is_done:
+        return None
+    return following
 
 
 def advance_to_review(task, actor) -> bool:
@@ -338,9 +378,56 @@ def advance_to_review(task, actor) -> bool:
     arts = [i for i in items if i.is_art]
     if not arts or not all(i.is_done for i in items):
         return False
+    return send_to_review(task, actor)
+
+
+def review_column(workspace_id):
+    """The board's review column, or None."""
+    return TaskColumn.objects.for_workspace(workspace_id).filter(is_review=True).first()
+
+
+def stage_actions(task) -> list[str]:
+    """The stages a task can be moved to from its window, by its column: in the first
+    column, start the work ("start", to the next one); once working, to review; in review,
+    back for changes or on to done; done, none. A stage whose column the board doesn't
+    have is left out."""
+    column = task.column
+    if column.is_done:
+        return []
+    if _work_column(task) is not None:
+        return ["start"]
+    have = TaskColumn.objects.for_workspace(task.workspace_id)
+    if column.is_review:
+        wanted = [("changes", have.filter(is_changes_requested=True)), ("done", have.filter(is_done=True))]
+    else:
+        wanted = [("review", have.filter(is_review=True))]
+    return [stage for stage, columns in wanted if columns.exists()]
+
+
+def move_to_stage(task, stage, actor) -> bool:
+    """Move a task to the column of ``stage`` ("start", "review", "changes" or "done") when its window offers it
+    (stage_actions). Review goes through send_to_review. Returns whether it moved."""
+    if stage not in stage_actions(task):
+        return False
+    if stage == "start":
+        return start_work(task, actor)
+    if stage == "review":
+        return send_to_review(task, actor)
+    flag = {"changes": "is_changes_requested", "done": "is_done"}[stage]
+    column = TaskColumn.objects.for_workspace(task.workspace_id).filter(**{flag: True}).first()
+    move_task(task, column, _next_position(column), actor)
+    return True
+
+
+def send_to_review(task, actor) -> bool:
+    """Move a task to the review column and tell whoever created it.
+
+    A task already in review or done stays where it is, as one on a board without
+    a review column. Returns whether it moved.
+    """
     if task.column.is_review or task.column.is_done:
         return False
-    review = TaskColumn.objects.for_workspace(task.workspace_id).filter(is_review=True).first()
+    review = review_column(task.workspace_id)
     if review is None:
         return False
     move_task(task, review, _next_position(review), actor)
@@ -455,39 +542,37 @@ def request_arts(
     title,
     format_keys,
     description="",
+    briefing="",
     post_caption="",
+    channel_formats=None,
     assignees=(),
     due_date=None,
     idea=None,
     extra_items=(),
+    checklists=(),
+    column=None,
+    priority=Task.Priority.MEDIUM,
+    tags=(),
 ) -> Task:
     """One task with a checklist per network ("Instagram", "Facebook"…), each holding an
-    item per requested format of that network, in catalogue order, and, when
-    ``extra_items`` (other to-dos typed with the request) are given, an "Other to-dos"
-    checklist with them.
+    item per requested format of that network, in catalogue order; then the task's own
+    ``checklists`` (clean_checklists) and, when ``extra_items`` (other to-dos typed with
+    the request) are given, an "Other to-dos" checklist with them.
 
     Unknown keys are dropped; at least one known format is required. "Other to-dos" is
-    written in the site's language, like the default column names.
+    written in the site's language, like the default column names. ``briefing`` says how
+    the arts should be made; ``column`` (the first one by default), ``description``,
+    ``priority`` and ``tags`` are those of any task.
     """
-    from . import creative_formats
-
-    wanted = set(format_keys)
-    formats = [f for f in creative_formats.FORMATS if f.key in wanted]
-    if not formats:
+    lists = _art_checklists(format_keys)
+    if not lists:
         raise ValueError("No known format requested")
-    # One checklist per network, in catalogue order, its arts named by format; then "Other to-dos".
-    checklists: list[dict] = []
-    for fmt in formats:
-        label = creative_formats.network(fmt.network).label
-        if not checklists or checklists[-1]["title"] != label:
-            checklists.append({"title": label, "items": []})
-        checklists[-1]["items"].append(
-            {"text": str(fmt.label), "format_key": fmt.key, "width": fmt.width, "height": fmt.height}
-        )
+    # One checklist per network; then the task's own checklists and "Other to-dos".
+    lists += list(checklists)
     extras = [str(text).strip()[:255] for text in extra_items if str(text).strip()][:MAX_CHECKLIST_ITEMS]
     if extras:
         with override(settings.LANGUAGE_CODE):
-            checklists.append({"title": str(_("Other to-dos")), "items": extras})
+            lists.append({"title": str(_("Other to-dos")), "items": extras})
     if not assignees:
         default = art_settings(workspace).art_assignee
         if default and default in assignable_members(workspace):
@@ -497,13 +582,56 @@ def request_arts(
         actor,
         title=title,
         description=description,
+        briefing=briefing,
         post_caption=post_caption,
+        channel_formats=channel_formats,
         due_date=due_date,
         assignees=list(assignees),
         idea=idea,
         calendar_event=idea.calendar_event if idea else None,
-        checklists=checklists,
+        checklists=lists,
+        column=column,
+        priority=priority,
+        tags=tags,
     )
+
+
+def _art_checklists(format_keys) -> list[dict]:
+    """One checklist per network (``{"title", "items"}``), in catalogue order, with an art
+    item per known format of ``format_keys``, named by the format."""
+    from . import creative_formats
+
+    wanted = set(format_keys)
+    lists: list[dict] = []
+    for fmt in creative_formats.FORMATS:
+        if fmt.key not in wanted:
+            continue
+        label = str(creative_formats.network(fmt.network).label)
+        if not lists or lists[-1]["title"] != label:
+            lists.append({"title": label, "items": []})
+        lists[-1]["items"].append(
+            {"text": str(fmt.label), "format_key": fmt.key, "width": fmt.width, "height": fmt.height}
+        )
+    return lists
+
+
+@transaction.atomic
+def add_arts(task, format_keys) -> int:
+    """Ask for more arts on an existing task: the formats it doesn't have yet join the
+    checklist of their network (a new one when the task has none). Returns how many."""
+    have = set(task.checklist.exclude(format_key="").values_list("format_key", flat=True))
+    lists = _art_checklists([key for key in format_keys if key not in have])
+    added = 0
+    for spec in lists:
+        checklist = task.checklists.filter(title=spec["title"]).first() or add_checklist(task, spec["title"])
+        top = task.checklist.aggregate(top=Max("position"))["top"]
+        start = 0 if top is None else top + 1
+        TaskChecklistItem.objects.bulk_create(
+            TaskChecklistItem(task=task, checklist=checklist, position=start + offset, **item)
+            for offset, item in enumerate(spec["items"])
+        )
+        added += len(spec["items"])
+    return added
 
 
 def deliver_art(item, asset, actor) -> bool:
@@ -520,6 +648,7 @@ def deliver_art(item, asset, actor) -> bool:
     item.done_by = actor
     item.done_at = timezone.now()
     item.save(update_fields=["media_asset", "is_done", "done_by", "done_at"])
+    start_work(item.task, actor)
     advance_to_review(item.task, actor)
     return creative_formats.ratio_matches(item.width or 0, item.height or 0, asset.width, asset.height)
 
@@ -544,11 +673,12 @@ class NothingToPublishError(Exception):
 def create_post_from_task(task, actor):
     """A draft post with each delivered art in the format it was made for.
 
-    It goes out with the task's ``post_caption``; the briefing (``description``)
-    is for the designers and never becomes the caption. The first delivered feed art is the post's media; every other delivered
+    It goes out with the task's ``post_caption``; the description and the briefing
+    are for the team and never become the caption. The first delivered feed art is the post's media; every other delivered
     art stands in for it on its own format (a Story, a Reel, another network's
     feed) through the same per-format media the composer's crop uses. Formats
-    the account can't publish and art-only pieces are left out.
+    the account can't publish and art-only pieces are left out, and so are the
+    channels and formats outside the task's ``channel_formats`` when it has any.
     """
     from apps.composer.models import PlatformPost, Post, PostMedia
     from apps.social_accounts.models import SocialAccount
@@ -568,6 +698,7 @@ def create_post_from_task(task, actor):
         .publishable()
         .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
     )
+    wanted = task.channel_formats or {}
     # (account, publish format) → art, first art per pair in checklist order.
     plan: dict = {}
     for fmt, asset in delivered:
@@ -575,6 +706,7 @@ def create_post_from_task(task, actor):
             if (
                 account.platform in creative_formats.network(fmt.network).platforms
                 and fmt.publish_format in account.formats
+                and (not wanted or fmt.publish_format in wanted.get(str(account.id), ()))
             ):
                 plan.setdefault((account, fmt.publish_format), asset)
     if not plan:

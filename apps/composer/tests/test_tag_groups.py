@@ -155,3 +155,34 @@ def test_an_idea_with_no_date_makes_no_group(client):
     client.post(reverse("composer:idea_create", kwargs=kwargs), {"title": "Solta", "tags": "a,b"})
 
     assert not TagGroup.objects.exists()
+
+
+@pytest.mark.django_db
+def test_a_group_holds_at_most_five_tags(client):
+    from apps.composer.services import MAX_GROUP_TAGS, add_to_tag_group
+
+    user, workspace = _brand()
+    client.force_login(user)
+
+    response = _save(client, workspace, name="Big", tags="a, b, c, d, e, f, g")
+    assert response.json()["tags"] == ["a", "b", "c", "d", "e"][:MAX_GROUP_TAGS]
+
+    add_to_tag_group(workspace, "Dates", ["one", "two", "three"])
+    add_to_tag_group(workspace, "Dates", ["two", "four", "five", "six"])
+    names = set(TagGroup.objects.get(workspace=workspace, name="Dates").tags.values_list("name", flat=True))
+    assert names == {"one", "two", "three", "four", "five"}
+
+
+@pytest.mark.django_db
+def test_an_idea_keeps_at_most_five_tags(client):
+    from apps.composer.models import Idea
+
+    user, workspace = _brand()
+    client.force_login(user)
+
+    client.post(
+        reverse("composer:idea_create", kwargs={"workspace_id": workspace.id}),
+        {"title": "Launch", "tags": "a, b, c, d, e, f, g"},
+    )
+
+    assert Idea.objects.get(workspace=workspace).tags == ["a", "b", "c", "d", "e"]

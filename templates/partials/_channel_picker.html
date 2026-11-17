@@ -1,0 +1,55 @@
+{% load i18n %}
+{% comment %}
+The channels some content is meant for: a row of the brand's connected accounts
+(the composer's destination look, .target-card), each with its format toggles
+(Feed, Story, Reels…), scrolled sideways with the arrows; with none connected,
+a link to connect one. The picks post as JSON in a hidden "channel_formats"
+(``{"<account id>": ["default", "reel"]}``, cleaned by
+composer.services.clean_channel_formats). Used by the idea windows
+(composer/create_landing.html) and the task windows (tasks/partials/_new_item_post.html,
+tasks/partials/_task_fields.html).
+
+Runs in an Alpine component; every argument but options is JavaScript of it:
+  options  the accounts (composer.services.channel_accounts)
+  model    the picks object
+  toggle   the function that turns one account's format on or off: toggle(model, id, format)
+  ref      the x-ref of the row
+Optional: label (the heading; "Channels (optional)" by default), note (the line under the row).
+{% endcomment %}
+<div class="flex items-center justify-between gap-3 mb-1.5">
+    <p class="text-sm font-semibold text-neutral-950">{% if label %}{{ label }}{% else %}{% translate "Channels" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span>{% endif %}</p>
+    {% if options %}{% include "partials/_scroll_arrows.html" with ref=ref %}{% endif %}
+</div>
+{% if options %}
+<input type="hidden" name="channel_formats" :value="JSON.stringify({{ model }})">
+<div class="target-picker" x-ref="{{ ref }}">
+    {% for account in options %}
+    <div class="target-card" :class="({{ model }}['{{ account.id }}'] || []).length && 'is-selected'" style="width: 220px;">
+        <div class="target-card-head">
+            <span class="target-card-avatar" aria-hidden="true">{% if account.avatar_url %}<img src="{{ account.avatar_url }}" alt="" referrerpolicy="no-referrer">{% else %}{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}{% endif %}</span>
+            <span class="flex-1 min-w-0">
+                <span class="target-card-name">{{ account.account_name }}</span>
+                <span class="target-card-sub">{% include "partials/_platform_icon.html" with platform=account.platform %} {{ account.get_platform_display }}</span>
+            </span>
+            <span class="target-card-check" x-show="({{ model }}['{{ account.id }}'] || []).length" x-cloak aria-hidden="true">
+                <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </span>
+        </div>
+        <div class="target-card-formats">
+            {% for option in account.format_options %}
+            <button type="button" class="format-toggle" :class="({{ model }}['{{ account.id }}'] || []).includes('{{ option.format }}') && 'is-on'"
+                    :aria-pressed="({{ model }}['{{ account.id }}'] || []).includes('{{ option.format }}').toString()"
+                    aria-label="{{ option.label }}" title="{{ option.label }}"
+                    @click="{{ toggle }}({{ model }}, '{{ account.id }}', '{{ option.format }}')">
+                {% include "partials/_format_icon.html" with format=option.format show_default=True %}
+                {{ option.short }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+<p class="text-xs text-neutral-600 mt-1.5">{% if note %}{{ note }}{% else %}{% translate "Creating the post starts it on these channels and formats. With none ticked, on every connected one." %}{% endif %}</p>
+{% else %}
+<p class="text-xs text-neutral-600">{% translate "Connect a channel to choose where this idea will be published." %} <a href="{% url 'social_accounts:connect' workspace_id=workspace.id %}" class="font-semibold text-brand-800 hover:text-brand-900">{% translate "Connect a Channel" %}</a></p>
+{% endif %}

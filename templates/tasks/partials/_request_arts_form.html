@@ -6,11 +6,11 @@ network by its accounts (the composer's destination cards) and tick what it
 needs. On the right the checklists the task will have: one per network with
 its ticked formats, kept in step as formats are ticked (× unticks), and
 "Other to-dos" typed there (``extra_items``). The button that creates the
-task sits in the left column's foot, as in the task window.
+task sits in a foot across both columns.
 
 Rendered inside the request modal (tasks/partials/_request_arts_host.html, the
-script is artPicker() there), in the task board's new item window and, without
-JS, on its own page. Posts back to itself, or to ``action_url`` when another
+script is artPicker() there) and, without JS, on its own page; the task board
+asks for arts from its new task window instead (tasks/partials/_new_item_modal.html). Posts back to itself, or to ``action_url`` when another
 app reuses it (tasks.views.render_art_request_form); a valid request answers
 HX-Redirect to the board with the new task open.
 {% endcomment %}
@@ -45,9 +45,9 @@ HX-Redirect to the board with the new task open.
                     <input id="ra-title" name="title" value="{{ form.title }}" maxlength="255" required autocomplete="off" class="form-input-styled block w-full text-sm">
                 </div>
                 <div>
-                    <label class="new-item-label" for="ra-description">{% translate "Briefing" %}</label>
-                    <textarea id="ra-description" name="description" rows="4" class="form-input-styled block w-full text-sm"
-                              placeholder="{% translate 'How the arts should be made: what they say and show' %}">{{ form.description }}</textarea>
+                    <label class="new-item-label" for="ra-briefing">{% translate "Briefing for creating the arts" %}</label>
+                    <textarea id="ra-briefing" name="briefing" rows="4" class="form-input-styled block w-full text-sm"
+                              placeholder="{% translate 'How the arts should be made: what they say and show' %}">{{ form.briefing }}</textarea>
                 </div>
                 <div>
                     <label class="new-item-label" for="ra-caption">{% translate "Post caption" %}</label>
@@ -96,68 +96,8 @@ HX-Redirect to the board with the new task open.
                 </div>
             </div>
 
-            {# Arrows: the row scrolls sideways when the accounts don't fit. #}
-            <div class="flex items-center justify-between gap-3 mt-6 mb-2">
-                <p class="text-sm font-semibold text-neutral-950">{% translate "Formats" %}</p>
-                {% include "partials/_scroll_arrows.html" with ref="networkRow" %}
-            </div>
-            <div class="target-picker pb-3" role="tablist" aria-label="{% translate 'Networks' %}" x-ref="networkRow">
-                {% for group in groups %}
-                {% for account in group.accounts %}
-                {% include "partials/_target_card.html" with platform=account.platform account=account network=group.network.key %}
-                {% endfor %}
-                {% endfor %}
-                {% for group in groups %}
-                {% if not group.accounts %}
-                {% include "partials/_target_card.html" with platform=group.network.platforms.0 label=group.network.label network=group.network.key %}
-                {% endif %}
-                {% endfor %}
-            </div>
+            <div class="mt-6">{% include "tasks/partials/_art_formats.html" %}</div>
 
-            {% for group in groups %}
-            <div data-network="{{ group.network.key }}" x-show="tab === '{{ group.network.key }}'" {% if group.network.key != first_tab %}x-cloak{% endif %}>
-                <p class="text-xs font-semibold text-neutral-600 mt-2 mb-2">{{ group.network.label }}</p>
-                <div class="grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));">
-                    {% for fmt in group.formats %}
-                    <label class="art-format">
-                        <input type="checkbox" name="formats" value="{{ fmt.key }}" data-network="{{ group.network.key }}"
-                               data-network-label="{{ group.network.label }}" data-label="{{ fmt.label }}" data-size="{{ fmt.width }} × {{ fmt.height }}"
-                               {% if fmt.key in selected %}checked{% endif %}>
-                        <span class="art-tick" aria-hidden="true"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
-                        {# The format's glyph on a lilac tile: Feed, Story, Reels; a picture for art-only pieces. #}
-                        <span class="art-icon-box" aria-hidden="true">
-                            {% if fmt.publish_format == "story" or fmt.publish_format == "reel" or fmt.publish_format == "default" %}
-                            {% include "partials/_format_icon.html" with format=fmt.publish_format show_default=True cls="w-5 h-5" %}
-                            {% elif fmt.media == "video" %}
-                            {% include "partials/_format_icon.html" with format="reel" cls="w-5 h-5" %}
-                            {% else %}
-                            {% include "partials/_format_icon.html" with format="profile_photo" cls="w-5 h-5" %}
-                            {% endif %}
-                        </span>
-                        <span class="min-w-0">
-                            <span class="block text-[13px] font-bold text-neutral-950 leading-tight truncate">{{ fmt.label }}</span>
-                            <span class="block text-[11.5px] text-neutral-600 tabular-nums">{{ fmt.width }} × {{ fmt.height }} px</span>
-                            <span class="mt-1 flex flex-wrap gap-1">
-                                <span class="art-ratio">{{ fmt.ratio_label }}</span>
-                                {% if fmt.media == "video" %}<span class="task-pill task-pill--due">{% translate "Video" %}</span>{% endif %}
-                                {% if not fmt.is_publishable %}<span class="task-pill task-pill--art">{% translate "Art only" %}</span>{% endif %}
-                            </span>
-                        </span>
-                    </label>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endfor %}
-
-            {# The foot, like the task window's: the button that sends the request, kept in view while the column scrolls. #}
-            <div class="art-request-footer">
-                <button type="submit" class="btn-brand text-sm px-5" :disabled="picked < 1">
-                    <span x-show="picked < 1">{% translate "Choose the formats" %}</span>
-                    <span x-show="picked >= 1" x-cloak>
-                        <span x-text="picked"></span> · {% translate "Create task for the creative team" %}
-                    </span>
-                </button>
-            </div>
         </section>
 
         {# Right: the checklist the task will have. #}
@@ -221,5 +161,15 @@ HX-Redirect to the board with the new task open.
             </div>
 
         </aside>
+
+        {# The foot, across both columns like a window's: the button that sends the request, kept in view while the form scrolls. #}
+        <div class="art-request-footer">
+            <button type="submit" class="btn-brand text-sm px-5" :disabled="picked < 1">
+                <span x-show="picked < 1">{% translate "Choose the formats" %}</span>
+                <span x-show="picked >= 1" x-cloak>
+                    <span x-text="picked"></span> · {% translate "Create task for the creative team" %}
+                </span>
+            </button>
+        </div>
     </form>
 </div>

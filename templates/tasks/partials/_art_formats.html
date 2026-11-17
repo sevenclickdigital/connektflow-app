@@ -1,0 +1,81 @@
+{% load i18n %}
+{% comment %}
+The art request's channels and formats. On the left the workspace's networks,
+one row each (connected ones first, the account in the row's tooltip; then the
+others): the row shows that network's formats, its box ticks or unticks all
+of them (half ticked when only some are). On the right the shown network's
+formats as cards in one row, scrolled sideways with the arrows, each with its
+glyph, size and proportion. They post as "formats".
+
+Runs inside an Alpine component that spread artPicker() (tasks/partials/_request_arts_host.html):
+``tab`` is the network shown, ``counts`` / ``totals`` the ticked and offered
+formats per network (the header reads the shown one's: "2 of 5"),
+``toggleNetwork(key)`` ticks a whole network.
+Used by the art request form and by the task board's new task window.
+Expects: groups (tasks.views._art_catalogue), selected (format keys ticked); optional
+locked (format keys ticked and fixed: a task's arts already asked for, which don't post again).
+{% endcomment %}
+<p class="text-base font-bold text-neutral-950">{% translate "Channels and formats" %} <span class="text-red-600" aria-hidden="true">*</span></p>
+<p class="text-[13px] text-neutral-600 mt-0.5">{% translate "Choose where these arts will be published and the formats they need." %}</p>
+<div class="art-channels mt-3">
+    <div class="art-channel-list" role="tablist" aria-label="{% translate 'Networks' %}">
+        {% for group in groups %}
+        <div class="art-channel" :class="tab === '{{ group.network.key }}' && 'is-shown'">
+            <button type="button" role="tab" class="art-channel-name" @click="tab = '{{ group.network.key }}'; $refs.formatRow.scrollLeft = 0"
+                    title="{% if group.accounts %}{% for account in group.accounts %}{{ account.display_label }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}{% translate 'Not connected' %}{% endif %}"
+                    :aria-selected="tab === '{{ group.network.key }}' ? 'true' : 'false'">
+                <span class="w-5 h-5 flex items-center justify-center flex-shrink-0" aria-hidden="true">
+                    {% with platform=group.network.platforms.0 %}
+                    {% if platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=platform size="md" %}{% endif %}
+                    {% endwith %}
+                </span>
+                <span class="min-w-0 text-left text-sm truncate {% if group.accounts %}font-semibold text-neutral-950{% else %}text-neutral-700{% endif %}">{{ group.network.label }}</span>
+            </button>
+            <input type="checkbox" class="bb-checkbox flex-shrink-0"
+                   :checked="counts['{{ group.network.key }}'] === totals['{{ group.network.key }}']"
+                   x-effect="$el.indeterminate = counts['{{ group.network.key }}'] > 0 && counts['{{ group.network.key }}'] < totals['{{ group.network.key }}']"
+                   @change.stop="toggleNetwork('{{ group.network.key }}')"
+                   aria-label="{% blocktranslate with network=group.network.label %}All formats of {{ network }}{% endblocktranslate %}">
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="art-channel-formats min-w-0">
+        <div class="flex items-center justify-between gap-3 mb-3">
+            <p class="text-sm font-semibold text-neutral-950">{% translate "Selected formats" %} <span class="text-neutral-500 font-medium tabular-nums">(<span x-text="counts[tab] || 0">0</span> {% translate "of" context "count of a total" %} <span x-text="totals[tab] || 0">0</span>)</span></p>
+            {% include "partials/_scroll_arrows.html" with ref="formatRow" %}
+        </div>
+        <div class="art-format-row" x-ref="formatRow">
+        {% for group in groups %}
+        <div data-network="{{ group.network.key }}" x-show="tab === '{{ group.network.key }}'" {% if group.network.key != first_tab %}x-cloak{% endif %}
+             class="flex gap-3">
+            {% for fmt in group.formats %}
+            <label class="art-format">
+                <input type="checkbox" name="formats" value="{{ fmt.key }}" data-network="{{ group.network.key }}"
+                       data-network-label="{{ group.network.label }}" data-label="{{ fmt.label }}" data-size="{{ fmt.width }} × {{ fmt.height }}"
+                       {% if fmt.key in selected %}checked{% endif %} {% if fmt.key in locked %}disabled{% endif %}>
+                <span class="art-tick" aria-hidden="true"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+                {# The format's glyph on a lilac tile: Feed, Story, Reels; a picture for art-only pieces. #}
+                <span class="art-icon-box" aria-hidden="true">
+                    {% if fmt.publish_format == "story" or fmt.publish_format == "reel" or fmt.publish_format == "default" %}
+                    {% include "partials/_format_icon.html" with format=fmt.publish_format show_default=True cls="w-6 h-6" %}
+                    {% elif fmt.media == "video" %}
+                    {% include "partials/_format_icon.html" with format="reel" cls="w-6 h-6" %}
+                    {% else %}
+                    {% include "partials/_format_icon.html" with format="profile_photo" cls="w-6 h-6" %}
+                    {% endif %}
+                </span>
+                <span class="block text-sm font-bold text-neutral-950 leading-tight truncate mt-2.5">{{ fmt.label }}</span>
+                <span class="block text-[12px] text-neutral-600 tabular-nums mt-0.5">{{ fmt.width }} × {{ fmt.height }} px</span>
+                <span class="mt-1.5 flex flex-wrap gap-1">
+                    <span class="art-ratio">{{ fmt.ratio_label }}</span>
+                    {% if fmt.media == "video" %}<span class="task-pill task-pill--due">{% translate "Video" %}</span>{% endif %}
+                    {% if not fmt.is_publishable %}<span class="task-pill task-pill--art">{% translate "Art only" %}</span>{% endif %}
+                </span>
+            </label>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        </div>
+    </div>
+</div>

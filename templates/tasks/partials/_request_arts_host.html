@@ -32,11 +32,17 @@ function artPicker(firstTab) {
         tab: firstTab,
         picked: 0,
         counts: {},
+        totals: {},
         pickedList: [],
         extras: Array.isArray(extras) ? extras : [],
         extraText: '',
         init() { this.recount(); },
         recount() {
+            var totals = {};
+            this.$root.querySelectorAll('input[name=formats]').forEach(function (box) {
+                totals[box.dataset.network] = (totals[box.dataset.network] || 0) + 1;
+            });
+            this.totals = totals;
             var counts = {};
             var list = [];
             var boxes = this.$root.querySelectorAll('input[name=formats]:checked');
@@ -57,6 +63,15 @@ function artPicker(firstTab) {
                 group.items.push(art);
             });
             return groups;
+        },
+        // A network's box: ticks all its formats, or unticks them all when all are ticked; shows it.
+        // Fixed formats (a task's arts already asked for, disabled) stay as they are.
+        toggleNetwork(network) {
+            var boxes = Array.from(this.$root.querySelectorAll('input[name=formats][data-network="' + network + '"]:not(:disabled)'));
+            var all = boxes.length && boxes.every(function (box) { return box.checked; });
+            boxes.forEach(function (box) { box.checked = !all; });
+            this.tab = network;
+            this.recount();
         },
         untick(key) {
             var box = this.$root.querySelector('input[name=formats][value="' + key + '"]');

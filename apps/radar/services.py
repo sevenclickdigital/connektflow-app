@@ -469,7 +469,7 @@ def create_offer_task(
     """A task to post the offer.
 
     With ``format_keys`` it is an art request (one checklist item per format,
-    ``apps.tasks.services.request_arts``); either way the product image is
+    ``apps.tasks.services.request_arts``), whose briefing is ``description``; either way the product image is
     copied to the media library once and used twice: as a checklist item to
     work from, and in the draft post attached to the task.
     """
@@ -487,7 +487,7 @@ def create_offer_task(
             user,
             title=title,
             format_keys=format_keys,
-            description=description,
+            briefing=description,
             post_caption=caption,
             assignees=assignees,
             due_date=due_date,

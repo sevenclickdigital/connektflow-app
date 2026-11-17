@@ -37,6 +37,8 @@ class TaskColumn(models.Model):
         default=False,
         help_text="Where a task goes on its own once every art on its checklist is delivered.",
     )
+    # Where "Request changes" in a task in review sends it (services.move_to_stage).
+    is_changes_requested = models.BooleanField(default=False, db_default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -63,9 +65,16 @@ class Task(models.Model):
 
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, default="")
-    # The text the post goes out with. Kept apart from ``description``, which on
-    # an art request is the briefing for the designers.
+    # On an art request, how the arts should be made: what they say and show, for the designers.
+    briefing = models.TextField(blank=True, default="", db_default="")
+    # The text the post goes out with, apart from the description and the briefing.
     post_caption = models.TextField(blank=True, default="")
+    # The channels the post goes out on, each with its formats, as an idea's
+    # (``{"<account id>": ["default", "reel"]}``; composer.services.clean_channel_formats).
+    # Empty: every connected account.
+    channel_formats = models.JSONField(
+        default=dict, blank=True, db_default=models.Value({}, output_field=models.JSONField())
+    )
     priority = models.CharField(max_length=10, choices=Priority.choices, default=Priority.MEDIUM)
     # Free labels, like an idea's: a list of names (services.clean_tags).
     tags = models.JSONField(default=list, blank=True, db_default=models.Value([], output_field=models.JSONField()))

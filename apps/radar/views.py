@@ -309,7 +309,7 @@ def offer_art_request(request, workspace_id):
         return form_response(
             {
                 "title": (_("Arts: %(title)s") % {"title": offer.name})[:255],
-                "description": services.offer_brief(offer),
+                "briefing": services.offer_brief(offer),
                 "post_caption": _caption(request, offer),
                 "due_date": "",
             }
@@ -319,7 +319,7 @@ def offer_art_request(request, workspace_id):
     title = request.POST.get("title", "").strip()
     form = {
         "title": title,
-        "description": request.POST.get("description", ""),
+        "briefing": request.POST.get("briefing", ""),
         "post_caption": request.POST.get("post_caption", ""),
         "due_date": request.POST.get("due_date", ""),
         "extra_items": request.POST.getlist("extra_items"),
@@ -340,7 +340,7 @@ def offer_art_request(request, workspace_id):
             form["post_caption"].strip()[:MAX_CAPTION_LENGTH],
             request.user,
             title=title,
-            description=form["description"].strip(),
+            description=form["briefing"].strip(),
             format_keys=format_keys,
             assignees=task_services.resolve_assignees(request.workspace, list(chosen)),
             due_date=parse_date(form["due_date"]) or None,

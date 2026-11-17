@@ -556,43 +556,7 @@
                     template's networks when the idea comes from the Templates tab.
                     {% endcomment %}
                     <div class="mt-5">
-                        <div class="flex items-center justify-between gap-3 mb-1.5">
-                            <p class="text-sm font-semibold text-neutral-950">{% translate "Channels" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></p>
-                            {% if idea_channel_options %}{% include "partials/_scroll_arrows.html" with ref="createChannelRow" %}{% endif %}
-                        </div>
-                        {% if idea_channel_options %}
-                        <input type="hidden" name="channel_formats" :value="JSON.stringify(createChannelFormats)">
-                        <div class="target-picker" x-ref="createChannelRow">
-                            {% for account in idea_channel_options %}
-                            <div class="target-card" :class="(createChannelFormats['{{ account.id }}'] || []).length && 'is-selected'" style="width: 220px;">
-                                <div class="target-card-head">
-                                    <span class="target-card-avatar" aria-hidden="true">{% if account.avatar_url %}<img src="{{ account.avatar_url }}" alt="" referrerpolicy="no-referrer">{% else %}{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}{% endif %}</span>
-                                    <span class="flex-1 min-w-0">
-                                        <span class="target-card-name">{{ account.account_name }}</span>
-                                        <span class="target-card-sub">{% include "partials/_platform_icon.html" with platform=account.platform %} {{ account.get_platform_display }}</span>
-                                    </span>
-                                    <span class="target-card-check" x-show="(createChannelFormats['{{ account.id }}'] || []).length" x-cloak aria-hidden="true">
-                                        <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                    </span>
-                                </div>
-                                <div class="target-card-formats">
-                                    {% for option in account.format_options %}
-                                    <button type="button" class="format-toggle" :class="(createChannelFormats['{{ account.id }}'] || []).includes('{{ option.format }}') && 'is-on'"
-                                            :aria-pressed="(createChannelFormats['{{ account.id }}'] || []).includes('{{ option.format }}').toString()"
-                                            aria-label="{{ option.label }}" title="{{ option.label }}"
-                                            @click="toggleChannelFormat(createChannelFormats, '{{ account.id }}', '{{ option.format }}')">
-                                        {% include "partials/_format_icon.html" with format=option.format show_default=True %}
-                                        {{ option.short }}
-                                    </button>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <p class="text-xs text-neutral-600 mt-1.5">{% translate "Creating the post starts it on these channels and formats. With none ticked, on every connected one." %}</p>
-                        {% else %}
-                        <p class="text-xs text-neutral-600">{% translate "Connect a channel to choose where this idea will be published." %} <a href="{% url 'social_accounts:connect' workspace_id=workspace.id %}" class="font-semibold text-brand-800 hover:text-brand-900">{% translate "Connect a Channel" %}</a></p>
-                        {% endif %}
+                        {% include "partials/_channel_picker.html" with options=idea_channel_options model="createChannelFormats" toggle="toggleChannelFormat" ref="createChannelRow" %}
                     </div>
                 </div>
 
@@ -807,43 +771,7 @@
                     template's networks when the idea comes from the Templates tab.
                     {% endcomment %}
                     <div class="mt-5">
-                        <div class="flex items-center justify-between gap-3 mb-1.5">
-                            <p class="text-sm font-semibold text-neutral-950">{% translate "Channels" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></p>
-                            {% if idea_channel_options %}{% include "partials/_scroll_arrows.html" with ref="editChannelRow" %}{% endif %}
-                        </div>
-                        {% if idea_channel_options %}
-                        <input type="hidden" name="channel_formats" :value="JSON.stringify(editChannelFormats)">
-                        <div class="target-picker" x-ref="editChannelRow">
-                            {% for account in idea_channel_options %}
-                            <div class="target-card" :class="(editChannelFormats['{{ account.id }}'] || []).length && 'is-selected'" style="width: 220px;">
-                                <div class="target-card-head">
-                                    <span class="target-card-avatar" aria-hidden="true">{% if account.avatar_url %}<img src="{{ account.avatar_url }}" alt="" referrerpolicy="no-referrer">{% else %}{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}{% endif %}</span>
-                                    <span class="flex-1 min-w-0">
-                                        <span class="target-card-name">{{ account.account_name }}</span>
-                                        <span class="target-card-sub">{% include "partials/_platform_icon.html" with platform=account.platform %} {{ account.get_platform_display }}</span>
-                                    </span>
-                                    <span class="target-card-check" x-show="(editChannelFormats['{{ account.id }}'] || []).length" x-cloak aria-hidden="true">
-                                        <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                    </span>
-                                </div>
-                                <div class="target-card-formats">
-                                    {% for option in account.format_options %}
-                                    <button type="button" class="format-toggle" :class="(editChannelFormats['{{ account.id }}'] || []).includes('{{ option.format }}') && 'is-on'"
-                                            :aria-pressed="(editChannelFormats['{{ account.id }}'] || []).includes('{{ option.format }}').toString()"
-                                            aria-label="{{ option.label }}" title="{{ option.label }}"
-                                            @click="toggleChannelFormat(editChannelFormats, '{{ account.id }}', '{{ option.format }}')">
-                                        {% include "partials/_format_icon.html" with format=option.format show_default=True %}
-                                        {{ option.short }}
-                                    </button>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <p class="text-xs text-neutral-600 mt-1.5">{% translate "Creating the post starts it on these channels and formats. With none ticked, on every connected one." %}</p>
-                        {% else %}
-                        <p class="text-xs text-neutral-600">{% translate "Connect a channel to choose where this idea will be published." %} <a href="{% url 'social_accounts:connect' workspace_id=workspace.id %}" class="font-semibold text-brand-800 hover:text-brand-900">{% translate "Connect a Channel" %}</a></p>
-                        {% endif %}
+                        {% include "partials/_channel_picker.html" with options=idea_channel_options model="editChannelFormats" toggle="toggleChannelFormat" ref="editChannelRow" %}
                     </div>
                 </div>
 
@@ -1161,6 +1089,7 @@ function kanbanBoard() {
         toggleEditTag(tag) {
             var idx = this.editSelectedTags.indexOf(tag);
             if (idx === -1) {
+                if (this.tagLimitReached(this.editSelectedTags)) return;
                 this.editSelectedTags.push(tag);
             } else {
                 this.editSelectedTags.splice(idx, 1);
@@ -1170,6 +1099,7 @@ function kanbanBoard() {
         toggleCreateTag(tag) {
             var idx = this.createSelectedTags.indexOf(tag);
             if (idx === -1) {
+                if (this.tagLimitReached(this.createSelectedTags)) return;
                 this.createSelectedTags.push(tag);
             } else {
                 this.createSelectedTags.splice(idx, 1);
@@ -1190,7 +1120,7 @@ function kanbanBoard() {
             name = name.trim();
             if (!name) return;
             if (!this.allTags.includes(name)) { this.allTags.push(name); this.allTags.sort(); }
-            if (!this.createSelectedTags.includes(name)) { this.createSelectedTags.push(name); }
+            if (!this.createSelectedTags.includes(name) && !this.tagLimitReached(this.createSelectedTags)) { this.createSelectedTags.push(name); }
             this.createTagSearch = '';
             this._persistTag(name);
         },
@@ -1199,7 +1129,7 @@ function kanbanBoard() {
             name = name.trim();
             if (!name) return;
             if (!this.allTags.includes(name)) { this.allTags.push(name); this.allTags.sort(); }
-            if (!this.editSelectedTags.includes(name)) { this.editSelectedTags.push(name); }
+            if (!this.editSelectedTags.includes(name) && !this.tagLimitReached(this.editSelectedTags)) { this.editSelectedTags.push(name); }
             this.editTagSearch = '';
             this._persistTag(name);
         },
@@ -1424,6 +1354,8 @@ function kanbanBoard() {
         // Image editor: the composer's, saving into the idea being written.
         ...window.cropEditorBase(),
         ...window.tagGroupsBase(),
+        // An idea carries at most 5 tags (composer.services.MAX_IDEA_TAGS): networks ignore the rest.
+        tagLimit: 5,
         cropFor: { target: '', assetId: '' },
 
         cropIdeaMedia(target, index) {

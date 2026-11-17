@@ -30,9 +30,12 @@
 {% block content %}
 {% with tab="tasks" %}{% include "composer/partials/_ideas_hero.html" %}{% endwith %}
 
-<div x-data="taskBoard()" @keydown.escape.window="if (!crop.open) closeTask()" @crop-task-art.window="openArtCrop($event.detail)" class="flex-1 flex flex-col">
+<div x-data="taskBoard()" @keydown.escape.window="if (preview.open) preview.open = false; else if (!crop.open) closeTask()"
+     @crop-task-art.window="openArtCrop($event.detail)" @preview-media.window="preview = Object.assign({ open: true }, $event.detail)" class="flex-1 flex flex-col">
     {# The composer's image editor, for a delivered art (tasks/partials/_checklist_item.html); above the task's window. #}
     {% include "composer/partials/_crop_editor.html" with crop_layer="z-[80]" %}
+    {# A delivered art or a reference image shown large, over the task's window (tasks/partials/_checklist_item.html). #}
+    {% include "components/_media_preview.html" with layer="z-[90]" %}
     {% comment %}
     Filters of the board, in the idea board's style: a search over the cards
     (in the browser, kept across board refreshes) and the menus of who is
@@ -112,6 +115,7 @@
     </div>
 </div>
 
+{# Its artPicker() runs the new task window's "Request arts". #}
 {% include "tasks/partials/_request_arts_host.html" %}
 {{ task_board_config|json_script:"task-board-config" }}
 {{ emoji_categories|json_script:"task-emoji" }}
@@ -146,12 +150,23 @@ function taskFields(initial, descLimit) {
         tagQuery: '',
         tagsOpen: false,
         allTags: suggestions.slice(),
+        // A task carries at most 5 tags (services.MAX_TASK_TAGS): networks ignore the rest.
+        tagLimit: 5,
+        // The post's channels: { "<account id>": [formats] } (partials/_channel_picker.html).
+        channels: Object.assign({}, initial.channels || {}),
         removeLabel: cfg.labels.remove,
 
         columnTone() {
             var select = this.$root.querySelector('select[name=column]');
             var option = select && Array.from(select.options).find(function (o) { return o.value === this.column; }, this);
             return option ? option.dataset.tone : 'brand';
+        },
+
+        toggleChannelFormat(map, id, fmt) {
+            var formats = (map[id] || []).slice();
+            var at = formats.indexOf(fmt);
+            if (at > -1) formats.splice(at, 1); else formats.push(fmt);
+            if (formats.length) map[id] = formats; else delete map[id];
         },
 
         toggleAssignee(id) {
@@ -169,14 +184,14 @@ function taskFields(initial, descLimit) {
         toggleTag(name) {
             var at = this.tags.indexOf(name);
             if (at > -1) this.tags.splice(at, 1);
-            else if (this.tags.length < 20) this.tags.push(name);
+            else if (!this.tagLimitReached(this.tags)) this.tags.push(name);
         },
 
         persistTag(name) {
             name = (name || '').trim().replace(/^#+/, '').trim().slice(0, 50);
             if (!name) return;
             if (this.allTags.indexOf(name) < 0) { this.allTags.push(name); this.allTags.sort(); }
-            if (this.tags.indexOf(name) < 0 && this.tags.length < 20) this.tags.push(name);
+            if (this.tags.indexOf(name) < 0 && !this.tagLimitReached(this.tags)) this.tags.push(name);
             this.tagQuery = '';
         },
 
@@ -196,48 +211,45 @@ function taskFields(initial, descLimit) {
 }
 
 // The task's own window (tasks/partials/_task_modal.html): its fields start
-// from the task (data-initial on the form) and are saved together.
+// from the task (data-initial on the window), locked until "Edit" (taskEditing, on
+// the board: it outlives the window's refreshes), and are saved together; the
+// "Request arts" formats run on artPicker() as in the new task window.
 function taskEditForm(el) {
     var initial = JSON.parse(el.dataset.initial);
-    return taskFields(initial, 0);
+    // Its two switches (tasks/partials/_new_item_options.html) start from the task.
+    return Object.assign(taskFields(initial, 0), artPicker(el.dataset.firstTab), {
+        wantsArt: !!initial.wantsArt,
+        wantsPost: !!initial.wantsPost,
+    });
 }
 
-// The "Create new item" window (tasks/partials/_new_item_modal.html).
-function newItemForm() {
+// The new task window (tasks/partials/_new_item_modal.html): the task's fields, its
+// checklists and "Request arts" (artPicker() in tasks/partials/_request_arts_host.html:
+// the network shown and the formats ticked, by network).
+function newItemForm(firstTab) {
     var cfg = JSON.parse(document.getElementById('task-board-config').textContent);
-    return Object.assign(taskFields({}, 500), {
+    return Object.assign(taskFields({}, 500), artPicker(firstTab), {
         isOpen: false,
-        step: 'choose',
+        wantsArt: false,
+        wantsPost: false,
         checklists: [],
         nextKey: 1,
-        artLoaded: false,
         checklistTitleLabel: cfg.labels.checklistTitle,
         itemPlaceholder: cfg.labels.checklistItem,
 
         open(detail) {
             detail = detail || {};
             this.isOpen = true;
-            if (detail.column) this.column = detail.column;
-            else if (!this.column) this.column = this.$refs.taskForm.querySelector('select[name=column]').value;
-            if (detail.kind === 'art') { this.pickArt(); return; }
-            this.step = 'choose';
+            // The column whose "Add task" opened the window (blank: the board's first one).
+            this.column = detail.column || '';
             var self = this;
-            this.$nextTick(function () { self.$refs.firstKind.focus(); });
-        },
-
-        // Step 1 → 2: the form of the kind picked.
-        choose(kind) {
-            if (kind === 'art') { this.pickArt(); return; }
-            this.step = 'task';
-            var self = this;
-            // After x-show has shown the form: a hidden field can't take the focus.
+            // After x-show has shown the window: a hidden field can't take the focus.
             setTimeout(function () { self.$refs.title.focus(); }, 50);
         },
 
         close() {
             if (!this.isOpen) return;
             this.isOpen = false;
-            this.step = 'choose';
             this.showEmoji = false;
             this.$refs.taskForm.reset();
             this.descLength = 0;
@@ -245,16 +257,11 @@ function newItemForm() {
             this.tags = [];
             this.tagQuery = '';
             this.checklists = [];
-            // The art request form is fetched afresh next time, without what was ticked or typed.
-            this.artLoaded = false;
-        },
-
-        // The art request form comes from the server the first time it is picked.
-        pickArt() {
-            this.step = 'art';
-            if (this.artLoaded) return;
-            this.artLoaded = true;
-            htmx.ajax('GET', cfg.artRequestUrl, { target: '#new-item-art-body', swap: 'innerHTML' });
+            this.wantsArt = false;
+            this.wantsPost = false;
+            this.channels = {};
+            this.tab = firstTab;
+            this.recount();
         },
 
         // A new named checklist, with its title field ready to type in.
@@ -294,6 +301,11 @@ function taskBoard() {
     }
     return Object.assign(window.cropEditorBase(), {
         taskOpen: false,
+        // The file shown large (components/_media_preview.html), opened by "preview-media".
+        preview: { open: false, url: '', video: false, title: '' },
+        // The open task's window is being edited ("Edit"): its fields, its checklists'
+        // own controls and "Save task" show. Here, as the window reloads on every change.
+        taskEditing: false,
         openTaskId: '',
         dragId: null,
         query: '',
@@ -355,12 +367,14 @@ function taskBoard() {
             this.openTaskId = id;
             var body = document.getElementById('task-modal-body');
             body.innerHTML = '';
+            this.taskEditing = false;
             this.taskOpen = true;
             htmx.ajax('GET', urlFor(cfg.detailUrl, id), { target: '#task-modal-body', swap: 'innerHTML' });
         },
 
         closeTask() {
             this.taskOpen = false;
+            this.taskEditing = false;
             document.getElementById('task-modal-body').innerHTML = '';
         },
 

@@ -24,10 +24,12 @@ reference image. Expects: item, task, workspace, can_edit, can_upload.
             The delivered art as the composer shows a post's image: hovering it shows
             the settings button, whose menu removes the art from the item, opens the
             image editor (crop, with the aspect-ratio presets, starting on the item's own
-            format) or replaces the file. Clicking the image opens the file.
+            format) or replaces the file. Clicking the image shows it large, in a window over
+            the task's (components/_media_preview.html, on the board).
             {% endcomment %}
             <div class="media-thumb flex-shrink-0" x-data="{ menu: false }">
-                <a href="{{ item.media_asset.file.url }}" target="_blank" rel="noopener" class="block w-full h-full" aria-label="{% translate 'Open the file' %}">
+                <a href="{{ item.media_asset.file.url }}" class="block w-full h-full" aria-label="{% translate 'Open the file' %}"
+                   @click.prevent="$dispatch('preview-media', { url: $el.href, video: {% if item.media_asset.media_type == "video" %}true{% else %}false{% endif %}, title: $el.dataset.title })" data-title="{{ item.text }}">
                     {% if item.media_asset.media_type == "video" %}
                     <video src="{{ item.media_asset.file.url }}#t=0.5" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>
                     {% else %}
@@ -92,7 +94,8 @@ reference image. Expects: item, task, workspace, can_edit, can_upload.
         {% elif item.media_asset and item.media_asset.file and item.media_asset.media_type == "image" %}
         {# Reference material attached to a plain item, e.g. the product image from the Radar. #}
         <div class="mt-1.5 flex items-center gap-2">
-            <a href="{{ item.media_asset.file.url }}" target="_blank" rel="noopener" class="block w-20 h-20 rounded-lg overflow-hidden bg-neutral-100 ring-1 ring-neutral-300 flex-shrink-0">
+            <a href="{{ item.media_asset.file.url }}" data-title="{{ item.text }}"
+               @click.prevent="$dispatch('preview-media', { url: $el.href, video: false, title: $el.dataset.title })" class="block w-20 h-20 rounded-lg overflow-hidden bg-neutral-100 ring-1 ring-neutral-300 flex-shrink-0">
                 <img src="{% if item.media_asset.thumbnail %}{{ item.media_asset.thumbnail.url }}{% else %}{{ item.media_asset.file.url }}{% endif %}" alt="{{ item.text }}" class="w-full h-full object-cover">
             </a>
             <div class="text-[11.5px] leading-tight">
@@ -104,7 +107,7 @@ reference image. Expects: item, task, workspace, can_edit, can_upload.
         {% endif %}
     </div>
     {% if can_edit %}
-    <button type="button" class="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-500 hover:text-red-600 flex-shrink-0"
+    <button type="button" class="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-500 hover:text-red-600 flex-shrink-0" x-show="taskEditing"
             hx-post="{% url 'tasks:item_delete' workspace_id=workspace.id task_id=task.id item_id=item.id %}" hx-target="#task-modal-body"
             aria-label="{% translate 'Remove item' %}">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>

@@ -66,6 +66,7 @@ def test_first_visit_seeds_the_columns_and_lists_tasks(workspace, owner):
         "To do",
         "In progress",
         "In review",
+        "Changes requested",
         "Done",
     ]
     assert "Write the launch brief" in body
@@ -110,7 +111,7 @@ def test_tasks_of_another_workspace_are_not_reachable(workspace, owner):
 
 def test_moving_to_the_done_column_completes_the_task_and_back_reopens_it(workspace, owner):
     task = services.create_task(workspace, owner, title="Ship")
-    todo, _progress, _review, done = services.ensure_columns(workspace)
+    todo, _progress, _review, _changes, done = services.ensure_columns(workspace)
     client = _client(owner)
 
     client.post(_url("task_move", workspace, task_id=task.id), {"column": done.id, "position": 0})
@@ -181,7 +182,7 @@ def test_checklist_add_toggle_and_remove(workspace, owner):
 
 
 def test_deleting_a_column_sends_its_tasks_to_the_column_beside_it(workspace, owner):
-    todo, progress, _review, _done = services.ensure_columns(workspace)
+    todo, progress, _review, _changes, _done = services.ensure_columns(workspace)
     kept = services.create_task(workspace, owner, title="Already there", column=todo)
     first = services.create_task(workspace, owner, title="First", column=progress)
     second = services.create_task(workspace, owner, title="Second", column=progress)
@@ -196,14 +197,14 @@ def test_deleting_a_column_sends_its_tasks_to_the_column_beside_it(workspace, ow
 
 
 def test_the_first_column_hands_its_tasks_to_the_next_and_the_last_column_stays(workspace, owner):
-    todo, progress, review, done = services.ensure_columns(workspace)
+    todo, progress, review, changes, done = services.ensure_columns(workspace)
     task = services.create_task(workspace, owner, title="Move me", column=todo)
 
     _client(owner).post(_url("column_delete", workspace, column_id=todo.id))
     task.refresh_from_db()
     assert task.column == progress
 
-    for column in (progress, review):
+    for column in (progress, review, changes):
         _client(owner).post(_url("column_delete", workspace, column_id=column.id))
     response = _client(owner).post(_url("column_delete", workspace, column_id=done.id))
 
@@ -278,16 +279,16 @@ def test_an_unknown_priority_is_ignored(workspace, owner):
 
 
 def test_a_new_column_goes_right_after_the_one_its_menu_belongs_to(workspace, owner):
-    todo, progress, review, done = services.ensure_columns(workspace)
+    todo, progress, review, _changes, done = services.ensure_columns(workspace)
     client = _client(owner)
 
     client.post(_url("column_create", workspace), {"name": "Waiting", "after": progress.id})
     client.post(_url("column_create", workspace), {"name": "Archive"})
 
     names = [c.name for c in TaskColumn.objects.for_workspace(workspace.id)]
-    assert names == ["To do", "In progress", "Waiting", "In review", "Done", "Archive"]
+    assert names == ["To do", "In progress", "Waiting", "In review", "Changes requested", "Done", "Archive"]
     positions = list(TaskColumn.objects.for_workspace(workspace.id).values_list("position", flat=True))
-    assert positions == list(range(6))
+    assert positions == list(range(7))
 
 
 def test_a_new_column_cannot_be_placed_after_another_workspaces_column(workspace, owner):
@@ -445,7 +446,7 @@ def test_the_board_script_closes_a_deleted_task_and_filters_the_search(workspace
 
 def test_saving_the_task_window_saves_every_field_and_closes_it(workspace, owner):
     editor = _user("editor@example.com", workspace, Role.EDITOR)
-    todo, progress, _review, _done = services.ensure_columns(workspace)
+    todo, progress, _review, _changes, _done = services.ensure_columns(workspace)
     task = services.create_task(workspace, owner, title="Draft", column=todo, tags=["old"], assignees=[owner])
 
     response = _client(owner).post(

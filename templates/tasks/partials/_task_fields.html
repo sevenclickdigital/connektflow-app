@@ -7,11 +7,15 @@ composer/partials/_tag_field.html). The Alpine state and methods they use (colum
 tags, tagQuery…) come from taskFields() in tasks/board.html.
 
 Expects: prefix (for the ids), columns, priorities, members, today; optional
-task (the task being edited: fills the fields and adds its post caption and
-post date), desc_limit (a maximum length for the description, with a counter),
-readonly (shows the fields without letting them change).
+task (the task being edited: fills the fields and adds its post date), desc_limit (a maximum
+length for the description, with a counter), readonly (shows the fields
+without letting them change), after_description (a template shown right under
+the description: the new task window's switches), hide_column (no
+column field: the column travels hidden, the one the window was opened for;
+the responsible move up beside the priority and the due date), lockable (the
+fields follow the board's ``taskEditing``: disabled, and not even opened, until it is on).
 {% endcomment %}
-<fieldset class="space-y-5 min-w-0" {% if readonly %}disabled{% endif %}>
+<fieldset class="space-y-5 min-w-0" {% if readonly %}disabled{% elif lockable %}:disabled="!taskEditing" :class="!taskEditing && 'is-locked'"{% endif %}>
     <div>
         <label class="new-item-label" for="{{ prefix }}-title">{% translate "Task title" %} <span class="text-red-600" aria-hidden="true">*</span></label>
         <input id="{{ prefix }}-title" x-ref="title" name="title" type="text" maxlength="255" required autocomplete="off"
@@ -27,18 +31,12 @@ readonly (shows the fields without letting them change).
         {% if desc_limit %}<p class="text-right text-xs text-neutral-500 mt-1 tabular-nums"><span x-text="descLength">0</span>/{{ desc_limit }}</p>{% endif %}
     </div>
 
-    {# The post caption, with the description: both are the text of the work. #}
-    {% if task %}
-    <div>
-        <label class="new-item-label" for="{{ prefix }}-caption">
-            {% translate "Post caption" %}
-        </label>
-        <textarea id="{{ prefix }}-caption" name="post_caption" rows="4" placeholder="{% translate 'The text the post goes out with' %}"
-                  class="form-input-styled block w-full text-sm">{{ task.post_caption }}</textarea>
-    </div>
-    {% endif %}
+    {% if after_description %}{% include after_description %}{% endif %}
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+        {% if hide_column %}
+        <input type="hidden" name="column" :value="column">
+        {% else %}
         <div>
             <label class="new-item-label" for="{{ prefix }}-column">
                 {% translate "Column (status)" %}
@@ -52,6 +50,7 @@ readonly (shows the fields without letting them change).
                 </select>
             </div>
         </div>
+        {% endif %}
         <div>
             <label class="new-item-label" for="{{ prefix }}-priority">{% translate "Priority" %}</label>
             <div class="relative">
@@ -67,43 +66,13 @@ readonly (shows the fields without letting them change).
             <input id="{{ prefix }}-due" name="due_date" type="date" class="form-input-styled w-full text-sm"
                    value="{% if task %}{{ task.due_date|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}">
         </div>
+        {# Without the column, the responsible take its place in this row and the tags have the next one. #}
+        {% if hide_column %}{% include "tasks/partials/_task_assignees.html" %}{% endif %}
     </div>
 
-    {# Responsible and tags side by side. #}
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-    {# Responsible: the picked members as chips, the rest in the dropdown. #}
-    {% if members %}
-    <div class="min-w-0">
-        <div class="new-item-label" id="{{ prefix }}-assignees-label">
-            {% translate "Responsible" %}
-        </div>
-        <div class="relative" @click.outside="peopleOpen = false">
-            <div class="new-item-chipbox" @click="if (!$el.closest('fieldset').disabled) peopleOpen = !peopleOpen" role="button" tabindex="0"
-                 aria-labelledby="{{ prefix }}-assignees-label" @keydown.enter.prevent="peopleOpen = !peopleOpen" :aria-expanded="peopleOpen.toString()">
-                {% for member in members %}
-                <span class="new-item-chip is-person" x-show="assignees.includes('{{ member.pk }}')">
-                    <span class="task-avatar !ml-0" aria-hidden="true">{{ member.display_name|make_list|first|upper }}</span>
-                    {{ member.display_name }}
-                    <button type="button" @click.stop="toggleAssignee('{{ member.pk }}')" aria-label="{% blocktranslate with name=member.display_name %}Remove {{ name }}{% endblocktranslate %}">×</button>
-                </span>
-                {% endfor %}
-                <span class="text-sm text-neutral-500" x-show="!assignees.length">{% translate "Nobody yet" %}</span>
-                <svg class="w-4 h-4 text-neutral-600 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-            </div>
-            <input type="hidden" name="assignees_sent" value="1">
-            <template x-for="id in assignees" :key="id"><input type="hidden" name="assignees" :value="id"></template>
-            <div x-show="peopleOpen" x-transition class="new-item-dropdown">
-                {% for member in members %}
-                <label>
-                    <input type="checkbox" class="bb-checkbox" :checked="assignees.includes('{{ member.pk }}')" @change="toggleAssignee('{{ member.pk }}')">
-                    <span class="task-avatar !ml-0" aria-hidden="true">{{ member.display_name|make_list|first|upper }}</span>
-                    <span class="truncate">{{ member.display_name }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
+    {# Responsible and tags side by side (the tags alone, across, without the column). #}
+    <div class="grid grid-cols-1 {% if not hide_column %}sm:grid-cols-2{% endif %} gap-4 items-start">
+    {% if not hide_column %}{% include "tasks/partials/_task_assignees.html" %}{% endif %}
 
     {# Tags: the idea window's own field (composer/partials/_tag_field.html), with the brand's tag groups. #}
     <div class="flex min-w-0">

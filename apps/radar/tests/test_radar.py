@@ -421,7 +421,7 @@ def test_art_request_from_an_offer_has_the_formats_the_image_and_a_draft_post(wo
             {
                 "item_id": "21",
                 "title": "Arts: Product 21",
-                "description": "Brief",
+                "briefing": "Brief",
                 "post_caption": "Look at this",
                 "formats": ["ig_feed_portrait", "ig_story"],
             },
@@ -431,6 +431,7 @@ def test_art_request_from_an_offer_has_the_formats_the_image_and_a_draft_post(wo
     task = Task.objects.get(workspace=workspace)
     assert response["HX-Redirect"] == reverse("tasks:board", kwargs={"workspace_id": workspace.id}) + f"?task={task.pk}"
     assert task.post_caption == "Look at this"
+    assert task.briefing == "Brief"
     assert task.post.caption == "Look at this"
     media = PostMedia.objects.get(post=task.post)
     assert media.media_asset.workspace_id == workspace.id

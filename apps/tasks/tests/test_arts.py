@@ -248,7 +248,7 @@ def test_the_modal_gets_the_form_and_a_redirect_to_the_new_task(workspace, owner
     invalid = client.post(_request_url(workspace), {"title": "Arts"}, HTTP_HX_REQUEST="true")
     created = client.post(_request_url(workspace), {"title": "Arts", "formats": ["ig_story"]}, HTTP_HX_REQUEST="true")
 
-    assert "<html" not in form and "target-card" in form and "Insta" in form
+    assert "<html" not in form and "art-channel" in form and "Insta" in form
     assert invalid.status_code == 200 and "Choose at least one format." in invalid.content.decode()
     task = Task.objects.get()
     assert created.status_code == 204 and created["HX-Redirect"].endswith(f"?task={task.pk}")
@@ -276,7 +276,7 @@ def test_an_ideas_text_becomes_the_caption_not_the_briefing(workspace, owner):
 
     body = _client(owner).get(_request_url(workspace), {"idea": idea.id}, HTTP_HX_REQUEST="true").content.decode()
 
-    briefing = body.split('name="description"')[1].split("</textarea>")[0]
+    briefing = body.split('name="briefing"')[1].split("</textarea>")[0]
     caption = body.split('name="post_caption"')[1].split("</textarea>")[0]
     assert "Launch caption" in caption
     assert "Launch caption" not in briefing
@@ -290,10 +290,12 @@ def test_every_channel_on_offer_is_listed_and_hidden_ones_are_not(workspace, own
 
     body = _client(owner).get(_request_url(workspace), HTTP_HX_REQUEST="true").content.decode()
 
-    assert "TikTok · not connected" in body and "Bluesky · not connected" in body
+    assert "All formats of TikTok" in body and "All formats of Bluesky" in body
     assert "Pinterest" not in body
-    # Instagram is connected, so it isn't offered again as not connected.
-    assert "Instagram · not connected" not in body
+    # Instagram is listed once, with its connected account.
+    assert body.count("All formats of Instagram") == 1
+    instagram_row = body.split("All formats of Instagram")[0].rsplit('class="art-channel"', 1)[1]
+    assert "Insta" in instagram_row and "Not connected" not in instagram_row
 
 
 def test_unconnected_choices_treat_both_instagram_routes_as_one_network():
@@ -438,15 +440,101 @@ def test_the_form_starts_with_the_default_art_assignee_picked(workspace, owner, 
     assert str(designer.pk) in picked and str(owner.pk) not in picked
 
 
-def test_a_request_from_the_boards_window_stays_on_the_board(workspace, owner):
+def _create_url(workspace):
+    return reverse("tasks:task_create", kwargs={"workspace_id": workspace.id})
+
+
+def test_the_new_task_window_asks_for_arts_with_the_tasks_own_fields(workspace, owner):
+    _todo, progress, _review, _changes, _done = services.ensure_columns(workspace)
+
     response = _client(owner).post(
-        _request_url(workspace), {"title": "Arts", "formats": ["ig_story"], "board": "1"}, HTTP_HX_REQUEST="true"
+        _create_url(workspace),
+        {
+            "title": "Launch",
+            "description": "Team notes",
+            "request_art": "1",
+            "formats": ["ig_story", "ig_feed_portrait", "fb_post_square"],
+            "briefing": "Purple, with the product",
+            "make_post": "1",
+            "post_caption": "It's here!",
+            "column": progress.id,
+            "priority": "high",
+            "tags": ["#launch"],
+            "checklists": json.dumps([{"title": "Approval", "items": ["Client OK"]}]),
+        },
+        HTTP_HX_REQUEST="true",
     )
 
     assert "HX-Redirect" not in response
     triggers = response["HX-Trigger"]
-    assert "taskCreated" in triggers and "tasksChanged" in triggers and "showToast" in triggers
-    assert Task.objects.count() == 1
+    assert "taskCreated" in triggers and "tasksChanged" in triggers
+    task = Task.objects.get()
+    assert (task.description, task.briefing, task.post_caption) == (
+        "Team notes",
+        "Purple, with the product",
+        "It's here!",
+    )
+    assert (task.column, task.priority, task.tags) == (progress, "high", ["launch"])
+    titles = [c.title for c in task.checklists.order_by("position")]
+    assert titles[-1] == "Approval" and len(titles) == 3
+    assert sorted(task.checklist.exclude(format_key="").values_list("format_key", flat=True)) == [
+        "fb_post_square",
+        "ig_feed_portrait",
+        "ig_story",
+    ]
+
+
+def test_asking_for_arts_needs_a_format(workspace, owner):
+    response = _client(owner).post(
+        _create_url(workspace), {"title": "Launch", "request_art": "1", "formats": ["nope"]}, HTTP_HX_REQUEST="true"
+    )
+
+    assert "showToast" in response["HX-Trigger"] and "taskCreated" not in response["HX-Trigger"]
+    assert not Task.objects.exists()
+
+
+def test_without_the_switch_the_formats_are_ignored(workspace, owner):
+    _client(owner).post(_create_url(workspace), {"title": "Plain", "formats": ["ig_story"]}, HTTP_HX_REQUEST="true")
+
+    task = Task.objects.get()
+    assert not task.checklist.exists() and task.briefing == ""
+
+
+def test_a_column_of_another_workspace_is_refused(workspace, owner):
+    other = Workspace.objects.create(organization=workspace.organization, name="Other")
+    foreign = services.ensure_columns(other)[1]
+
+    response = _client(owner).post(
+        _create_url(workspace),
+        {"title": "Arts", "request_art": "1", "formats": ["ig_story"], "column": foreign.id},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 404
+    assert not Task.objects.filter(workspace=workspace).exists()
+
+
+def test_the_board_offers_the_networks_in_the_new_task_window(workspace, owner):
+    _connect(workspace, "instagram", "Insta")
+
+    body = _client(owner).get(reverse("tasks:board", kwargs={"workspace_id": workspace.id})).content.decode()
+
+    assert 'name="request_art"' in body and 'name="formats" value="ig_story"' in body
+
+
+def test_an_art_task_shows_its_briefing_in_its_window(workspace, owner):
+    task = services.request_arts(workspace, owner, title="Arts", format_keys=["ig_story"], briefing="Bold type")
+
+    body = (
+        _client(owner)
+        .get(
+            reverse("tasks:task_detail", kwargs={"workspace_id": workspace.id, "task_id": task.id}),
+            HTTP_HX_REQUEST="true",
+        )
+        .content.decode()
+    )
+
+    assert 'name="briefing"' in body and "Bold type</textarea>" in body
 
 
 def test_a_request_from_elsewhere_still_opens_the_task_on_the_board(workspace, owner):
@@ -457,7 +545,217 @@ def test_a_request_from_elsewhere_still_opens_the_task_on_the_board(workspace, o
     assert f"?task={Task.objects.get().pk}" in response["HX-Redirect"]
 
 
-def test_the_boards_window_form_carries_the_board_mark(workspace, owner):
-    body = _client(owner).get(_request_url(workspace) + "?board=1", HTTP_HX_REQUEST="true").content.decode()
+def test_the_new_task_window_makes_a_post_task_with_its_caption_and_channels(workspace, owner):
+    instagram = _connect(workspace, "instagram", "Insta")
+    other = Workspace.objects.create(organization=workspace.organization, name="Other")
+    foreign = _connect(other, "facebook", "Not ours")
 
-    assert 'name="board" value="1"' in body
+    _client(owner).post(
+        _create_url(workspace),
+        {
+            "title": "Launch post",
+            "make_post": "1",
+            "post_caption": "It's here!",
+            "channel_formats": json.dumps({str(instagram.id): ["story", "nope"], str(foreign.id): ["default"]}),
+        },
+        HTTP_HX_REQUEST="true",
+    )
+
+    task = Task.objects.get(workspace=workspace)
+    assert task.post_caption == "It's here!"
+    # Only the brand's own account, on the formats it has.
+    assert task.channel_formats == {str(instagram.id): ["story"]}
+
+
+def test_without_the_post_switch_no_caption_nor_channels_are_kept(workspace, owner):
+    instagram = _connect(workspace, "instagram", "Insta")
+
+    _client(owner).post(
+        _create_url(workspace),
+        {"title": "Plain", "post_caption": "Ignored", "channel_formats": json.dumps({str(instagram.id): ["default"]})},
+        HTTP_HX_REQUEST="true",
+    )
+
+    task = Task.objects.get()
+    assert (task.post_caption, task.channel_formats) == ("", {})
+
+
+def test_the_post_goes_out_only_on_the_tasks_channels(workspace, owner):
+    instagram = _connect(workspace, "instagram", "Insta")
+    task = services.request_arts(
+        workspace,
+        owner,
+        title="Arts",
+        format_keys=["ig_feed_portrait", "ig_story"],
+        channel_formats={str(instagram.id): ["story"]},
+    )
+    feed_item, story_item = task.checklist.all()
+    client = _client(owner)
+    _deliver(client, task, feed_item, _png(1080, 1350, "feed.png"))
+    _deliver(client, task, story_item, _png(1080, 1920, "story.png"))
+
+    post = services.create_post_from_task(Task.objects.get(pk=task.pk), owner)
+
+    assert [pp.format for pp in PlatformPost.objects.filter(post=post)] == ["story"]
+
+
+def test_the_task_window_saves_the_posts_channels(workspace, owner):
+    instagram = _connect(workspace, "instagram", "Insta")
+    task = services.create_task(workspace, owner, title="Post")
+
+    _client(owner).post(
+        reverse("tasks:task_update", kwargs={"workspace_id": workspace.id, "task_id": task.id}),
+        {"save": "1", "channel_formats": json.dumps({str(instagram.id): ["default"]})},
+    )
+
+    task.refresh_from_db()
+    assert task.channel_formats == {str(instagram.id): ["default"]}
+
+
+def test_ticking_an_item_moves_the_task_from_to_do_to_in_progress(workspace, owner):
+    todo, progress, _review, _changes, _done = services.ensure_columns(workspace)
+    task = services.create_task(
+        workspace, owner, title="Work", column=todo, checklists=[{"title": "A", "items": ["x", "y"]}]
+    )
+
+    services.set_item_done(task.checklist.first(), True, owner)
+
+    task.refresh_from_db()
+    assert task.column == progress
+
+
+def test_ticking_an_item_elsewhere_leaves_the_task_where_it_is(workspace, owner):
+    _todo, _progress, review, _changes, _done = services.ensure_columns(workspace)
+    task = services.create_task(
+        workspace, owner, title="Work", column=review, checklists=[{"title": "A", "items": ["x"]}]
+    )
+
+    services.set_item_done(task.checklist.first(), True, owner)
+
+    task.refresh_from_db()
+    assert task.column == review
+
+
+def test_the_task_window_asks_for_more_arts_without_repeating_the_ones_it_has(workspace, owner):
+    task = services.request_arts(workspace, owner, title="Arts", format_keys=["ig_story"])
+
+    _client(owner).post(
+        reverse("tasks:task_update", kwargs={"workspace_id": workspace.id, "task_id": task.id}),
+        {"save": "1", "request_art": "1", "briefing": "Bold", "formats": ["ig_story", "ig_feed_portrait", "fb_story"]},
+    )
+
+    task.refresh_from_db()
+    assert task.briefing == "Bold"
+    keys = sorted(task.checklist.exclude(format_key="").values_list("format_key", flat=True))
+    assert keys == ["fb_story", "ig_feed_portrait", "ig_story"]
+    # The new Instagram art joins the Instagram checklist; Facebook gets its own.
+    assert sorted(task.checklists.values_list("title", flat=True)) == ["Facebook", "Instagram"]
+
+
+def test_switching_the_post_off_in_the_task_window_clears_caption_and_channels(workspace, owner):
+    instagram = _connect(workspace, "instagram", "Insta")
+    task = services.create_task(
+        workspace, owner, title="Post", post_caption="Hi", channel_formats={str(instagram.id): ["default"]}
+    )
+
+    _client(owner).post(
+        reverse("tasks:task_update", kwargs={"workspace_id": workspace.id, "task_id": task.id}),
+        {"save": "1", "post_sent": "1"},
+    )
+
+    task.refresh_from_db()
+    assert (task.post_caption, task.channel_formats) == ("", {})
+
+
+def test_send_for_review_moves_the_card_and_closes_the_window(workspace, owner):
+    _todo, progress, review, _changes, _done = services.ensure_columns(workspace)
+    task = services.create_task(workspace, owner, title="Work", column=progress)
+
+    response = _client(owner).post(
+        reverse("tasks:task_stage", kwargs={"workspace_id": workspace.id, "task_id": task.id}), {"stage": "review"}
+    )
+
+    task.refresh_from_db()
+    assert task.column == review
+    assert "closeTask" in response["HX-Trigger"]
+
+
+def test_a_task_in_review_is_not_sent_again(workspace, owner):
+    _todo, _progress, review, _changes, _done = services.ensure_columns(workspace)
+    task = services.create_task(workspace, owner, title="Work", column=review)
+
+    response = _client(owner).post(
+        reverse("tasks:task_stage", kwargs={"workspace_id": workspace.id, "task_id": task.id}), {"stage": "review"}
+    )
+    body = (
+        _client(owner)
+        .get(
+            reverse("tasks:task_detail", kwargs={"workspace_id": workspace.id, "task_id": task.id}),
+            HTTP_HX_REQUEST="true",
+        )
+        .content.decode()
+    )
+
+    assert "closeTask" not in response["HX-Trigger"]
+    assert '"stage": "review"' not in body
+    # In review, the window offers to send it back for changes or approve it.
+    assert '"stage": "changes"' in body and '"stage": "done"' in body
+
+
+def test_another_workspaces_task_cannot_be_sent_for_review(workspace, owner):
+    other = Workspace.objects.create(organization=workspace.organization, name="Other")
+    foreign = services.create_task(other, owner, title="Theirs")
+
+    response = _client(owner).post(
+        reverse("tasks:task_stage", kwargs={"workspace_id": workspace.id, "task_id": foreign.id}), {"stage": "review"}
+    )
+
+    assert response.status_code == 404
+
+
+def test_a_task_in_review_goes_back_for_changes_or_on_to_done(workspace, owner):
+    _todo, _progress, review, changes, done = services.ensure_columns(workspace)
+    back = services.create_task(workspace, owner, title="Back", column=review)
+    ahead = services.create_task(workspace, owner, title="Ahead", column=review)
+    url = lambda task: reverse("tasks:task_stage", kwargs={"workspace_id": workspace.id, "task_id": task.id})  # noqa: E731
+
+    _client(owner).post(url(back), {"stage": "changes"})
+    _client(owner).post(url(ahead), {"stage": "done"})
+
+    back.refresh_from_db()
+    ahead.refresh_from_db()
+    assert back.column == changes and ahead.column == done and ahead.completed_at is not None
+
+
+def test_a_task_not_in_review_cannot_be_approved(workspace, owner):
+    todo, *_rest = services.ensure_columns(workspace)
+    task = services.create_task(workspace, owner, title="Early", column=todo)
+
+    response = _client(owner).post(
+        reverse("tasks:task_stage", kwargs={"workspace_id": workspace.id, "task_id": task.id}), {"stage": "done"}
+    )
+
+    task.refresh_from_db()
+    assert task.column == todo and "closeTask" not in response["HX-Trigger"]
+
+
+def test_a_task_to_do_starts_production_instead_of_going_to_review(workspace, owner):
+    todo, progress, *_rest = services.ensure_columns(workspace)
+    task = services.create_task(workspace, owner, title="Fresh", column=todo)
+    url = reverse("tasks:task_stage", kwargs={"workspace_id": workspace.id, "task_id": task.id})
+
+    body = (
+        _client(owner)
+        .get(
+            reverse("tasks:task_detail", kwargs={"workspace_id": workspace.id, "task_id": task.id}),
+            HTTP_HX_REQUEST="true",
+        )
+        .content.decode()
+    )
+    refused = _client(owner).post(url, {"stage": "review"})
+    _client(owner).post(url, {"stage": "start"})
+
+    assert '"stage": "start"' in body and '"stage": "review"' not in body
+    assert "closeTask" not in refused["HX-Trigger"]
+    task.refresh_from_db()
+    assert task.column == progress
