@@ -46,8 +46,11 @@ EMAIL_DAILY_SEND_LIMIT = -1
 EMAIL_RECIPIENT_HOURLY_LIMIT = -1
 EMAIL_RECIPIENT_DAILY_LIMIT = -1
 
-# Disable CSP in development
-CSP_REPORT_ONLY = True
+# The CSP is enforced here as in production, so a script it blocks (an inline
+# one without the page's nonce, say) fails locally instead of only online.
+# CSP_REPORT_ONLY=true in .env turns it back into reports, e.g. to try a
+# third-party script before adding its source to CSP_SCRIPT_SRC.
+CSP_REPORT_ONLY = env.bool("CSP_REPORT_ONLY", default=False)  # noqa: F405
 
 # Django debug toolbar (optional)
 try:
