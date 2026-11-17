@@ -8,6 +8,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% comment %}
+    The CSP (production enforces it; development only reports) runs an inline
+    script only with this page's nonce. htmx re-creates the scripts of the
+    HTML it swaps in, whose nonce was the partial response's: this gives them
+    the page's, so a partial's script runs in production as it does locally.
+    {% endcomment %}
+    <meta name="htmx-config" content='{"inlineScriptNonce": "{{ request.csp_nonce }}"}'>
     <title>{% block title %}Connekt Flow{% endblock %}</title>
     <link rel="icon" href="{% static 'favicon/favicon.ico' %}" sizes="any">
     <link rel="icon" type="image/svg+xml" href="{% static 'favicon/favicon.svg' %}">

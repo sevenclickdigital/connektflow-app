@@ -3,4 +3,4 @@
   <a href="{% url 'intelligence:playground' org_id=org_id %}"
      class="text-brand-800 hover:text-brand-900 ml-1">{% translate "Open Intelligence" %} →</a>
 </div>
-<script>window.location.href = "{% url 'intelligence:playground' org_id=org_id %}";</script>
+<script nonce="{{ request.csp_nonce }}">window.location.href = "{% url 'intelligence:playground' org_id=org_id %}";</script>

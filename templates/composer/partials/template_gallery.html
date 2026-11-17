@@ -376,7 +376,7 @@ composer/partials/_ideas_hero.html.
     </div>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 function templateShelf() {
     const shelf = JSON.parse(document.getElementById('template-shelf-data').textContent) || [];
     const PLACEHOLDER = '999999999';

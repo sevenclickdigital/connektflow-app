@@ -273,7 +273,7 @@ translated on the server.
     </div>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 function specialDatesTab() {
     const dates = JSON.parse(document.getElementById('special-dates-data').textContent) || [];
     return {

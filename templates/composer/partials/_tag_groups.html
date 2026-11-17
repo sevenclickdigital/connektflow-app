@@ -14,7 +14,7 @@ Expects: tag_groups (composer.services.tag_groups_payload), workspace.
 {% translate "Delete this group? Its tags are kept." as lbl_tg_confirm_delete %}{{ lbl_tg_confirm_delete|json_script:"tg-confirm-delete" }}
 {% translate "Could not save the group." as lbl_tg_save_failed %}{{ lbl_tg_save_failed|json_script:"tg-save-failed" }}
 {% translate "Could not delete the group." as lbl_tg_delete_failed %}{{ lbl_tg_delete_failed|json_script:"tg-delete-failed" }}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 window.tagGroupsBase = function () {
     const label = (id) => JSON.parse(document.getElementById('tg-' + id).textContent);
     const post = (url, data) => fetch(url, {

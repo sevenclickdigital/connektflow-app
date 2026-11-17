@@ -49,6 +49,7 @@ description: "Use when creating or editing Django templates, HTMX interactions, 
 ## Alpine
 
 - Gestures (drag, connect ports, pan): call `preventDefault` on the pointer event — `.stop` only stops Alpine propagation and the browser still selects text. Don't `preventDefault` when the press lands on an input, textarea, select or button, or the field can't take focus.
+- **Every inline `<script>` carries `nonce="{{ request.csp_nonce }}"`.** Production enforces the CSP (development only reports it), so a script without it works locally and is blocked online — one did that to the whole idea board. `apps/common/tests/test_inline_script_nonce.py` fails on any template that forgets it; scripts that htmx swaps in get the page's nonce through the `htmx-config` meta in `base.html`.
 - Keep component state in `x-data` on the closest container; large builders (`templates/automations/flow_builder.html`) read server data from `json_script` tags.
 
 ## Before finishing

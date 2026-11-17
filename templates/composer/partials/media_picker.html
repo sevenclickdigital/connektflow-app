@@ -275,7 +275,7 @@ rules have to arrive with it.
   </div>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
   {% comment %}
   Defined on each load of this partial rather than in compose.html: the modal
   body is swapped in by HTMX, and Alpine initialises the x-data above the

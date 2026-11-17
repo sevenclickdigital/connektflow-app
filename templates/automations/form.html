@@ -394,7 +394,7 @@ stale is a rule that silently saves the previous keyword list.
     </form>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     // Three list editors, all the same contract: own an array, render it with
     // x-for, mirror it into the hidden input as JSON on every change. The
     // visible controls deliberately have no `name` — only the hidden input is
