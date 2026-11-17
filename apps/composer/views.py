@@ -30,6 +30,7 @@ from django.utils.translation import gettext_lazy, ngettext, override, pgettext
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from apps.billing.storage_usage import WorkspaceStorageExceededError
+from apps.common.htmx import toast_response
 from apps.common.validators import (
     is_safe_url,
     parse_and_truncate_tag_string,
@@ -50,7 +51,7 @@ from providers.tiktok import VALID_PRIVACY_LEVELS as TIKTOK_PRIVACY_LEVELS
 
 from . import idea_icons
 from .emoji import emoji_catalogue, facebook_feeling_choices
-from .forms import ContentCategoryForm, PostForm
+from .forms import ContentCategoryForm, PostForm, TemplateSubmissionForm
 from .models import (
     ContentCategory,
     Feed,
@@ -67,7 +68,9 @@ from .models import (
     TagGroup,
 )
 from .services import (
+    MAX_PENDING_TEMPLATE_SUBMISSIONS,
     TagGroupNameTakenError,
+    TemplateSubmissionLimitError,
     add_to_tag_group,
     brand_hashtags,
     delete_tag,
@@ -76,15 +79,23 @@ from .services import (
     image_count_blocker,
     media_blocker,
     media_change_blocker,
+    platforms_for_template_networks,
     post_image_count,
     post_media_types,
     post_ordered_media_types,
     publish_blocker,
+    record_template_use,
     require_publishable,
     save_tag_group,
+    submit_template,
     tag_group_payload,
     tag_groups_payload,
     tag_usage,
+    template_account_formats,
+    template_shelf,
+    template_text,
+    templates_for,
+    toggle_template_favorite,
     usable_media_types,
 )
 from .status import READONLY_STATUSES, derive_post_status
@@ -887,13 +898,14 @@ def _resolve_queues_for_post(queue_id, workspace, post_data):
     return unique
 
 
-def _resolve_template_data(template_id, workspace):
+def _resolve_template_data(template_id, workspace, variation=None):
     """Resolve a ?template= value into a template_data dict.
 
     Accepts either the numeric id of an ``IdeaTemplate`` (the shelf the
-    operator keeps, shown in the create page) or a UUID for a saved
-    PostTemplate row. Returns ``None`` if the value is missing, malformed,
-    or does not match any template.
+    operator keeps, shown in the create page; ``variation`` picks which
+    version of its text, and the use is counted for the popular ones) or a
+    UUID for a saved PostTemplate row. Returns ``None`` if the value is
+    missing, malformed, or does not match any template.
     """
     if not template_id:
         return None
@@ -903,10 +915,16 @@ def _resolve_template_data(template_id, workspace):
     except (TypeError, ValueError):
         numeric_id = None
     if numeric_id is not None:
-        idea_template = IdeaTemplate.objects.filter(id=numeric_id, is_active=True).first()
+        idea_template = templates_for(workspace).filter(id=numeric_id).prefetch_related("variations").first()
         if idea_template is None:
             return None
-        return {"caption": idea_template.body, "tags": []}
+        record_template_use(workspace, idea_template)
+        return {
+            "caption": template_text(idea_template, variation),
+            "tags": [],
+            "networks": idea_template.networks,
+            "network_formats": idea_template.network_formats,
+        }
     # Fall back to PostTemplate UUID lookup.
     try:
         tpl = PostTemplate.objects.get(id=template_id, workspace=workspace)
@@ -1061,7 +1079,7 @@ def compose(request, workspace_id, post_id=None):
             initial["scheduled_time"] = DEFAULT_POST_TIME.strftime("%H:%M")
         # Resolve ?template=<id> into template_data (supports both built-in int IDs
         # and PostTemplate UUIDs). Seed caption so it pre-fills the form.
-        template_data = _resolve_template_data(request.GET.get("template"), workspace)
+        template_data = _resolve_template_data(request.GET.get("template"), workspace, request.GET.get("variation"))
         if template_data and template_data.get("caption"):
             initial["caption"] = template_data["caption"]
         form = PostForm(initial=initial)
@@ -1098,6 +1116,17 @@ def compose(request, workspace_id, post_id=None):
         social_accounts = social_accounts.filter(id=account_filter)
         if not post_id and social_accounts.exists():
             selected_account_ids = [account_filter]
+    # A template of the shelf comes with the brand's accounts on the networks it suits already ticked.
+    elif not post_id and template_data and template_data.get("networks"):
+        platforms = platforms_for_template_networks(template_data["networks"])
+        selected_account_ids = [str(account.id) for account in social_accounts if account.platform in platforms]
+        # ...each on the formats the template names for its network (Feed / Story / Reels).
+        selected_formats.update(
+            template_account_formats(
+                template_data.get("network_formats"),
+                [account for account in social_accounts if str(account.id) in selected_account_ids],
+            )
+        )
 
     # Platform character limits for JS
     from apps.automations.matching import COMMENT_PLATFORMS
@@ -3685,7 +3714,7 @@ def _idea_columns(workspace, tag=None):
     ideas_qs = (
         Idea.objects.for_workspace(workspace.id)
         .select_related("author", "media_asset", "calendar_event")
-        .prefetch_related("media_attachments__media_asset")
+        .prefetch_related("media_attachments__media_asset", "channels")
         # Whether the idea already went on to the task board (an art request);
         # with ``post``, what tells an idea already in production.
         .annotate(has_task=models.Exists(_idea_tasks()))
@@ -3784,11 +3813,55 @@ def _build_idea_media_payload(idea):
     return media_payload, attachments
 
 
+def _idea_channel_accounts(workspace):
+    """The brand's accounts an idea can be meant for: the connected ones it can publish to."""
+    return (
+        SocialAccount.objects.for_workspace(workspace.id)
+        .publishable()
+        .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
+        .order_by("platform", "account_name", "id")
+    )
+
+
+def _set_idea_channel_formats(idea, workspace, picked):
+    """Point ``idea`` at the brand's accounts in ``picked`` (``{"<account id>":
+    [formats]}``), each on the formats it offers among those asked. Accounts of
+    other brands, not connected, or left without a format are dropped."""
+    picked = picked if isinstance(picked, dict) else {}
+    ids = [key for key in picked if _is_valid_uuid(key)]
+    channel_formats = {}
+    for account in _idea_channel_accounts(workspace).filter(id__in=ids):
+        asked = picked.get(str(account.id)) or []
+        formats = [fmt for fmt in account.formats if fmt in asked]
+        if formats:
+            channel_formats[str(account.id)] = formats
+    idea.channel_formats = channel_formats
+    idea.save(update_fields=["channel_formats"])
+    idea.channels.set(list(channel_formats))
+
+
+def _parse_channel_formats(raw):
+    """The ``channel_formats`` field of an idea's form: a JSON object, or {}."""
+    try:
+        value = json.loads(raw or "{}")
+    except (TypeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
 def _prepare_idea_for_kanban(idea):
     """Attach computed media/tag fields used by Kanban templates."""
     media_payload, attachments = _build_idea_media_payload(idea)
     idea.media_payload_json = json.dumps(media_payload)
     idea.tags_payload_json = json.dumps(idea.tags or [])
+    idea.channel_list = list(idea.channels.all())
+    # Each channel with its formats; one ticked before formats existed is on the feed post.
+    idea.channels_payload_json = json.dumps(
+        {
+            str(account.id): (idea.channel_formats or {}).get(str(account.id)) or ["default"]
+            for account in idea.channel_list
+        }
+    )
     idea.media_count = len(media_payload)
     idea.cover_media = attachments[0].media_asset if attachments else idea.media_asset
     return idea
@@ -3967,20 +4040,26 @@ def idea_from_template(request, workspace_id, template_id):
     the category as a tag. From there it is sorted like any other idea.
     """
     workspace = _get_workspace(request, workspace_id)
-    template = get_object_or_404(IdeaTemplate, id=template_id, is_active=True)
+    template = get_object_or_404(templates_for(workspace).prefetch_related("variations"), id=template_id)
     _idea_columns(workspace)  # creates the board on a brand that never opened it
     icon, tone = idea_icons.category_style(template.category)
-    Idea.objects.create(
+    icon = template.icon or icon
+    idea = Idea.objects.create(
         workspace=workspace,
         author=request.user,
         title=template.title[:255],
-        description=template.body or template.description,
+        description=template_text(template, request.POST.get("variation")),
         tags=parse_and_truncate_tag_string(str(template.get_category_display())),
         group=IdeaGroup.objects.for_workspace(workspace.id).order_by("position", "created_at").first(),
         status=Idea.Status.UNASSIGNED,
         icon=icon,
         icon_tone=tone,
     )
+    # Meant for the brand's accounts on the networks the template suits, on its formats there.
+    _set_idea_channel_formats(
+        idea, workspace, template_account_formats(template.network_formats, _idea_channel_accounts(workspace))
+    )
+    record_template_use(workspace, template)
     messages.success(request, _("The template is now one of your ideas."))
     return redirect("composer:create_landing", workspace_id=workspace.id)
 
@@ -4028,6 +4107,8 @@ def create_landing(request, workspace_id, tab="ideas"):
         "builtin_templates": [],
         "idea_icons": idea_icons.icon_library(),
         "idea_icon_tones": idea_icons.TONES,
+        # The accounts the idea windows offer as its channels.
+        "idea_channel_options": list(_idea_channel_accounts(workspace)),
     }
     if tab in ("ideas", "dates"):
         context["special_dates_ahead"] = special_dates_ahead(workspace, today)
@@ -4039,6 +4120,8 @@ def create_landing(request, workspace_id, tab="ideas"):
     if tab == "templates":
         context.update(
             builtin_templates=IdeaTemplate.objects.filter(is_active=True),
+            template_shelf=template_shelf(workspace),
+            submission_form=TemplateSubmissionForm(),
             template_categories=[{"slug": slug, "label": label} for slug, label in IdeaTemplate.Category.choices],
         )
     if tab == "dates":
@@ -4159,6 +4242,8 @@ def idea_create(request, workspace_id):
 
         if has_multi_media_payload or media_asset_ids:
             _sync_idea_media_attachments(idea, workspace, media_asset_ids)
+        if "channel_formats" in request.POST:
+            _set_idea_channel_formats(idea, workspace, _parse_channel_formats(request.POST["channel_formats"]))
 
     # Sync any new tags to the Tag model
     _sync_tags_to_model(workspace, tags)
@@ -4239,6 +4324,8 @@ def idea_edit(request, workspace_id, idea_id):
         idea.save(
             update_fields=["title", "description", "tags", "group", "target_date", "icon", "icon_tone", "updated_at"]
         )
+        if "channel_formats" in request.POST:
+            _set_idea_channel_formats(idea, workspace, _parse_channel_formats(request.POST["channel_formats"]))
 
         if has_multi_media_payload:
             _sync_idea_media_attachments(idea, workspace, media_asset_ids)
@@ -4316,12 +4403,18 @@ def idea_create_post(request, workspace_id, idea_id):
     if not ordered_media_asset_ids and idea.media_asset_id:
         ordered_media_asset_ids.append(str(idea.media_asset_id))
 
-    connected_accounts = list(
-        SocialAccount.objects.for_workspace(workspace.id)
-        .publishable()
-        .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
-        .order_by("platform", "account_name", "id")
-    )
+    # The post starts on the idea's channels that are still connected, or on
+    # every connected account when the idea names none.
+    connected_accounts = list(_idea_channel_accounts(workspace))
+    idea_channels = {account.id for account in idea.channels.all()}
+    if idea_channels:
+        connected_accounts = [account for account in connected_accounts if account.id in idea_channels]
+    # One PlatformPost per format of each channel (the feed post where the idea names none).
+    targets = [
+        (account, fmt)
+        for account in connected_accounts
+        for fmt in ((idea.channel_formats or {}).get(str(account.id)) or [PlatformPost.Format.DEFAULT])
+    ]
 
     with transaction.atomic():
         post = Post.objects.create(
@@ -4344,15 +4437,9 @@ def idea_create_post(request, workspace_id, idea_id):
                 ]
             )
 
-        if connected_accounts:
+        if targets:
             PlatformPost.objects.bulk_create(
-                [
-                    PlatformPost(
-                        post=post,
-                        social_account=account,
-                    )
-                    for account in connected_accounts
-                ]
+                [PlatformPost(post=post, social_account=account, format=fmt) for account, fmt in targets]
             )
 
         idea.post = post
@@ -5079,6 +5166,49 @@ def tag_group_delete(request, workspace_id, group_id):
     workspace = _get_workspace(request, workspace_id)
     get_object_or_404(TagGroup, id=group_id, workspace=workspace).delete()
     return JsonResponse({"ok": True})
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def template_submit(request, workspace_id):
+    """A customer sends a template idea; it waits hidden for the operator's approval."""
+    workspace = _get_workspace(request, workspace_id)
+    form = TemplateSubmissionForm(request.POST, request.FILES)
+    if not form.is_valid():
+        first_error = next(iter(form.errors.values()))[0]
+        return toast_response(tone="error", title=_("The template was not sent."), body=str(first_error))
+    try:
+        submit_template(
+            workspace,
+            request.user,
+            form.save(commit=False),
+            variations=zip(
+                request.POST.getlist("variation_title"), request.POST.getlist("variation_body"), strict=False
+            ),
+        )
+    except TemplateSubmissionLimitError:
+        return toast_response(
+            tone="error",
+            title=_("You already have %(count)s templates waiting for approval.")
+            % {"count": MAX_PENDING_TEMPLATE_SUBMISSIONS},
+        )
+    return toast_response(
+        tone="success",
+        title=_("Template sent. Thank you!"),
+        body=_("It reaches every brand's shelf once our team approves it."),
+        events={"templateSubmitted": True},
+    )
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def template_favorite_toggle(request, workspace_id, template_id):
+    """Save a template of the shelf for the brand, or drop it if it was saved."""
+    workspace = _get_workspace(request, workspace_id)
+    template = get_object_or_404(templates_for(workspace), id=template_id)
+    return JsonResponse({"favorite": toggle_template_favorite(workspace, template)})
 
 
 @login_required

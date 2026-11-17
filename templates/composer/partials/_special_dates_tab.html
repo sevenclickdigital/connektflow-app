@@ -160,7 +160,7 @@ translated on the server.
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {# Left: upcoming dates #}
-        <div class="lg:col-span-7">
+        <div class="lg:col-span-8">
             <div class="flex flex-col gap-3">
                 <template x-for="entry in visible" :key="entry.iso + entry.name">
                     <div class="a-card a-card-hover p-4 flex items-center gap-4 cursor-pointer"
@@ -194,20 +194,21 @@ translated on the server.
         </div>
 
         {# Right: the date picked #}
-        <div class="lg:col-span-5 lg:sticky lg:top-4">
+        <div class="lg:col-span-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:rounded-xl" style="scrollbar-width: thin;">
             <template x-if="selected">
-                <div class="a-card overflow-hidden">
+                {# The same panel as the templates': the picture in a rounded box, the kind in its corner. #}
+                <div class="a-card p-4">
                     {# The date's picture when the operator sent one; its icon on the brand colour otherwise. #}
-                    <div class="h-40 relative flex items-center justify-center bg-brand-700 overflow-hidden">
+                    <div class="relative h-40 rounded-xl overflow-hidden flex items-center justify-center bg-brand-700">
                         <template x-if="selected.image">
                             <img :src="selected.image" alt="" class="absolute inset-0 w-full h-full object-cover">
                         </template>
                         <template x-if="!selected.image">
-                            <svg class="w-20 h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="selected.icon_markup"></svg>
+                            <svg class="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="selected.icon_markup"></svg>
                         </template>
                         <span class="pill absolute top-3 right-3 shadow-sm" :class="pillClass(selected.kind)"><i></i><span x-text="selected.kind_label"></span></span>
                     </div>
-                    <div class="p-5">
+                    <div class="pt-4">
                         <h2 class="text-xl font-semibold text-neutral-950" x-text="selected.name"></h2>
                         <p class="text-sm text-neutral-600 mt-1.5 flex flex-wrap items-center gap-x-2">
                             <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>

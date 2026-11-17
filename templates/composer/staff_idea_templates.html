@@ -27,7 +27,15 @@ Access is is_staff (apps.composer.staff_views, through _staff_required).
 {% block content %}
 {# The shell lays its content out as a column that shrinks its children; this keeps the table at full height. #}
 <div class="flex-shrink-0">
+{# The shelf, and the templates customers sent, waiting for approval. #}
+<nav class="a-pill-group mb-4" aria-label="{% translate 'Templates' %}">
+  <a href="{% url 'composer_staff:idea_templates' %}" class="{% if not sent %}active{% endif %}" {% if not sent %}aria-current="page"{% endif %}>{% translate "Shelf" %}</a>
+  <a href="{% url 'composer_staff:idea_templates' %}?tab=sent" class="{% if sent %}active{% endif %}" {% if sent %}aria-current="page"{% endif %}>
+    {% translate "Sent by customers" %}{% if pending_count %} <span class="tabular-nums">({{ pending_count }})</span>{% endif %}
+  </a>
+</nav>
 <form method="get" class="flex flex-col sm:flex-row gap-3 mb-5">
+  {% if sent %}<input type="hidden" name="tab" value="sent">{% endif %}
   <div class="relative flex-1">
     <svg class="w-4 h-4 text-neutral-500 absolute pointer-events-none" style="left: 0.875rem; top: 50%; transform: translateY(-50%);" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
     <label for="idea_template_search" class="sr-only">{% translate "Search templates" %}</label>
@@ -53,14 +61,39 @@ Access is is_staff (apps.composer.staff_views, through _staff_required).
     {% for item in templates %}
     <li class="px-5 py-3 flex items-center gap-4 {% if not item.is_active %}opacity-60{% endif %}">
       <span class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 icon-tone-{{ item.category|category_tone }}">
+        {% if item.icon %}
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{% idea_icon_markup item.icon %}</svg>
+        {% else %}
         {% include "composer/partials/_template_category_icon.html" with slug=item.category size="w-5 h-5" %}
+        {% endif %}
       </span>
       <div class="min-w-0 flex-1">
-        <div class="text-sm font-semibold text-neutral-950 truncate">{% if item.emoji %}<span aria-hidden="true">{{ item.emoji }}</span> {% endif %}{{ item.title }}</div>
+        <div class="text-sm font-semibold text-neutral-950 truncate">{{ item.title }}</div>
         <div class="text-xs text-neutral-600 truncate">{{ item.description }}</div>
+        {% if sent %}
+        <div class="text-xs text-neutral-500 mt-0.5">
+          {% blocktranslate with brand=item.submitted_workspace.name|default:"—" person=item.submitted_by.email|default:"—" date=item.created_at|date:"d/m/Y" %}Sent by {{ person }} ({{ brand }}) on {{ date }}{% endblocktranslate %}
+        </div>
+        {% endif %}
       </div>
       <span class="pill icon-tone-{{ item.category|category_tone }} hidden sm:inline-flex">{{ item.get_category_display }}</span>
-      {% if not item.is_active %}<span class="pill pill-neutral"><i></i>{% translate "Hidden" %}</span>{% endif %}
+      {% if sent %}
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <a href="{% url 'composer_staff:idea_template_edit' template_id=item.id %}" class="btn-ghost py-1.5 px-3 text-xs">{% translate "Review it" %}</a>
+        <form method="post" action="{% url 'composer_staff:idea_template_review' template_id=item.id %}">
+          {% csrf_token %}
+          <input type="hidden" name="decision" value="reject">
+          <button type="submit" class="btn-danger-soft py-1.5 px-3 text-xs">{% translate "Reject" %}</button>
+        </form>
+        <form method="post" action="{% url 'composer_staff:idea_template_review' template_id=item.id %}">
+          {% csrf_token %}
+          <input type="hidden" name="decision" value="approve">
+          <button type="submit" class="btn-brand py-1.5 px-3 text-xs">{% translate "Approve" %}</button>
+        </form>
+      </div>
+      {% else %}
+      {% if item.review_status == "rejected" %}<span class="pill pill-error"><i></i>{% translate "Rejected" %}</span>
+      {% elif not item.is_active %}<span class="pill pill-neutral"><i></i>{% translate "Hidden" %}</span>{% endif %}
       <div class="flex items-center gap-2 flex-shrink-0">
         <a href="{% url 'composer_staff:idea_template_edit' template_id=item.id %}" class="btn-ghost py-1.5 px-3 text-xs">{% translate "Edit" %}</a>
         <form method="post" action="{% url 'composer_staff:idea_template_toggle' template_id=item.id %}">
@@ -68,12 +101,13 @@ Access is is_staff (apps.composer.staff_views, through _staff_required).
           <button type="submit" class="btn-ghost py-1.5 px-3 text-xs">{% if item.is_active %}{% translate "Hide" %}{% else %}{% translate "Show" %}{% endif %}</button>
         </form>
       </div>
+      {% endif %}
     </li>
     {% endfor %}
   </ul>
   {% else %}
   <div class="px-6 py-10 text-center">
-    <p class="text-sm text-neutral-500">{% translate "No template matches this search." %}</p>
+    <p class="text-sm text-neutral-500">{% if sent and not query and not category %}{% translate "No template waiting for approval." %}{% else %}{% translate "No template matches this search." %}{% endif %}</p>
   </div>
   {% endif %}
 </section>

@@ -16,14 +16,10 @@ bottom, apart from saving. Access is is_staff (apps.composer.staff_views).
 
 {% block content %}
 <div class="flex-shrink-0 max-w-3xl">
-  <form method="post" class="a-card p-6 flex flex-col gap-5">
+  <form method="post" enctype="multipart/form-data" class="a-card p-6 flex flex-col gap-5">
     {% csrf_token %}
     {{ form.non_field_errors }}
     <div class="flex flex-col sm:flex-row gap-4">
-      <div>
-        <label for="{{ form.emoji.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.emoji.label }}</label>
-        {{ form.emoji }}
-      </div>
       <div class="flex-1">
         <label for="{{ form.title.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.title.label }}</label>
         {{ form.title }}
@@ -34,6 +30,10 @@ bottom, apart from saving. Access is is_staff (apps.composer.staff_views).
         {{ form.category }}
       </div>
     </div>
+    <fieldset>
+      <legend class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.icon.label }}</legend>
+      {% include "composer/partials/_template_icon_picker.html" with icons=icon_choices current=form.icon.value|default:"" name="icon" %}
+    </fieldset>
     <div>
       <label for="{{ form.description.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.description.label }}</label>
       {{ form.description }}
@@ -41,10 +41,77 @@ bottom, apart from saving. Access is is_staff (apps.composer.staff_views).
       {% for error in form.description.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
     </div>
     <div>
+      <label for="{{ form.details.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.details.label }}</label>
+      {{ form.details }}
+      <p class="text-xs text-neutral-600 mt-1">{{ form.details.help_text }}</p>
+    </div>
+    <div>
+      <label for="{{ form.image.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.image.label }}</label>
+      {% if template.image %}<img src="{{ template.image.url }}" alt="" class="w-48 h-28 object-cover rounded-lg border border-neutral-300 mb-2">{% endif %}
+      {{ form.image }}
+      <p class="text-xs text-neutral-600 mt-1">{{ form.image.help_text }}</p>
+      {% for error in form.image.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+    </div>
+
+    {# What the template is: shown under "Characteristics" in its panel. #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {% for field in form %}{% if field.name == "formats" or field.name == "goals" %}
+      <fieldset>
+        <legend class="text-sm font-semibold text-neutral-950 mb-1.5">{{ field.label }}</legend>
+        <div class="flex flex-col gap-1.5 text-sm text-neutral-800">
+          {% for choice in field %}
+          <label class="flex items-center gap-2 cursor-pointer">{{ choice.tag }} {{ choice.choice_label }}</label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      {% endif %}{% endfor %}
+    </div>
+    {# min-w-0: a fieldset would otherwise grow to the whole row of network cards. #}
+    <fieldset class="min-w-0">
+      <legend class="text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Networks" %}</legend>
+      <p class="text-xs text-neutral-600 mb-2">{% translate "Tick the formats the template suits on each network, as in the composer." %}</p>
+      {% include "composer/partials/_template_network_picker.html" with options=form.network_options initial=form.initial_targets %}
+    </fieldset>
+    <div>
+      <label for="{{ form.ideal_for.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.ideal_for.label }}</label>
+      {{ form.ideal_for }}
+      <p class="text-xs text-neutral-600 mt-1">{{ form.ideal_for.help_text }}</p>
+    </div>
+
+    <div>
       <label for="{{ form.body.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.body.label }}</label>
       {{ form.body }}
       <p class="text-xs text-neutral-600 mt-1">{{ form.body.help_text }}</p>
     </div>
+
+    {% comment %}
+    The other versions of the text: each one is offered to the customer
+    beside the template's own. An empty row is ignored; ticking "Remove"
+    drops a version.
+    {% endcomment %}
+    <fieldset class="flex flex-col gap-4">
+      <legend class="text-sm font-semibold text-neutral-950">{% translate "Other versions of the text" %}</legend>
+      <p class="text-xs text-neutral-600 -mt-2">{% translate "The customer picks which version opens. Save to get another empty row." %}</p>
+      {{ variations.management_form }}
+      {{ variations.non_form_errors }}
+      {% for item in variations %}
+      <div class="rounded-lg border border-neutral-300 p-4 flex flex-col gap-3">
+        {% for hidden in item.hidden_fields %}{{ hidden }}{% endfor %}
+        <div>
+          <label for="{{ item.title.id_for_label }}" class="block text-xs font-semibold text-neutral-800 mb-1">{{ item.title.label }}</label>
+          {{ item.title }}
+        </div>
+        <div>
+          <label for="{{ item.body.id_for_label }}" class="block text-xs font-semibold text-neutral-800 mb-1">{{ item.body.label }}</label>
+          {{ item.body }}
+          {% for error in item.body.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+        </div>
+        {% if item.instance.pk %}
+        <label class="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer">{{ item.DELETE }} {% translate "Remove this version" %}</label>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </fieldset>
     <label class="flex items-center gap-2 text-sm text-neutral-900 cursor-pointer">
       {{ form.is_active }} {{ form.is_active.label }}
     </label>

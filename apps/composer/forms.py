@@ -5,7 +5,8 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.common.validators import normalize_tags, parse_and_truncate_tag_string
 
-from .models import ContentCategory, Idea, Post, PostTemplate
+from . import idea_icons, services
+from .models import ContentCategory, Idea, IdeaTemplate, IdeaTemplateVariation, Post, PostTemplate
 
 
 class IdeaForm(forms.ModelForm):
@@ -156,3 +157,146 @@ class PlatformOverrideForm(forms.Form):
             }
         ),
     )
+
+
+def _checkboxes(choices, label):
+    return forms.MultipleChoiceField(choices=choices, required=False, label=label, widget=forms.CheckboxSelectMultiple)
+
+
+class IdeaTemplateForm(forms.ModelForm):
+    """The operator's template form. The icon comes from the idea icon library
+    (``idea_icons``); none picked means the category's."""
+
+    formats = _checkboxes(IdeaTemplate.Format.choices, _("Format"))
+    goals = _checkboxes(IdeaTemplate.Goal.choices, _("Objective"))
+    #: Each network with the formats the template suits on it, as
+    #: "<network>:<format>" values (the composer's Feed / Story / Reels).
+    targets = forms.MultipleChoiceField(required=False, label=_("Networks"), widget=forms.MultipleHiddenInput)
+    # A value a network does not offer is dropped on save
+    # (services.network_formats_from_targets), not a reason to refuse the form.
+    targets.valid_value = lambda value: True  # type: ignore[method-assign]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.network_options = services.template_network_options()
+        self.fields["targets"].choices = [
+            (option["value"], option["short"]) for network in self.network_options for option in network["formats"]
+        ]
+        if self.instance.pk and not self.is_bound:
+            self.initial["targets"] = [
+                f"{network}:{fmt}"
+                for network, formats in (self.instance.network_formats or {}).items()
+                for fmt in formats
+            ]
+
+    def initial_targets(self) -> list[str]:
+        """The values ticked when the form shows, for the network cards."""
+        if self.is_bound:
+            return self.data.getlist("targets") if hasattr(self.data, "getlist") else []
+        return list(self.initial.get("targets", []))
+
+    def save(self, commit=True):
+        template = super().save(commit=False)
+        template.network_formats = services.network_formats_from_targets(self.cleaned_data.get("targets"))
+        template.networks = list(template.network_formats)
+        if commit:
+            template.save()
+        return template
+
+    def clean_icon(self):
+        """Only a slug of the library is kept; anything else means "the category's"."""
+        value = (self.cleaned_data.get("icon") or "").strip()
+        return value if value in idea_icons.ICONS else ""
+
+    class Meta:
+        model = IdeaTemplate
+        fields = [
+            "icon",
+            "title",
+            "description",
+            "details",
+            "body",
+            "category",
+            "image",
+            "formats",
+            "goals",
+            "ideal_for",
+            "is_active",
+        ]
+        labels = {
+            "icon": _("Icon"),
+            "title": _("Title"),
+            "description": _("Description"),
+            "body": _("Text of the template"),
+            "category": _("Category"),
+            "is_active": _("Shown to customers"),
+            "details": _("Detailed description"),
+            "image": _("Cover image"),
+            "ideal_for": _("Ideal for"),
+        }
+        help_texts = {
+            "description": _("One or two lines on the card, saying what the idea is."),
+            "body": _("What opens in the composer. Mark the parts to fill in with double braces, like {{topic}}."),
+            "details": _("Shown in the template's panel. Without it, the description is shown."),
+            "image": _("The top of the card. Without one, the category's icon is shown."),
+            "ideal_for": _("For example: tips, recommendations, lists."),
+        }
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "form-input-styled w-full"}),
+            "description": forms.Textarea(attrs={"class": "form-input-styled w-full", "rows": 2}),
+            "body": forms.Textarea(attrs={"class": "form-input-styled w-full", "rows": 10}),
+            "category": forms.Select(attrs={"class": "form-input-styled w-full"}),
+            "details": forms.Textarea(attrs={"class": "form-input-styled w-full", "rows": 3}),
+            "ideal_for": forms.TextInput(attrs={"class": "form-input-styled w-full"}),
+        }
+
+
+class IdeaTemplateVariationForm(forms.ModelForm):
+    class Meta:
+        model = IdeaTemplateVariation
+        fields = ["title", "body"]
+        labels = {"title": _("Name of the version"), "body": _("Text")}
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "form-input-styled w-full"}),
+            "body": forms.Textarea(attrs={"class": "form-input-styled w-full", "rows": 5}),
+        }
+
+
+#: The other versions of a template's text, under its own.
+VariationFormSet: type[forms.BaseInlineFormSet] = forms.inlineformset_factory(
+    IdeaTemplate, IdeaTemplateVariation, form=IdeaTemplateVariationForm, extra=1, can_delete=True
+)
+
+
+class TemplateSubmissionForm(IdeaTemplateForm):
+    """A customer's template idea: the operator's form without "shown to
+    customers", which is the operator's approval."""
+
+    #: The largest cover a customer may send.
+    MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+    class Meta(IdeaTemplateForm.Meta):
+        fields = [
+            "icon",
+            "title",
+            "description",
+            "details",
+            "body",
+            "category",
+            "image",
+            "formats",
+            "goals",
+            "ideal_for",
+        ]
+
+    def clean_body(self):
+        body = self.cleaned_data.get("body", "").strip()
+        if not body:
+            raise forms.ValidationError(_("Write the text of the template."))
+        return body
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+        if image and getattr(image, "size", 0) > self.MAX_IMAGE_BYTES:
+            raise forms.ValidationError(_("The cover can have at most 5 MB."))
+        return image

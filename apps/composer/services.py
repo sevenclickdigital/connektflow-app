@@ -806,6 +806,317 @@ def add_to_tag_group(workspace, name, tag_names) -> None:
     group.tags.add(*_tags_named(workspace, tag_names))
 
 
+#: How many of the most used templates lately are shown as popular, and over how many days.
+POPULAR_TEMPLATES = 3
+POPULAR_TEMPLATE_DAYS = 90
+
+
+def popular_template_ids() -> set[int]:
+    """The templates used most in the last ``POPULAR_TEMPLATE_DAYS`` days,
+    across every brand: at most ``POPULAR_TEMPLATES``, and only ones used."""
+    from django.db.models import Count
+    from django.utils import timezone
+
+    from .models import IdeaTemplateUse
+
+    since = timezone.now() - dt.timedelta(days=POPULAR_TEMPLATE_DAYS)
+    ranked = (
+        IdeaTemplateUse.objects.filter(created_at__gte=since, template__is_active=True)
+        .values("template")
+        .annotate(total=Count("id"))
+        .order_by("-total", "template")[:POPULAR_TEMPLATES]
+    )
+    return {row["template"] for row in ranked}
+
+
+#: The account platforms behind each network a template names.
+TEMPLATE_NETWORK_PLATFORMS = {
+    "instagram": {"instagram", "instagram_login"},
+    "facebook": {"facebook"},
+    "linkedin": {"linkedin_personal", "linkedin_company"},
+    "tiktok": {"tiktok"},
+    "youtube": {"youtube"},
+    "threads": {"threads"},
+    "pinterest": {"pinterest"},
+    "x": {"x"},
+}
+
+
+#: The account platform whose publishing formats a template network offers.
+TEMPLATE_NETWORK_FORMAT_SOURCE = {"linkedin": "linkedin_company"}
+
+
+def template_network_formats(network) -> list[str]:
+    """The publishing formats a template may name for ``network``: those the
+    composer offers on its accounts (``SocialAccount.PLATFORM_FIELD_CONFIG``)."""
+    from apps.social_accounts.models import SocialAccount
+
+    platform = TEMPLATE_NETWORK_FORMAT_SOURCE.get(network, network)
+    return SocialAccount.PLATFORM_FIELD_CONFIG.get(platform, {}).get(
+        "formats", SocialAccount.PLATFORM_FIELD_DEFAULTS["formats"]
+    )
+
+
+def template_format_short(fmt, formats) -> str:
+    """A format's short name, as the composer's toggles call it: the ordinary
+    post is "Feed" where the network also has Stories, "Post" elsewhere."""
+    from django.utils.translation import pgettext
+
+    names = {
+        "default": _("Feed") if "story" in formats else _("Post"),
+        "story": pgettext("publishing format", "Story"),
+        "reel": _("Reels"),
+        "profile_photo": _("Photo"),
+    }
+    return str(names.get(fmt, fmt))
+
+
+def template_network_options() -> list[dict]:
+    """Every network a template can name, with its formats, for the forms:
+    ``[{"network", "label", "formats": [{"value": "<network>:<format>", "short"}]}]``."""
+    from .models import IdeaTemplate
+
+    options = []
+    for network, label in IdeaTemplate.Network.choices:
+        formats = template_network_formats(network)
+        options.append(
+            {
+                "network": network,
+                "label": str(label),
+                "formats": [
+                    {"value": f"{network}:{fmt}", "format": fmt, "short": template_format_short(fmt, formats)}
+                    for fmt in formats
+                ],
+            }
+        )
+    return options
+
+
+def network_formats_from_targets(targets) -> dict[str, list[str]]:
+    """``{"network": [formats]}`` from ``"<network>:<format>"`` values, keeping
+    only real networks and the formats each offers, in the network's order."""
+    from .models import IdeaTemplate
+
+    picked: dict[str, set[str]] = {}
+    for value in targets or []:
+        network, _sep, fmt = str(value).partition(":")
+        if network in IdeaTemplate.Network.values and fmt in template_network_formats(network):
+            picked.setdefault(network, set()).add(fmt)
+    return {
+        network: [fmt for fmt in template_network_formats(network) if fmt in picked[network]]
+        for network in IdeaTemplate.Network.values
+        if network in picked
+    }
+
+
+def template_network_items(template) -> list[dict]:
+    """The template's networks for its panel, each with the formats picked:
+    ``[{"network", "label", "formats": [{"format", "short"}]}]``."""
+    from .models import IdeaTemplate
+
+    labels = dict(IdeaTemplate.Network.choices)
+    items = []
+    for network in IdeaTemplate.Network.values:
+        picked = (template.network_formats or {}).get(network)
+        if picked is None and network not in (template.networks or []):
+            continue
+        offered = template_network_formats(network)
+        formats = [fmt for fmt in offered if fmt in (picked or ["default"])]
+        items.append(
+            {
+                "network": network,
+                "label": str(labels[network]),
+                "formats": [{"format": fmt, "short": template_format_short(fmt, offered)} for fmt in formats],
+            }
+        )
+    return items
+
+
+def template_network_labels(template) -> list[str]:
+    """The template's networks as its panel lists them: "Instagram (Feed, Reels)",
+    or just the name where the network has only the one format."""
+    from .models import IdeaTemplate
+
+    labels = dict(IdeaTemplate.Network.choices)
+    result = []
+    for network in IdeaTemplate.Network.values:
+        if network not in (template.network_formats or {}) and network not in (template.networks or []):
+            continue
+        offered = template_network_formats(network)
+        picked = (template.network_formats or {}).get(network, [])
+        if len(offered) > 1 and picked:
+            shorts = ", ".join(template_format_short(fmt, offered) for fmt in offered if fmt in picked)
+            result.append(f"{labels[network]} ({shorts})")
+        else:
+            result.append(str(labels[network]))
+    return result
+
+
+def network_of_platform(platform) -> str:
+    """The template network an account platform belongs to ("" for none)."""
+    return next((network for network, platforms in TEMPLATE_NETWORK_PLATFORMS.items() if platform in platforms), "")
+
+
+def template_account_formats(network_formats, accounts) -> dict[str, list[str]]:
+    """``{"<account id>": [formats]}`` for the ``accounts`` on a template's
+    networks: each on the formats the template names for its network that the
+    account offers."""
+    result = {}
+    for account in accounts:
+        wanted = (network_formats or {}).get(network_of_platform(account.platform), [])
+        formats = [fmt for fmt in account.formats if fmt in wanted]
+        if formats:
+            result[str(account.id)] = formats
+    return result
+
+
+def platforms_for_template_networks(networks) -> set[str]:
+    """The ``SocialAccount.platform`` values of a template's ``networks``."""
+    return set().union(*(TEMPLATE_NETWORK_PLATFORMS.get(network, set()) for network in networks or []))
+
+
+def template_variations(template) -> list[dict]:
+    """The versions of a template's text, the template's own ``body`` first:
+    ``[{"title", "body"}]``. Use with ``prefetch_related("variations")``."""
+    versions = [{"title": "", "body": template.body or template.description}]
+    versions += [{"title": item.title, "body": item.body} for item in template.variations.all()]
+    return versions
+
+
+def template_text(template, variation) -> str:
+    """The text of version ``variation`` (0 is the template's own), or the
+    template's own when that version does not exist."""
+    versions = template_variations(template)
+    try:
+        index = int(variation)
+    except (TypeError, ValueError):
+        index = 0
+    return versions[index]["body"] if 0 <= index < len(versions) else versions[0]["body"]
+
+
+def templates_for(workspace):
+    """The templates a brand may use: the shelf (approved and shown) plus the
+    ones it sent itself, which it uses at once, before or without approval."""
+    from django.db.models import Q
+
+    from .models import IdeaTemplate
+
+    return IdeaTemplate.objects.filter(Q(is_active=True) | Q(submitted_workspace=workspace))
+
+
+def template_shelf(workspace) -> list[dict]:
+    """The active templates as the create page's Templates tab draws them,
+    every label already in the user's language."""
+    from . import idea_icons
+    from .models import IdeaTemplate, IdeaTemplateFavorite
+
+    favorites = set(IdeaTemplateFavorite.objects.for_workspace(workspace.id).values_list("template_id", flat=True))
+    popular = popular_template_ids()
+    formats = dict(IdeaTemplate.Format.choices)
+    goals = dict(IdeaTemplate.Goal.choices)
+    shelf = []
+    reviews = dict(IdeaTemplate.Review.choices)
+    for template in templates_for(workspace).prefetch_related("variations"):
+        shelf.append(
+            {
+                "id": template.id,
+                "title": template.title,
+                "description": template.description,
+                "details": template.details or template.description,
+                "category": template.category,
+                "category_label": str(template.get_category_display()),
+                "tone": idea_icons.category_style(template.category)[1],
+                "icon_markup": idea_icons.icon_markup(template.icon or idea_icons.category_style(template.category)[0]),
+                "image": template.image.url if template.image else "",
+                "formats": [str(formats[key]) for key in template.formats if key in formats],
+                "goals": [str(goals[key]) for key in template.goals if key in goals],
+                "networks": template_network_labels(template),
+                "network_items": template_network_items(template),
+                "ideal_for": template.ideal_for,
+                "variations": template_variations(template),
+                "favorite": template.id in favorites,
+                # The brand sent it: listed under "My templates", with where its review stands.
+                "mine": template.submitted_workspace_id == workspace.id,
+                "review": template.review_status,
+                "review_label": str(reviews.get(template.review_status, "")),
+                "popular": template.id in popular,
+            }
+        )
+    return shelf
+
+
+def toggle_template_favorite(workspace, template) -> bool:
+    """Save ``template`` for the brand, or drop it if it was saved. Returns
+    whether it is now a favorite."""
+    from .models import IdeaTemplateFavorite
+
+    deleted, _rows = IdeaTemplateFavorite.objects.filter(workspace=workspace, template=template).delete()
+    if deleted:
+        return False
+    IdeaTemplateFavorite.objects.get_or_create(workspace=workspace, template=template)
+    return True
+
+
+#: How many templates a brand may have waiting for approval at once, and how
+#: many more versions of the text one of them may bring.
+MAX_PENDING_TEMPLATE_SUBMISSIONS = 10
+MAX_SUBMITTED_VARIATIONS = 4
+
+
+class TemplateSubmissionLimitError(Exception):
+    """The brand already has ``MAX_PENDING_TEMPLATE_SUBMISSIONS`` templates waiting."""
+
+
+def submit_template(workspace, user, template, variations=()):
+    """A customer's template idea, kept hidden until the operator approves it.
+
+    ``template`` is the unsaved ``IdeaTemplate`` the customer filled in
+    (``forms.TemplateSubmissionForm().save(commit=False)``: title, texts,
+    category, icon, cover, characteristics). ``variations`` are more versions of the text,
+    ``(title, body)`` pairs; empty ones are skipped and at most
+    ``MAX_SUBMITTED_VARIATIONS`` are kept.
+    Raises ``TemplateSubmissionLimitError`` when the brand already has too many waiting.
+    """
+    from django.db import transaction
+
+    from .models import IdeaTemplate, IdeaTemplateVariation
+
+    waiting = IdeaTemplate.objects.filter(
+        submitted_workspace=workspace, review_status=IdeaTemplate.Review.PENDING
+    ).count()
+    if waiting >= MAX_PENDING_TEMPLATE_SUBMISSIONS:
+        raise TemplateSubmissionLimitError
+    versions = [(name.strip()[:120], text.strip()) for name, text in variations if text and text.strip()]
+    with transaction.atomic():
+        template.is_active = False
+        template.review_status = IdeaTemplate.Review.PENDING
+        template.submitted_by = user
+        template.submitted_workspace = workspace
+        template.save()
+        IdeaTemplateVariation.objects.bulk_create(
+            IdeaTemplateVariation(template=template, title=name, body=text, position=index)
+            for index, (name, text) in enumerate(versions[:MAX_SUBMITTED_VARIATIONS])
+        )
+    return template
+
+
+def review_template(template, approve: bool) -> None:
+    """The operator's answer to a sent template: approving puts it on every
+    brand's shelf; rejecting keeps it hidden."""
+    from .models import IdeaTemplate
+
+    template.review_status = IdeaTemplate.Review.APPROVED if approve else IdeaTemplate.Review.REJECTED
+    template.is_active = approve
+    template.save(update_fields=["review_status", "is_active", "updated_at"])
+
+
+def record_template_use(workspace, template) -> None:
+    """Count one use of ``template`` by the brand (for the popular ones)."""
+    from .models import IdeaTemplateUse
+
+    IdeaTemplateUse.objects.create(workspace=workspace, template=template)
+
+
 def tag_usage(workspace) -> list[dict]:
     """The brand's saved tags by name, each with how many ideas and posts carry it.
 

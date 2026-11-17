@@ -17,4 +17,5 @@ urlpatterns = [
     path("<int:template_id>/", staff_views.template_edit, name="idea_template_edit"),
     path("<int:template_id>/toggle/", staff_views.template_toggle, name="idea_template_toggle"),
     path("<int:template_id>/delete/", staff_views.template_delete, name="idea_template_delete"),
+    path("<int:template_id>/review/", staff_views.template_review, name="idea_template_review"),
 ]

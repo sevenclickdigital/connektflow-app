@@ -868,12 +868,15 @@ span.flatpickr-weekday {
 
 /* Destination picker (templates/partials/_target_card.html): one card per
    connected account in the composer's "Where to publish" row and the art
-   request's network picker. Formats are toggles inside the card; on narrow
-   screens the row scrolls sideways instead of wrapping. */
-.target-picker { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-@media (max-width: 639px) {
-    .target-picker { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 0.25rem; }
+   request's network picker. Formats are toggles inside the card; the row
+   stays one line and scrolls sideways, with the prev/next buttons of
+   partials/_scroll_arrows.html where the page offers them. */
+.target-picker {
+    display: flex; flex-wrap: nowrap; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem;
+    scroll-behavior: smooth; scroll-snap-type: x proximity; scrollbar-width: none;
 }
+.target-picker::-webkit-scrollbar { display: none; }
+.target-picker > * { scroll-snap-align: start; }
 .target-card {
     display: flex; flex-direction: column; gap: 0.5rem; width: 240px; flex-shrink: 0;
     padding: 0.625rem 0.75rem; border-radius: var(--radius-lg); border: 1.5px solid var(--border);

@@ -282,6 +282,15 @@ class Idea(models.Model):
     )
 
     # Timestamps
+    #: The brand's accounts the idea is meant for; "create post" starts the
+    #: post on them (on every connected account when none is ticked).
+    channels = models.ManyToManyField("social_accounts.SocialAccount", blank=True, related_name="ideas")
+    #: The formats each channel is meant for, as the composer's toggles name
+    #: them (``{"<account id>": ["default", "reel"]}``); ``channels`` holds
+    #: the accounts that have any.
+    channel_formats = models.JSONField(
+        default=dict, blank=True, db_default=models.Value({}, output_field=models.JSONField())
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1066,6 +1075,34 @@ class IdeaTemplate(models.Model):
         LIST = "list", _("List")
         BEHIND_THE_SCENES = "behind-the-scenes", _("Behind the Scenes")
 
+    #: Where the template's content fits, shown as "Format" on its card.
+    class Format(models.TextChoices):
+        POST = "post", _("Post")
+        CAROUSEL = "carousel", _("Carousel")
+        REELS = "reels", _("Reels")
+        STORY = "story", _("Stories")
+        VIDEO = "video", _("Video")
+
+    #: What the template is for, shown as "Goal".
+    class Goal(models.TextChoices):
+        ENGAGEMENT = "engagement", _("Engagement")
+        AUTHORITY = "authority", _("Authority")
+        SALES = "sales", _("Sales")
+        REACH = "reach", _("Reach")
+        COMMUNITY = "community", _("Community")
+        EDUCATION = "education", _("Education")
+
+    #: The networks it suits (brand names, not translated).
+    class Network(models.TextChoices):
+        INSTAGRAM = "instagram", "Instagram"
+        FACEBOOK = "facebook", "Facebook"
+        LINKEDIN = "linkedin", "LinkedIn"
+        TIKTOK = "tiktok", "TikTok"
+        YOUTUBE = "youtube", "YouTube"
+        THREADS = "threads", "Threads"
+        PINTEREST = "pinterest", "Pinterest"
+        X = "x", "X"
+
     id = models.AutoField(primary_key=True)
     emoji = models.CharField(max_length=8, blank=True, default="")
     title = models.CharField(max_length=160)
@@ -1073,6 +1110,41 @@ class IdeaTemplate(models.Model):
     body = models.TextField(blank=True, default="")
     category = models.CharField(max_length=24, choices=Category.choices, default=Category.TIP)
     is_active = models.BooleanField(default=True)
+    #: The template's icon from the idea icon library (``idea_icons``);
+    #: empty means its category's. ``emoji`` is no longer shown.
+    icon = models.CharField(max_length=32, blank=True, default="", db_default="")
+    #: The card's cover; without one the card shows the category's icon.
+    image = models.ImageField(upload_to="idea_templates/", blank=True, default="", db_default="")
+    #: The longer text of the template's detail panel.
+    details = models.TextField(blank=True, default="", db_default="")
+    formats = models.JSONField(default=list, blank=True, db_default=models.Value([], output_field=models.JSONField()))
+    goals = models.JSONField(default=list, blank=True, db_default=models.Value([], output_field=models.JSONField()))
+    networks = models.JSONField(default=list, blank=True, db_default=models.Value([], output_field=models.JSONField()))
+    #: The publishing formats per network, as the composer offers them
+    #: (``{"instagram": ["default", "reel"]}``; formats from
+    #: ``SocialAccount.PLATFORM_FIELD_CONFIG``). ``networks`` holds its keys.
+    network_formats = models.JSONField(
+        default=dict, blank=True, db_default=models.Value({}, output_field=models.JSONField())
+    )
+    ideal_for = models.CharField(max_length=200, blank=True, default="", db_default="")
+
+    #: Where a template stands: the operator's own are approved; one a
+    #: customer sent waits hidden (``is_active`` off) until the operator
+    #: approves it, which also puts it on the shelf.
+    class Review(models.TextChoices):
+        APPROVED = "approved", _("Approved")
+        PENDING = "pending", _("Waiting for approval")
+        REJECTED = "rejected", _("Rejected")
+
+    review_status = models.CharField(
+        max_length=16, choices=Review.choices, default=Review.APPROVED, db_default=Review.APPROVED
+    )
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    submitted_workspace = models.ForeignKey(
+        "workspaces.Workspace", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1082,3 +1154,58 @@ class IdeaTemplate(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class IdeaTemplateVariation(models.Model):
+    """Another version of a template's text, kept by the operator.
+
+    The template's own ``body`` is its first version; these follow it in
+    ``position`` order, and the customer picks which one to open.
+    """
+
+    id = models.AutoField(primary_key=True)
+    template = models.ForeignKey(IdeaTemplate, on_delete=models.CASCADE, related_name="variations")
+    title = models.CharField(max_length=120, blank=True, default="")
+    body = models.TextField()
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "composer_idea_template_variation"
+        ordering = ["position", "id"]
+
+    def __str__(self):
+        return self.title or self.template.title
+
+
+class IdeaTemplateFavorite(models.Model):
+    """A template a brand saved to find again."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workspace = models.ForeignKey(
+        "workspaces.Workspace", on_delete=models.CASCADE, related_name="favorite_idea_templates"
+    )
+    template = models.ForeignKey(IdeaTemplate, on_delete=models.CASCADE, related_name="favorites")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = WorkspaceScopedManager()
+
+    class Meta:
+        db_table = "composer_idea_template_favorite"
+        constraints = [
+            models.UniqueConstraint(fields=["workspace", "template"], name="uniq_workspace_idea_template_favorite"),
+        ]
+
+
+class IdeaTemplateUse(models.Model):
+    """One use of a template by a brand: opened in the composer or put on the
+    idea board. The most used ones lately are shown as popular."""
+
+    id = models.BigAutoField(primary_key=True)
+    workspace = models.ForeignKey("workspaces.Workspace", on_delete=models.CASCADE, related_name="idea_template_uses")
+    template = models.ForeignKey(IdeaTemplate, on_delete=models.CASCADE, related_name="uses")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    objects = WorkspaceScopedManager()
+
+    class Meta:
+        db_table = "composer_idea_template_use"

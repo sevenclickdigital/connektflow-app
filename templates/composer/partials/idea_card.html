@@ -9,7 +9,8 @@
      data-target-date="{{ idea.target_date|date:'Y-m-d' }}"
      data-icon="{{ idea.icon }}"
      data-icon-tone="{{ idea.icon_tone }}"
-     @click="openEdit('{{ idea.id }}', '{{ idea.title|escapejs }}', '{{ idea.description|escapejs }}', $el.dataset.tags, '{{ group_id }}', $el.dataset.media, $el.dataset.targetDate, $el.dataset.icon, $el.dataset.iconTone)">
+     data-channels="{{ idea.channels_payload_json|escape }}"
+     @click="openEdit('{{ idea.id }}', '{{ idea.title|escapejs }}', '{{ idea.description|escapejs }}', $el.dataset.tags, '{{ group_id }}', $el.dataset.media, $el.dataset.targetDate, $el.dataset.icon, $el.dataset.iconTone, $el.dataset.channels)">
     {% if idea.cover_media and idea.cover_media.file %}
     <div class="-mx-3 -mt-3 mb-2 rounded-t-lg overflow-hidden flex items-center justify-center h-[120px]">
         {% if idea.cover_media.media_type == 'video' %}
@@ -72,6 +73,13 @@
         <span class="tabular-nums">{{ idea.target_date|date:"j M" }}{% if idea.calendar_event %} · {{ idea.calendar_event.title }}{% endif %}</span>
         {% else %}
         <span>{% translate "No date" %}</span>
+        {% endif %}
+        {% if idea.channel_list %}
+        <span class="ml-auto flex items-center gap-1" title="{% for account in idea.channel_list %}{{ account.account_name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+            {% for account in idea.channel_list %}
+            <span class="w-4 h-4 flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}</span>
+            {% endfor %}
+        </span>
         {% endif %}
     </div>
 </div>

@@ -5,6 +5,10 @@
 
 {% comment %}Header is rendered inside the content block to avoid overlap with the -m-6 layout{% endcomment %}
 
+{# The whole page scrolls, with the scrollbar at the window's edge (see base.html). #}
+{% block column_height %}{% endblock %}
+{% block content_scroll %}overflow-x-clip{% endblock %}
+
 {% block extra_head %}
 <style>
     /* Kanban board */
@@ -295,8 +299,7 @@
 {{ idea_icons|json_script:"idea-icons-data" }}
 <div x-data="kanbanBoard()" class="-m-6 flex-grow flex flex-col"
      @tag-deleted.window="forgetTag($event.detail.name, $event.detail.used)"
-     @media-picked.camel.window="addPickedMedia($event.detail.assets)"
-     @use-builtin-template.window="openTemplate($event.detail.id)">
+     @media-picked.camel.window="addPickedMedia($event.detail.assets)">
 
     {% comment %}
     Ideas, Templates and Special dates are three pages of the same area: each
@@ -721,6 +724,51 @@
                     </div>
                 </div>
 
+                {% comment %}
+                The idea's channels: the brand's connected accounts it is meant
+                for. "Create post" starts the post on them. Filled in from the
+                template's networks when the idea comes from the Templates tab.
+                {% endcomment %}
+                <div style="padding: 0 24px 16px;">
+                    <div class="flex items-center justify-between gap-3 mb-1.5">
+                        <p class="text-sm font-semibold text-neutral-950">{% translate "Channels" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></p>
+                        {% if idea_channel_options %}{% include "partials/_scroll_arrows.html" with ref="createChannelRow" %}{% endif %}
+                    </div>
+                    {% if idea_channel_options %}
+                    <input type="hidden" name="channel_formats" :value="JSON.stringify(createChannelFormats)">
+                    <div class="target-picker" x-ref="createChannelRow">
+                        {% for account in idea_channel_options %}
+                        <div class="target-card" :class="(createChannelFormats['{{ account.id }}'] || []).length && 'is-selected'" style="width: 220px;">
+                            <div class="target-card-head">
+                                <span class="target-card-avatar" aria-hidden="true">{% if account.avatar_url %}<img src="{{ account.avatar_url }}" alt="" referrerpolicy="no-referrer">{% else %}{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}{% endif %}</span>
+                                <span class="flex-1 min-w-0">
+                                    <span class="target-card-name">{{ account.account_name }}</span>
+                                    <span class="target-card-sub">{% include "partials/_platform_icon.html" with platform=account.platform %} {{ account.get_platform_display }}</span>
+                                </span>
+                                <span class="target-card-check" x-show="(createChannelFormats['{{ account.id }}'] || []).length" x-cloak aria-hidden="true">
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                </span>
+                            </div>
+                            <div class="target-card-formats">
+                                {% for option in account.format_options %}
+                                <button type="button" class="format-toggle" :class="(createChannelFormats['{{ account.id }}'] || []).includes('{{ option.format }}') && 'is-on'"
+                                        :aria-pressed="(createChannelFormats['{{ account.id }}'] || []).includes('{{ option.format }}').toString()"
+                                        aria-label="{{ option.label }}" title="{{ option.label }}"
+                                        @click="toggleChannelFormat(createChannelFormats, '{{ account.id }}', '{{ option.format }}')">
+                                    {% include "partials/_format_icon.html" with format=option.format show_default=True %}
+                                    {{ option.short }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs text-neutral-600 mt-1.5">{% translate "Creating the post starts it on these channels and formats. With none ticked, on every connected one." %}</p>
+                    {% else %}
+                    <p class="text-xs text-neutral-600">{% translate "Connect a channel to choose where this idea will be published." %} <a href="{% url 'social_accounts:connect' workspace_id=workspace.id %}" class="font-semibold text-brand-800 hover:text-brand-900">{% translate "Connect a Channel" %}</a></p>
+                    {% endif %}
+                </div>
+
                 <!-- Footer -->
                 <div class="idea-modal-footer" @click="createGroupDropdownOpen = false; createTagDropdownOpen = false">
                     <span style="margin-right: auto; display: flex; align-items: center; color: var(--text-tertiary);">
@@ -994,6 +1042,51 @@
                     </div>
                 </div>
 
+                {% comment %}
+                The idea's channels: the brand's connected accounts it is meant
+                for. "Create post" starts the post on them. Filled in from the
+                template's networks when the idea comes from the Templates tab.
+                {% endcomment %}
+                <div style="padding: 0 24px 16px;">
+                    <div class="flex items-center justify-between gap-3 mb-1.5">
+                        <p class="text-sm font-semibold text-neutral-950">{% translate "Channels" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></p>
+                        {% if idea_channel_options %}{% include "partials/_scroll_arrows.html" with ref="editChannelRow" %}{% endif %}
+                    </div>
+                    {% if idea_channel_options %}
+                    <input type="hidden" name="channel_formats" :value="JSON.stringify(editChannelFormats)">
+                    <div class="target-picker" x-ref="editChannelRow">
+                        {% for account in idea_channel_options %}
+                        <div class="target-card" :class="(editChannelFormats['{{ account.id }}'] || []).length && 'is-selected'" style="width: 220px;">
+                            <div class="target-card-head">
+                                <span class="target-card-avatar" aria-hidden="true">{% if account.avatar_url %}<img src="{{ account.avatar_url }}" alt="" referrerpolicy="no-referrer">{% else %}{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}{% endif %}</span>
+                                <span class="flex-1 min-w-0">
+                                    <span class="target-card-name">{{ account.account_name }}</span>
+                                    <span class="target-card-sub">{% include "partials/_platform_icon.html" with platform=account.platform %} {{ account.get_platform_display }}</span>
+                                </span>
+                                <span class="target-card-check" x-show="(editChannelFormats['{{ account.id }}'] || []).length" x-cloak aria-hidden="true">
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                </span>
+                            </div>
+                            <div class="target-card-formats">
+                                {% for option in account.format_options %}
+                                <button type="button" class="format-toggle" :class="(editChannelFormats['{{ account.id }}'] || []).includes('{{ option.format }}') && 'is-on'"
+                                        :aria-pressed="(editChannelFormats['{{ account.id }}'] || []).includes('{{ option.format }}').toString()"
+                                        aria-label="{{ option.label }}" title="{{ option.label }}"
+                                        @click="toggleChannelFormat(editChannelFormats, '{{ account.id }}', '{{ option.format }}')">
+                                    {% include "partials/_format_icon.html" with format=option.format show_default=True %}
+                                    {{ option.short }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs text-neutral-600 mt-1.5">{% translate "Creating the post starts it on these channels and formats. With none ticked, on every connected one." %}</p>
+                    {% else %}
+                    <p class="text-xs text-neutral-600">{% translate "Connect a channel to choose where this idea will be published." %} <a href="{% url 'social_accounts:connect' workspace_id=workspace.id %}" class="font-semibold text-brand-800 hover:text-brand-900">{% translate "Connect a Channel" %}</a></p>
+                    {% endif %}
+                </div>
+
                 <!-- Footer -->
                 <div class="idea-modal-footer" @click="editGroupDropdownOpen = false; editTagDropdownOpen = false">
                     <button type="button"
@@ -1121,84 +1214,6 @@
         </div>
     </template>
 
-    <!-- Template Detail Modal -->
-    <div x-show="viewingTemplate" x-cloak
-         class="idea-modal-overlay"
-         @click.self="viewingTemplate = null"
-         @keydown.escape.window="viewingTemplate = null">
-        <div class="idea-modal" @click.stop style="max-width: 560px;">
-            <!-- Close button -->
-            <button type="button" class="idea-modal-close" @click="viewingTemplate = null" title="{% translate 'Close' %}">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-
-            <!-- Emoji icon -->
-            <div class="px-6 pt-6 pb-2">
-                <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-4"
-                     style="background: var(--neutral-50);">
-                    <span x-text="viewingTemplate?.emoji"></span>
-                </div>
-                <!-- Title -->
-                <h2 class="text-xl font-bold text-neutral-950 mb-2" style="letter-spacing: -0.01em;"
-                    x-text="viewingTemplate?.title"></h2>
-                <!-- Description -->
-                <p class="text-sm leading-relaxed" style="color: var(--text-tertiary);"
-                   x-text="viewingTemplate?.description"></p>
-            </div>
-
-            <!-- Template body -->
-            <div class="px-6 py-4">
-                <div class="rounded-xl border p-5 bg-green-50/40 border-green-200/60">
-                    <p class="text-sm leading-relaxed text-neutral-800 whitespace-pre-line"
-                       x-text="viewingTemplate?.body || viewingTemplate?.description"></p>
-                    <!-- Actions -->
-                    <div class="flex items-center justify-end gap-2 mt-4 pt-3" style="border-top: 1px solid rgba(0,0,0,0.06);">
-                        <button type="button" @click="copyTemplateBody()"
-                                class="btn-neutral-100 w-9 h-9 rounded-lg border flex items-center justify-center cursor-pointer"
-                                style="border-color: var(--border); color: var(--text-tertiary);"
-                                title="{% translate 'Copy to clipboard' %}">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                        </button>
-                        {% comment %}
-                        Straight to the idea board: the template becomes an
-                        idea with its icon, colour, title, text and tag.
-                        {% endcomment %}
-                        <form method="post" :action="'/workspace/{{ workspace.id }}/create/templates/' + (viewingTemplate ? viewingTemplate.id : 0) + '/idea/'">
-                            {% csrf_token %}
-                            <button type="submit" class="btn-brand text-sm">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                                {% translate "Add to my ideas" %}
-                            </button>
-                        </form>
-                        <button type="button" @click="useTemplate()"
-                                class="btn-primary-tint inline-flex items-center border gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg cursor-pointer"
-                                style="background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary);border-color: var(--primary); ">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-                            {% translate "Use Template" %}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer with attribution & tags -->
-            <div class="px-6 pb-5 flex items-center gap-3">
-                <span class="text-xs font-medium text-neutral-500">{% translate "By" %}</span>
-                <span class="text-xs font-semibold text-neutral-700 underline decoration-neutral-400 underline-offset-2">{% translate "Connekt Flow" %}</span>
-                <template x-if="viewingTemplate?.tags?.length > 0">
-                    <span class="text-neutral-400 mx-1">{% translate "&bull;" %}</span>
-                </template>
-                <template x-for="tag in (viewingTemplate?.tags || [])" :key="tag">
-                    <span class="text-xs font-medium text-neutral-600" x-text="tag"></span>
-                </template>
-                <template x-if="!viewingTemplate?.tags?.length">
-                    <span>
-                        <span class="text-neutral-400 mx-1">{% translate "&bull;" %}</span>
-                        <span class="text-xs font-medium text-neutral-600" x-text="viewingTemplate?.category ? viewingTemplate.category.charAt(0).toUpperCase() + viewingTemplate.category.slice(1).replace('-', ' ') : ''"></span>
-                    </span>
-                </template>
-            </div>
-        </div>
-    </div>
 </div>
 {% include "tasks/partials/_request_arts_host.html" %}
 {% endblock %}
@@ -1316,6 +1331,7 @@ function kanbanBoard() {
         createGroupId: '',
         createSelectedGroup: '',
         createSelectedTags: [],
+        createChannelFormats: {},
         // The tag group a new idea will fill: the special date it started from, and that date's tags.
         createTagGroup: '',
         createTagGroupTags: [],
@@ -1331,10 +1347,10 @@ function kanbanBoard() {
         ideaTagModalTarget: 'create',
         emojiPickerOpen: false,
         _mediaDragOver: false,
-        viewingTemplate: null,
         editingIdea: null,
         editSelectedGroup: '',
         editSelectedTags: [],
+        editChannelFormats: {},
         editGroupDropdownOpen: false,
         editTagDropdownOpen: false,
         editTagSearch: '',
@@ -1356,38 +1372,6 @@ function kanbanBoard() {
         // Column ID-to-label map for the dropdown
         _columnMap: { {% for col in columns %}'{{ col.id }}': '{{ col.label }}'{% if not forloop.last %}, {% endif %}{% endfor %} },
         _defaultGroupId: '{% if columns %}{{ columns.0.id }}{% endif %}',
-
-        // Template data for detail modal
-        _templates: {
-            {% for tpl in builtin_templates %}
-            {{ tpl.id }}: {
-                id: {{ tpl.id }},
-                emoji: "{{ tpl.emoji }}",
-                title: "{{ tpl.title|escapejs }}",
-                description: "{{ tpl.description|escapejs }}",
-                body: "{{ tpl.body|default:''|escapejs }}",
-                category: "{{ tpl.category }}"
-            }{% if not forloop.last %},{% endif %}
-            {% endfor %}
-        },
-
-        openTemplate(id) {
-            this.viewingTemplate = this._templates[id] || null;
-        },
-
-        useTemplate() {
-            if (!this.viewingTemplate) return;
-            var tpl = this.viewingTemplate;
-            var body = tpl.body || tpl.description;
-            this.viewingTemplate = null;
-            window.location.href = '/workspace/{{ workspace.id }}/compose/?template=' + tpl.id;
-        },
-
-        copyTemplateBody() {
-            if (!this.viewingTemplate) return;
-            var body = this.viewingTemplate.body || this.viewingTemplate.description;
-            navigator.clipboard.writeText(body);
-        },
 
         createGroupLabel() {
             return this._columnMap[this.createSelectedGroup] || clLabel('unassigned');
@@ -1553,6 +1537,7 @@ function kanbanBoard() {
             this.createGroupId = '';
             this.createSelectedGroup = this._defaultGroupId;
             this.createSelectedTags = [];
+            this.createChannelFormats = {};
             this.createTagGroup = '';
             this.createTagGroupTags = [];
             this.createGroupDropdownOpen = false;
@@ -1957,6 +1942,15 @@ function kanbanBoard() {
             });
         },
 
+        // Ticks or unticks one format of one channel (``map`` is changed in place,
+        // so its object stays the one the form reads).
+        toggleChannelFormat(map, id, fmt) {
+            var formats = (map[id] || []).slice();
+            var at = formats.indexOf(fmt);
+            if (at > -1) formats.splice(at, 1); else formats.push(fmt);
+            if (formats.length) map[id] = formats; else delete map[id];
+        },
+
         refreshBoardHard() {
             var url = '{% url "composer:idea_board" workspace_id=workspace.id %}';
             if (this.activeTag) {
@@ -2313,7 +2307,7 @@ function kanbanBoard() {
             });
         },
 
-        openEdit(ideaId, title, description, tagsJson, groupId, mediaJson, targetDate, icon, iconTone) {
+        openEdit(ideaId, title, description, tagsJson, groupId, mediaJson, targetDate, icon, iconTone, channelsJson) {
             var parsedMedia = [];
             if (mediaJson) {
                 try {
@@ -2337,6 +2331,9 @@ function kanbanBoard() {
             this.iconPickerOpen = '';
             this.editSelectedGroup = groupId || this._defaultGroupId;
             this.editSelectedTags = parsedTags.slice();
+            var parsedChannels = {};
+            try { parsedChannels = JSON.parse(channelsJson || '{}'); } catch (_err) { parsedChannels = {}; }
+            this.editChannelFormats = parsedChannels && !Array.isArray(parsedChannels) ? parsedChannels : {};
             this.editGroupDropdownOpen = false;
             this.editTagDropdownOpen = false;
             this.editTagSearch = '';

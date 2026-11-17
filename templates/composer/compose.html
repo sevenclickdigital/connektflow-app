@@ -476,7 +476,7 @@
                 media is attached, a format it can't satisfy is greyed out with
                 the reason, and save refuses it anyway (format_blocker).
                 {% endcomment %}
-                <div>
+                <div x-data>
                     <div class="flex items-center justify-between gap-3 mb-2">
                         <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500">{% translate "Where to publish" %}</span>
                         <span class="text-xs text-neutral-600" x-show="selectedTargetList().length" x-cloak>
@@ -484,8 +484,10 @@
                             <span x-show="selectedTargetList().length === 1">{% translate "destination" %}</span><span x-show="selectedTargetList().length !== 1">{% translate "destinations" %}</span>
                             · <button type="button" class="btn-link py-0 px-1 text-xs" @click="clearTargets()">{% translate "Clear" %}</button>
                         </span>
+                        {# The row stays one line; the arrows scroll it. #}
+                        <span class="ml-auto">{% include "partials/_scroll_arrows.html" with ref="targetRow" %}</span>
                     </div>
-                    <div class="target-picker" role="group" aria-label="{% translate 'Where to publish' %}">
+                    <div class="target-picker" role="group" aria-label="{% translate 'Where to publish' %}" x-ref="targetRow">
                         {% for account in social_accounts %}
                         {% include "partials/_target_card.html" with platform=account.platform account=account formats=account.format_options %}
                         {% endfor %}

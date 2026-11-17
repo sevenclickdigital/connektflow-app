@@ -1,71 +1,432 @@
 {% load i18n idea_icons %}
 {% comment %}
-The Templates page: the categories as tiles, a search and the grid of
-ready-made starting points (the banner above is composer/partials/_ideas_hero.html). Search and category
-filter in the browser.
+The Templates page: a filter bar (search, category, the brand's favorites),
+the grid of template cards and, beside it, the panel of the one
+picked: its text versions, characteristics and the ways to use it. Search,
+category and favorites filter in the browser; saving a favorite is a POST.
 
-Expects: builtin_templates (the active IdeaTemplate rows) and
-template_categories (its Category choices). Runs inside the create page's
-Alpine scope (showCreateModal, the use-builtin-template event).
+Expects: template_shelf (composer.services.template_shelf), template_categories
+(IdeaTemplate.Category choices), workspace. The banner above is
+composer/partials/_ideas_hero.html.
 {% endcomment %}
+{{ template_shelf|json_script:"template-shelf-data" }}
 
-<div x-data="{ activeCategory: 'all', query: '', matches(text) { return text.includes(this.query.trim().toLowerCase()) } }"
-     class="min-w-0">
+<div x-data="templateShelf()" class="min-w-0"
+     data-version-label="{% translate 'Version {n}' %}"
+     data-compose-url="{% url 'composer:compose' workspace_id=workspace.id %}"
+     data-idea-url="{% url 'composer:idea_from_template' workspace_id=workspace.id template_id=999999999 %}"
+     data-favorite-url="{% url 'composer:template_favorite_toggle' workspace_id=workspace.id template_id=999999999 %}">
 
-    <div class="min-w-0">
-        <!-- Categories -->
-        <h3 class="text-sm font-semibold text-neutral-950 mb-3">{% translate "Explore by category" %}</h3>
-        <div class="flex gap-3 mb-5 overflow-x-auto pb-1" style="scrollbar-width: thin;">
-            <button type="button" @click="activeCategory = 'all'"
-                    class="flex-shrink-0 w-[104px] flex flex-col items-center gap-2 px-2 py-3 rounded-xl border text-xs font-semibold transition-colors cursor-pointer"
-                    :class="activeCategory === 'all'
-                        ? 'bg-brand-50 border-brand-300 text-brand-800'
-                        : 'bg-white border-neutral-300 text-neutral-700 hover:border-neutral-400'">
-                <span class="w-10 h-10 rounded-xl flex items-center justify-center icon-tone-brand">
-                    {% include "composer/partials/_template_category_icon.html" with slug="all" size="w-5 h-5" %}
-                </span>
-                <span class="w-full text-center leading-tight truncate">{% translate "All" %}</span>
-            </button>
-            {% for cat in template_categories %}
-            <button type="button" @click="activeCategory = '{{ cat.slug }}'"
-                    class="flex-shrink-0 w-[104px] flex flex-col items-center gap-2 px-2 py-3 rounded-xl border text-xs font-semibold transition-colors cursor-pointer"
-                    :class="activeCategory === '{{ cat.slug }}'
-                        ? 'bg-brand-50 border-brand-300 text-brand-800'
-                        : 'bg-white border-neutral-300 text-neutral-700 hover:border-neutral-400'">
-                <span class="w-10 h-10 rounded-xl flex items-center justify-center icon-tone-{{ cat.slug|category_tone }}">
-                    {% include "composer/partials/_template_category_icon.html" with slug=cat.slug size="w-5 h-5" %}
-                </span>
-                <span class="w-full text-center leading-tight truncate" title="{{ cat.label }}">{{ cat.label }}</span>
-            </button>
-            {% endfor %}
-        </div>
-
-        <!-- Search -->
-        <div class="relative mb-5">
-            <svg class="w-4 h-4 text-neutral-500 absolute pointer-events-none" style="left: 0.875rem; top: 50%; transform: translateY(-50%);" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    {% comment %}
+    Filters in the special dates' style: search, a Category menu with the
+    count of each, and the brand's favorites as a toggle; the active ones
+    show below as removable chips.
+    {% endcomment %}
+    <div class="flex flex-wrap items-center gap-2 mb-5">
+        <div class="relative flex-1 min-w-[14rem]">
+            <svg class="w-4 h-4 text-neutral-500 absolute pointer-events-none left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             <label for="template_search" class="sr-only">{% translate "Search templates" %}</label>
             <input type="search" id="template_search" x-model="query" placeholder="{% translate 'Search templates' %}…"
-                   class="form-input-styled w-full" style="padding-left: 2.5rem;">
+                   class="form-input-styled w-full h-9 py-0 pl-9 text-sm focus:ring-2 focus:ring-inset focus:ring-brand-200">
         </div>
 
-        <!-- Template grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-            {% for tpl in builtin_templates %}
-            <button type="button"
-                    data-search="{{ tpl.title|lower }} {{ tpl.description|lower }}"
-                    x-show="(activeCategory === 'all' || activeCategory === '{{ tpl.category }}') && matches($el.dataset.search)"
-                    @click="$dispatch('use-builtin-template', { id: {{ tpl.id }} })"
-                    class="a-card a-card-hover text-left p-4 flex flex-col cursor-pointer">
-                <span class="w-11 h-11 rounded-xl flex items-center justify-center mb-3 icon-tone-{{ tpl.category|category_tone }}">
-                    {% include "composer/partials/_template_category_icon.html" with slug=tpl.category size="w-5 h-5" %}
-                </span>
-                <span class="text-sm font-semibold text-neutral-950 line-clamp-2">{{ tpl.title }}</span>
-                <span class="text-xs text-neutral-600 mt-1 line-clamp-3 flex-1">{{ tpl.description }}</span>
-                <span class="flex flex-wrap gap-1.5 mt-4">
-                    <span class="pill icon-tone-{{ tpl.category|category_tone }}">{{ tpl.get_category_display }}</span>
-                </span>
+        <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
+            <button type="button" class="chip h-9 px-3 text-sm" :class="category !== 'all' && 'active'" @click="open = !open" :aria-expanded="open.toString()">
+                <span class="text-neutral-500 font-medium">{% translate "Category" %}:</span>
+                <span x-text="category === 'all' ? $el.dataset.all : categoryLabel(category)" data-all="{% translate 'All' context 'special dates' %}"></span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
             </button>
-            {% endfor %}
+            <div x-show="open" x-cloak x-transition
+                 class="absolute right-0 top-full mt-1 w-60 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-30">
+                <button type="button" class="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-left hover:bg-neutral-50 cursor-pointer"
+                        :class="category === 'all' ? 'text-brand-800 font-semibold' : 'text-neutral-800'" @click="category = 'all'; open = false">
+                    {% translate "All" context "special dates" %}
+                    <span class="text-xs text-neutral-500 tabular-nums" x-text="shelf.length"></span>
+                </button>
+                {% for cat in template_categories %}
+                <button type="button" class="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-left hover:bg-neutral-50 cursor-pointer"
+                        x-show="countCategory('{{ cat.slug }}') > 0"
+                        :class="category === '{{ cat.slug }}' ? 'text-brand-800 font-semibold bg-brand-50' : 'text-neutral-800'" @click="category = '{{ cat.slug }}'; open = false">
+                    <span class="flex items-center gap-2 min-w-0">
+                        <span class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 icon-tone-{{ cat.slug|category_tone }}">
+                            {% include "composer/partials/_template_category_icon.html" with slug=cat.slug size="w-3.5 h-3.5" %}
+                        </span>
+                        <span class="truncate">{{ cat.label }}</span>
+                    </span>
+                    <span class="text-xs text-neutral-500 tabular-nums" x-text="countCategory('{{ cat.slug }}')"></span>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <button type="button" class="chip h-9 px-3 text-sm" :class="favoritesOnly && 'active'" @click="favoritesOnly = !favoritesOnly" :aria-pressed="favoritesOnly.toString()">
+            <svg class="w-4 h-4" :fill="favoritesOnly ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+            {% translate "Favorites" %}
+            <span class="tabular-nums opacity-70" x-text="favorites.length"></span>
+        </button>
+
+        {# The templates this brand sent: usable by it at once, whatever their review. #}
+        <button type="button" class="chip h-9 px-3 text-sm" :class="mineOnly && 'active'" @click="mineOnly = !mineOnly" :aria-pressed="mineOnly.toString()">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            {% translate "My templates" %}
+            <span class="tabular-nums opacity-70" x-text="mineCount()"></span>
+        </button>
+
+        {% comment %}
+        A customer sends a template idea for the shelf: it waits, hidden, for
+        the operator's approval (composer_staff:idea_templates, "Sent by
+        customers"), and then every brand sees it.
+        {% endcomment %}
+        <div x-data="{ open: false, versions: [] }" data-max-versions="4"
+             @template-submitted.camel.window="open = false; versions = []; $refs.submitForm.reset()">
+            <button type="button" class="btn-soft h-9 py-0 px-3 text-sm" @click="open = true">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+                {% translate "Send a template" %}
+            </button>
+            <div x-show="open" x-cloak class="modal-overlay" style="z-index: 210;" role="dialog" aria-modal="true" aria-labelledby="template-submit-title"
+                 x-transition.opacity @keydown.escape.window="open = false">
+                <div class="modal-panel" style="max-width: 40rem;" @click.outside="open = false">
+                    <button type="button" class="modal-close" @click="open = false" aria-label="{% translate 'Close' %}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                    <div class="modal-header">
+                        <div class="modal-icon is-brand">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+                        </div>
+                        <div>
+                            <div class="modal-title" id="template-submit-title">{% translate "Send a template" %}</div>
+                            <p class="modal-meta">{% translate "Share a starting point that works for you. Once our team approves it, every brand finds it here." %}</p>
+                        </div>
+                    </div>
+                    <form x-ref="submitForm" class="flex flex-col gap-4"
+                          hx-post="{% url 'composer:template_submit' workspace_id=workspace.id %}" hx-swap="none" hx-encoding="multipart/form-data">
+                        {% csrf_token %}
+                        <div>
+                            <label for="template_submit_title" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Title" %}</label>
+                            <input type="text" id="template_submit_title" name="title" required maxlength="160" class="form-input-styled w-full"
+                                   placeholder="{% translate 'For example: 3 mistakes my customers make' %}">
+                        </div>
+                        <fieldset>
+                            <legend class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Icon" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></legend>
+                            {% include "composer/partials/_template_icon_picker.html" with icons=idea_icons current="" name="icon" %}
+                        </fieldset>
+                        <div>
+                            <label for="template_submit_category" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Category" %}</label>
+                            <select id="template_submit_category" name="category" class="form-input-styled w-full">
+                                {% for cat in template_categories %}<option value="{{ cat.slug }}">{{ cat.label }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="template_submit_description" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Description" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></label>
+                            <input type="text" id="template_submit_description" name="description" maxlength="400" class="form-input-styled w-full"
+                                   placeholder="{% translate 'In one line, what the post is about' %}">
+                        </div>
+                        <div>
+                            <label for="template_submit_details" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Detailed description" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></label>
+                            <textarea id="template_submit_details" name="details" rows="2" class="form-input-styled w-full" style="resize: vertical;"
+                                      placeholder="{% translate 'When and why to use this template' %}"></textarea>
+                        </div>
+                        <div>
+                            <label for="template_submit_image" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Cover image" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></label>
+                            <input type="file" id="template_submit_image" name="image" accept="image/*" class="block w-full text-sm text-neutral-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-50 file:text-brand-800 file:font-semibold hover:file:bg-brand-100">
+                            <p class="text-xs text-neutral-600 mt-1">{% translate "Up to 5 MB. Without one, the category's icon is shown." %}</p>
+                        </div>
+                        {# What the template is, as on the operator's form: shown under "Characteristics". #}
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {% for field in submission_form %}{% if field.name == "formats" or field.name == "goals" %}
+                            <fieldset>
+                                <legend class="text-sm font-semibold text-neutral-950 mb-1.5">{{ field.label }}</legend>
+                                <div class="flex flex-col gap-1.5 text-sm text-neutral-800">
+                                    {% for choice in field %}
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" name="{{ field.name }}" value="{{ choice.data.value }}" class="rounded accent-brand-700">
+                                        {{ choice.choice_label }}
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </fieldset>
+                            {% endif %}{% endfor %}
+                        </div>
+                        {# min-w-0: a fieldset would otherwise grow to the whole row of network cards. #}
+                        <fieldset class="min-w-0">
+                            <legend class="text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Networks" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></legend>
+                            {% include "composer/partials/_template_network_picker.html" with options=submission_form.network_options initial=submission_form.initial_targets %}
+                        </fieldset>
+                        <div>
+                            <label for="template_submit_ideal_for" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Ideal for" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></label>
+                            <input type="text" id="template_submit_ideal_for" name="ideal_for" maxlength="200" class="form-input-styled w-full"
+                                   placeholder="{% translate 'For example: tips, recommendations, lists.' %}">
+                        </div>
+                        <div>
+                            <label for="template_submit_body" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Text of the template" %}</label>
+                            <textarea id="template_submit_body" name="body" required rows="6" class="form-input-styled w-full" style="resize: vertical;"
+                                      placeholder="{% translate 'Write the post and mark the parts to fill in with double braces, like {{topic}}.' %}"></textarea>
+                        </div>
+                        {# More versions of the text, each with a name: the customer picks one when using the template. #}
+                        <div class="flex flex-col gap-3">
+                            <template x-for="(version, index) in versions" :key="version.key">
+                                <div class="rounded-lg border border-neutral-300 p-3 flex flex-col gap-2">
+                                    <div class="flex items-center gap-2">
+                                        <label class="sr-only" :for="'template_submit_version_' + version.key">{% translate "Name of the version" %}</label>
+                                        <input type="text" name="variation_title" maxlength="120" class="form-input-styled flex-1 h-9 py-0 text-sm"
+                                               :id="'template_submit_version_' + version.key" placeholder="{% translate 'Name of the version, like Short version' %}">
+                                        <button type="button" class="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-500 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                                                @click="versions.splice(index, 1)" title="{% translate 'Remove this version' %}" aria-label="{% translate 'Remove this version' %}">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                                        </button>
+                                    </div>
+                                    <label class="sr-only" :for="'template_submit_version_body_' + version.key">{% translate "Text" %}</label>
+                                    <textarea name="variation_body" rows="4" class="form-input-styled w-full text-sm" style="resize: vertical;"
+                                              :id="'template_submit_version_body_' + version.key" placeholder="{% translate 'Another way to write the same post' %}"></textarea>
+                                </div>
+                            </template>
+                            <button type="button" class="self-start inline-flex items-center gap-1.5 text-sm font-semibold text-brand-800 hover:text-brand-900 cursor-pointer"
+                                    x-show="versions.length < Number($root.dataset.maxVersions)"
+                                    @click="versions.push({ key: Date.now() + Math.random() })">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                                {% translate "Add another version of the text" %}
+                            </button>
+                        </div>
+                        <div class="modal-footer" style="margin-top: 0.5rem;">
+                            <button type="button" class="btn-ghost" @click="open = false">{% translate "Cancel" %}</button>
+                            <button type="submit" class="btn-brand">{% translate "Send for approval" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Active filters #}
+    <div class="flex flex-wrap items-center gap-2 -mt-3 mb-5" x-show="category !== 'all' || favoritesOnly || mineOnly || query" x-cloak>
+        <button type="button" x-show="category !== 'all'" class="pill pill-brand cursor-pointer hover:brightness-95" @click="category = 'all'">
+            <span x-text="categoryLabel(category)"></span><span aria-hidden="true">×</span>
+        </button>
+        <button type="button" x-show="favoritesOnly" class="pill pill-brand cursor-pointer hover:brightness-95" @click="favoritesOnly = false">
+            <span>{% translate "Favorites" %}</span><span aria-hidden="true">×</span>
+        </button>
+        <button type="button" x-show="mineOnly" class="pill pill-brand cursor-pointer hover:brightness-95" @click="mineOnly = false">
+            <span>{% translate "My templates" %}</span><span aria-hidden="true">×</span>
+        </button>
+        <button type="button" class="text-xs font-semibold text-neutral-600 hover:text-neutral-900 cursor-pointer"
+                @click="category = 'all'; favoritesOnly = false; mineOnly = false; query = ''">{% translate "Clear filters" %}</button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start min-w-0">
+        <!-- Cards -->
+        <div class="lg:col-span-8 min-w-0">
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {% for tpl in template_shelf %}
+                <div role="button" tabindex="0"
+                     data-id="{{ tpl.id }}" data-category="{{ tpl.category }}"{% if tpl.mine %} data-mine="1"{% endif %}
+                     data-search="{{ tpl.title|lower }} {{ tpl.description|lower }} {{ tpl.category_label|lower }}"
+                     x-show="shows($el)"
+                     @click="select({{ tpl.id }})" @keydown.enter.prevent="select({{ tpl.id }})"
+                     class="a-card a-card-hover p-3 flex flex-col cursor-pointer text-left min-w-0"
+                     :class="selectedId === {{ tpl.id }} && 'ring-2 ring-inset ring-brand-400'">
+                    <div class="relative h-32 rounded-xl overflow-hidden flex items-center justify-center icon-tone-{{ tpl.tone }}">
+                        {% if tpl.image %}
+                        <img src="{{ tpl.image }}" alt="" class="absolute inset-0 w-full h-full object-cover" loading="lazy">
+                        {% else %}
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ tpl.icon_markup|safe }}</svg>
+                        {% endif %}
+                        <button type="button" @click.stop="toggleFavorite({{ tpl.id }})"
+                                class="absolute top-2 right-2 w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-neutral-800 hover:text-brand-700 cursor-pointer"
+                                :aria-pressed="isFavorite({{ tpl.id }}).toString()"
+                                title="{% translate 'Save to favorites' %}" aria-label="{% translate 'Save to favorites' %}">
+                            <svg class="w-4 h-4" :class="isFavorite({{ tpl.id }}) && 'text-brand-700'" :fill="isFavorite({{ tpl.id }}) ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-1.5 mt-3">
+                        <span class="pill icon-tone-{{ tpl.tone }}">{{ tpl.category_label }}</span>
+                        {% if tpl.mine %}
+                        <span class="pill {% if tpl.review == 'pending' %}pill-warning{% elif tpl.review == 'rejected' %}pill-error{% else %}pill-success{% endif %}"><i></i>{{ tpl.review_label }}</span>
+                        {% endif %}
+                    </div>
+                    <h3 class="text-sm font-semibold text-neutral-950 mt-2 line-clamp-2">{{ tpl.title }}</h3>
+                    <p class="text-xs text-neutral-600 mt-1 line-clamp-2 flex-1">{{ tpl.description }}</p>
+                    <div class="flex items-center justify-between gap-2 mt-3">
+                        <span class="inline-flex items-center gap-1.5 text-xs text-neutral-600">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                            {% blocktranslate count counter=tpl.variations|length %}{{ counter }} version{% plural %}{{ counter }} versions{% endblocktranslate %}
+                        </span>
+                        {% if tpl.popular %}
+                        <span class="pill pill-warning">&#x1F525; {% translate "Popular" %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="a-card px-6 py-10 text-center" x-show="!visibleCount()" x-cloak>
+                <p class="text-sm text-neutral-500" x-show="mineOnly && !query && category === 'all'">{% translate "Templates you send appear here, ready to use, while our team reviews them." %}</p>
+                <p class="text-sm text-neutral-500" x-show="favoritesOnly && !mineOnly && !query && category === 'all'">{% translate "Save a template with the bookmark to find it here." %}</p>
+                <p class="text-sm text-neutral-500" x-show="(!favoritesOnly && !mineOnly) || query || category !== 'all'">{% translate "No template matches this search." %}</p>
+            </div>
+        </div>
+
+        <!-- The template picked -->
+        <div class="lg:col-span-4 lg:sticky lg:top-4 min-w-0 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:rounded-xl" style="scrollbar-width: thin;">
+            <template x-if="selected">
+                {# The same panel as the special dates': the picture in a rounded box, the category in its corner. #}
+                <div class="a-card p-4">
+                    <div class="relative h-40 rounded-xl overflow-hidden flex items-center justify-center" :class="'icon-tone-' + selected.tone">
+                        <template x-if="selected.image">
+                            <img :src="selected.image" alt="" class="absolute inset-0 w-full h-full object-cover">
+                        </template>
+                        <template x-if="!selected.image">
+                            <svg class="w-14 h-14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="selected.icon_markup"></svg>
+                        </template>
+                        <span class="pill bg-white shadow-sm absolute top-3 right-3" :class="'icon-tone-' + selected.tone" x-text="selected.category_label"></span>
+                    </div>
+                    <div class="pt-4">
+                    <span x-show="selected.mine" class="pill" :class="{ pending: 'pill-warning', rejected: 'pill-error' }[selected.review] || 'pill-success'"><i></i><span x-text="selected.review_label"></span></span>
+                    <h2 class="text-xl font-semibold text-neutral-950" :class="selected.mine && 'mt-2'" x-text="selected.title"></h2>
+                    <p class="text-sm text-neutral-700 mt-1.5 leading-relaxed" x-text="selected.details"></p>
+
+                    <div class="mt-4 pt-4 border-t border-neutral-200"
+                         x-show="selected.formats.length || selected.goals.length || selected.ideal_for || selected.network_items.length">
+                        <h3 class="text-sm font-semibold text-neutral-950 mb-3">{% translate "Characteristics" %}</h3>
+                        <ul class="flex flex-col gap-2.5 text-sm text-neutral-800">
+                            <li class="flex items-start gap-2.5" x-show="selected.formats.length">
+                                <span class="w-6 h-6 rounded-md icon-tone-brand flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg></span>
+                                <span><strong class="font-semibold">{% translate "Format" %}:</strong> <span x-text="selected.formats.join(', ')"></span></span>
+                            </li>
+                            <li class="flex items-start gap-2.5" x-show="selected.goals.length">
+                                <span class="w-6 h-6 rounded-md icon-tone-brand flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>
+                                <span><strong class="font-semibold">{% translate "Objective" %}:</strong> <span x-text="selected.goals.join(', ')"></span></span>
+                            </li>
+                            <li class="flex items-start gap-2.5" x-show="selected.ideal_for">
+                                <span class="w-6 h-6 rounded-md icon-tone-brand flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></span>
+                                <span><strong class="font-semibold">{% translate "Ideal for" %}:</strong> <span x-text="selected.ideal_for"></span></span>
+                            </li>
+                            <li class="flex items-center gap-2.5" x-show="selected.network_items.length">
+                                <span class="w-6 h-6 rounded-md icon-tone-brand flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span>
+                                <div class="min-w-0 flex-1 flex flex-wrap items-center gap-1.5">
+                                    <strong class="font-semibold">{% translate "Networks" %}:</strong>
+                                    {# One small chip per network: its icon and, where it has more than the feed post, its formats' glyphs. #}
+                                    <template x-for="item in selected.network_items" :key="item.network">
+                                        <span class="inline-flex items-center gap-1 h-6 px-2 rounded-full border border-neutral-200 bg-white text-neutral-600"
+                                              :title="item.label + ': ' + item.formats.map(option => option.short).join(', ')"
+                                              :aria-label="item.label + ': ' + item.formats.map(option => option.short).join(', ')">
+                                            {% for network in submission_form.network_options %}
+                                            <span class="w-3.5 h-3.5 flex items-center justify-center [&>svg]:w-3.5 [&>svg]:h-3.5" x-show="item.network === '{{ network.network }}'">{% include "partials/_platform_icon.html" with platform=network.network size="sm" %}</span>
+                                            {% endfor %}
+                                            <template x-for="option in item.formats" :key="option.format">
+                                                <span x-show="item.formats.length > 1 || option.format !== 'default'" class="flex items-center text-brand-700">
+                                                    <span x-show="option.format === 'default'">{% include "partials/_format_icon.html" with format="default" show_default=True %}</span>
+                                                    <span x-show="option.format === 'story'">{% include "partials/_format_icon.html" with format="story" %}</span>
+                                                    <span x-show="option.format === 'reel'">{% include "partials/_format_icon.html" with format="reel" %}</span>
+                                                </span>
+                                            </template>
+                                        </span>
+                                    </template>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {# Which version of the text opens: only when there is more than one. #}
+                    <div class="mt-4 pt-4 border-t border-neutral-200" x-show="selected.variations.length > 1">
+                        <button type="button" class="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
+                                @click="toggleSection('versions')" :aria-expanded="(openSection === 'versions').toString()">
+                            <span class="min-w-0">
+                                <span class="block text-sm font-semibold text-neutral-950">{% translate "Versions of the text" %}</span>
+                                <span class="block text-xs text-neutral-600 truncate" x-show="openSection !== 'versions'"
+                                      x-text="selected.variations[variation].title || $root.dataset.versionLabel.replace('{n}', variation + 1)"></span>
+                            </span>
+                            <svg class="w-4 h-4 text-neutral-500 transition-transform" :class="openSection === 'versions' && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="flex flex-col gap-1.5 mt-2" x-show="openSection === 'versions'" x-transition.opacity>
+                            <template x-for="(item, index) in selected.variations" :key="index">
+                                <label class="flex items-start gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-colors"
+                                       :class="variation === index ? 'border-brand-300 bg-brand-50' : 'border-neutral-200 hover:border-neutral-300'">
+                                    <input type="radio" class="mt-0.5 accent-brand-700" :checked="variation === index" @change="variation = index">
+                                    <span class="min-w-0">
+                                        <span class="block text-sm font-medium text-neutral-950" x-text="item.title || $root.dataset.versionLabel.replace('{n}', index + 1)"></span>
+                                        <span class="block text-xs text-neutral-600 line-clamp-2" x-text="item.body"></span>
+                                    </span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 mt-6">
+                        <a :href="composeUrl()" class="btn-brand w-full">
+                            {% translate "Use this template" %}
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                        </a>
+                        <form method="post" :action="ideaUrl()">
+                            {% csrf_token %}
+                            <input type="hidden" name="variation" :value="variation">
+                            <button type="submit" class="btn-soft w-full">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                                {% translate "Add to my ideas" %}
+                            </button>
+                        </form>
+                        <button type="button" class="btn-ghost w-full" @click="toggleFavorite(selected.id)" :aria-pressed="isFavorite(selected.id).toString()">
+                            <svg class="w-4 h-4" :fill="isFavorite(selected.id) ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                            <span x-show="!isFavorite(selected.id)">{% translate "Save to favorites" %}</span>
+                            <span x-show="isFavorite(selected.id)">{% translate "Saved to favorites" %}</span>
+                        </button>
+                    </div>
+                    </div>
+                </div>
+            </template>
         </div>
     </div>
 </div>
+
+<script>
+function templateShelf() {
+    const shelf = JSON.parse(document.getElementById('template-shelf-data').textContent) || [];
+    const PLACEHOLDER = '999999999';
+    return {
+        shelf,
+        favorites: shelf.filter(item => item.favorite).map(item => item.id),
+        category: 'all',
+        favoritesOnly: false,
+        mineOnly: false,
+        query: '',
+        selectedId: shelf.length ? shelf[0].id : null,
+        variation: 0,
+        // Whether the panel's "versions of the text" section is open: '' or 'versions'.
+        openSection: '',
+        toggleSection(name) { this.openSection = this.openSection === name ? '' : name; },
+        get selected() { return this.shelf.find(item => item.id === this.selectedId) || null; },
+        select(id) { this.selectedId = id; this.variation = 0; },
+        isFavorite(id) { return this.favorites.includes(id); },
+        // Whether a card passes the category, the favorites and "my templates" toggles and the search.
+        shows(el) {
+            const q = this.query.trim().toLowerCase();
+            return (this.category === 'all' || el.dataset.category === this.category)
+                && (!this.favoritesOnly || this.isFavorite(Number(el.dataset.id)))
+                && (!this.mineOnly || el.dataset.mine === '1')
+                && (!q || el.dataset.search.includes(q));
+        },
+        mineCount() { return this.shelf.filter(item => item.mine).length; },
+        countCategory(slug) { return this.shelf.filter(item => item.category === slug).length; },
+        categoryLabel(slug) { return (this.shelf.find(item => item.category === slug) || {}).category_label || ''; },
+        visibleCount() {
+            return [...this.$root.querySelectorAll('[data-id]')].filter(el => this.shows(el)).length;
+        },
+        composeUrl() {
+            const base = this.$root.dataset.composeUrl;
+            return base + '?template=' + this.selectedId + (this.variation ? '&variation=' + this.variation : '');
+        },
+        ideaUrl() { return this.$root.dataset.ideaUrl.replace(PLACEHOLDER, this.selectedId); },
+        toggleFavorite(id) {
+            fetch(this.$root.dataset.favoriteUrl.replace(PLACEHOLDER, id), {
+                method: 'POST',
+                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+            })
+                .then(response => (response.ok ? response.json() : null))
+                .then(data => {
+                    if (!data) return;
+                    this.favorites = data.favorite
+                        ? [...new Set([...this.favorites, id])]
+                        : this.favorites.filter(other => other !== id);
+                });
+        },
+    };
+}
+</script>

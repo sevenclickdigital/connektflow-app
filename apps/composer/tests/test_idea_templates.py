@@ -23,6 +23,10 @@ def _brand(email="dona@example.com"):
     return user, workspace
 
 
+#: The management fields of the template form's (empty) list of text versions.
+NO_VERSIONS = {"variations-TOTAL_FORMS": "0", "variations-INITIAL_FORMS": "0"}
+
+
 def _operator(client):
     operator = User.objects.create_user(
         email="op@example.com", password="x", tos_accepted_at=timezone.now(), is_staff=True
@@ -78,6 +82,7 @@ def test_the_operator_creates_edits_hides_and_deletes_a_template(client):
             "body": "Texto",
             "category": "tip",
             "is_active": "on",
+            **NO_VERSIONS,
         },
     )
     template = IdeaTemplate.objects.get(title="Dica rápida")
@@ -85,10 +90,18 @@ def test_the_operator_creates_edits_hides_and_deletes_a_template(client):
     edit = reverse("composer_staff:idea_template_edit", kwargs={"template_id": template.id})
     client.post(
         edit,
-        {"emoji": "💡", "title": "Dica do dia", "description": "", "body": "", "category": "story", "is_active": "on"},
+        {
+            "emoji": "💡",
+            "title": "Dica do dia",
+            "description": "",
+            "body": "",
+            "category": "story",
+            "is_active": "on",
+            **NO_VERSIONS,
+        },
     )
     # A category that does not exist is refused, and nothing changes.
-    client.post(edit, {"title": "Quebrado", "category": "nao-existe"})
+    client.post(edit, {"title": "Quebrado", "category": "nao-existe", **NO_VERSIONS})
     template.refresh_from_db()
     assert (template.title, template.category) == ("Dica do dia", "story")
 

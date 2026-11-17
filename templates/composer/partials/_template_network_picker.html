@@ -1,0 +1,43 @@
+{% load i18n %}
+{% comment %}
+The networks a template suits, each with its publishing formats: one card per
+network, drawn like the composer's "Where to publish" cards (.target-card,
+.format-toggle in styles.css), with the same Feed / Story / Reels toggles.
+Each format ticked travels as a hidden "targets" value "<network>:<format>"
+(forms.IdeaTemplateForm). Used by the operator's template form and by the
+customer's "send a template" window.
+
+Expects: options (composer.services.template_network_options()), initial (the
+values ticked when it shows, a list).
+{% endcomment %}
+{{ initial|json_script:"template-targets-initial" }}
+<div x-data="{ targets: JSON.parse(document.getElementById('template-targets-initial').textContent) || [],
+               toggle(value) { const at = this.targets.indexOf(value); if (at > -1) this.targets.splice(at, 1); else this.targets.push(value); },
+               picked(network) { return this.targets.some(value => value.startsWith(network + ':')); } }"
+     @template-submitted.camel.window="targets = []">
+    <template x-for="value in targets" :key="value"><input type="hidden" name="targets" :value="value"></template>
+    <div class="flex justify-end mb-2">{% include "partials/_scroll_arrows.html" with ref="networkRow" %}</div>
+    <div class="target-picker" x-ref="networkRow">
+        {% for network in options %}
+        <div class="target-card" :class="picked('{{ network.network }}') && 'is-selected'" style="width: 200px;">
+            <div class="target-card-head">
+                <span class="target-card-avatar" aria-hidden="true">{% include "partials/_platform_icon.html" with platform=network.network size="sm" %}</span>
+                <span class="target-card-name flex-1">{{ network.label }}</span>
+                <span class="target-card-check" x-show="picked('{{ network.network }}')" x-cloak aria-hidden="true">
+                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </span>
+            </div>
+            <div class="target-card-formats">
+                {% for option in network.formats %}
+                <button type="button" class="format-toggle" :class="targets.includes('{{ option.value }}') && 'is-on'"
+                        :aria-pressed="targets.includes('{{ option.value }}').toString()"
+                        aria-label="{{ network.label }} {{ option.short }}" @click="toggle('{{ option.value }}')">
+                    {% include "partials/_format_icon.html" with format=option.format show_default=True %}
+                    {{ option.short }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>

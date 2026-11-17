@@ -9,6 +9,12 @@ urlpatterns = [
     path("create/", views.create_landing, name="create_landing"),
     path("create/templates/", views.create_landing, {"tab": "templates"}, name="create_templates"),
     path("create/templates/<int:template_id>/idea/", views.idea_from_template, name="idea_from_template"),
+    path("create/templates/submit/", views.template_submit, name="template_submit"),
+    path(
+        "create/templates/<int:template_id>/favorite/",
+        views.template_favorite_toggle,
+        name="template_favorite_toggle",
+    ),
     path("create/dates/", views.create_landing, {"tab": "dates"}, name="create_dates"),
     # Idea CRUD (HTMX endpoints)
     path("ideas/upload-media/", views.idea_upload_media, name="idea_upload_media"),
