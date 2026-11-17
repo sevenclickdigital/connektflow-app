@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% load i18n %}
+{# Its panels scroll on their own inside the window (see base.html). #}
+{% block column_height %}min-h-0{% endblock %}
+{% block content_scroll %}min-h-0 overflow-y-auto overflow-x-hidden{% endblock %}
 
 {% block title %}{% if template_mode %}{{ flow_template.name }} - {% translate "Templates" %} - {% translate "Administration" %}{% else %}{% translate "Flow builder" %} - {{ workspace.name }}{% endif %} - Connekt Flow{% endblock %}
 

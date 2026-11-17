@@ -1,26 +1,4 @@
-{% load i18n %}
+{# A new column is added from a column's menu, right after it (tasks/partials/_column.html). #}
 {% for column in columns %}
     {% include "tasks/partials/_column.html" %}
 {% endfor %}
-
-{% if can_edit %}
-{# A new column: a dashed slot at the end of the board that turns into its name field. #}
-<div class="task-new-column" x-data="{ adding: false }">
-    <button type="button" x-show="!adding" @click="adding = true; $nextTick(() => $refs.colName.focus())" class="task-new-column-button">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        {% translate "New column" %}
-    </button>
-    <form x-show="adding" x-cloak class="p-3"
-          hx-post="{% url 'tasks:column_create' workspace_id=workspace.id %}" hx-swap="none"
-          @htmx:after-request="adding = false; $el.reset()">
-        <label class="task-field-label block" for="new-column-name">{% translate "Column name" %}</label>
-        <input id="new-column-name" x-ref="colName" name="name" type="text" maxlength="100" required autocomplete="off"
-               placeholder="{% translate 'E.g. Waiting for the client' %}" @keydown.escape="adding = false"
-               class="form-input-styled w-full text-sm">
-        <div class="flex items-center gap-2 mt-2">
-            <button type="submit" class="btn-brand text-xs px-3 py-1">{% translate "Add" %}</button>
-            <button type="button" @click="adding = false" class="text-xs font-medium text-neutral-600 hover:text-neutral-800 cursor-pointer">{% translate "Cancel" %}</button>
-        </div>
-    </form>
-</div>
-{% endif %}

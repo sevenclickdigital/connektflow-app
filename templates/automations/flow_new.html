@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% load i18n %}
+{# Its panels scroll on their own inside the window (see base.html). #}
+{% block column_height %}min-h-0{% endblock %}
+{% block content_scroll %}min-h-0 overflow-y-auto overflow-x-hidden{% endblock %}
 
 {% block title %}{% translate "New rule" %} - {{ workspace.name }} - Connekt Flow{% endblock %}
 

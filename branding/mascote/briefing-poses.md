@@ -35,7 +35,37 @@ Como pedir uma pose nova do Moti para um card ou tela, e as poses já pensadas p
 - **Expressão:** animado, com o braço livre comemorando.
 - **Detalhes:** poucos confetes roxos e lilases caindo em volta, sem poluir.
 
-## 3. Modelo de pedido para uma pose nova
+## 3. Poses de outras telas
+
+### Tarefas — "Mantenha o trabalho do time andando"
+
+- **Arquivo:** `moti-tarefas` (em uso no card de Tarefas; original em `poses/Robô Mascote com Checklist Roxo.png`)
+- **Pose:** Moti de corpo inteiro, em passo firme para a esquerda, segurando com uma mão uma prancheta grande virada para a frente. Na prancheta, uma checklist de três linhas: as duas primeiras com um visto roxo, a terceira sendo marcada naquele momento por um lápis grande na outra mão.
+- **Expressão:** determinado e satisfeito, o "deixa comigo, está andando".
+- **Detalhes:** um selo redondo de visto (✓) roxo flutuando ao lado da prancheta, com dois tracinhos de brilho. Nada mais em volta.
+- **Leitura a 150 px:** a prancheta é o objeto principal e precisa ocupar cerca de um terço da altura do Moti; os vistos são grossos, para continuarem legíveis pequenos.
+
+Pedido pronto para colar no gerador de imagens:
+
+```
+Pose do Moti para: card de Tarefas, "Mantenha o trabalho do time andando"
+Arquivo: moti-tarefas
+Pose: corpo inteiro, dando um passo firme para a esquerda; numa mão segura uma
+prancheta grande virada para a frente com uma checklist de três linhas — as duas
+primeiras com visto roxo, a terceira sendo marcada agora por um lápis grande que
+ele segura na outra mão
+Expressão: determinado e satisfeito, "deixa comigo"
+Detalhes: um selo redondo de visto roxo flutuando ao lado da prancheta, com dois
+tracinhos de brilho
+Direção: olhando para a esquerda
+Enquadramento: corpo inteiro
+Formato: PNG transparente, sem sombra no chão
+Estilo: o mesmo das poses atuais (moti_pose_joinha_corpo_inteiro,
+moti_trabalhando_no_computador) — 3D branco e roxo, viseira escura com olhos
+lilases, capa roxa; prancheta, lápis e selo só em roxo, lilás e branco
+```
+
+## 4. Modelo de pedido para uma pose nova
 
 Copie e preencha:
 

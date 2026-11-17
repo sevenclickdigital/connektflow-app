@@ -59,7 +59,7 @@
 {% block content %}
 {% with tab="tasks" %}{% include "composer/partials/_ideas_hero.html" %}{% endwith %}
 
-<div x-data="taskBoard()" @keydown.escape.window="closeTask()">
+<div x-data="taskBoard()" @keydown.escape.window="closeTask()" class="flex-1 flex flex-col">
     {% comment %}
     Filters of the board, in the idea board's style: a search over the cards
     (in the browser, kept across board refreshes) and the menus of who is
@@ -122,13 +122,84 @@
         </button>
     </div>
 
-    <div id="task-board" class="task-board mt-4"
+    <div id="task-board" class="task-board flex-1 mt-4"
          hx-get="{{ request.get_full_path }}"
          hx-trigger="tasksChanged from:body"
          hx-swap="innerHTML"
          @htmx:after-swap="applySearch()">
         {% include "tasks/partials/_board.html" %}
     </div>
+
+    {% if can_edit %}
+    {% comment %}
+    The "Add task" window, opened by a column's button for that column. Only
+    the title is required; the checklist, files and the rest are filled in the
+    task itself afterwards. It closes on the server's taskCreated.
+    {% endcomment %}
+    <div class="modal-overlay" x-show="newTask.open" x-cloak x-transition.opacity
+         @click.self="closeNewTask()" @keydown.escape.window="closeNewTask()" @task-created.camel.window="closeNewTask()">
+        <form class="modal-panel is-lg" role="dialog" aria-modal="true" aria-labelledby="new-task-title" x-ref="newTaskForm"
+              hx-post="{% url 'tasks:task_create' workspace_id=workspace.id %}" hx-swap="none">
+            <button type="button" class="modal-close" @click="closeNewTask()" aria-label="{% translate 'Close' %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <div class="modal-header">
+                <div class="modal-icon is-brand">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                </div>
+                <div class="min-w-0">
+                    <h2 id="new-task-title" class="modal-title">{% translate "New task" %}</h2>
+                    <p class="modal-meta">{% translate "In the column" %} <span class="font-semibold text-neutral-700" x-text="newTask.columnName"></span></p>
+                </div>
+            </div>
+
+            <input type="hidden" name="column" :value="newTask.column">
+            <div class="space-y-4">
+                <div>
+                    <label class="task-field-label block" for="new-task-name">{% translate "Title" %}</label>
+                    <input id="new-task-name" x-ref="newTaskTitle" name="title" type="text" maxlength="255" required autocomplete="off"
+                           placeholder="{% translate 'What needs to be done?' %}" class="form-input-styled w-full text-sm">
+                </div>
+                <div>
+                    <label class="task-field-label block" for="new-task-description">{% translate "Description" %}</label>
+                    <textarea id="new-task-description" name="description" rows="3" class="form-input-styled w-full text-sm"
+                              placeholder="{% translate 'Details, links, what done looks like…' %}"></textarea>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="task-field-label block" for="new-task-priority">{% translate "Priority" %}</label>
+                        <select id="new-task-priority" name="priority" class="form-input-styled bb-select w-full text-sm cursor-pointer">
+                            {% for value, label in priorities %}<option value="{{ value }}" {% if value == "medium" %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="task-field-label block" for="new-task-due">{% translate "Due date" %}</label>
+                        <input id="new-task-due" name="due_date" type="date" class="form-input-styled w-full text-sm">
+                    </div>
+                </div>
+                {% if members %}
+                <fieldset>
+                    <legend class="task-field-label">{% translate "Responsible" %}</legend>
+                    <div class="flex flex-wrap gap-2">
+                        {% for member in members %}
+                        <label class="chip has-[:checked]:border-brand-300 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800">
+                            <input type="checkbox" name="assignees" value="{{ member.pk }}" class="sr-only">
+                            <span class="task-avatar !ml-0" aria-hidden="true">{{ member.display_name|make_list|first|upper }}</span>
+                            {{ member.display_name }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+                {% endif %}
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-outline text-sm" @click="closeNewTask()">{% translate "Cancel" %}</button>
+                <button type="submit" class="btn-brand text-sm">{% translate "Create task" %}</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
 
     <div class="task-modal-backdrop" x-show="taskOpen" x-cloak @click.self="closeTask()">
         <div class="task-modal" role="dialog" aria-modal="true" aria-label="{% translate 'Task' %}">
@@ -154,6 +225,20 @@ function taskBoard() {
         taskOpen: false,
         dragId: null,
         query: '',
+        newTask: { open: false, column: '', columnName: '' },
+
+        // The "Add task" window, for the column whose button was pressed.
+        openNewTask(columnId, columnName) {
+            this.newTask = { open: true, column: columnId, columnName: columnName };
+            var self = this;
+            this.$nextTick(function () { self.$refs.newTaskTitle.focus(); });
+        },
+
+        closeNewTask() {
+            if (!this.newTask.open) return;
+            this.newTask.open = false;
+            this.$refs.newTaskForm.reset();
+        },
 
         // Hides the cards whose text does not contain the search.
         applySearch() {

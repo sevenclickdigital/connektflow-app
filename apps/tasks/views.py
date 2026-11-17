@@ -125,6 +125,14 @@ def _board_config(request) -> dict:
     }
 
 
+def _parse_day(value):
+    """A ``YYYY-MM-DD`` value as a date; blank, malformed or impossible (2026-13-01) → None."""
+    try:
+        return parse_date(value or "")
+    except ValueError:
+        return None
+
+
 def _valid_uuid(value) -> list[str]:
     try:
         return [str(uuid.UUID(value))]
@@ -182,15 +190,29 @@ def board(request, workspace_id):
 @require_permission("create_posts")
 @require_POST
 def task_create(request, workspace_id):
+    """The "Add task" window: the title is required; description, priority, due date and assignees are optional.
+
+    Success fires ``taskCreated`` (the window closes) besides refreshing the board.
+    """
     workspace = request.workspace
     title = request.POST.get("title", "").strip()
     if not title:
         return toast_response(tone="error", title=_("Give the task a title."))
     column = None
-    if request.POST.get("column"):
+    if _valid_uuid(request.POST.get("column")):
         column = get_object_or_404(TaskColumn, id=request.POST["column"], workspace=workspace)
-    services.create_task(workspace, request.user, title=title, column=column)
-    return trigger_response({BOARD_CHANGED: True})
+    priority = request.POST.get("priority", "")
+    services.create_task(
+        workspace,
+        request.user,
+        title=title,
+        column=column,
+        description=request.POST.get("description", "").strip(),
+        priority=priority if priority in Task.Priority.values else Task.Priority.MEDIUM,
+        due_date=_parse_day(request.POST.get("due_date")),
+        assignees=services.resolve_assignees(workspace, request.POST.getlist("assignees")),
+    )
+    return toast_response(tone="success", title=_("Task created."), events={BOARD_CHANGED: True, "taskCreated": True})
 
 
 @login_required
@@ -244,7 +266,7 @@ def task_update(request, workspace_id, task_id):
         task.priority = request.POST["priority"]
         fields.append("priority")
     if "due_date" in request.POST:
-        task.due_date = parse_date(request.POST["due_date"]) if request.POST["due_date"] else None
+        task.due_date = _parse_day(request.POST["due_date"])
         fields.append("due_date")
     if fields:
         task.save(update_fields=[*fields, "updated_at"])
@@ -329,13 +351,15 @@ def item_delete(request, workspace_id, task_id, item_id):
 @require_permission("create_posts")
 @require_POST
 def column_create(request, workspace_id):
+    """A new column, right after the column ``after`` names (a column of this board), or at the end."""
     workspace = request.workspace
     name = request.POST.get("name", "").strip()
     if not name:
         return toast_response(tone="error", title=_("Give the column a name."))
-    services.ensure_columns(workspace)
-    top = TaskColumn.objects.for_workspace(workspace.id).aggregate(top=Max("position"))["top"] or 0
-    TaskColumn.objects.create(workspace=workspace, name=name[:100], position=top + 1)
+    after = None
+    if _valid_uuid(request.POST.get("after")):
+        after = get_object_or_404(TaskColumn, id=request.POST["after"], workspace=workspace)
+    services.create_column(workspace, name, after=after)
     return trigger_response({BOARD_CHANGED: True})
 
 
@@ -436,7 +460,7 @@ def request_arts(request, workspace_id):
                 post_caption=request.POST.get("post_caption", "").strip(),
                 format_keys=format_keys,
                 assignees=services.resolve_assignees(workspace, request.POST.getlist("assignees")),
-                due_date=parse_date(request.POST.get("due_date") or "") or None,
+                due_date=_parse_day(request.POST.get("due_date")),
                 idea=idea,
             )
             board_url = f"{reverse('tasks:board', kwargs={'workspace_id': workspace.id})}?task={task.pk}"
@@ -501,7 +525,8 @@ def render_art_request_form(
         task_settings = services.art_settings(workspace)
         chosen_assignees = {str(task_settings.art_assignee_id)} if task_settings.art_assignee_id else set()
     accounts = list(
-        SocialAccount.objects.for_workspace(workspace.id).publishable()
+        SocialAccount.objects.for_workspace(workspace.id)
+        .publishable()
         .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
         .order_by("platform", "account_name")
     )

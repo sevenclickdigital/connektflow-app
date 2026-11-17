@@ -946,16 +946,21 @@
             builder canvas is the one exception: it empties both
             main_padding and content_width to fill the area beside the sidebar.
 
-            By default the column below the page header scrolls, so the header
-            stays put. A page that would rather scroll as a whole, with the
-            scrollbar at the window's edge, empties column_height and sets
-            content_scroll to "overflow-x-clip" (the create area does). <main>
-            keeps min-h-0 so it stays the window's height and is what scrolls.
+            The page scrolls as a whole, as a web page does: <main> (min-h-0, so
+            it stays the window's height) is what scrolls, with the scrollbar at
+            the window's edge, and the page header scrolls away with the content.
+            The content clips sideways without becoming a scroll box itself
+            (overflow-x-clip), so position: sticky inside a page sticks to <main>.
+
+            An app-like screen whose panels scroll on their own inside the
+            window (the inbox, the flow builder, the composer) bounds the column
+            to the window instead: it sets column_height to "min-h-0" and
+            content_scroll to "min-h-0 overflow-y-auto overflow-x-hidden".
             {% endcomment %}
             <main class="flex-1 min-h-0 {% block main_padding %}px-4 py-5 sm:px-6 lg:px-8 lg:py-8{% endblock %} overflow-y-auto flex flex-col">
-                <div class="w-full {% block content_width %}max-w-7xl{% endblock %} mx-auto flex-1 {% block column_height %}min-h-0{% endblock %} flex flex-col">
+                <div class="w-full {% block content_width %}max-w-7xl{% endblock %} mx-auto flex-1 {% block column_height %}{% endblock %} flex flex-col">
                 {% block page_header %}{% endblock %}
-                <div class="flex-1 flex flex-col {% block content_scroll %}min-h-0 overflow-y-auto overflow-x-hidden{% endblock %}">
+                <div class="flex-1 flex flex-col {% block content_scroll %}overflow-x-clip{% endblock %}">
                 {% block content %}{% endblock %}
                 </div>
                 </div>

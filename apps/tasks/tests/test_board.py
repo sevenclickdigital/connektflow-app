@@ -275,3 +275,64 @@ def test_an_unknown_priority_is_ignored(workspace, owner):
     body = _client(owner).get(_url("board", workspace), {"priority": "urgent"}).content.decode()
 
     assert "Any task" in body and "Priority: " not in body
+
+
+def test_a_new_column_goes_right_after_the_one_its_menu_belongs_to(workspace, owner):
+    todo, progress, review, done = services.ensure_columns(workspace)
+    client = _client(owner)
+
+    client.post(_url("column_create", workspace), {"name": "Waiting", "after": progress.id})
+    client.post(_url("column_create", workspace), {"name": "Archive"})
+
+    names = [c.name for c in TaskColumn.objects.for_workspace(workspace.id)]
+    assert names == ["To do", "In progress", "Waiting", "In review", "Done", "Archive"]
+    positions = list(TaskColumn.objects.for_workspace(workspace.id).values_list("position", flat=True))
+    assert positions == list(range(6))
+
+
+def test_a_new_column_cannot_be_placed_after_another_workspaces_column(workspace, owner):
+    other = Workspace.objects.create(organization=workspace.organization, name="Other")
+    foreign = services.ensure_columns(other)[0]
+
+    response = _client(owner).post(_url("column_create", workspace), {"name": "Sneaky", "after": foreign.id})
+
+    assert response.status_code == 404
+    assert not TaskColumn.objects.filter(name="Sneaky").exists()
+
+
+def test_the_add_task_window_saves_its_fields_in_the_column_it_was_opened_for(workspace, owner):
+    editor = _user("editor@example.com", workspace, Role.EDITOR)
+    column = services.ensure_columns(workspace)[1]
+
+    response = _client(owner).post(
+        _url("task_create", workspace),
+        {
+            "title": "Shoot the reel",
+            "column": column.id,
+            "description": "Two takes, vertical.",
+            "priority": "high",
+            "due_date": "2026-12-01",
+            "assignees": [editor.pk],
+        },
+    )
+
+    assert "taskCreated" in response["HX-Trigger"]
+    task = Task.objects.get(title="Shoot the reel")
+    assert task.column == column and task.description == "Two takes, vertical."
+    assert task.priority == "high" and task.due_date == date(2026, 12, 1)
+    assert list(task.assignees.all()) == [editor]
+
+
+def test_the_add_task_window_ignores_what_is_not_valid(workspace, owner):
+    outsider = User.objects.create_user(email="out@example.com", password="x", tos_accepted_at=timezone.now())
+
+    response = _client(owner).post(
+        _url("task_create", workspace),
+        {"title": "Loose", "priority": "urgent", "due_date": "2026-13-01", "assignees": [outsider.pk]},
+    )
+    blank = _client(owner).post(_url("task_create", workspace), {"title": "  "})
+
+    task = Task.objects.get(title="Loose")
+    assert task.priority == "medium" and task.due_date is None and not task.assignees.exists()
+    assert response.status_code == 204
+    assert "taskCreated" not in blank["HX-Trigger"]

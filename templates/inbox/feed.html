@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% load humanize i18n static %}
+{# Its panels scroll on their own inside the window (see base.html). #}
+{% block column_height %}min-h-0{% endblock %}
+{% block content_scroll %}min-h-0 overflow-y-auto overflow-x-hidden{% endblock %}
 
 {% block title %}{% translate "Inbox" %} - {{ workspace.name }} - Connekt Flow{% endblock %}
 {% comment %}Full bleed, like the flow builder: the inbox fills the area beside the sidebar.{% endcomment %}

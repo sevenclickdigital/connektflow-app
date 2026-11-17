@@ -2,7 +2,7 @@
 {% comment %}
 One column of the task board, drawn like the idea board's (.kanban-* in
 styles.css) in the colour picked for it. The team shapes the board freely:
-the column menu renames it, changes its colour, moves it and deletes it (its
+the column menu renames it, adds a new column right after it, changes its colour, moves it and deletes it (its
 tasks go to the column beside it). A column can be closed to a narrow strip
 and opened again; the choice is kept in the browser, per column. A closed
 column still takes a card dropped on it.
@@ -10,7 +10,7 @@ column still takes a card dropped on it.
 Expects: column (with task_list), column_tones, can_edit, workspace.
 {% endcomment %}
 <section class="kanban-column kanban-tone-{{ column.tone }} task-column" data-column-id="{{ column.id }}"
-         x-data="{ menu: false, renaming: false, closed: localStorage.getItem('task-column:{{ column.id }}') === 'closed',
+         x-data="{ menu: false, renaming: false, adding: false, closed: localStorage.getItem('task-column:{{ column.id }}') === 'closed',
                   startRename() { this.renaming = true; this.$nextTick(() => { this.$refs.rename.focus(); this.$refs.rename.select(); }); } }"
          x-effect="localStorage.setItem('task-column:{{ column.id }}', closed ? 'closed' : 'open')"
          :class="closed && 'is-closed'">
@@ -50,12 +50,31 @@ Expects: column (with task_list), column_tones, can_edit, workspace.
                         title="{% translate 'Column options' %}" aria-label="{% translate 'Column options' %}">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
                 </button>
-                <div x-show="menu" x-cloak x-transition @click.outside="menu = false" @keydown.escape="menu = false"
-                     class="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-30 min-w-[200px]">
+                <div x-show="menu" x-cloak x-transition @click.outside="menu = false; adding = false" @keydown.escape="menu = false; adding = false"
+                     class="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-30 min-w-[220px]">
+                    {# "Add a column to the right" turns the menu into the new column's name field. #}
+                    <form x-show="adding" x-cloak class="px-3 py-2"
+                          hx-post="{% url 'tasks:column_create' workspace_id=workspace.id %}" hx-swap="none"
+                          @htmx:after-request="menu = false; adding = false; $el.reset()">
+                        <input type="hidden" name="after" value="{{ column.id }}">
+                        <label class="task-field-label block" for="new-column-{{ column.id }}">{% translate "New column on the right" %}</label>
+                        <input id="new-column-{{ column.id }}" x-ref="newColumn" name="name" type="text" maxlength="100" required autocomplete="off"
+                               placeholder="{% translate 'E.g. Waiting for the client' %}" class="form-input-styled w-full text-sm">
+                        <div class="flex items-center gap-2 mt-2">
+                            <button type="submit" class="btn-brand text-xs px-3 py-1">{% translate "Add" %}</button>
+                            <button type="button" @click="adding = false" class="text-xs font-medium text-neutral-600 hover:text-neutral-800 cursor-pointer">{% translate "Cancel" %}</button>
+                        </div>
+                    </form>
+                    <div x-show="!adding">
                     <button type="button" class="flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50 cursor-pointer"
                             @click="menu = false; startRename()">
                         <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
                         {% translate "Rename column" %}
+                    </button>
+                    <button type="button" class="flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50 cursor-pointer"
+                            @click="adding = true; $nextTick(() => $refs.newColumn.focus())">
+                        <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                        {% translate "Add a column to the right" %}
                     </button>
                     <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500 border-t border-neutral-200 mt-1">{% translate "Colour" %}</div>
                     <div class="flex items-center gap-2 px-3 pb-2 pt-1">
@@ -76,6 +95,7 @@ Expects: column (with task_list), column_tones, can_edit, workspace.
                                 hx-confirm="{% if column.task_list %}{% translate 'Delete this column? Its tasks go to the column beside it.' %}{% else %}{% translate 'Delete this column?' %}{% endif %}"
                                 @click="menu = false">{% translate "Delete column" %}</button>
                     </div>
+                    </div>
                 </div>
             </div>
             {% endif %}
@@ -95,22 +115,11 @@ Expects: column (with task_list), column_tones, can_edit, workspace.
     </div>
 
     {% if can_edit %}
-    <div class="px-2 pb-2" x-show="!closed" x-data="{ adding: false }">
-        <button type="button" x-show="!adding" @click="adding = true; $nextTick(() => $refs.title.focus())" class="kanban-add w-full">
+    <div class="px-2 pb-2" x-show="!closed">
+        <button type="button" @click="openNewTask('{{ column.id }}', $el.dataset.columnName)" data-column-name="{{ column.name }}" class="kanban-add w-full">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             {% translate "Add task" %}
         </button>
-        <form x-show="adding" x-cloak hx-post="{% url 'tasks:task_create' workspace_id=workspace.id %}" hx-swap="none"
-              @htmx:after-request="$el.reset(); $refs.title.focus()">
-            <input type="hidden" name="column" value="{{ column.id }}">
-            <input x-ref="title" name="title" type="text" maxlength="255" required autocomplete="off"
-                   placeholder="{% translate 'Task title' %}" aria-label="{% translate 'Task title' %}" @keydown.escape="adding = false"
-                   class="form-input-styled w-full text-sm">
-            <div class="flex items-center gap-2 mt-2">
-                <button type="submit" class="btn-brand text-xs px-3 py-1">{% translate "Add" %}</button>
-                <button type="button" @click="adding = false" class="text-xs font-medium text-neutral-600 hover:text-neutral-800 cursor-pointer">{% translate "Cancel" %}</button>
-            </div>
-        </form>
     </div>
     {% endif %}
 </section>

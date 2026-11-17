@@ -41,6 +41,23 @@ def ensure_columns(workspace) -> list[TaskColumn]:
     ]
 
 
+def create_column(workspace, name, *, after=None) -> TaskColumn:
+    """A new column named ``name``, right after ``after`` (a column of this board), or at the end.
+
+    The columns to its right move one place along so the order stays a plain 0..n sequence.
+    """
+    columns = ensure_columns(workspace)
+    index = next((i + 1 for i, c in enumerate(columns) if after is not None and c.pk == after.pk), len(columns))
+    with transaction.atomic():
+        column = TaskColumn(workspace=workspace, name=name[:100])
+        columns.insert(index, column)
+        for position, item in enumerate(columns):
+            item.position = position
+        column.save()
+        TaskColumn.objects.bulk_update([c for c in columns if c.pk != column.pk], ["position"])
+    return column
+
+
 def delete_column(column, actor) -> TaskColumn | None:
     """Delete ``column``; its tasks go, in order, to the end of the column beside it.
 
