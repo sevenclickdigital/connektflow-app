@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% load static i18n analytics_extras %}
+
+{% block title %}{% translate "Dashboard" context "menu" %} - {{ workspace.name }} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    {% comment %}
+    Greets by the part of the day in the brand's timezone and sums up the day
+    (workspaces.dashboard.day_summary): each count only when it is there and the
+    person can act on it.
+    {% endcomment %}
+    <div>
+        <h1 class="page-title">
+            {% if day.part_of_day == "morning" %}{% blocktranslate with name=day.first_name %}Good morning, {{ name }}.{% endblocktranslate %}{% elif day.part_of_day == "afternoon" %}{% blocktranslate with name=day.first_name %}Good afternoon, {{ name }}.{% endblocktranslate %}{% else %}{% blocktranslate with name=day.first_name %}Good evening, {{ name }}.{% endblocktranslate %}{% endif %}
+            {% if day.total %}{% blocktranslate count total=day.total %}Your day has {{ total }} thing.{% plural %}Your day has {{ total }} things.{% endblocktranslate %}{% else %}{% translate "Your day is clear." %}{% endif %}
+        </h1>
+        <p class="page-description">
+            {% if day.total %}{% spaceless %}
+            {% if day.posts %}<span>{% blocktranslate count total=day.posts %}{{ total }} post goes out today{% plural %}{{ total }} posts go out today{% endblocktranslate %}</span>{% endif %}
+            {% if day.approvals %}<span class="before:content-['·'] before:mx-1.5 first:before:content-none first:before:mx-0">{% blocktranslate count total=day.approvals %}{{ total }} approval{% plural %}{{ total }} approvals{% endblocktranslate %}</span>{% endif %}
+            {% if day.messages %}<span class="before:content-['·'] before:mx-1.5 first:before:content-none first:before:mx-0">{% blocktranslate count total=day.messages %}{{ total }} message{% plural %}{{ total }} messages{% endblocktranslate %}</span>{% endif %}
+            {% if day.tasks %}<span class="before:content-['·'] before:mx-1.5 first:before:content-none first:before:mx-0">{% blocktranslate count total=day.tasks %}{{ total }} task for today{% plural %}{{ total }} tasks for today{% endblocktranslate %}</span>{% endif %}
+            {% endspaceless %}{% else %}
+            {% blocktranslate with name=workspace.name %}Nothing pending for {{ name }} today.{% endblocktranslate %}
+            {% endif %}
+        </p>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-2">
+        {# Brings back the hero card once it was closed (see composer/partials/_ideas_hero.html). #}
+        <button type="button" x-data="{ heroClosed: localStorage.getItem('cf:ideas-hero-closed:dashboard') === '1' }"
+                x-show="heroClosed" x-cloak
+                @ideas-hero-toggled.window="heroClosed = $event.detail.closed"
+                @click="$dispatch('ideas-hero-open')"
+                class="w-9 h-9 rounded-full flex items-center justify-center bg-brand-50 border border-brand-200 text-brand-700 hover:bg-brand-100 transition-colors cursor-pointer"
+                title="{% translate 'Show tips' %}" aria-label="{% translate 'Show tips' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0012 2z"/></svg>
+        </button>
+        {% if can_view_analytics %}
+        <div class="a-pill-group" role="group" aria-label="{% translate 'Period' %}">
+            {% for n in range_choices %}
+            <a href="?range={{ n }}{% if active_account %}&account={{ active_account.id }}{% endif %}" class="{% if n == days %}active{% endif %}">{% blocktranslate %}{{ n }} days{% endblocktranslate %}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if request.workspace_membership.effective_permissions.create_posts %}
+        {% comment %}A post starts from a day of the calendar (its "+"), so it always has a date.{% endcomment %}
+        <a href="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=calendar" class="btn-brand text-sm px-4 py-2 inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            {% translate "New post" %}
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% with perms=request.workspace_membership.effective_permissions %}
+{% include "composer/partials/_ideas_hero.html" with tab="dashboard" %}
+
+{% comment %}
+What needs someone: each chip only when there is something, and only for who
+can act on it. The counts are the sidebar's (pending approvals, unread inbox)
+plus failed posts and accounts that lost their connection.
+{% endcomment %}
+<div class="flex flex-wrap gap-2 mb-5">
+    {% if failed_posts %}
+    <a href="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=list&status=failed" class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm transition-colors bg-red-50 text-red-700 hover:bg-red-100">
+        <b>{% blocktranslate count total=failed_posts %}{{ total }} post failed{% plural %}{{ total }} posts failed{% endblocktranslate %}</b>
+        <span aria-hidden="true">·</span><span class="underline">{% translate "fix" %}</span>
+    </a>
+    {% endif %}
+    {% if sidebar_pending_approvals and perms.approve_posts %}
+    <a href="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=list&status=pending_review&status=pending_client" class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm transition-colors bg-brand-100 text-brand-800 hover:bg-brand-200">
+        <b>{% blocktranslate count total=sidebar_pending_approvals %}{{ total }} awaiting approval{% plural %}{{ total }} awaiting approval{% endblocktranslate %}</b>
+        <span aria-hidden="true">·</span><span class="underline">{% translate "review" %}</span>
+    </a>
+    {% endif %}
+    {% if sidebar_unread_inbox_count and perms.use_inbox %}
+    <a href="{% url 'inbox:feed' workspace_id=workspace.id %}" class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm transition-colors bg-blue-50 text-blue-700 hover:bg-blue-100">
+        <b>{% blocktranslate count total=sidebar_unread_inbox_count %}{{ total }} unread message{% plural %}{{ total }} unread messages{% endblocktranslate %}</b>
+        <span aria-hidden="true">·</span><span class="underline">{% translate "reply" %}</span>
+    </a>
+    {% endif %}
+    {% for account in reconnect_accounts %}
+    <a href="{% url 'social_accounts:list' workspace_id=workspace.id %}" class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm transition-colors bg-amber-50 text-amber-800 hover:bg-amber-100">
+        <b>{% blocktranslate with name=account.account_name %}{{ name }} disconnected{% endblocktranslate %}</b>
+        <span aria-hidden="true">·</span><span class="underline">{% translate "reconnect" %}</span>
+    </a>
+    {% endfor %}
+    {% if not failed_posts and not reconnect_accounts %}{% if not sidebar_pending_approvals or not perms.approve_posts %}{% if not sidebar_unread_inbox_count or not perms.use_inbox %}
+    <span class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm transition-colors bg-emerald-50 text-emerald-700">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+        <b>{% translate "All caught up: nothing pending." %}</b>
+    </span>
+    {% endif %}{% endif %}{% endif %}
+</div>
+
+<div class="grid gap-5 lg:grid-cols-3 mb-5">
+    {% if can_view_analytics %}
+    {# Results of one network at a time: reach is unique people, so adding up networks would count the same person twice. #}
+    <section class="lg:col-span-2 bg-white border border-neutral-300 rounded-xl p-5 min-w-0">
+        {% if rated_accounts %}
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h2 class="text-base font-semibold text-neutral-950">{% translate "Results" %}</h2>
+            <div class="flex flex-wrap gap-1.5" role="group" aria-label="{% translate 'Network' %}">
+                {% for account in rated_accounts %}
+                <a href="?range={{ days }}&account={{ account.id }}" title="{{ account.account_name }}"
+                   class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors {% if account.id == active_account.id %}border-brand-700 bg-brand-700 text-white{% else %}border-neutral-300 bg-white text-neutral-700 hover:border-brand-300 hover:text-brand-700{% endif %}"
+                   {% if account.id == active_account.id %}aria-current="true"{% endif %}>
+                    <span class="w-4 h-4 rounded-full bg-white flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}</span>
+                    {{ account.pill_label|truncatechars:32 }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% include "analytics/_hero_chart.html" %}
+        {% else %}
+        <div class="h-full flex flex-col items-center justify-center text-center py-8">
+            <img src="{% static 'img/moti/moti-procurando.webp' %}" alt="" class="h-28 mb-3">
+            <h2 class="text-base font-semibold text-neutral-950">{% translate "No results to show yet" %}</h2>
+            <p class="text-sm text-neutral-600 mt-1 max-w-sm">{% translate "Connect a network with reports to follow its reach, followers and engagement here." %}</p>
+            {% if can_connect_accounts %}<a href="{% url 'social_accounts:list' workspace_id=workspace.id %}" class="btn-brand text-sm px-4 py-2 mt-4">{% translate "Connect account" %}</a>{% endif %}
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <div class="{% if not can_view_analytics %}lg:col-span-3 {% endif %}min-w-0 flex">
+        <div class="flex-1 [&>*]:h-full">{% include "workspaces/partials/_dashboard_goal.html" %}</div>
+    </div>
+</div>
+
+{% if can_view_analytics and network_cards %}
+<h2 class="text-base font-semibold text-neutral-950 mb-3">{% translate "By network" %}</h2>
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-5">
+    {% for card in network_cards %}
+    <a href="?range={{ days }}&account={{ card.account.id }}"
+       class="block bg-white border rounded-xl p-4 transition-colors {% if card.account.id == active_account.id %}border-brand-300 ring-2 ring-brand-100{% else %}border-neutral-300 hover:border-brand-300{% endif %}">
+        <div class="flex items-center gap-2.5 mb-3">
+            <div class="relative flex-shrink-0">
+                {% if card.account.avatar_url %}
+                <img src="{{ card.account.avatar_url }}" alt="" class="w-8 h-8 rounded-full object-cover">
+                {% else %}
+                <div class="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center font-bold text-neutral-600">{{ card.account.account_name|make_list|first|upper }}</div>
+                {% endif %}
+                <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=card.account.platform size="sm" %}</div>
+            </div>
+            <span class="text-sm font-semibold text-neutral-950 truncate">{{ card.account.account_name }}</span>
+        </div>
+        {% if card.available %}
+        <dl class="grid grid-cols-3 gap-2">
+            <div class="min-w-0">
+                <dt class="text-xs text-neutral-600">{% translate "Followers" %}</dt>
+                <dd class="text-lg font-bold text-neutral-950">{{ card.followers|fmt_metric }}</dd>
+            </div>
+            <div class="min-w-0">
+                <dt class="text-xs text-neutral-600 truncate">{% translate card.primary.label %}</dt>
+                <dd class="text-lg font-bold text-neutral-950">{% if card.primary.derived.available %}{{ card.primary.derived.value|fmt_metric:card.primary.derived.kind }}{% else %}—{% endif %}</dd>
+                {% if card.primary.derived.available and card.primary.derived.comparison_available %}<dd>{% include "analytics/_delta_chip.html" with delta=card.primary.derived.delta %}</dd>{% endif %}
+            </div>
+            <div class="min-w-0">
+                <dt class="text-xs text-neutral-600">{% translate "Engagement" %}</dt>
+                <dd class="text-lg font-bold text-neutral-950">{% if card.engagement %}{{ card.engagement.value|fmt_metric:"percent" }}{% else %}—{% endif %}</dd>
+                {% if card.engagement and card.engagement.comparison_available %}<dd>{% include "analytics/_delta_chip.html" with delta=card.engagement.delta %}</dd>{% endif %}
+            </div>
+        </dl>
+        {% else %}
+        <p class="text-xs text-neutral-600">{{ card.reason }}</p>
+        {% endif %}
+    </a>
+    {% endfor %}
+    {% if can_connect_accounts %}
+    <a href="{% url 'social_accounts:list' workspace_id=workspace.id %}" class="flex items-center gap-4 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-4 hover:border-brand-300 transition-colors">
+        <img src="{% static 'img/moti/moti-procurando.webp' %}" alt="" class="h-16 flex-shrink-0">
+        <span>
+            <span class="block text-sm font-semibold text-neutral-950">{% translate "Connect another network" %}</span>
+            <span class="block text-xs text-neutral-600 mt-0.5">{% translate "TikTok, LinkedIn, YouTube and more" %}</span>
+            <span class="block text-sm font-semibold text-brand-700 mt-2">+ {% translate "Connect account" %}</span>
+        </span>
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% comment %}
+The team's own work: open tasks assigned to me (not for clients, who have no
+task board) and the next special dates and brand events, each saying whether
+its post is already approved, scheduled or out, or offering to plan one.
+{% endcomment %}
+<div class="grid gap-5 {% if my_tasks is not None %}lg:grid-cols-2{% endif %} mb-5">
+    {% if my_tasks is not None %}
+    <section class="bg-white border border-neutral-300 rounded-xl p-5 min-w-0">
+        <div class="flex items-center justify-between gap-3 mb-1">
+            <h2 class="text-base font-semibold text-neutral-950">{% translate "My tasks" %}{% if my_tasks.total %} <span class="text-sm font-medium text-neutral-500">({{ my_tasks.total }})</span>{% endif %}</h2>
+            <a href="{% url 'tasks:board' workspace_id=workspace.id %}?assignee=me" class="text-sm font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap">{% translate "See board" %} →</a>
+        </div>
+        {% if my_tasks.rows %}
+        <ul class="divide-y divide-neutral-300">
+            {% for row in my_tasks.rows %}
+            <li>
+                <a href="{% url 'tasks:board' workspace_id=workspace.id %}?task={{ row.task.id }}" class="flex items-center gap-3 py-2.5 group">
+                    <span class="w-4 h-4 rounded border-2 border-neutral-400 flex-shrink-0 group-hover:border-brand-500" aria-hidden="true"></span>
+                    <span class="flex-1 min-w-0 text-sm text-neutral-800 truncate group-hover:text-brand-700">{{ row.task.title }}</span>
+                    {% if row.due == "overdue" %}
+                    <span class="flex-shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">{% translate "Overdue" %}</span>
+                    {% elif row.due == "today" %}
+                    <span class="flex-shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">{% translate "Today" %}</span>
+                    {% elif row.due == "upcoming" %}
+                    <span class="flex-shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-neutral-700">{{ row.task.due_date|date:"j M"|lower }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-neutral-600 py-4">{% translate "No open task assigned to you." %}</p>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="bg-white border border-neutral-300 rounded-xl p-5 min-w-0">
+        <div class="flex items-center justify-between gap-3 mb-1">
+            <h2 class="text-base font-semibold text-neutral-950">{% translate "Upcoming dates" %}</h2>
+            <a href="{% url 'composer:create_dates' workspace_id=workspace.id %}" class="text-sm font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap">{% translate "See all" %} →</a>
+        </div>
+        {% if upcoming_dates %}
+        <ul class="divide-y divide-neutral-300">
+            {% for entry in upcoming_dates %}
+            <li class="flex items-center gap-3 py-2.5">
+                <div class="w-10 text-center flex-shrink-0">
+                    <div class="text-lg font-bold leading-none text-neutral-950 tabular-nums">{{ entry.date|date:"j" }}</div>
+                    <div class="text-[10px] font-bold uppercase tracking-wide text-neutral-500 mt-0.5">{{ entry.date|date:"M" }}</div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-neutral-950 truncate" title="{{ entry.name }}">{% if entry.emoji %}{{ entry.emoji }} {% endif %}{{ entry.name }}</p>
+                    <p class="text-xs text-neutral-600">{% if entry.days == 0 %}{% translate "today" %}{% else %}{% blocktranslate count days=entry.days %}in {{ days }} day{% plural %}in {{ days }} days{% endblocktranslate %}{% endif %}</p>
+                </div>
+                {% if entry.has_post %}
+                <span class="flex-shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">{% translate "Post ready" %}</span>
+                {% elif perms.create_posts %}
+                <a href="{% url 'composer:compose' workspace_id=workspace.id %}?scheduled_date={{ entry.date|date:'Y-m-d' }}" class="flex-shrink-0 text-sm font-semibold text-brand-700 hover:text-brand-800">+ {% translate "Plan" context "verb: plan a post" %}</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-neutral-600 py-4">{% translate "No special date or campaign in the next 90 days." %}</p>
+        {% endif %}
+    </section>
+</div>
+
+{% if active_account %}
+<div class="grid gap-5 lg:grid-cols-3">
+    <section class="lg:col-span-2 bg-white border border-neutral-300 rounded-xl p-5 min-w-0">
+        <div class="flex items-center justify-between gap-3 mb-4">
+            <h2 class="text-base font-semibold text-neutral-950">{% blocktranslate with name=active_account.account_name %}Best posts · {{ name }}{% endblocktranslate %}</h2>
+            <a href="{% url 'analytics:account' workspace_id=workspace.id account_id=active_account.id %}?range={{ days }}" class="text-sm font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap">{% translate "See reports" %} →</a>
+        </div>
+        {% if top_posts %}
+        <div class="grid gap-3 grid-cols-2 md:grid-cols-4">
+            {% for row in top_posts %}
+            <a href="{% url 'analytics:account' workspace_id=workspace.id account_id=active_account.id %}?range={{ days }}" class="block rounded-xl border border-neutral-300 overflow-hidden hover:border-brand-300 transition-colors">
+                <div class="relative aspect-square bg-brand-50">
+                    {% if row.media_preview.kind == "image" %}
+                    <img src="{{ row.media_preview.url }}" alt="" class="w-full h-full object-cover" loading="lazy">
+                    {% elif row.media_preview.kind == "video" %}
+                    <video src="{{ row.media_preview.url }}#t=0.5" class="w-full h-full object-cover" muted preload="metadata"></video>
+                    {% endif %}
+                    <span class="absolute top-2 left-2 w-6 h-6 rounded-full bg-white text-xs font-bold text-neutral-950 flex items-center justify-center shadow-sm">{{ forloop.counter }}</span>
+                </div>
+                <div class="p-2.5">
+                    <p class="text-xs font-semibold text-neutral-950 truncate">{{ row.caption|default:_("No caption")|truncatechars:60 }}</p>
+                    <p class="text-xs text-neutral-600 mt-0.5">{{ row.stats|get_stat:primary_metric|fmt_metric }} {% translate primary_label as metric_name %}{{ metric_name|lower }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-neutral-600 py-6 text-center">{% blocktranslate %}No posts published on this network in the last {{ days }} days.{% endblocktranslate %}</p>
+        {% endif %}
+    </section>
+
+    <section class="bg-white border border-neutral-300 rounded-xl p-5 min-w-0">
+        <h2 class="text-base font-semibold text-neutral-950 mb-3">{% translate "What works best" %}</h2>
+        {% if performance.formats %}
+        <ul class="space-y-3">
+            {% for row in performance.formats %}
+            <li>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="text-neutral-800">{{ row.label }} <span class="text-xs text-neutral-500">· {% blocktranslate count total=row.posts %}{{ total }} post{% plural %}{{ total }} posts{% endblocktranslate %}</span></span>
+                    <b class="text-neutral-950">{{ row.rate|fmt_metric:"percent" }}</b>
+                </div>
+                <div class="h-2 rounded-full bg-neutral-100 overflow-hidden"><span class="block h-full rounded-full {% if forloop.first %}bg-brand-600{% else %}bg-brand-400{% endif %}" style="width: {{ row.share }}%"></span></div>
+            </li>
+            {% endfor %}
+        </ul>
+        <div class="mt-4 pt-3 border-t border-neutral-300 text-sm text-neutral-600">
+            {% if performance.best_day %}
+            <p>{% translate "Best day" %}: <b class="text-neutral-950">{{ performance.best_day }}</b></p>
+            <p class="mt-1">{% translate "Best time" %}: <b class="text-neutral-950">{% blocktranslate with start=performance.best_hours.0 end=performance.best_hours.1 %}{{ start }}h–{{ end }}h{% endblocktranslate %}</b></p>
+            {% else %}
+            <p>{% translate "The best day and time show up once there are a few more published posts with results." %}</p>
+            {% endif %}
+            <p class="text-xs text-neutral-500 mt-2">{% translate "Average engagement rate per post (engagements ÷ views or reach), calculated by Connekt Flow from the network's numbers." %}</p>
+        </div>
+        {% else %}
+        <p class="text-sm text-neutral-600">{% blocktranslate %}No published post with results in the last {{ days }} days yet.{% endblocktranslate %}</p>
+        {% endif %}
+    </section>
+</div>
+{% endif %}
+{% endwith %}
+{% endblock %}

@@ -65,7 +65,7 @@
                            hx-target="#analytics-post-table"
                            hx-swap="outerHTML"
                            style="text-decoration: none; color: inherit;">
-                            {{ ml.label }} {% if table.sort_key == ml.key %}<span>{% if table.sort_dir == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}
+                            {% translate ml.label %} {% if table.sort_key == ml.key %}<span>{% if table.sort_dir == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}
                         </a>
                     </th>
                     {% endfor %}

@@ -3,6 +3,10 @@ Reusable styled select dropdown — see the `ui_select` inclusion tag docstring.
 Bind `model` to a property in the enclosing x-data scope (array if `multiple`,
 else string). The panel is position:fixed so an overflow toolbar can't clip it.
 
+With `multiple`, an empty array means every option: all boxes show ticked,
+unticking one keeps the others, and ticking them all empties the array again.
+The last ticked box cannot be unticked, so the filter never shows nothing.
+
 Expressions that reference `model` live in Alpine DIRECTIVES (x-text / :class /
 @click), which resolve via the scope chain — NOT in x-data methods, whose plain
 JS body can't see the parent scope.
@@ -11,6 +15,7 @@ JS body can't see the parent scope.
      x-data="{
         open: false, top: 0, left: 0,
         opts: {{ options_js|json_attr }},
+        uiNext(current, v){ const all = this.opts.map(o => String(o.value)); let sel = current.length ? current.map(String) : all.slice(); if (sel.includes(v)) { if (sel.length === 1) return current; sel = sel.filter(x => x !== v); } else { sel.push(v); } return sel.length === all.length ? [] : sel; },
         uiLabel(v){ if (!v) return '{{ placeholder|escapejs }}'; const o = this.opts.find(o => String(o.value) === String(v)); return o ? o.label : '{{ placeholder|escapejs }}'; },
         uiToggle(e){ if (this.open) { this.open = false; return; } const r = e.currentTarget.getBoundingClientRect(); this.top = r.bottom + 4; this.left = Math.min(r.left, window.innerWidth - 236); this.open = true; }
      }"
@@ -19,7 +24,7 @@ JS body can't see the parent scope.
     <button type="button" @click="uiToggle($event)"
             class="cal-filter-select{% if icon %} has-icon{% endif %} flex items-center gap-1 whitespace-nowrap"
             :class="{% if multiple %}{{ model }}.length{% else %}{{ model }}{% endif %} && 'border-brand-300 text-brand-900'">
-        <span x-text="{% if multiple %}{{ model }}.length ? {{ model }}.length + ' {% translate "selected" as ui_selected %}{{ ui_selected|escapejs }}' : '{{ placeholder|escapejs }}'{% else %}uiLabel({{ model }}){% endif %}"></span>
+        <span x-text="{% if multiple %}{{ model }}.length > 1 ? {{ model }}.length + ' {% translate "selected" as ui_selected %}{{ ui_selected|escapejs }}' : uiLabel({{ model }}[0]){% else %}uiLabel({{ model }}){% endif %}"></span>
     </button>
     <div x-show="open" x-cloak
          :style="`top:${top}px; left:${left}px;`"
@@ -28,12 +33,14 @@ JS body can't see the parent scope.
                 @click="{% if multiple %}{{ model }} = []{% else %}{{ model }} = ''; open = false{% endif %}; {{ onchange }}"
                 class="w-full text-left px-3 py-1.5 text-xs font-semibold hover:bg-neutral-50 border-b border-neutral-100"
                 :class="{% if multiple %}!{{ model }}.length{% else %}!{{ model }}{% endif %} ? 'text-brand-800' : 'text-neutral-600'">
-            {% blocktranslate with label=placeholder %}{{ label }} — all{% endblocktranslate %}
+            {% if multiple %}{{ placeholder }}{% else %}{% blocktranslate with label=placeholder %}{{ label }} — all{% endblocktranslate %}{% endif %}
         </button>
         {% for opt in options %}
         {% if multiple %}
         <label class="flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-800 hover:bg-neutral-50 cursor-pointer">
-            <input type="checkbox" value="{{ opt.value }}" x-model="{{ model }}" @change="{{ onchange }}"
+            <input type="checkbox" value="{{ opt.value }}"
+                   :checked="!{{ model }}.length || {{ model }}.map(String).includes('{{ opt.value|escapejs }}')"
+                   @change="{{ model }} = uiNext({{ model }}, '{{ opt.value|escapejs }}'); $event.target.checked = !{{ model }}.length || {{ model }}.map(String).includes('{{ opt.value|escapejs }}'); {{ onchange }}"
                    class="rounded border-neutral-400 text-brand-700 focus:ring-brand-500">
             {% if opt.icon %}<span class="w-4 h-4 rounded flex items-center justify-center pi-{{ opt.icon }} flex-shrink-0 text-white">{% include "social_accounts/partials/_platform_icon.html" with platform=opt.icon size="3" %}</span>{% endif %}
             <span class="truncate">{{ opt.label }}</span>

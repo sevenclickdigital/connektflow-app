@@ -9,6 +9,16 @@
         <h1 class="page-title">{% translate "Publishing calendar" %}</h1>
         <p class="page-description">{% translate "Plan, organize and track all your content in one place." %}</p>
     </div>
+    <div class="flex flex-wrap items-center justify-end gap-2">
+    {# Brings back the hero card once it was closed (see composer/partials/_ideas_hero.html). #}
+    <button type="button" x-data="{ heroClosed: localStorage.getItem('cf:ideas-hero-closed:calendar') === '1' }"
+            x-show="heroClosed" x-cloak
+            @ideas-hero-toggled.window="heroClosed = $event.detail.closed"
+            @click="$dispatch('ideas-hero-open')"
+            class="w-9 h-9 rounded-full flex items-center justify-center bg-brand-50 border border-brand-200 text-brand-700 hover:bg-brand-100 transition-colors cursor-pointer"
+            title="{% translate 'Show tips' %}" aria-label="{% translate 'Show tips' %}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0012 2z"/></svg>
+    </button>
     <!-- List / Calendar / Board toggle -->
     <div class="a-pill-group" x-data="{ activeMode: '{{ mode|default:'calendar' }}' }">
             <button class="{% if mode == 'list' %}active{% endif %}" :class="{ active: activeMode === 'list' }"
@@ -38,6 +48,7 @@
                 <svg class="w-3.5 h-3.5 inline -mt-px mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="4" height="8" rx="1"/></svg>
                 {% translate "Board" %}
             </button>
+    </div>
     </div>
 </div>
 {% endblock %}
@@ -531,6 +542,7 @@
 {% endblock %}
 
 {% block content %}
+{% include "composer/partials/_ideas_hero.html" with tab="calendar" %}
 <div id="publish-body" class="flex-1 flex flex-col min-h-0">
     {% if mode == 'list' %}
         {% include "calendar/partials/publish_list_shell.html" %}
@@ -663,7 +675,7 @@ function bulkBar() {
 function statusBoard() {
     return {
         dragId: null,
-        platform: '{{ active_filters.platforms.0|default:""|escapejs }}',
+        platform: [{% for code in active_filters.platforms %}'{{ code|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
         activeTag: '{{ active_filters.tags.0|default:""|escapejs }}',
         periodDate: '{{ target_date|date:"Y-m-d" }}',
         init() {
@@ -673,7 +685,7 @@ function statusBoard() {
         },
         _params() {
             const params = new URLSearchParams({ mode: 'board', date: this.periodDate });
-            if (this.platform) params.set('platform', this.platform);
+            this.platform.forEach((code) => params.append('platform', code));
             if (this.activeTag) params.set('tag', this.activeTag);
             return params;
         },
@@ -683,10 +695,6 @@ function statusBoard() {
             params.set('_columns', '1');
             htmx.ajax('GET', '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString(),
                       { target: '#board-content', swap: 'innerHTML' });
-        },
-        filterPlatform(platform) {
-            this.platform = platform;
-            this.reloadBoard();
         },
         // Toolbar navigation (_period_toolbar.html): another month, same filters.
         goToPeriod(date) {
@@ -749,7 +757,7 @@ function calendarApp() {
         draggedPlatformPostId: null,
         calendarFilters: {
             status: '{{ active_filters.statuses.0|default:"" }}',
-            platform: '{{ active_filters.platforms.0|default:""|escapejs }}',
+            platform: [{% for code in active_filters.platforms %}'{{ code|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
             tag: '{{ active_filters.tags.0|default:"" }}',
         },
 
@@ -763,7 +771,7 @@ function calendarApp() {
             params.set('view', this.activeView);
             params.set('date', '{{ target_date|date:"Y-m-d" }}');
             if (this.calendarFilters.status) params.set('status', this.calendarFilters.status);
-            if (this.calendarFilters.platform) params.set('platform', this.calendarFilters.platform);
+            this.calendarFilters.platform.forEach((code) => params.append('platform', code));
             if (this.calendarFilters.tag) params.set('tag', this.calendarFilters.tag);
             const url = '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString();
             htmx.ajax('GET', url, {target: '#calendar-content', swap: 'innerHTML'});
@@ -775,14 +783,9 @@ function calendarApp() {
             const params = new URLSearchParams({ mode: 'calendar', view: view || this.activeView });
             if (date) params.set('date', date);
             if (this.calendarFilters.status) params.set('status', this.calendarFilters.status);
-            if (this.calendarFilters.platform) params.set('platform', this.calendarFilters.platform);
+            this.calendarFilters.platform.forEach((code) => params.append('platform', code));
             if (this.calendarFilters.tag) params.set('tag', this.calendarFilters.tag);
             window.location = '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString();
-        },
-
-        filterPlatform(platform) {
-            this.calendarFilters.platform = platform;
-            this.reloadCalendar();
         },
 
         init() {
@@ -927,7 +930,7 @@ function calendarApp() {
             body.innerHTML = '<div class="p-8 text-center text-xs text-neutral-500">' + body.dataset.loading + '</div>';
             const params = new URLSearchParams({ date: this.dayModal.date });
             if (this.calendarFilters.status) params.set('status', this.calendarFilters.status);
-            if (this.calendarFilters.platform) params.set('platform', this.calendarFilters.platform);
+            this.calendarFilters.platform.forEach((code) => params.append('platform', code));
             if (this.calendarFilters.tag) params.set('tag', this.calendarFilters.tag);
             htmx.ajax('GET', '{% url "calendar:day_posts" workspace_id=workspace.id %}?' + params.toString(),
                       { target: body, swap: 'innerHTML' });
@@ -1080,7 +1083,7 @@ function calendarApp() {
 function publishList() {
     return {
         activeTab: '{{ active_tab|default:"queue" }}',
-        platform: '{{ active_filters.platforms.0|default:""|escapejs }}',
+        platform: [{% for code in active_filters.platforms %}'{{ code|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
         activeTag: '{{ active_filters.tags.0|default:""|escapejs }}',
         // The month shown; the tabs list only what falls in it.
         periodDate: '{{ target_date|date:"Y-m-d" }}',
@@ -1101,16 +1104,11 @@ function publishList() {
             this.reloadTab();
         },
 
-        filterPlatform(platform) {
-            this.platform = platform;
-            this.reloadTab();
-        },
-
         // Toolbar navigation (_period_toolbar.html): another month, same tab and filters.
         goToPeriod(date) {
             const params = new URLSearchParams({ mode: 'list', tab: this.activeTab });
             if (date) params.set('date', date);
-            if (this.platform) params.set('platform', this.platform);
+            this.platform.forEach((code) => params.append('platform', code));
             if (this.activeTag) params.set('tag', this.activeTag);
             window.location = '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString();
         },
@@ -1122,7 +1120,7 @@ function publishList() {
             // user can no longer see.
             Alpine.store('sel').clear();
             const params = new URLSearchParams({ date: this.periodDate });
-            if (this.platform) params.set('platform', this.platform);
+            this.platform.forEach((code) => params.append('platform', code));
             if (this.activeTag) params.set('tag', this.activeTag);
             const url = this.tabUrls[this.activeTab] + '?' + params.toString();
             htmx.ajax('GET', url, {target: '#tab-content', swap: 'innerHTML'});

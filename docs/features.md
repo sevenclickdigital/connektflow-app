@@ -51,7 +51,9 @@ X publishes text with up to 4 photos or one video/GIF through the v2 API (`provi
 - Deletion: the owner requests it. That sets `deletion_requested_at` and schedules `execute_scheduled_org_deletion` (`apps/organizations/tasks.py`) for **14 days** later, and the deletion can be cancelled during that window. YouTube connections and copied YouTube API data are removed immediately when deletion is requested (`apps/social_accounts/youtube_compliance.py`). After deletion the owner is redirected to `CUSTOM_SIGNUP_URL` if it is set.
 
 ### F-1.2 Workspaces — `apps/workspaces/`
-- `Workspace`: name, icon, description, timezone, primary/secondary brand colour, default hashtags, default first comment, approval workflow mode, `is_archived`.
+- `Workspace`: name, icon, description, timezone, primary/secondary brand colour, default hashtags, default first comment, approval workflow mode, `is_archived`, `monthly_post_goal`.
+- **Dashboard** (`/workspaces/<id>/dashboard/`, `views.workspace_dashboard`, numbers in `dashboard.py`): the home page (`/` sends the last used brand there) and the sidebar's "Dashboard". The header greets by the part of the day in the brand's timezone and sums up the day (`dashboard.day_summary`: posts going out today, pending approvals, unread messages, my tasks due today or overdue — each only for who can act on it; the approval and unread counts are `approvals.services.pending_approval_count` and `inbox.services.unread_count`, the same as the sidebar badges). Moti's hero card (`_ideas_hero.html`, tab `dashboard`); chips for what needs someone, each only for who can act on it (failed posts, pending approvals, unread inbox, accounts to reconnect) or "all caught up"; the reports page's area chart (`analytics/_hero_chart.html`) for one network at a time, chosen by pills (`?account=`) — reach is unique people, so networks are never added up; the monthly goal card; one card per connected network (followers, primary metric, engagement rate, with deltas); "My tasks" (open tasks assigned to me, most urgent first, opening on the board with `?task=`; not for clients) and "Upcoming dates" (`calendar.services.upcoming_dates` for 90 days, with "Post ready" when an approved, scheduled or published post falls on the day, else "+ Plan" into the composer with that date); the network's four best posts; and "what works best" (`analytics.services.post_performance`: average engagement rate per format, and the best weekday and 3-hour block once there are 6 rated posts). `?range=7|30|90` sets the period. Analytics parts need `view_analytics`.
+- **Monthly goal**: owners and managers set it on the goal card ("Set goal" / pencil → `dashboard_goal`, 1–999, empty removes it). Posts count once whatever the number of networks: published this month, plus scheduled for the rest of the month, against the goal, with a pace note (reached, covered by the schedule, on track, behind).
 - Create, list and settings pages, plus a separate approvals settings page (`/workspaces/<id>/settings/approvals/`).
 - Cross-workspace calendar at `/organizations/calendar/` (`apps/organizations/views.py`).
 - A workspace can connect at most `MAX_ACCOUNTS_PER_PLATFORM` (default **1**) account per platform (`apps/social_accounts/views.py`). Reconnecting an account that already exists is always allowed.
@@ -77,7 +79,7 @@ X publishes text with up to 4 photos or one video/GIF through the v2 API (`provi
 
 ### F-1.7 Client onboarding — `apps/onboarding/`
 - **Connection links** (`ConnectionLink`): a manager creates a tokenised link with an expiry of 1 to 90 days (default 7), sends it by email, and can revoke it. The client opens a public page with no login, connects accounts through OAuth (or Bluesky/Mastodon forms), and the accounts land in the workspace. Each connection is recorded in `ConnectionLinkUsage` and triggers a `client_connected_accounts` notification.
-- **Get Started checklist** on the workspace dashboard (`checklist.py`): connect accounts, create first post, create first idea, invite team. It can be dismissed per user (`OnboardingChecklist`).
+- **Get Started checklist**, a popup on every brand page (`checklist.py`, `onboarding/partials/_checklist.html` from `base.html`): connect accounts, create first post, create first idea, invite team. It can be dismissed per user (`OnboardingChecklist`).
 
 ---
 
@@ -358,7 +360,7 @@ People and companies the workspace talks to (sidebar: Engajar → Contatos, for 
 - F-1.6 Settings UI for org/workspace defaults (overrides only through admin).
 - F-1.7 "First content batch" onboarding step.
 - F-2.1 AI writing assist in the composer.
-- F-2.3 Optimal posting-time suggestions (only the setting keys exist).
+- F-2.3 Optimal posting-time suggestions in the composer (only the setting keys exist; the dashboard shows the best day and time from past posts).
 - F-4.2 Cross-account / cross-workspace analytics dashboard and engagement alerts.
 - F-4.3 Report builder (sections, templates, PDF export, scheduled reports, share links).
 - F-5.1 Two-factor authentication (TOTP fields only; no setup or enforcement).

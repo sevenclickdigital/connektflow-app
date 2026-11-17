@@ -22,7 +22,7 @@
     <div style="flex: 1 1 215px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; align-content: center;">
         {% for p in engagement.parts %}
         <div style="padding: 11px 13px; border-radius: var(--radius-lg); background: var(--surface-1); border: 1px solid var(--border);">
-            <div style="font-size: 0.6875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">{{ p.label }}</div>
+            <div style="font-size: 0.6875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">{% translate p.label %}</div>
             <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 6px;">
                 <span class="a-mono" style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">{{ p.derived.value|fmt_metric:p.derived.kind }}</span>
                 {% include "analytics/_delta_chip.html" with delta=p.derived.delta %}

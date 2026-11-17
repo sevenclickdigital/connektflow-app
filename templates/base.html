@@ -719,9 +719,11 @@
                 its children; otherwise it remembers how it was left. Items with
                 no place in the layout yet sit under "More" so no destination is
                 lost; ones announced but not built show as "Soon", without a link.
-                Dashboard points at "/" (the home redirect) until it has a page.
+                Dashboard opens the current brand's dashboard; without a brand, "/"
+                (the home redirect) picks one.
                 {% endcomment %}
-                <a href="/" class="mb-0.5 sidebar-nav-item ">
+                <a href="{% if request.workspace %}{% url 'workspaces:dashboard' workspace_id=request.workspace.id %}{% else %}/{% endif %}"
+                   class="mb-0.5 sidebar-nav-item {% if request.resolver_match.app_name == 'workspaces' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                     <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>
                     <span class="sidebar-nav-label">{% translate "Dashboard" context "menu" %}</span>
                 </a>
@@ -1125,10 +1127,14 @@
         // ``(retries || 0) + 1`` string-concatenate the event each tick and
         // the ``> 30`` cap below would never trip when Chart.js is offline.
         document.addEventListener('DOMContentLoaded', function () { bbInitHeroChart(); });
-        document.body.addEventListener('htmx:afterSwap', function(evt) {
-            var target = evt.detail && evt.detail.target;
-            if (target && target.id === 'analytics-hero-chart') {
-                bbInitHeroChart();
+        /* Redraw once the swapped chart has settled, on the next frame: drawn
+           from htmx:afterSwap the canvas could be measured before its box had
+           its final size, and only part of the chart showed. The chip swap is
+           outerHTML, so the settled element is the new #analytics-hero-chart. */
+        document.body.addEventListener('htmx:afterSettle', function(evt) {
+            var el = evt.target;
+            if (el && el.id === 'analytics-hero-chart') {
+                requestAnimationFrame(function () { bbInitHeroChart(); });
             }
         });
 

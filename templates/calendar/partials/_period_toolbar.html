@@ -5,10 +5,11 @@ picker (January to December of the year shown), the campaigns and special dates 
 and the filters.
 Times follow the workspace timezone, so there is no timezone filter.
 The enclosing Alpine component provides goToPeriod(date, view) — it keeps the mode, tab
-and filters — and the models named by status_model / tag_model, reloaded by onchange.
+and filters — and the models named by platform_model / status_model / tag_model, reloaded by onchange.
 Context: period_label, prev_date, next_date, month_options, show_drafts,
-show_holidays, show_events, can_create_posts, status_choices, all_tags, workspace;
-nav_query (e.g. "mode=list&tab=queue"), status_model (optional), tag_model, onchange,
+show_holidays, show_events, can_create_posts, status_choices, all_tags, platform_options, workspace;
+nav_query (e.g. "mode=list&tab=queue"), platform_model (an array: the networks shown, empty = all),
+status_model (optional), tag_model, onchange,
 drafts_switch (the calendar's "Drafts" button; the list and board have their own drafts views).
 {% endcomment %}
 {% url 'calendar:calendar' workspace_id=workspace.id as publish_url %}
@@ -78,6 +79,9 @@ drafts_switch (the calendar's "Drafts" button; the list and board have their own
                 class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all duration-150 {% if show_holidays %}border-amber-300 bg-amber-50 text-amber-700{% else %}border-neutral-300 text-neutral-600 hover:bg-neutral-50{% endif %}">
             🎉 {% translate "Special dates" %}
         </button>
+        {% endif %}
+        {% if platform_options %}
+        {% ui_select model=platform_model options=platform_options multiple=True onchange=onchange placeholder=_("All networks") icon="channel" %}
         {% endif %}
         {% if status_model %}
         {% ui_select model=status_model options=status_choices onchange=onchange placeholder=_("All Posts") icon="status" %}

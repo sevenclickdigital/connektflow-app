@@ -246,7 +246,7 @@ def test_an_account_already_in_use_is_not_sent_back_to_the_welcome_step(client):
 
     landing = client.get(reverse("dashboard"), follow=True)
 
-    assert landing.redirect_chain[-1][0] == reverse("calendar:calendar", kwargs={"workspace_id": workspace.id})
+    assert landing.redirect_chain[-1][0] == reverse("workspaces:dashboard", kwargs={"workspace_id": workspace.id})
 
 
 @pytest.mark.django_db

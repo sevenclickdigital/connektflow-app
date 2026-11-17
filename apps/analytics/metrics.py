@@ -7,27 +7,31 @@ mirrors the design's ``analytics/data.js``.
 
 from __future__ import annotations
 
+from django.utils.translation import gettext_noop
+
 # Kinds drive formatting (count vs percent vs minutes) in templates.
+# Labels stay in English here — the agent API returns them as they are — and are
+# only marked for the catalogue: templates translate them with {% translate label %}.
 METRICS: dict[str, dict[str, str]] = {
-    "impressions": {"label": "Impressions", "kind": "count"},
-    "reach": {"label": "Reach", "kind": "count"},
-    "views": {"label": "Views", "kind": "count"},
-    "plays": {"label": "Plays", "kind": "count"},
-    "likes": {"label": "Likes", "kind": "count"},
-    "reactions": {"label": "Reactions", "kind": "count"},
-    "comments": {"label": "Comments", "kind": "count"},
-    "replies": {"label": "Replies", "kind": "count"},
-    "shares": {"label": "Shares", "kind": "count"},
-    "reposts": {"label": "Reposts", "kind": "count"},
-    "saves": {"label": "Saves", "kind": "count"},
-    "clicks": {"label": "Link clicks", "kind": "count"},
-    "outbound": {"label": "Outbound clicks", "kind": "count"},
-    "follows": {"label": "New follows", "kind": "count"},
-    "followers": {"label": "Followers", "kind": "count"},
-    "subscribers": {"label": "Subscribers", "kind": "count"},
-    "watch_time": {"label": "Watch time", "kind": "minutes"},
-    "avg_view_pct": {"label": "Avg view %", "kind": "percent"},
-    "engagement": {"label": "Engagement rate", "kind": "percent"},
+    "impressions": {"label": gettext_noop("Impressions"), "kind": "count"},
+    "reach": {"label": gettext_noop("Reach"), "kind": "count"},
+    "views": {"label": gettext_noop("Views"), "kind": "count"},
+    "plays": {"label": gettext_noop("Plays"), "kind": "count"},
+    "likes": {"label": gettext_noop("Likes"), "kind": "count"},
+    "reactions": {"label": gettext_noop("Reactions"), "kind": "count"},
+    "comments": {"label": gettext_noop("Comments"), "kind": "count"},
+    "replies": {"label": gettext_noop("Replies"), "kind": "count"},
+    "shares": {"label": gettext_noop("Shares"), "kind": "count"},
+    "reposts": {"label": gettext_noop("Reposts"), "kind": "count"},
+    "saves": {"label": gettext_noop("Saves"), "kind": "count"},
+    "clicks": {"label": gettext_noop("Link clicks"), "kind": "count"},
+    "outbound": {"label": gettext_noop("Outbound clicks"), "kind": "count"},
+    "follows": {"label": gettext_noop("New follows"), "kind": "count"},
+    "followers": {"label": gettext_noop("Followers"), "kind": "count"},
+    "subscribers": {"label": gettext_noop("Subscribers"), "kind": "count"},
+    "watch_time": {"label": gettext_noop("Watch time"), "kind": "minutes"},
+    "avg_view_pct": {"label": gettext_noop("Avg view %"), "kind": "percent"},
+    "engagement": {"label": gettext_noop("Engagement rate"), "kind": "percent"},
 }
 
 # Metrics that exist for the account/channel but never per individual post

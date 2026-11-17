@@ -1,0 +1,235 @@
+"""Read-side services for the brand dashboard (workspaces.views.workspace_dashboard).
+
+The dashboard only gathers: the analytics numbers come from
+apps.analytics.services (the same calculations as the reports page), the
+pending counts from the same statuses the sidebar badges use.
+"""
+
+from __future__ import annotations
+
+import calendar
+from datetime import date, datetime, time, timedelta
+from typing import Any
+
+from django.db.models import Q
+from django.utils import timezone
+
+from apps.analytics import services as analytics
+from apps.composer.models import PlatformPost
+from apps.social_accounts.models import SocialAccount
+
+
+def reconnect_accounts(workspace) -> list[SocialAccount]:
+    """The brand's accounts that lost their connection and need reconnecting."""
+    return [
+        account
+        for account in SocialAccount.objects.publishable()
+        .filter(workspace=workspace)
+        .order_by("platform", "account_name")
+        if account.needs_reconnect
+    ]
+
+
+def failed_post_count(workspace) -> int:
+    """Posts with at least one network whose publication failed."""
+    return (
+        PlatformPost.objects.filter(post__workspace_id=workspace.id, status=PlatformPost.Status.FAILED)
+        .values("post_id")
+        .distinct()
+        .count()
+    )
+
+
+def _month_bounds(today: date, tz) -> tuple[datetime, datetime]:
+    first = today.replace(day=1)
+    last = first.replace(day=calendar.monthrange(first.year, first.month)[1])
+    start = timezone.make_aware(datetime.combine(first, time.min), tz)
+    end = timezone.make_aware(datetime.combine(last + timedelta(days=1), time.min), tz)
+    return start, end
+
+
+def month_goal_progress(workspace, today: date, tz) -> dict[str, Any]:
+    """Where the brand stands against its monthly post goal.
+
+    Counts posts, not publications: one post sent to Instagram and Facebook
+    counts once. ``published`` are posts with a network published this month;
+    ``scheduled`` are the others with a network still scheduled for a later
+    day of this month. ``pace`` says how the month is going, for the card's
+    note: "done" (goal covered by published posts), "covered" (published +
+    scheduled reach it), "on_track" (published keeps up with the days gone)
+    or "behind"; ``None`` without a goal.
+    """
+    start, end = _month_bounds(today, tz)
+    in_month = PlatformPost.objects.filter(post__workspace_id=workspace.id)
+    published_ids = set(
+        in_month.filter(
+            status=PlatformPost.Status.PUBLISHED, published_at__gte=start, published_at__lt=end
+        ).values_list("post_id", flat=True)
+    )
+    scheduled_ids = set(
+        in_month.filter(status__in=(PlatformPost.Status.SCHEDULED, PlatformPost.Status.PUBLISHING))
+        .filter(
+            Q(scheduled_at__gte=start, scheduled_at__lt=end)
+            | Q(scheduled_at__isnull=True, post__scheduled_at__gte=start, post__scheduled_at__lt=end)
+        )
+        .values_list("post_id", flat=True)
+    )
+    published = len(published_ids)
+    scheduled = len(scheduled_ids - published_ids)
+    goal = workspace.monthly_post_goal or None
+
+    days_in_month = calendar.monthrange(today.year, today.month)[1]
+    pace = None
+    remaining = 0
+    percent = 0
+    if goal:
+        remaining = max(goal - published - scheduled, 0)
+        percent = min(round((published + scheduled) / goal * 100), 100)
+        if published >= goal:
+            pace = "done"
+        elif published + scheduled >= goal:
+            pace = "covered"
+        elif published >= goal * today.day / days_in_month:
+            pace = "on_track"
+        else:
+            pace = "behind"
+    return {
+        "goal": goal,
+        "published": published,
+        "scheduled": scheduled,
+        "remaining": remaining,
+        "percent": percent,
+        "pace": pace,
+        "days_left": days_in_month - today.day,
+        "month": today.replace(day=1),
+    }
+
+
+def network_card(account: SocialAccount, days: int, bundle: dict[str, Any] | None = None) -> dict[str, Any]:
+    """One account's headline numbers for the "By network" row: followers, the
+    platform's primary metric and the engagement rate, each with its change
+    against the previous period when the platform gives one."""
+    # Set by analytics.services.analytics_accounts, which the accounts come from.
+    if getattr(account, "analytics_verdict", None) is not None:
+        return {"account": account, "available": False, "reason": getattr(account, "analytics_unavailable_reason", "")}
+    if bundle is None:
+        bundle = analytics.account_analytics_bundle(account, days)
+    chart = analytics.hero_chart_data(account, days, bundle=bundle)
+    engagement = analytics.engagement_card(account, days, bundle=bundle)
+    return {
+        "account": account,
+        "available": True,
+        "followers": account.follower_count,
+        "primary": chart,
+        "engagement": engagement["rate"] if engagement and engagement["rate"].denominator else None,
+    }
+
+
+def my_open_tasks(workspace, user, today: date, limit: int = 5) -> dict[str, Any]:
+    """The tasks assigned to ``user`` that are not in a done column, most urgent
+    first (overdue, then by due date; undated last). Each row carries ``due``:
+    "overdue", "today", "upcoming" or ``None``. ``total`` counts them all."""
+    from django.db.models import F
+
+    from apps.tasks.models import Task
+
+    open_tasks = Task.objects.for_workspace(workspace.id).filter(assignees=user, column__is_done=False)
+    rows = []
+    for task in open_tasks.order_by(F("due_date").asc(nulls_last=True), "-created_at")[:limit]:
+        if task.due_date is None:
+            due = None
+        elif task.due_date < today:
+            due = "overdue"
+        elif task.due_date == today:
+            due = "today"
+        else:
+            due = "upcoming"
+        rows.append({"task": task, "due": due})
+    return {"rows": rows, "total": open_tasks.count()}
+
+
+# Statuses that mean the date already has its post on the way.
+_READY_STATUSES = (
+    PlatformPost.Status.APPROVED,
+    PlatformPost.Status.SCHEDULED,
+    PlatformPost.Status.PUBLISHING,
+    PlatformPost.Status.PUBLISHED,
+)
+
+
+def upcoming_dates_with_posts(workspace, today: date, tz, limit: int = 4) -> list[dict[str, Any]]:
+    """The next special dates and brand events (calendar.services.upcoming_dates,
+    so the calendar's own settings decide which show), each with ``has_post``:
+    whether a post is approved, scheduled or out on that day."""
+    from apps.calendar.services import upcoming_dates
+
+    entries = upcoming_dates(workspace, today, days=90)[:limit]
+    if not entries:
+        return []
+    start = timezone.make_aware(datetime.combine(entries[0]["date"], time.min), tz)
+    end = timezone.make_aware(datetime.combine(entries[-1]["date"] + timedelta(days=1), time.min), tz)
+    moments = PlatformPost.objects.filter(post__workspace_id=workspace.id, status__in=_READY_STATUSES).filter(
+        Q(published_at__gte=start, published_at__lt=end)
+        | Q(scheduled_at__gte=start, scheduled_at__lt=end)
+        | Q(scheduled_at__isnull=True, post__scheduled_at__gte=start, post__scheduled_at__lt=end)
+    )
+    days_with_posts = set()
+    for published, scheduled, post_scheduled in moments.values_list(
+        "published_at", "scheduled_at", "post__scheduled_at"
+    ):
+        moment = published or scheduled or post_scheduled
+        if moment is not None:
+            days_with_posts.add(timezone.localtime(moment, tz).date())
+    return [{**entry, "has_post": entry["date"] in days_with_posts} for entry in entries]
+
+
+def day_summary(workspace, user, perms: dict, today: date, tz, *, is_team: bool) -> dict[str, Any]:
+    """What the header greets with: the part of the day, the person's first name
+    and the day's counts, each only for who can act on it (``None`` otherwise):
+    posts going out today (scheduled, publishing or already out today),
+    pending approvals, unread messages and open tasks of theirs due today or
+    overdue (only for the team, ``is_team``: clients have no task board).
+    ``total`` adds up the ones shown."""
+    from apps.approvals.services import pending_approval_count
+    from apps.inbox.services import unread_count
+    from apps.tasks.models import Task
+
+    start, end = (timezone.make_aware(datetime.combine(d, time.min), tz) for d in (today, today + timedelta(days=1)))
+    going_out = (
+        PlatformPost.objects.filter(
+            post__workspace_id=workspace.id,
+            status__in=(PlatformPost.Status.SCHEDULED, PlatformPost.Status.PUBLISHING, PlatformPost.Status.PUBLISHED),
+        )
+        .filter(
+            Q(published_at__gte=start, published_at__lt=end)
+            | Q(published_at__isnull=True, scheduled_at__gte=start, scheduled_at__lt=end)
+            | Q(
+                published_at__isnull=True,
+                scheduled_at__isnull=True,
+                post__scheduled_at__gte=start,
+                post__scheduled_at__lt=end,
+            )
+        )
+        .values("post_id")
+        .distinct()
+        .count()
+    )
+    counts = {
+        "posts": going_out,
+        "approvals": pending_approval_count(workspace.id) if perms.get("approve_posts") else None,
+        "messages": unread_count(workspace.id) if perms.get("use_inbox") else None,
+        "tasks": (
+            Task.objects.for_workspace(workspace.id)
+            .filter(assignees=user, column__is_done=False, due_date__lte=today)
+            .count()
+            if is_team
+            else None
+        ),
+    }
+    hour = timezone.localtime(timezone=tz).hour
+    return {
+        "part_of_day": "morning" if 5 <= hour < 12 else "afternoon" if 12 <= hour < 18 else "evening",
+        "first_name": (user.first_name or user.display_name).split()[0],
+        **counts,
+        "total": sum(v for v in counts.values() if v),
+    }

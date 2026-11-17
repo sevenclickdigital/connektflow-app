@@ -115,6 +115,38 @@ def unavailable_reason(platform: str, enabled_platforms: list[str] | None = None
     return verdict.message if verdict else None
 
 
+def analytics_accounts(workspace, enabled_platforms: list[str]) -> list[SocialAccount]:
+    """Every connected account in the workspace, annotated with why (if at all)
+    analytics is unavailable for it (``analytics_verdict`` and
+    ``analytics_unavailable_reason``).
+
+    Deliberately unfiltered by platform: an account whose platform is switched
+    off in ``AnalyticsPlatformConfig`` used to be dropped here, so it vanished
+    from the account switcher with nothing anywhere saying why. It stays in the
+    list and carries its verdict, which the reports page and the dashboard
+    both render.
+    """
+    accounts = list(
+        SocialAccount.objects.publishable()
+        .filter(workspace=workspace, connection_status=SocialAccount.ConnectionStatus.CONNECTED)
+        .order_by("platform", "account_name")
+    )
+    for account in accounts:
+        verdict = analytics_availability(account.platform, enabled_platforms)
+        account.analytics_verdict = verdict
+        account.analytics_unavailable_reason = verdict.message if verdict else None
+    return accounts
+
+
+def preferred_account(accounts: list[SocialAccount]) -> SocialAccount:
+    """The account to land on: the first with working analytics, else the first.
+
+    Falling back to ``accounts[0]`` rather than nothing means a workspace whose
+    only account is unavailable still gets the page explaining why.
+    """
+    return next((a for a in accounts if a.analytics_verdict is None), accounts[0])
+
+
 def _supports_post_fallback(metric_key: str) -> bool:
     """Which metric keys can be derived by summing per-post deltas.
 
@@ -716,6 +748,121 @@ def post_detail(post: PlatformPost) -> dict[str, Any]:
             }
             for m in metrics
         ],
+    }
+
+
+# Below these counts a ranking says more about chance than about the audience,
+# so post_performance leaves the best day/time out.
+BEST_TIME_MIN_POSTS = 6
+BEST_TIME_MIN_PER_BUCKET = 2
+BEST_TIME_BLOCK_HOURS = 3
+
+
+def post_engagement_rate(platform: str, stats: dict[str, float]) -> float | None:
+    """One post's engagement rate in %, the reports page's formula applied to a
+    single post: the engagement parts it has over the first denominator
+    (views, reach, impressions, plays) it has a value for. ``None`` when there
+    is nothing to divide by yet, so the post stays out of the averages."""
+    from .metrics import ENGAGEMENT_DENOMINATORS, ENGAGEMENT_PARTS
+
+    metrics = post_metrics_for(platform)
+    denominator = next((stats[d] for d in ENGAGEMENT_DENOMINATORS if d in metrics and stats.get(d, 0) > 0), None)
+    if denominator is None:
+        return None
+    engagements = sum(stats.get(m, 0) for m in metrics if m in ENGAGEMENT_PARTS)
+    return round(engagements / denominator * 100, 2)
+
+
+def _format_label(post: PlatformPost) -> str:
+    """What a published post was, as the person who made it would call it."""
+    from django.utils.translation import gettext
+
+    if post.format == PlatformPost.Format.REEL:
+        return gettext("Reels")
+    if post.format == PlatformPost.Format.STORY:
+        return gettext("Stories")
+    media = [pm.media_asset for pm in post.post.media_attachments.all()]
+    if len(media) > 1:
+        return gettext("Carousel")
+    if media and media[0].is_video:
+        return gettext("Video")
+    if media:
+        return gettext("Single image")
+    return gettext("Text")
+
+
+def post_performance(account: SocialAccount, days: int, tz) -> dict[str, Any]:
+    """Which formats and which posting times engaged best on ``account`` over
+    the last ``days`` days, for the dashboard's "what works best" card.
+
+    Returns ``{"formats": [...], "best_day": str | None, "best_hours":
+    (start, end) | None, "rated_posts": int}``. Each format row is
+    ``{"label", "rate", "posts", "share"}`` (share = rate relative to the best
+    format, for the bar), best first. Rates are averages of each post's
+    :func:`post_engagement_rate`; posts without a denominator yet are skipped.
+    The best day and the best ``BEST_TIME_BLOCK_HOURS``-hour block are read in
+    ``tz`` (the brand's timezone) and only reported once there are
+    ``BEST_TIME_MIN_POSTS`` rated posts, from buckets holding at least
+    ``BEST_TIME_MIN_PER_BUCKET`` of them.
+    """
+    from django.utils.dates import WEEKDAYS
+
+    cutoff = timezone.now() - timedelta(days=days)
+    posts = list(
+        PlatformPost.objects.filter(
+            social_account=account,
+            status=PlatformPost.Status.PUBLISHED,
+            published_at__gte=cutoff,
+        )
+        .exclude(format=PlatformPost.Format.PROFILE_PHOTO)
+        .select_related("post")
+        .prefetch_related("post__media_attachments__media_asset")
+    )
+    stats = _latest_post_stats([p.id for p in posts], post_metrics_for(account.platform))
+
+    by_format: dict[str, list[float]] = defaultdict(list)
+    by_day: dict[int, list[float]] = defaultdict(list)
+    by_block: dict[int, list[float]] = defaultdict(list)
+    rated = 0
+    for post in posts:
+        rate = post_engagement_rate(account.platform, stats.get(post.id, {}))
+        if rate is None:
+            continue
+        rated += 1
+        by_format[_format_label(post)].append(rate)
+        local = timezone.localtime(post.published_at, tz)
+        by_day[local.weekday()].append(rate)
+        by_block[local.hour // BEST_TIME_BLOCK_HOURS].append(rate)
+
+    def average(values: list[float]) -> float:
+        return sum(values) / len(values)
+
+    ranked = sorted(
+        ((label, round(average(rates), 1), len(rates)) for label, rates in by_format.items()),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    top = ranked[0][1] if ranked else 0
+    formats = [
+        {"label": label, "rate": rate, "posts": count, "share": round(rate / top * 100) if top else 0}
+        for label, rate, count in ranked
+    ]
+
+    def best(buckets: dict[int, list[float]]) -> int | None:
+        eligible = {k: v for k, v in buckets.items() if len(v) >= BEST_TIME_MIN_PER_BUCKET}
+        if rated < BEST_TIME_MIN_POSTS or not eligible:
+            return None
+        return max(eligible, key=lambda k: average(eligible[k]))
+
+    day = best(by_day)
+    block = best(by_block)
+    return {
+        "formats": formats,
+        "best_day": WEEKDAYS[day] if day is not None else None,
+        "best_hours": (block * BEST_TIME_BLOCK_HOURS, (block + 1) * BEST_TIME_BLOCK_HOURS)
+        if block is not None
+        else None,
+        "rated_posts": rated,
     }
 
 

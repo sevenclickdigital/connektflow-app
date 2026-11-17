@@ -51,29 +51,6 @@ def _get_workspace(request, workspace_id):
     return workspace
 
 
-def _analytics_accounts(workspace, enabled_platforms):
-    """Every connected account in the workspace, annotated with why (if at all)
-    analytics is unavailable for it.
-
-    Deliberately unfiltered by platform: an account whose platform is switched
-    off in ``AnalyticsPlatformConfig`` used to be dropped here, so it vanished
-    from the account switcher with nothing anywhere saying why. It stays in the
-    list now and carries its verdict, which the switcher and the page body both
-    render.
-    """
-    accounts = list(
-        SocialAccount.objects.publishable().filter(
-            workspace=workspace,
-            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-        ).order_by("platform", "account_name")
-    )
-    for account in accounts:
-        verdict = services.analytics_availability(account.platform, enabled_platforms)
-        account.analytics_verdict = verdict
-        account.analytics_unavailable_reason = verdict.message if verdict else None
-    return accounts
-
-
 def _source_accounts(workspace) -> list[OpportunityConnection]:
     """Connected opportunity sources with their own analytics (Shopee Affiliates), for the switcher."""
     return list(
@@ -81,17 +58,6 @@ def _source_accounts(workspace) -> list[OpportunityConnection]:
         .filter(source=OpportunityConnection.Source.SHOPEE_AFFILIATE)
         .order_by("created_at")
     )
-
-
-def _preferred_account(accounts):
-    """The account to land on: the first with working analytics, else the first.
-
-    Shared by the index redirect and the unknown-``account_id`` fallback so the
-    two ways of arriving without a specific account agree. Falling back to
-    ``accounts[0]`` rather than the no-accounts page means a workspace whose
-    only account is unavailable still gets the page explaining why.
-    """
-    return next((a for a in accounts if a.analytics_verdict is None), accounts[0])
 
 
 def _parse_range(value: str | None) -> int:
@@ -131,9 +97,11 @@ def analytics_index(request: HttpRequest, workspace_id) -> HttpResponse:
     """Landing route: redirects to the first connected account with analytics."""
     workspace = _get_workspace(request, workspace_id)
     enabled = AnalyticsPlatformConfig.enabled_platforms()
-    accounts = _analytics_accounts(workspace, enabled) if enabled else []
+    accounts = services.analytics_accounts(workspace, enabled) if enabled else []
     if accounts:
-        return redirect("analytics:account", workspace_id=workspace.id, account_id=_preferred_account(accounts).id)
+        return redirect(
+            "analytics:account", workspace_id=workspace.id, account_id=services.preferred_account(accounts).id
+        )
     sources = _source_accounts(workspace)
     if sources:
         return redirect("analytics:shopee", workspace_id=workspace.id, connection_id=sources[0].id)
@@ -150,13 +118,15 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
     if not enabled:
         raise Http404("Analytics is disabled.")
 
-    accounts = _analytics_accounts(workspace, enabled)
+    accounts = services.analytics_accounts(workspace, enabled)
     if not accounts:
         return render(request, "analytics/no_accounts.html", {"workspace": workspace})
 
     account = next((a for a in accounts if str(a.id) == str(account_id)), None)
     if account is None:
-        return redirect("analytics:account", workspace_id=workspace.id, account_id=_preferred_account(accounts).id)
+        return redirect(
+            "analytics:account", workspace_id=workspace.id, account_id=services.preferred_account(accounts).id
+        )
 
     days = _parse_range(request.GET.get("range"))
     primary_color = "var(--primary)"  # locked in chat — design's locked accent
@@ -295,7 +265,7 @@ def shopee_report(request: HttpRequest, workspace_id, connection_id) -> HttpResp
 
     context: dict = {
         "workspace": workspace,
-        "accounts": _analytics_accounts(workspace, enabled) if enabled else [],
+        "accounts": services.analytics_accounts(workspace, enabled) if enabled else [],
         "source_accounts": sources,
         "active_source": connection,
         "days": days,

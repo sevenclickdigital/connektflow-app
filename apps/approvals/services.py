@@ -427,3 +427,17 @@ def _notify_clients(post, workspace):
                 "workspace_id": str(workspace.id),
             },
         )
+
+
+def pending_approval_count(workspace_id) -> int:
+    """Posts waiting for an internal or client review (one per post, whatever its
+    number of networks): the sidebar badge and the dashboard's summary."""
+    return (
+        PlatformPost.objects.filter(
+            post__workspace_id=workspace_id,
+            status__in=(PlatformPost.Status.PENDING_REVIEW, PlatformPost.Status.PENDING_CLIENT),
+        )
+        .values("post_id")
+        .distinct()
+        .count()
+    )

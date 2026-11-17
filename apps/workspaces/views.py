@@ -1,3 +1,6 @@
+import json
+import zoneinfo
+from urllib.parse import urlencode
 from zoneinfo import available_timezones
 
 from django.contrib import messages
@@ -6,12 +9,17 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import Http404
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.utils.translation import gettext as _
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from apps.analytics.metrics import PLATFORM_PRIMARY
 from apps.billing import services
+from apps.common.htmx import toast_response
+from apps.members.decorators import require_workspace_role
 from apps.members.models import OrgMembership, WorkspaceMembership
 
+from . import dashboard
 from .models import Workspace
 
 #: Brazil's timezones, offered first in a brand's settings and named the way
@@ -338,4 +346,159 @@ def workspace_team(request, workspace_id):
             "all_roles": WorkspaceMembership.WorkspaceRole.choices,
             "settings_active": "team",
         },
+    )
+
+
+DASHBOARD_RANGES = (7, 30, 90)
+DASHBOARD_DEFAULT_RANGE = 30
+MONTHLY_GOAL_MAX = 999
+
+
+def _workspace_tz(workspace):
+    try:
+        return zoneinfo.ZoneInfo(workspace.effective_timezone or "UTC")
+    except (zoneinfo.ZoneInfoNotFoundError, ValueError):
+        return zoneinfo.ZoneInfo("UTC")
+
+
+@login_required
+@require_workspace_role("viewer")
+@require_GET
+def workspace_dashboard(request, workspace_id):
+    """The brand's overview: what needs attention, results per network, the
+    month's post goal and what has been working.
+
+    ``?range=7|30|90`` sets the period of every number, ``?account=<id>`` the
+    network the results chart, top posts and "what works" read from. Both are
+    plain links; the chart's metric chips swap only the chart
+    (``?partial=chart``), and the goal card re-fetches itself
+    (``?partial=goal``) after it is saved.
+    """
+    from apps.analytics import services as analytics
+    from apps.social_accounts.models import AnalyticsPlatformConfig
+
+    workspace = request.workspace
+    perms = request.workspace_membership.effective_permissions
+    tz = _workspace_tz(workspace)
+    today = timezone.localdate(timezone=tz)
+
+    is_team = request.workspace_membership.workspace_role != WorkspaceMembership.WorkspaceRole.CLIENT
+    goal = dashboard.month_goal_progress(workspace, today, tz)
+    context = {
+        "workspace": workspace,
+        "goal": goal,
+        "can_set_goal": _can_set_goal(request.workspace_membership),
+    }
+    if request.htmx and request.GET.get("partial") == "goal":
+        return render(request, "workspaces/partials/_dashboard_goal.html", context)
+
+    try:
+        days = int(request.GET.get("range") or DASHBOARD_DEFAULT_RANGE)
+    except ValueError:
+        days = DASHBOARD_DEFAULT_RANGE
+    if days not in DASHBOARD_RANGES:
+        days = DASHBOARD_DEFAULT_RANGE
+
+    enabled = AnalyticsPlatformConfig.enabled_platforms() if perms.get("view_analytics") else []
+    accounts = analytics.analytics_accounts(workspace, enabled) if enabled else []
+    rated = [a for a in accounts if a.analytics_verdict is None]
+    # The results pills name the network only ("Instagram"); the account name
+    # joins it only when the brand has two accounts on the same network.
+    platforms = [a.platform for a in rated]
+    for account in rated:
+        network = analytics.platform_name(account)
+        account.pill_label = (
+            network if platforms.count(account.platform) == 1 else f"{network} · {account.account_name}"
+        )
+    selected = next((a for a in rated if str(a.id) == request.GET.get("account")), None)
+    if selected is None and rated:
+        selected = analytics.preferred_account(rated)
+
+    context.update(
+        {
+            "days": days,
+            "range_choices": DASHBOARD_RANGES,
+            "accounts": accounts,
+            "rated_accounts": rated,
+            "active_account": selected,
+            "primary_color": "var(--primary)",
+            "reconnect_accounts": (
+                dashboard.reconnect_accounts(workspace) if perms.get("manage_social_accounts") else []
+            ),
+            "failed_posts": dashboard.failed_post_count(workspace) if perms.get("create_posts") else 0,
+            "can_view_analytics": bool(perms.get("view_analytics")),
+            "can_connect_accounts": bool(perms.get("manage_social_accounts")),
+            # The task board is the team's: clients work through the portal (tasks.views.require_board_access).
+            "my_tasks": dashboard.my_open_tasks(workspace, request.user, today) if is_team else None,
+            "day": dashboard.day_summary(workspace, request.user, perms, today, tz, is_team=is_team),
+            "upcoming_dates": dashboard.upcoming_dates_with_posts(workspace, today, tz),
+            "today": today,
+        }
+    )
+    bundle = None
+    if selected is not None:
+        bundle = analytics.account_analytics_bundle(selected, days)
+        chart = analytics.hero_chart_data(selected, days, metric=request.GET.get("chart_metric"), bundle=bundle)
+        primary = PLATFORM_PRIMARY.get(selected.platform, "")
+        context.update(
+            {
+                # The names analytics/_hero_chart.html reads; chart_query keeps
+                # the chosen network on its metric chips.
+                "chart": chart,
+                "chart_series_json": json.dumps([None if v is None else round(v, 4) for v in chart["derived"].series]),
+                "chart_labels_json": json.dumps(chart["labels"]),
+                "content_noun": analytics.content_noun(selected),
+                "chart_query": urlencode({"account": selected.id}) + "&",
+            }
+        )
+        if request.htmx and request.GET.get("partial") == "chart":
+            return render(request, "analytics/_hero_chart.html", context)
+        context.update(
+            {
+                "top_posts": analytics.all_posts_for(selected, days_filter=days, sort_key=None, page_size=4)["rows"],
+                "primary_metric": primary,
+                "primary_label": next((c["label"] for c in chart["chips"] if c["key"] == primary), ""),
+                "performance": analytics.post_performance(selected, days, tz),
+            }
+        )
+    context["network_cards"] = [
+        dashboard.network_card(account, days, bundle if selected and account.id == selected.id else None)
+        for account in accounts
+    ]
+    return render(request, "workspaces/dashboard.html", context)
+
+
+def _can_set_goal(membership) -> bool:
+    """Owners and managers plan the brand's month; the goal is theirs to set."""
+    return membership is not None and membership.workspace_role in (
+        WorkspaceMembership.WorkspaceRole.OWNER,
+        WorkspaceMembership.WorkspaceRole.MANAGER,
+    )
+
+
+@login_required
+@require_workspace_role("manager")
+@require_POST
+def dashboard_goal(request, workspace_id):
+    """Set (or clear, with an empty value) the brand's monthly post goal."""
+    workspace = request.workspace
+    raw = (request.POST.get("monthly_post_goal") or "").strip()
+    if raw == "":
+        goal = None
+    else:
+        try:
+            goal = int(raw)
+        except ValueError:
+            goal = 0
+        if not 1 <= goal <= MONTHLY_GOAL_MAX:
+            return toast_response(
+                tone="error",
+                title=_("Enter a goal between 1 and %(max)s posts.") % {"max": MONTHLY_GOAL_MAX},
+            )
+    workspace.monthly_post_goal = goal
+    workspace.save(update_fields=["monthly_post_goal", "updated_at"])
+    return toast_response(
+        tone="success",
+        title=_("Monthly goal saved.") if goal else _("Monthly goal removed."),
+        events={"dashboardGoalChanged": True},
     )

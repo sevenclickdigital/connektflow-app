@@ -1,14 +1,13 @@
 {% load i18n %}
 {% comment %}
 List mode shell for the Publish page: the toolbar card (_period_toolbar.html, month
-navigation and filters), the tabs (Queue, Drafts, Approvals, Sent) of the month shown,
-one pill per platform, then the tab content beside the side panel.
+navigation and filters), the tabs (Queue, Drafts, Approvals, Sent) of the month shown, then the tab content beside the side panel.
 Tab switching is an HTMX partial swap; each tab response refreshes the tab counts and
 the side panel out-of-band (_tab_counts_oob.html).
 {% endcomment %}
 
 <div x-data="publishList()" class="flex-1 flex flex-col min-h-0 gap-4">
-    {% include "calendar/partials/_period_toolbar.html" with nav_query="mode=list&tab="|add:active_tab tag_model="activeTag" onchange="reloadTab()" %}
+    {% include "calendar/partials/_period_toolbar.html" with nav_query="mode=list&tab="|add:active_tab platform_model="platform" tag_model="activeTag" onchange="reloadTab()" %}
 
     <div class="flex flex-wrap items-center gap-3 flex-shrink-0">
         <div class="a-pill-group">
@@ -24,9 +23,6 @@ the side panel out-of-band (_tab_counts_oob.html).
             <button type="button" class="{% if active_tab == 'sent' %}active{% endif %}" :class="{ active: activeTab === 'sent' }" @click="switchTab('sent')">
                 {% translate "Sent" %} <span id="tabcount-sent">{% include "calendar/partials/_tab_count_badge.html" with count=sent_count %}</span>
             </button>
-        </div>
-        <div class="min-w-0 flex-1">
-            {% include "calendar/partials/_platform_pills.html" with platform_model="platform" %}
         </div>
     </div>
 

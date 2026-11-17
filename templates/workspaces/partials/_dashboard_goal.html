@@ -1,0 +1,78 @@
+{% load i18n static %}
+{% comment %}
+The dashboard's "monthly goal" card (workspaces.dashboard.month_goal_progress).
+
+Owners and managers set the goal right here: "Set goal" / the pencil open a
+number field posted to workspaces:dashboard_goal, which answers with a toast
+and "dashboardGoalChanged"; the card then re-fetches itself (?partial=goal).
+An empty value removes the goal.
+
+Expects: workspace, goal, can_set_goal.
+{% endcomment %}
+<div id="dashboard-goal" class="bg-white border border-neutral-300 rounded-xl p-5 flex flex-col" x-data="{ editing: false }"
+     hx-get="{% url 'workspaces:dashboard' workspace_id=workspace.id %}?partial=goal"
+     hx-trigger="dashboardGoalChanged from:body" hx-swap="outerHTML">
+    <div class="flex items-center justify-between gap-2">
+        <h2 class="text-base font-semibold text-neutral-950">{% blocktranslate with month=goal.month|date:"F"|lower %}{{ month }} goal{% endblocktranslate %}</h2>
+        {% if can_set_goal and goal.goal %}
+        <button type="button" class="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-600 hover:text-brand-700 hover:bg-brand-50 cursor-pointer"
+                @click="editing = !editing" title="{% translate 'Change goal' %}" aria-label="{% translate 'Change goal' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>
+        </button>
+        {% endif %}
+    </div>
+
+    {% if can_set_goal %}
+    <form x-show="editing" x-cloak class="mt-3 flex items-end gap-2"
+          hx-post="{% url 'workspaces:dashboard_goal' workspace_id=workspace.id %}" hx-swap="none">
+        <label class="flex-1 min-w-0">
+            <span class="block text-xs font-medium text-neutral-600 mb-1">{% translate "Posts per month" %}</span>
+            <input type="number" name="monthly_post_goal" min="1" max="999" inputmode="numeric" value="{{ goal.goal|default_if_none:'' }}"
+                   class="form-input-styled w-full text-sm" placeholder="{% translate 'e.g. 20' %}">
+        </label>
+        <button type="submit" class="btn-brand text-sm px-4">{% translate "Save" %}</button>
+        <button type="button" class="btn-outline text-sm px-3" @click="editing = false">{% translate "Cancel" %}</button>
+    </form>
+    {% endif %}
+
+    <div class="flex items-center gap-5 my-4" x-show="!editing">
+        <svg viewBox="0 0 100 100" class="w-28 h-28 flex-shrink-0" aria-hidden="true">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--neutral-100)" stroke-width="12"/>
+            {% if goal.goal and goal.percent %}
+            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--brand-600)" stroke-width="12" stroke-linecap="round"
+                    stroke-dasharray="{% widthratio goal.percent 100 264 %} 264" transform="rotate(-90 50 50)"/>
+            {% endif %}
+            <text x="50" y="{% if goal.goal %}48{% else %}56{% endif %}" text-anchor="middle" font-size="22" font-weight="800" fill="var(--neutral-950)">{{ goal.published|add:goal.scheduled }}</text>
+            {% if goal.goal %}<text x="50" y="65" text-anchor="middle" font-size="10" fill="var(--neutral-600)">{% blocktranslate with total=goal.goal %}of {{ total }} posts{% endblocktranslate %}</text>{% endif %}
+        </svg>
+        <dl class="text-sm space-y-2">
+            <div><dt class="sr-only">{% translate "Published" %}</dt><dd><b class="text-neutral-950">{{ goal.published }}</b> <span class="text-neutral-600">{% translate "published" %}</span></dd></div>
+            <div><dt class="sr-only">{% translate "Scheduled" %}</dt><dd><b class="text-neutral-950">{{ goal.scheduled }}</b> <span class="text-neutral-600">{% translate "scheduled" %}</span></dd></div>
+            {% if goal.goal %}
+            <div><dt class="sr-only">{% translate "Left to plan" %}</dt><dd><b class="{% if goal.remaining %}text-amber-600{% else %}text-neutral-950{% endif %}">{{ goal.remaining }}</b> <span class="text-neutral-600">{% translate "left to plan" %}</span></dd></div>
+            {% endif %}
+        </dl>
+    </div>
+
+    <div class="mt-auto p-3 rounded-xl bg-brand-50 flex items-center gap-3" x-show="!editing">
+        <img src="{% static 'img/moti/moti-joinha.webp' %}" alt="" class="h-12 flex-shrink-0">
+        <p class="text-xs text-neutral-700 min-w-0">
+            {% if not goal.goal %}
+                {% if can_set_goal %}
+                <b class="text-neutral-950">{% translate "No goal yet." %}</b> {% translate "Set how many posts the brand should publish each month and follow the pace here." %}
+                <button type="button" class="block mt-1.5 font-semibold text-brand-700 hover:text-brand-800 cursor-pointer" @click="editing = true">{% translate "Set goal" %}</button>
+                {% else %}
+                {% translate "No monthly goal set for this brand. The owner or a manager can set one." %}
+                {% endif %}
+            {% elif goal.pace == "done" %}
+                <b class="text-neutral-950">{% translate "Goal reached!" %}</b> {% blocktranslate count total=goal.published %}{{ total }} post published this month.{% plural %}{{ total }} posts published this month.{% endblocktranslate %}
+            {% elif goal.pace == "covered" %}
+                <b class="text-neutral-950">{% translate "Goal covered." %}</b> {% translate "With what is scheduled, the month reaches the goal." %}
+            {% elif goal.pace == "on_track" %}
+                <b class="text-neutral-950">{% translate "Good pace!" %}</b> {% blocktranslate count total=goal.remaining %}{{ total }} post left to plan{% plural %}{{ total }} posts left to plan{% endblocktranslate %}, {% blocktranslate count days=goal.days_left %}{{ days }} day to go.{% plural %}{{ days }} days to go.{% endblocktranslate %}
+            {% else %}
+                <b class="text-neutral-950">{% translate "Behind the goal." %}</b> {% blocktranslate count total=goal.remaining %}{{ total }} post still needs planning{% plural %}{{ total }} posts still need planning{% endblocktranslate %}, {% blocktranslate count days=goal.days_left %}{{ days }} day left in the month.{% plural %}{{ days }} days left in the month.{% endblocktranslate %}
+            {% endif %}
+        </p>
+    </div>
+</div>

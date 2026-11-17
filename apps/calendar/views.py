@@ -160,6 +160,19 @@ def _get_filtered_posts(workspace, request):
     return qs
 
 
+def _platform_options(social_accounts):
+    """One option per connected platform for the toolbar's networks filter (``ui_select``)."""
+    options = {}
+    for account in social_accounts:
+        if account.platform not in options:
+            options[account.platform] = {
+                "value": account.platform,
+                "label": account.get_platform_display(),
+                "icon": account.platform,
+            }
+    return list(options.values())
+
+
 def _get_filtered_platform_posts(workspace, request):
     """Return a PlatformPost queryset filtered by calendar query params.
 
@@ -792,6 +805,7 @@ def calendar_view(request, workspace_id):
         "view_type": view_type,
         "target_date": target_date,
         "social_accounts": social_accounts,
+        "platform_options": _platform_options(social_accounts),
         "authors": authors,
         "categories": categories,
         "active_filters": active_filters,

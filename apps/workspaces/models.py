@@ -33,6 +33,9 @@ class Workspace(models.Model):
         default=ApprovalWorkflowMode.NONE,
     )
     is_archived = models.BooleanField(default=False)
+    # How many posts the brand aims to publish per calendar month, set from the
+    # dashboard's goal card. Empty means no goal: the card then only counts.
+    monthly_post_goal = models.PositiveSmallIntegerField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

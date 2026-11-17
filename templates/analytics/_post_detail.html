@@ -39,7 +39,7 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
         {% for tile in metric_tiles %}
         <div style="padding: 12px 14px; border-radius: var(--radius-lg); border: 1px solid {% if tile.is_primary %}transparent{% else %}var(--border){% endif %}; background: {% if tile.is_primary %}var(--primary-soft){% else %}#fff{% endif %};">
-            <div style="font-size: 0.6875rem; font-weight: 600; color: {% if tile.is_primary %}var(--primary){% else %}var(--text-secondary){% endif %}; margin-bottom: 6px;">{{ tile.label }}</div>
+            <div style="font-size: 0.6875rem; font-weight: 600; color: {% if tile.is_primary %}var(--primary){% else %}var(--text-secondary){% endif %}; margin-bottom: 6px;">{% translate tile.label %}</div>
             <div style="font-size: 1.4rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text-primary);">{{ tile.value|fmt_metric:tile.kind }}</div>
             {% if tile.sparkline %}
             <div style="margin-top: 6px;">{% sparkline tile.sparkline "var(--primary)" 160 24 %}</div>

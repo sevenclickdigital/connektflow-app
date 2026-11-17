@@ -1,8 +1,9 @@
 {% load i18n static %}
 {% comment %}
 The hero card at the top of each page of the create area (ideas, templates,
-special dates) and of the task board ("tasks"): what the page is for and a
-pose of Moti.
+special dates), of the task board ("tasks"), of the publishing calendar
+("calendar") and of the brand dashboard ("dashboard"): what the page is for
+and a pose of Moti.
 
 Closing it is remembered per page in this browser (localStorage
 "cf:ideas-hero-closed:<tab>") and announced with the "ideas-hero-toggled"
@@ -44,6 +45,12 @@ Expects: tab.
         {% elif tab == "tasks" %}
         <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Keep the team's work moving" %}</h2>
         <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "Shape the board your way, hand out the tasks and follow each one until it is done." %}</p>
+        {% elif tab == "calendar" %}
+        <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Your content on schedule" %}</h2>
+        <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "See everything that goes out this month, fill the empty days and keep every channel posting." %}</p>
+        {% elif tab == "dashboard" %}
+        <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Your brand at a glance" %}</h2>
+        <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "Follow each network's results, see what works best and sort out what is pending before it becomes a problem." %}</p>
         {% elif tab == "dates" %}
         <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Be ready for every special date" %}</h2>
         <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "See the dates that matter to your segment ahead of time and plan the content for each one." %}</p>
@@ -57,7 +64,9 @@ Expects: tab.
     <img src="{% static 'img/moti/moti-modelos.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
     {% elif tab == "tasks" %}
     <img src="{% static 'img/moti/moti-tarefas.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
-    {% elif tab == "dates" %}
+    {% elif tab == "dashboard" %}
+    <img src="{% static 'img/moti/moti-computador.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
+    {% elif tab == "dates" or tab == "calendar" %}
     <img src="{% static 'img/moti/moti-datas.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
     {% else %}
     <img src="{% static 'img/moti/moti-ideia.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">

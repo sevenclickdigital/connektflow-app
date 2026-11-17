@@ -466,3 +466,8 @@ def _local_post_preview(message: InboxMessage) -> dict:
         "product_type": origin,
         "post_id": post.id,
     }
+
+
+def unread_count(workspace_id) -> int:
+    """Unread inbox messages of a workspace: the sidebar badge and the dashboard's summary."""
+    return InboxMessage.objects.for_workspace(workspace_id).filter(status=InboxMessage.Status.UNREAD).count()

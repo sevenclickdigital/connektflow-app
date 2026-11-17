@@ -56,26 +56,16 @@ def sidebar_context(request):
     # Unread inbox count for sidebar badge
     sidebar_unread_inbox_count = 0
     if workspace:
-        from apps.inbox.models import InboxMessage
+        from apps.inbox.services import unread_count
 
-        sidebar_unread_inbox_count = (
-            InboxMessage.objects.for_workspace(workspace.id).filter(status=InboxMessage.Status.UNREAD).count()
-        )
+        sidebar_unread_inbox_count = unread_count(workspace.id)
 
     # Pending approval count for badge
     sidebar_pending_approvals = 0
     if workspace:
-        from apps.composer.models import PlatformPost
+        from apps.approvals.services import pending_approval_count
 
-        sidebar_pending_approvals = (
-            PlatformPost.objects.filter(
-                post__workspace_id=workspace.id,
-                status__in=["pending_review", "pending_client"],
-            )
-            .values("post_id")
-            .distinct()
-            .count()
-        )
+        sidebar_pending_approvals = pending_approval_count(workspace.id)
 
     # Idea columns and tags for the quick-create modal in the sidebar
     sidebar_idea_columns = []

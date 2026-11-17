@@ -21,7 +21,7 @@ def health_check(request):
 
 @login_required
 def dashboard(request):
-    """Main dashboard - redirects to last used workspace or shows org overview."""
+    """Home: the last used brand's dashboard, or the org overview when there is none."""
     from apps.members.models import WorkspaceMembership
 
     user = request.user
@@ -48,7 +48,7 @@ def dashboard(request):
                 and not billing_services.is_workspace_active(request.workspace)
             ):
                 return redirect("billing:subscribe_modal", workspace_id=user.last_workspace_id)
-            return redirect("calendar:calendar", workspace_id=user.last_workspace_id)
+            return redirect("workspaces:dashboard", workspace_id=user.last_workspace_id)
         user.last_workspace_id = None
         user.save(update_fields=["last_workspace_id"])
 
@@ -59,7 +59,7 @@ def dashboard(request):
     if membership:
         user.last_workspace_id = membership.workspace.id
         user.save(update_fields=["last_workspace_id"])
-        return redirect("calendar:calendar", workspace_id=membership.workspace.id)
+        return redirect("workspaces:dashboard", workspace_id=membership.workspace.id)
 
     # An operator account owns nothing on purpose — no organization, no
     # workspace, so nothing to bill (see
