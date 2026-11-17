@@ -8,14 +8,13 @@ tags, tagQuery…) come from taskFields() in tasks/board.html.
 
 Expects: prefix (for the ids), columns, priorities, members, today; optional
 task (the task being edited: fills the fields and adds its post date), desc_limit (a maximum
-length for the description, with a counter), readonly (shows the fields
-without letting them change), after_description (a template shown right under
+length for the description, with a counter), after_description (a template shown right under
 the description: the new task window's switches), hide_column (no
 column field: the column travels hidden, the one the window was opened for;
 the responsible move up beside the priority and the due date), lockable (the
 fields follow the board's ``taskEditing``: disabled, and not even opened, until it is on).
 {% endcomment %}
-<fieldset class="space-y-5 min-w-0" {% if readonly %}disabled{% elif lockable %}:disabled="!taskEditing" :class="!taskEditing && 'is-locked'"{% endif %}>
+<fieldset class="space-y-5 min-w-0" {% if lockable %}:disabled="!taskEditing" :class="!taskEditing && 'is-locked'"{% endif %}>
     <div>
         <label class="new-item-label" for="{{ prefix }}-title">{% translate "Task title" %} <span class="text-red-600" aria-hidden="true">*</span></label>
         <input id="{{ prefix }}-title" x-ref="title" name="title" type="text" maxlength="255" required autocomplete="off"

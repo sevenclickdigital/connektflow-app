@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Max, Prefetch, Q
@@ -12,7 +14,7 @@ from django.utils.translation import override
 
 from apps.members.models import WorkspaceMembership
 
-from .models import Task, TaskChecklist, TaskChecklistItem, TaskColumn
+from .models import Task, TaskChecklist, TaskChecklistItem, TaskColumn, TaskComment
 
 
 def ensure_columns(workspace) -> list[TaskColumn]:
@@ -32,7 +34,7 @@ def ensure_columns(workspace) -> list[TaskColumn]:
             (_("In progress"), tone.INFO, False, False, False),
             (_("In review"), tone.WARNING, True, False, False),
             (_("Changes requested"), tone.ERROR, False, True, False),
-            (_("Done"), tone.SUCCESS, False, False, True),
+            (_("Ready to publish"), tone.SUCCESS, False, False, True),
         ]
     return [
         TaskColumn.objects.create(
@@ -145,6 +147,8 @@ MAX_CHECKLIST_ITEMS = 50
 def clean_checklists(raw) -> list[dict]:
     """Named checklists as posted (a list of ``{"title", "items"}``), trimmed and capped.
 
+    An item is its text, or ``{"text", "accepts_file", "width", "height"}`` when its
+    settings were set (the new task window's gear; the size cleaned by clean_item_size).
     A checklist without a title keeps a numbered "Checklist N"; one without items is kept
     (the team fills it later). Anything that isn't that shape is dropped.
     """
@@ -152,12 +156,28 @@ def clean_checklists(raw) -> list[dict]:
     for spec in raw if isinstance(raw, list) else []:
         if not isinstance(spec, dict):
             continue
-        items = [str(t).strip()[:255] for t in spec.get("items") or [] if isinstance(t, str | int) and str(t).strip()]
+        items = [item for item in (_clean_item(raw_item) for raw_item in spec.get("items") or []) if item]
         title = str(spec.get("title") or "").strip()[:120] or _("Checklist %(number)s") % {
             "number": len(checklists) + 1
         }
         checklists.append({"title": title, "items": items[:MAX_CHECKLIST_ITEMS]})
     return checklists[:MAX_CHECKLISTS]
+
+
+def _clean_item(raw):
+    """One posted checklist item (clean_checklists): its text, or a dict with its settings."""
+    if isinstance(raw, str | int):
+        return str(raw).strip()[:255]
+    if not isinstance(raw, dict):
+        return ""
+    text = str(raw.get("text") or "").strip()[:255]
+    if not text:
+        return ""
+    width, height = clean_item_size(raw.get("width"), raw.get("height"))
+    accepts_file = bool(raw.get("accepts_file"))
+    if not (accepts_file or width):
+        return text
+    return {"text": text, "accepts_file": accepts_file, "width": width, "height": height}
 
 
 def add_checklist(task, title) -> TaskChecklist:
@@ -187,6 +207,68 @@ def checklist_groups(task, items) -> list[dict]:
     for group in groups:
         group["done"] = sum(1 for i in group["items"] if i.is_done)
     return groups
+
+
+MAX_ITEM_SIDE = 10000
+
+
+def clean_item_size(width, height) -> tuple[int | None, int | None]:
+    """An item's file size as typed: both sides positive whole pixels up to MAX_ITEM_SIDE,
+    or (None, None) when either side is missing or isn't one."""
+
+    def side(value):
+        try:
+            number = int(str(value).strip())
+        except (TypeError, ValueError):
+            return None
+        return number if 0 < number <= MAX_ITEM_SIDE else None
+
+    width, height = side(width), side(height)
+    return (width, height) if width and height else (None, None)
+
+
+def configure_item(item, *, accepts_file, width, height) -> None:
+    """The item's settings: whether it asks for a file, and the size that file should have."""
+    item.accepts_file = bool(accepts_file)
+    item.width, item.height = clean_item_size(width, height)
+    item.save(update_fields=["accepts_file", "width", "height"])
+
+
+MAX_REFERENCES = 10
+
+
+def set_references(task, asset_ids) -> None:
+    """The art request's reference images: the workspace's images among ``asset_ids``, in
+    the order given, up to MAX_REFERENCES; ids of other workspaces or files are dropped."""
+    from apps.media_library.models import MediaAsset
+
+    wanted = []
+    for raw in asset_ids:
+        try:
+            value = str(uuid.UUID(str(raw)))
+        except ValueError:
+            continue
+        if value not in wanted:
+            wanted.append(value)
+    found = MediaAsset.objects.filter(
+        workspace=task.workspace, media_type=MediaAsset.MediaType.IMAGE, id__in=wanted[:MAX_REFERENCES]
+    ).values_list("id", flat=True)
+    task.references.set(list(found))
+
+
+class CommentNotAllowedError(Exception):
+    """Comments are written while the task is in review."""
+
+
+def add_comment(checklist, author, body):
+    """A comment on one of a task's checklists, while the task is in review; the body is
+    trimmed and capped (TaskComment.MAX_LENGTH). Returns it, or None when it was blank."""
+    if not checklist.task.column.is_review:
+        raise CommentNotAllowedError
+    body = (body or "").strip()[: TaskComment.MAX_LENGTH]
+    if not body:
+        return None
+    return TaskComment.objects.create(checklist=checklist, author=author, body=body)
 
 
 def resolve_assignees(workspace, raw_ids) -> list:
@@ -227,7 +309,13 @@ def task_detail_queryset(workspace):
         .select_related("column", "idea", "post", "calendar_event", "created_by")
         .prefetch_related(
             "assignees",
-            "checklists",
+            "references",
+            Prefetch(
+                "checklists",
+                queryset=TaskChecklist.objects.prefetch_related(
+                    Prefetch("comments", queryset=TaskComment.objects.select_related("author"))
+                ),
+            ),
             Prefetch("checklist", queryset=TaskChecklistItem.objects.select_related("media_asset", "done_by")),
         )
     )
@@ -339,7 +427,6 @@ def set_item_done(item, done, actor) -> None:
     item.save(update_fields=["is_done", "done_by", "done_at"])
     if done:
         start_work(item.task, actor)
-        advance_to_review(item.task, actor)
 
 
 def start_work(task, actor) -> bool:
@@ -366,19 +453,6 @@ def _work_column(task):
     if following.is_review or following.is_changes_requested or following.is_done:
         return None
     return following
-
-
-def advance_to_review(task, actor) -> bool:
-    """Send an art task to the review column once every art on it is delivered.
-
-    Only art tasks move by themselves, and only forward: a task already in
-    review or done stays where it is. Returns whether it moved.
-    """
-    items = list(task.checklist.all())
-    arts = [i for i in items if i.is_art]
-    if not arts or not all(i.is_done for i in items):
-        return False
-    return send_to_review(task, actor)
 
 
 def review_column(workspace_id):
@@ -487,8 +561,8 @@ def notify_ready_for_review(task) -> None:
         notify(
             task.created_by,
             EventType.TASK_READY_FOR_REVIEW,
-            title=_("Arts ready for review: %(title)s") % {"title": task.title},
-            body=_("Every art on the checklist was delivered."),
+            title=_("Ready for review: %(title)s") % {"title": task.title},
+            body=_("The task was sent for review."),
             data={"action_url": task_url(task), "task_id": str(task.pk), "workspace_id": str(task.workspace_id)},
         )
 
@@ -550,6 +624,7 @@ def request_arts(
     idea=None,
     extra_items=(),
     checklists=(),
+    references=(),
     column=None,
     priority=Task.Priority.MEDIUM,
     tags=(),
@@ -559,6 +634,7 @@ def request_arts(
     ``checklists`` (clean_checklists) and, when ``extra_items`` (other to-dos typed with
     the request) are given, an "Other to-dos" checklist with them.
 
+    ``references`` are media library ids of reference images (set_references).
     Unknown keys are dropped; at least one known format is required. "Other to-dos" is
     written in the site's language, like the default column names. ``briefing`` says how
     the arts should be made; ``column`` (the first one by default), ``description``,
@@ -577,7 +653,7 @@ def request_arts(
         default = art_settings(workspace).art_assignee
         if default and default in assignable_members(workspace):
             assignees = [default]
-    return create_task(
+    task = create_task(
         workspace,
         actor,
         title=title,
@@ -594,6 +670,9 @@ def request_arts(
         priority=priority,
         tags=tags,
     )
+    if references:
+        set_references(task, references)
+    return task
 
 
 def _art_checklists(format_keys) -> list[dict]:
@@ -649,7 +728,6 @@ def deliver_art(item, asset, actor) -> bool:
     item.done_at = timezone.now()
     item.save(update_fields=["media_asset", "is_done", "done_by", "done_at"])
     start_work(item.task, actor)
-    advance_to_review(item.task, actor)
     return creative_formats.ratio_matches(item.width or 0, item.height or 0, asset.width, asset.height)
 
 

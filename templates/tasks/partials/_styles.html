@@ -33,6 +33,9 @@ Styles of the task board, its card and the art request form. Included once per p
     .new-item-art.is-on { border-color: var(--brand-300); }
     .new-item-art-switch { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; }
     .new-item-art-body { min-width: 0; padding: 4px 16px 16px; }
+    /* "Add" a reference photo: a dashed square like the idea window's media "Add". */
+    .task-reference-add { width: 80px; height: 80px; border-radius: 12px; border: 1.5px dashed var(--brand-300); background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; transition: background .12s ease; }
+    .task-reference-add:hover { background: var(--brand-50); }
     .new-item-label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
     fieldset:disabled .new-item-chipbox { background: var(--neutral-50); cursor: default; }
     /* A task's locked fields (its window before "Edit"): nothing opens, not even the boxes that aren't inputs. */
@@ -85,9 +88,17 @@ Styles of the task board, its card and the art request form. Included once per p
     .task-detail-split { flex: 1; min-height: 0; display: flex; }
     .task-detail-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
     .task-detail-close { position: absolute; top: 16px; right: 16px; z-index: 5; }
+    /* Folded (the window's default): the task's side is a strip and the checklists take the rest. */
+    .task-detail-split.is-folded .task-detail-main { flex: 0 0 72px; border-right: 1px solid var(--neutral-200); }
+    .task-detail-split.is-folded .new-item-checklists { flex: 1; width: auto; border-left: 0; }
+    .task-detail-strip { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 0; }
+    .task-detail-strip-button { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--neutral-300); background: white; color: var(--neutral-700); cursor: pointer; }
+    .task-detail-strip-button:hover { border-color: var(--brand-300); color: var(--brand-700); background: var(--brand-50); }
     @media (max-width: 900px) {
         .task-detail-split { flex-direction: column; overflow-y: auto; }
         .task-detail-main { min-height: auto; }
+        .task-detail-split.is-folded .task-detail-main { flex: none; border-right: 0; border-bottom: 1px solid var(--neutral-200); }
+        .task-detail-strip { flex-direction: row; justify-content: center; padding: 12px; }
         .task-detail .new-item-body, .task-detail .new-item-checklists { overflow-y: visible; }
         .task-detail .new-item-checklists { width: auto; border-left: 0; border-top: 1px solid var(--neutral-200); }
     }

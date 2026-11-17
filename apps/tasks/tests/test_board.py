@@ -67,7 +67,7 @@ def test_first_visit_seeds_the_columns_and_lists_tasks(workspace, owner):
         "In progress",
         "In review",
         "Changes requested",
-        "Done",
+        "Ready to publish",
     ]
     assert "Write the launch brief" in body
 
@@ -286,7 +286,7 @@ def test_a_new_column_goes_right_after_the_one_its_menu_belongs_to(workspace, ow
     client.post(_url("column_create", workspace), {"name": "Archive"})
 
     names = [c.name for c in TaskColumn.objects.for_workspace(workspace.id)]
-    assert names == ["To do", "In progress", "Waiting", "In review", "Changes requested", "Done", "Archive"]
+    assert names == ["To do", "In progress", "Waiting", "In review", "Changes requested", "Ready to publish", "Archive"]
     positions = list(TaskColumn.objects.for_workspace(workspace.id).values_list("position", flat=True))
     assert positions == list(range(7))
 

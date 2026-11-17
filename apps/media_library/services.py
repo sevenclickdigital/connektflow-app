@@ -894,7 +894,7 @@ def sweep_orphaned_media(
 def _fk_referenced_asset_ids():
     """Collect all asset IDs referenced via foreign keys."""
     from apps.composer.models import Idea, IdeaMedia, PostMedia
-    from apps.tasks.models import TaskChecklistItem
+    from apps.tasks.models import Task, TaskChecklistItem
 
     referenced = set()
     referenced.update(PostMedia.objects.values_list("media_asset_id", flat=True))
@@ -904,6 +904,8 @@ def _fk_referenced_asset_ids():
     referenced.update(
         TaskChecklistItem.objects.filter(media_asset__isnull=False).values_list("media_asset_id", flat=True)
     )
+    # Reference images picked for an art request's briefing.
+    referenced.update(Task.references.through.objects.values_list("mediaasset_id", flat=True))
     return referenced
 
 

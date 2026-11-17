@@ -1,8 +1,10 @@
 {% load i18n %}
 {% comment %}
-One to-do in the task's window: the tick, the text and, for an art item, its
-format size, the delivered file and the upload; a plain item may carry a
-reference image. Expects: item, task, workspace, can_edit, can_upload.
+One to-do in the task's window: the tick, the text and, for an item that takes
+a file (an art item, or one whose settings ask for a file), its size, the
+delivered file and the upload; a plain item may carry a reference image. While
+editing, its gear opens its settings (ask for a file, the file's size).
+Expects: item, task, workspace, can_edit, can_upload.
 {% endcomment %}
 <li class="group flex items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-neutral-50 -mx-2">
     {% if can_edit %}
@@ -15,11 +17,28 @@ reference image. Expects: item, task, workspace, can_edit, can_upload.
         {% if item.is_done %}<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>{% endif %}
     {% if can_edit %}</button>{% else %}</span>{% endif %}
     <div class="flex-1 min-w-0">
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span class="text-sm {% if item.is_done %}text-neutral-500 line-through{% else %}text-neutral-900{% endif %}">{{ item.text }}</span>
-        {% if item.is_art %}
-        <span class="task-pill task-pill--art ml-1">{{ item.width }} × {{ item.height }}</span>
+        {% if item.width and item.height %}<span class="task-pill task-pill--art">{{ item.width }} × {{ item.height }}</span>{% endif %}
+        {% if item.takes_file %}
+        {% comment %}
+        The first delivery, on the item's own line, as an icon: it opens the media library
+        (the board's picker window), where the art is picked or uploaded and then delivered
+        here (tasks:item_deliver with asset_id). Once there is an art, it is replaced from the
+        thumbnail's settings menu.
+        {% endcomment %}
+        {% if can_upload and not item.media_asset %}
+        <button type="button" class="w-7 h-7 rounded-full flex items-center justify-center bg-white ring-1 ring-neutral-300 text-neutral-700 hover:ring-brand-300 hover:text-brand-800 cursor-pointer"
+                title="{% translate 'Deliver art' %}" aria-label="{% translate 'Deliver art' %}"
+                @click="$dispatch('open-reference-picker', { for: 'deliver', url: '{% url 'tasks:item_deliver' workspace_id=workspace.id task_id=task.id item_id=item.id %}' })">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/><path d="M12 4v12"/><path d="M7 9l5-5 5 5"/></svg>
+        </button>
+        {% endif %}
+        {% endif %}
+        </div>
+        {% if item.takes_file %}
+        {% if item.media_asset and item.media_asset.file %}
         <div class="mt-1.5 flex flex-wrap items-center gap-2">
-            {% if item.media_asset and item.media_asset.file %}
             {% comment %}
             The delivered art as the composer shows a post's image: hovering it shows
             the settings button, whose menu removes the art from the item, opens the
@@ -77,20 +96,8 @@ reference image. Expects: item, task, workspace, can_edit, can_upload.
                 {% if item.media_asset.width %}<div class="text-neutral-500 tabular-nums">{{ item.media_asset.width }} × {{ item.media_asset.height }}</div>{% endif %}
                 {% if not item.ratio_ok %}<div class="text-amber-600 font-semibold">{% translate "Proportions differ from the format" %}</div>{% endif %}
             </div>
-            {% endif %}
-            {# The first delivery; once there is an art, it is replaced from the thumbnail's settings menu. #}
-            {% if can_upload and not item.media_asset %}
-            <form hx-post="{% url 'tasks:item_deliver' workspace_id=workspace.id task_id=task.id item_id=item.id %}" hx-target="#task-modal-body"
-                  hx-encoding="multipart/form-data" hx-trigger="change" hx-indicator="this">
-                <label class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11.5px] font-semibold cursor-pointer bg-white ring-1 ring-neutral-300 text-neutral-700 hover:ring-brand-300 hover:text-brand-900">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/><path d="M12 4v12"/><path d="M7 9l5-5 5 5"/></svg>
-                    <span class="task-up-idle">{% translate "Deliver art" %}</span>
-                    <span class="task-up-busy">{% translate "Uploading…" %}</span>
-                    <input type="file" name="file" accept="image/*,video/*" class="sr-only">
-                </label>
-            </form>
-            {% endif %}
         </div>
+        {% endif %}
         {% elif item.media_asset and item.media_asset.file and item.media_asset.media_type == "image" %}
         {# Reference material attached to a plain item, e.g. the product image from the Radar. #}
         <div class="mt-1.5 flex items-center gap-2">
@@ -107,6 +114,41 @@ reference image. Expects: item, task, workspace, can_edit, can_upload.
         {% endif %}
     </div>
     {% if can_edit %}
+    {% comment %}
+    The item's settings, while editing: "Ask for a file" (it then takes a delivery, as an art
+    item does) and the size that file should have (its proportions are checked on delivery).
+    {% endcomment %}
+    <div class="relative flex-shrink-0" x-data="{ settings: false }" x-show="taskEditing" @click.outside="settings = false" @keydown.escape.stop="settings = false">
+        <button type="button" class="text-neutral-500 hover:text-brand-700 cursor-pointer" @click="settings = !settings"
+                title="{% translate 'Item settings' %}" aria-label="{% translate 'Item settings' %}" :aria-expanded="settings.toString()">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </button>
+        <form x-show="settings" x-cloak x-transition class="absolute right-0 top-full mt-1 z-30 w-64 p-3 rounded-xl bg-white shadow-lg ring-1 ring-neutral-300 space-y-3"
+              hx-post="{% url 'tasks:item_settings' workspace_id=workspace.id task_id=task.id item_id=item.id %}" hx-target="#task-modal-body">
+            <label class="flex items-center justify-between gap-3 cursor-pointer">
+                <span class="text-sm font-semibold text-neutral-900">{% translate "Ask for a file" %}</span>
+                <span class="bb-toggle flex-shrink-0">
+                    <input type="checkbox" name="accepts_file" value="1" {% if item.takes_file %}checked{% endif %} {% if item.is_art %}disabled{% endif %}>
+                    <span class="bb-toggle-track"></span>
+                </span>
+            </label>
+            {% if item.is_art %}<input type="hidden" name="accepts_file" value="1">{% endif %}
+            <div>
+                <p class="text-[12px] font-semibold text-neutral-700 mb-1">{% translate "Size (px)" %}</p>
+                <div class="flex items-center gap-2">
+                    <input type="number" name="width" min="1" max="10000" value="{{ item.width|default:'' }}" placeholder="{% translate 'Width' %}"
+                           aria-label="{% translate 'Width' %}" class="form-input-styled w-full text-sm !py-1.5">
+                    <span class="text-neutral-500" aria-hidden="true">×</span>
+                    <input type="number" name="height" min="1" max="10000" value="{{ item.height|default:'' }}" placeholder="{% translate 'Height' %}"
+                           aria-label="{% translate 'Height' %}" class="form-input-styled w-full text-sm !py-1.5">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" class="btn-outline text-xs px-3" @click="settings = false">{% translate "Cancel" %}</button>
+                <button type="submit" class="btn-brand text-xs px-3">{% translate "Save" %}</button>
+            </div>
+        </form>
+    </div>
     <button type="button" class="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-500 hover:text-red-600 flex-shrink-0" x-show="taskEditing"
             hx-post="{% url 'tasks:item_delete' workspace_id=workspace.id task_id=task.id item_id=item.id %}" hx-target="#task-modal-body"
             aria-label="{% translate 'Remove item' %}">

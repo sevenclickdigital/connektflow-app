@@ -152,7 +152,9 @@ def catalogue(accounts=(), visible_platforms=None) -> list[dict]:
 
 
 def ratio_matches(fmt_width: int, fmt_height: int, width: int, height: int) -> bool:
-    if not (width and height):
+    """Whether ``width`` × ``height`` has the proportions of ``fmt_width`` × ``fmt_height``;
+    true when either size is unknown (an item without a size takes any file)."""
+    if not (width and height and fmt_width and fmt_height):
         return True
     expected = fmt_width / fmt_height
     return abs(width / height - expected) <= expected * RATIO_TOLERANCE

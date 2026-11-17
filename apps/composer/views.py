@@ -3947,7 +3947,7 @@ def _quota_error_response(exc):
     )
 
 
-def _create_idea_media_asset(workspace, user, uploaded_file):
+def _create_idea_media_asset(workspace, user, uploaded_file, folder=None):
     """Create a MediaAsset from an uploaded file for Idea create/edit flows.
 
     Raises ``StorageQuotaExceededError`` / ``WorkspaceStorageExceededError``
@@ -3979,6 +3979,7 @@ def _create_idea_media_asset(workspace, user, uploaded_file):
         mime_type=content_type,
         file_size=uploaded_file.size,
         source="upload",
+        folder=folder,
     )
 
 
@@ -4097,8 +4098,14 @@ def idea_upload_media(request, workspace_id):
     if not uploaded_file:
         return JsonResponse({"error": _("No file provided")}, status=400)
 
+    # Sent from the media library window: into the folder open there (one of the brand's).
+    from apps.media_library.models import MediaFolder
+
+    folder = None
+    if _is_valid_uuid(request.POST.get("folder_id")):
+        folder = MediaFolder.objects.filter(workspace=workspace, id=request.POST["folder_id"]).first()
     try:
-        asset = _create_idea_media_asset(workspace, request.user, uploaded_file)
+        asset = _create_idea_media_asset(workspace, request.user, uploaded_file, folder=folder)
     except (StorageQuotaExceededError, WorkspaceStorageExceededError) as exc:
         return _quota_error_response(exc)
     return JsonResponse(_idea_asset_payload(asset))

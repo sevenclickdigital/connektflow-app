@@ -34,6 +34,31 @@ that "Create a post" was there, so switching it off clears the caption and the c
             <textarea id="{{ prefix }}-briefing" name="briefing" rows="4" class="form-input-styled block w-full text-sm"
                       placeholder="{% translate 'How the arts should be made: what they say and show' %}">{{ task.briefing|default:'' }}</textarea>
         </div>
+        {% comment %}
+        Reference images for the designers, from the media library: "Add" opens it
+        (open-reference-picker, the board's picker window) and what is picked joins here
+        (addReferences). They post as "references", with "references_sent".
+        {% endcomment %}
+        <div class="mb-5">
+            <p class="new-item-label">{% translate "Reference photos" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></p>
+            <input type="hidden" name="references_sent" value="1">
+            <div class="flex flex-wrap gap-2">
+                <template x-for="(ref, index) in references" :key="ref.id">
+                    <div class="relative w-20 h-20 rounded-xl overflow-hidden ring-1 ring-neutral-300 bg-neutral-100 group">
+                        <img :src="ref.url" alt="" class="w-full h-full object-cover">
+                        <input type="hidden" name="references" :value="ref.id">
+                        <button type="button" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 text-neutral-700 hover:text-red-600 flex items-center justify-center shadow cursor-pointer"
+                                @click="references.splice(index, 1)" :aria-label="removeLabel">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </template>
+                <button type="button" class="task-reference-add" x-show="references.length < 10" @click="pickReferences()">
+                    <svg class="w-6 h-6 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    <span class="text-[12px] text-neutral-600 leading-tight">{% translate "Add" %}</span>
+                </button>
+            </div>
+        </div>
         {% include "tasks/partials/_art_formats.html" %}
     </fieldset>
 </div>

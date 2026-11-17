@@ -53,6 +53,12 @@ def _task(request, task_id):
     return get_object_or_404(services.task_detail_queryset(request.workspace), id=task_id)
 
 
+def _reference_json(asset) -> dict:
+    """A reference image as the task windows' script keeps it: its id and a picture to show."""
+    picture = asset.thumbnail if asset.thumbnail else asset.file
+    return {"id": str(asset.id), "url": picture.url if picture else ""}
+
+
 def _render_card(request, task, *, changed=True, focus_new_item=False, focus_checklist=""):
     """The open task's modal content, re-fetched so prefetches reflect the change."""
     task = _task(request, task.pk)
@@ -73,23 +79,45 @@ def _render_card(request, task, *, changed=True, focus_new_item=False, focus_che
     task.post_date_display = local.strftime("%d/%m/%Y %H:%M") if local else ""
     # Where the window's fields start from (taskEditForm in tasks/board.html).
     groups = _art_catalogue(request.workspace)
+    channel_options = list(channel_accounts(request.workspace))
+    # The window's summary, before "Edit" (tasks/partials/_task_summary.html): the arts asked
+    # for by network, and the post's channels with their formats.
+    titles = {c.pk: c.title for c in task.checklists.all()}
+    art_summary: dict[str, list[str]] = {}
+    for item in items:
+        if item.is_art:
+            art_summary.setdefault(titles.get(item.checklist_id, ""), []).append(item.text)
+    task.art_summary = [{"network": network, "formats": labels} for network, labels in art_summary.items()]
+    task.channel_summary = [
+        {
+            "account": account,
+            "formats": [
+                o["short"] for o in account.format_options() if o["format"] in task.channel_formats[str(account.id)]
+            ],
+        }
+        for account in channel_options
+        if str(account.id) in task.channel_formats
+    ]
     task.edit_initial_json = json.dumps(
         {
             "column": str(task.column_id),
             "assignees": [str(u.pk) for u in task.assignees.all()],
             "tags": task.tags,
             "channels": task.channel_formats,
-            "wantsArt": bool(task.briefing) or any(item.is_art for item in items),
+            "references": [_reference_json(asset) for asset in task.references.all()],
+            "wantsArt": bool(task.briefing) or any(item.is_art for item in items) or bool(task.references.all()),
             "wantsPost": bool(task.post_caption or task.channel_formats or task.post_id),
         }
     )
     for item in items:
         fmt = creative_formats.get(item.format_key) if item.is_art else None
         item.ratio_ok = True
-        if fmt and item.media_asset:
+        if item.media_asset and item.width and item.height:
+            # Against the item's own size: the format's, or the one set in its settings.
             item.ratio_ok = creative_formats.ratio_matches(
-                fmt.width, fmt.height, item.media_asset.width, item.media_asset.height
+                item.width, item.height, item.media_asset.width, item.media_asset.height
             )
+        if fmt and item.media_asset:
             task.has_publishable_art = task.has_publishable_art or fmt.is_publishable
     response = render(
         request,
@@ -100,7 +128,7 @@ def _render_card(request, task, *, changed=True, focus_new_item=False, focus_che
             "columns": services.ensure_columns(request.workspace),
             "members": services.assignable_members(request.workspace),
             "tag_suggestions": services.tag_suggestions(request.workspace),
-            "channel_options": list(channel_accounts(request.workspace)),
+            "channel_options": channel_options,
             # "Request arts": the networks and formats, those already asked for ticked and fixed.
             "groups": groups,
             "first_tab": groups[0]["network"].key if groups else "",
@@ -231,6 +259,8 @@ def board(request, workspace_id):
         context["groups"] = _art_catalogue(workspace)
         context["first_tab"] = context["groups"][0]["network"].key if context["groups"] else ""
         context["channel_options"] = list(channel_accounts(workspace))
+        # The media library window opens on the board's own folder.
+        context["tasks_folder_id"] = str(services.media_folder(workspace).id)
     return render(request, "tasks/board.html", context)
 
 
@@ -284,6 +314,7 @@ def task_create(request, workspace_id):
             request.user,
             format_keys=format_keys,
             briefing=request.POST.get("briefing", "").strip(),
+            references=request.POST.getlist("references"),
             **fields,
         )
         done = _("Art request created.")
@@ -362,8 +393,11 @@ def task_update(request, workspace_id, task_id):
     if fields:
         task.save(update_fields=[*fields, "updated_at"])
     if request.POST.get("request_art") == "1":
-        # "Request arts" in the window: the formats ticked there that the task doesn't have yet.
+        # "Request arts" in the window: the formats ticked there that the task doesn't have yet,
+        # and its reference images as they are now.
         services.add_arts(task, [k for k in request.POST.getlist("formats") if creative_formats.get(k)])
+        if "references_sent" in request.POST:
+            services.set_references(task, request.POST.getlist("references"))
     if "publish_at" in request.POST:
         services.propose_post_date(task, _parse_local_datetime(request.POST["publish_at"], workspace))
     if "tags_sent" in request.POST:
@@ -484,10 +518,29 @@ def checklist_delete(request, workspace_id, task_id, checklist_id):
 @require_board_access
 @require_permission("create_posts")
 @require_POST
+def checklist_comment(request, workspace_id, task_id, checklist_id):
+    """A comment on a named checklist of a task in review; the window reloads with it."""
+    checklist = get_object_or_404(
+        TaskChecklist.objects.select_related("task__column"),
+        id=checklist_id,
+        task_id=task_id,
+        task__workspace=request.workspace,
+    )
+    try:
+        services.add_comment(checklist, request.user, request.POST.get("body", ""))
+    except services.CommentNotAllowedError:
+        return toast_response(tone="error", title=_("Comments are written while the task is in review."))
+    return _render_card(request, checklist.task, changed=False)
+
+
+@login_required
+@require_board_access
+@require_permission("create_posts")
+@require_POST
 def item_art_remove(request, workspace_id, task_id, item_id):
     """Take the delivered art off an item (the file stays in the media library)."""
     item = _item(request, task_id, item_id)
-    if item.is_art and item.media_asset_id:
+    if item.takes_file and item.media_asset_id:
         services.remove_art(item)
     return _render_card(request, item.task)
 
@@ -506,7 +559,7 @@ def item_art_crop(request, workspace_id, task_id, item_id):
     from apps.media_library.cropping import crop_from_request
 
     item = _item(request, task_id, item_id)
-    if not item.is_art:
+    if not item.takes_file:
         return HttpResponse(_("Only images can be cropped."), status=400, content_type="text/plain")
     cropped, error = crop_from_request(request, request.workspace, item.media_asset)
     if error is not None:
@@ -539,6 +592,23 @@ def item_delete(request, workspace_id, task_id, item_id):
 # ---------------------------------------------------------------------------
 # Columns
 # ---------------------------------------------------------------------------
+
+
+@login_required
+@require_board_access
+@require_permission("create_posts")
+@require_POST
+def item_settings(request, workspace_id, task_id, item_id):
+    """The item's settings (its gear, while editing): whether it asks for a file, and the
+    size that file should have."""
+    item = _item(request, task_id, item_id)
+    services.configure_item(
+        item,
+        accepts_file=request.POST.get("accepts_file") == "1",
+        width=request.POST.get("width"),
+        height=request.POST.get("height"),
+    )
+    return _render_card(request, item.task, changed=False)
 
 
 @login_required
@@ -787,22 +857,34 @@ def art_settings(request, workspace_id):
 @require_permission("upload_media")
 @require_POST
 def item_deliver(request, workspace_id, task_id, item_id):
-    """Upload the file for an art item, into the media library's "Tasks" folder.
+    """The file of an art item: uploaded here (``file``, into the media library's "Tasks"
+    folder) or picked in the media library (``asset_id``, one of the workspace's images
+    or videos, left where it is).
 
     Warns when its proportions don't match the format.
     """
     from django.core.exceptions import ValidationError
 
     from apps.billing.storage_usage import WorkspaceStorageExceededError
+    from apps.media_library.models import MediaAsset
     from apps.media_library.quotas import StorageQuotaExceededError
     from apps.media_library.services import create_asset, extract_image_metadata
     from apps.media_library.tasks import process_media_asset
 
     item = _item(request, task_id, item_id)
     uploaded = request.FILES.get("file")
-    if not item.is_art or not uploaded:
+    picked = None
+    if not uploaded and _valid_uuid(request.POST.get("asset_id")):
+        picked = MediaAsset.objects.filter(
+            workspace=request.workspace,
+            id=request.POST["asset_id"],
+            media_type__in=[MediaAsset.MediaType.IMAGE, MediaAsset.MediaType.GIF, MediaAsset.MediaType.VIDEO],
+        ).first()
+    if not item.takes_file or not (uploaded or picked):
         return toast_response(tone="error", title=_("Choose the file of the art."))
     workspace = request.workspace
+    if picked:
+        return _delivered(request, item, picked)
     try:
         asset = create_asset(
             workspace.organization, workspace, uploaded, request.user, folder=services.media_folder(workspace)
@@ -826,7 +908,12 @@ def item_deliver(request, workspace_id, task_id, item_id):
             asset.width, asset.height = size["width"], size["height"]
             asset.save(update_fields=["width", "height"])
     process_media_asset(str(asset.id))
+    return _delivered(request, item, asset)
 
+
+def _delivered(request, item, asset):
+    """Deliver ``asset`` on the art item and answer the task's window, warning when its
+    proportions don't match the format."""
     matches = services.deliver_art(item, asset, request.user)
     response = _render_card(request, item.task)
     if not matches:
@@ -849,7 +936,12 @@ def item_deliver(request, workspace_id, task_id, item_id):
 @require_permission("create_posts")
 @require_POST
 def task_create_post(request, workspace_id, task_id):
-    task = get_object_or_404(Task.objects.select_related("idea", "workspace"), id=task_id, workspace=request.workspace)
+    """The post made from the task's delivered arts, once the task is approved (in the done column)."""
+    task = get_object_or_404(
+        Task.objects.select_related("idea", "workspace", "column"), id=task_id, workspace=request.workspace
+    )
+    if not task.column.is_done:
+        return toast_response(tone="error", title=_("Approve the task before creating its post."))
     try:
         post = services.create_post_from_task(task, request.user)
     except services.NothingToPublishError:

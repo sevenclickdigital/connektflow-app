@@ -1,0 +1,100 @@
+{% load i18n %}
+{% comment %}
+A task's window before "Edit": its data as text, shorter than the fields
+(tasks/partials/_task_fields.html), which take its place once editing. Title and
+description; priority, due date and who is responsible; the tags; the arts asked
+for (briefing and formats by network) and the post (caption, channels with their
+formats, post date) when the task has them.
+
+Expects: task (with art_summary, channel_summary and post_date_display from
+tasks.views._render_card).
+{% endcomment %}
+<div class="space-y-5">
+    <div>
+        <h3 class="text-lg font-semibold text-neutral-950 break-words">{{ task.title }}</h3>
+        {% if task.description %}
+        <p class="text-sm text-neutral-700 mt-1.5 whitespace-pre-line break-words">{{ task.description }}</p>
+        {% else %}
+        <p class="text-sm text-neutral-500 mt-1.5">{% translate "No description." %}</p>
+        {% endif %}
+    </div>
+
+    <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+            <dt class="task-field-label">{% translate "Priority" %}</dt>
+            <dd class="text-sm text-neutral-900">{{ task.get_priority_display }}</dd>
+        </div>
+        <div>
+            <dt class="task-field-label">{% translate "Due date" %}</dt>
+            <dd class="text-sm text-neutral-900">{% if task.due_date %}{{ task.due_date|date:"d/m/Y" }}{% else %}{% translate "No date" %}{% endif %}</dd>
+        </div>
+        <div class="min-w-0">
+            <dt class="task-field-label">{% translate "Responsible" %}</dt>
+            <dd class="text-sm text-neutral-900 break-words">
+                {% for person in task.assignees.all %}{{ person.display_name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-neutral-500">{% translate "Nobody yet" %}</span>{% endfor %}
+            </dd>
+        </div>
+    </dl>
+
+    {% if task.tags %}
+    <div>
+        <p class="task-field-label">{% translate "Tags" %}</p>
+        <div class="flex flex-wrap gap-1.5">
+            {% for tag in task.tags %}<span class="pill pill-brand">{{ tag }}</span>{% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if task.briefing or task.art_summary or task.references.all %}
+    <section class="rounded-xl border border-neutral-200 p-4">
+        <p class="flex items-center gap-2 text-sm font-bold text-neutral-950">
+            <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            {% translate "Arts requested" %}
+        </p>
+        {% if task.briefing %}
+        <p class="text-sm text-neutral-700 mt-2 whitespace-pre-line break-words">{{ task.briefing }}</p>
+        {% endif %}
+        {% if task.references.all %}
+        <div class="flex flex-wrap gap-2 mt-3">
+            {% for asset in task.references.all %}
+            <a href="{{ asset.file.url }}" data-title="{% translate 'Reference photo' %}" class="block w-16 h-16 rounded-lg overflow-hidden ring-1 ring-neutral-300 bg-neutral-100"
+               @click.prevent="$dispatch('preview-media', { url: $el.href, video: false, title: $el.dataset.title })">
+                <img src="{% if asset.thumbnail %}{{ asset.thumbnail.url }}{% else %}{{ asset.file.url }}{% endif %}" alt="" class="w-full h-full object-cover">
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if task.art_summary %}
+        <ul class="mt-2 space-y-1 text-sm">
+            {% for group in task.art_summary %}
+            <li><span class="font-semibold text-neutral-900">{{ group.network|default:_("Arts") }}:</span> <span class="text-neutral-700">{{ group.formats|join:", " }}</span></li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    {% if task.post_caption or task.channel_summary or task.post_date_display %}
+    <section class="rounded-xl border border-neutral-200 p-4">
+        <p class="flex items-center gap-2 text-sm font-bold text-neutral-950">
+            <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            {% translate "Post" %}
+            {% if task.post_date_display %}<span class="ml-auto text-[12px] font-medium text-neutral-500">{{ task.post_date_display }}</span>{% endif %}
+        </p>
+        {% if task.post_caption %}
+        <p class="text-sm text-neutral-700 mt-2 whitespace-pre-line break-words">{{ task.post_caption }}</p>
+        {% endif %}
+        {% if task.channel_summary %}
+        <ul class="mt-2 space-y-1 text-sm">
+            {% for channel in task.channel_summary %}
+            <li class="flex items-center gap-1.5 min-w-0">
+                {% include "partials/_platform_icon.html" with platform=channel.account.platform %}
+                <span class="font-semibold text-neutral-900 truncate">{{ channel.account.account_name }}</span>
+                <span class="text-neutral-600 flex-shrink-0">· {{ channel.formats|join:", " }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </section>
+    {% endif %}
+</div>

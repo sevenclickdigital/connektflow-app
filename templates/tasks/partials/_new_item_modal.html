@@ -16,7 +16,8 @@ Expects: columns, priorities, members, today, workspace, groups and first_tab
 post can go out on); the page renders the tag suggestions.
 {% endcomment %}
 <div x-data="newItemForm('{{ first_tab }}')" x-cloak
-     @open-new-item.window="open($event.detail)" @task-created.camel.window="close()" @keydown.escape.window="close()">
+     @open-new-item.window="open($event.detail)" @task-created.camel.window="close()" @keydown.escape.window="if (!showMediaPicker) close()"
+     @media-picked.camel.window="if (referencePickerFor === 'new') addReferences($event.detail.assets)">
     <div class="new-item-overlay" x-show="isOpen" x-transition.opacity @click.self="close()">
         <div class="new-item-panel" role="dialog" aria-modal="true" aria-labelledby="new-item-heading">
             <div class="new-item-main">
@@ -94,8 +95,40 @@ post can go out on); the page renders the tag suggestions.
                                         <template x-for="(item, itemIndex) in list.items" :key="itemIndex">
                                             <li class="group flex items-center gap-2 text-sm text-neutral-800 rounded-md px-1 py-0.5 hover:bg-white">
                                                 <span class="task-check" aria-hidden="true"></span>
-                                                <span class="flex-1 min-w-0 break-words" x-text="item"></span>
-                                                <button type="button" class="text-neutral-500 hover:text-red-600 cursor-pointer opacity-60 group-hover:opacity-100" @click="list.items.splice(itemIndex, 1)" :aria-label="removeLabel + ' ' + item">×</button>
+                                                <span class="flex-1 min-w-0 break-words" x-text="item.text"></span>
+                                                <span class="task-pill task-pill--art" x-show="item.width && item.height" x-text="item.width + ' × ' + item.height"></span>
+                                                <svg class="w-3.5 h-3.5 text-brand-700 flex-shrink-0" x-show="item.accepts_file" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/><path d="M12 4v12"/><path d="M7 9l5-5 5 5"/></svg>
+                                                {% comment %}
+                                                The item's settings, as in the task's own window (tasks/partials/_checklist_item.html),
+                                                kept on the item here and sent with the task (clean_checklists).
+                                                {% endcomment %}
+                                                <div class="relative flex-shrink-0" x-data="{ settings: false }" @click.outside="settings = false" @keydown.escape.stop="settings = false">
+                                                    <button type="button" class="text-neutral-500 hover:text-brand-700 cursor-pointer" @click="settings = !settings"
+                                                            title="{% translate 'Item settings' %}" aria-label="{% translate 'Item settings' %}" :aria-expanded="settings.toString()">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                                                    </button>
+                                                    <div x-show="settings" x-cloak x-transition class="absolute right-0 top-full mt-1 z-30 w-64 p-3 rounded-xl bg-white shadow-lg ring-1 ring-neutral-300 space-y-3">
+                                                        <label class="flex items-center justify-between gap-3 cursor-pointer">
+                                                            <span class="text-sm font-semibold text-neutral-900">{% translate "Ask for a file" %}</span>
+                                                            <span class="bb-toggle flex-shrink-0">
+                                                                <input type="checkbox" x-model="item.accepts_file">
+                                                                <span class="bb-toggle-track"></span>
+                                                            </span>
+                                                        </label>
+                                                        <div>
+                                                            <p class="text-[12px] font-semibold text-neutral-700 mb-1">{% translate "Size (px)" %}</p>
+                                                            <div class="flex items-center gap-2">
+                                                                <input type="number" min="1" max="10000" x-model="item.width" placeholder="{% translate 'Width' %}" aria-label="{% translate 'Width' %}" class="form-input-styled w-full text-sm !py-1.5">
+                                                                <span class="text-neutral-500" aria-hidden="true">×</span>
+                                                                <input type="number" min="1" max="10000" x-model="item.height" placeholder="{% translate 'Height' %}" aria-label="{% translate 'Height' %}" class="form-input-styled w-full text-sm !py-1.5">
+                                                            </div>
+                                                        </div>
+                                                        <div class="flex justify-end">
+                                                            <button type="button" class="btn-brand text-xs px-3" @click="settings = false">{% translate "Done" %}</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="text-neutral-500 hover:text-red-600 cursor-pointer opacity-60 group-hover:opacity-100" @click="list.items.splice(itemIndex, 1)" :aria-label="removeLabel + ' ' + item.text">×</button>
                                             </li>
                                         </template>
                                     </ul>

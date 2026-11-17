@@ -35,7 +35,7 @@ class TaskColumn(models.Model):
     is_done = models.BooleanField(default=False)
     is_review = models.BooleanField(
         default=False,
-        help_text="Where a task goes on its own once every art on its checklist is delivered.",
+        help_text="Where a task goes when someone sends it for review from its window.",
     )
     # Where "Request changes" in a task in review sends it (services.move_to_stage).
     is_changes_requested = models.BooleanField(default=False, db_default=False)
@@ -67,6 +67,8 @@ class Task(models.Model):
     description = models.TextField(blank=True, default="")
     # On an art request, how the arts should be made: what they say and show, for the designers.
     briefing = models.TextField(blank=True, default="", db_default="")
+    # Reference images for the designers, picked from the media library with the briefing.
+    references = models.ManyToManyField("media_library.MediaAsset", blank=True, related_name="task_references")
     # The text the post goes out with, apart from the description and the briefing.
     post_caption = models.TextField(blank=True, default="")
     # The channels the post goes out on, each with its formats, as an idea's
@@ -131,6 +133,28 @@ class TaskChecklist(models.Model):
         return self.title
 
 
+class TaskComment(models.Model):
+    """A comment on one of a task's checklists, written while the task is in review
+    (services.add_comment): what to change in that group of to-dos."""
+
+    MAX_LENGTH = 2000
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    checklist = models.ForeignKey(TaskChecklist, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="task_comments"
+    )
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "tasks_comment"
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return self.body[:50]
+
+
 class TaskChecklistItem(models.Model):
     """One to-do of a task. Art items also name the format and size to deliver."""
 
@@ -146,8 +170,11 @@ class TaskChecklistItem(models.Model):
 
     # Set only on items created by an art request (see apps/tasks/creative_formats.py).
     format_key = models.CharField(max_length=60, blank=True, default="")
+    # The size the delivered file should have: the format's, or set in the item's settings.
     width = models.PositiveIntegerField(null=True, blank=True)
     height = models.PositiveIntegerField(null=True, blank=True)
+    # Any item can ask for a file, as an art item does (the item's settings, "Ask for a file").
+    accepts_file = models.BooleanField(default=False, db_default=False)
     media_asset = models.ForeignKey(
         "media_library.MediaAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="task_items"
     )
@@ -162,6 +189,11 @@ class TaskChecklistItem(models.Model):
     @property
     def is_art(self):
         return bool(self.format_key)
+
+    @property
+    def takes_file(self):
+        """A file is delivered on it: an art item, or one set to ask for a file."""
+        return self.is_art or self.accepts_file
 
 
 class TaskSettings(models.Model):

@@ -21,7 +21,7 @@ from apps.notifications.models import EventType, Notification
 from apps.organizations.models import Organization
 from apps.social_accounts.models import SocialAccount
 from apps.tasks import services
-from apps.tasks.models import Task
+from apps.tasks.models import Task, TaskColumn
 from apps.workspaces.models import Workspace
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("_english", "_media_root")]
@@ -158,7 +158,7 @@ def test_an_idea_of_another_workspace_cannot_be_used(workspace, owner):
     assert _client(owner).get(_request_url(workspace), {"idea": idea.id}).status_code == 404
 
 
-def test_delivering_every_art_sends_the_task_to_review_and_tells_its_author(workspace, owner, designer):
+def test_delivering_every_art_leaves_the_review_to_the_button_which_tells_the_author(workspace, owner, designer):
     task = services.request_arts(workspace, owner, title="Arts", format_keys=["ig_story"], assignees=[designer])
     item = task.checklist.get()
 
@@ -168,6 +168,15 @@ def test_delivering_every_art_sends_the_task_to_review_and_tells_its_author(work
     task.refresh_from_db()
     assert response.status_code == 200
     assert item.is_done and item.media_asset.width == 1080
+    # Everything delivered, but the task only went from "To do" into production.
+    assert not task.column.is_review and task.column.position == 1
+    assert not Notification.objects.filter(event_type=EventType.TASK_READY_FOR_REVIEW).exists()
+
+    _client(designer).post(
+        reverse("tasks:task_stage", kwargs={"workspace_id": workspace.id, "task_id": task.id}), {"stage": "review"}
+    )
+
+    task.refresh_from_db()
     assert task.column.is_review
     assert Notification.objects.filter(user=owner, event_type=EventType.TASK_READY_FOR_REVIEW).exists()
     # The delivered file is protected from the orphaned-media sweep.
@@ -195,6 +204,13 @@ def test_a_viewer_cannot_deliver(workspace, owner):
     assert response.status_code == 403
 
 
+def _approve(task):
+    """Put the task in its board's done column, where its post can be created."""
+    done = TaskColumn.objects.get(workspace=task.workspace, is_done=True)
+    Task.objects.filter(pk=task.pk).update(column=done)
+    task.refresh_from_db()
+
+
 def test_the_post_publishes_each_art_in_its_own_format(workspace, owner):
     instagram = _connect(workspace, "instagram", "Insta")
     _connect(workspace, "facebook", "Page")
@@ -208,6 +224,7 @@ def test_the_post_publishes_each_art_in_its_own_format(workspace, owner):
     _deliver(client, task, profile_item, _png(320, 320, "profile.png"))
     feed_item.refresh_from_db()
     story_item.refresh_from_db()
+    _approve(task)
 
     response = client.post(reverse("tasks:task_create_post", kwargs={"workspace_id": workspace.id, "task_id": task.id}))
 
@@ -230,6 +247,7 @@ def test_the_post_publishes_each_art_in_its_own_format(workspace, owner):
 def test_no_post_without_a_publishable_delivered_art(workspace, owner):
     _connect(workspace, "facebook", "Page")
     task = services.request_arts(workspace, owner, title="Arts", format_keys=["fb_cover"])
+    _approve(task)
 
     response = _client(owner).post(
         reverse("tasks:task_create_post", kwargs={"workspace_id": workspace.id, "task_id": task.id})
@@ -759,3 +777,243 @@ def test_a_task_to_do_starts_production_instead_of_going_to_review(workspace, ow
     assert "closeTask" not in refused["HX-Trigger"]
     task.refresh_from_db()
     assert task.column == progress
+
+
+def _comment_url(task, checklist):
+    return reverse(
+        "tasks:checklist_comment",
+        kwargs={"workspace_id": task.workspace_id, "task_id": task.id, "checklist_id": checklist.id},
+    )
+
+
+def test_a_task_in_review_takes_comments_on_its_checklists_and_shows_them(workspace, owner):
+    _todo, _progress, review, *_rest = services.ensure_columns(workspace)
+    task = services.create_task(
+        workspace, owner, title="Arts", column=review, checklists=[{"title": "Instagram", "items": ["Feed"]}]
+    )
+    checklist = task.checklists.get()
+
+    body = _client(owner).post(_comment_url(task, checklist), {"body": "  Make the logo bigger  "}).content.decode()
+    _client(owner).post(_comment_url(task, checklist), {"body": "   "})
+
+    comment = checklist.comments.get()
+    assert (comment.body, comment.author) == ("Make the logo bigger", owner)
+    assert "Make the logo bigger" in body
+
+
+def test_comments_are_written_only_in_review(workspace, owner):
+    todo, *_rest = services.ensure_columns(workspace)
+    task = services.create_task(
+        workspace, owner, title="Early", column=todo, checklists=[{"title": "A", "items": ["x"]}]
+    )
+
+    response = _client(owner).post(_comment_url(task, task.checklists.get()), {"body": "Too soon"})
+
+    assert "showToast" in response["HX-Trigger"]
+    assert not task.checklists.get().comments.exists()
+
+
+def test_another_workspaces_checklist_cannot_be_commented(workspace, owner):
+    other = Workspace.objects.create(organization=workspace.organization, name="Other")
+    review = services.ensure_columns(other)[2]
+    foreign = services.create_task(
+        other, owner, title="Theirs", column=review, checklists=[{"title": "A", "items": ["x"]}]
+    )
+    checklist = foreign.checklists.get()
+
+    response = _client(owner).post(
+        reverse(
+            "tasks:checklist_comment",
+            kwargs={"workspace_id": workspace.id, "task_id": foreign.id, "checklist_id": checklist.id},
+        ),
+        {"body": "Sneaky"},
+    )
+
+    assert response.status_code == 404
+    assert not checklist.comments.exists()
+
+
+def test_the_task_window_sums_up_the_arts_and_the_posts_channels(workspace, owner):
+    instagram = _connect(workspace, "instagram", "Insta")
+    task = services.request_arts(
+        workspace,
+        owner,
+        title="Launch",
+        format_keys=["ig_story"],
+        briefing="Bold type",
+        post_caption="It's here",
+        channel_formats={str(instagram.id): ["story"]},
+    )
+
+    body = (
+        _client(owner)
+        .get(
+            reverse("tasks:task_detail", kwargs={"workspace_id": workspace.id, "task_id": task.id}),
+            HTTP_HX_REQUEST="true",
+        )
+        .content.decode()
+    )
+
+    summary = body.split("Arts requested")[1]
+    assert "Bold type" in summary and "Instagram:" in summary
+    assert "Insta</span>" in summary and "It&#x27;s here" in summary
+
+
+def test_the_post_waits_for_the_task_to_be_approved(workspace, owner):
+    _connect(workspace, "instagram", "Insta")
+    task = services.request_arts(workspace, owner, title="Arts", format_keys=["ig_feed_portrait"])
+    _deliver(_client(owner), task, task.checklist.get(), _png(1080, 1350))
+
+    response = _client(owner).post(
+        reverse("tasks:task_create_post", kwargs={"workspace_id": workspace.id, "task_id": task.id})
+    )
+    body = (
+        _client(owner)
+        .get(
+            reverse("tasks:task_detail", kwargs={"workspace_id": workspace.id, "task_id": task.id}),
+            HTTP_HX_REQUEST="true",
+        )
+        .content.decode()
+    )
+
+    task.refresh_from_db()
+    assert task.post is None and "showToast" in response["HX-Trigger"]
+    assert "create-post" not in body
+    _approve(task)
+    body = (
+        _client(owner)
+        .get(
+            reverse("tasks:task_detail", kwargs={"workspace_id": workspace.id, "task_id": task.id}),
+            HTTP_HX_REQUEST="true",
+        )
+        .content.decode()
+    )
+    assert "create-post" in body
+
+
+def _image_asset(workspace, name="ref.png"):
+    from apps.media_library.models import MediaAsset
+
+    return MediaAsset.objects.create(
+        workspace=workspace, file=SimpleUploadedFile(name, b"x"), filename=name, media_type=MediaAsset.MediaType.IMAGE
+    )
+
+
+def test_an_art_request_keeps_its_reference_photos_only_the_workspaces_images(workspace, owner):
+    mine = _image_asset(workspace)
+    other = Workspace.objects.create(organization=workspace.organization, name="Other")
+    theirs = _image_asset(other, "theirs.png")
+
+    _client(owner).post(
+        _create_url(workspace),
+        {
+            "title": "Arts",
+            "request_art": "1",
+            "formats": ["ig_story"],
+            "references": [str(mine.id), str(theirs.id), "nope"],
+        },
+        HTTP_HX_REQUEST="true",
+    )
+
+    task = Task.objects.get(workspace=workspace)
+    assert list(task.references.all()) == [mine]
+    # Kept out of the orphaned-media sweep.
+    assert mine.id in _fk_referenced_asset_ids()
+
+
+def test_the_task_window_replaces_the_reference_photos(workspace, owner):
+    first, second = _image_asset(workspace, "a.png"), _image_asset(workspace, "b.png")
+    task = services.request_arts(workspace, owner, title="Arts", format_keys=["ig_story"], references=[first.id])
+
+    _client(owner).post(
+        reverse("tasks:task_update", kwargs={"workspace_id": workspace.id, "task_id": task.id}),
+        {"save": "1", "request_art": "1", "references_sent": "1", "references": [str(second.id)]},
+    )
+
+    assert list(task.references.all()) == [second]
+
+
+def test_an_art_is_delivered_from_the_media_library_but_never_another_workspaces(workspace, owner):
+    task = services.request_arts(workspace, owner, title="Arts", format_keys=["ig_story"])
+    item = task.checklist.get()
+    url = reverse("tasks:item_deliver", kwargs={"workspace_id": workspace.id, "task_id": task.id, "item_id": item.id})
+    other = Workspace.objects.create(organization=workspace.organization, name="Other")
+
+    refused = _client(owner).post(url, {"asset_id": str(_image_asset(other, "theirs.png").id)})
+    item.refresh_from_db()
+    assert "showToast" in refused["HX-Trigger"] and item.media_asset is None
+
+    mine = _image_asset(workspace)
+    _client(owner).post(url, {"asset_id": str(mine.id)})
+    item.refresh_from_db()
+    assert item.media_asset == mine and item.is_done
+
+
+def test_an_item_set_to_ask_for_a_file_takes_a_delivery_of_any_size(workspace, owner):
+    task = services.create_task(
+        workspace, owner, title="Plain", checklists=[{"title": "A", "items": ["Product photo"]}]
+    )
+    item = task.checklist.get()
+    settings_url = reverse(
+        "tasks:item_settings", kwargs={"workspace_id": workspace.id, "task_id": task.id, "item_id": item.id}
+    )
+    deliver_url = reverse(
+        "tasks:item_deliver", kwargs={"workspace_id": workspace.id, "task_id": task.id, "item_id": item.id}
+    )
+
+    refused = _client(owner).post(deliver_url, {"asset_id": str(_image_asset(workspace).id)})
+    _client(owner).post(settings_url, {"accepts_file": "1", "width": "abc", "height": "900"})
+    item.refresh_from_db()
+    assert "showToast" in refused["HX-Trigger"]
+    # A size needs both sides: one invalid side clears it.
+    assert item.accepts_file and (item.width, item.height) == (None, None)
+
+    _client(owner).post(deliver_url, {"asset_id": str(_image_asset(workspace, "photo.png").id)})
+    item.refresh_from_db()
+    assert item.media_asset is not None and item.is_done
+
+
+def test_an_items_size_is_set_in_its_settings_and_checked_on_delivery(workspace, owner):
+    task = services.create_task(workspace, owner, title="Plain", checklists=[{"title": "A", "items": ["Banner"]}])
+    item = task.checklist.get()
+
+    _client(owner).post(
+        reverse("tasks:item_settings", kwargs={"workspace_id": workspace.id, "task_id": task.id, "item_id": item.id}),
+        {"accepts_file": "1", "width": "1200", "height": "600"},
+    )
+    response = _deliver(_client(owner), task, item, _png(1080, 1080))
+
+    item.refresh_from_db()
+    assert (item.width, item.height) == (1200, 600)
+    assert json.loads(response["HX-Trigger"])["showToast"]["tone"] == "warn"
+
+
+def test_the_new_task_windows_items_carry_their_settings(workspace, owner):
+    _client(owner).post(
+        _create_url(workspace),
+        {
+            "title": "Shoot",
+            "checklists": json.dumps(
+                [
+                    {
+                        "title": "Photos",
+                        "items": [
+                            "Plain",
+                            {"text": "Product photo", "accepts_file": True, "width": "1080", "height": "1350"},
+                            {"text": "Half size", "accepts_file": False, "width": "900", "height": ""},
+                        ],
+                    }
+                ]
+            ),
+        },
+        HTTP_HX_REQUEST="true",
+    )
+
+    items = {i.text: i for i in Task.objects.get().checklist.all()}
+    assert (items["Plain"].accepts_file, items["Plain"].width) == (False, None)
+    assert (items["Product photo"].accepts_file, items["Product photo"].width, items["Product photo"].height) == (
+        True,
+        1080,
+        1350,
+    )
+    assert (items["Half size"].accepts_file, items["Half size"].width) == (False, None)

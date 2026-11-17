@@ -6,23 +6,42 @@ on the left its fields (tasks/partials/_task_fields.html, as when it was created
 and no column field: the board moves it), saved together by "Save task" in the foot,
 beside "Delete" and the post's action, in a foot across the window (outside the form,
 since the checklists have forms of their own); on the right its checklists, whose items are
-ticked, delivered and added at once. The fields start locked, the work being on the
+ticked, delivered and added at once. Before "Edit" the task shows as text
+(tasks/partials/_task_summary.html), the work being on the
 checklists, which are only ticked (and arts delivered) until then: "Edit", at the top,
 unlocks the fields and shows "Save task", "Delete" and the checklists' own controls
 (add, rename, delete; taskEditing on the board). Until then the foot offers "Send for
-review" (or, in review, "Request changes" and "Approve"), beside the task's column.
+review" (or, in review, "Request changes" and "Approve"), beside the task's column. In
+review each named checklist also takes comments ("Comment"), shown under it from then on.
 {% endcomment %}
 {% url 'tasks:task_update' workspace_id=workspace.id task_id=task.id as update_url %}
-<div class="task-detail" x-data="taskEditForm($el)" data-initial="{{ task.edit_initial_json }}" data-first-tab="{{ first_tab }}">
+<div class="task-detail" x-data="taskEditForm($el)" data-initial="{{ task.edit_initial_json }}" data-first-tab="{{ first_tab }}"
+     @media-picked.camel.window="if (referencePickerFor === 'edit') addReferences($event.detail.assets)">
     <button type="button" @click="closeTask()" class="modal-close task-detail-close" aria-label="{% translate 'Close' %}">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
 
-    <div class="task-detail-split">
+    {# The task's side starts folded into a strip, leaving the window to the checklists (taskSummaryOpen on the board). #}
+    <div class="task-detail-split" :class="!taskSummaryOpen && 'is-folded'">
     <form id="task-edit-{{ task.id }}" class="task-detail-main"
           hx-post="{{ update_url }}" hx-target="#task-modal-body">
         <input type="hidden" name="save" value="1">
-        <div class="new-item-body !pt-7">
+        <div class="task-detail-strip" x-show="!taskSummaryOpen">
+            <span class="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center" aria-hidden="true">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            </span>
+            <button type="button" class="task-detail-strip-button" @click="taskSummaryOpen = true"
+                    title="{% translate 'Show the task' %}" aria-label="{% translate 'Show the task' %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+            {% if can_edit %}
+            <button type="button" class="task-detail-strip-button" @click="taskSummaryOpen = true; taskEditing = true; $nextTick(() => $refs.title.focus())"
+                    title="{% translate 'Edit' %}" aria-label="{% translate 'Edit' %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+            </button>
+            {% endif %}
+        </div>
+        <div class="new-item-body !pt-7" x-show="taskSummaryOpen" x-cloak>
             {# No room kept for the close button: it sits over the checklists, on the right. #}
             <div class="flex items-start gap-4">
                 <span class="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center flex-shrink-0" aria-hidden="true">
@@ -43,10 +62,21 @@ review" (or, in review, "Request changes" and "Approve"), beside the task's colu
                     {% translate "Edit" %}
                 </button>
                 {% endif %}
+                {# Folds the task's side back into the strip (not while editing: the fields are there). #}
+                <button type="button" class="task-detail-strip-button flex-shrink-0 self-center" x-show="!taskEditing" @click="taskSummaryOpen = false"
+                        title="{% translate 'Fold the task' %}" aria-label="{% translate 'Fold the task' %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
             </div>
-            <div class="mt-6">
-                {% include "tasks/partials/_task_fields.html" with prefix="edit-task" readonly=can_edit|yesno:",1" after_description="tasks/partials/_new_item_options.html" hide_column=True lockable=True %}
+            {# Before "Edit", the task as text; after it, the fields in its place. #}
+            <div class="mt-6" x-show="!taskEditing">
+                {% include "tasks/partials/_task_summary.html" %}
             </div>
+            {% if can_edit %}
+            <div class="mt-6" x-show="taskEditing" x-cloak>
+                {% include "tasks/partials/_task_fields.html" with prefix="edit-task" after_description="tasks/partials/_new_item_options.html" hide_column=True lockable=True %}
+            </div>
+            {% endif %}
         </div>
 
     </form>
@@ -75,7 +105,7 @@ review" (or, in review, "Request changes" and "Approve"), beside the task's colu
             line stays open after an item is added there, for the next one. The untitled
             checklist has no header, so its line is always there.
             {% endcomment %}
-            <section class="task-checklist" x-data="{ adding: {% if not group.checklist or focus_new_item and focus_checklist == group_key %}true{% else %}false{% endif %} }"
+            <section class="task-checklist" x-data="{ adding: {% if not group.checklist or focus_new_item and focus_checklist == group_key %}true{% else %}false{% endif %}, commenting: false }"
                      {% if not group.items %}x-show="taskEditing"{% endif %}>
                 {% if group.checklist %}
                 <div class="flex items-center gap-2 mb-1.5">
@@ -109,6 +139,47 @@ review" (or, in review, "Request changes" and "Approve"), beside the task's colu
                     {% include "tasks/partials/_checklist_item.html" %}
                     {% endfor %}
                 </ul>
+                {% if group.checklist %}
+                {% comment %}
+                The group's comments: written in review ("Comment", services.add_comment), kept
+                and shown in every column, so whoever makes the changes reads them.
+                {% endcomment %}
+                {% with comments=group.checklist.comments.all %}
+                {% if comments %}
+                <ul class="mt-3 space-y-2 border-t border-neutral-100 pt-3">
+                    {% for comment in comments %}
+                    <li class="flex gap-2.5">
+                        <span class="task-avatar !ml-0 flex-shrink-0" aria-hidden="true">{{ comment.author.display_name|default:"?"|make_list|first|upper }}</span>
+                        <div class="min-w-0 flex-1 rounded-lg bg-neutral-50 px-3 py-2">
+                            <p class="text-[11.5px] text-neutral-500">
+                                <span class="font-semibold text-neutral-800">{{ comment.author.display_name|default:_("Former member") }}</span>
+                                · {{ comment.created_at|date:"d/m H:i" }}
+                            </p>
+                            <p class="text-sm text-neutral-800 mt-0.5 break-words">{{ comment.body|linebreaksbr }}</p>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% endwith %}
+                {% if can_edit and task.column.is_review %}
+                <button type="button" class="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-700 hover:text-brand-900 cursor-pointer" x-show="!commenting"
+                        @click="commenting = true; setTimeout(() => $refs.comment.focus(), 30)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    {% translate "Comment" context "verb" %}
+                </button>
+                <form class="mt-2 space-y-2" x-show="commenting" x-cloak
+                      hx-post="{% url 'tasks:checklist_comment' workspace_id=workspace.id task_id=task.id checklist_id=group.checklist.id %}" hx-target="#task-modal-body">
+                    <textarea name="body" x-ref="comment" rows="2" maxlength="2000" required @keydown.escape.stop="commenting = false"
+                              aria-label="{% translate 'Comment' %}" placeholder="{% translate 'What should change in this group?' %}"
+                              class="form-input-styled block w-full text-sm"></textarea>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" class="btn-outline text-xs px-3" @click="commenting = false">{% translate "Cancel" %}</button>
+                        <button type="submit" class="btn-brand text-xs px-3">{% translate "Send" %}</button>
+                    </div>
+                </form>
+                {% endif %}
+                {% endif %}
                 {% if can_edit %}
                 <form class="mt-2 flex gap-2" x-show="adding && taskEditing" x-cloak
                       hx-post="{% url 'tasks:item_add' workspace_id=workspace.id task_id=task.id %}" hx-target="#task-modal-body">
@@ -158,7 +229,8 @@ review" (or, in review, "Request changes" and "Approve"), beside the task's colu
         <div class="flex items-center gap-3 ml-auto">
             {% if task.post %}
             <a href="{% url 'composer:compose_edit' workspace_id=workspace.id post_id=task.post_id %}" class="btn-soft text-sm px-5">{% translate "Open the post" %}</a>
-            {% elif can_edit and task.has_publishable_art %}
+            {% elif can_edit and task.has_publishable_art and task.column.is_done %}
+            {# Only once approved: the post goes out with the arts the review accepted. #}
             <button type="button" class="btn-soft text-sm px-5" title="{% translate 'Each art goes to the format it was made for.' %}"
                     hx-post="{% url 'tasks:task_create_post' workspace_id=workspace.id task_id=task.id %}" hx-swap="none">{% translate "Create post with these arts" %}</button>
             {% endif %}
