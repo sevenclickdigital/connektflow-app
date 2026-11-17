@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 02:51+0000\n"
+"POT-Creation-Date: 2026-11-17 04:44+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -1764,7 +1764,7 @@ msgstr "Objetivo"
 #: templates/composer/partials/template_gallery.html:154
 #: templates/composer/partials/template_gallery.html:307
 #: templates/composer/staff_idea_template_form.html:71
-#: templates/tasks/partials/_request_arts_form.html:24
+#: templates/tasks/partials/_request_arts_form.html:106
 msgid "Networks"
 msgstr "Redes"
 
@@ -1775,20 +1775,19 @@ msgstr "Ícone"
 
 #: apps/composer/forms.py:228 templates/composer/compose.html:595
 #: templates/composer/compose.html:2453
-#: templates/composer/create_landing.html:481
-#: templates/composer/create_landing.html:799
+#: templates/composer/create_landing.html:456
+#: templates/composer/create_landing.html:708
 #: templates/composer/partials/template_gallery.html:107
 #: templates/inbox/partials/_saved_reply_form.html:8
-#: templates/tasks/board.html:161
-#: templates/tasks/partials/_request_arts_form.html:71
+#: templates/tasks/partials/_request_arts_form.html:45
 msgid "Title"
 msgstr "Título"
 
 #: apps/composer/forms.py:229 templates/automations/flow_builder.html:1164
-#: templates/base.html:609 templates/composer/create_landing.html:516
-#: templates/composer/create_landing.html:836
+#: templates/base.html:610 templates/composer/create_landing.html:491
+#: templates/composer/create_landing.html:745
 #: templates/composer/partials/template_gallery.html:122
-#: templates/tasks/board.html:166
+#: templates/tasks/partials/_task_fields.html:22
 msgid "Description"
 msgstr "Descrição"
 
@@ -1871,8 +1870,8 @@ msgstr "Escreva o texto do modelo."
 msgid "The cover can have at most 5 MB."
 msgstr "A capa pode ter no máximo 5 MB."
 
-#: apps/composer/idea_icons.py:20 templates/base.html:494
-#: templates/tasks/partials/_task_card.html:47
+#: apps/composer/idea_icons.py:20 templates/base.html:495
+#: templates/tasks/partials/_task_card.html:52
 msgid "Idea"
 msgstr "Ideia"
 
@@ -1920,7 +1919,7 @@ msgstr "Foto"
 #: apps/media_library/models.py:83 apps/tasks/creative_formats.py:98
 #: apps/tasks/creative_formats.py:100
 #: templates/radar/partials/_instagram_media_grid.html:15
-#: templates/tasks/partials/_request_arts_form.html:52
+#: templates/tasks/partials/_request_arts_form.html:144
 msgid "Video"
 msgstr "Vídeo"
 
@@ -2007,8 +2006,8 @@ msgstr "Hashtag"
 msgid "Mention"
 msgstr "Menção"
 
-#: apps/composer/models.py:210 templates/base.html:261
-#: templates/composer/create_landing.html:1169
+#: apps/composer/models.py:210 templates/base.html:262
+#: templates/composer/create_landing.html:1012
 msgid "Unassigned"
 msgstr "Sem responsável"
 
@@ -2037,7 +2036,7 @@ msgstr "Em espera"
 #: apps/composer/models.py:540 apps/composer/models.py:1080
 #: apps/composer/services.py:866 apps/social_accounts/models.py:656
 #: apps/tasks/creative_formats.py:112 templates/analytics/_post_table.html:50
-#: templates/base.html:484 templates/inbox/partials/_entry_facts.html:29
+#: templates/base.html:485 templates/inbox/partials/_entry_facts.html:29
 msgid "Post"
 msgstr "Publicação"
 
@@ -2196,7 +2195,7 @@ msgstr "Modelo recusado."
 msgid "Template deleted."
 msgstr "Modelo excluído."
 
-#: apps/composer/views.py:139
+#: apps/composer/views.py:140
 msgid ""
 "No open posting slot within the scheduling horizon — add posting slots or "
 "free one up."
@@ -2204,12 +2203,12 @@ msgstr ""
 "Nenhum horário livre dentro do período de agendamento — adicione horários de "
 "publicação ou libere um."
 
-#: apps/composer/views.py:618
+#: apps/composer/views.py:619
 #, python-format
 msgid "Select a Pinterest board for %(account)s."
 msgstr "Selecione uma pasta do Pinterest para %(account)s."
 
-#: apps/composer/views.py:716
+#: apps/composer/views.py:717
 #, python-format
 msgid ""
 "%(account)s: Instagram publishes a single video in the feed as a Reel. "
@@ -2218,32 +2217,32 @@ msgstr ""
 "%(account)s: o Instagram publica um vídeo único no feed como Reel. Escolha "
 "Feed ou Reels, não os dois."
 
-#: apps/composer/views.py:787
+#: apps/composer/views.py:788
 #, python-format
 msgid "%(platforms)s can only publish videos."
 msgid_plural "%(platforms)s can only publish videos."
 msgstr[0] "O %(platforms)s só publica vídeos."
 msgstr[1] "%(platforms)s só publicam vídeos."
 
-#: apps/composer/views.py:791 apps/composer/views.py:800
-#: apps/composer/views.py:5088 templates/composer/compose.html:1231
+#: apps/composer/views.py:792 apps/composer/views.py:801
+#: apps/composer/views.py:5065 templates/composer/compose.html:1231
 msgid "and"
 msgstr "e"
 
-#: apps/composer/views.py:796
+#: apps/composer/views.py:797
 #, python-format
 msgid "%(platforms)s needs an image or a video."
 msgid_plural "%(platforms)s need an image or a video."
 msgstr[0] "O %(platforms)s precisa de uma imagem ou um vídeo."
 msgstr[1] "%(platforms)s precisam de uma imagem ou um vídeo."
 
-#: apps/composer/views.py:808
+#: apps/composer/views.py:809
 msgid "Add a video to this post, or deselect that account."
 msgid_plural "Add a video to this post, or deselect those accounts."
 msgstr[0] "Adicione um vídeo a esta publicação ou desmarque essa conta."
 msgstr[1] "Adicione um vídeo a esta publicação ou desmarque essas contas."
 
-#: apps/composer/views.py:816
+#: apps/composer/views.py:817
 msgid "Add an image or a video to this post, or deselect that account."
 msgid_plural ""
 "Add an image or a video to this post, or deselect those accounts."
@@ -2252,88 +2251,88 @@ msgstr[0] ""
 msgstr[1] ""
 "Adicione uma imagem ou um vídeo a esta publicação ou desmarque essas contas."
 
-#: apps/composer/views.py:1635 templates/composer/compose.html:2508
+#: apps/composer/views.py:1636 templates/composer/compose.html:2508
 msgid "Scheduled time must be in the future."
 msgstr "O horário agendado precisa estar no futuro."
 
-#: apps/composer/views.py:1647
+#: apps/composer/views.py:1648
 msgid "Date and time required."
 msgstr "Data e hora são obrigatórias."
 
-#: apps/composer/views.py:1668 apps/composer/views.py:1709
+#: apps/composer/views.py:1669 apps/composer/views.py:1710
 msgid "No active queue found for the selected channel."
 msgstr "Nenhuma fila ativa encontrada para o canal selecionado."
 
-#: apps/composer/views.py:1974
+#: apps/composer/views.py:1975
 msgid "Read-only — not saved"
 msgstr "Somente leitura — não salvo"
 
-#: apps/composer/views.py:2024
+#: apps/composer/views.py:2025
 msgid "Nothing to save yet"
 msgstr "Nada para salvar ainda"
 
-#: apps/composer/views.py:2054
+#: apps/composer/views.py:2055
 #, python-format
 msgid "Saved %(time)s"
 msgstr "Salvo às %(time)s"
 
-#: apps/composer/views.py:2279 apps/composer/views.py:3146
-#: apps/composer/views.py:4145
+#: apps/composer/views.py:2280 apps/composer/views.py:3147
+#: apps/composer/views.py:4122
 msgid "No file provided"
 msgstr "Nenhum arquivo enviado"
 
-#: apps/composer/views.py:2283
+#: apps/composer/views.py:2284
 msgid "Only image files are allowed"
 msgstr "Apenas arquivos de imagem são permitidos"
 
-#: apps/composer/views.py:2542
+#: apps/composer/views.py:2543
 msgid "Could not read video duration."
 msgstr "Não foi possível ler a duração do vídeo."
 
-#: apps/composer/views.py:2557
+#: apps/composer/views.py:2558
 msgid "Could not extract frames."
 msgstr "Não foi possível extrair os quadros."
 
-#: apps/composer/views.py:2598
+#: apps/composer/views.py:2599
 msgid "Missing search query"
 msgstr "Informe um termo de busca"
 
-#: apps/composer/views.py:2611
+#: apps/composer/views.py:2612
 msgid "Could not reach Unsplash. Try again."
 msgstr "Não foi possível acessar o Unsplash. Tente novamente."
 
-#: apps/composer/views.py:2616
+#: apps/composer/views.py:2617
 msgid "Unsplash rate limit reached. Try again in a few minutes."
 msgstr ""
 "Limite de requisições do Unsplash atingido. Tente novamente em alguns "
 "minutos."
 
-#: apps/composer/views.py:2618 templates/composer/compose.html:2496
+#: apps/composer/views.py:2619 templates/composer/compose.html:2496
 msgid "Unsplash search failed. Try again."
 msgstr "A busca no Unsplash falhou. Tente novamente."
 
-#: apps/composer/views.py:2645
+#: apps/composer/views.py:2646
 msgid "Unexpected response from Unsplash. Try again."
 msgstr "Resposta inesperada do Unsplash. Tente novamente."
 
-#: apps/composer/views.py:2670
+#: apps/composer/views.py:2671
 msgid "No photos selected"
 msgstr "Nenhuma foto selecionada"
 
-#: apps/composer/views.py:2673
+#: apps/composer/views.py:2674
 #, python-format
 msgid "Select at most %(count)s photos per import."
 msgstr "Selecione no máximo %(count)s fotos por importação."
 
-#: apps/composer/views.py:2784
+#: apps/composer/views.py:2785
 msgid "Could not import the selected photos."
 msgstr "Não foi possível importar as fotos selecionadas."
 
-#: apps/composer/views.py:2834
+#: apps/composer/views.py:2835
 msgid "Failed to fetch boards"
 msgstr "Não foi possível carregar as pastas"
 
-#: apps/composer/views.py:2874
+#: apps/composer/views.py:2875
 msgid ""
 "Place search isn't enabled for this app on Meta yet: it needs the Page "
 "Public Metadata Access feature approved in App Review."
@@ -2341,62 +2340,46 @@ msgstr ""
 "A busca de locais ainda não está liberada para este app na Meta: ela precisa "
 "do recurso Page Public Metadata Access aprovado na revisão do app."
 
-#: apps/composer/views.py:2878
+#: apps/composer/views.py:2879
 msgid "Could not search places right now. Try again in a moment."
 msgstr "Não foi possível buscar locais agora. Tente de novo em instantes."
 
-#: apps/composer/views.py:3341
-msgid "Only images can be cropped."
-msgstr "Só imagens podem ser cortadas."
-
-#: apps/composer/views.py:3344
-msgid "Choose the area to keep."
-msgstr "Escolha a área que vai ficar."
-
-#: apps/composer/views.py:3351
-msgid "The area to keep must be inside the image."
-msgstr "A área a manter precisa estar dentro da imagem."
-
-#: apps/composer/views.py:3354
-msgid "This image is too large to edit."
-msgstr "Esta imagem é grande demais para editar."
-
-#: apps/composer/views.py:3366 apps/composer/views.py:3445
+#: apps/composer/views.py:3343 apps/composer/views.py:3422
 msgid "This post has already published and can't be edited."
 msgstr "Esta publicação já foi publicada e não pode ser editada."
 
-#: apps/composer/views.py:3490
+#: apps/composer/views.py:3467
 msgid "Marked as published. Thank you!"
 msgstr "Marcado como publicado. Obrigado!"
 
-#: apps/composer/views.py:3583
+#: apps/composer/views.py:3560
 msgid "You don't have permission to delete this post."
 msgstr "Você não tem permissão para excluir esta publicação."
 
-#: apps/composer/views.py:3669
+#: apps/composer/views.py:3646
 msgid "Brainstorming"
 msgstr "Brainstorming"
 
-#: apps/composer/views.py:3670
+#: apps/composer/views.py:3647
 msgctxt "idea column"
 msgid "Under review"
 msgstr "Em avaliação"
 
-#: apps/composer/views.py:3671
+#: apps/composer/views.py:3648
 msgctxt "idea column"
 msgid "Approved"
 msgstr "Aprovadas"
 
-#: apps/composer/views.py:3672
+#: apps/composer/views.py:3649
 msgctxt "idea column"
 msgid "Discarded"
 msgstr "Descartadas"
 
-#: apps/composer/views.py:3704
+#: apps/composer/views.py:3681
 msgid "This is a place to plan ✍️ your content"
 msgstr "Este é o lugar para planejar ✍️ seu conteúdo"
 
-#: apps/composer/views.py:3706
+#: apps/composer/views.py:3683
 msgid ""
 "Save your Ideas before converting them into posts. Brainstorm, plan ahead, "
 "and keep everything organized in one place."
@@ -2404,81 +2387,82 @@ msgstr ""
 "Salve suas ideias antes de transformá-las em publicações. Tenha ideias, "
 "planeje com antecedência e mantenha tudo organizado em um só lugar."
 
-#: apps/composer/views.py:3738
+#: apps/composer/views.py:3715
 msgid "First ideas to explore."
 msgstr "Ideias iniciais para explorar."
 
-#: apps/composer/views.py:3739
+#: apps/composer/views.py:3716
 msgid "Weighing whether it works and in which format."
 msgstr "Analisando a viabilidade e o formato."
 
-#: apps/composer/views.py:3740
+#: apps/composer/views.py:3717
 msgid "Ideas ready for production."
 msgstr "Ideias prontas para produção."
 
-#: apps/composer/views.py:3741
+#: apps/composer/views.py:3718
 msgid "Ideas that will not be used."
 msgstr "Ideias que não serão utilizadas."
 
-#: apps/composer/views.py:3985 apps/tasks/views.py:605
+#: apps/composer/views.py:3962 apps/media_library/cropping.py:32
+#: apps/tasks/views.py:744
 msgid "Storage quota exceeded. Free up space or upgrade your plan."
 msgstr ""
 "Cota de armazenamento excedida. Libere espaço ou faça upgrade do seu plano."
 
-#: apps/composer/views.py:4063
+#: apps/composer/views.py:4040
 msgid "The template is now one of your ideas."
 msgstr "O modelo agora é uma das suas ideias."
 
-#: apps/composer/views.py:4548
+#: apps/composer/views.py:4525
 msgid "Name is required."
 msgstr "O nome é obrigatório."
 
-#: apps/composer/views.py:4577
+#: apps/composer/views.py:4554
 msgid "Column must be empty before deleting."
 msgstr "A coluna precisa estar vazia antes de ser excluída."
 
-#: apps/composer/views.py:4812
+#: apps/composer/views.py:4789
 msgid "CSV file too large (max 5 MB)."
 msgstr "Arquivo CSV muito grande (máx. 5 MB)."
 
-#: apps/composer/views.py:4822
+#: apps/composer/views.py:4799
 msgid "CSV file is empty."
 msgstr "O arquivo CSV está vazio."
 
-#: apps/composer/views.py:5128
+#: apps/composer/views.py:5100
 msgid "Tag name is required."
 msgstr "O nome da tag é obrigatório."
 
-#: apps/composer/views.py:5131
+#: apps/composer/views.py:5103
 msgid "Unknown tag kind."
 msgstr "Tipo de etiqueta desconhecido."
 
-#: apps/composer/views.py:5146
+#: apps/composer/views.py:5118
 msgid "Group name is required."
 msgstr "O nome do grupo é obrigatório."
 
-#: apps/composer/views.py:5157
+#: apps/composer/views.py:5129
 msgid "A group with this name already exists."
 msgstr "Já existe um grupo com este nome."
 
-#: apps/composer/views.py:5180
+#: apps/composer/views.py:5152
 msgid "The template was not sent."
 msgstr "O modelo não foi enviado."
 
-#: apps/composer/views.py:5193
+#: apps/composer/views.py:5165
 #, python-format
 msgid "You already have %(count)s templates waiting for approval."
 msgstr "Você já tem %(count)s modelos aguardando aprovação."
 
-#: apps/composer/views.py:5198
+#: apps/composer/views.py:5170
 msgid "Template sent. Thank you!"
 msgstr "Modelo enviado. Obrigado!"
 
-#: apps/composer/views.py:5199
+#: apps/composer/views.py:5171
 msgid "It reaches every brand's shelf once our team approves it."
 msgstr "Ele aparece para todas as marcas assim que a nossa equipe aprovar."
 
-#: apps/composer/views.py:5231
+#: apps/composer/views.py:5203
 msgid "This tag no longer exists."
 msgstr "Esta tag não existe mais."
 
@@ -3291,6 +3275,22 @@ msgstr "Contato de cobrança atualizado."
 msgid "Provide a title, a thumbnail, or both."
 msgstr "Informe um título, uma miniatura ou os dois."
 
+#: apps/media_library/cropping.py:49 apps/tasks/views.py:431
+msgid "Only images can be cropped."
+msgstr "Só imagens podem ser cortadas."
+
+#: apps/media_library/cropping.py:52
+msgid "Choose the area to keep."
+msgstr "Escolha a área que vai ficar."
+
+#: apps/media_library/cropping.py:58
+msgid "The area to keep must be inside the image."
+msgstr "A área a manter precisa estar dentro da imagem."
+
+#: apps/media_library/cropping.py:60
+msgid "This image is too large to edit."
+msgstr "Esta imagem é grande demais para editar."
+
 #: apps/media_library/models.py:85
 msgid "Document"
 msgstr "Documento"
@@ -3840,12 +3840,12 @@ msgstr "Até R$ 100"
 msgid "Commission %(pct)s%% · ~%(amount)s"
 msgstr "Comissão %(pct)s%% · ~%(amount)s"
 
-#: apps/radar/services.py:427 apps/radar/services.py:603
+#: apps/radar/services.py:427 apps/radar/services.py:605
 #, python-format
 msgid "%(pct)s%% OFF"
 msgstr "%(pct)s%% OFF"
 
-#: apps/radar/services.py:437 apps/radar/services.py:605
+#: apps/radar/services.py:437 apps/radar/services.py:607
 #, python-format
 msgid "%(count)s sold"
 msgid_plural "%(count)s sold"
@@ -3862,16 +3862,16 @@ msgstr "Link de afiliado: %(link)s"
 msgid "Product page: %(link)s"
 msgstr "Página do produto: %(link)s"
 
-#: apps/radar/services.py:480
+#: apps/radar/services.py:481
 #, python-format
 msgid "Post offer: %(name)s"
 msgstr "Publicar oferta: %(name)s"
 
-#: apps/radar/services.py:482
+#: apps/radar/services.py:483
 msgid "Product image (copy in the media library)"
 msgstr "Imagem do produto (cópia na galeria)"
 
-#: apps/radar/services.py:514
+#: apps/radar/services.py:516
 msgid ""
 "Shopee refused the App ID or Secret. Reconnect Shopee Affiliates in "
 "Platforms."
@@ -3879,13 +3879,13 @@ msgstr ""
 "A Shopee recusou o App ID ou o Secret. Reconecte a Shopee Afiliados em "
 "Plataformas."
 
-#: apps/radar/services.py:516
+#: apps/radar/services.py:518
 msgid "Shopee is limiting requests right now. Wait a minute and try again."
 msgstr ""
 "A Shopee está limitando as consultas agora. Aguarde um minuto e tente de "
 "novo."
 
-#: apps/radar/services.py:519
+#: apps/radar/services.py:521
 msgid ""
 "This affiliate account has no access to the Shopee Open API. Check its "
 "status in the Shopee affiliate panel."
@@ -3893,43 +3893,43 @@ msgstr ""
 "Esta conta de afiliado não tem acesso à Open API da Shopee. Verifique a "
 "situação dela no painel de afiliados da Shopee."
 
-#: apps/radar/services.py:521
+#: apps/radar/services.py:523
 msgid "Shopee could not answer right now. Try again in a moment."
 msgstr "A Shopee não conseguiu responder agora. Tente novamente em instantes."
 
-#: apps/radar/services.py:543
+#: apps/radar/services.py:545
 #, python-format
 msgid "🛒 %(count)s sold"
 msgstr "🛒 %(count)s vendidos"
 
-#: apps/radar/services.py:556
+#: apps/radar/services.py:558
 msgid "🔥 SHOPEE DEAL!"
 msgstr "🔥 OFERTA SHOPEE!"
 
-#: apps/radar/services.py:557
+#: apps/radar/services.py:559
 #, python-format
 msgid "💰 For %(price)s"
 msgstr "💰 Por %(price)s"
 
-#: apps/radar/services.py:558
+#: apps/radar/services.py:560
 #, python-format
 msgid "🛍️ Check it out: %(link)s"
 msgstr "🛍️ Confira: %(link)s"
 
-#: apps/radar/services.py:559
+#: apps/radar/services.py:561
 msgid "⚠️ Price and availability may change."
 msgstr "⚠️ Preço e disponibilidade podem mudar."
 
-#: apps/radar/services.py:562
+#: apps/radar/services.py:564
 msgid "🚨 LOOK AT THIS DEAL!"
 msgstr "🚨 OLHA ESSA OFERTA!"
 
-#: apps/radar/services.py:563
+#: apps/radar/services.py:565
 #, python-format
 msgid "🔥 Only %(price)s"
 msgstr "🔥 Por apenas %(price)s"
 
-#: apps/radar/services.py:564
+#: apps/radar/services.py:566
 #, python-format
 msgid ""
 "Grab it while it lasts 👇\n"
@@ -3938,7 +3938,7 @@ msgstr ""
 "Aproveite enquanto durar 👇\n"
 "%(link)s"
 
-#: apps/radar/services.py:568
+#: apps/radar/services.py:570
 #, python-format
 msgid ""
 "On Shopee 👇\n"
@@ -4002,44 +4002,44 @@ msgstr "Conecte a Shopee Afiliados para ver as ofertas."
 msgid "From the Shopee offer “%(name)s”"
 msgstr "Da oferta da Shopee “%(name)s”"
 
-#: apps/radar/views.py:311 apps/tasks/views.py:486
+#: apps/radar/views.py:311 apps/tasks/views.py:619
 #, python-format
 msgid "Arts: %(title)s"
 msgstr "Artes: %(title)s"
 
-#: apps/radar/views.py:329 apps/tasks/views.py:451
+#: apps/radar/views.py:330 apps/tasks/views.py:574
 msgid "Give the request a title."
 msgstr "Dê um título à solicitação."
 
-#: apps/radar/views.py:331 apps/tasks/views.py:453
+#: apps/radar/views.py:332 apps/tasks/views.py:576
 msgid "Choose at least one format."
 msgstr "Escolha pelo menos um formato."
 
-#: apps/radar/views.py:351
+#: apps/radar/views.py:353
 msgid "Task created with the product image and a draft post."
 msgstr "Tarefa criada com a imagem do produto e um rascunho de publicação."
 
-#: apps/radar/views.py:411
+#: apps/radar/views.py:413
 msgid "This offer is no longer loaded"
 msgstr "Esta oferta não está mais carregada"
 
-#: apps/radar/views.py:412
+#: apps/radar/views.py:414
 msgid "Reload the offers and try again."
 msgstr "Recarregue as ofertas e tente de novo."
 
-#: apps/radar/views.py:423
+#: apps/radar/views.py:425
 msgid "Media storage is full"
 msgstr "O armazenamento de mídia está cheio"
 
-#: apps/radar/views.py:423
+#: apps/radar/views.py:425
 msgid "Free up space in the media library to copy the product image."
 msgstr "Libere espaço na galeria para copiar a imagem do produto."
 
-#: apps/radar/views.py:426 apps/radar/views.py:427
+#: apps/radar/views.py:428 apps/radar/views.py:429
 msgid "Could not copy the product image"
 msgstr "Não foi possível copiar a imagem do produto"
 
-#: apps/radar/views.py:427
+#: apps/radar/views.py:429
 msgid "Shopee sent an image the media library does not accept."
 msgstr "A Shopee enviou uma imagem que a galeria não aceita."
 
@@ -4924,89 +4924,137 @@ msgstr "Em produção"
 msgid "In review"
 msgstr "Em revisão"
 
-#: apps/tasks/services.py:288
+#: apps/tasks/services.py:70 templates/tasks/board.html:4
+#: templates/tasks/board.html:13 templates/tasks/request_arts.html:13
+msgid "Tasks"
+msgstr "Tarefas"
+
+#: apps/tasks/services.py:149
+#, python-format
+msgid "Checklist %(number)s"
+msgstr "Checklist %(number)s"
+
+#: apps/tasks/services.py:389
 #, python-format
 msgid "New task: %(title)s"
 msgstr "Nova tarefa: %(title)s"
 
-#: apps/tasks/services.py:289
+#: apps/tasks/services.py:390
 #, python-format
 msgid "%(who)s made you responsible for this task."
 msgstr "%(who)s colocou você como responsável por esta tarefa."
 
-#: apps/tasks/services.py:302
+#: apps/tasks/services.py:403
 #, python-format
 msgid "Arts ready for review: %(title)s"
 msgstr "Artes prontas para revisão: %(title)s"
 
-#: apps/tasks/services.py:303
+#: apps/tasks/services.py:404
 msgid "Every art on the checklist was delivered."
 msgstr "Todas as artes da checklist foram entregues."
 
-#: apps/tasks/services.py:329
+#: apps/tasks/services.py:430
 #, python-format
 msgid "Due tomorrow: %(title)s"
 msgstr "Prazo amanhã: %(title)s"
 
-#: apps/tasks/views.py:124
+#: apps/tasks/services.py:490
+#: templates/tasks/partials/_request_arts_form.html:201
+msgid "Other to-dos"
+msgstr "Outras tarefas"
+
+#: apps/tasks/views.py:135
 msgid "The task could not be moved. Try again."
 msgstr "Não foi possível mover a tarefa. Tente novamente."
 
-#: apps/tasks/views.py:163 templates/tasks/board.html:87
+#: apps/tasks/views.py:136 templates/base.html:623
+#: templates/calendar/partials/_staff_date_rows.html:18
+#: templates/client_portal/admin/partials/client_row.html:54
+#: templates/composer/compose.html:852
+#: templates/composer/partials/_place_picker.html:20
+#: templates/composer/partials/feeds_tab.html:93
+#: templates/tasks/partials/_checklist_item.html:47
+#: templates/tasks/partials/_request_arts_form.html:17
+#: templates/workspaces/team.html:49
+msgid "Remove"
+msgstr "Remover"
+
+#: apps/tasks/views.py:137 templates/tasks/partials/_task_modal.html:79
+#: templates/tasks/partials/_task_modal.html:124
+msgid "Checklist title"
+msgstr "Título da checklist"
+
+#: apps/tasks/views.py:138 templates/tasks/partials/_task_modal.html:106
+msgid "Add an item"
+msgstr "Adicionar item"
+
+#: apps/tasks/views.py:139
+msgid "The image could not be saved. Try again."
+msgstr "Não foi possível salvar a imagem. Tente novamente."
+
+#: apps/tasks/views.py:188 templates/tasks/board.html:89
 msgid "My tasks"
 msgstr "Minhas tarefas"
 
-#: apps/tasks/views.py:200
+#: apps/tasks/views.py:229
 msgid "Give the task a title."
 msgstr "Dê um título à tarefa."
 
-#: apps/tasks/views.py:215
+#: apps/tasks/views.py:246
 msgid "Task created."
 msgstr "Tarefa criada."
 
-#: apps/tasks/views.py:293
+#: apps/tasks/views.py:322
+msgid "Task saved."
+msgstr "Tarefa salva."
+
+#: apps/tasks/views.py:333
 msgid "Task deleted."
 msgstr "Tarefa excluída."
 
-#: apps/tasks/views.py:358
+#: apps/tasks/views.py:474
 msgid "Give the column a name."
 msgstr "Dê um nome à coluna."
 
-#: apps/tasks/views.py:395
+#: apps/tasks/views.py:511
 msgid "The board needs at least one column."
 msgstr "O quadro precisa de pelo menos uma coluna."
 
-#: apps/tasks/views.py:399
+#: apps/tasks/views.py:515
 #, python-format
 msgid "Column deleted. Its tasks went to %(column)s."
 msgstr "Coluna excluída. As tarefas dela foram para %(column)s."
 
-#: apps/tasks/views.py:571
+#: apps/tasks/views.py:595
+msgid "Art request created."
+msgstr "Solicitação de arte criada."
+
+#: apps/tasks/views.py:705
 msgid "Art request settings saved."
 msgstr "Configurações de artes salvas."
 
-#: apps/tasks/views.py:595
+#: apps/tasks/views.py:732
 msgid "Choose the file of the art."
 msgstr "Escolha o arquivo da arte."
 
-#: apps/tasks/views.py:600 apps/tasks/views.py:604 apps/tasks/views.py:608
+#: apps/tasks/views.py:739 apps/tasks/views.py:743 apps/tasks/views.py:747
 msgid "The art was not uploaded."
 msgstr "A arte não foi enviada."
 
-#: apps/tasks/views.py:627
+#: apps/tasks/views.py:766
 msgid "The art's proportions don't match the format"
 msgstr "A proporção da arte não bate com o formato"
 
-#: apps/tasks/views.py:628
+#: apps/tasks/views.py:767
 #, python-format
 msgid "Expected %(w)s × %(h)s, received %(rw)s × %(rh)s."
 msgstr "Esperado %(w)s × %(h)s, recebido %(rw)s × %(rh)s."
 
-#: apps/tasks/views.py:647
+#: apps/tasks/views.py:786
 msgid "There is no delivered art to publish."
 msgstr "Não há arte entregue para publicar."
 
-#: apps/tasks/views.py:648
+#: apps/tasks/views.py:787
 msgid ""
 "Deliver a publishable format for an account connected to this workspace."
 msgstr "Entregue um formato publicável para uma conta conectada a esta marca."
@@ -5358,8 +5406,8 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/automations/flow_builder.html:900
 #: templates/automations/flow_builder.html:1121
 #: templates/automations/flow_new.html:158 templates/automations/form.html:392
-#: templates/base.html:677 templates/base.html:701 templates/base.html:1495
-#: templates/base.html:1552 templates/billing/account_billing.html:231
+#: templates/base.html:678 templates/base.html:702 templates/base.html:1496
+#: templates/base.html:1553 templates/billing/account_billing.html:231
 #: templates/calendar/calendar.html:585
 #: templates/calendar/partials/_delete_post_modal.html:56
 #: templates/calendar/partials/event_form.html:127
@@ -5371,9 +5419,9 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/composer/categories.html:45 templates/composer/categories.html:91
 #: templates/composer/compose.html:1748 templates/composer/compose.html:2239
 #: templates/composer/compose.html:2315 templates/composer/compose.html:2403
-#: templates/composer/create_landing.html:368
-#: templates/composer/create_landing.html:1114
-#: templates/composer/create_landing.html:1150
+#: templates/composer/create_landing.html:343
+#: templates/composer/create_landing.html:957
+#: templates/composer/create_landing.html:993
 #: templates/composer/partials/_crop_editor.html:54
 #: templates/composer/partials/_tag_manager.html:103
 #: templates/composer/partials/feeds_tab.html:105
@@ -5411,7 +5459,8 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/social_accounts/partials/_disconnect_confirm.html:47
 #: templates/social_accounts/partials/_posting_slots_grid.html:87
 #: templates/social_accounts/partials/_posting_slots_grid.html:121
-#: templates/tasks/board.html:199 templates/tasks/partials/_column.html:65
+#: templates/tasks/partials/_column.html:65
+#: templates/tasks/partials/_new_item_modal.html:149
 #: templates/workspaces/settings.html:170
 #: templates/workspaces/settings.html:227
 msgid "Cancel"
@@ -5628,7 +5677,7 @@ msgstr ""
 "Crie uma marca para começar a agendar publicações, gerenciar conteúdo e "
 "colaborar com sua equipe."
 
-#: templates/accounts/dashboard.html:55 templates/base.html:1490
+#: templates/accounts/dashboard.html:55 templates/base.html:1491
 #: templates/workspaces/list.html:65
 msgid "Workspace name"
 msgstr "Nome da marca"
@@ -5675,14 +5724,14 @@ msgstr "Enviar foto"
 msgid "Role"
 msgstr "Função"
 
-#: templates/accounts/settings.html:74 templates/base.html:832
+#: templates/accounts/settings.html:74 templates/base.html:833
 #: templates/members/accept_invite.html:104
 #: templates/members/partials/member_row.html:29
 #: templates/organizations/partials/workspace_card.html:27
 msgid "Owner"
 msgstr "Proprietário"
 
-#: templates/accounts/settings.html:74 templates/base.html:832
+#: templates/accounts/settings.html:74 templates/base.html:833
 #: templates/members/accept_invite.html:104
 #: templates/members/partials/invitation_row.html:21
 #: templates/members/partials/invite_modal.html:67
@@ -5691,7 +5740,7 @@ msgstr "Proprietário"
 msgid "Admin"
 msgstr "Administrador"
 
-#: templates/accounts/settings.html:74 templates/base.html:832
+#: templates/accounts/settings.html:74 templates/base.html:833
 #: templates/members/accept_invite.html:104
 #: templates/members/partials/invitation_row.html:23
 #: templates/members/partials/invite_modal.html:73
@@ -6193,8 +6242,8 @@ msgstr "Nome"
 msgid "e.g. Zapier bot, content pipeline"
 msgstr "ex.: bot do Zapier, pipeline de conteúdo"
 
-#: templates/api_keys/_issue_modal.html:41 templates/base.html:361
-#: templates/base.html:371 templates/billing/staff_subscriptions.html:171
+#: templates/api_keys/_issue_modal.html:41 templates/base.html:362
+#: templates/base.html:372 templates/billing/staff_subscriptions.html:171
 msgid "Workspace"
 msgstr "Marca"
 
@@ -6261,6 +6310,7 @@ msgstr "Emitida por %(name)s"
 #: templates/media_library/_shared_asset_card.html:67
 #: templates/media_library/asset_edit.html:4
 #: templates/organizations/workspaces.html:165
+#: templates/tasks/partials/_checklist_item.html:56
 msgid "Edit"
 msgstr "Editar"
 
@@ -6649,7 +6699,7 @@ msgstr "Nenhum histórico de versões disponível"
 
 #: templates/automations/flow_builder.html:7
 #: templates/automations/flow_builder.html:255
-#: templates/composer/create_landing.html:277
+#: templates/composer/create_landing.html:252
 #: templates/composer/staff_idea_templates.html:31
 msgid "Templates"
 msgstr "Modelos"
@@ -6708,13 +6758,15 @@ msgid "Automation settings"
 msgstr "Configurações da automação"
 
 #: templates/automations/flow_builder.html:201
-#: templates/composer/create_landing.html:548
-#: templates/composer/create_landing.html:869
+#: templates/composer/create_landing.html:523
+#: templates/composer/create_landing.html:778
 #: templates/composer/partials/_media_thumb_actions.html:10
 #: templates/layouts/settings.html:19
 #: templates/organizations/partials/workspace_card.html:42
 #: templates/settings_manager/index.html:3
-#: templates/settings_manager/index.html:6 templates/workspaces/settings.html:3
+#: templates/settings_manager/index.html:6
+#: templates/tasks/partials/_checklist_item.html:40
+#: templates/workspaces/settings.html:3
 msgid "Settings"
 msgstr "Configurações"
 
@@ -6803,10 +6855,10 @@ msgstr ""
 #: templates/calendar/partials/_post_card.html:114
 #: templates/calendar/staff_dates.html:79 templates/composer/compose.html:1776
 #: templates/composer/compose.html:2492
-#: templates/composer/create_landing.html:559
-#: templates/composer/create_landing.html:880
-#: templates/composer/create_landing.html:1041
-#: templates/composer/create_landing.html:1130
+#: templates/composer/create_landing.html:534
+#: templates/composer/create_landing.html:789
+#: templates/composer/create_landing.html:884
+#: templates/composer/create_landing.html:973
 #: templates/composer/partials/_media_thumb_actions.html:24
 #: templates/composer/partials/_tag_manager.html:97
 #: templates/composer/partials/_tag_manager.html:104
@@ -6822,7 +6874,7 @@ msgstr ""
 #: templates/media_library/_folder_tree.html:92
 #: templates/media_library/_folder_tree.html:104
 #: templates/media_library/_shared_asset_card.html:79
-#: templates/tasks/partials/_task_modal.html:146
+#: templates/tasks/partials/_task_modal.html:38
 msgid "Delete"
 msgstr "Excluir"
 
@@ -7059,8 +7111,8 @@ msgid "Someone who comments five times still hears from you once."
 msgstr "Quem comentar cinco vezes recebe resposta uma vez só."
 
 #: templates/automations/flow_builder.html:888
-#: templates/automations/form.html:358 templates/tasks/board.html:96
-#: templates/tasks/board.html:118 templates/tasks/board.html:172
+#: templates/automations/form.html:358 templates/tasks/board.html:98
+#: templates/tasks/board.html:120 templates/tasks/partials/_task_fields.html:56
 msgid "Priority"
 msgstr "Prioridade"
 
@@ -7079,7 +7131,8 @@ msgstr "Buscar imagens…"
 
 #: templates/automations/flow_builder.html:953
 #: templates/composer/compose.html:2471
-#: templates/tasks/partials/_task_modal.html:208
+#: templates/tasks/partials/_checklist_item.html:66
+#: templates/tasks/partials/_checklist_item.html:87
 msgid "Uploading…"
 msgstr "Enviando…"
 
@@ -7097,6 +7150,7 @@ msgstr "Enviar"
 #: templates/calendar/partials/publish_calendar_shell.html:74
 #: templates/composer/partials/_tag_manager.html:83
 #: templates/radar/partials/_source_card.html:94
+#: templates/tasks/partials/_new_item_modal.html:158
 msgid "Loading…"
 msgstr "Carregando…"
 
@@ -7134,16 +7188,16 @@ msgstr "Os fluxos prontos aparecerão aqui assim que forem publicados."
 msgid "steps"
 msgstr "etapas"
 
-#: templates/automations/flow_builder.html:1105 templates/base.html:508
+#: templates/automations/flow_builder.html:1105 templates/base.html:509
 #: templates/billing/staff_console.html:205
 #: templates/calendar/partials/event_form.html:47
 #: templates/calendar/partials/publish_calendar_shell.html:54
 #: templates/calendar/partials/publish_calendar_shell.html:66
 #: templates/composer/compose.html:2091
-#: templates/composer/create_landing.html:450
-#: templates/composer/create_landing.html:561
-#: templates/composer/create_landing.html:770
-#: templates/composer/create_landing.html:882
+#: templates/composer/create_landing.html:425
+#: templates/composer/create_landing.html:536
+#: templates/composer/create_landing.html:679
+#: templates/composer/create_landing.html:791
 #: templates/composer/partials/_crop_editor.html:22
 #: templates/composer/partials/_media_thumb_actions.html:26
 #: templates/composer/partials/_tag_groups.html:133
@@ -7158,9 +7212,12 @@ msgstr "etapas"
 #: templates/social_accounts/partials/_account_card.html:211
 #: templates/social_accounts/partials/_account_card.html:232
 #: templates/social_accounts/partials/_connect_guide.html:14
-#: templates/tasks/board.html:145
+#: templates/tasks/partials/_checklist_item.html:49
+#: templates/tasks/partials/_new_item_modal.html:27
+#: templates/tasks/partials/_new_item_modal.html:61
 #: templates/tasks/partials/_request_arts_host.html:17
-#: templates/tasks/partials/_task_modal.html:5
+#: templates/tasks/partials/_task_modal.html:11
+#: templates/tasks/partials/_task_modal.html:50
 #: templates/workspaces/settings.html:157
 msgid "Close"
 msgstr "Fechar"
@@ -7349,6 +7406,7 @@ msgstr "Conecte uma conta do Facebook ou Instagram para automatizar respostas."
 #: templates/social_accounts/bluesky_connect.html:10
 #: templates/social_accounts/devto_connect.html:10
 #: templates/social_accounts/mastodon_connect.html:10
+#: templates/tasks/partials/_new_item_modal.html:59
 msgid "Back"
 msgstr "Voltar"
 
@@ -8021,70 +8079,70 @@ msgstr ""
 msgid "Name one above to start drawing it on the canvas."
 msgstr "Dê um nome acima para começar a desenhá-lo na tela."
 
-#: templates/base.html:251 templates/partials/_review_banner.html:22
+#: templates/base.html:252 templates/partials/_review_banner.html:22
 msgid "Dismiss"
 msgstr "Dispensar"
 
-#: templates/base.html:256 templates/composer/compose.html:2504
+#: templates/base.html:257 templates/composer/compose.html:2504
 msgid "Something went wrong. Please try again."
 msgstr "Algo deu errado. Tente novamente."
 
-#: templates/base.html:257
+#: templates/base.html:258
 msgid "Select date…"
 msgstr "Selecionar data…"
 
-#: templates/base.html:258
+#: templates/base.html:259
 msgid "Select time…"
 msgstr "Selecionar horário…"
 
-#: templates/base.html:259 templates/composer/create_landing.html:1172
+#: templates/base.html:260 templates/composer/create_landing.html:1015
 msgid "Security token missing. Please reload the page."
 msgstr "Token de segurança ausente. Recarregue a página."
 
-#: templates/base.html:260 templates/composer/create_landing.html:1176
+#: templates/base.html:261 templates/composer/create_landing.html:1019
 msgid "Could not save the idea. Please try again."
 msgstr "Não foi possível salvar a ideia. Tente novamente."
 
-#: templates/base.html:262 templates/composer/create_landing.html:1185
+#: templates/base.html:263 templates/composer/create_landing.html:1028
 msgid "One of the files failed to upload. Please try again."
 msgstr "Falha ao enviar um dos arquivos. Tente novamente."
 
-#: templates/base.html:419
+#: templates/base.html:420
 msgid "No workspaces"
 msgstr "Nenhuma marca"
 
-#: templates/base.html:434
+#: templates/base.html:435
 msgid "Manage organizations"
 msgstr "Gerenciar organizações"
 
-#: templates/base.html:448
+#: templates/base.html:449
 msgid "Expand sidebar"
 msgstr "Expandir barra lateral"
 
-#: templates/base.html:448 templates/base.html:449
+#: templates/base.html:449 templates/base.html:450
 msgid "Collapse sidebar"
 msgstr "Recolher barra lateral"
 
-#: templates/base.html:464
+#: templates/base.html:465
 msgid "New"
 msgstr "Novo"
 
-#: templates/base.html:485
+#: templates/base.html:486
 msgid "Pick its day on the calendar"
 msgstr "Escolha o dia no calendário"
 
-#: templates/base.html:495
+#: templates/base.html:496
 msgid "Capture a content idea"
 msgstr "Registrar uma ideia de conteúdo"
 
-#: templates/base.html:523 templates/composer/create_landing.html:469
+#: templates/base.html:524 templates/composer/create_landing.html:444
 msgid "Create Idea"
 msgstr "Criar ideia"
 
-#: templates/base.html:548 templates/calendar/partials/_period_toolbar.html:86
+#: templates/base.html:549 templates/calendar/partials/_period_toolbar.html:86
 #: templates/composer/compose.html:952 templates/composer/compose.html:1633
-#: templates/composer/create_landing.html:648
-#: templates/composer/create_landing.html:969 templates/contacts/form.html:128
+#: templates/composer/partials/_tag_field.html:26
+#: templates/contacts/form.html:128
 #: templates/contacts/partials/_results.html:87 templates/funnels/board.html:93
 #: templates/funnels/board.html:94
 #: templates/funnels/partials/_opportunity_details.html:57
@@ -8094,76 +8152,64 @@ msgstr "Criar ideia"
 msgid "Tags"
 msgstr "Tags"
 
-#: templates/base.html:558 templates/composer/compose.html:1670
-#: templates/composer/create_landing.html:677
-#: templates/composer/create_landing.html:998
+#: templates/base.html:559 templates/composer/compose.html:1670
+#: templates/composer/partials/_tag_field.html:54
 msgid "Search or create tag..."
 msgstr "Buscar ou criar etiqueta..."
 
-#: templates/base.html:569 templates/composer/compose.html:1692
-#: templates/composer/create_landing.html:682
-#: templates/composer/create_landing.html:1003
+#: templates/base.html:570 templates/composer/compose.html:1692
+#: templates/composer/partials/_tag_field.html:58
 #: templates/composer/partials/_tag_groups.html:179
 msgid "No tags yet. Type to create one."
 msgstr "Nenhuma etiqueta ainda. Digite para criar uma."
 
-#: templates/base.html:576 templates/base.html:708 templates/base.html:1499
-#: templates/base.html:1555 templates/calendar/queues.html:63
+#: templates/base.html:577 templates/base.html:709 templates/base.html:1500
+#: templates/base.html:1556 templates/calendar/queues.html:63
 #: templates/composer/compose.html:1679 templates/composer/compose.html:1687
 #: templates/composer/compose.html:1755
 #: templates/composer/create_landing.html:4
-#: templates/composer/create_landing.html:375
-#: templates/composer/create_landing.html:690
-#: templates/composer/create_landing.html:1011
-#: templates/composer/create_landing.html:1157
+#: templates/composer/create_landing.html:350
+#: templates/composer/create_landing.html:1000
+#: templates/composer/partials/_tag_field.html:64
 #: templates/composer/partials/media_picker.html:216
 #: templates/inbox/partials/_saved_reply_form.html:21
+#: templates/tasks/partials/_task_modal.html:125
 #: templates/workspaces/list.html:71
 msgid "Create"
 msgstr "Criar"
 
-#: templates/base.html:584 templates/base.html:693
+#: templates/base.html:585 templates/base.html:694
 #: templates/composer/compose.html:1699 templates/composer/compose.html:1715
-#: templates/composer/create_landing.html:346
-#: templates/composer/create_landing.html:360
-#: templates/composer/create_landing.html:698
-#: templates/composer/create_landing.html:1019
-#: templates/composer/create_landing.html:1142
+#: templates/composer/create_landing.html:321
+#: templates/composer/create_landing.html:335
+#: templates/composer/create_landing.html:985
+#: templates/composer/partials/_tag_field.html:73
 msgid "Create new tag"
 msgstr "Criar nova tag"
 
-#: templates/base.html:608 templates/composer/create_landing.html:483
-#: templates/composer/create_landing.html:803
+#: templates/base.html:609 templates/composer/create_landing.html:458
+#: templates/composer/create_landing.html:712
 msgid "Give your idea a title"
 msgstr "Dê um título à sua ideia"
 
-#: templates/base.html:609 templates/composer/create_landing.html:517
-#: templates/composer/create_landing.html:837
+#: templates/base.html:610 templates/composer/create_landing.html:492
+#: templates/composer/create_landing.html:746
 msgid "Let it flow... or"
 msgstr "Deixe fluir... ou"
 
-#: templates/base.html:620 templates/composer/compose.html:427
+#: templates/base.html:621 templates/composer/compose.html:427
 msgid "Preview"
 msgstr "Prévia"
 
-#: templates/base.html:622 templates/calendar/partials/_staff_date_rows.html:18
-#: templates/client_portal/admin/partials/client_row.html:54
-#: templates/composer/compose.html:852
-#: templates/composer/partials/_place_picker.html:20
-#: templates/composer/partials/feeds_tab.html:93
-#: templates/workspaces/team.html:49
-msgid "Remove"
-msgstr "Remover"
-
-#: templates/base.html:634
+#: templates/base.html:635
 msgid "Drag &amp; drop"
 msgstr "Arraste e solte"
 
-#: templates/base.html:635
+#: templates/base.html:636
 msgid "Add another file"
 msgstr "Adicionar outro arquivo"
 
-#: templates/base.html:636
+#: templates/base.html:637
 msgid ""
 "or <strong style=\"color: var(--primary); cursor: pointer;\">select a file</"
 "strong>"
@@ -8171,139 +8217,139 @@ msgstr ""
 "ou <strong style=\"color: var(--primary); cursor: pointer;\">selecione um "
 "arquivo</strong>"
 
-#: templates/base.html:646 templates/calendar/partials/_staff_date_rows.html:31
+#: templates/base.html:647 templates/calendar/partials/_staff_date_rows.html:31
 #: templates/calendar/staff_dates.html:22
 #: templates/calendar/staff_dates.html:61
-#: templates/composer/create_landing.html:719
+#: templates/composer/create_landing.html:628
 msgid "Emoji"
 msgstr "Emoji"
 
-#: templates/base.html:655 templates/composer/create_landing.html:728
+#: templates/base.html:656 templates/composer/create_landing.html:637
 msgid "Search emoji..."
 msgstr "Buscar emoji..."
 
-#: templates/base.html:684 templates/composer/create_landing.html:756
-#: templates/composer/create_landing.html:1058
+#: templates/base.html:685 templates/composer/create_landing.html:665
+#: templates/composer/create_landing.html:901
 msgid "Save Idea"
 msgstr "Salvar ideia"
 
-#: templates/base.html:697 templates/composer/compose.html:1719
-#: templates/composer/create_landing.html:364
-#: templates/composer/create_landing.html:1146
+#: templates/base.html:698 templates/composer/compose.html:1719
+#: templates/composer/create_landing.html:339
+#: templates/composer/create_landing.html:989
 msgid "Tag name..."
 msgstr "Nome da etiqueta..."
 
-#: templates/base.html:732
+#: templates/base.html:733
 msgctxt "menu"
 msgid "Dashboard"
 msgstr "Dashboard"
 
-#: templates/base.html:742
+#: templates/base.html:743
 msgctxt "menu"
 msgid "Publish"
 msgstr "Publicar"
 
-#: templates/base.html:748
+#: templates/base.html:749
 msgctxt "menu"
 msgid "Calendar"
 msgstr "Calendário"
 
-#: templates/base.html:750
+#: templates/base.html:751
 msgctxt "menu"
 msgid "Task management"
 msgstr "Gestão de Tarefas"
 
-#: templates/base.html:752 templates/composer/create_landing.html:251
+#: templates/base.html:753 templates/composer/create_landing.html:226
 msgid "Idea hub"
 msgstr "Central de ideias"
 
-#: templates/base.html:761
+#: templates/base.html:762
 msgctxt "menu"
 msgid "Engage"
 msgstr "Engajar"
 
-#: templates/base.html:765
+#: templates/base.html:766
 msgctxt "menu"
 msgid "Inbox"
 msgstr "Inbox"
 
-#: templates/base.html:766
+#: templates/base.html:767
 msgctxt "menu"
 msgid "Automation"
 msgstr "Automação"
 
-#: templates/base.html:767
+#: templates/base.html:768
 msgctxt "menu"
 msgid "Contacts"
 msgstr "Contatos"
 
-#: templates/base.html:773 templates/client_portal/reports.html:3
+#: templates/base.html:774 templates/client_portal/reports.html:3
 #: templates/client_portal/reports.html:8
 msgid "Reports"
 msgstr "Relatórios"
 
-#: templates/base.html:779 templates/social_accounts/list.html:3
+#: templates/base.html:780 templates/social_accounts/list.html:3
 #: templates/social_accounts/list.html:8
 msgid "Social Accounts"
 msgstr "Contas sociais"
 
-#: templates/base.html:783
+#: templates/base.html:784
 msgid "More"
 msgstr "Mais"
 
-#: templates/base.html:786 templates/media_library/library_index.html:12
+#: templates/base.html:787 templates/media_library/library_index.html:12
 #: templates/media_library/library_index.html:26
 msgid "Gallery"
 msgstr "Galeria"
 
-#: templates/base.html:791 templates/radar/index.html:3
+#: templates/base.html:792 templates/radar/index.html:3
 #: templates/radar/index.html:7 templates/radar/shopee.html:37
 msgid "Radar"
 msgstr "Radar"
 
-#: templates/base.html:798 templates/notifications/history.html:4
+#: templates/base.html:799 templates/notifications/history.html:4
 #: templates/notifications/history.html:12
 #: templates/notifications/partials/drawer.html:5
 msgid "Notifications"
 msgstr "Notificações"
 
-#: templates/base.html:803 templates/intelligence/playground.html:4
+#: templates/base.html:804 templates/intelligence/playground.html:4
 #: templates/intelligence/playground.html:9
 msgid "Intelligence"
 msgstr "Inteligência"
 
-#: templates/base.html:813
+#: templates/base.html:814
 msgid "Moti, the Connekt Flow robot, working on a laptop"
 msgstr "Moti, o robô do Connekt Flow, trabalhando no notebook"
 
-#: templates/base.html:836 templates/base.html:907
+#: templates/base.html:837 templates/base.html:908
 #: templates/billing/subscribe_modal.html:95
 #: templates/billing/subscribe_modal.html:326
 #: templates/client_portal/portal_base.html:69
 msgid "Log out"
 msgstr "Sair"
 
-#: templates/base.html:875
+#: templates/base.html:876
 msgid "My profile"
 msgstr "Meu perfil"
 
-#: templates/base.html:893
+#: templates/base.html:894
 msgid "Language"
 msgstr "Idioma"
 
-#: templates/base.html:928
+#: templates/base.html:929
 msgid "Toggle menu"
 msgstr "Alternar menu"
 
-#: templates/base.html:1486 templates/organizations/workspaces.html:160
+#: templates/base.html:1487 templates/organizations/workspaces.html:160
 msgid "Create workspace"
 msgstr "Criar marca"
 
-#: templates/base.html:1526 templates/organizations/workspaces.html:15
+#: templates/base.html:1527 templates/organizations/workspaces.html:15
 msgid "Create organization"
 msgstr "Criar organização"
 
-#: templates/base.html:1527
+#: templates/base.html:1528
 msgid ""
 "For another company of yours. It has its own brands, team and billing data, "
 "separate from the others."
@@ -8311,31 +8357,31 @@ msgstr ""
 "Para outra empresa sua. Ela tem marcas, equipe e dados de cobrança próprios, "
 "separados das outras."
 
-#: templates/base.html:1530 templates/organizations/workspaces.html:110
+#: templates/base.html:1531 templates/organizations/workspaces.html:110
 msgid "Organization Name"
 msgstr "Nome da organização"
 
-#: templates/base.html:1535 templates/billing/account_billing.html:184
+#: templates/base.html:1536 templates/billing/account_billing.html:184
 #: templates/billing/account_billing.html:212
 #: templates/billing/subscribe_modal.html:64
 #: templates/billing/subscribe_modal.html:292
 msgid "CPF or CNPJ"
 msgstr "CPF ou CNPJ"
 
-#: templates/base.html:1540 templates/billing/account_billing.html:221
+#: templates/base.html:1541 templates/billing/account_billing.html:221
 #: templates/billing/subscribe_modal.html:69
 #: templates/billing/subscribe_modal.html:295
 msgid "Phone with area code"
 msgstr "Telefone com DDD"
 
-#: templates/base.html:1545 templates/billing/subscribe_modal.html:74
+#: templates/base.html:1546 templates/billing/subscribe_modal.html:74
 msgid ""
 "Of the organization. They go on its invoices and are what the free trial "
 "asks for."
 msgstr ""
 "Da organização. Eles vão nas faturas dela e são o que o teste grátis pede."
 
-#: templates/base.html:1546
+#: templates/base.html:1547
 msgid "Name of its first brand"
 msgstr "Nome da primeira marca dela"
 
@@ -9871,7 +9917,7 @@ msgstr "Data e hora"
 
 #: templates/calendar/partials/_list_table.html:23
 #: templates/composer/partials/idea_card.html:76
-#: templates/tasks/partials/_task_card.html:44
+#: templates/tasks/partials/_task_card.html:49
 msgid "No date"
 msgstr "Sem data"
 
@@ -9892,8 +9938,8 @@ msgstr ""
 "comentários."
 
 #: templates/calendar/partials/_no_channels_empty_state.html:25
-#: templates/composer/create_landing.html:626
-#: templates/composer/create_landing.html:947
+#: templates/composer/create_landing.html:601
+#: templates/composer/create_landing.html:856
 msgid "Connect a Channel"
 msgstr "Conectar um canal"
 
@@ -9932,8 +9978,8 @@ msgstr "Mostrar feriados e datas comerciais do Brasil"
 #: templates/calendar/partials/_side_panel.html:21
 #: templates/calendar/staff_dates.html:12
 #: templates/calendar/staff_dates.html:17
-#: templates/composer/create_landing.html:251
-#: templates/composer/create_landing.html:281
+#: templates/composer/create_landing.html:226
+#: templates/composer/create_landing.html:256
 #: templates/layouts/admin_shell.html:82
 msgid "Special dates"
 msgstr "Datas comemorativas"
@@ -9987,6 +10033,8 @@ msgstr "Nada agendado daqui em diante."
 
 #: templates/calendar/partials/_staff_date_rows.html:18
 #: templates/radar/staff_market_hashtags.html:70
+#: templates/tasks/partials/_request_arts_form.html:79
+#: templates/tasks/partials/_task_fields.html:87
 #, python-format
 msgid "Remove %(name)s"
 msgstr "Remover %(name)s"
@@ -10152,8 +10200,8 @@ msgstr "Crie sua primeira publicação para vê-la no calendário"
 #: templates/calendar/partials/list_view.html:71
 #: templates/calendar/partials/publish_drafts.html:24
 #: templates/calendar/partials/publish_queue.html:24
-#: templates/composer/create_landing.html:750
-#: templates/composer/create_landing.html:1052
+#: templates/composer/create_landing.html:659
+#: templates/composer/create_landing.html:895
 #: templates/composer/drafts_list.html:67
 msgid "Create Post"
 msgstr "Criar publicação"
@@ -10821,16 +10869,17 @@ msgid "Confirm"
 msgstr "Confirmar"
 
 #: templates/components/_form_field.html:11
-#: templates/composer/create_landing.html:528
-#: templates/composer/create_landing.html:592
-#: templates/composer/create_landing.html:849
-#: templates/composer/create_landing.html:913
+#: templates/composer/create_landing.html:503
+#: templates/composer/create_landing.html:567
+#: templates/composer/create_landing.html:758
+#: templates/composer/create_landing.html:822
 #: templates/composer/partials/template_gallery.html:112
 #: templates/composer/partials/template_gallery.html:122
 #: templates/composer/partials/template_gallery.html:127
 #: templates/composer/partials/template_gallery.html:132
 #: templates/composer/partials/template_gallery.html:154
 #: templates/composer/partials/template_gallery.html:158
+#: templates/tasks/partials/_new_item_modal.html:97
 msgid "optional"
 msgstr "opcional"
 
@@ -10979,8 +11028,8 @@ msgid "What would you like to share?"
 msgstr "O que você quer compartilhar?"
 
 #: templates/composer/compose.html:656
-#: templates/composer/create_landing.html:581
-#: templates/composer/create_landing.html:902
+#: templates/composer/create_landing.html:556
+#: templates/composer/create_landing.html:811
 #: templates/composer/partials/_tag_groups.html:185
 #: templates/funnels/partials/_pick_conversation.html:21
 #: templates/social_accounts/list.html:134
@@ -10988,7 +11037,9 @@ msgstr "O que você quer compartilhar?"
 #: templates/social_accounts/list.html:141
 #: templates/social_accounts/partials/_posting_slots_grid.html:116
 #: templates/tasks/partials/_column.html:64
-#: templates/tasks/partials/_task_modal.html:242
+#: templates/tasks/partials/_new_item_modal.html:127
+#: templates/tasks/partials/_request_arts_form.html:220
+#: templates/tasks/partials/_task_modal.html:107
 msgid "Add"
 msgstr "Adicionar"
 
@@ -10998,6 +11049,7 @@ msgstr "Buscar no Unsplash"
 
 #: templates/composer/compose.html:685
 #: templates/inbox/partials/_reply_composer.html:93
+#: templates/tasks/partials/_new_item_modal.html:143
 msgid "Insert emoji"
 msgstr "Inserir emoji"
 
@@ -11452,8 +11504,7 @@ msgid "Select tags..."
 msgstr "Selecione etiquetas..."
 
 #: templates/composer/compose.html:1704
-#: templates/composer/create_landing.html:703
-#: templates/composer/create_landing.html:1024
+#: templates/composer/partials/_tag_field.html:79
 #: templates/composer/partials/_tag_groups.html:132
 msgid "Tag groups"
 msgstr "Grupos de tags"
@@ -11683,8 +11734,8 @@ msgstr "Arraste e solte uma miniatura"
 msgid "Posting to @{name}"
 msgstr "Publicando em @{name}"
 
-#: templates/composer/compose.html:2475 templates/tasks/board.html:81
-#: templates/tasks/board.html:86
+#: templates/composer/compose.html:2475 templates/tasks/board.html:83
+#: templates/tasks/board.html:88
 msgid "Everyone"
 msgstr "Todos"
 
@@ -11744,7 +11795,7 @@ msgid "Use this frame"
 msgstr "Usar este quadro"
 
 #: templates/composer/compose.html:2491
-#: templates/composer/create_landing.html:1131
+#: templates/composer/create_landing.html:974
 msgid "Deleting…"
 msgstr "Excluindo…"
 
@@ -11852,7 +11903,7 @@ msgstr ""
 "Este corte vale só para {format}; os outros formatos continuam com a imagem "
 "original."
 
-#: templates/composer/create_landing.html:251
+#: templates/composer/create_landing.html:226
 #: templates/composer/staff_idea_template_form.html:8
 #: templates/composer/staff_idea_template_form.html:12
 #: templates/composer/staff_idea_templates.html:12
@@ -11861,11 +11912,11 @@ msgstr ""
 msgid "Content templates"
 msgstr "Modelos de conteúdo"
 
-#: templates/composer/create_landing.html:254
+#: templates/composer/create_landing.html:229
 msgid "Ready-made starting points to make your own and publish."
 msgstr "Pontos de partida prontos para personalizar e publicar."
 
-#: templates/composer/create_landing.html:254
+#: templates/composer/create_landing.html:229
 msgid ""
 "Find special dates and use them to create content that matters to your "
 "audience."
@@ -11873,115 +11924,114 @@ msgstr ""
 "Encontre datas especiais e aproveite para criar conteúdos relevantes para o "
 "seu público."
 
-#: templates/composer/create_landing.html:254
+#: templates/composer/create_landing.html:229
 msgid "Keep, organise and develop the ideas for your next content."
 msgstr "Guarde, organize e desenvolva as ideias dos seus próximos conteúdos."
 
-#: templates/composer/create_landing.html:266 templates/tasks/board.html:23
+#: templates/composer/create_landing.html:241 templates/tasks/board.html:23
 msgid "Show tips"
 msgstr "Mostrar dicas"
 
-#: templates/composer/create_landing.html:270
+#: templates/composer/create_landing.html:245
 msgid "Pages of the create area"
 msgstr "Páginas da área de criação"
 
-#: templates/composer/create_landing.html:273
+#: templates/composer/create_landing.html:248
 msgid "Ideas"
 msgstr "Ideias"
 
-#: templates/composer/create_landing.html:302
-#: templates/composer/create_landing.html:303
+#: templates/composer/create_landing.html:277
+#: templates/composer/create_landing.html:278
 msgid "Search ideas"
 msgstr "Buscar ideias"
 
 #
-#: templates/composer/create_landing.html:310 templates/contacts/list.html:84
+#: templates/composer/create_landing.html:285 templates/contacts/list.html:84
 msgid "Tag"
 msgstr "Tag"
 
-#: templates/composer/create_landing.html:311
-#: templates/composer/create_landing.html:326
+#: templates/composer/create_landing.html:286
+#: templates/composer/create_landing.html:301
 #: templates/composer/partials/_special_dates_tab.html:42
 #: templates/composer/partials/_special_dates_tab.html:49
 #: templates/composer/partials/_special_dates_tab.html:67
 #: templates/composer/partials/_special_dates_tab.html:74
 #: templates/composer/partials/template_gallery.html:37
 #: templates/composer/partials/template_gallery.html:44
-#: templates/tasks/board.html:97 templates/tasks/board.html:102
+#: templates/tasks/board.html:99 templates/tasks/board.html:104
 msgctxt "special dates"
 msgid "All"
 msgstr "Todas"
 
-#: templates/composer/create_landing.html:321
+#: templates/composer/create_landing.html:296
 msgid "Search tags..."
 msgstr "Buscar etiquetas..."
 
-#: templates/composer/create_landing.html:335
+#: templates/composer/create_landing.html:310
 msgid "No tags yet"
 msgstr "Nenhuma etiqueta ainda"
 
-#: templates/composer/create_landing.html:338
+#: templates/composer/create_landing.html:313
 msgid "No matching tags"
 msgstr "Nenhuma etiqueta encontrada"
 
-#: templates/composer/create_landing.html:351
-#: templates/composer/create_landing.html:708
-#: templates/composer/create_landing.html:1029
+#: templates/composer/create_landing.html:326
+#: templates/composer/partials/_tag_field.html:84
 #: templates/composer/partials/_tag_manager.html:68
 msgid "Manage tags"
 msgstr "Gerenciar tags"
 
-#: templates/composer/create_landing.html:490
-#: templates/composer/create_landing.html:810
+#: templates/composer/create_landing.html:465
+#: templates/composer/create_landing.html:719
 #: templates/composer/partials/_template_icon_picker.html:21
 msgid "Choose an icon"
 msgstr "Escolher um ícone"
 
-#: templates/composer/create_landing.html:504
-#: templates/composer/create_landing.html:509
-#: templates/composer/create_landing.html:824
-#: templates/composer/create_landing.html:829
+#: templates/composer/create_landing.html:479
+#: templates/composer/create_landing.html:484
+#: templates/composer/create_landing.html:733
+#: templates/composer/create_landing.html:738
 #: templates/tasks/partials/_column.html:79
 msgid "Colour"
 msgstr "Cor"
 
-#: templates/composer/create_landing.html:506
-#: templates/composer/create_landing.html:826
+#: templates/composer/create_landing.html:481
+#: templates/composer/create_landing.html:735
 msgid "Colour of the column"
 msgstr "Cor da coluna"
 
-#: templates/composer/create_landing.html:528
-#: templates/composer/create_landing.html:849
+#: templates/composer/create_landing.html:503
+#: templates/composer/create_landing.html:758
 msgid "Reference"
 msgstr "Referência"
 
-#: templates/composer/create_landing.html:529
-#: templates/composer/create_landing.html:850
+#: templates/composer/create_landing.html:504
+#: templates/composer/create_landing.html:759
 msgid "Add an image, a reference or a file."
 msgstr "Adicione uma imagem, referência ou arquivo."
 
-#: templates/composer/create_landing.html:552
-#: templates/composer/create_landing.html:873
+#: templates/composer/create_landing.html:527
+#: templates/composer/create_landing.html:782
 #: templates/composer/partials/_media_thumb_actions.html:14
 msgid "Drag to reorder"
 msgstr "Arraste para reordenar"
 
-#: templates/composer/create_landing.html:567
-#: templates/composer/create_landing.html:888
+#: templates/composer/create_landing.html:542
+#: templates/composer/create_landing.html:797
 #: templates/composer/partials/_media_thumb_actions.html:33
 #: templates/media_library/asset_edit.html:82
 msgid "Crop"
 msgstr "Recortar"
 
-#: templates/composer/create_landing.html:592
-#: templates/composer/create_landing.html:913
+#: templates/composer/create_landing.html:567
+#: templates/composer/create_landing.html:822
 #: templates/contacts/partials/_results.html:85
 #: templates/organizations/cross_calendar.html:194
 msgid "Channels"
 msgstr "Canais"
 
-#: templates/composer/create_landing.html:624
-#: templates/composer/create_landing.html:945
+#: templates/composer/create_landing.html:599
+#: templates/composer/create_landing.html:854
 msgid ""
 "Creating the post starts it on these channels and formats. With none ticked, "
 "on every connected one."
@@ -11989,37 +12039,32 @@ msgstr ""
 "Ao criar a publicação, ela já vem com estes canais e formatos. Sem nenhum "
 "marcado, vem com todos os conectados."
 
-#: templates/composer/create_landing.html:626
-#: templates/composer/create_landing.html:947
+#: templates/composer/create_landing.html:601
+#: templates/composer/create_landing.html:856
 msgid "Connect a channel to choose where this idea will be published."
 msgstr "Conecte um canal para escolher onde esta ideia será publicada."
 
-#: templates/composer/create_landing.html:639
-#: templates/composer/create_landing.html:960
+#: templates/composer/create_landing.html:614
+#: templates/composer/create_landing.html:869
 msgid "Content date"
 msgstr "Data do conteúdo"
 
-#: templates/composer/create_landing.html:657
-#: templates/composer/create_landing.html:978
-msgid "Add tags"
-msgstr "Adicionar tags"
-
-#: templates/composer/create_landing.html:787
+#: templates/composer/create_landing.html:696
 msgid "Edit Idea"
 msgstr "Editar ideia"
 
-#: templates/composer/create_landing.html:1046 templates/tasks/board.html:53
-#: templates/tasks/partials/_request_arts_form.html:21
+#: templates/composer/create_landing.html:889 templates/tasks/board.html:53
+#: templates/tasks/partials/_request_arts_form.html:29
 #: templates/tasks/partials/_request_arts_host.html:15
 #: templates/tasks/request_arts.html:8
 msgid "Request arts"
 msgstr "Solicitar artes"
 
-#: templates/composer/create_landing.html:1108
+#: templates/composer/create_landing.html:951
 msgid "Delete idea?"
 msgstr "Excluir ideia?"
 
-#: templates/composer/create_landing.html:1109
+#: templates/composer/create_landing.html:952
 msgid ""
 "This action cannot be undone. The idea and all associated data will be "
 "permanently removed."
@@ -12027,56 +12072,56 @@ msgstr ""
 "Esta ação não pode ser desfeita. A ideia e todos os dados associados serão "
 "removidos permanentemente."
 
-#: templates/composer/create_landing.html:1170
+#: templates/composer/create_landing.html:1013
 msgid "Request validation failed."
 msgstr "Falha na validação da solicitação."
 
-#: templates/composer/create_landing.html:1171
+#: templates/composer/create_landing.html:1014
 msgid "Request failed."
 msgstr "Falha na solicitação."
 
-#: templates/composer/create_landing.html:1173
+#: templates/composer/create_landing.html:1016
 msgid "Idea form is missing."
 msgstr "O formulário da ideia não foi encontrado."
 
-#: templates/composer/create_landing.html:1174
+#: templates/composer/create_landing.html:1017
 msgid "Idea form action is missing."
 msgstr "A ação do formulário da ideia não foi encontrada."
 
-#: templates/composer/create_landing.html:1175
+#: templates/composer/create_landing.html:1018
 msgid "Could not refresh board."
 msgstr "Não foi possível atualizar o quadro."
 
-#: templates/composer/create_landing.html:1177
+#: templates/composer/create_landing.html:1020
 msgid "Could not save the idea before creating a post."
 msgstr "Não foi possível salvar a ideia antes de criar a publicação."
 
-#: templates/composer/create_landing.html:1178
+#: templates/composer/create_landing.html:1021
 msgid "Could not open the composer for this idea."
 msgstr "Não foi possível abrir o editor para esta ideia."
 
-#: templates/composer/create_landing.html:1179
+#: templates/composer/create_landing.html:1022
 msgid "Could not create a post from this idea. Please try again."
 msgstr ""
 "Não foi possível criar uma publicação a partir desta ideia. Tente novamente."
 
-#: templates/composer/create_landing.html:1180
+#: templates/composer/create_landing.html:1023
 msgid "Idea is missing."
 msgstr "A ideia não foi encontrada."
 
-#: templates/composer/create_landing.html:1181
+#: templates/composer/create_landing.html:1024
 msgid "Could not create a post from this idea."
 msgstr "Não foi possível criar uma publicação a partir desta ideia."
 
-#: templates/composer/create_landing.html:1182
+#: templates/composer/create_landing.html:1025
 msgid "Could not delete the idea. Please try again."
 msgstr "Não foi possível excluir a ideia. Tente novamente."
 
-#: templates/composer/create_landing.html:1183
+#: templates/composer/create_landing.html:1026
 msgid "Could not create column. Please try again."
 msgstr "Não foi possível criar a coluna. Tente novamente."
 
-#: templates/composer/create_landing.html:1184
+#: templates/composer/create_landing.html:1027
 msgid "Could not delete column. Please try again."
 msgstr "Não foi possível excluir a coluna. Tente novamente."
 
@@ -12168,8 +12213,8 @@ msgstr "Mídia"
 #: templates/composer/manual_publish.html:31
 #: templates/media_library/_asset_detail_panel.html:59
 #: templates/media_library/_asset_detail_panel.html:66
-#: templates/tasks/partials/_task_modal.html:197
-#: templates/tasks/partials/_task_modal.html:221
+#: templates/tasks/partials/_checklist_item.html:75
+#: templates/tasks/partials/_checklist_item.html:100
 msgid "Download"
 msgstr "Baixar"
 
@@ -12506,6 +12551,10 @@ msgstr "Salvar nos favoritos"
 #: templates/composer/partials/template_gallery.html:371
 msgid "Saved to favorites"
 msgstr "Salvo nos favoritos"
+
+#: templates/composer/partials/_tag_field.html:35
+msgid "Add tags"
+msgstr "Adicionar tags"
 
 #: templates/composer/partials/_tag_groups.html:14
 msgid "Delete this group? Its tags are kept."
@@ -17292,7 +17341,7 @@ msgid "You can edit the text before creating a task or scheduling."
 msgstr "Você pode editar o texto antes de criar a tarefa ou agendar."
 
 #: templates/radar/partials/_share_dialog.html:102
-#: templates/tasks/board.html:200
+#: templates/tasks/partials/_new_item_modal.html:150
 msgid "Create task"
 msgstr "Criar tarefa"
 
@@ -18085,11 +18134,6 @@ msgstr "Remover horário"
 msgid "Add time slot"
 msgstr "Adicionar horário"
 
-#: templates/tasks/board.html:4 templates/tasks/board.html:13
-#: templates/tasks/request_arts.html:13
-msgid "Tasks"
-msgstr "Tarefas"
-
 #: templates/tasks/board.html:14
 msgid "Organise the team's tasks on a board you shape yourself."
 msgstr "Organize as tarefas do time em um quadro montado do seu jeito."
@@ -18110,42 +18154,53 @@ msgstr "Ninguém por padrão"
 msgid "Due this many days before the content date"
 msgstr "Prazo: quantos dias antes da data do conteúdo"
 
-#: templates/tasks/board.html:73 templates/tasks/board.html:74
+#: templates/tasks/board.html:75 templates/tasks/board.html:76
 msgid "Search tasks"
 msgstr "Buscar tarefas"
 
-#: templates/tasks/board.html:80 templates/tasks/board.html:184
-#: templates/tasks/partials/_request_arts_form.html:89
-#: templates/tasks/partials/_request_arts_form.html:100
-#: templates/tasks/partials/_task_modal.html:33
+#: templates/tasks/board.html:82
+#: templates/tasks/partials/_request_arts_form.html:70
+#: templates/tasks/partials/_task_fields.html:78
 msgid "Responsible"
 msgstr "Responsáveis"
 
-#: templates/tasks/board.html:153
-msgid "New task"
-msgstr "Nova tarefa"
-
-#: templates/tasks/board.html:154
-msgid "In the column"
-msgstr "Na coluna"
-
-#: templates/tasks/board.html:163
-msgid "What needs to be done?"
-msgstr "O que precisa ser feito?"
-
-#: templates/tasks/board.html:168
-msgid "Details, links, what done looks like…"
-msgstr "Detalhes, links, como fica quando estiver pronta…"
-
-#: templates/tasks/board.html:178
-#: templates/tasks/partials/_request_arts_form.html:85
-#: templates/tasks/partials/_task_modal.html:82
-msgid "Due date"
-msgstr "Prazo"
-
-#: templates/tasks/board.html:207
+#: templates/tasks/board.html:139
+#: templates/tasks/partials/_new_item_modal.html:36
+#: templates/tasks/partials/_task_modal.html:21
 msgid "Task"
 msgstr "Tarefa"
+
+#: templates/tasks/partials/_checklist_item.html:11
+msgid "Mark as done"
+msgstr "Marcar como feito"
+
+#: templates/tasks/partials/_checklist_item.html:31
+msgid "Open the file"
+msgstr "Abrir o arquivo"
+
+#: templates/tasks/partials/_checklist_item.html:45
+msgid "Remove this art from the item? The file stays in the media library."
+msgstr "Remover esta arte do item? O arquivo continua na biblioteca de mídia."
+
+#: templates/tasks/partials/_checklist_item.html:65
+msgid "Replace"
+msgstr "Trocar"
+
+#: templates/tasks/partials/_checklist_item.html:77
+msgid "Proportions differ from the format"
+msgstr "Proporção diferente do formato"
+
+#: templates/tasks/partials/_checklist_item.html:86
+msgid "Deliver art"
+msgstr "Entregar arte"
+
+#: templates/tasks/partials/_checklist_item.html:102
+msgid "In the media library"
+msgstr "Na galeria"
+
+#: templates/tasks/partials/_checklist_item.html:110
+msgid "Remove item"
+msgstr "Remover item"
 
 #: templates/tasks/partials/_column.html:38
 msgid "Column name"
@@ -18195,7 +18250,50 @@ msgstr "Excluir coluna"
 msgid "Add task"
 msgstr "Adicionar tarefa"
 
-#: templates/tasks/partials/_request_arts_form.html:22
+#: templates/tasks/partials/_new_item_modal.html:30
+#: templates/tasks/partials/_new_item_modal.html:54
+msgid "Create new item"
+msgstr "Criar novo item"
+
+#: templates/tasks/partials/_new_item_modal.html:31
+msgid "Choose the kind of task you want to create for your team."
+msgstr "Escolha o tipo de tarefa que deseja criar para o seu time."
+
+#: templates/tasks/partials/_new_item_modal.html:37
+msgid "Organise an activity, a deadline or an internal job."
+msgstr "Organize uma atividade, prazo ou demanda interna."
+
+#: templates/tasks/partials/_new_item_modal.html:44
+msgid "Art request"
+msgstr "Solicitação de arte"
+
+#: templates/tasks/partials/_new_item_modal.html:45
+msgid "Ask for the visual pieces your content needs."
+msgstr "Peça a criação de peças visuais para o seu conteúdo."
+
+#: templates/tasks/partials/_new_item_modal.html:76
+msgid "New task"
+msgstr "Nova tarefa"
+
+#: templates/tasks/partials/_new_item_modal.html:77
+msgid "Organise an activity, set deadlines and who is responsible."
+msgstr "Organize uma atividade, defina prazos e responsáveis."
+
+#: templates/tasks/partials/_new_item_modal.html:96
+#: templates/tasks/partials/_task_modal.html:65
+msgid "Checklists"
+msgstr "Checklists"
+
+#: templates/tasks/partials/_new_item_modal.html:99
+msgid "Split the work into lists, each with its own title and items."
+msgstr "Divida o trabalho em listas, cada uma com seu título e seus itens."
+
+#: templates/tasks/partials/_new_item_modal.html:135
+#: templates/tasks/partials/_task_modal.html:119
+msgid "New checklist"
+msgstr "Nova checklist"
+
+#: templates/tasks/partials/_request_arts_form.html:30
 msgid ""
 "Choose every piece this content needs. The creative team gets one task with "
 "the exact size of each."
@@ -18203,122 +18301,156 @@ msgstr ""
 "Escolha todas as peças de que este conteúdo precisa. A equipe de criação "
 "recebe uma tarefa com o tamanho exato de cada uma."
 
-#: templates/tasks/partials/_request_arts_form.html:53
-msgid "Art only"
-msgstr "Só arte"
-
-#: templates/tasks/partials/_request_arts_form.html:66
+#: templates/tasks/partials/_request_arts_form.html:32
 #, python-format
 msgid "From the idea “%(title)s”"
 msgstr "Da ideia “%(title)s”"
 
-#: templates/tasks/partials/_request_arts_form.html:75
+#: templates/tasks/partials/_request_arts_form.html:49
 msgid "Briefing"
 msgstr "Briefing"
 
-#: templates/tasks/partials/_request_arts_form.html:77
+#: templates/tasks/partials/_request_arts_form.html:51
 msgid "How the arts should be made: what they say and show"
 msgstr "Como as artes devem ser feitas: o que dizem e mostram"
 
-#: templates/tasks/partials/_request_arts_form.html:80
-#: templates/tasks/partials/_task_modal.html:122
+#: templates/tasks/partials/_request_arts_form.html:54
+#: templates/tasks/partials/_task_fields.html:34
 msgid "Post caption"
 msgstr "Legenda da publicação"
 
-#: templates/tasks/partials/_request_arts_form.html:82
-#: templates/tasks/partials/_task_modal.html:127
+#: templates/tasks/partials/_request_arts_form.html:56
+#: templates/tasks/partials/_task_fields.html:36
 msgid "The text the post goes out with"
 msgstr "O texto com que a publicação vai sair"
 
-#: templates/tasks/partials/_request_arts_form.html:115
+#: templates/tasks/partials/_request_arts_form.html:60
+#: templates/tasks/partials/_task_fields.html:66
+msgid "Due date"
+msgstr "Prazo"
+
+#: templates/tasks/partials/_request_arts_form.html:82
+#: templates/tasks/partials/_task_fields.html:90
+msgid "Nobody yet"
+msgstr "Ninguém ainda"
+
+#: templates/tasks/partials/_request_arts_form.html:103
+msgid "Formats"
+msgstr "Formatos"
+
+#: templates/tasks/partials/_request_arts_form.html:145
+msgid "Art only"
+msgstr "Só arte"
+
+#: templates/tasks/partials/_request_arts_form.html:157
 msgid "Choose the formats"
 msgstr "Escolha os formatos"
 
-#: templates/tasks/partials/_request_arts_form.html:117
+#: templates/tasks/partials/_request_arts_form.html:159
 msgid "Create task for the creative team"
 msgstr "Criar tarefa para a criação"
 
-#: templates/tasks/partials/_task_card.html:32
-msgid "Checklist progress"
-msgstr "Progresso da checklist"
-
-#: templates/tasks/partials/_task_modal.html:72
-#: templates/tasks/partials/_task_modal.html:73
-msgid "Task title"
-msgstr "Título da tarefa"
-
-#: templates/tasks/partials/_task_modal.html:99
-msgid "Post date"
-msgstr "Data da publicação"
-
-#: templates/tasks/partials/_task_modal.html:104
-msgid "Scheduled. Change it in the composer."
-msgstr "Agendada. Altere no editor de publicações."
-
-#: templates/tasks/partials/_task_modal.html:113
-msgid "Add the details of the task…"
-msgstr "Adicione os detalhes da tarefa…"
-
-#: templates/tasks/partials/_task_modal.html:116
-msgid "No description."
-msgstr "Sem descrição."
-
-#: templates/tasks/partials/_task_modal.html:130
-msgid "No caption"
-msgstr "Sem legenda"
-
-#: templates/tasks/partials/_task_modal.html:146
-msgid "Delete this task? This cannot be undone."
-msgstr "Excluir esta tarefa? Isso não pode ser desfeito."
-
-#: templates/tasks/partials/_task_modal.html:149
-msgid "Open the post"
-msgstr "Abrir publicação"
-
-#: templates/tasks/partials/_task_modal.html:152
-msgid "Each art goes to the format it was made for."
-msgstr "Cada arte vai para o formato em que foi feita."
-
-#: templates/tasks/partials/_task_modal.html:153
-msgid "Create post with these arts"
-msgstr "Criar publicação com estas artes"
-
-#: templates/tasks/partials/_task_modal.html:164
+#: templates/tasks/partials/_request_arts_form.html:169
 msgid "Checklist"
 msgstr "Checklist"
 
-#: templates/tasks/partials/_task_modal.html:167
+#: templates/tasks/partials/_request_arts_form.html:171
+msgid ""
+"The formats you tick become a list per network. Add any other to-do below."
+msgstr ""
+"Os formatos marcados viram uma lista por rede. Adicione outras tarefas "
+"abaixo."
+
+#: templates/tasks/partials/_request_arts_form.html:174
+msgid "Tick the formats on the left."
+msgstr "Marque os formatos à esquerda."
+
+#: templates/tasks/partials/_request_arts_form.html:216
+msgid "Another to-do"
+msgstr "Outra tarefa"
+
+#: templates/tasks/partials/_request_arts_form.html:218
+msgid "E.g. Approve with the client"
+msgstr "Ex.: Aprovar com o cliente"
+
+#: templates/tasks/partials/_task_card.html:37
+msgid "Checklist progress"
+msgstr "Progresso da checklist"
+
+#: templates/tasks/partials/_task_fields.html:16
+msgid "Task title"
+msgstr "Título da tarefa"
+
+#: templates/tasks/partials/_task_fields.html:18
+msgid "E.g. Review the post caption"
+msgstr "Ex.: Revisar legenda do post"
+
+#: templates/tasks/partials/_task_fields.html:25
+msgid "Say what needs to be done, references, links or notes…"
+msgstr "Detalhe o que precisa ser feito, referências, links ou observações…"
+
+#: templates/tasks/partials/_task_fields.html:44
+msgid "Column (status)"
+msgstr "Coluna (status)"
+
+#: templates/tasks/partials/_task_fields.html:46
+#: templates/tasks/partials/_task_fields.html:48
+msgid "Where the task is on the board."
+msgstr "Onde a tarefa está no quadro."
+
+#: templates/tasks/partials/_task_fields.html:124
+msgid "Post date"
+msgstr "Data da publicação"
+
+#: templates/tasks/partials/_task_fields.html:126
+msgid "Scheduled. Change it in the composer."
+msgstr "Agendada. Altere no editor de publicações."
+
+#: templates/tasks/partials/_task_modal.html:21
+msgid "Edit task"
+msgstr "Editar tarefa"
+
+#: templates/tasks/partials/_task_modal.html:23
+#, python-format
+msgid "Created by %(name)s on %(date)s"
+msgstr "Criada por %(name)s em %(date)s"
+
+#: templates/tasks/partials/_task_modal.html:38
+msgid "Delete this task? This cannot be undone."
+msgstr "Excluir esta tarefa? Isso não pode ser desfeito."
+
+#: templates/tasks/partials/_task_modal.html:42
+msgid "Open the post"
+msgstr "Abrir publicação"
+
+#: templates/tasks/partials/_task_modal.html:44
+msgid "Each art goes to the format it was made for."
+msgstr "Cada arte vai para o formato em que foi feita."
+
+#: templates/tasks/partials/_task_modal.html:45
+msgid "Create post with these arts"
+msgstr "Criar publicação com estas artes"
+
+#: templates/tasks/partials/_task_modal.html:48
+msgid "Save task"
+msgstr "Salvar tarefa"
+
+#: templates/tasks/partials/_task_modal.html:68
 #, python-format
 msgid "%(done)s of %(total)s done"
 msgstr "%(done)s de %(total)s feitos"
 
-#: templates/tasks/partials/_task_modal.html:177
-msgid "Mark as done"
-msgstr "Marcar como feito"
+#: templates/tasks/partials/_task_modal.html:90
+msgid "Delete this checklist and its items?"
+msgstr "Excluir esta checklist e os itens dela?"
 
-#: templates/tasks/partials/_task_modal.html:199
-msgid "Proportions differ from the format"
-msgstr "Proporção diferente do formato"
+#: templates/tasks/partials/_task_modal.html:91
+msgid "Delete checklist"
+msgstr "Excluir checklist"
 
-#: templates/tasks/partials/_task_modal.html:207
-msgid "Replace art"
-msgstr "Trocar arte"
-
-#: templates/tasks/partials/_task_modal.html:207
-msgid "Deliver art"
-msgstr "Entregar arte"
-
-#: templates/tasks/partials/_task_modal.html:223
-msgid "In the media library"
-msgstr "Na galeria"
-
-#: templates/tasks/partials/_task_modal.html:231
-msgid "Remove item"
-msgstr "Remover item"
-
-#: templates/tasks/partials/_task_modal.html:241
-msgid "Add an item"
-msgstr "Adicionar item"
+#: templates/tasks/partials/_task_modal.html:124
+msgid "Checklist title, e.g. Shooting"
+msgstr "Título da checklist, ex.: Gravação"
 
 #: templates/workspaces/approvals_settings.html:9
 msgid ""
@@ -18600,6 +18732,40 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 #: templates/workspaces/team.html:102
 msgid "Send invitation"
 msgstr "Enviar convite"
+
+#~ msgid "Arts to create"
+#~ msgstr "Artes para criar"
+
+#
+#~ msgid "Add a tag…"
+#~ msgstr "Adicionar tag…"
+
+#~ msgid "Show the saved tags"
+#~ msgstr "Mostrar as tags salvas"
+
+#~ msgid "Add an item and press Enter"
+#~ msgstr "Digite um item e pressione Enter"
+
+#~ msgid "Add the details of the task…"
+#~ msgstr "Adicione os detalhes da tarefa…"
+
+#~ msgid "No description."
+#~ msgstr "Sem descrição."
+
+#~ msgid "No caption"
+#~ msgstr "Sem legenda"
+
+#~ msgid "Kind of item"
+#~ msgstr "Tipo de item"
+
+#~ msgid "In the column"
+#~ msgstr "Na coluna"
+
+#~ msgid "What needs to be done?"
+#~ msgstr "O que precisa ser feito?"
+
+#~ msgid "Details, links, what done looks like…"
+#~ msgstr "Detalhes, links, como fica quando estiver pronta…"
 
 #~ msgid "Any priority"
 #~ msgstr "Qualquer prioridade"
@@ -19095,9 +19261,6 @@ msgstr "Enviar convite"
 
 #~ msgid "Column"
 #~ msgstr "Coluna"
-
-#~ msgid "Nobody"
-#~ msgstr "Ninguém"
 
 #~ msgid "Linked to"
 #~ msgstr "Vinculado a"

@@ -464,6 +464,7 @@ def create_offer_task(
     format_keys=(),
     assignees=(),
     due_date=None,
+    extra_items=(),
 ):
     """A task to post the offer.
 
@@ -490,6 +491,7 @@ def create_offer_task(
             post_caption=caption,
             assignees=assignees,
             due_date=due_date,
+            extra_items=extra_items,
         )
         TaskChecklistItem.objects.create(task=task, position=task.checklist.count(), **image_item)
     else:

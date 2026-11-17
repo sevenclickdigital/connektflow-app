@@ -67,6 +67,8 @@ class Task(models.Model):
     # an art request is the briefing for the designers.
     post_caption = models.TextField(blank=True, default="")
     priority = models.CharField(max_length=10, choices=Priority.choices, default=Priority.MEDIUM)
+    # Free labels, like an idea's: a list of names (services.clean_tags).
+    tags = models.JSONField(default=list, blank=True, db_default=models.Value([], output_field=models.JSONField()))
     due_date = models.DateField(null=True, blank=True)
 
     created_by = models.ForeignKey(
@@ -100,11 +102,32 @@ class Task(models.Model):
         return self.title[:80]
 
 
+class TaskChecklist(models.Model):
+    """A named list of to-dos inside a task ("Shooting", "Approval"…). A task may have several.
+
+    Items outside any of them (``TaskChecklistItem.checklist`` empty: art items, older
+    items) form the task's untitled checklist.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    task = models.ForeignKey("Task", on_delete=models.CASCADE, related_name="checklists")
+    title = models.CharField(max_length=120)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "tasks_checklist"
+        ordering = ["position", "id"]
+
+    def __str__(self):
+        return self.title
+
+
 class TaskChecklistItem(models.Model):
     """One to-do of a task. Art items also name the format and size to deliver."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="checklist")
+    checklist = models.ForeignKey(TaskChecklist, on_delete=models.CASCADE, null=True, blank=True, related_name="items")
     text = models.CharField(max_length=255)
     position = models.PositiveIntegerField(default=0)
 

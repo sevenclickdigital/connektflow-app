@@ -23,35 +23,6 @@
                 title="{% translate 'Show tips' %}" aria-label="{% translate 'Show tips' %}">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0012 2z"/></svg>
         </button>
-        {% if can_manage %}
-        <div class="relative" x-data="{ open: false }">
-            <button type="button" class="w-9 h-9 rounded-full border border-neutral-300 bg-white text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 flex items-center justify-center"
-                    @click="open = !open" :aria-expanded="open" title="{% translate 'Art settings' %}" aria-label="{% translate 'Art settings' %}">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-            </button>
-            <form x-show="open" x-cloak @click.outside="open = false"
-                  hx-post="{% url 'tasks:art_settings' workspace_id=workspace.id %}" hx-swap="none" @htmx:after-request="open = false"
-                  class="absolute right-0 top-full mt-2 z-30 w-72 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 p-4 space-y-3">
-                <p class="text-sm font-semibold text-neutral-900">{% translate "Art settings" %}</p>
-                <div>
-                    <label class="task-field-label block" for="art-assignee">{% translate "Art requests go to" %}</label>
-                    <select id="art-assignee" name="art_assignee" class="bb-select w-full text-sm">
-                        <option value="">{% translate "Nobody by default" %}</option>
-                        {% for member in members %}<option value="{{ member.pk }}" {% if member.pk == art_settings.art_assignee_id %}selected{% endif %}>{{ member.display_name }}</option>{% endfor %}
-                    </select>
-                </div>
-                <div>
-                    <label class="task-field-label block" for="art-lead">{% translate "Due this many days before the content date" %}</label>
-                    <input id="art-lead" type="number" name="art_lead_days" min="0" max="60" value="{{ art_settings.art_lead_days }}" class="form-input-styled w-full text-sm">
-                </div>
-                <button type="submit" class="btn-brand w-full justify-center text-sm">{% translate "Save" %}</button>
-            </form>
-        </div>
-        {% endif %}
-        {% if can_edit %}
-        <button type="button" class="btn-brand text-sm px-4 py-2 whitespace-nowrap"
-                x-data @click="$dispatch('open-art-request', { url: '{% url 'tasks:request_arts' workspace_id=workspace.id %}' })">{% translate "Request arts" %}</button>
-        {% endif %}
     </div>
 </div>
 {% endblock %}
@@ -59,7 +30,9 @@
 {% block content %}
 {% with tab="tasks" %}{% include "composer/partials/_ideas_hero.html" %}{% endwith %}
 
-<div x-data="taskBoard()" @keydown.escape.window="closeTask()" class="flex-1 flex flex-col">
+<div x-data="taskBoard()" @keydown.escape.window="if (!crop.open) closeTask()" @crop-task-art.window="openArtCrop($event.detail)" class="flex-1 flex flex-col">
+    {# The composer's image editor, for a delivered art (tasks/partials/_checklist_item.html); above the task's window. #}
+    {% include "composer/partials/_crop_editor.html" with crop_layer="z-[80]" %}
     {% comment %}
     Filters of the board, in the idea board's style: a search over the cards
     (in the browser, kept across board refreshes) and the menus of who is
@@ -130,79 +103,10 @@
         {% include "tasks/partials/_board.html" %}
     </div>
 
-    {% if can_edit %}
-    {% comment %}
-    The "Add task" window, opened by a column's button for that column. Only
-    the title is required; the checklist, files and the rest are filled in the
-    task itself afterwards. It closes on the server's taskCreated.
-    {% endcomment %}
-    <div class="modal-overlay" x-show="newTask.open" x-cloak x-transition.opacity
-         @click.self="closeNewTask()" @keydown.escape.window="closeNewTask()" @task-created.camel.window="closeNewTask()">
-        <form class="modal-panel is-lg" role="dialog" aria-modal="true" aria-labelledby="new-task-title" x-ref="newTaskForm"
-              hx-post="{% url 'tasks:task_create' workspace_id=workspace.id %}" hx-swap="none">
-            <button type="button" class="modal-close" @click="closeNewTask()" aria-label="{% translate 'Close' %}">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            </button>
-            <div class="modal-header">
-                <div class="modal-icon is-brand">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                </div>
-                <div class="min-w-0">
-                    <h2 id="new-task-title" class="modal-title">{% translate "New task" %}</h2>
-                    <p class="modal-meta">{% translate "In the column" %} <span class="font-semibold text-neutral-700" x-text="newTask.columnName"></span></p>
-                </div>
-            </div>
-
-            <input type="hidden" name="column" :value="newTask.column">
-            <div class="space-y-4">
-                <div>
-                    <label class="task-field-label block" for="new-task-name">{% translate "Title" %}</label>
-                    <input id="new-task-name" x-ref="newTaskTitle" name="title" type="text" maxlength="255" required autocomplete="off"
-                           placeholder="{% translate 'What needs to be done?' %}" class="form-input-styled w-full text-sm">
-                </div>
-                <div>
-                    <label class="task-field-label block" for="new-task-description">{% translate "Description" %}</label>
-                    <textarea id="new-task-description" name="description" rows="3" class="form-input-styled w-full text-sm"
-                              placeholder="{% translate 'Details, links, what done looks like…' %}"></textarea>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="task-field-label block" for="new-task-priority">{% translate "Priority" %}</label>
-                        <select id="new-task-priority" name="priority" class="form-input-styled bb-select w-full text-sm cursor-pointer">
-                            {% for value, label in priorities %}<option value="{{ value }}" {% if value == "medium" %}selected{% endif %}>{{ label }}</option>{% endfor %}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="task-field-label block" for="new-task-due">{% translate "Due date" %}</label>
-                        <input id="new-task-due" name="due_date" type="date" class="form-input-styled w-full text-sm">
-                    </div>
-                </div>
-                {% if members %}
-                <fieldset>
-                    <legend class="task-field-label">{% translate "Responsible" %}</legend>
-                    <div class="flex flex-wrap gap-2">
-                        {% for member in members %}
-                        <label class="chip has-[:checked]:border-brand-300 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800">
-                            <input type="checkbox" name="assignees" value="{{ member.pk }}" class="sr-only">
-                            <span class="task-avatar !ml-0" aria-hidden="true">{{ member.display_name|make_list|first|upper }}</span>
-                            {{ member.display_name }}
-                        </label>
-                        {% endfor %}
-                    </div>
-                </fieldset>
-                {% endif %}
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn-outline text-sm" @click="closeNewTask()">{% translate "Cancel" %}</button>
-                <button type="submit" class="btn-brand text-sm">{% translate "Create task" %}</button>
-            </div>
-        </form>
-    </div>
-    {% endif %}
+    {% if can_edit %}{% include "tasks/partials/_new_item_modal.html" %}{% endif %}
 
     <div class="task-modal-backdrop" x-show="taskOpen" x-cloak @click.self="closeTask()">
-        <div class="task-modal" role="dialog" aria-modal="true" aria-label="{% translate 'Task' %}">
+        <div class="task-modal is-detail" role="dialog" aria-modal="true" aria-label="{% translate 'Task' %}">
             <div id="task-modal-body"></div>
         </div>
     </div>
@@ -210,10 +114,177 @@
 
 {% include "tasks/partials/_request_arts_host.html" %}
 {{ task_board_config|json_script:"task-board-config" }}
+{{ emoji_categories|json_script:"task-emoji" }}
+{{ tag_suggestions|json_script:"task-tag-suggestions" }}
+{% comment %}
+The idea hub's tag groups window and "Manage tags", once for the page: the task
+windows' tag fields open them ("open-tag-groups", "open-tag-manager").
+{% endcomment %}
+<div x-data="Object.assign(window.tagGroupsBase(), { allTags: JSON.parse(document.getElementById('task-tag-suggestions').textContent) })"
+     @open-tag-groups.window="openTagGroups()">
+    {% include "composer/partials/_tag_groups.html" %}
+</div>
+{% include "composer/partials/_tag_manager.html" %}
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/emoji-picker.js' %}"></script>
 <script nonce="{{ request.csp_nonce }}">
+// State and behaviour of the task's fields (tasks/partials/_task_fields.html),
+// shared by the new task window and the task's own window. ``initial`` holds
+// the column, assignees and tags to start from; ``descLimit`` caps the
+// description (0: no cap).
+function taskFields(initial, descLimit) {
+    var cfg = JSON.parse(document.getElementById('task-board-config').textContent);
+    var suggestions = JSON.parse(document.getElementById('task-tag-suggestions').textContent);
+    return Object.assign(window.emojiPicker('task-emoji'), window.tagGroupsBase(), {
+        column: initial.column || '',
+        descLength: 0,
+        assignees: (initial.assignees || []).slice(),
+        peopleOpen: false,
+        tags: (initial.tags || []).slice(),
+        tagQuery: '',
+        tagsOpen: false,
+        allTags: suggestions.slice(),
+        removeLabel: cfg.labels.remove,
+
+        columnTone() {
+            var select = this.$root.querySelector('select[name=column]');
+            var option = select && Array.from(select.options).find(function (o) { return o.value === this.column; }, this);
+            return option ? option.dataset.tone : 'brand';
+        },
+
+        toggleAssignee(id) {
+            var at = this.assignees.indexOf(id);
+            if (at > -1) this.assignees.splice(at, 1); else this.assignees.push(id);
+        },
+
+        // The tag field (composer/partials/_tag_field.html): the brand's tags the search matches,
+        // picking or dropping one, and a new one from the search (saved with the task).
+        tagFiltered() {
+            var q = this.tagQuery.trim().toLowerCase();
+            return this.allTags.filter(function (t) { return !q || t.toLowerCase().indexOf(q) > -1; });
+        },
+
+        toggleTag(name) {
+            var at = this.tags.indexOf(name);
+            if (at > -1) this.tags.splice(at, 1);
+            else if (this.tags.length < 20) this.tags.push(name);
+        },
+
+        persistTag(name) {
+            name = (name || '').trim().replace(/^#+/, '').trim().slice(0, 50);
+            if (!name) return;
+            if (this.allTags.indexOf(name) < 0) { this.allTags.push(name); this.allTags.sort(); }
+            if (this.tags.indexOf(name) < 0 && this.tags.length < 20) this.tags.push(name);
+            this.tagQuery = '';
+        },
+
+        // The emoji goes where the cursor is in the description.
+        insertEmoji(char) {
+            var field = this.$refs.description;
+            var start = field.selectionStart == null ? field.value.length : field.selectionStart;
+            var end = field.selectionEnd == null ? start : field.selectionEnd;
+            if (descLimit && field.value.length - (end - start) + char.length > descLimit) return;
+            field.value = field.value.slice(0, start) + char + field.value.slice(end);
+            field.selectionStart = field.selectionEnd = start + char.length;
+            this.descLength = field.value.length;
+            this.showEmoji = false;
+            field.focus();
+        },
+    });
+}
+
+// The task's own window (tasks/partials/_task_modal.html): its fields start
+// from the task (data-initial on the form) and are saved together.
+function taskEditForm(el) {
+    var initial = JSON.parse(el.dataset.initial);
+    return taskFields(initial, 0);
+}
+
+// The "Create new item" window (tasks/partials/_new_item_modal.html).
+function newItemForm() {
+    var cfg = JSON.parse(document.getElementById('task-board-config').textContent);
+    return Object.assign(taskFields({}, 500), {
+        isOpen: false,
+        step: 'choose',
+        checklists: [],
+        nextKey: 1,
+        artLoaded: false,
+        checklistTitleLabel: cfg.labels.checklistTitle,
+        itemPlaceholder: cfg.labels.checklistItem,
+
+        open(detail) {
+            detail = detail || {};
+            this.isOpen = true;
+            if (detail.column) this.column = detail.column;
+            else if (!this.column) this.column = this.$refs.taskForm.querySelector('select[name=column]').value;
+            if (detail.kind === 'art') { this.pickArt(); return; }
+            this.step = 'choose';
+            var self = this;
+            this.$nextTick(function () { self.$refs.firstKind.focus(); });
+        },
+
+        // Step 1 → 2: the form of the kind picked.
+        choose(kind) {
+            if (kind === 'art') { this.pickArt(); return; }
+            this.step = 'task';
+            var self = this;
+            // After x-show has shown the form: a hidden field can't take the focus.
+            setTimeout(function () { self.$refs.title.focus(); }, 50);
+        },
+
+        close() {
+            if (!this.isOpen) return;
+            this.isOpen = false;
+            this.step = 'choose';
+            this.showEmoji = false;
+            this.$refs.taskForm.reset();
+            this.descLength = 0;
+            this.assignees = [];
+            this.tags = [];
+            this.tagQuery = '';
+            this.checklists = [];
+            // The art request form is fetched afresh next time, without what was ticked or typed.
+            this.artLoaded = false;
+        },
+
+        // The art request form comes from the server the first time it is picked.
+        pickArt() {
+            this.step = 'art';
+            if (this.artLoaded) return;
+            this.artLoaded = true;
+            htmx.ajax('GET', cfg.artRequestUrl, { target: '#new-item-art-body', swap: 'innerHTML' });
+        },
+
+        // A new named checklist, with its title field ready to type in.
+        addChecklist() {
+            if (this.checklists.length >= 10) return;
+            var key = this.nextKey++;
+            this.checklists.push({ key: key, title: '', items: [], text: '' });
+            this.$nextTick(function () {
+                var field = document.getElementById('new-checklist-title-' + key);
+                if (field) field.focus();
+            });
+        },
+
+        addItem(list) {
+            var text = list.text.trim();
+            if (text && list.items.length < 50) list.items.push(text.slice(0, 255));
+            list.text = '';
+        },
+
+        // What the "checklists" field posts: [{ title, items }], the item typed but not added included.
+        checklistsJson() {
+            return JSON.stringify(this.checklists.map(function (list) {
+                var items = list.items.slice();
+                if (list.text.trim()) items.push(list.text.trim().slice(0, 255));
+                return { title: list.title.trim(), items: items };
+            }));
+        },
+    });
+}
+
 function taskBoard() {
     var cfg = JSON.parse(document.getElementById('task-board-config').textContent);
     function urlFor(template, id) { return template.replace(cfg.placeholder, id); }
@@ -221,23 +292,47 @@ function taskBoard() {
         var el = document.querySelector('[name=csrfmiddlewaretoken]');
         return el ? el.value : '';
     }
-    return {
+    return Object.assign(window.cropEditorBase(), {
         taskOpen: false,
+        openTaskId: '',
         dragId: null,
         query: '',
-        newTask: { open: false, column: '', columnName: '' },
+        artCrop: null,
 
-        // The "Add task" window, for the column whose button was pressed.
-        openNewTask(columnId, columnName) {
-            this.newTask = { open: true, column: columnId, columnName: columnName };
-            var self = this;
-            this.$nextTick(function () { self.$refs.newTaskTitle.focus(); });
+        // The image editor on a delivered art, on the preset of the item's format when there is one.
+        openArtCrop(detail) {
+            var ratio = detail.width && detail.height ? detail.width / detail.height : 0;
+            var preset = this.cropPresets().find(function (p) { return ratio && p.ratio && Math.abs(p.ratio - ratio) / ratio < 0.02; });
+            this.artCrop = detail;
+            this.openCrop({ url: detail.url, target: detail.target, ratio: preset ? preset.key : 'free' });
         },
 
-        closeNewTask() {
-            if (!this.newTask.open) return;
-            this.newTask.open = false;
-            this.$refs.newTaskForm.reset();
+        cropFormatNote() { return this.crop.target; },
+
+        // The crop becomes the item's art (the original stays in the library); the task's window reloads.
+        saveCrop() {
+            if (!this.cropper || this.crop.saving || !this.artCrop) return;
+            var data = this.cropper.getData(true);
+            var self = this;
+            this.crop.saving = true;
+            this.crop.error = '';
+            fetch(this.artCrop.cropUrl, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrf(), 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ x: data.x, y: data.y, width: data.width, height: data.height }),
+            }).then(function (response) {
+                if (response.ok) return null;
+                var plain = (response.headers.get('Content-Type') || '').indexOf('text/plain') === 0;
+                return (plain ? response.text() : Promise.resolve('')).then(function (reason) {
+                    throw new Error(reason || cfg.labels.cropFailed);
+                });
+            }).then(function () {
+                self.closeCrop();
+                if (self.openTaskId) htmx.ajax('GET', urlFor(cfg.detailUrl, self.openTaskId), { target: '#task-modal-body', swap: 'innerHTML' });
+                htmx.trigger(document.body, 'tasksChanged');
+            }).catch(function (err) {
+                self.crop.error = err.message;
+            }).finally(function () { self.crop.saving = false; });
         },
 
         // Hides the cards whose text does not contain the search.
@@ -250,12 +345,14 @@ function taskBoard() {
 
         init() {
             var self = this;
+            // A deleted task answers "closeTask"; ?task=<id> opens that task on arrival.
             document.body.addEventListener('closeTask', function () { self.closeTask(); });
             if (cfg.openTask) this.openTask(cfg.openTask);
         },
 
         openTask(id) {
             if (this.dragId) return;
+            this.openTaskId = id;
             var body = document.getElementById('task-modal-body');
             body.innerHTML = '';
             this.taskOpen = true;
@@ -336,7 +433,7 @@ function taskBoard() {
                 headers: { 'X-CSRFToken': csrf(), 'Content-Type': 'application/json' },
             }).finally(function () { htmx.trigger(document.body, 'tasksChanged'); });
         },
-    };
+    });
 }
 </script>
 {% endblock %}

@@ -74,6 +74,7 @@ from .services import (
     add_to_tag_group,
     brand_hashtags,
     delete_tag,
+    ensure_tags,
     format_blocker,
     format_media_replacements,
     image_count_blocker,
@@ -3319,40 +3320,16 @@ def remove_pending_media(request, workspace_id, asset_id):
     return response
 
 
-def _crop_box(request):
-    """The crop box posted by the composer's image editor, in source pixels, or ``None``."""
-    try:
-        box = {key: int(round(float(request.POST[key]))) for key in ("x", "y", "width", "height")}
-    except (KeyError, TypeError, ValueError):
-        return None
-    return box
-
-
 def _crop_asset(request, workspace, asset):
     """Crop ``asset`` into a new asset, or an error response to return as-is.
 
-    Plain-text 400s: the composer shows the body of a failed htmx request in
-    its error toast, and a 4xx doesn't swap the thumbnails.
+    Plain-text 400s (the composer shows the body of a failed htmx request in its
+    error toast, and a 4xx doesn't swap the thumbnails); a storage-cap breach in
+    the composer's own 413 JSON shape.
     """
-    from apps.media_library.models import MediaAsset
-    from apps.media_library.services import ImageTooLargeError, crop_into_new_asset
+    from apps.media_library.cropping import crop_from_request
 
-    if asset.media_type != MediaAsset.MediaType.IMAGE:
-        return None, HttpResponse(_("Only images can be cropped."), status=400, content_type="text/plain")
-    box = _crop_box(request)
-    if box is None:
-        return None, HttpResponse(_("Choose the area to keep."), status=400, content_type="text/plain")
-    try:
-        cropped = crop_into_new_asset(asset, workspace=workspace, uploaded_by=request.user, **box)
-    except (StorageQuotaExceededError, WorkspaceStorageExceededError) as exc:
-        return None, _quota_error_response(exc)
-    except ValueError:
-        return None, HttpResponse(
-            _("The area to keep must be inside the image."), status=400, content_type="text/plain"
-        )
-    except ImageTooLargeError:
-        return None, HttpResponse(_("This image is too large to edit."), status=400, content_type="text/plain")
-    return cropped, None
+    return crop_from_request(request, workspace, asset, quota_response=_quota_error_response)
 
 
 @login_required
@@ -5097,12 +5074,7 @@ def csv_confirm_import(request, workspace_id):
 
 def _sync_tags_to_model(workspace, tag_names):
     """Ensure Tag records exist for all given tag names in a workspace."""
-    if not tag_names:
-        return
-    existing = set(Tag.objects.for_workspace(workspace.id).filter(name__in=tag_names).values_list("name", flat=True))
-    new_tags = [Tag(workspace=workspace, name=name) for name in tag_names if name not in existing]
-    if new_tags:
-        Tag.objects.bulk_create(new_tags, ignore_conflicts=True)
+    ensure_tags(workspace, tag_names)
 
 
 @login_required

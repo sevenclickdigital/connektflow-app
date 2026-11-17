@@ -130,11 +130,6 @@ def network(key: str) -> Network:
     return _NETWORKS_BY_KEY[key]
 
 
-def checklist_text(fmt: CreativeFormat) -> str:
-    """The checklist line for a format, e.g. "Instagram · Story"."""
-    return f"{network(fmt.network).label} · {fmt.label}"
-
-
 def catalogue(accounts=(), visible_platforms=None) -> list[dict]:
     """Networks with their formats and the workspace's accounts on each.
 

@@ -1,0 +1,88 @@
+{% load i18n %}
+{% comment %}
+A tag field, the idea window's: the label with how many tags are picked, a box
+with the picked tags as chips on one line (each with its ×) and an arrow; the
+box opens, upwards, a list with a search (that also creates a tag), the brand's
+tags by group (composer/partials/_tag_picker_rows.html) and the shortcuts to
+create a tag, edit the tag groups and manage the saved tags. Used by the idea
+windows and by the task board's task windows.
+
+Runs inside an Alpine component that spread `window.tagGroupsBase()` and has
+`allTags`. Every argument is JavaScript of that component:
+  selected    the array of picked tag names
+  search      the search text
+  open        whether the list is open
+  toggle      the function that picks or drops one tag by name
+  persist     the function that creates a tag from the search text and picks it
+  matches     the tag names the search matches (a getter)
+  search_ref  the x-ref of the search field
+  on_open     optional: what else to run when the box is clicked
+  new_tag     optional: what "Create new tag" runs (the button shows only with it)
+  groups      optional: what "Tag groups" runs (default: openTagGroups())
+Optional: name (with a name, the picked tags travel in hidden inputs of that name).
+{% endcomment %}
+<div class="flex-1 min-w-0 flex flex-col gap-1.5 relative" @click.away="{{ open }} = false">
+    <span class="flex items-center gap-2 text-sm font-semibold text-neutral-950">
+        {% translate "Tags" %}
+        <span x-show="{{ selected }}.length" class="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-[11px] font-bold text-white bg-brand-700" x-text="{{ selected }}.length"></span>
+    </span>
+    <div role="button" tabindex="0" :aria-expanded="{{ open }}.toString()"
+         class="min-h-11 flex items-center gap-2 pl-2 pr-1 py-1.5 rounded-lg border bg-white cursor-pointer transition-colors"
+         :class="{{ open }} ? 'border-brand-500 ring-2 ring-brand-100' : 'border-neutral-300 hover:border-neutral-400'"
+         @click="{{ open }} = !{{ open }};{% if on_open %} {{ on_open }};{% endif %} if ({{ open }}) $nextTick(() => $refs.{{ search_ref }}.focus())"
+         @keydown.enter.prevent="$el.click()" @keydown.space.prevent="$el.click()">
+        <div class="idea-selected-tags flex-1 min-w-0 items-center" style="margin: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;">
+            <span x-show="!{{ selected }}.length" class="px-1 text-sm text-neutral-500">{% translate "Add tags" %}</span>
+            <template x-for="tag in {{ selected }}" :key="tag">
+                <span class="idea-tag-chip">
+                    <span x-text="tag"></span>
+                    <button type="button" @click.stop="{{ toggle }}(tag)" :aria-label="tag">
+                        <svg width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </span>
+            </template>
+        </div>
+        <span class="w-px h-6 bg-neutral-200 flex-shrink-0" aria-hidden="true"></span>
+        <svg class="w-4 h-4 mx-1.5 text-neutral-600 flex-shrink-0 transition-transform" :class="{{ open }} && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    {% if name %}<template x-for="tag in {{ selected }}" :key="tag"><input type="hidden" name="{{ name }}" :value="tag"></template>{% endif %}
+    <div x-show="{{ open }}" x-cloak x-transition class="idea-pill-dropdown" style="left: 0; right: 0; top: auto; bottom: calc(100% + 6px);">
+        <div style="padding: 4px 6px; border-bottom: 1px solid var(--border);">
+            <input type="text" x-ref="{{ search_ref }}" x-model="{{ search }}"
+                   @keydown.enter.prevent="if ({{ search }}.trim() && !{{ matches }}.includes({{ search }}.trim())) { {{ persist }}({{ search }}.trim()); } else if ({{ matches }}.length === 1) { {{ toggle }}({{ matches }}[0]); {{ search }} = ''; }"
+                   class="w-full text-xs px-2 py-1.5 rounded border outline-none" style="border-color: var(--border);"
+                   aria-label="{% translate 'Search or create tag...' %}" placeholder="{% translate 'Search or create tag...' %}">
+        </div>
+        {% include "composer/partials/_tag_picker_rows.html" with query=search selected=selected toggle=toggle %}
+        <template x-if="!{{ search }}.trim() && !allTags.length">
+            <div class="px-3 py-2 text-xs" style="color: var(--text-tertiary);">{% translate "No tags yet. Type to create one." %}</div>
+        </template>
+        <template x-if="{{ search }}.trim() && !{{ matches }}.includes({{ search }}.trim())">
+            <div class="border-t" style="border-color: var(--border); margin-top: 2px; padding-top: 2px;">
+                <button type="button" @click="{{ persist }}({{ search }}.trim())" style="color: var(--primary);">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    {% translate "Create" %} “<span x-text="{{ search }}.trim()"></span>”
+                </button>
+            </div>
+        </template>
+        <div class="border-t border-neutral-100 px-1 py-1">
+            {% if new_tag %}
+            <button type="button" @click="{{ new_tag }}"
+                    class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
+                <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                {% translate "Create new tag" %}
+            </button>
+            {% endif %}
+            <button type="button" @click="{{ open }} = false; {{ groups|default:'openTagGroups()' }}"
+                    class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
+                <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                {% translate "Tag groups" %}
+            </button>
+            <button type="button" @click="{{ open }} = false; $dispatch('open-tag-manager')"
+                    class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
+                <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+                {% translate "Manage tags" %}
+            </button>
+        </div>
+    </div>
+</div>

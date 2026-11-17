@@ -2,6 +2,8 @@
 Styles of the task board, its card and the art request form. Included once per page.
 {% endcomment %}
 <style nonce="{{ request.csp_nonce }}">
+    {# The composer's thumbnail controls (settings, menu), for the delivered arts in a task's checklist. #}
+    {% include "composer/partials/_media_thumb_styles.html" %}
     /* The board: the columns side by side (.kanban-* in styles.css), scrolling sideways when they don't fit.
        It takes what is left of the window's height (flex-1 down from the page), and every column stretches
        to it; a column with more cards than that grows, and the page scrolls, as a web page does. */
@@ -12,6 +14,55 @@ Styles of the task board, its card and the art request form. Included once per p
     .kanban-column-strip.drag-over { background: var(--kanban-tone-badge); }
     .task-card { cursor: pointer; user-select: none; }
     .task-card.is-dragging { opacity: .5; transform: rotate(2deg); }
+    /* "Create new item" (tasks/partials/_new_item_modal.html): a small window with the two kinds, then the kind's form.
+       The form's body scrolls between its header and its footer; every box between the panel and the
+       body is a flex column with min-height: 0, or the body never scrolls. */
+    .new-item-overlay { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(2px); }
+    .new-item-chooser { position: relative; width: 100%; max-width: 520px; padding: 32px; border-radius: 20px; background: linear-gradient(180deg, white, color-mix(in srgb, var(--brand-50) 70%, white)); box-shadow: var(--shadow-xl); }
+    .new-item-panel { width: 100%; max-width: 1120px; height: min(860px, calc(100vh - 32px)); display: flex; background: white; border-radius: 20px; box-shadow: var(--shadow-xl); overflow: hidden; }
+    .new-item-kind { width: 100%; display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 14px; border: 1.5px solid var(--border); background: white; cursor: pointer; transition: border-color .12s ease, box-shadow .12s ease, background .12s ease; }
+    .new-item-kind:hover, .new-item-kind:focus-visible { border-color: var(--brand-500); background: var(--brand-50); box-shadow: 0 0 0 3px rgba(124, 58, 237, .12); outline: none; }
+    .new-item-kind-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--brand-100); color: var(--brand-700); }
+    .new-item-topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 0 28px; }
+    .new-item-main { position: relative; flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+    /* The task's form: its fields on the left, its checklists on the right, each scrolling on its own. */
+    .new-item-split { flex: 1; min-height: 0; display: flex; }
+    .new-item-body { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; padding: 16px 32px 24px; }
+    .new-item-checklists { width: 380px; flex-shrink: 0; min-height: 0; overflow-y: auto; padding: 24px; background: color-mix(in srgb, var(--brand-50) 70%, white); border-left: 1px solid var(--neutral-200); }
+    .new-item-checklist { padding: 12px; border-radius: 12px; border: 1px solid var(--neutral-200); background: white; }
+    .new-item-add-checklist { margin-top: 12px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; border-radius: 12px; border: 1.5px dashed var(--brand-300); font-size: 13px; font-weight: 600; color: var(--brand-700); cursor: pointer; transition: background .12s ease; }
+    .new-item-add-checklist:hover { background: var(--brand-50); }
+    .new-item-footer { display: flex; align-items: center; gap: 12px; padding: 16px 32px; border-top: 1px solid var(--neutral-200); }
+    .new-item-art { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+    .new-item-label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+    fieldset:disabled .new-item-chipbox { background: var(--neutral-50); cursor: default; }
+    .new-item-dot { position: absolute; left: 12px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 9999px; background: var(--kanban-tone-ink); pointer-events: none; }
+    .new-item-chipbox { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 44px; padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-md, 10px); background: white; cursor: pointer; }
+    .new-item-chipbox:focus-within, .new-item-chipbox:focus { border-color: var(--brand-400); outline: none; box-shadow: 0 0 0 3px var(--brand-100); }
+    .new-item-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; font-size: 13px; font-weight: 500; background: var(--brand-100); color: var(--brand-800); }
+    .new-item-chip.is-person { background: white; color: var(--text-primary); border: 1px solid var(--border); padding-left: 4px; }
+    .new-item-chip button { font-size: 14px; line-height: 1; color: inherit; opacity: .7; cursor: pointer; }
+    .new-item-chip button:hover { opacity: 1; }
+    .new-item-dropdown { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20; max-height: 240px; overflow-y: auto; padding: 4px; background: white; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); }
+    .new-item-dropdown > label, .new-item-dropdown > button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; border-radius: 8px; font-size: 13px; text-align: left; cursor: pointer; }
+    .new-item-dropdown > label:hover, .new-item-dropdown > button:hover { background: var(--neutral-100); }
+    /* The art request form inside the window: its own layout, without the page's side panel corner. */
+    .new-item-art .art-request-side { border-radius: 0; }
+    /* Its side panel runs down to the window's foot. */
+    .new-item-art #new-item-art-body, .new-item-art .art-request-root { flex: 1 0 auto; display: flex; flex-direction: column; }
+    .new-item-art .art-request-grid { flex: 1 0 auto; }
+    /* A named checklist in the task's window. */
+    .task-checklist { padding: 12px; border-radius: 12px; border: 1px solid var(--neutral-200); background: white; }
+    @media (max-width: 900px) {
+        .new-item-split { flex-direction: column; overflow-y: auto; }
+        .new-item-body, .new-item-checklists { overflow-y: visible; min-height: auto; }
+        .new-item-checklists { width: auto; border-left: 0; border-top: 1px solid var(--neutral-200); }
+    }
+    @media (max-width: 640px) {
+        .new-item-chooser { padding: 24px 20px; }
+        .new-item-body { padding: 12px 20px 20px; }
+        .new-item-footer { padding: 12px 20px; }
+    }
     .task-card.is-complete .task-card-title { color: #64748B; text-decoration: line-through; }
     .task-progress { height: 4px; border-radius: 9999px; background: #E5E7EB; overflow: hidden; }
     .task-progress > span { display: block; height: 100%; border-radius: inherit; background: #7C3AED; }
@@ -25,8 +76,22 @@ Styles of the task board, its card and the art request form. Included once per p
     .task-pill--low { background: #F5F3FF; color: #475569; }
     .task-pill--due { background: #F5F3FF; color: #475569; }
     .task-pill--art { background: #EDE9FE; color: #6D28D9; }
-    .task-modal-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(28,25,23,.45); display: flex; align-items: flex-start; justify-content: center; padding: 6vh 16px; overflow-y: auto; }
-    .task-modal { background: white; border-radius: 16px; width: 100%; max-width: 1040px; box-shadow: 0 24px 60px rgba(28,25,23,.3); }
+    /* A window over the board, centred when it fits (margin-block: auto), scrolling with the backdrop when it doesn't. */
+    .task-modal-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(28,25,23,.45); display: flex; align-items: flex-start; justify-content: center; padding: 16px; overflow-y: auto; }
+    .task-modal { background: white; border-radius: 16px; width: 100%; max-width: 1040px; margin-block: auto; box-shadow: 0 24px 60px rgba(28,25,23,.3); }
+    /* The task's window (tasks/partials/_task_modal.html): as tall as the new task window, its fields
+       and its checklists each scrolling on their own, the save bar always in view. */
+    .task-modal.is-detail { max-width: 1120px; height: min(860px, calc(100vh - 32px)); display: flex; overflow: hidden; border-radius: 20px; }
+    .task-modal.is-detail > #task-modal-body { flex: 1; min-width: 0; display: flex; }
+    .task-detail { position: relative; flex: 1; min-width: 0; display: flex; }
+    .task-detail-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+    .task-detail-close { position: absolute; top: 16px; right: 16px; z-index: 5; }
+    @media (max-width: 900px) {
+        .task-detail { flex-direction: column; overflow-y: auto; }
+        .task-detail-main { min-height: auto; }
+        .task-detail .new-item-body, .task-detail .new-item-checklists { overflow-y: visible; }
+        .task-detail .new-item-checklists { width: auto; border-left: 0; border-top: 1px solid var(--neutral-200); }
+    }
     #task-modal-body:empty::before, #task-modal-body[data-loading]::before { content: ""; display: block; height: 220px; }
     .task-check { width: 18px; height: 18px; border-radius: 5px; border: 2px solid #CBD5E1; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: white; }
     .task-check.is-on { background: #22C55E; border-color: #22C55E; color: white; }
@@ -34,28 +99,25 @@ Styles of the task board, its card and the art request form. Included once per p
     .task-up-busy { display: none; }
     .htmx-request .task-up-idle { display: none; }
     .htmx-request .task-up-busy { display: inline; }
-    .task-modal-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); }
-    .task-modal-main, .task-modal-side { min-width: 0; }
-    .task-modal-side { background: #FAFAFF; border-top: 1px solid #F5F3FF; border-radius: 0 0 16px 16px; }
     .task-modal-close { position: absolute; top: 12px; right: 12px; z-index: 10; }
-    @media (min-width: 768px) {
-        .task-modal-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-        .task-modal-side { border-top: 0; border-left: 1px solid #F5F3FF; border-radius: 0 16px 16px 0; max-height: 82vh; overflow-y: auto; }
-    }
-    .art-format { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 14px; border: 1.5px solid #E5E7EB; background: white; cursor: pointer; transition: border-color .12s ease, box-shadow .12s ease; }
-    .art-format:hover { border-color: #CBD5E1; box-shadow: 0 4px 14px rgba(28,25,23,.07); }
-    .art-format:has(input:checked) { border-color: #7C3AED; box-shadow: 0 0 0 3px rgba(124, 58, 237,.15); }
+    /* An art format to tick, compact: its glyph on a small lilac tile beside the name, size and ratio;
+       the tick, top right, fills when picked. */
+    .art-format { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 34px 10px 10px; border-radius: 12px; border: 1.5px solid var(--border); background: white; cursor: pointer; transition: border-color .12s ease, box-shadow .12s ease, background .12s ease; }
+    .art-format:hover { border-color: var(--brand-300); box-shadow: 0 4px 14px rgba(28,25,23,.07); }
+    .art-format:has(input:checked) { border-color: var(--brand-500); background: color-mix(in srgb, var(--brand-50) 60%, white); box-shadow: 0 0 0 3px rgba(124, 58, 237, .12); }
     .art-format:has(input:focus-visible) { outline: 2px solid #7C3AED; outline-offset: 2px; }
     .art-format input { position: absolute; opacity: 0; pointer-events: none; }
-    .art-shape-box { height: 96px; display: flex; align-items: center; justify-content: center; background: #FAFAFF; border-radius: 10px; }
-    .art-shape { background: linear-gradient(135deg, #E9D5FF, #D8B4FE); border-radius: 4px; max-width: 78%; max-height: 80px; }
-    .art-format:has(input:checked) .art-shape { background: linear-gradient(135deg, #A855F7, #7C3AED); }
-    .art-tick { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 9999px; border: 2px solid #CBD5E1; background: white; display: flex; align-items: center; justify-content: center; color: white; }
-    .art-format:has(input:checked) .art-tick { background: #7C3AED; border-color: #7C3AED; }
+    .art-icon-box { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--brand-50), var(--brand-100)); color: var(--brand-700); }
+    .art-ratio { display: inline-flex; align-items: center; padding: 0 6px; border-radius: 9999px; font-size: 10.5px; font-weight: 600; line-height: 16px; background: var(--brand-50); color: var(--neutral-700); font-variant-numeric: tabular-nums; }
+    .art-tick { position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 9999px; border: 2px solid var(--neutral-400); background: white; display: flex; align-items: center; justify-content: center; color: white; }
+    .art-format:has(input:checked) .art-tick { background: var(--brand-700); border-color: var(--brand-700); }
     .art-request-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
+    .art-request-footer { position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: flex-end; gap: 12px; margin: 24px -24px -24px; padding: 16px 24px; background: white; border-top: 1px solid var(--neutral-200); }
+    @media (max-width: 767px) { .art-request-footer { margin: 20px -20px -20px; padding: 12px 20px; } }
+    .art-checklist { padding: 12px; border-radius: 12px; border: 1px solid var(--neutral-200); background: white; }
     .art-request-side { background: #FAFAFF; border-top: 1px solid #F5F3FF; }
     @media (min-width: 1024px) {
-        .art-request-grid { grid-template-columns: minmax(0, 1fr) 320px; }
+        .art-request-grid { grid-template-columns: minmax(0, 1fr) 360px; }
         .art-request-side { border-top: 0; border-left: 1px solid #F5F3FF; border-radius: 0 16px 16px 0; }
     }
 </style>

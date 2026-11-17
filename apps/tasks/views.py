@@ -21,11 +21,13 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from apps.common.htmx import toast_response, trigger_response
+from apps.composer.emoji import emoji_catalogue
+from apps.composer.services import tag_groups_payload
 from apps.members.decorators import require_permission, require_workspace_role
 from apps.members.models import WorkspaceMembership
 
 from . import creative_formats, services
-from .models import Task, TaskChecklistItem, TaskColumn
+from .models import Task, TaskChecklist, TaskChecklistItem, TaskColumn
 
 BOARD_CHANGED = "tasksChanged"
 
@@ -51,11 +53,12 @@ def _task(request, task_id):
     return get_object_or_404(services.task_detail_queryset(request.workspace), id=task_id)
 
 
-def _render_card(request, task, *, changed=True, focus_new_item=False):
+def _render_card(request, task, *, changed=True, focus_new_item=False, focus_checklist=""):
     """The open task's modal content, re-fetched so prefetches reflect the change."""
     task = _task(request, task.pk)
     items = list(task.checklist.all())
     task.checklist_done = sum(1 for item in items if item.is_done)
+    task.checklist_total = len(items)
     task.has_publishable_art = False
     post = task.post
     when = (post.scheduled_at or post.proposed_publish_at) if post else None
@@ -64,6 +67,10 @@ def _render_card(request, task, *, changed=True, focus_new_item=False):
     local = when.astimezone(_workspace_tz(request.workspace)) if when else None
     task.post_date_input = local.strftime("%Y-%m-%dT%H:%M") if local else ""
     task.post_date_display = local.strftime("%d/%m/%Y %H:%M") if local else ""
+    # Where the window's fields start from (taskEditForm in tasks/board.html).
+    task.edit_initial_json = json.dumps(
+        {"column": str(task.column_id), "assignees": [str(u.pk) for u in task.assignees.all()], "tags": task.tags}
+    )
     for item in items:
         fmt = creative_formats.get(item.format_key) if item.is_art else None
         item.ratio_ok = True
@@ -80,11 +87,15 @@ def _render_card(request, task, *, changed=True, focus_new_item=False):
             "workspace": request.workspace,
             "columns": services.ensure_columns(request.workspace),
             "members": services.assignable_members(request.workspace),
+            "tag_suggestions": services.tag_suggestions(request.workspace),
+            "checklist_groups": services.checklist_groups(task, items),
             "priorities": Task.Priority.choices,
             "can_edit": _can_edit(request),
             "can_upload": bool(request.workspace_membership.effective_permissions.get("upload_media")),
             "today": timezone.localdate(),
             "focus_new_item": focus_new_item,
+            # The checklist whose "add an item" line stays open (its id, or "loose" for the untitled one).
+            "focus_checklist": focus_checklist,
         },
     )
     if changed:
@@ -119,9 +130,16 @@ def _board_config(request) -> dict:
         "detailUrl": reverse("tasks:task_detail", kwargs={"workspace_id": ws, "task_id": _PLACEHOLDER}),
         "moveUrl": reverse("tasks:task_move", kwargs={"workspace_id": ws, "task_id": _PLACEHOLDER}),
         "reorderUrl": reverse("tasks:column_reorder", kwargs={"workspace_id": ws}),
+        "artRequestUrl": reverse("tasks:request_arts", kwargs={"workspace_id": ws}) + "?board=1",
         "openTask": open_task,
         "canEdit": _can_edit(request),
-        "labels": {"moveFailed": _("The task could not be moved. Try again.")},
+        "labels": {
+            "moveFailed": _("The task could not be moved. Try again."),
+            "remove": _("Remove"),
+            "checklistTitle": _("Checklist title"),
+            "checklistItem": _("Add an item"),
+            "cropFailed": _("The image could not be saved. Try again."),
+        },
     }
 
 
@@ -131,6 +149,15 @@ def _parse_day(value):
         return parse_date(value or "")
     except ValueError:
         return None
+
+
+def _json_list(value) -> list:
+    """A posted JSON array; anything else (blank, malformed, another type) → []."""
+    try:
+        parsed = json.loads(value or "[]")
+    except ValueError:
+        return []
+    return parsed if isinstance(parsed, list) else []
 
 
 def _valid_uuid(value) -> list[str]:
@@ -176,9 +203,9 @@ def board(request, workspace_id):
         "today": timezone.localdate(),
         "task_board_config": _board_config(request),
         "column_tones": TaskColumn.Tone.choices,
-        "art_settings": services.art_settings(workspace),
-        "can_manage": request.workspace_membership.workspace_role
-        in (WorkspaceMembership.WorkspaceRole.OWNER, WorkspaceMembership.WorkspaceRole.MANAGER),
+        "tag_suggestions": services.tag_suggestions(workspace),
+        "tag_groups": tag_groups_payload(workspace.id),
+        "emoji_categories": emoji_catalogue(),
     }
     if request.htmx and request.htmx.target == "task-board":
         return render(request, "tasks/partials/_board.html", context)
@@ -190,7 +217,8 @@ def board(request, workspace_id):
 @require_permission("create_posts")
 @require_POST
 def task_create(request, workspace_id):
-    """The "Add task" window: the title is required; description, priority, due date and assignees are optional.
+    """The new task window: the title is required; description, priority, due date, assignees,
+    tags and named checklists (``checklists``, JSON: ``[{"title", "items": [text, …]}]``) are optional.
 
     Success fires ``taskCreated`` (the window closes) besides refreshing the board.
     """
@@ -211,6 +239,8 @@ def task_create(request, workspace_id):
         priority=priority if priority in Task.Priority.values else Task.Priority.MEDIUM,
         due_date=_parse_day(request.POST.get("due_date")),
         assignees=services.resolve_assignees(workspace, request.POST.getlist("assignees")),
+        tags=request.POST.getlist("tags"),
+        checklists=services.clean_checklists(_json_list(request.POST.get("checklists"))),
     )
     return toast_response(tone="success", title=_("Task created."), events={BOARD_CHANGED: True, "taskCreated": True})
 
@@ -247,7 +277,11 @@ def task_detail(request, workspace_id, task_id):
 @require_permission("create_posts")
 @require_POST
 def task_update(request, workspace_id, task_id):
-    """Save one or more of the card's fields; only the fields posted change."""
+    """Save one or more of the task's fields; only the fields posted change.
+
+    With ``save`` (the window's "Save task", which posts them all) it answers a toast and
+    closes the window; otherwise it re-renders the window.
+    """
     workspace = request.workspace
     task = get_object_or_404(Task, id=task_id, workspace=workspace)
     fields = []
@@ -272,6 +306,8 @@ def task_update(request, workspace_id, task_id):
         task.save(update_fields=[*fields, "updated_at"])
     if "publish_at" in request.POST:
         services.propose_post_date(task, _parse_local_datetime(request.POST["publish_at"], workspace))
+    if "tags_sent" in request.POST:
+        services.set_tags(task, request.POST.getlist("tags"))
     if "assignees_sent" in request.POST:
         users = services.resolve_assignees(workspace, request.POST.getlist("assignees"))
         services.set_assignees(task, users, request.user)
@@ -280,6 +316,9 @@ def task_update(request, workspace_id, task_id):
         if column.id != task.column_id:
             top = Task.objects.filter(column=column).aggregate(top=Max("position"))["top"]
             services.move_task(task, column, 0 if top is None else top + 1, request.user)
+    if "save" in request.POST:
+        # "Save task" in the task's window: everything at once, then the window closes.
+        return toast_response(tone="success", title=_("Task saved."), events={BOARD_CHANGED: True, "closeTask": True})
     return _render_card(request, task)
 
 
@@ -312,12 +351,88 @@ def _item(request, task_id, item_id):
 @require_permission("create_posts")
 @require_POST
 def item_add(request, workspace_id, task_id):
+    """A to-do at the end of the task, inside the named checklist ``checklist`` (one of this task's) or outside any."""
     task = get_object_or_404(Task, id=task_id, workspace=request.workspace)
+    checklist = None
+    if _valid_uuid(request.POST.get("checklist")):
+        checklist = get_object_or_404(TaskChecklist, id=request.POST["checklist"], task=task)
     text = request.POST.get("text", "").strip()
     if text:
-        top = task.checklist.aggregate(top=Max("position"))["top"]
-        TaskChecklistItem.objects.create(task=task, text=text[:255], position=0 if top is None else top + 1)
-    return _render_card(request, task, focus_new_item=True)
+        services.add_item(task, text, checklist)
+    return _render_card(request, task, focus_new_item=True, focus_checklist=str(checklist.pk) if checklist else "loose")
+
+
+@login_required
+@require_board_access
+@require_permission("create_posts")
+@require_POST
+def checklist_add(request, workspace_id, task_id):
+    task = get_object_or_404(Task, id=task_id, workspace=request.workspace)
+    title = request.POST.get("title", "").strip()
+    if title:
+        services.add_checklist(task, title)
+    return _render_card(request, task)
+
+
+@login_required
+@require_board_access
+@require_permission("create_posts")
+@require_POST
+def checklist_update(request, workspace_id, task_id, checklist_id):
+    """Rename a named checklist; a blank title keeps the old one."""
+    checklist = get_object_or_404(TaskChecklist, id=checklist_id, task_id=task_id, task__workspace=request.workspace)
+    title = request.POST.get("title", "").strip()
+    if title:
+        checklist.title = title[:120]
+        checklist.save(update_fields=["title"])
+    return _render_card(request, checklist.task)
+
+
+@login_required
+@require_board_access
+@require_permission("create_posts")
+@require_POST
+def checklist_delete(request, workspace_id, task_id, checklist_id):
+    """Delete a named checklist with its items."""
+    checklist = get_object_or_404(TaskChecklist, id=checklist_id, task_id=task_id, task__workspace=request.workspace)
+    task = checklist.task
+    checklist.delete()
+    return _render_card(request, task)
+
+
+@login_required
+@require_board_access
+@require_permission("create_posts")
+@require_POST
+def item_art_remove(request, workspace_id, task_id, item_id):
+    """Take the delivered art off an item (the file stays in the media library)."""
+    item = _item(request, task_id, item_id)
+    if item.is_art and item.media_asset_id:
+        services.remove_art(item)
+    return _render_card(request, item.task)
+
+
+@login_required
+@require_board_access
+@require_permission("create_posts")
+@require_POST
+def item_art_crop(request, workspace_id, task_id, item_id):
+    """Replace an item's delivered art with a crop of it, made in the image editor.
+
+    Body: the crop box (``x``, ``y``, ``width``, ``height``) in the image's pixels. The
+    copy lands next to the original (the "Tasks" folder); the original stays in the
+    library. Refusals answer a plain-text 400, which the editor shows as is.
+    """
+    from apps.media_library.cropping import crop_from_request
+
+    item = _item(request, task_id, item_id)
+    if not item.is_art:
+        return HttpResponse(_("Only images can be cropped."), status=400, content_type="text/plain")
+    cropped, error = crop_from_request(request, request.workspace, item.media_asset)
+    if error is not None:
+        return error
+    services.deliver_art(item, cropped, request.user)
+    return HttpResponse(status=204, headers={"HX-Trigger": BOARD_CHANGED})
 
 
 @login_required
@@ -433,7 +548,12 @@ def column_reorder(request, workspace_id):
 @require_permission("create_posts")
 @require_http_methods(["GET", "POST"])
 def request_arts(request, workspace_id):
-    """Pick the formats a piece of content needs; creates one task with an item per format."""
+    """Pick the formats a piece of content needs; creates one task with an item per format.
+
+    A valid request sends the user to the board with the new task open, unless the form
+    sits in the board's own window (``board=1``): then the window closes and the board
+    refreshes, with the new card on it.
+    """
     from apps.composer.models import Idea
 
     workspace = request.workspace
@@ -442,6 +562,8 @@ def request_arts(request, workspace_id):
     if idea_id and _valid_uuid(idea_id):
         idea = get_object_or_404(Idea, id=idea_id, workspace=workspace)
     task_settings = services.art_settings(workspace)
+    # "board=1": the form sits in the task board's new item window (it stays on the board).
+    from_board = (request.GET.get("board") or request.POST.get("board")) == "1"
 
     if request.method == "POST":
         format_keys = request.POST.getlist("formats")
@@ -462,7 +584,16 @@ def request_arts(request, workspace_id):
                 assignees=services.resolve_assignees(workspace, request.POST.getlist("assignees")),
                 due_date=_parse_day(request.POST.get("due_date")),
                 idea=idea,
+                extra_items=request.POST.getlist("extra_items"),
             )
+            if from_board and request.htmx:
+                # Asked from the task board's own window: the new card shows on the board,
+                # and the task opens only when someone clicks it.
+                return toast_response(
+                    tone="success",
+                    title=_("Art request created."),
+                    events={BOARD_CHANGED: True, "taskCreated": True},
+                )
             board_url = f"{reverse('tasks:board', kwargs={'workspace_id': workspace.id})}?task={task.pk}"
             if request.htmx:
                 return HttpResponse(status=204, headers={"HX-Redirect": board_url})
@@ -474,6 +605,7 @@ def request_arts(request, workspace_id):
             "description": request.POST.get("description", ""),
             "post_caption": request.POST.get("post_caption", ""),
             "due_date": request.POST.get("due_date", ""),
+            "extra_items": request.POST.getlist("extra_items"),
         }
     else:
         error = ""
@@ -496,6 +628,7 @@ def request_arts(request, workspace_id):
         chosen_assignees=chosen_assignees,
         error=error,
         idea=idea,
+        hidden={"board": "1"} if from_board else None,
     )
 
 
@@ -581,7 +714,10 @@ def art_settings(request, workspace_id):
 @require_permission("upload_media")
 @require_POST
 def item_deliver(request, workspace_id, task_id, item_id):
-    """Upload the file for an art item; warns when its proportions don't match the format."""
+    """Upload the file for an art item, into the media library's "Tasks" folder.
+
+    Warns when its proportions don't match the format.
+    """
     from django.core.exceptions import ValidationError
 
     from apps.billing.storage_usage import WorkspaceStorageExceededError
@@ -595,7 +731,9 @@ def item_deliver(request, workspace_id, task_id, item_id):
         return toast_response(tone="error", title=_("Choose the file of the art."))
     workspace = request.workspace
     try:
-        asset = create_asset(workspace.organization, workspace, uploaded, request.user)
+        asset = create_asset(
+            workspace.organization, workspace, uploaded, request.user, folder=services.media_folder(workspace)
+        )
     except WorkspaceStorageExceededError as exc:
         return toast_response(tone="error", title=_("The art was not uploaded."), body=str(exc.message))
     except StorageQuotaExceededError:

@@ -1117,6 +1117,22 @@ def record_template_use(workspace, template) -> None:
     IdeaTemplateUse.objects.create(workspace=workspace, template=template)
 
 
+def ensure_tags(workspace, names) -> None:
+    """Save in the brand's tag list (``Tag``) every name not there yet.
+
+    Ideas, posts and tasks share that list: it is where their tag pickers suggest from.
+    """
+    from .models import Tag
+
+    names = [name for name in names if name]
+    if not names:
+        return
+    existing = set(Tag.objects.for_workspace(workspace.id).filter(name__in=names).values_list("name", flat=True))
+    new_tags = [Tag(workspace=workspace, name=name) for name in dict.fromkeys(names) if name not in existing]
+    if new_tags:
+        Tag.objects.bulk_create(new_tags, ignore_conflicts=True)
+
+
 def tag_usage(workspace) -> list[dict]:
     """The brand's saved tags by name, each with how many ideas and posts carry it.
 

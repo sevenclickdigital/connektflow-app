@@ -119,8 +119,8 @@ def test_requesting_arts_makes_one_task_with_an_item_per_format(workspace, owner
     assert list(task.assignees.all()) == [designer]
     # Catalogue order, not click order; unknown keys dropped.
     assert [(i.text, i.width, i.height) for i in task.checklist.all()] == [
-        ("Instagram · Portrait post", 1080, 1350),
-        ("Instagram · Story", 1080, 1920),
+        ("Portrait post", 1080, 1350),
+        ("Story", 1080, 1920),
     ]
 
 
@@ -303,3 +303,161 @@ def test_unconnected_choices_treat_both_instagram_routes_as_one_network():
 
     assert "instagram" not in offered and "instagram_login" not in offered
     assert "facebook" in offered
+
+
+def test_delivered_arts_go_to_the_tasks_folder_of_the_media_library(workspace, owner):
+    from apps.media_library.models import MediaFolder
+
+    task = services.request_arts(workspace, owner, title="Arts", format_keys=["ig_feed_square", "ig_story"])
+    square, story = task.checklist.order_by("position")
+    other = Workspace.objects.create(organization=workspace.organization, name="Other")
+    client = _client(owner)
+
+    _deliver(client, task, square, _png(1080, 1080))
+    _deliver(client, task, story, _png(1080, 1920))
+
+    folders = MediaFolder.objects.filter(workspace=workspace, parent_folder__isnull=True)
+    assert list(folders.values_list("name", flat=True)) == ["Tasks"]
+    square.refresh_from_db()
+    story.refresh_from_db()
+    assert square.media_asset.folder == story.media_asset.folder == folders.get()
+    assert not MediaFolder.objects.filter(workspace=other).exists()
+
+
+def test_the_tasks_folder_is_named_in_the_sites_language(workspace, settings):
+    settings.LANGUAGE_CODE = "pt-br"
+
+    assert services.media_folder(workspace).name == "Tarefas"
+    assert services.media_folder(workspace) == services.media_folder(workspace)
+
+
+def _item_url(name, task, item):
+    return reverse(f"tasks:{name}", kwargs={"workspace_id": task.workspace_id, "task_id": task.id, "item_id": item.id})
+
+
+def test_cropping_a_delivered_art_makes_the_crop_the_items_art_in_the_tasks_folder(workspace, owner):
+    task = services.request_arts(workspace, owner, title="Arts", format_keys=["ig_feed_portrait"])
+    item = task.checklist.get()
+    client = _client(owner)
+    _deliver(client, task, item, _png(1200, 1200))
+    item.refresh_from_db()
+    original = item.media_asset
+
+    response = client.post(_item_url("item_art_crop", task, item), {"x": 120, "y": 0, "width": 960, "height": 1200})
+
+    assert response.status_code == 204
+    item.refresh_from_db()
+    assert item.media_asset != original and (item.media_asset.width, item.media_asset.height) == (960, 1200)
+    assert item.media_asset.folder == original.folder == services.media_folder(workspace)
+    assert item.is_done
+    # A box outside the image is refused in plain text, which the editor shows.
+    refused = client.post(_item_url("item_art_crop", task, item), {"x": 0, "y": 0, "width": 5000, "height": 5000})
+    assert refused.status_code == 400 and refused["Content-Type"].startswith("text/plain")
+
+
+def test_removing_a_delivered_art_reopens_the_item_and_keeps_the_file(workspace, owner):
+    from apps.media_library.models import MediaAsset
+
+    task = services.request_arts(workspace, owner, title="Arts", format_keys=["ig_story"])
+    item = task.checklist.get()
+    client = _client(owner)
+    _deliver(client, task, item, _png(1080, 1920))
+    item.refresh_from_db()
+    asset_id = item.media_asset_id
+
+    client.post(_item_url("item_art_remove", task, item))
+
+    item.refresh_from_db()
+    assert item.media_asset is None and not item.is_done
+    assert MediaAsset.objects.filter(id=asset_id).exists()
+
+
+def test_another_workspace_cannot_crop_or_remove_an_art(workspace, owner):
+    task = services.request_arts(workspace, owner, title="Arts", format_keys=["ig_story"])
+    item = task.checklist.get()
+    _deliver(_client(owner), task, item, _png(1080, 1920))
+    other = Workspace.objects.create(organization=Organization.objects.create(name="Other org"), name="Other")
+    stranger = _user("stranger@example.com", other, Role.OWNER)
+    client = _client(stranger)
+
+    for name, data in (("item_art_remove", {}), ("item_art_crop", {"x": 0, "y": 0, "width": 10, "height": 10})):
+        url = reverse(f"tasks:{name}", kwargs={"workspace_id": other.id, "task_id": task.id, "item_id": item.id})
+        assert client.post(url, data).status_code == 404
+    item.refresh_from_db()
+    assert item.media_asset is not None
+
+
+def test_the_request_makes_a_checklist_per_network_and_one_for_the_other_to_dos(workspace, owner):
+    _client(owner).post(
+        _request_url(workspace),
+        {
+            "title": "Arts: launch",
+            "formats": ["fb_story", "ig_story", "ig_feed_portrait"],
+            "extra_items": ["Approve with the client", "  "],
+        },
+    )
+
+    task = Task.objects.get()
+    lists = [(c.title, [(i.text, i.format_key) for i in c.items.order_by("position")]) for c in task.checklists.all()]
+    assert lists == [
+        ("Instagram", [("Portrait post", "ig_feed_portrait"), ("Story", "ig_story")]),
+        ("Facebook", [("Story", "fb_story")]),
+        ("Other to-dos", [("Approve with the client", "")]),
+    ]
+    assert not task.checklist.filter(checklist__isnull=True).exists()
+
+
+def test_a_request_without_other_to_dos_has_only_the_networks(workspace, owner):
+    _client(owner).post(_request_url(workspace), {"title": "Arts", "formats": ["ig_story"]})
+
+    assert list(Task.objects.get().checklists.values_list("title", flat=True)) == ["Instagram"]
+
+
+def test_a_refused_request_keeps_the_extra_to_dos_typed(workspace, owner):
+    body = (
+        _client(owner)
+        .post(
+            _request_url(workspace),
+            {"title": "", "formats": ["ig_story"], "extra_items": ["Keep me"]},
+            HTTP_HX_REQUEST="true",
+        )
+        .content.decode()
+    )
+
+    assert "Keep me" in body and not Task.objects.exists()
+
+
+def test_the_form_starts_with_the_default_art_assignee_picked(workspace, owner, designer):
+    settings_row = services.art_settings(workspace)
+    settings_row.art_assignee = designer
+    settings_row.save()
+
+    body = _client(owner).get(_request_url(workspace), HTTP_HX_REQUEST="true").content.decode()
+
+    picked = body.split('data-picked="', 1)[1].split('"', 1)[0]
+    assert str(designer.pk) in picked and str(owner.pk) not in picked
+
+
+def test_a_request_from_the_boards_window_stays_on_the_board(workspace, owner):
+    response = _client(owner).post(
+        _request_url(workspace), {"title": "Arts", "formats": ["ig_story"], "board": "1"}, HTTP_HX_REQUEST="true"
+    )
+
+    assert "HX-Redirect" not in response
+    triggers = response["HX-Trigger"]
+    assert "taskCreated" in triggers and "tasksChanged" in triggers and "showToast" in triggers
+    assert Task.objects.count() == 1
+
+
+def test_a_request_from_elsewhere_still_opens_the_task_on_the_board(workspace, owner):
+    response = _client(owner).post(
+        _request_url(workspace), {"title": "Arts", "formats": ["ig_story"]}, HTTP_HX_REQUEST="true"
+    )
+
+    assert f"?task={Task.objects.get().pk}" in response["HX-Redirect"]
+
+
+def test_the_boards_window_form_carries_the_board_mark(workspace, owner):
+    body = _client(owner).get(_request_url(workspace) + "?board=1", HTTP_HX_REQUEST="true").content.decode()
+
+    assert 'name="board" value="1"' in body

@@ -14,7 +14,7 @@ from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.notifications.models import EventType, Notification
 from apps.organizations.models import Organization
 from apps.tasks import services
-from apps.tasks.models import Task, TaskColumn
+from apps.tasks.models import Task, TaskChecklist, TaskColumn
 from apps.workspaces.models import Workspace
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("_english")]
@@ -336,3 +336,147 @@ def test_the_add_task_window_ignores_what_is_not_valid(workspace, owner):
     assert task.priority == "medium" and task.due_date is None and not task.assignees.exists()
     assert response.status_code == 204
     assert "taskCreated" not in blank["HX-Trigger"]
+
+
+def test_the_new_task_window_saves_tags_and_named_checklists_and_the_brand_keeps_the_new_tags(workspace, owner):
+    import json
+
+    from apps.composer.models import Tag
+
+    _client(owner).post(
+        _url("task_create", workspace),
+        {
+            "title": "Black Friday reel",
+            "tags": ["#blackfriday", " promo ", "promo", ""],
+            "checklists": json.dumps(
+                [
+                    {"title": "Shooting", "items": ["Write the script", "  ", "Shoot"]},
+                    {"title": "", "items": ["Send to the client"]},
+                ]
+            ),
+        },
+    )
+
+    task = Task.objects.get(title="Black Friday reel")
+    assert task.tags == ["blackfriday", "promo"]
+    lists = [(c.title, [i.text for i in c.items.order_by("position")]) for c in task.checklists.all()]
+    assert lists == [("Shooting", ["Write the script", "Shoot"]), ("Checklist 2", ["Send to the client"])]
+    assert set(Tag.objects.for_workspace(workspace.id).values_list("name", flat=True)) >= {"blackfriday", "promo"}
+
+
+def test_malformed_checklists_are_ignored(workspace, owner):
+    for value in ("not json", '{"title": "x"}', '[1, "two", {"items": "nope"}]'):
+        _client(owner).post(_url("task_create", workspace), {"title": f"Loose {value}", "checklists": value})
+
+    assert Task.objects.filter(title__startswith="Loose").count() == 3
+    lists = list(TaskChecklist.objects.filter(task__title__startswith="Loose").values_list("title", flat=True))
+    assert lists == ["Checklist 1"]
+    assert services.clean_checklists([{"title": "x", "items": ["a"]}] * 20)[-1]["title"] == "x"
+    assert len(services.clean_checklists([{"title": "x", "items": ["a"]}] * 20)) == services.MAX_CHECKLISTS
+
+
+def test_named_checklists_are_added_renamed_filled_and_deleted_in_the_task(workspace, owner):
+    task = services.create_task(workspace, owner, title="Launch", items=[{"text": "Loose item"}])
+    client = _client(owner)
+
+    client.post(_url("checklist_add", workspace, task_id=task.id), {"title": "Shooting"})
+    checklist = task.checklists.get()
+    client.post(_url("item_add", workspace, task_id=task.id), {"text": "Book the studio", "checklist": checklist.id})
+    body = client.post(
+        _url("checklist_update", workspace, task_id=task.id, checklist_id=checklist.id), {"title": "Recording"}
+    ).content.decode()
+
+    assert "Recording" in body and "Loose item" in body and "Book the studio" in body
+    assert list(checklist.items.values_list("text", flat=True)) == ["Book the studio"]
+
+    client.post(_url("checklist_delete", workspace, task_id=task.id, checklist_id=checklist.id))
+    assert not task.checklists.exists()
+    assert list(task.checklist.values_list("text", flat=True)) == ["Loose item"]
+
+
+def test_a_checklist_of_another_task_or_workspace_is_out_of_reach(workspace, owner):
+    task = services.create_task(workspace, owner, title="Mine")
+    other_task = services.create_task(workspace, owner, title="Other", checklists=[{"title": "Theirs", "items": []}])
+    foreign = other_task.checklists.get()
+    other_ws = Workspace.objects.create(organization=workspace.organization, name="Other")
+    elsewhere = services.create_task(other_ws, owner, title="Far", checklists=[{"title": "Far list", "items": []}])
+    client = _client(owner)
+
+    assert (
+        client.post(
+            _url("item_add", workspace, task_id=task.id), {"text": "Sneak", "checklist": foreign.id}
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            _url("checklist_delete", workspace, task_id=elsewhere.id, checklist_id=elsewhere.checklists.get().id)
+        ).status_code
+        == 404
+    )
+    assert not task.checklist.exists() and elsewhere.checklists.exists()
+
+
+def test_tags_are_capped_and_trimmed():
+    tags = services.clean_tags([f"tag{i}" for i in range(30)] + ["x" * 80])
+    assert len(tags) == services.MAX_TASK_TAGS
+    assert services.clean_tags(["x" * 80]) == ["x" * services.MAX_TAG_LENGTH]
+
+
+def test_the_task_detail_replaces_the_tags(workspace, owner):
+    task = services.create_task(workspace, owner, title="Tagged", tags=["old"])
+
+    _client(owner).post(_url("task_update", workspace, task_id=task.id), {"tags_sent": "1", "tags": ["new", "#fresh"]})
+    task.refresh_from_db()
+    assert task.tags == ["new", "fresh"]
+
+    _client(owner).post(_url("task_update", workspace, task_id=task.id), {"tags_sent": "1"})
+    task.refresh_from_db()
+    assert task.tags == []
+
+
+def test_the_board_script_closes_a_deleted_task_and_filters_the_search(workspace, owner):
+    """A deleted task answers "closeTask"; the page must still listen for it (and keep its search)."""
+    body = _client(owner).get(_url("board", workspace)).content.decode()
+
+    assert "addEventListener('closeTask'" in body
+    assert "applySearch() {" in body
+
+
+def test_saving_the_task_window_saves_every_field_and_closes_it(workspace, owner):
+    editor = _user("editor@example.com", workspace, Role.EDITOR)
+    todo, progress, _review, _done = services.ensure_columns(workspace)
+    task = services.create_task(workspace, owner, title="Draft", column=todo, tags=["old"], assignees=[owner])
+
+    response = _client(owner).post(
+        _url("task_update", workspace, task_id=task.id),
+        {
+            "save": "1",
+            "title": "Final",
+            "description": "Brief",
+            "post_caption": "Caption",
+            "priority": "low",
+            "due_date": "2026-12-05",
+            "column": progress.id,
+            "assignees_sent": "1",
+            "assignees": [editor.pk],
+            "tags_sent": "1",
+            "tags": ["new"],
+        },
+    )
+
+    triggers = response["HX-Trigger"]
+    assert "closeTask" in triggers and "showToast" in triggers
+    task.refresh_from_db()
+    assert (task.title, task.description, task.post_caption, task.priority) == ("Final", "Brief", "Caption", "low")
+    assert task.due_date == date(2026, 12, 5) and task.column == progress and task.tags == ["new"]
+    assert list(task.assignees.all()) == [editor]
+
+
+def test_the_task_window_shows_the_shared_fields_and_a_save_bar(workspace, owner):
+    task = services.create_task(workspace, owner, title="Window", tags=["campaign"])
+
+    body = _client(owner).get(_url("task_detail", workspace, task_id=task.id)).content.decode()
+
+    assert 'name="save"' in body and 'id="edit-task-title"' in body
+    assert "campaign" in body  # the tags start from the task (data-initial)

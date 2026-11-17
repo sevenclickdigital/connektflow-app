@@ -161,26 +161,6 @@
     .idea-media-row .media-thumb video { width: 100%; height: 100%; object-fit: cover; }
     .idea-media-row .media-thumb.is-moving { opacity: 0.4; }
     .idea-media-row .media-thumb.is-drop-target { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-ring); }
-    .idea-selected-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-        margin-top: 8px;
-    }
-    .idea-selected-tags .idea-tag-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        padding: 2px 8px;
-        border-radius: 9999px;
-        font-size: 0.6875rem;
-        font-weight: 600;
-        background: var(--primary-soft, #F9F5FF);
-        color: var(--primary, #5B21B6);
-        border: 1px solid var(--primary-muted, #E9D5FF);
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
     /* Emoji picker */
     .emoji-picker-popup {
         position: absolute;
@@ -222,11 +202,6 @@
         background: var(--neutral-100);
     }
 
-    .idea-selected-tags .idea-tag-chip button {
-        display: flex; align-items: center; justify-content: center;
-        width: 12px; height: 12px; border: none; background: none;
-        cursor: pointer; color: inherit; padding: 0;
-    }
 </style>
 {% include "tasks/partials/_styles.html" %}
 {% endblock %}
@@ -635,73 +610,7 @@
                                    class="w-full h-11 pl-9 pr-3 rounded-lg border border-neutral-300 bg-white text-sm text-neutral-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 cursor-pointer">
                         </span>
                     </label>
-                    <div class="flex-1 min-w-0 flex flex-col gap-1.5 relative" @click.away="createTagDropdownOpen = false">
-                        <span class="flex items-center gap-2 text-sm font-semibold text-neutral-950">
-                            {% translate "Tags" %}
-                            <span x-show="createSelectedTags.length" class="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-[11px] font-bold text-white bg-brand-700" x-text="createSelectedTags.length"></span>
-                        </span>
-                        <div role="button" tabindex="0" :aria-expanded="createTagDropdownOpen.toString()"
-                             class="min-h-11 flex items-center gap-2 pl-2 pr-1 py-1.5 rounded-lg border bg-white cursor-pointer transition-colors"
-                             :class="createTagDropdownOpen ? 'border-brand-500 ring-2 ring-brand-100' : 'border-neutral-300 hover:border-neutral-400'"
-                             @click="createTagDropdownOpen = !createTagDropdownOpen; createGroupDropdownOpen = false; if(createTagDropdownOpen) $nextTick(() => $refs.createTagSearchInput.focus())"
-                             @keydown.enter.prevent="$el.click()" @keydown.space.prevent="$el.click()">
-                            <div class="idea-selected-tags flex-1 min-w-0 items-center" style="margin: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;">
-                                <span x-show="!createSelectedTags.length" class="px-1 text-sm text-neutral-500">{% translate "Add tags" %}</span>
-                            <template x-for="tag in createSelectedTags" :key="tag">
-                                <span class="idea-tag-chip">
-                                    <span x-text="tag"></span>
-                                    <button type="button" @click.stop="toggleCreateTag(tag)">
-                                        <svg width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                    </button>
-                                </span>
-                            </template>
-                            </div>
-                            <span class="w-px h-6 bg-neutral-200 flex-shrink-0" aria-hidden="true"></span>
-                            <svg class="w-4 h-4 mx-1.5 text-neutral-600 flex-shrink-0 transition-transform" :class="createTagDropdownOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-                        </div>
-                        <div x-show="createTagDropdownOpen" x-cloak x-transition class="idea-pill-dropdown" style="left: 0; right: 0; top: auto; bottom: calc(100% + 6px);">
-                                    <!-- Search input -->
-                                    <div style="padding: 4px 6px; border-bottom: 1px solid var(--border);">
-                                        <input type="text" x-ref="createTagSearchInput" x-model="createTagSearch"
-                                               @keydown.enter.prevent="if (createTagSearch.trim() && !filteredCreateTags.includes(createTagSearch.trim())) { persistAndToggleCreateTag(createTagSearch.trim()); } else if (filteredCreateTags.length === 1) { toggleCreateTag(filteredCreateTags[0]); createTagSearch = ''; }"
-                                               class="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                                               style="border-color: var(--border);"
-                                               placeholder="{% translate 'Search or create tag...' %}">
-                                    </div>
-                                    <!-- Filtered tag list -->
-                                    {% include "composer/partials/_tag_picker_rows.html" with query="createTagSearch" selected="createSelectedTags" toggle="toggleCreateTag" %}
-                                    <template x-if="!createTagSearch.trim() && !allTags.length">
-                                        <div class="px-3 py-2 text-xs" style="color: var(--text-tertiary);">{% translate "No tags yet. Type to create one." %}</div>
-                                    </template>
-                                    <!-- Create new tag -->
-                                    <template x-if="createTagSearch.trim() && !filteredCreateTags.includes(createTagSearch.trim())">
-                                        <div class="border-t" style="border-color: var(--border); margin-top: 2px; padding-top: 2px;">
-                                            <button type="button" @click="persistAndToggleCreateTag(createTagSearch.trim())"
-                                                    style="color: var(--primary);">
-                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                                {% translate "Create" %} “<span x-text="createTagSearch.trim()"></span>”
-                                            </button>
-                                        </div>
-                                    </template>
-                                    <div class="border-t border-neutral-100 px-1 py-1">
-                                        <button type="button" @click="openIdeaCreateTagModal('create')"
-                                                class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
-                                            <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                            {% translate "Create new tag" %}
-                                        </button>
-                                        <button type="button" @click="createTagDropdownOpen = false; openTagGroups()"
-                                                class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
-                                            <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-                                            {% translate "Tag groups" %}
-                                        </button>
-                                        <button type="button" @click="createTagDropdownOpen = false; $dispatch('open-tag-manager')"
-                                                class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
-                                            <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
-                                            {% translate "Manage tags" %}
-                                        </button>
-                                    </div>
-                                </div>
-                    </div>
+                    {% include "composer/partials/_tag_field.html" with selected="createSelectedTags" search="createTagSearch" open="createTagDropdownOpen" toggle="toggleCreateTag" persist="persistAndToggleCreateTag" matches="filteredCreateTags" search_ref="createTagSearchInput" on_open="createGroupDropdownOpen = false" new_tag="openIdeaCreateTagModal('create')" %}
                 </div>
 
                 <!-- Footer -->
@@ -952,73 +861,7 @@
                                    class="w-full h-11 pl-9 pr-3 rounded-lg border border-neutral-300 bg-white text-sm text-neutral-950 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 cursor-pointer">
                         </span>
                     </label>
-                    <div class="flex-1 min-w-0 flex flex-col gap-1.5 relative" @click.away="editTagDropdownOpen = false">
-                        <span class="flex items-center gap-2 text-sm font-semibold text-neutral-950">
-                            {% translate "Tags" %}
-                            <span x-show="editSelectedTags.length" class="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-[11px] font-bold text-white bg-brand-700" x-text="editSelectedTags.length"></span>
-                        </span>
-                        <div role="button" tabindex="0" :aria-expanded="editTagDropdownOpen.toString()"
-                             class="min-h-11 flex items-center gap-2 pl-2 pr-1 py-1.5 rounded-lg border bg-white cursor-pointer transition-colors"
-                             :class="editTagDropdownOpen ? 'border-brand-500 ring-2 ring-brand-100' : 'border-neutral-300 hover:border-neutral-400'"
-                             @click="editTagDropdownOpen = !editTagDropdownOpen; editGroupDropdownOpen = false; if(editTagDropdownOpen) $nextTick(() => $refs.editTagSearchInput.focus())"
-                             @keydown.enter.prevent="$el.click()" @keydown.space.prevent="$el.click()">
-                            <div class="idea-selected-tags flex-1 min-w-0 items-center" style="margin: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;">
-                                <span x-show="!editSelectedTags.length" class="px-1 text-sm text-neutral-500">{% translate "Add tags" %}</span>
-                            <template x-for="tag in editSelectedTags" :key="tag">
-                                <span class="idea-tag-chip">
-                                    <span x-text="tag"></span>
-                                    <button type="button" @click.stop="toggleEditTag(tag)">
-                                        <svg width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                    </button>
-                                </span>
-                            </template>
-                            </div>
-                            <span class="w-px h-6 bg-neutral-200 flex-shrink-0" aria-hidden="true"></span>
-                            <svg class="w-4 h-4 mx-1.5 text-neutral-600 flex-shrink-0 transition-transform" :class="editTagDropdownOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-                        </div>
-                        <div x-show="editTagDropdownOpen" x-cloak x-transition class="idea-pill-dropdown" style="left: 0; right: 0; top: auto; bottom: calc(100% + 6px);">
-                                    <!-- Search input -->
-                                    <div style="padding: 4px 6px; border-bottom: 1px solid var(--border);">
-                                        <input type="text" x-ref="editTagSearchInput" x-model="editTagSearch"
-                                               @keydown.enter.prevent="if (editTagSearch.trim() && !filteredEditTags.includes(editTagSearch.trim())) { persistAndToggleEditTag(editTagSearch.trim()); } else if (filteredEditTags.length === 1) { toggleEditTag(filteredEditTags[0]); editTagSearch = ''; }"
-                                               class="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                                               style="border-color: var(--border);"
-                                               placeholder="{% translate 'Search or create tag...' %}">
-                                    </div>
-                                    <!-- Filtered tag list -->
-                                    {% include "composer/partials/_tag_picker_rows.html" with query="editTagSearch" selected="editSelectedTags" toggle="toggleEditTag" %}
-                                    <template x-if="!editTagSearch.trim() && !allTags.length">
-                                        <div class="px-3 py-2 text-xs" style="color: var(--text-tertiary);">{% translate "No tags yet. Type to create one." %}</div>
-                                    </template>
-                                    <!-- Create new tag -->
-                                    <template x-if="editTagSearch.trim() && !filteredEditTags.includes(editTagSearch.trim())">
-                                        <div class="border-t" style="border-color: var(--border); margin-top: 2px; padding-top: 2px;">
-                                            <button type="button" @click="persistAndToggleEditTag(editTagSearch.trim())"
-                                                    style="color: var(--primary);">
-                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                                {% translate "Create" %} “<span x-text="editTagSearch.trim()"></span>”
-                                            </button>
-                                        </div>
-                                    </template>
-                                    <div class="border-t border-neutral-100 px-1 py-1">
-                                        <button type="button" @click="openIdeaCreateTagModal('edit')"
-                                                class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
-                                            <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                            {% translate "Create new tag" %}
-                                        </button>
-                                        <button type="button" @click="editTagDropdownOpen = false; openTagGroups()"
-                                                class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
-                                            <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-                                            {% translate "Tag groups" %}
-                                        </button>
-                                        <button type="button" @click="editTagDropdownOpen = false; $dispatch('open-tag-manager')"
-                                                class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
-                                            <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
-                                            {% translate "Manage tags" %}
-                                        </button>
-                                    </div>
-                                </div>
-                    </div>
+                    {% include "composer/partials/_tag_field.html" with selected="editSelectedTags" search="editTagSearch" open="editTagDropdownOpen" toggle="toggleEditTag" persist="persistAndToggleEditTag" matches="filteredEditTags" search_ref="editTagSearchInput" on_open="editGroupDropdownOpen = false" new_tag="openIdeaCreateTagModal('edit')" %}
                 </div>
 
                 <!-- Footer -->

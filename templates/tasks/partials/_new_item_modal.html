@@ -1,0 +1,162 @@
+{% load i18n %}
+{% comment %}
+"Create new item": how anything is created on the task board, in two steps.
+First a small window offers the two kinds; picking one turns it into that
+kind's form (with "Back" to the choice):
+
+- Task: on the left title, description, column, priority, due date (today
+  by default), assignees and tags (the brand's tag list, shared with ideas);
+  on the right its named checklists, each with a title and items. Posted to
+  tasks:task_create, whose taskCreated closes it.
+- Art request: the art request form (tasks/partials/_request_arts_form.html),
+  fetched the first time the kind is picked; it creates the task and opens it
+  on the board itself.
+
+Opened with $dispatch('open-new-item', { column: '<column id>' }) by a
+column's "Add task", on the choice for that column (kind: 'art' goes straight
+to the art request form). The script is newItemForm() in tasks/board.html.
+
+Expects: columns, priorities, members, today, workspace (the page renders the tag suggestions).
+{% endcomment %}
+<div x-data="newItemForm()" x-cloak
+     @open-new-item.window="open($event.detail)" @task-created.camel.window="close()" @keydown.escape.window="close()">
+    <div class="new-item-overlay" x-show="isOpen" x-transition.opacity @click.self="close()">
+        {# Step 1: the kind of item. #}
+        <div class="new-item-chooser" x-show="step === 'choose'" role="dialog" aria-modal="true" aria-labelledby="new-item-heading">
+            <button type="button" class="modal-close" @click="close()" aria-label="{% translate 'Close' %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <h2 id="new-item-heading" class="text-2xl font-bold text-neutral-950 pr-8" style="letter-spacing: -0.01em;">{% translate "Create new item" %}</h2>
+            <p class="text-sm text-neutral-600 mt-1.5">{% translate "Choose the kind of task you want to create for your team." %}</p>
+            <div class="mt-6 space-y-3">
+                <button type="button" class="new-item-kind" x-ref="firstKind" @click="choose('task')">
+                    <span class="new-item-kind-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>
+                    <span class="flex-1 min-w-0 text-left">
+                        <span class="block text-sm font-bold text-neutral-950">{% translate "Task" %}</span>
+                        <span class="block text-[13px] text-neutral-600 mt-0.5">{% translate "Organise an activity, a deadline or an internal job." %}</span>
+                    </span>
+                    <svg class="w-5 h-5 text-neutral-500 flex-shrink-0 self-center" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+                <button type="button" class="new-item-kind" @click="choose('art')">
+                    <span class="new-item-kind-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+                    <span class="flex-1 min-w-0 text-left">
+                        <span class="block text-sm font-bold text-neutral-950">{% translate "Art request" %}</span>
+                        <span class="block text-[13px] text-neutral-600 mt-0.5">{% translate "Ask for the visual pieces your content needs." %}</span>
+                    </span>
+                    <svg class="w-5 h-5 text-neutral-500 flex-shrink-0 self-center" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+            </div>
+        </div>
+
+        {# Step 2: the form of the kind picked. #}
+        <div class="new-item-panel" x-show="step !== 'choose'" role="dialog" aria-modal="true"
+             aria-label="{% translate 'Create new item' %}">
+            <div class="new-item-main">
+                <div class="new-item-topbar">
+                    <button type="button" class="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-600 hover:text-neutral-950 cursor-pointer" @click="step = 'choose'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                        {% translate "Back" %}
+                    </button>
+                    <button type="button" class="modal-close !static" @click="close()" aria-label="{% translate 'Close' %}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                {# ── Task ── #}
+                <form x-show="step === 'task'" x-ref="taskForm" class="flex flex-col flex-1 min-h-0"
+                      hx-post="{% url 'tasks:task_create' workspace_id=workspace.id %}" hx-swap="none">
+                    <div class="new-item-split">
+                    <div class="new-item-body">
+                        <div class="flex items-start gap-4">
+                            <span class="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                            </span>
+                            <div class="min-w-0">
+                                <h3 class="text-xl font-bold text-neutral-950">{% translate "New task" %}</h3>
+                                <p class="text-sm text-neutral-600 mt-0.5">{% translate "Organise an activity, set deadlines and who is responsible." %}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            {% include "tasks/partials/_task_fields.html" with prefix="new-task" desc_limit=500 %}
+                        </div>
+                    </div>
+
+                    {% comment %}
+                    Right: the task's checklists. Each has a title and its items;
+                    "New checklist" adds one. They travel as one JSON field,
+                    "checklists" (tasks.views.task_create).
+                    {% endcomment %}
+                    <aside class="new-item-checklists">
+                        <input type="hidden" name="checklists" :value="checklistsJson()">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                            <h4 class="text-base font-bold text-neutral-950">{% translate "Checklists" %}</h4>
+                            <span class="text-sm text-neutral-500">({% translate "optional" %})</span>
+                        </div>
+                        <p class="text-[13px] text-neutral-600 mt-1">{% translate "Split the work into lists, each with its own title and items." %}</p>
+
+                        <div class="mt-4 space-y-3">
+                            <template x-for="(list, listIndex) in checklists" :key="list.key">
+                                <section class="new-item-checklist">
+                                    <div class="flex items-center gap-2">
+                                        <input type="text" x-model="list.title" maxlength="120" autocomplete="off" :id="'new-checklist-title-' + list.key"
+                                               :aria-label="checklistTitleLabel" :placeholder="checklistTitleLabel"
+                                               class="flex-1 min-w-0 text-sm font-semibold text-neutral-950 bg-transparent border-0 rounded-md px-1 -mx-1 py-1 focus:bg-white focus:ring-2 focus:ring-brand-200">
+                                        <span class="text-[11px] font-semibold text-neutral-500 tabular-nums" x-show="list.items.length" x-text="list.items.length"></span>
+                                        <button type="button" class="w-7 h-7 rounded-md flex items-center justify-center text-neutral-500 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                                                @click="checklists.splice(listIndex, 1)" :aria-label="removeLabel + ' ' + (list.title || checklistTitleLabel)">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
+                                        </button>
+                                    </div>
+                                    <ul class="mt-1.5 space-y-1" x-show="list.items.length">
+                                        <template x-for="(item, itemIndex) in list.items" :key="itemIndex">
+                                            <li class="group flex items-center gap-2 text-sm text-neutral-800 rounded-md px-1 py-0.5 hover:bg-white">
+                                                <span class="task-check" aria-hidden="true"></span>
+                                                <span class="flex-1 min-w-0 break-words" x-text="item"></span>
+                                                <button type="button" class="text-neutral-500 hover:text-red-600 cursor-pointer opacity-60 group-hover:opacity-100" @click="list.items.splice(itemIndex, 1)" :aria-label="removeLabel + ' ' + item">×</button>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <input type="text" x-model="list.text" maxlength="255" autocomplete="off"
+                                               @keydown.enter.prevent="addItem(list)" :aria-label="itemPlaceholder" :placeholder="itemPlaceholder"
+                                               class="form-input-styled w-full text-sm">
+                                        <button type="button" class="btn-outline text-sm px-3" @click="addItem(list)">{% translate "Add" %}</button>
+                                    </div>
+                                </section>
+                            </template>
+                        </div>
+
+                        <button type="button" class="new-item-add-checklist" @click="addChecklist()" x-show="checklists.length < 10">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                            {% translate "New checklist" %}
+                        </button>
+                    </aside>
+                    </div>
+
+                    <div class="new-item-footer">
+                        <div class="relative">
+                            <button type="button" @click="toggleEmoji()" class="w-9 h-9 rounded-full flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 cursor-pointer"
+                                    :class="showEmoji && 'bg-neutral-100'" title="{% translate 'Insert emoji' %}" aria-label="{% translate 'Insert emoji' %}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                            </button>
+                            {% include "composer/partials/emoji_picker.html" %}
+                        </div>
+                        <div class="flex items-center gap-3 ml-auto">
+                            <button type="button" class="btn-outline text-sm px-5" @click="close()">{% translate "Cancel" %}</button>
+                            <button type="submit" class="btn-brand text-sm px-5">{% translate "Create task" %}</button>
+                        </div>
+                    </div>
+                </form>
+
+                {# ── Art request: fetched the first time it is picked ── #}
+                <div x-show="step === 'art'" class="new-item-art">
+                    <div id="new-item-art-body" x-ref="artBody">
+                        <div class="p-10 text-center text-sm text-neutral-500">{% translate "Loading…" %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -12,7 +12,7 @@ from django.utils.translation import override
 
 from apps.members.models import WorkspaceMembership
 
-from .models import Task, TaskChecklistItem, TaskColumn
+from .models import Task, TaskChecklist, TaskChecklistItem, TaskColumn
 
 
 def ensure_columns(workspace) -> list[TaskColumn]:
@@ -58,6 +58,19 @@ def create_column(workspace, name, *, after=None) -> TaskColumn:
     return column
 
 
+def media_folder(workspace):
+    """The media library folder the task board files its uploads in ("Tasks", in the site's language).
+
+    Written once in the site's language, like the default column names, so every
+    member finds the same folder whatever language they use.
+    """
+    from apps.media_library.services import top_level_folder
+
+    with override(settings.LANGUAGE_CODE):
+        name = str(_("Tasks"))
+    return top_level_folder(workspace, name)
+
+
 def delete_column(column, actor) -> TaskColumn | None:
     """Delete ``column``; its tasks go, in order, to the end of the column beside it.
 
@@ -88,6 +101,87 @@ def assignable_members(workspace):
     return [m.user for m in memberships if m.effective_permissions.get("create_posts")]
 
 
+MAX_TASK_TAGS = 20
+MAX_TAG_LENGTH = 50
+
+
+def clean_tags(raw) -> list[str]:
+    """Tag names as typed: trimmed, without a leading "#", no blanks or repeats, at most MAX_TASK_TAGS."""
+    tags: list[str] = []
+    for value in raw:
+        name = str(value).strip().lstrip("#").strip()[:MAX_TAG_LENGTH]
+        if name and name not in tags:
+            tags.append(name)
+    return tags[:MAX_TASK_TAGS]
+
+
+def tag_suggestions(workspace) -> list[str]:
+    """The brand's saved tags (shared with ideas and posts), by name."""
+    from apps.composer.models import Tag
+
+    return list(Tag.objects.for_workspace(workspace.id).order_by("name").values_list("name", flat=True))
+
+
+def set_tags(task, raw) -> None:
+    """Replace the task's tags, saving new names in the brand's tag list."""
+    from apps.composer.services import ensure_tags
+
+    task.tags = clean_tags(raw)
+    task.save(update_fields=["tags", "updated_at"])
+    ensure_tags(task.workspace, task.tags)
+
+
+MAX_CHECKLISTS = 10
+MAX_CHECKLIST_ITEMS = 50
+
+
+def clean_checklists(raw) -> list[dict]:
+    """Named checklists as posted (a list of ``{"title", "items"}``), trimmed and capped.
+
+    A checklist without a title keeps a numbered "Checklist N"; one without items is kept
+    (the team fills it later). Anything that isn't that shape is dropped.
+    """
+    checklists: list[dict] = []
+    for spec in raw if isinstance(raw, list) else []:
+        if not isinstance(spec, dict):
+            continue
+        items = [str(t).strip()[:255] for t in spec.get("items") or [] if isinstance(t, str | int) and str(t).strip()]
+        title = str(spec.get("title") or "").strip()[:120] or _("Checklist %(number)s") % {
+            "number": len(checklists) + 1
+        }
+        checklists.append({"title": title, "items": items[:MAX_CHECKLIST_ITEMS]})
+    return checklists[:MAX_CHECKLISTS]
+
+
+def add_checklist(task, title) -> TaskChecklist:
+    top = task.checklists.aggregate(top=Max("position"))["top"]
+    return TaskChecklist.objects.create(task=task, title=title.strip()[:120], position=0 if top is None else top + 1)
+
+
+def add_item(task, text, checklist=None) -> TaskChecklistItem:
+    """A to-do at the end of the task's items, in ``checklist`` (one of the task's) or outside any."""
+    top = task.checklist.aggregate(top=Max("position"))["top"]
+    return TaskChecklistItem.objects.create(
+        task=task, checklist=checklist, text=text.strip()[:255], position=0 if top is None else top + 1
+    )
+
+
+def checklist_groups(task, items) -> list[dict]:
+    """The task's items for its window: the untitled ones first (when there are any or no
+    named checklist), then each named checklist with its own, each with how many are done.
+    """
+    named = list(task.checklists.all())
+    loose = [i for i in items if i.checklist_id is None]
+    groups: list[dict] = []
+    if loose or not named:
+        groups.append({"checklist": None, "items": loose})
+    for checklist in named:
+        groups.append({"checklist": checklist, "items": [i for i in items if i.checklist_id == checklist.pk]})
+    for group in groups:
+        group["done"] = sum(1 for i in group["items"] if i.is_done)
+    return groups
+
+
 def resolve_assignees(workspace, raw_ids) -> list:
     """Keep only ids of users who may be assigned in this workspace."""
     wanted = {str(i) for i in raw_ids if i}
@@ -95,25 +189,12 @@ def resolve_assignees(workspace, raw_ids) -> list:
 
 
 def board_columns(workspace, *, assignee_id=None, priority=None):
-    """Columns with their (filtered) tasks, checklist progress, assignees and cover image.
-
-    ``task.cover_items`` holds the checklist items that carry an image, in
-    order; the card shows the first as its cover.
-    """
+    """Columns with their (filtered) tasks, checklist progress and assignees."""
     columns = ensure_columns(workspace)
     tasks = (
         Task.objects.for_workspace(workspace.id)
         .select_related("idea")
-        .prefetch_related(
-            "assignees",
-            Prefetch(
-                "checklist",
-                queryset=TaskChecklistItem.objects.filter(media_asset__media_type="image")
-                .select_related("media_asset")
-                .order_by("position"),
-                to_attr="cover_items",
-            ),
-        )
+        .prefetch_related("assignees")
         .annotate(
             items_total=Count("checklist", distinct=True),
             items_done=Count("checklist", filter=Q(checklist__is_done=True), distinct=True),
@@ -139,6 +220,7 @@ def task_detail_queryset(workspace):
         .select_related("column", "idea", "post", "calendar_event", "created_by")
         .prefetch_related(
             "assignees",
+            "checklists",
             Prefetch("checklist", queryset=TaskChecklistItem.objects.select_related("media_asset", "done_by")),
         )
     )
@@ -161,13 +243,16 @@ def create_task(
     priority=Task.Priority.MEDIUM,
     due_date=None,
     assignees=(),
+    tags=(),
+    checklists=(),
     idea=None,
     calendar_event=None,
     items=(),
 ) -> Task:
     """Create a task at the bottom of ``column`` (the first column by default).
 
-    ``items`` are dicts of ``TaskChecklistItem`` fields, in order.
+    ``items`` are dicts of ``TaskChecklistItem`` fields, in order, outside any named
+    checklist; ``checklists`` are ``{"title", "items": [text, …]}`` (clean_checklists).
     """
     column = column or ensure_columns(workspace)[0]
     task = Task.objects.create(
@@ -179,14 +264,30 @@ def create_task(
         post_caption=post_caption,
         priority=priority,
         due_date=due_date,
+        tags=clean_tags(tags),
         created_by=actor,
         idea=idea,
         calendar_event=calendar_event,
         completed_at=timezone.now() if column.is_done else None,
     )
-    TaskChecklistItem.objects.bulk_create(
-        [TaskChecklistItem(task=task, position=pos, **item) for pos, item in enumerate(items)]
-    )
+    rows = [TaskChecklistItem(task=task, position=pos, **item) for pos, item in enumerate(items)]
+    for index, spec in enumerate(checklists):
+        checklist = TaskChecklist.objects.create(task=task, title=spec["title"], position=index)
+        # An item is its text, or a dict of TaskChecklistItem fields (an art item's format and size).
+        rows += [
+            TaskChecklistItem(
+                task=task,
+                checklist=checklist,
+                position=len(rows) + offset,
+                **(item if isinstance(item, dict) else {"text": item}),
+            )
+            for offset, item in enumerate(spec["items"])
+        ]
+    TaskChecklistItem.objects.bulk_create(rows)
+    if task.tags:
+        from apps.composer.services import ensure_tags
+
+        ensure_tags(workspace, task.tags)
     if assignees:
         task.assignees.set(assignees)
         transaction.on_commit(lambda: notify_assigned(task, assignees, actor))
@@ -358,10 +459,15 @@ def request_arts(
     assignees=(),
     due_date=None,
     idea=None,
+    extra_items=(),
 ) -> Task:
-    """One task whose checklist has an item per requested format, in catalogue order.
+    """One task with a checklist per network ("Instagram", "Facebook"…), each holding an
+    item per requested format of that network, in catalogue order, and, when
+    ``extra_items`` (other to-dos typed with the request) are given, an "Other to-dos"
+    checklist with them.
 
-    Unknown keys are dropped; at least one known format is required.
+    Unknown keys are dropped; at least one known format is required. "Other to-dos" is
+    written in the site's language, like the default column names.
     """
     from . import creative_formats
 
@@ -369,6 +475,19 @@ def request_arts(
     formats = [f for f in creative_formats.FORMATS if f.key in wanted]
     if not formats:
         raise ValueError("No known format requested")
+    # One checklist per network, in catalogue order, its arts named by format; then "Other to-dos".
+    checklists: list[dict] = []
+    for fmt in formats:
+        label = creative_formats.network(fmt.network).label
+        if not checklists or checklists[-1]["title"] != label:
+            checklists.append({"title": label, "items": []})
+        checklists[-1]["items"].append(
+            {"text": str(fmt.label), "format_key": fmt.key, "width": fmt.width, "height": fmt.height}
+        )
+    extras = [str(text).strip()[:255] for text in extra_items if str(text).strip()][:MAX_CHECKLIST_ITEMS]
+    if extras:
+        with override(settings.LANGUAGE_CODE):
+            checklists.append({"title": str(_("Other to-dos")), "items": extras})
     if not assignees:
         default = art_settings(workspace).art_assignee
         if default and default in assignable_members(workspace):
@@ -383,15 +502,7 @@ def request_arts(
         assignees=list(assignees),
         idea=idea,
         calendar_event=idea.calendar_event if idea else None,
-        items=[
-            {
-                "text": creative_formats.checklist_text(f),
-                "format_key": f.key,
-                "width": f.width,
-                "height": f.height,
-            }
-            for f in formats
-        ],
+        checklists=checklists,
     )
 
 
@@ -411,6 +522,18 @@ def deliver_art(item, asset, actor) -> bool:
     item.save(update_fields=["media_asset", "is_done", "done_by", "done_at"])
     advance_to_review(item.task, actor)
     return creative_formats.ratio_matches(item.width or 0, item.height or 0, asset.width, asset.height)
+
+
+def remove_art(item) -> None:
+    """Take the delivered file off an art item, which goes back to waiting for one.
+
+    The file stays in the media library: it may already be in a post.
+    """
+    item.media_asset = None
+    item.is_done = False
+    item.done_by = None
+    item.done_at = None
+    item.save(update_fields=["media_asset", "is_done", "done_by", "done_at"])
 
 
 class NothingToPublishError(Exception):
@@ -441,9 +564,9 @@ def create_post_from_task(task, actor):
         raise NothingToPublishError
 
     accounts = list(
-        SocialAccount.objects.for_workspace(task.workspace_id).publishable().filter(
-            connection_status=SocialAccount.ConnectionStatus.CONNECTED
-        )
+        SocialAccount.objects.for_workspace(task.workspace_id)
+        .publishable()
+        .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
     )
     # (account, publish format) → art, first art per pair in checklist order.
     plan: dict = {}

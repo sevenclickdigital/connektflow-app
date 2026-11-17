@@ -1,14 +1,22 @@
 {% load i18n %}
 {% comment %}
-The art request form: pick a network by its accounts (the composer's
-destination cards), tick the formats needed, brief and assign. Rendered inside the
-request modal (tasks/partials/_request_arts_host.html) and, without JS, on its
-own page. Posts back to itself, or to ``action_url`` when another app reuses it
-(tasks.views.render_art_request_form); a valid request answers HX-Redirect to
-the board with the new task open.
+The art request form. On the left the request itself (title, briefing, post
+caption, due date, who is responsible) and, under it, the formats: pick a
+network by its accounts (the composer's destination cards) and tick what it
+needs. On the right the checklists the task will have: one per network with
+its ticked formats, kept in step as formats are ticked (× unticks), and
+"Other to-dos" typed there (``extra_items``). The button that creates the
+task sits in the left column's foot, as in the task window.
+
+Rendered inside the request modal (tasks/partials/_request_arts_host.html, the
+script is artPicker() there), in the task board's new item window and, without
+JS, on its own page. Posts back to itself, or to ``action_url`` when another
+app reuses it (tasks.views.render_art_request_form); a valid request answers
+HX-Redirect to the board with the new task open.
 {% endcomment %}
-<div class="art-request-root" x-data="artPicker('{{ first_tab }}')" @change="recount()">
+<div class="art-request-root" x-data="artPicker('{{ first_tab }}')" @change="recount()" data-remove="{% translate 'Remove' %}">
     {% if action_url %}{% firstof action_url as post_url %}{% else %}{% url 'tasks:request_arts' workspace_id=workspace.id as post_url %}{% endif %}
+    {{ form.extra_items|default_if_none:""|json_script:"art-extra-items" }}
     <form method="post" action="{{ post_url }}"
           hx-post="{{ post_url }}"
           hx-target="closest .art-request-root" hx-swap="outerHTML"
@@ -20,8 +28,80 @@ the board with the new task open.
         <section class="p-5 md:p-6 min-w-0">
             <h2 class="text-lg font-semibold text-neutral-950 pr-10">{% translate "Request arts" %}</h2>
             <p class="text-sm text-neutral-600 mt-0.5">{% translate "Choose every piece this content needs. The creative team gets one task with the exact size of each." %}</p>
+            {% if idea %}
+            <p class="text-xs text-neutral-600 mt-1">{% blocktranslate with title=idea.title %}From the idea “{{ title }}”{% endblocktranslate %}</p>
+            {% elif source_note %}
+            <p class="text-xs text-neutral-600 mt-1">{{ source_note }}</p>
+            {% endif %}
+            {% if error %}<div class="alert-error text-sm mt-3">{{ error }}</div>{% endif %}
 
-            <div class="target-picker mt-5 pb-3" role="tablist" aria-label="{% translate 'Networks' %}">
+            {% comment %}
+            The request, laid out like the task's own fields (tasks/partials/_task_fields.html):
+            what it is, how the arts should be made, the post's text, then when and who.
+            {% endcomment %}
+            <div class="space-y-5 mt-6">
+                <div>
+                    <label class="new-item-label" for="ra-title">{% translate "Title" %} <span class="text-red-600" aria-hidden="true">*</span></label>
+                    <input id="ra-title" name="title" value="{{ form.title }}" maxlength="255" required autocomplete="off" class="form-input-styled block w-full text-sm">
+                </div>
+                <div>
+                    <label class="new-item-label" for="ra-description">{% translate "Briefing" %}</label>
+                    <textarea id="ra-description" name="description" rows="4" class="form-input-styled block w-full text-sm"
+                              placeholder="{% translate 'How the arts should be made: what they say and show' %}">{{ form.description }}</textarea>
+                </div>
+                <div>
+                    <label class="new-item-label" for="ra-caption">{% translate "Post caption" %}</label>
+                    <textarea id="ra-caption" name="post_caption" rows="4" class="form-input-styled block w-full text-sm"
+                              placeholder="{% translate 'The text the post goes out with' %}">{{ form.post_caption }}</textarea>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                    <div>
+                        <label class="new-item-label" for="ra-due">{% translate "Due date" %}</label>
+                        <input id="ra-due" type="date" name="due_date" value="{{ form.due_date }}" class="form-input-styled block w-full text-sm">
+                    </div>
+                    {% comment %}
+                    Responsible, as in the task's fields: the picked members as chips, the rest in
+                    the dropdown; they post as hidden "assignees" inputs.
+                    {% endcomment %}
+                    <div class="min-w-0" x-data="{ open: false, picked: JSON.parse($el.dataset.picked) }" data-picked="[{% for member in members %}{% if member.pk|stringformat:'s' in chosen_assignees %}&quot;{{ member.pk }}&quot;,{% endif %}{% endfor %}&quot;&quot;]"
+                         x-init="picked = picked.filter(Boolean)" @click.outside="open = false">
+                        <div class="new-item-label" id="ra-assignees-label">{% translate "Responsible" %}</div>
+                        <div class="relative">
+                            <div class="new-item-chipbox" role="button" tabindex="0" aria-labelledby="ra-assignees-label"
+                                 @click="open = !open" @keydown.enter.prevent="open = !open" :aria-expanded="open.toString()">
+                                {% for member in members %}
+                                <span class="new-item-chip is-person" x-show="picked.includes('{{ member.pk }}')">
+                                    <span class="task-avatar !ml-0" aria-hidden="true">{{ member.display_name|make_list|first|upper }}</span>
+                                    {{ member.display_name }}
+                                    <button type="button" @click.stop="picked = picked.filter(id => id !== '{{ member.pk }}')"
+                                            aria-label="{% blocktranslate with name=member.display_name %}Remove {{ name }}{% endblocktranslate %}">×</button>
+                                </span>
+                                {% endfor %}
+                                <span class="text-sm text-neutral-500" x-show="!picked.length">{% translate "Nobody yet" %}</span>
+                                <svg class="w-4 h-4 text-neutral-600 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                            </div>
+                            <template x-for="id in picked" :key="id"><input type="hidden" name="assignees" :value="id"></template>
+                            <div x-show="open" x-cloak x-transition class="new-item-dropdown">
+                                {% for member in members %}
+                                <label>
+                                    <input type="checkbox" class="bb-checkbox" :checked="picked.includes('{{ member.pk }}')"
+                                           @change="picked.includes('{{ member.pk }}') ? picked = picked.filter(id => id !== '{{ member.pk }}') : picked.push('{{ member.pk }}')">
+                                    <span class="task-avatar !ml-0" aria-hidden="true">{{ member.display_name|make_list|first|upper }}</span>
+                                    <span class="truncate">{{ member.display_name }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Arrows: the row scrolls sideways when the accounts don't fit. #}
+            <div class="flex items-center justify-between gap-3 mt-6 mb-2">
+                <p class="text-sm font-semibold text-neutral-950">{% translate "Formats" %}</p>
+                {% include "partials/_scroll_arrows.html" with ref="networkRow" %}
+            </div>
+            <div class="target-picker pb-3" role="tablist" aria-label="{% translate 'Networks' %}" x-ref="networkRow">
                 {% for group in groups %}
                 {% for account in group.accounts %}
                 {% include "partials/_target_card.html" with platform=account.platform account=account network=group.network.key %}
@@ -37,18 +117,28 @@ the board with the new task open.
             {% for group in groups %}
             <div data-network="{{ group.network.key }}" x-show="tab === '{{ group.network.key }}'" {% if group.network.key != first_tab %}x-cloak{% endif %}>
                 <p class="text-xs font-semibold text-neutral-600 mt-2 mb-2">{{ group.network.label }}</p>
-                <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
+                <div class="grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));">
                     {% for fmt in group.formats %}
                     <label class="art-format">
-                        <input type="checkbox" name="formats" value="{{ fmt.key }}" data-network="{{ group.network.key }}" {% if fmt.key in selected %}checked{% endif %}>
+                        <input type="checkbox" name="formats" value="{{ fmt.key }}" data-network="{{ group.network.key }}"
+                               data-network-label="{{ group.network.label }}" data-label="{{ fmt.label }}" data-size="{{ fmt.width }} × {{ fmt.height }}"
+                               {% if fmt.key in selected %}checked{% endif %}>
                         <span class="art-tick" aria-hidden="true"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
-                        <span class="art-shape-box" aria-hidden="true">
-                            <span class="art-shape" style="aspect-ratio: {{ fmt.width }} / {{ fmt.height }}; {% if fmt.width >= fmt.height %}width: 78%;{% else %}height: 80px;{% endif %}"></span>
+                        {# The format's glyph on a lilac tile: Feed, Story, Reels; a picture for art-only pieces. #}
+                        <span class="art-icon-box" aria-hidden="true">
+                            {% if fmt.publish_format == "story" or fmt.publish_format == "reel" or fmt.publish_format == "default" %}
+                            {% include "partials/_format_icon.html" with format=fmt.publish_format show_default=True cls="w-5 h-5" %}
+                            {% elif fmt.media == "video" %}
+                            {% include "partials/_format_icon.html" with format="reel" cls="w-5 h-5" %}
+                            {% else %}
+                            {% include "partials/_format_icon.html" with format="profile_photo" cls="w-5 h-5" %}
+                            {% endif %}
                         </span>
-                        <span>
-                            <span class="block text-[13px] font-semibold text-neutral-900">{{ fmt.label }}</span>
-                            <span class="block text-[11.5px] text-neutral-600 tabular-nums">{{ fmt.width }} × {{ fmt.height }} px · {{ fmt.ratio_label }}</span>
+                        <span class="min-w-0">
+                            <span class="block text-[13px] font-bold text-neutral-950 leading-tight truncate">{{ fmt.label }}</span>
+                            <span class="block text-[11.5px] text-neutral-600 tabular-nums">{{ fmt.width }} × {{ fmt.height }} px</span>
                             <span class="mt-1 flex flex-wrap gap-1">
+                                <span class="art-ratio">{{ fmt.ratio_label }}</span>
                                 {% if fmt.media == "video" %}<span class="task-pill task-pill--due">{% translate "Video" %}</span>{% endif %}
                                 {% if not fmt.is_publishable %}<span class="task-pill task-pill--art">{% translate "Art only" %}</span>{% endif %}
                             </span>
@@ -58,64 +148,78 @@ the board with the new task open.
                 </div>
             </div>
             {% endfor %}
+
+            {# The foot, like the task window's: the button that sends the request, kept in view while the column scrolls. #}
+            <div class="art-request-footer">
+                <button type="submit" class="btn-brand text-sm px-5" :disabled="picked < 1">
+                    <span x-show="picked < 1">{% translate "Choose the formats" %}</span>
+                    <span x-show="picked >= 1" x-cloak>
+                        <span x-text="picked"></span> · {% translate "Create task for the creative team" %}
+                    </span>
+                </button>
+            </div>
         </section>
 
-        <aside class="art-request-side p-5 md:p-6 space-y-4">
-            {% if error %}<div class="alert-error text-sm">{{ error }}</div>{% endif %}
-            {% if idea %}
-            <p class="text-xs text-neutral-600 pr-10">{% blocktranslate with title=idea.title %}From the idea “{{ title }}”{% endblocktranslate %}</p>
-            {% elif source_note %}
-            <p class="text-xs text-neutral-600 pr-10">{{ source_note }}</p>
-            {% endif %}
-            <div>
-                <label class="task-field-label block" for="ra-title">{% translate "Title" %}</label>
-                <input id="ra-title" name="title" value="{{ form.title }}" maxlength="255" required class="form-input-styled w-full text-sm">
+        {# Right: the checklist the task will have. #}
+        <aside class="art-request-side p-5 md:p-6 flex flex-col">
+            <div class="flex items-center gap-2 pr-10">
+                <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                <h3 class="text-base font-bold text-neutral-950">{% translate "Checklist" %}</h3>
             </div>
-            <div>
-                <label class="task-field-label block" for="ra-description">{% translate "Briefing" %}</label>
-                <textarea id="ra-description" name="description" rows="4" class="form-input-styled w-full text-sm"
-                          placeholder="{% translate 'How the arts should be made: what they say and show' %}">{{ form.description }}</textarea>
-            </div>
-            <div>
-                <label class="task-field-label block" for="ra-caption">{% translate "Post caption" %}</label>
-                <textarea id="ra-caption" name="post_caption" rows="4" class="form-input-styled w-full text-sm"
-                          placeholder="{% translate 'The text the post goes out with' %}">{{ form.post_caption }}</textarea>
-            </div>
-            <div>
-                <label class="task-field-label block" for="ra-due">{% translate "Due date" %}</label>
-                <input id="ra-due" type="date" name="due_date" value="{{ form.due_date }}" class="form-input-styled w-full text-sm">
-            </div>
-            <div>
-                <div class="task-field-label">{% translate "Responsible" %}</div>
-                {% comment %}
-                Same picker as the task modal's "Responsible" pill. The checkboxes stay
-                in this form while the dropdown is closed, so they post with it.
-                {% endcomment %}
-                <div class="relative" x-data="{ open: false, names: [] }" @click.outside="open = false"
-                     x-init="names = [...$el.querySelectorAll('input[name=assignees]:checked')].map(i => i.dataset.name)"
-                     @change="names = [...$el.querySelectorAll('input[name=assignees]:checked')].map(i => i.dataset.name)">
-                    <button type="button" class="idea-pill-btn" @click="open = !open" :aria-expanded="open">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                        <span class="truncate" data-empty="{% translate 'Responsible' %}" x-text="names.length ? names.join(', ') : $el.dataset.empty">{% translate "Responsible" %}</span>
-                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                    <div x-show="open" x-cloak x-transition class="idea-pill-dropdown" style="left: 0; right: auto;">
-                        {% for member in members %}
-                        <label>
-                            <input type="checkbox" name="assignees" value="{{ member.pk }}" data-name="{{ member.display_name }}" class="bb-checkbox"
-                                   {% if member.pk|stringformat:"s" in chosen_assignees %}checked{% endif %}>
-                            <span class="truncate">{{ member.display_name }}</span>
-                        </label>
-                        {% endfor %}
+            <p class="text-[13px] text-neutral-600 mt-1">{% translate "The formats you tick become a list per network. Add any other to-do below." %}</p>
+
+            {# A checklist per network with its ticked formats, as the task will have them. #}
+            <p class="text-xs text-neutral-500 mt-4" x-show="!pickedGroups().length">{% translate "Tick the formats on the left." %}</p>
+            <div class="mt-4 space-y-3">
+                <template x-for="group in pickedGroups()" :key="group.network">
+                    <section class="art-checklist">
+                        <div class="flex items-center gap-2">
+                            <h4 class="flex-1 text-sm font-semibold text-neutral-950" x-text="group.label"></h4>
+                            <span class="text-[11px] font-semibold text-neutral-500 tabular-nums" x-text="group.items.length"></span>
+                        </div>
+                        <ul class="mt-2 space-y-1">
+                            <template x-for="art in group.items" :key="art.key">
+                                <li class="group flex items-center gap-2 text-sm text-neutral-800 rounded-md px-1 py-1 hover:bg-neutral-50">
+                                    <span class="task-check" aria-hidden="true"></span>
+                                    <span class="flex-1 min-w-0">
+                                        <span class="block truncate" x-text="art.label"></span>
+                                        <span class="block text-[11px] text-neutral-500 tabular-nums" x-text="art.size + ' px'"></span>
+                                    </span>
+                                    <button type="button" class="text-neutral-500 hover:text-red-600 cursor-pointer opacity-60 group-hover:opacity-100"
+                                            @click="untick(art.key)" :aria-label="$root.dataset.remove + ' ' + art.label">×</button>
+                                </li>
+                            </template>
+                        </ul>
+                    </section>
+                </template>
+
+                {# Other to-dos, typed here before the request is sent: a checklist of their own. #}
+                <section class="art-checklist">
+                    <div class="flex items-center gap-2">
+                        <h4 class="flex-1 text-sm font-semibold text-neutral-950">{% translate "Other to-dos" %}</h4>
+                        <span class="text-[11px] font-semibold text-neutral-500 tabular-nums" x-show="extras.length" x-text="extras.length"></span>
                     </div>
-                </div>
+                    <ul class="mt-2 space-y-1" x-show="extras.length">
+                        <template x-for="(text, index) in extras" :key="index">
+                            <li class="group flex items-center gap-2 text-sm text-neutral-800 rounded-md px-1 py-1 hover:bg-neutral-50">
+                                <span class="task-check" aria-hidden="true"></span>
+                                <span class="flex-1 min-w-0 break-words" x-text="text"></span>
+                                <input type="hidden" name="extra_items" :value="text">
+                                <button type="button" class="text-neutral-500 hover:text-red-600 cursor-pointer opacity-60 group-hover:opacity-100"
+                                        @click="extras.splice(index, 1)" :aria-label="$root.dataset.remove + ' ' + text">×</button>
+                            </li>
+                        </template>
+                    </ul>
+                    <div class="flex items-center gap-2 mt-2">
+                        <label class="sr-only" for="ra-extra">{% translate "Another to-do" %}</label>
+                        <input id="ra-extra" type="text" x-model="extraText" maxlength="255" autocomplete="off"
+                               @keydown.enter.prevent="addExtra()" placeholder="{% translate 'E.g. Approve with the client' %}"
+                               class="form-input-styled w-full text-sm">
+                        <button type="button" class="btn-outline text-sm px-3" @click="addExtra()">{% translate "Add" %}</button>
+                    </div>
+                </section>
             </div>
-            <button type="submit" class="btn-brand w-full justify-center" :disabled="picked < 1">
-                <span x-show="picked < 1">{% translate "Choose the formats" %}</span>
-                <span x-show="picked >= 1" x-cloak>
-                    <span x-text="picked"></span> · {% translate "Create task for the creative team" %}
-                </span>
-            </button>
+
         </aside>
     </form>
 </div>

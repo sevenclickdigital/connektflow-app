@@ -322,6 +322,7 @@ def offer_art_request(request, workspace_id):
         "description": request.POST.get("description", ""),
         "post_caption": request.POST.get("post_caption", ""),
         "due_date": request.POST.get("due_date", ""),
+        "extra_items": request.POST.getlist("extra_items"),
     }
     chosen = set(request.POST.getlist("assignees"))
     error = ""
@@ -343,6 +344,7 @@ def offer_art_request(request, workspace_id):
             format_keys=format_keys,
             assignees=task_services.resolve_assignees(request.workspace, list(chosen)),
             due_date=parse_date(form["due_date"]) or None,
+            extra_items=request.POST.getlist("extra_items"),
         )
     except _IMAGE_ERRORS as exc:
         title_msg, body = _image_error(exc, workspace_id)

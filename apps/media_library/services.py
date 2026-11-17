@@ -67,6 +67,23 @@ def create_folder(organization, workspace, name, parent_folder=None):
     return folder
 
 
+def top_level_folder(workspace, name):
+    """The workspace's top-level folder called ``name``, created the first time it is needed.
+
+    For folders other parts of the app file their media in (the task board's
+    arts go to "Tasks"). Looked up by name, so a folder the team renamed is not
+    found again and a new one is made.
+    """
+    folder = (
+        MediaFolder.objects.filter(workspace=workspace, parent_folder__isnull=True, name=name)
+        .order_by("created_at")
+        .first()
+    )
+    if folder is None:
+        folder = MediaFolder.objects.create(organization=workspace.organization, workspace=workspace, name=name)
+    return folder
+
+
 def create_asset(
     organization,
     workspace,

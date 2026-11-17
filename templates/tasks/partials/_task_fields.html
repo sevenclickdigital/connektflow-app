@@ -1,0 +1,132 @@
+{% load i18n %}
+{% comment %}
+The task's fields, shared by the new task window (tasks/partials/_new_item_modal.html)
+and the task's own window (tasks/partials/_task_modal.html): title, description,
+column, priority, due date, assignees and tags (the idea window's tag field,
+composer/partials/_tag_field.html). The Alpine state and methods they use (column, assignees,
+tags, tagQuery…) come from taskFields() in tasks/board.html.
+
+Expects: prefix (for the ids), columns, priorities, members, today; optional
+task (the task being edited: fills the fields and adds its post caption and
+post date), desc_limit (a maximum length for the description, with a counter),
+readonly (shows the fields without letting them change).
+{% endcomment %}
+<fieldset class="space-y-5 min-w-0" {% if readonly %}disabled{% endif %}>
+    <div>
+        <label class="new-item-label" for="{{ prefix }}-title">{% translate "Task title" %} <span class="text-red-600" aria-hidden="true">*</span></label>
+        <input id="{{ prefix }}-title" x-ref="title" name="title" type="text" maxlength="255" required autocomplete="off"
+               value="{{ task.title|default:'' }}" placeholder="{% translate 'E.g. Review the post caption' %}" class="form-input-styled w-full text-sm">
+    </div>
+
+    <div>
+        <label class="new-item-label" for="{{ prefix }}-description">{% translate "Description" %}</label>
+        <textarea id="{{ prefix }}-description" x-ref="description" name="description" rows="4" {% if desc_limit %}maxlength="{{ desc_limit }}"{% endif %}
+                  @input="descLength = $el.value.length"
+                  placeholder="{% translate 'Say what needs to be done, references, links or notes…' %}"
+                  class="form-input-styled block w-full text-sm">{{ task.description|default:'' }}</textarea>
+        {% if desc_limit %}<p class="text-right text-xs text-neutral-500 mt-1 tabular-nums"><span x-text="descLength">0</span>/{{ desc_limit }}</p>{% endif %}
+    </div>
+
+    {# The post caption, with the description: both are the text of the work. #}
+    {% if task %}
+    <div>
+        <label class="new-item-label" for="{{ prefix }}-caption">
+            {% translate "Post caption" %}
+        </label>
+        <textarea id="{{ prefix }}-caption" name="post_caption" rows="4" placeholder="{% translate 'The text the post goes out with' %}"
+                  class="form-input-styled block w-full text-sm">{{ task.post_caption }}</textarea>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+            <label class="new-item-label" for="{{ prefix }}-column">
+                {% translate "Column (status)" %}
+                <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                <span class="sr-only">{% translate "Where the task is on the board." %}</span>
+            </label>
+            <div class="relative" title="{% translate 'Where the task is on the board.' %}">
+                <span class="new-item-dot" :class="'kanban-tone-' + columnTone()" aria-hidden="true"></span>
+                <select id="{{ prefix }}-column" name="column" x-model="column" class="form-input-styled bb-select w-full text-sm cursor-pointer !pl-8">
+                    {% for col in columns %}<option value="{{ col.id }}" data-tone="{{ col.tone }}">{{ col.name }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div>
+            <label class="new-item-label" for="{{ prefix }}-priority">{% translate "Priority" %}</label>
+            <div class="relative">
+                <svg class="w-4 h-4 text-neutral-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                {% firstof task.priority "medium" as current_priority %}
+                <select id="{{ prefix }}-priority" name="priority" class="form-input-styled bb-select w-full text-sm cursor-pointer !pl-9">
+                    {% for value, label in priorities %}<option value="{{ value }}" {% if value == current_priority %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div>
+            <label class="new-item-label" for="{{ prefix }}-due">{% translate "Due date" %}</label>
+            <input id="{{ prefix }}-due" name="due_date" type="date" class="form-input-styled w-full text-sm"
+                   value="{% if task %}{{ task.due_date|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}">
+        </div>
+    </div>
+
+    {# Responsible and tags side by side. #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+    {# Responsible: the picked members as chips, the rest in the dropdown. #}
+    {% if members %}
+    <div class="min-w-0">
+        <div class="new-item-label" id="{{ prefix }}-assignees-label">
+            {% translate "Responsible" %}
+        </div>
+        <div class="relative" @click.outside="peopleOpen = false">
+            <div class="new-item-chipbox" @click="if (!$el.closest('fieldset').disabled) peopleOpen = !peopleOpen" role="button" tabindex="0"
+                 aria-labelledby="{{ prefix }}-assignees-label" @keydown.enter.prevent="peopleOpen = !peopleOpen" :aria-expanded="peopleOpen.toString()">
+                {% for member in members %}
+                <span class="new-item-chip is-person" x-show="assignees.includes('{{ member.pk }}')">
+                    <span class="task-avatar !ml-0" aria-hidden="true">{{ member.display_name|make_list|first|upper }}</span>
+                    {{ member.display_name }}
+                    <button type="button" @click.stop="toggleAssignee('{{ member.pk }}')" aria-label="{% blocktranslate with name=member.display_name %}Remove {{ name }}{% endblocktranslate %}">×</button>
+                </span>
+                {% endfor %}
+                <span class="text-sm text-neutral-500" x-show="!assignees.length">{% translate "Nobody yet" %}</span>
+                <svg class="w-4 h-4 text-neutral-600 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+            <input type="hidden" name="assignees_sent" value="1">
+            <template x-for="id in assignees" :key="id"><input type="hidden" name="assignees" :value="id"></template>
+            <div x-show="peopleOpen" x-transition class="new-item-dropdown">
+                {% for member in members %}
+                <label>
+                    <input type="checkbox" class="bb-checkbox" :checked="assignees.includes('{{ member.pk }}')" @change="toggleAssignee('{{ member.pk }}')">
+                    <span class="task-avatar !ml-0" aria-hidden="true">{{ member.display_name|make_list|first|upper }}</span>
+                    <span class="truncate">{{ member.display_name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# Tags: the idea window's own field (composer/partials/_tag_field.html), with the brand's tag groups. #}
+    <div class="flex min-w-0">
+        <input type="hidden" name="tags_sent" value="1">
+        {% include "composer/partials/_tag_field.html" with selected="tags" search="tagQuery" open="tagsOpen" toggle="toggleTag" persist="persistTag" matches="tagFiltered()" search_ref="tagSearch" groups="$dispatch('open-tag-groups')" name="tags" %}
+    </div>
+    </div>
+
+    {% if task %}
+    {% if task.post %}
+    {% comment %}
+    The post's date: saved as Post.proposed_publish_at, it places the draft on the
+    calendar and pre-fills the composer's schedule. Read-only once the post is
+    scheduled, when the composer owns it.
+    {% endcomment %}
+    <div>
+        <label class="new-item-label" for="{{ prefix }}-publish-at">{% translate "Post date" %}</label>
+        {% if task.post.scheduled_at %}
+        <p class="text-sm text-neutral-800" title="{% translate 'Scheduled. Change it in the composer.' %}">{{ task.post_date_display|default:"—" }}</p>
+        {% else %}
+        <input id="{{ prefix }}-publish-at" type="datetime-local" name="publish_at" value="{{ task.post_date_input }}" class="form-input-styled w-full sm:w-64 text-sm">
+        {% endif %}
+    </div>
+    {% endif %}
+    {% endif %}
+</fieldset>

@@ -22,18 +22,50 @@ include tasks/partials/_styles.html.
     </div>
 </div>
 <script nonce="{{ request.csp_nonce }}">
+// The art request form (tasks/partials/_request_arts_form.html): the network shown, how many
+// formats are ticked per network, the checklists kept in step with them (one per network)
+// and the other to-dos typed beside them.
 function artPicker(firstTab) {
+    var source = document.getElementById('art-extra-items');
+    var extras = source ? JSON.parse(source.textContent) : [];
     return {
         tab: firstTab,
         picked: 0,
         counts: {},
+        pickedList: [],
+        extras: Array.isArray(extras) ? extras : [],
+        extraText: '',
         init() { this.recount(); },
         recount() {
             var counts = {};
+            var list = [];
             var boxes = this.$root.querySelectorAll('input[name=formats]:checked');
-            boxes.forEach(function (box) { counts[box.dataset.network] = (counts[box.dataset.network] || 0) + 1; });
+            boxes.forEach(function (box) {
+                counts[box.dataset.network] = (counts[box.dataset.network] || 0) + 1;
+                list.push({ key: box.value, network: box.dataset.network, networkLabel: box.dataset.networkLabel, label: box.dataset.label, size: box.dataset.size });
+            });
             this.counts = counts;
             this.picked = boxes.length;
+            this.pickedList = list;
+        },
+        // The ticked formats by network, in the order the formats are listed.
+        pickedGroups() {
+            var groups = [];
+            this.pickedList.forEach(function (art) {
+                var group = groups.find(function (g) { return g.network === art.network; });
+                if (!group) { group = { network: art.network, label: art.networkLabel, items: [] }; groups.push(group); }
+                group.items.push(art);
+            });
+            return groups;
+        },
+        untick(key) {
+            var box = this.$root.querySelector('input[name=formats][value="' + key + '"]');
+            if (box) { box.checked = false; this.recount(); }
+        },
+        addExtra() {
+            var text = this.extraText.trim();
+            if (text && this.extras.length < 50) this.extras.push(text.slice(0, 255));
+            this.extraText = '';
         },
     };
 }
