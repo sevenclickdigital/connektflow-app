@@ -108,7 +108,7 @@ plus failed posts and accounts that lost their connection.
                 <a href="?range={{ days }}&account={{ account.id }}" title="{{ account.account_name }}"
                    class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors {% if account.id == active_account.id %}border-brand-700 bg-brand-700 text-white{% else %}border-neutral-300 bg-white text-neutral-700 hover:border-brand-300 hover:text-brand-700{% endif %}"
                    {% if account.id == active_account.id %}aria-current="true"{% endif %}>
-                    <span class="w-4 h-4 rounded-full bg-white flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}</span>
+                    <span class="w-4 h-4 rounded-full bg-white flex items-center justify-center">{% if account.platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}{% endif %}</span>
                     {{ account.pill_label|truncatechars:32 }}
                 </a>
                 {% endfor %}
@@ -144,7 +144,7 @@ plus failed posts and accounts that lost their connection.
                 {% else %}
                 <div class="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center font-bold text-neutral-600">{{ card.account.account_name|make_list|first|upper }}</div>
                 {% endif %}
-                <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=card.account.platform size="sm" %}</div>
+                <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">{% if card.account.platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=card.account.platform size="sm" %}{% endif %}</div>
             </div>
             <span class="text-sm font-semibold text-neutral-950 truncate">{{ card.account.account_name }}</span>
         </div>
