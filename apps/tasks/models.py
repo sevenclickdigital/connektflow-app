@@ -18,10 +18,20 @@ from apps.common.managers import WorkspaceScopedManager
 class TaskColumn(models.Model):
     """A column of the board. Exactly the columns flagged ``is_done`` count as finished."""
 
+    class Tone(models.TextChoices):
+        """The column's colour, drawn by the shared ``.kanban-tone-*`` classes (styles.css)."""
+
+        BRAND = "brand", _("Purple")
+        INFO = "info", _("Blue")
+        WARNING = "warning", _("Yellow")
+        SUCCESS = "success", _("Green")
+        ERROR = "error", _("Red")
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     workspace = models.ForeignKey("workspaces.Workspace", on_delete=models.CASCADE, related_name="task_columns")
     name = models.CharField(max_length=100)
     position = models.PositiveIntegerField(default=0)
+    tone = models.CharField(max_length=10, choices=Tone.choices, default=Tone.BRAND, db_default=Tone.BRAND)
     is_done = models.BooleanField(default=False)
     is_review = models.BooleanField(
         default=False,

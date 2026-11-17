@@ -149,6 +149,12 @@ def board(request, workspace_id):
         assignee_id = None
         assignee = ""
     priority = request.GET.get("priority", "")
+    if priority not in Task.Priority.values:
+        priority = ""
+    if assignee == "me":
+        assignee_label = _("My tasks")
+    else:
+        assignee_label = next((m.display_name for m in members if str(m.pk) == str(assignee_id)), "")
     context = {
         "workspace": workspace,
         "columns": services.board_columns(workspace, assignee_id=assignee_id, priority=priority),
@@ -156,9 +162,12 @@ def board(request, workspace_id):
         "priorities": Task.Priority.choices,
         "active_assignee": assignee,
         "active_priority": priority,
+        "active_assignee_label": assignee_label,
+        "active_priority_label": Task.Priority(priority).label if priority else "",
         "can_edit": _can_edit(request),
         "today": timezone.localdate(),
         "task_board_config": _board_config(request),
+        "column_tones": TaskColumn.Tone.choices,
         "art_settings": services.art_settings(workspace),
         "can_manage": request.workspace_membership.workspace_role
         in (WorkspaceMembership.WorkspaceRole.OWNER, WorkspaceMembership.WorkspaceRole.MANAGER),
@@ -335,11 +344,18 @@ def column_create(request, workspace_id):
 @require_permission("create_posts")
 @require_POST
 def column_rename(request, workspace_id, column_id):
+    """Change the column's name and/or colour; only the fields posted change."""
     column = get_object_or_404(TaskColumn, id=column_id, workspace=request.workspace)
+    fields = []
     name = request.POST.get("name", "").strip()
     if name:
         column.name = name[:100]
-        column.save(update_fields=["name"])
+        fields.append("name")
+    if request.POST.get("tone") in TaskColumn.Tone.values:
+        column.tone = request.POST["tone"]
+        fields.append("tone")
+    if fields:
+        column.save(update_fields=fields)
     return trigger_response({BOARD_CHANGED: True})
 
 
@@ -349,11 +365,16 @@ def column_rename(request, workspace_id, column_id):
 @require_POST
 def column_delete(request, workspace_id, column_id):
     column = get_object_or_404(TaskColumn, id=column_id, workspace=request.workspace)
-    if column.tasks.exists():
-        return toast_response(tone="error", title=_("Move the tasks out of this column before deleting it."))
-    if TaskColumn.objects.for_workspace(request.workspace.id).count() == 1:
+    had_tasks = column.tasks.exists()
+    target = services.delete_column(column, request.user)
+    if target is None:
         return toast_response(tone="error", title=_("The board needs at least one column."))
-    column.delete()
+    if had_tasks:
+        return toast_response(
+            tone="success",
+            title=_("Column deleted. Its tasks went to %(column)s.") % {"column": target.name},
+            events={BOARD_CHANGED: True},
+        )
     return trigger_response({BOARD_CHANGED: True})
 
 

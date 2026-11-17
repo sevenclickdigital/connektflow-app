@@ -11,59 +11,7 @@
 
 {% block extra_head %}
 <style>
-    /* Kanban board */
-    /* Open columns share the width of the board, never narrower than 220px
-       (below that the board scrolls sideways). */
-    .kanban-column {
-        min-width: 220px;
-        flex: 1 1 220px;
-        display: flex;
-        flex-direction: column;
-        background: var(--kanban-tone-bg);
-        border: 1px solid var(--kanban-tone-badge);
-        border-radius: 12px;
-        /* The page fills the window's height and the board row stretches to
-           it, so the columns run down to the bottom (or to the side panel,
-           when taller), up to most of the window; past that their cards
-           scroll inside them. */
-        min-height: 420px;
-        max-height: calc(100vh - 160px);
-    }
-    /* One soft tone per column, from the semantic tokens. */
-    .kanban-tone-brand   { --kanban-tone-bg: var(--brand-50);   --kanban-tone-badge: var(--brand-100);   --kanban-tone-ink: var(--brand-800); }
-    .kanban-tone-warning { --kanban-tone-bg: var(--warning-50); --kanban-tone-badge: color-mix(in srgb, var(--warning-500) 22%, white); --kanban-tone-ink: var(--warning-700); }
-    .kanban-tone-success { --kanban-tone-bg: var(--success-50); --kanban-tone-badge: color-mix(in srgb, var(--success-500) 20%, white); --kanban-tone-ink: var(--success-700); }
-    .kanban-tone-error   { --kanban-tone-bg: var(--error-50);   --kanban-tone-badge: color-mix(in srgb, var(--error-500) 18%, white);   --kanban-tone-ink: var(--error-700); }
-    .kanban-count { background: var(--kanban-tone-badge); color: var(--kanban-tone-ink); }
-    /* A closed column: a narrow strip with its name written downwards. */
-    .kanban-column.is-closed { min-width: 56px; flex: 0 0 56px; }
-    .kanban-column-strip {
-        flex: 1; width: 100%;
-        display: flex; flex-direction: column; align-items: center; gap: 12px;
-        padding: 14px 0; border-radius: 12px; cursor: pointer;
-    }
-    .kanban-column-strip:hover { background: var(--kanban-tone-badge); }
-    .kanban-column-strip-label {
-        writing-mode: vertical-rl;
-        font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-        color: var(--text-primary);
-    }
-    .kanban-cards {
-        flex: 1;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        padding: 0 8px 8px;
-        min-height: 60px;
-    }
-    .kanban-cards.drag-over {
-        background: #F9F5FF;
-        outline: 2px dashed #D8B4FE;
-        border-radius: 8px;
-        margin: 0 4px 4px;
-        padding: 0 4px 4px;
-    }
+    /* The board's columns and their tones: .kanban-* in styles.css. */
 
     /* Idea card */
     .idea-card {
@@ -123,25 +71,6 @@
         outline: 2px dashed #D8B4FE;
         outline-offset: -2px;
         background: #F9F5FF;
-    }
-
-    /* New idea inline */
-    .new-idea-inline {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 8px 12px;
-        font-size: 13px;
-        font-weight: 500;
-        color: #94A3B8;
-        cursor: pointer;
-        border-radius: 8px;
-        transition: all 150ms ease;
-    }
-    .new-idea-inline:hover {
-        color: #475569;
-        background: rgba(0,0,0,0.04);
     }
 
     /* Tag filter chip */

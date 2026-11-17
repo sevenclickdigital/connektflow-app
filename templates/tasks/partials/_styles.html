@@ -2,16 +2,16 @@
 Styles of the task board, its card and the art request form. Included once per page.
 {% endcomment %}
 <style nonce="{{ request.csp_nonce }}">
-    .task-board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 16px; align-items: flex-start; min-height: calc(100vh - 190px); }
-    .task-column { flex: 0 0 280px; background: #F5F3FF; border-radius: 14px; display: flex; flex-direction: column; max-height: calc(100vh - 190px); }
-    .task-column.is-done-col { background: #F0FDF4; }
-    .task-column.is-review-col { background: #F9F5FF; }
-    .task-drop { flex: 1 1 auto; overflow-y: auto; padding: 0 8px 4px; min-height: 40px; border-radius: 10px; transition: background-color .12s ease; }
-    .task-drop.is-over { background: rgba(124, 58, 237, .08); }
-    .task-card { background: white; border-radius: 10px; padding: 10px 11px; margin-bottom: 8px; border: 1px solid #E5E7EB;
-        box-shadow: 0 1px 2px rgba(28,25,23,.05); cursor: pointer; user-select: none; transition: box-shadow .12s ease, border-color .12s ease; }
-    .task-card:hover { border-color: #CBD5E1; box-shadow: 0 3px 10px rgba(28,25,23,.08); }
-    .task-card.is-dragging { opacity: .45; }
+    /* The board: the columns side by side (.kanban-* in styles.css), scrolling sideways when they don't fit. */
+    .task-board { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 4px; align-items: stretch; }
+    .task-board .kanban-column { min-width: 260px; flex-basis: 260px; }
+    .task-board .kanban-column.is-closed { min-width: 56px; flex: 0 0 56px; }
+    .kanban-column-strip.drag-over { background: var(--kanban-tone-badge); }
+    .task-card { cursor: pointer; user-select: none; }
+    .task-card.is-dragging { opacity: .5; transform: rotate(2deg); }
+    .task-new-column { flex: 0 0 240px; align-self: flex-start; border: 1.5px dashed var(--border-hover); border-radius: 12px; background: white; }
+    .task-new-column-button { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 12px; font-size: 13px; font-weight: 600; color: var(--text-secondary); border-radius: 12px; cursor: pointer; }
+    .task-new-column-button:hover { color: var(--brand-700); background: var(--brand-50); }
     .task-card.is-complete .task-card-title { color: #64748B; text-decoration: line-through; }
     .task-progress { height: 4px; border-radius: 9999px; background: #E5E7EB; overflow: hidden; }
     .task-progress > span { display: block; height: 100%; border-radius: inherit; background: #7C3AED; }
@@ -24,7 +24,6 @@ Styles of the task board, its card and the art request form. Included once per p
     .task-pill--medium { background: #FEF3C7; color: #B45309; }
     .task-pill--low { background: #F5F3FF; color: #475569; }
     .task-pill--due { background: #F5F3FF; color: #475569; }
-    .task-pill--overdue { background: #FEE2E2; color: #B91C1C; }
     .task-pill--art { background: #EDE9FE; color: #6D28D9; }
     .task-modal-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(28,25,23,.45); display: flex; align-items: flex-start; justify-content: center; padding: 6vh 16px; overflow-y: auto; }
     .task-modal { background: white; border-radius: 16px; width: 100%; max-width: 1040px; box-shadow: 0 24px 60px rgba(28,25,23,.3); }

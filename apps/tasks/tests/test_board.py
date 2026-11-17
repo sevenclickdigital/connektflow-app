@@ -180,13 +180,59 @@ def test_checklist_add_toggle_and_remove(workspace, owner):
     assert not task.checklist.exists()
 
 
-def test_a_column_with_tasks_cannot_be_deleted(workspace, owner):
-    task = services.create_task(workspace, owner, title="Keep")
+def test_deleting_a_column_sends_its_tasks_to_the_column_beside_it(workspace, owner):
+    todo, progress, _review, _done = services.ensure_columns(workspace)
+    kept = services.create_task(workspace, owner, title="Already there", column=todo)
+    first = services.create_task(workspace, owner, title="First", column=progress)
+    second = services.create_task(workspace, owner, title="Second", column=progress)
+    services.move_task(second, progress, 1, owner)
 
-    response = _client(owner).post(_url("column_delete", workspace, column_id=task.column_id))
+    response = _client(owner).post(_url("column_delete", workspace, column_id=progress.id))
 
     assert "showToast" in response["HX-Trigger"]
-    assert TaskColumn.objects.filter(pk=task.column_id).exists()
+    assert not TaskColumn.objects.filter(pk=progress.id).exists()
+    ordered = list(Task.objects.filter(column=todo).order_by("position").values_list("pk", flat=True))
+    assert ordered == [kept.pk, first.pk, second.pk]
+
+
+def test_the_first_column_hands_its_tasks_to_the_next_and_the_last_column_stays(workspace, owner):
+    todo, progress, review, done = services.ensure_columns(workspace)
+    task = services.create_task(workspace, owner, title="Move me", column=todo)
+
+    _client(owner).post(_url("column_delete", workspace, column_id=todo.id))
+    task.refresh_from_db()
+    assert task.column == progress
+
+    for column in (progress, review):
+        _client(owner).post(_url("column_delete", workspace, column_id=column.id))
+    response = _client(owner).post(_url("column_delete", workspace, column_id=done.id))
+
+    assert "showToast" in response["HX-Trigger"]
+    assert TaskColumn.objects.filter(pk=done.id).exists()
+    task.refresh_from_db()
+    assert task.column == done and task.completed_at is not None
+
+
+def test_a_column_takes_a_colour_only_from_the_palette(workspace, owner):
+    column = services.ensure_columns(workspace)[0]
+    client = _client(owner)
+
+    client.post(_url("column_rename", workspace, column_id=column.id), {"tone": "success"})
+    client.post(_url("column_rename", workspace, column_id=column.id), {"tone": "url(evil)"})
+
+    column.refresh_from_db()
+    assert column.tone == "success" and column.name == "To do"
+
+
+def test_another_workspace_cannot_delete_or_recolour_a_column(workspace, owner):
+    other = Workspace.objects.create(organization=workspace.organization, name="Other")
+    foreign = services.ensure_columns(other)[0]
+    client = _client(owner)
+
+    assert client.post(_url("column_delete", workspace, column_id=foreign.id)).status_code == 404
+    assert client.post(_url("column_rename", workspace, column_id=foreign.id), {"tone": "error"}).status_code == 404
+    foreign.refresh_from_db()
+    assert foreign.tone == "brand"
 
 
 @override_settings(LANGUAGE_CODE="en-us")
@@ -204,3 +250,28 @@ def test_due_reminder_goes_out_once_per_due_date(workspace, owner):
     task.due_date = today + timedelta(days=2)
     task.save()
     assert services.send_due_reminders(today + timedelta(days=1)) == 1
+
+
+def test_the_filter_bar_names_the_active_filters_and_keeps_the_other_one(workspace, owner):
+    services.create_task(workspace, owner, title="Urgent one", priority=Task.Priority.HIGH, assignees=[owner])
+    services.create_task(workspace, owner, title="Calm one", priority=Task.Priority.LOW, assignees=[owner])
+
+    body = (
+        _client(owner)
+        .get(_url("board", workspace), {"assignee": "me", "priority": "high", "task": "x"})
+        .content.decode()
+    )
+
+    assert "Urgent one" in body and "Calm one" not in body
+    assert "Priority: High" in body
+    # Each pill clears its own filter, keeps the other and drops the card to open.
+    assert 'href="?priority=high"' in body
+    assert 'href="?assignee=me"' in body
+
+
+def test_an_unknown_priority_is_ignored(workspace, owner):
+    services.create_task(workspace, owner, title="Any task")
+
+    body = _client(owner).get(_url("board", workspace), {"priority": "urgent"}).content.decode()
+
+    assert "Any task" in body and "Priority: " not in body

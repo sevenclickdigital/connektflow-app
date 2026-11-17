@@ -25,17 +25,40 @@ def ensure_columns(workspace) -> list[TaskColumn]:
     columns = list(TaskColumn.objects.for_workspace(workspace.id))
     if columns:
         return columns
+    tone = TaskColumn.Tone
     with override(settings.LANGUAGE_CODE):
         defaults = [
-            (_("To do"), False, False),
-            (_("In progress"), False, False),
-            (_("In review"), True, False),
-            (_("Done"), False, True),
+            (_("To do"), tone.BRAND, False, False),
+            (_("In progress"), tone.INFO, False, False),
+            (_("In review"), tone.WARNING, True, False),
+            (_("Done"), tone.SUCCESS, False, True),
         ]
     return [
-        TaskColumn.objects.create(workspace=workspace, name=name, position=pos, is_review=review, is_done=done)
-        for pos, (name, review, done) in enumerate(defaults)
+        TaskColumn.objects.create(
+            workspace=workspace, name=name, tone=colour, position=pos, is_review=review, is_done=done
+        )
+        for pos, (name, colour, review, done) in enumerate(defaults)
     ]
+
+
+def delete_column(column, actor) -> TaskColumn | None:
+    """Delete ``column``; its tasks go, in order, to the end of the column beside it.
+
+    The neighbour is the column on its left, or on its right when it is the
+    first. Returns that column, or None when the column was the board's only
+    one (nothing is deleted then: the board needs a column).
+    """
+    columns = list(TaskColumn.objects.for_workspace(column.workspace_id))
+    others = [c for c in columns if c.pk != column.pk]
+    if not others:
+        return None
+    index = next(i for i, c in enumerate(columns) if c.pk == column.pk)
+    target = columns[index - 1] if index > 0 else others[0]
+    with transaction.atomic():
+        for task in Task.objects.filter(column=column).order_by("position", "-created_at"):
+            move_task(task, target, _next_position(target), actor)
+        column.delete()
+    return target
 
 
 def assignable_members(workspace):

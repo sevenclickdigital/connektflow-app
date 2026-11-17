@@ -1,39 +1,93 @@
 {% load i18n %}
-<section class="task-column{% if column.is_done %} is-done-col{% elif column.is_review %} is-review-col{% endif %}" data-column-id="{{ column.id }}"
-         x-data="{ menu: false, renaming: false }">
-    <header class="flex items-center justify-between gap-2 px-3 pt-3 pb-2">
-        <div class="flex items-center gap-2 min-w-0" x-show="!renaming">
-            <h2 class="text-[13px] font-bold text-neutral-900 truncate">{{ column.name }}</h2>
-            <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold bg-white/80 text-neutral-600">{{ column.task_list|length }}</span>
+{% comment %}
+One column of the task board, drawn like the idea board's (.kanban-* in
+styles.css) in the colour picked for it. The team shapes the board freely:
+the column menu renames it, changes its colour, moves it and deletes it (its
+tasks go to the column beside it). A column can be closed to a narrow strip
+and opened again; the choice is kept in the browser, per column. A closed
+column still takes a card dropped on it.
+
+Expects: column (with task_list), column_tones, can_edit, workspace.
+{% endcomment %}
+<section class="kanban-column kanban-tone-{{ column.tone }} task-column" data-column-id="{{ column.id }}"
+         x-data="{ menu: false, renaming: false, closed: localStorage.getItem('task-column:{{ column.id }}') === 'closed',
+                  startRename() { this.renaming = true; this.$nextTick(() => { this.$refs.rename.focus(); this.$refs.rename.select(); }); } }"
+         x-effect="localStorage.setItem('task-column:{{ column.id }}', closed ? 'closed' : 'open')"
+         :class="closed && 'is-closed'">
+
+    {# Closed: the whole strip opens the column, and a card can be dropped on it. #}
+    <button type="button" class="kanban-column-strip" x-show="closed" x-cloak
+            @click="closed = false"
+            @dragover="dragOver($event)" @dragleave="dragLeave($event)" @drop="drop($event, '{{ column.id }}')"
+            aria-label="{% blocktranslate with name=column.name %}Open the column {{ name }}{% endblocktranslate %}">
+        <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+        <span class="kanban-column-strip-label">{{ column.name }}</span>
+        <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold bg-white text-neutral-600">{{ column.task_list|length }}</span>
+    </button>
+
+    <header class="flex items-center justify-between gap-2 px-3 py-2.5" x-show="!closed">
+        <div class="flex-1 flex items-center gap-2 min-w-0" x-show="!renaming">
+            <h2 class="min-w-0 text-[13px] font-bold text-neutral-900 truncate" title="{{ column.name }}">{{ column.name }}</h2>
+            <span class="kanban-count flex-shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold">{{ column.task_list|length }}</span>
         </div>
         {% if can_edit %}
         <form x-show="renaming" x-cloak class="flex-1"
               hx-post="{% url 'tasks:column_rename' workspace_id=workspace.id column_id=column.id %}" hx-swap="none">
-            <input name="name" value="{{ column.name }}" maxlength="100" x-ref="rename"
-                   @keydown.escape="renaming = false" @blur="$el.form.requestSubmit()"
+            {# Enter or leaving the field saves a changed name; Escape puts the old one back without saving. #}
+            <input name="name" value="{{ column.name }}" maxlength="100" x-ref="rename" required
+                   aria-label="{% translate 'Column name' %}"
+                   @keydown.escape.prevent="$el.value = $el.defaultValue; renaming = false"
+                   @keydown.enter.prevent="$el.blur()"
+                   @blur="renaming = false; if ($el.value.trim() && $el.value.trim() !== $el.defaultValue) $el.form.requestSubmit(); else $el.value = $el.defaultValue"
                    class="form-input-styled w-full text-sm py-1">
         </form>
-        <div class="relative flex-shrink-0" x-show="!renaming">
-            <button type="button" @click="menu = !menu" class="w-6 h-6 rounded-md text-neutral-600 hover:bg-white/80 flex items-center justify-center"
-                    aria-label="{% translate 'Column options' %}">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="6" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18" r="1.5"/></svg>
-            </button>
-            <div x-show="menu" x-cloak @click.outside="menu = false"
-                 class="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-20 min-w-[170px] text-xs">
-                <button type="button" class="w-full text-left px-3 py-1.5 hover:bg-neutral-50"
-                        @click="menu = false; renaming = true; $nextTick(() => $refs.rename.focus())">{% translate "Rename" %}</button>
-                <button type="button" class="w-full text-left px-3 py-1.5 hover:bg-neutral-50" @click="menu = false; moveColumn('{{ column.id }}', -1)">{% translate "Move left" %}</button>
-                <button type="button" class="w-full text-left px-3 py-1.5 hover:bg-neutral-50" @click="menu = false; moveColumn('{{ column.id }}', 1)">{% translate "Move right" %}</button>
-                {% if not column.task_list %}
-                <button type="button" class="w-full text-left px-3 py-1.5 text-red-600 hover:bg-red-50"
-                        hx-post="{% url 'tasks:column_delete' workspace_id=workspace.id column_id=column.id %}" hx-swap="none">{% translate "Delete column" %}</button>
-                {% endif %}
-            </div>
-        </div>
         {% endif %}
+        <div class="flex items-center gap-0.5 flex-shrink-0" x-show="!renaming">
+            {% if can_edit %}
+            <div class="relative">
+                <button type="button" @click="menu = !menu" :aria-expanded="menu.toString()"
+                        class="w-6 h-6 rounded-md text-neutral-600 hover:text-neutral-700 hover:bg-white/80 flex items-center justify-center transition-colors cursor-pointer"
+                        title="{% translate 'Column options' %}" aria-label="{% translate 'Column options' %}">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+                </button>
+                <div x-show="menu" x-cloak x-transition @click.outside="menu = false" @keydown.escape="menu = false"
+                     class="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-30 min-w-[200px]">
+                    <button type="button" class="flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50 cursor-pointer"
+                            @click="menu = false; startRename()">
+                        <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+                        {% translate "Rename column" %}
+                    </button>
+                    <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500 border-t border-neutral-200 mt-1">{% translate "Colour" %}</div>
+                    <div class="flex items-center gap-2 px-3 pb-2 pt-1">
+                        {% for value, label in column_tones %}
+                        <button type="button" class="kanban-swatch kanban-tone-{{ value }}{% if value == column.tone %} is-picked{% endif %}"
+                                hx-post="{% url 'tasks:column_rename' workspace_id=workspace.id column_id=column.id %}" hx-vals='{"tone": "{{ value }}"}' hx-swap="none"
+                                @click="menu = false" title="{{ label }}" aria-label="{{ label }}"
+                                aria-pressed="{% if value == column.tone %}true{% else %}false{% endif %}"></button>
+                        {% endfor %}
+                    </div>
+                    <div class="border-t border-neutral-200 mt-1 pt-1">
+                        <button type="button" class="w-full text-left px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50 cursor-pointer" @click="menu = false; moveColumn('{{ column.id }}', -1)">{% translate "Move left" %}</button>
+                        <button type="button" class="w-full text-left px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50 cursor-pointer" @click="menu = false; moveColumn('{{ column.id }}', 1)">{% translate "Move right" %}</button>
+                    </div>
+                    <div class="border-t border-neutral-200 mt-1 pt-1">
+                        <button type="button" class="w-full text-left px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 cursor-pointer"
+                                hx-post="{% url 'tasks:column_delete' workspace_id=workspace.id column_id=column.id %}" hx-swap="none"
+                                hx-confirm="{% if column.task_list %}{% translate 'Delete this column? Its tasks go to the column beside it.' %}{% else %}{% translate 'Delete this column?' %}{% endif %}"
+                                @click="menu = false">{% translate "Delete column" %}</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            <button type="button" @click="closed = true"
+                    class="w-6 h-6 rounded-md text-neutral-600 hover:text-neutral-700 hover:bg-white/80 flex items-center justify-center transition-colors cursor-pointer"
+                    title="{% translate 'Close column' %}" aria-label="{% blocktranslate with name=column.name %}Close the column {{ name }}{% endblocktranslate %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+        </div>
     </header>
 
-    <div class="task-drop"
+    <div class="kanban-cards task-drop" x-show="!closed"
          @dragover="dragOver($event)" @dragleave="dragLeave($event)" @drop="drop($event, '{{ column.id }}')">
         {% for task in column.task_list %}
             {% include "tasks/partials/_task_card.html" %}
@@ -41,21 +95,20 @@
     </div>
 
     {% if can_edit %}
-    <div class="px-2 pb-2" x-data="{ adding: false }">
-        <button type="button" x-show="!adding" @click="adding = true; $nextTick(() => $refs.title.focus())"
-                class="flex items-center gap-1.5 w-full px-2 py-1.5 text-[12.5px] font-medium text-neutral-600 hover:text-neutral-800 hover:bg-white/70 rounded-lg">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    <div class="px-2 pb-2" x-show="!closed" x-data="{ adding: false }">
+        <button type="button" x-show="!adding" @click="adding = true; $nextTick(() => $refs.title.focus())" class="kanban-add w-full">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             {% translate "Add task" %}
         </button>
         <form x-show="adding" x-cloak hx-post="{% url 'tasks:task_create' workspace_id=workspace.id %}" hx-swap="none"
               @htmx:after-request="$el.reset(); $refs.title.focus()">
             <input type="hidden" name="column" value="{{ column.id }}">
             <input x-ref="title" name="title" type="text" maxlength="255" required autocomplete="off"
-                   placeholder="{% translate 'Task title' %}" @keydown.escape="adding = false"
+                   placeholder="{% translate 'Task title' %}" aria-label="{% translate 'Task title' %}" @keydown.escape="adding = false"
                    class="form-input-styled w-full text-sm">
             <div class="flex items-center gap-2 mt-2">
                 <button type="submit" class="btn-brand text-xs px-3 py-1">{% translate "Add" %}</button>
-                <button type="button" @click="adding = false" class="text-xs font-medium text-neutral-600 hover:text-neutral-800">{% translate "Cancel" %}</button>
+                <button type="button" @click="adding = false" class="text-xs font-medium text-neutral-600 hover:text-neutral-800 cursor-pointer">{% translate "Cancel" %}</button>
             </div>
         </form>
     </div>

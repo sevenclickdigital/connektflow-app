@@ -9,23 +9,20 @@
 
 {% block page_header %}
 <div class="flex flex-wrap items-center gap-3 mb-4 lg:mb-[25px]">
-    <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950 mr-auto" style="letter-spacing: -0.01em;">{% translate "Tasks" %}</h1>
+    <div class="min-w-0 mr-auto">
+        <h1 class="text-2xl font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Tasks" %}</h1>
+        <p class="text-sm text-neutral-600 mt-0.5">{% translate "Organise the team's tasks on a board you shape yourself." %}</p>
+    </div>
     <div class="flex flex-wrap items-center justify-end gap-2">
-        <form method="get" class="flex items-center gap-2" x-data @change="$el.requestSubmit()">
-            <select name="assignee" class="bb-select text-sm whitespace-nowrap" aria-label="{% translate 'Responsible' %}">
-                <option value="">{% translate "Everyone" %}</option>
-                <option value="me" {% if active_assignee == "me" %}selected{% endif %}>{% translate "My tasks" %}</option>
-                {% for member in members %}
-                <option value="{{ member.pk }}" {% if active_assignee == member.pk|stringformat:"s" %}selected{% endif %}>{{ member.display_name }}</option>
-                {% endfor %}
-            </select>
-            <select name="priority" class="bb-select text-sm whitespace-nowrap" aria-label="{% translate 'Priority' %}">
-                <option value="">{% translate "Any priority" %}</option>
-                {% for value, label in priorities %}
-                <option value="{{ value }}" {% if active_priority == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </form>
+        {# Brings back the hero card once it was closed (see composer/partials/_ideas_hero.html). #}
+        <button type="button" x-data="{ heroClosed: localStorage.getItem('cf:ideas-hero-closed:tasks') === '1' }"
+                x-show="heroClosed" x-cloak
+                @ideas-hero-toggled.window="heroClosed = $event.detail.closed"
+                @click="$dispatch('ideas-hero-open')"
+                class="w-9 h-9 rounded-full flex items-center justify-center bg-brand-50 border border-brand-200 text-brand-700 hover:bg-brand-100 transition-colors cursor-pointer"
+                title="{% translate 'Show tips' %}" aria-label="{% translate 'Show tips' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0012 2z"/></svg>
+        </button>
         {% if can_manage %}
         <div class="relative" x-data="{ open: false }">
             <button type="button" class="w-9 h-9 rounded-full border border-neutral-300 bg-white text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 flex items-center justify-center"
@@ -60,11 +57,76 @@
 {% endblock %}
 
 {% block content %}
+{% with tab="tasks" %}{% include "composer/partials/_ideas_hero.html" %}{% endwith %}
+
 <div x-data="taskBoard()" @keydown.escape.window="closeTask()">
-    <div id="task-board" class="task-board"
+    {% comment %}
+    Filters of the board, in the idea board's style: a search over the cards
+    (in the browser, kept across board refreshes) and the menus of who is
+    responsible and of priority (server side, ?assignee= and ?priority=), with
+    the active ones as removable pills below.
+    {% endcomment %}
+    <div class="flex flex-wrap items-center gap-2">
+        <div class="relative flex-1 min-w-[14rem]">
+            <svg class="w-4 h-4 text-neutral-500 absolute pointer-events-none left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <label for="task_search" class="sr-only">{% translate "Search tasks" %}</label>
+            <input type="search" id="task_search" x-model="query" @input="applySearch()" placeholder="{% translate 'Search tasks' %}…"
+                   class="form-input-styled w-full h-9 py-0 pl-9 text-sm focus:ring-2 focus:ring-inset focus:ring-brand-200">
+        </div>
+        <div class="relative" x-data="{ open: false }" @keydown.escape="open = false">
+            <button type="button" @click="open = !open" :aria-expanded="open.toString()"
+                    class="chip h-9 px-3 text-sm {% if active_assignee %}active{% endif %}">
+                <span class="text-neutral-500 font-medium">{% translate "Responsible" %}:</span>
+                <span class="max-w-[10rem] truncate">{% if active_assignee_label %}{{ active_assignee_label }}{% else %}{% translate "Everyone" %}{% endif %}</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div x-show="open" x-cloak x-transition @click.outside="open = false"
+                 class="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 py-1 z-50 min-w-[200px] max-h-[280px] overflow-y-auto">
+                <a href="{% querystring assignee=None task=None %}" class="block px-3 py-1.5 text-sm hover:bg-neutral-50 rounded-md mx-1 {% if not active_assignee %}font-semibold text-brand-800 bg-brand-50{% else %}text-neutral-800{% endif %}">{% translate "Everyone" %}</a>
+                <a href="{% querystring assignee='me' task=None %}" class="block px-3 py-1.5 text-sm hover:bg-neutral-50 rounded-md mx-1 {% if active_assignee == 'me' %}font-semibold text-brand-800 bg-brand-50{% else %}text-neutral-800{% endif %}">{% translate "My tasks" %}</a>
+                {% for member in members %}
+                <a href="{% querystring assignee=member.pk task=None %}" class="block px-3 py-1.5 text-sm hover:bg-neutral-50 rounded-md mx-1 truncate {% if active_assignee == member.pk|stringformat:'s' %}font-semibold text-brand-800 bg-brand-50{% else %}text-neutral-800{% endif %}">{{ member.display_name }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="relative" x-data="{ open: false }" @keydown.escape="open = false">
+            <button type="button" @click="open = !open" :aria-expanded="open.toString()"
+                    class="chip h-9 px-3 text-sm {% if active_priority %}active{% endif %}">
+                <span class="text-neutral-500 font-medium">{% translate "Priority" %}:</span>
+                <span>{% if active_priority_label %}{{ active_priority_label }}{% else %}{% translate "All" context "special dates" %}{% endif %}</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div x-show="open" x-cloak x-transition @click.outside="open = false"
+                 class="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 py-1 z-50 min-w-[180px]">
+                <a href="{% querystring priority=None task=None %}" class="block px-3 py-1.5 text-sm hover:bg-neutral-50 rounded-md mx-1 {% if not active_priority %}font-semibold text-brand-800 bg-brand-50{% else %}text-neutral-800{% endif %}">{% translate "All" context "special dates" %}</a>
+                {% for value, label in priorities %}
+                <a href="{% querystring priority=value task=None %}" class="block px-3 py-1.5 text-sm hover:bg-neutral-50 rounded-md mx-1 {% if active_priority == value %}font-semibold text-brand-800 bg-brand-50{% else %}text-neutral-800{% endif %}">{{ label }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {# Active filters, removable #}
+    <div class="flex flex-wrap items-center gap-2 mt-3" x-show="{% if active_assignee or active_priority %}true{% else %}query{% endif %}" x-cloak>
+        {% if active_assignee_label %}
+        <a href="{% querystring assignee=None task=None %}" class="pill pill-brand hover:brightness-95">
+            <span>{{ active_assignee_label }}</span><span aria-hidden="true">×</span>
+        </a>
+        {% endif %}
+        {% if active_priority_label %}
+        <a href="{% querystring priority=None task=None %}" class="pill pill-brand hover:brightness-95">
+            <span>{% translate "Priority" %}: {{ active_priority_label }}</span><span aria-hidden="true">×</span>
+        </a>
+        {% endif %}
+        <button type="button" x-show="query" class="pill pill-brand cursor-pointer hover:brightness-95" @click="query = ''; applySearch()">
+            <span x-text="'“' + query + '”'"></span><span aria-hidden="true">×</span>
+        </button>
+    </div>
+
+    <div id="task-board" class="task-board mt-4"
          hx-get="{{ request.get_full_path }}"
          hx-trigger="tasksChanged from:body"
-         hx-swap="innerHTML">
+         hx-swap="innerHTML"
+         @htmx:after-swap="applySearch()">
         {% include "tasks/partials/_board.html" %}
     </div>
 
@@ -91,6 +153,15 @@ function taskBoard() {
     return {
         taskOpen: false,
         dragId: null,
+        query: '',
+
+        // Hides the cards whose text does not contain the search.
+        applySearch() {
+            var q = (this.query || '').trim().toLowerCase();
+            document.querySelectorAll('#task-board .task-card').forEach(function (card) {
+                card.hidden = !!q && !card.textContent.toLowerCase().includes(q);
+            });
+        },
 
         init() {
             var self = this;
@@ -121,7 +192,7 @@ function taskBoard() {
 
         dragEnd(event) {
             event.currentTarget.classList.remove('is-dragging');
-            document.querySelectorAll('.task-drop.is-over').forEach(function (el) { el.classList.remove('is-over'); });
+            document.querySelectorAll('.drag-over').forEach(function (el) { el.classList.remove('drag-over'); });
             var self = this;
             // Cleared after the click that may follow a drop, so it doesn't open the card.
             setTimeout(function () { self.dragId = null; }, 0);
@@ -131,7 +202,9 @@ function taskBoard() {
             if (!this.dragId) return;
             event.preventDefault();
             var zone = event.currentTarget;
-            zone.classList.add('is-over');
+            zone.classList.add('drag-over');
+            // A closed column's strip takes the card at its end: nothing to reorder there.
+            if (!zone.classList.contains('task-drop')) return;
             var card = document.querySelector('.task-card[data-task-id="' + this.dragId + '"]');
             if (!card) return;
             var after = Array.from(zone.querySelectorAll('.task-card:not(.is-dragging)')).find(function (c) {
@@ -143,19 +216,21 @@ function taskBoard() {
         },
 
         dragLeave(event) {
-            if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('is-over');
+            if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('drag-over');
         },
 
         drop(event, columnId) {
             event.preventDefault();
             var zone = event.currentTarget;
-            zone.classList.remove('is-over');
+            zone.classList.remove('drag-over');
             var id = this.dragId;
             if (!id) return;
             var cards = Array.from(zone.querySelectorAll('.task-card'));
+            var at = cards.findIndex(function (c) { return c.dataset.taskId === id; });
             var body = new FormData();
             body.append('column', columnId);
-            body.append('position', String(cards.findIndex(function (c) { return c.dataset.taskId === id; })));
+            // Not among the zone's cards (dropped on a closed column): the end of the column.
+            body.append('position', String(at < 0 ? 100000 : at));
             fetch(urlFor(cfg.moveUrl, id), { method: 'POST', body: body, headers: { 'X-CSRFToken': csrf() } })
                 .then(function (r) { if (!r.ok) throw new Error(String(r.status)); })
                 .catch(function () {

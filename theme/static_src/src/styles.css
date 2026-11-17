@@ -1128,6 +1128,40 @@ input.idea-title-input::placeholder {
 .stage-teal   { --st-bg: #CCFBF1; --st-fg: #0F766E; --st-chip: #99F6E4; --st-solid: #2DD4BF; }
 .stage-gray   { --st-bg: var(--surface-2); --st-fg: var(--text-secondary); --st-chip: var(--border); --st-solid: #9CA3AF; }
 
+/* Kanban board (the idea board, templates/composer/partials/kanban_column.html, and the
+   task board, templates/tasks/partials/_column.html). Open columns share the width of
+   the board, never narrower than 220px (below that the board scrolls sideways); past
+   most of the window's height their cards scroll inside them. */
+.kanban-column {
+  min-width: 220px; flex: 1 1 220px;
+  display: flex; flex-direction: column;
+  background: var(--kanban-tone-bg); border: 1px solid var(--kanban-tone-badge); border-radius: 12px;
+  min-height: 420px; max-height: calc(100vh - 160px);
+}
+/* One soft tone per column, from the semantic tokens (TaskColumn.Tone on the task board). */
+.kanban-tone-brand   { --kanban-tone-bg: var(--brand-50);   --kanban-tone-badge: var(--brand-100);   --kanban-tone-ink: var(--brand-800); }
+.kanban-tone-info    { --kanban-tone-bg: var(--info-50);    --kanban-tone-badge: color-mix(in srgb, var(--info-500) 18%, white);    --kanban-tone-ink: var(--info-700); }
+.kanban-tone-warning { --kanban-tone-bg: var(--warning-50); --kanban-tone-badge: color-mix(in srgb, var(--warning-500) 22%, white); --kanban-tone-ink: var(--warning-700); }
+.kanban-tone-success { --kanban-tone-bg: var(--success-50); --kanban-tone-badge: color-mix(in srgb, var(--success-500) 20%, white); --kanban-tone-ink: var(--success-700); }
+.kanban-tone-error   { --kanban-tone-bg: var(--error-50);   --kanban-tone-badge: color-mix(in srgb, var(--error-500) 18%, white);   --kanban-tone-ink: var(--error-700); }
+.kanban-count { background: var(--kanban-tone-badge); color: var(--kanban-tone-ink); }
+/* A colour swatch of the column menu: the tone's badge, ringed when picked. */
+.kanban-swatch { width: 22px; height: 22px; border-radius: 9999px; cursor: pointer; background: var(--kanban-tone-badge); border: 2px solid white; box-shadow: 0 0 0 1px var(--border); }
+.kanban-swatch.is-picked { box-shadow: 0 0 0 2px var(--kanban-tone-ink); }
+/* A closed column: a narrow strip with its name written downwards. */
+.kanban-column.is-closed { min-width: 56px; flex: 0 0 56px; }
+.kanban-column-strip { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px 0; border-radius: 12px; cursor: pointer; }
+.kanban-column-strip:hover { background: var(--kanban-tone-badge); }
+.kanban-column-strip-label { writing-mode: vertical-rl; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-primary); }
+.kanban-cards { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 0 8px 8px; min-height: 60px; }
+.kanban-cards.drag-over { background: #F9F5FF; outline: 2px dashed #D8B4FE; border-radius: 8px; margin: 0 4px 4px; padding: 0 4px 4px; }
+/* "New idea" / "Add task" at the foot of a column. */
+.kanban-add { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; font-size: 13px; font-weight: 500; color: var(--text-tertiary); cursor: pointer; border-radius: 8px; transition: all 150ms ease; }
+.kanban-add:hover { color: var(--neutral-700); background: rgba(0,0,0,0.04); }
+/* A card of the board. */
+.kanban-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; cursor: grab; transition: all 150ms ease; }
+.kanban-card:hover { border-color: var(--border-hover); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
 /* Inbox entry details: label / value rows (templates/inbox/partials/_message_details.html) */
 .inbox-fact { display: grid; grid-template-columns: 6.5rem 1fr; align-items: center; gap: 0.75rem; padding: 0.625rem 0; border-bottom: 1px solid var(--surface-2); font-size: 13px; }
 .inbox-fact:last-child { border-bottom: none; }
