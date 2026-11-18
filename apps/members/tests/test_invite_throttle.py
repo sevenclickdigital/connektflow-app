@@ -177,12 +177,12 @@ def test_a_duplicate_pending_invitation_is_still_refused(org, owner):
 @pytest.mark.django_db
 def test_a_send_that_fails_does_not_burn_the_allowance(org, owner, monkeypatch):
     """A misconfigured mail server must not cost the recipient their invites."""
-    from apps.members import services
+    from apps.common import emails
 
     def boom(*args, **kwargs):
         raise RuntimeError("smtp down")
 
-    monkeypatch.setattr(services.EmailMultiAlternatives, "send", boom)
+    monkeypatch.setattr(emails.EmailMultiAlternatives, "send", boom)
     invitation = invite(org, owner)
 
     invitation.refresh_from_db()
@@ -242,7 +242,7 @@ def test_a_dropped_send_gives_the_slot_back(org, owner):
     assert invitation.send_count == 1
 
     with (
-        patch("apps.members.services.EmailMultiAlternatives.send", return_value=0),
+        patch("apps.common.emails.EmailMultiAlternatives.send", return_value=0),
         pytest.raises(ValueError, match="could not send"),
     ):
         resend_invitation(invitation)
@@ -254,7 +254,7 @@ def test_a_dropped_send_gives_the_slot_back(org, owner):
 
 @pytest.mark.django_db
 def test_a_creation_whose_email_is_dropped_does_not_claim_it_was_sent(org, owner):
-    with patch("apps.members.services.EmailMultiAlternatives.send", return_value=0):
+    with patch("apps.common.emails.EmailMultiAlternatives.send", return_value=0):
         invitation = invite(org, owner)
 
     invitation.refresh_from_db()

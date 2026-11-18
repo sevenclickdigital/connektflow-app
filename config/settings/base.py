@@ -313,6 +313,9 @@ ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*"]
 ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
+# Security notices: password changed/reset/set, email changed or removed, a
+# social login connected. Sent from account/email/*_message.html.
+ACCOUNT_EMAIL_NOTIFICATIONS = True
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 LOGIN_REDIRECT_URL = "/"
 ACCOUNT_LOGOUT_REDIRECT_URL = "/accounts/login/"
@@ -423,9 +426,9 @@ EMAIL_BACKEND_TYPE = env("EMAIL_BACKEND_TYPE")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@localhost")
 
 # Everything outbound goes through the budget wrapper, which then hands the
-# message to EMAIL_INNER_BACKEND. There is no send_email() helper in this
-# codebase — six places build EmailMultiAlternatives inline and allauth builds
-# its own — so this is the only point where a runaway loop can be stopped.
+# message to EMAIL_INNER_BACKEND. Messages are built in more than one place
+# (apps.common.emails, allauth's adapter), so the backend is the only point
+# every one of them passes, and where a runaway loop can be stopped.
 EMAIL_BACKEND = "apps.common.mail.BudgetedEmailBackend"
 
 if EMAIL_BACKEND_TYPE == "smtp":
@@ -449,6 +452,24 @@ EMAIL_DAILY_SEND_LIMIT = env.int("EMAIL_DAILY_SEND_LIMIT", default=2000)
 EMAIL_RECIPIENT_HOURLY_LIMIT = env.int("EMAIL_RECIPIENT_HOURLY_LIMIT", default=6)
 EMAIL_RECIPIENT_DAILY_LIMIT = env.int("EMAIL_RECIPIENT_DAILY_LIMIT", default=20)
 RESEND_WEBHOOK_SECRET = env("RESEND_WEBHOOK_SECRET", default="")
+
+# Sender identity in every email footer (apps/common/emails.py) and the contact
+# on the legal pages. Anti-spam rules (CAN-SPAM, Gmail/Yahoo sender guidelines)
+# and the LGPD expect the sender to be identifiable: who sends, where, and how
+# to reach them. Each line is left out of the footer while its value is empty.
+# The address takes one line per "|"-separated part.
+LEGAL_COMPANY_NAME = env("LEGAL_COMPANY_NAME", default="Seven Click")
+LEGAL_COMPANY_DOCUMENT = env("LEGAL_COMPANY_DOCUMENT", default="18.908.297/0001-53")
+LEGAL_COMPANY_ADDRESS = env(
+    "LEGAL_COMPANY_ADDRESS",
+    default="Rua Santo Antônio, 1460 · Sala 405 | Barreiros, São José/SC · CEP 88117-351",
+)
+LEGAL_COMPANY_PHONE = env("LEGAL_COMPANY_PHONE", default="+55 (48) 9 8456-8572")
+LEGAL_COMPANY_SERVICE_AREA = env(
+    "LEGAL_COMPANY_SERVICE_AREA",
+    default="Atendimento presencial na Grande Florianópolis e virtual em todo o Brasil.",
+)
+LEGAL_CONTACT_EMAIL = env("LEGAL_CONTACT_EMAIL", default="")
 
 # Invitations. The cooldown and the send cap live on the Invitation row so they
 # survive a cache flush; the per-org daily cap uses the email budget counters.
@@ -570,6 +591,12 @@ _META_CREDENTIALS = {
     "config_id": env("PLATFORM_FACEBOOK_CONFIG_ID", default=""),
     "human_agent_enabled": env.bool("PLATFORM_FACEBOOK_HUMAN_AGENT_ENABLED", default=False),
 }
+# Meta Ads signs in through the same Meta app as Facebook Pages. This optional
+# Login for Business configuration must carry the ads permissions
+# (ads_management, ads_read, business_management, pages_show_list,
+# pages_manage_ads); the Pages one above has none of them, so it is not reused.
+# Unset, the Login dialog asks for those permissions directly.
+PLATFORM_META_ADS_CONFIG_ID = env("PLATFORM_META_ADS_CONFIG_ID", default="")
 # WhatsApp Cloud API, connected through Embedded Signup. Normally the same Meta
 # app as Facebook (the WhatsApp product is added to it); a separate app can be
 # named instead. ``config_id`` is the Embedded Signup configuration and is
@@ -591,12 +618,6 @@ _INSTAGRAM_LOGIN_CREDENTIALS = {
 # Threads has its own app identity: a Meta app carrying the "Access the Threads
 # API" use case gets a Threads App ID / Secret distinct from the Facebook pair
 # (App settings -> Basic -> Threads App ID). Sending the Facebook App ID to
-# Meta Ads signs in through the same Meta app as Facebook Pages. This optional
-# Login for Business configuration must carry the ads permissions
-# (ads_management, ads_read, business_management, pages_show_list,
-# pages_manage_ads); the Pages one above has none of them, so it is not reused.
-# Unset, the Login dialog asks for those permissions directly.
-PLATFORM_META_ADS_CONFIG_ID = env("PLATFORM_META_ADS_CONFIG_ID", default="")
 # threads.com/oauth/authorize fails with error 4476002 ("No app ID was provided
 # in the request"), so these deliberately do NOT fall back to _META_CREDENTIALS.
 # Left unset, Threads stays unconfigured and resolves through the org's

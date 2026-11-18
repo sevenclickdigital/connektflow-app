@@ -1,0 +1,11 @@
+{% extends "account/email/base_message.txt" %}
+{% load account i18n %}
+{% block content %}{% user_display user as user_display %}{% blocktranslate %}Hi {{ user_display }},{% endblocktranslate %}
+
+{% translate "Your account is ready. Three steps to get started:" %}
+
+1. {% translate "Connect your social accounts." %}
+2. {% translate "Create and schedule your first post on the calendar." %}
+3. {% translate "Answer comments and messages from the inbox." %}
+
+{{ app_url }}{% endblock %}

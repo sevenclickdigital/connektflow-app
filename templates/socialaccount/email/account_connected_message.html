@@ -1,0 +1,6 @@
+{% extends "account/email/base_notification.html" %}
+{% load i18n %}
+{% block title %}{% translate "A login was connected to your account" %}{% endblock %}
+{% block preheader %}{% translate "A login was connected to your account" %}{% endblock %}
+{% block heading %}{% translate "A login was connected to your account" %}{% endblock %}
+{% block notification_message %}{% blocktranslate %}A {{ provider }} account was connected to your account. You can now sign in with it.{% endblocktranslate %}{% endblock %}

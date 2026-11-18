@@ -1,9 +1,11 @@
-{% load i18n %}{% blocktranslate with name=client_user.display_name %}Hi {{ name }},{% endblocktranslate %}
+{% extends "emails/base.txt" %}
+{% load i18n %}
+{% block content %}{% blocktranslate with name=client_user.display_name %}Hi {{ name }},{% endblocktranslate %}
 
 {% blocktranslate with sender=created_by.display_name workspace=workspace.name %}{{ sender }} has shared content for your review in {{ workspace }}.{% endblocktranslate %}
 
 {% translate "Click the link below to access your portal and approve or provide feedback on scheduled posts:" %}
-
 {{ magic_url }}
 
-{% translate "This link is valid for 30 days. If it expires, ask your account manager for a new one." %}
+{% translate "This link is valid for 30 days and signs you in without a password, so don't forward this email. If it expires, ask your account manager for a new one." %}{% endblock %}
+{% block reason %}{% blocktranslate with workspace=workspace.name %}You're receiving this because you're a client of {{ workspace }}.{% endblocktranslate %}{% endblock %}

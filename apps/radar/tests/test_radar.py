@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import html
 import io
+import json
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -383,7 +385,7 @@ def test_favourites_are_per_workspace(workspace, shopee):
     page = intruder.get(_url("shopee_favorites", other))
 
     assert b"Product 5" not in page.content
-    assert intruder.post(_url("offer_task", other), {"prefill": "1", "item_id": "5"}).status_code == 204
+    assert intruder.post(_url("offer_task", other), {"send": "1", "item_id": "5"}).status_code == 204
     assert not Task.objects.exists()
 
 
@@ -394,23 +396,40 @@ def _fake_image(self, url):
     return buffer.getvalue(), "image/png"
 
 
-def test_create_task_opens_the_task_window_filled_from_the_offer(workspace, owner, shopee):
+def test_create_task_sends_the_offer_to_the_boards_window(workspace, owner, shopee):
     _list(shopee, [_offer(21)])
+    client = _client(owner)
 
-    response = _client(owner).post(
+    response = client.post(
         _url("offer_task", workspace),
-        {"prefill": "1", "item_id": "21", "caption": "Look at this"},
+        {"send": "1", "item_id": "21", "caption": "Look at this"},
         HTTP_HX_REQUEST="true",
     )
 
-    body = response.content.decode()
-    assert response.status_code == 200 and "data-standalone" in body
-    assert 'value="Post offer: Product 21"' in body
-    assert "Look at this</textarea>" in body
-    assert "https://s.shopee.com.br/21" in body
-    assert f'hx-post="{_url("offer_task", workspace)}"' in body
-    assert 'name="item_id" value="21"' in body
+    board = reverse("tasks:board", kwargs={"workspace_id": workspace.id})
+    assert response["HX-Redirect"] == f"{board}?new=handoff"
+    body = client.get(board, {"new": "handoff"}).content.decode()
+    initial = json.loads(html.unescape(body.split('data-initial="', 1)[1].split('"', 1)[0]))
+    assert initial["fields"]["title"] == "Post offer: Product 21"
+    assert initial["fields"]["post_caption"] == "Look at this"
+    assert "https://s.shopee.com.br/21" in initial["fields"]["briefing"]
+    assert initial["submitTo"] == _url("offer_task", workspace)
+    assert initial["hidden"]["item_id"] == "21"
     assert not Task.objects.exists()
+
+
+def test_an_offer_no_longer_cached_is_read_from_the_pages_signed_copy(workspace, shopee):
+    snapshot = services.share_payload([_offer(23)], workspace.id)["23"]["snapshot"]
+    cache.clear()
+
+    assert services.find_offer(shopee, 23, snapshot).name == "Product 23"
+    with pytest.raises(services.OfferUnavailableError):
+        services.find_offer(shopee, 23, snapshot + "x")
+    with pytest.raises(services.OfferUnavailableError):
+        services.find_offer(shopee, 24, snapshot)
+    other = Workspace.objects.create(organization=workspace.organization, name="Other")
+    with pytest.raises(services.OfferUnavailableError):
+        services.find_offer(shopee, 23, services.share_payload([_offer(23)], other.id)["23"]["snapshot"])
 
 
 def test_art_request_from_an_offer_has_the_formats_the_image_and_a_draft_post(workspace, owner, shopee):
@@ -499,7 +518,7 @@ def test_viewers_cannot_create_tasks_or_posts(workspace, shopee):
     _list(shopee, [_offer(41)])
     viewer = _client(_user("viewer@example.com", workspace, Role.VIEWER))
 
-    assert viewer.post(_url("offer_task", workspace), {"prefill": "1", "item_id": "41"}).status_code == 403
+    assert viewer.post(_url("offer_task", workspace), {"send": "1", "item_id": "41"}).status_code == 403
     assert viewer.post(_url("offer_post", workspace), {"item_id": "41"}).status_code == 403
     assert viewer.post(_url("offer_favorite", workspace), {"item_id": "41"}).status_code == 403
 
@@ -513,8 +532,8 @@ def test_video_search_terms_are_the_first_words_of_the_title():
     assert services.search_terms("Cropped") == ["cropped"]
 
 
-def test_dialog_amounts_are_rounded_to_cents():
-    payload = services.share_payload([_offer(9, commission="57.9054", rate="0.15")])["9"]
+def test_dialog_amounts_are_rounded_to_cents(workspace):
+    payload = services.share_payload([_offer(9, commission="57.9054", rate="0.15")], workspace.id)["9"]
 
     assert payload["commission"] == "Commission 15% · ~R$ 57.91"
     assert payload["terms"] == ["product 9"]

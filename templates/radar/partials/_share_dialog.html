@@ -4,8 +4,8 @@ x-data that holds ``open``, ``offer`` (the offer's entry in #radar-share-data,
 built by apps.radar.services.share_payload), ``tpl``, ``text`` and ``term``.
 Every string it shows comes formatted and translated from the server or from
 this template; the script only places values.
-"Create task" opens the board's new task window ({% task_window_host %} in shopee.html)
-filled from the offer; "Schedule post" posts here. Both send just the item id and
+"Create task" takes the user to the task board, whose new task window opens filled
+from the offer (radar:offer_task with send=1); "Schedule post" posts here. Both send just the item id and
 the edited text; the server takes the rest of the offer from what Shopee listed
 (services.find_offer).
 {% endcomment %}
@@ -22,6 +22,8 @@ the edited text; the server takes the rest of the offer from what Shopee listed
 
         <form hx-swap="none" @submit.prevent class="flex flex-col min-h-0" x-show="offer">
             <input type="hidden" name="item_id" :value="offerId">
+            {# The offer as the page listed it, signed (radar.services.offer_snapshot): found even if the listing left the cache. #}
+            <input type="hidden" name="snapshot" :value="offer?.snapshot || ''">
 
             <div class="overflow-y-auto px-5 py-4 space-y-5">
                 <!-- Product -->
@@ -98,7 +100,7 @@ the edited text; the server takes the rest of the offer from what Shopee listed
             <div class="border-t border-neutral-100 px-5 py-4 space-y-3">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <button type="button" class="btn-outline"
-                            @click="open = false; $dispatch('open-task-window', { url: '{% url 'radar:offer_task' workspace_id=workspace_id %}', method: 'POST', values: { prefill: '1', item_id: offerId, caption: text } })">
+                            hx-post="{% url 'radar:offer_task' workspace_id=workspace_id %}" hx-vals='{"send": "1"}' hx-disabled-elt="this">
                         {% translate "Create task" %}
                     </button>
                     <button type="button" class="btn-brand disabled:opacity-60 disabled:cursor-wait"

@@ -62,7 +62,7 @@ def test_a_dropped_send_leaves_the_existing_link_working(client_setup):
     mail.outbox.clear()
 
     with (
-        patch("apps.client_portal.services.EmailMultiAlternatives.send", return_value=0),
+        patch("apps.common.emails.EmailMultiAlternatives.send", return_value=0),
         pytest.raises(ValueError, match="could not send"),
     ):
         generate_magic_link(workspace=workspace, client_user=client_user, created_by=manager)
@@ -78,7 +78,7 @@ def test_a_raising_send_leaves_the_existing_link_working(client_setup):
     mail.outbox.clear()
 
     with (
-        patch("apps.client_portal.services.EmailMultiAlternatives.send", side_effect=RuntimeError("smtp down")),
+        patch("apps.common.emails.EmailMultiAlternatives.send", side_effect=RuntimeError("smtp down")),
         pytest.raises(ValueError, match="could not send"),
     ):
         generate_magic_link(workspace=workspace, client_user=client_user, created_by=manager)

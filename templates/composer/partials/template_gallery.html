@@ -16,7 +16,7 @@ composer/partials/_ideas_hero.html.
      data-compose-url="{% url 'composer:compose' workspace_id=workspace.id %}"
      data-idea-url="{% url 'composer:idea_from_template' workspace_id=workspace.id template_id=999999999 %}"
      data-favorite-url="{% url 'composer:template_favorite_toggle' workspace_id=workspace.id template_id=999999999 %}"
-     data-task-url="{% url 'tasks:task_window' workspace_id=workspace.id %}">
+     data-task-url="{% url 'tasks:board' workspace_id=workspace.id %}">
 
     {% comment %}
     Filters in the special dates' style: search, a Category menu with the
@@ -157,6 +157,16 @@ composer/partials/_ideas_hero.html.
                             <label for="template_submit_ideal_for" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Ideal for" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></label>
                             <input type="text" id="template_submit_ideal_for" name="ideal_for" maxlength="200" class="form-input-styled w-full"
                                    placeholder="{% translate 'For example: tips, recommendations, lists.' %}">
+                        </div>
+                        {# The production of the arts, sent on to the task's "Request arts" (composer/partials/_template_art_items.html). #}
+                        <div>
+                            <label for="template_submit_briefing" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Briefing for creating the arts" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></label>
+                            <textarea id="template_submit_briefing" name="briefing" rows="3" class="form-input-styled w-full" style="resize: vertical;"
+                                      placeholder="{% translate 'How the arts should be made: what they say and show' %}"></textarea>
+                        </div>
+                        <div>
+                            <p class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Arts to produce" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></p>
+                            {% include "composer/partials/_template_art_items.html" with options=submission_form.art_format_options items_json="[]" prefix="template-submit" %}
                         </div>
                         <div>
                             <label for="template_submit_body" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Text of the template" %}</label>
@@ -326,6 +336,31 @@ composer/partials/_ideas_hero.html.
                         </ul>
                     </div>
 
+                    {# The arts the template asks for (creative_formats.art_items_payload), sent on to "Send as task". #}
+                    <div class="mt-4 pt-4 border-t border-neutral-200" x-show="selected.art_items.length || selected.briefing">
+                        <button type="button" class="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
+                                @click="toggleSection('arts')" :aria-expanded="(openSection === 'arts').toString()">
+                            <span class="min-w-0">
+                                <span class="block text-sm font-semibold text-neutral-950">{% translate "Arts to produce" %}</span>
+                                <span class="block text-xs text-neutral-600 truncate" x-show="openSection !== 'arts'"
+                                      x-text="selected.art_items.map(item => item.count + '× ' + item.label).join(', ')"></span>
+                            </span>
+                            <svg class="w-4 h-4 text-neutral-500 transition-transform" :class="openSection === 'arts' && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="flex flex-col gap-2 mt-2" x-show="openSection === 'arts'" x-transition.opacity>
+                            <p class="text-xs text-neutral-700 whitespace-pre-line" x-show="selected.briefing" x-text="selected.briefing"></p>
+                            <template x-for="item in selected.art_items" :key="item.format">
+                                <div class="px-3 py-2 rounded-lg border border-neutral-200">
+                                    <p class="text-sm font-medium text-neutral-950">
+                                        <span x-text="item.count + '× ' + item.label"></span>
+                                        <span class="text-xs font-normal text-neutral-500" x-text="item.network + ' · ' + item.size"></span>
+                                    </p>
+                                    <p class="text-xs text-neutral-600" x-show="item.note" x-text="item.note"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
                     {# Which version of the text opens: only when there is more than one. #}
                     <div class="mt-4 pt-4 border-t border-neutral-200" x-show="selected.variations.length > 1">
                         <button type="button" class="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
@@ -364,11 +399,11 @@ composer/partials/_ideas_hero.html.
                                 {% translate "Add to my ideas" %}
                             </button>
                         </form>
-                        {# The task board's new task window, filled from the template (create_landing's task window host). #}
-                        <button type="button" class="btn-soft w-full" @click="$dispatch('open-task-window', { url: taskUrl() })">
+                        {# The task board, with its new task window open and filled from the template. #}
+                        <a :href="taskUrl()" class="btn-soft w-full">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
                             {% translate "Send as task" %}
-                        </button>
+                        </a>
                         <button type="button" class="btn-ghost w-full" @click="toggleFavorite(selected.id)" :aria-pressed="isFavorite(selected.id).toString()">
                             <svg class="w-4 h-4" :fill="isFavorite(selected.id) ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
                             <span x-show="!isFavorite(selected.id)">{% translate "Save to favorites" %}</span>
@@ -421,7 +456,7 @@ function templateShelf() {
         },
         ideaUrl() { return this.$root.dataset.ideaUrl.replace(PLACEHOLDER, this.selectedId); },
         taskUrl() {
-            return this.$root.dataset.taskUrl + '?template=' + this.selectedId + (this.variation ? '&variation=' + this.variation : '');
+            return this.$root.dataset.taskUrl + '?new=1&template=' + this.selectedId + (this.variation ? '&variation=' + this.variation : '');
         },
         toggleFavorite(id) {
             fetch(this.$root.dataset.favoriteUrl.replace(PLACEHOLDER, id), {

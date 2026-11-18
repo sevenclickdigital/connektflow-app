@@ -53,16 +53,27 @@ def unsubscribe_url(user_id, event_type: str) -> str:
     return f"{app_url}{path}"
 
 
-def list_unsubscribe_headers(user_id, event_type: str | None) -> dict[str, str]:
-    """RFC 2369 + RFC 8058 headers for a notification-class email.
+def notification_email_parts(user_id, event_type: str | None) -> tuple[dict[str, str], dict[str, str]]:
+    """The headers and the footer links of one notification email.
 
-    ``event_type=None`` is the daily digest, which spans every type.
+    The headers are the RFC 2369 + RFC 8058 ``List-Unsubscribe`` pair. The
+    body's "unsubscribe" link carries the same token, so whichever the
+    recipient uses turns off the same thing. ``event_type=None`` is the daily
+    digest, which spans every type. Returns ``(headers, context)``; ``context``
+    feeds the email layout.
     """
+    app_url = getattr(settings, "APP_URL", "http://localhost:8000").rstrip("/")
     url = unsubscribe_url(user_id, event_type if event_type is not None else ALL_EVENTS)
-    return {
+    context = {
+        "unsubscribe_url": url,
+        "preferences_url": f"{app_url}{reverse('notifications:preferences')}",
+        "notifications_url": f"{app_url}{reverse('notifications:list')}",
+    }
+    headers = {
         "List-Unsubscribe": f"<{url}>",
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     }
+    return headers, context
 
 
 def _decode(token: str) -> tuple[str, str] | None:

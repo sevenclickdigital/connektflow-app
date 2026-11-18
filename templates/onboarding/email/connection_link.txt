@@ -1,16 +1,18 @@
-{% load i18n %}{% translate "Hi," %}
+{% extends "emails/base.txt" %}
+{% load i18n %}
+{% block content %}{% translate "Hi," %}
 
 {% blocktranslate %}{{ org_name }} has invited you to connect your social media accounts to {{ workspace_name }}.{% endblocktranslate %}
 
 {% translate "Click the link below to get started:" %}
-
 {{ link_url }}
 
-{% blocktranslate with expires=expires_at|date:"M j, Y" %}This link will expire on {{ expires }}.{% endblocktranslate %}
+{% blocktranslate with expires=expires_at|date:"DATE_FORMAT" %}This link will expire on {{ expires }}.{% endblocktranslate %}
 
 {% translate "What to expect:" %}
 - {% translate "You'll see a list of social media platforms to connect." %}
 - {% translate "Click “Connect” on each platform you’d like to link." %}
 - {% translate "After connecting, click “Done” to notify your team." %}
 
-{% blocktranslate %}If you have any questions, please contact {{ org_name }} directly.{% endblocktranslate %}
+{% blocktranslate %}If you have any questions, please contact {{ org_name }} directly.{% endblocktranslate %}{% endblock %}
+{% block reason %}{% blocktranslate %}Sent by {{ org_name }}{% endblocktranslate %} · {% translate "You're receiving this because someone asked us to send you this connection link. If you weren't expecting it, you can ignore this email." %}{% endblock %}

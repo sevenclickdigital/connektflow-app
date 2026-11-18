@@ -1,0 +1,10 @@
+{% extends "account/email/base_message.html" %}
+{% load i18n %}
+{% block title %}{% translate "Your sign-in code" %}{% endblock %}
+{% block preheader %}{% translate "Enter this code in the browser window where you are signing in." %}{% endblock %}
+{% block content %}
+<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Your sign-in code" %}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% translate "Enter this code in the browser window where you are signing in." %}</p>
+<p style="margin:8px 0 0;padding:18px;background-color:#F5F3FF;border-radius:8px;text-align:center;font-size:28px;line-height:34px;font-weight:700;letter-spacing:6px;color:#0F172A;font-family:SFMono-Regular,Menlo,Consolas,monospace;">{{ code }}</p>
+<p style="margin:24px 0 0;font-size:13px;line-height:20px;color:#64748B;">{% translate "Never share this code with anyone. If you didn't ask for it, you can safely ignore this email." %}</p>
+{% endblock %}

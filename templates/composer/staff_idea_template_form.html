@@ -78,6 +78,24 @@ bottom, apart from saving. Access is is_staff (apps.composer.staff_views).
       <p class="text-xs text-neutral-600 mt-1">{{ form.ideal_for.help_text }}</p>
     </div>
 
+    {% comment %}
+    The production of the arts: what the creative team is told and which arts it
+    makes. "Send as task" fills the task's "Request arts" with them.
+    {% endcomment %}
+    <fieldset class="min-w-0 flex flex-col gap-4">
+      <legend class="text-sm font-semibold text-neutral-950">{% translate "Production of the arts" %}</legend>
+      <p class="text-xs text-neutral-600 -mt-2">{% translate "Sent to the task when the template is sent as a task, or kept in the idea it becomes." %}</p>
+      <div>
+        <label for="{{ form.briefing.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.briefing.label }}</label>
+        {{ form.briefing }}
+        <p class="text-xs text-neutral-600 mt-1">{{ form.briefing.help_text }}</p>
+      </div>
+      <div>
+        <p class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.art_items.label }}</p>
+        {% include "composer/partials/_template_art_items.html" with options=form.art_format_options items_json=form.initial_art_items_json prefix="staff-template" %}
+      </div>
+    </fieldset>
+
     <div>
       <label for="{{ form.body.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.body.label }}</label>
       {{ form.body }}

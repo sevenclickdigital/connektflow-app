@@ -1,0 +1,18 @@
+{% extends "account/email/base_message.html" %}
+{% load i18n %}
+{% block content %}
+<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% block heading %}{% translate "Your account was changed" %}{% endblock %}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% block notification_message %}{% endblock %}</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% translate "If it was you, there's nothing else to do. If you don't recognize this change, reset your password right away to secure your account." %}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 0;">
+  <tr>
+    <td style="padding:14px 18px;background-color:#F5F3FF;border-radius:8px;font-size:13px;line-height:21px;color:#475569;">
+      <strong style="color:#0F172A;">{% translate "Where the change came from" %}</strong><br>
+      {% translate "Date:" %} {{ timestamp|date:"DATETIME_FORMAT" }}<br>
+      {% translate "IP address:" %} {{ ip|default:"—" }}<br>
+      {% translate "Browser:" %} {{ user_agent|default:"—"|truncatechars:120 }}
+    </td>
+  </tr>
+</table>
+{% url "account_reset_password" as reset_path %}{% translate "Reset my password" as cta %}{% with reset_url=app_url|add:reset_path %}{% include "emails/_button.html" with url=reset_url label=cta %}{% endwith %}
+{% endblock %}

@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout, update_session_auth_hash
@@ -12,6 +14,8 @@ from django.views.decorators.http import require_http_methods, require_POST
 from apps.accounts import impersonation
 from apps.accounts.forms import ProfileForm
 from apps.billing import services as billing_services
+
+logger = logging.getLogger(__name__)
 
 
 def health_check(request):
@@ -217,14 +221,29 @@ def _handle_password_update(request, user):
     user.save(update_fields=["password", "updated_at"])
     update_session_auth_hash(request, user)
     messages.success(request, _("Password changed."))
-    # This form does not go through allauth, so its password_changed signal
-    # (apps.accounts.signals) never fires here.
+    # This form does not go through allauth, so neither its security notice nor
+    # its password_changed signal (apps.accounts.signals) fires on its own.
+    _send_password_changed_notice(request, user)
     from apps.oauth_server.services import revoke_user_tokens
 
     if revoke_user_tokens(user):
         messages.info(
             request, _("The apps connected to your account were disconnected. Authorize them again to keep using them.")
         )
+
+
+def _send_password_changed_notice(request, user):
+    """Email the owner that the password changed, as allauth does on its own forms.
+
+    The password is already saved, so a failed send is logged and the change
+    stands: holding it back would not make the account any safer.
+    """
+    from allauth.account.adapter import get_adapter
+
+    try:
+        get_adapter(request).send_notification_mail("account/email/password_changed", user)
+    except Exception:
+        logger.exception("Could not send the password-changed notice to user %s", user.pk)
 
 
 def _handle_account_deletion(request, user):

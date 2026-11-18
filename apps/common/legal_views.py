@@ -20,15 +20,21 @@ LAST_UPDATED = "15 de novembro de 2026"
 APP_NAME = "Connekt Flow"
 
 
+def contact_email() -> str:
+    """The address people write to, on the legal pages and in every email footer.
+
+    DEFAULT_FROM_EMAIL is often a noreply address, so an explicit contact wins.
+    Keep in step with the Meta app's "Email de contato": App Review compares the
+    two, and a mismatch reads as an inconsistent policy.
+    """
+    return getattr(settings, "LEGAL_CONTACT_EMAIL", "") or "robison@sevenclick.com.br"
+
+
 def _context():
     return {
         "app_name": APP_NAME,
         "last_updated": LAST_UPDATED,
-        # DEFAULT_FROM_EMAIL is often a noreply address, so prefer an explicit
-        # contact when one is configured.
-        # Keep in step with the Meta app's "Email de contato": App Review
-        # compares the two, and a mismatch reads as an inconsistent policy.
-        "contact_email": getattr(settings, "LEGAL_CONTACT_EMAIL", "") or "robison@sevenclick.com.br",
+        "contact_email": contact_email(),
     }
 
 

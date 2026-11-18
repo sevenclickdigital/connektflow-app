@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static i18n task_window_tags %}
+{% load static i18n %}
 
 {% block title %}{% translate "Create" %} - {{ workspace.name }} - Connekt Flow{% endblock %}
 
@@ -203,15 +203,13 @@
     }
 
 </style>
-{% include "tasks/partials/_styles.html" %}
 {% endblock %}
 
 {% block content %}
 {{ idea_icons|json_script:"idea-icons-data" }}
 <div x-data="kanbanBoard()" class="-m-6 flex-grow flex flex-col"
      @tag-deleted.window="forgetTag($event.detail.name, $event.detail.used)"
-     @media-picked.camel.window="addPickedMedia($event.detail.assets)"
-     @open-reference-picker.window="openIdeaMediaPicker('task')" @open-tag-groups.window="openTagGroups()">
+     @media-picked.camel.window="addPickedMedia($event.detail.assets)">
 
     {% comment %}
     Ideas, Templates and Special dates are three pages of the same area: each
@@ -793,7 +791,7 @@
                         {% translate "Delete" %}
                     </button>
                     <button type="button"
-                            @click="const url = '{% url 'tasks:task_window' workspace_id=workspace.id %}?idea=' + editingIdea.id; editingIdea = null; $dispatch('open-task-window', { url: url })"
+                            @click="window.location.href = '{% url 'tasks:board' workspace_id=workspace.id %}?new=1&idea=' + editingIdea.id"
                             class="btn-ghost px-4 py-2">
                         {% translate "Send as task" %}
                     </button>
@@ -912,13 +910,6 @@
         </div>
     </template>
 
-    {% comment %}
-    "Send as task" (an idea, a template, a special date): the task board's new task
-    window, filled from it. Inside this component: the reference photos open this
-    page's media library ("open-reference-picker", target "task") and the tag groups
-    its own window.
-    {% endcomment %}
-    {% task_window_host own_picker=False own_tags=False %}
 </div>
 {% endblock %}
 
@@ -1406,8 +1397,6 @@ function kanbanBoard() {
 
         // Files chosen (or uploaded) in the media library window.
         addPickedMedia(assets) {
-            // Reference photos for the task window: its own listener takes them.
-            if (this.mediaPickerTarget === 'task') return;
             for (var i = 0; i < (assets || []).length; i += 1) {
                 this._appendUploadedMedia(this.mediaPickerTarget, assets[i], null);
             }

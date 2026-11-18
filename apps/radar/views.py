@@ -205,7 +205,7 @@ def shopee(request, workspace_id):
         "favorite_ids": services.favorite_ids(request.workspace.id, connection.source),
         "video_platforms": services.VIDEO_PLATFORMS,
         "message_templates": services.MESSAGE_TEMPLATES,
-        "share_data": services.share_payload(results.offers) if results else {},
+        "share_data": services.share_payload(results.offers, request.workspace.id) if results else {},
         "next_page_query": urlencode({**query, "pages": filters.pages + 1}),
         "categories": services.SHOPEE_CATEGORIES,
         "sort_choices": services.SORT_CHOICES,
@@ -243,7 +243,7 @@ def shopee_favorites(request, workspace_id):
             "favorite_ids": {offer.item_id for offer in offers},
             "video_platforms": services.VIDEO_PLATFORMS,
             "message_templates": services.MESSAGE_TEMPLATES,
-            "share_data": services.share_payload(offers),
+            "share_data": services.share_payload(offers, request.workspace.id),
         },
     )
 
@@ -273,37 +273,34 @@ def offer_favorite(request, workspace_id):
 @ratelimit(key="user", rate="30/m", method="POST", block=True)
 @require_POST
 def offer_task(request, workspace_id):
-    """ "Create task" from the share dialog: the board's new task window, filled from the offer.
-
-    Opened with ``prefill=1`` (and the dialog's text as ``caption``) it answers the window
-    (tasks.views.render_task_window), which posts back here; submitted, it creates the task
+    """ "Create task" from the share dialog, which sends the user to the task board with its
+    new task window open and filled from the offer (``send=1``, with the dialog's text as
+    ``caption``; tasks.views.send_to_board). The window posts back here: the task is created
     with the product image and a draft post attached, like the board's window would.
     """
-    from apps.tasks import services as task_services
-    from apps.tasks.views import parse_task_post, render_task_window
+    from apps.tasks.views import parse_task_post, send_to_board
 
     connection = _shopee_connection(request)
     item_id = _item_id(request)
     if connection is None or item_id is None:
         return HttpResponse(status=400)
+    snapshot = request.POST.get("snapshot", "")
     try:
-        offer = services.find_offer(connection, item_id)
+        offer = services.find_offer(connection, item_id, snapshot)
     except services.OfferUnavailableError:
         return _offer_gone()
 
-    if request.POST.get("prefill"):
-        prefill = task_services.material_prefill(
-            request.workspace,
-            title=_("Post offer: %(name)s") % {"name": offer.name},
-            briefing=services.offer_brief(offer),
-            post_caption=_caption(request, offer),
-        )
-        return render_task_window(
+    if request.POST.get("send"):
+        return send_to_board(
             request,
-            prefill,
-            action_url=reverse("radar:offer_task", kwargs={"workspace_id": workspace_id}),
-            hidden={"item_id": item_id},
-            source_note=_("From the Shopee offer “%(name)s”") % {"name": offer.name},
+            {
+                "title": _("Post offer: %(name)s") % {"name": offer.name},
+                "briefing": services.offer_brief(offer),
+                "post_caption": _caption(request, offer),
+            },
+            note=_("From the Shopee offer “%(name)s”") % {"name": offer.name},
+            submit_to=reverse("radar:offer_task", kwargs={"workspace_id": workspace_id}),
+            hidden={"item_id": str(item_id), "snapshot": snapshot},
         )
 
     fields, art, error = parse_task_post(request)
@@ -333,7 +330,7 @@ def offer_post(request, workspace_id):
     if connection is None or item_id is None:
         return HttpResponse(status=400)
     try:
-        offer = services.find_offer(connection, item_id)
+        offer = services.find_offer(connection, item_id, request.POST.get("snapshot", ""))
     except services.OfferUnavailableError:
         return _offer_gone()
     try:

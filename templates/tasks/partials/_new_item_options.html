@@ -3,7 +3,7 @@
 The task windows' two switches, under the description (tasks/partials/_task_fields.html's
 after_description), in the new task window and in a task's own. Switched off, none of a
 switch's fields is sent (its fieldset is disabled). With ``task`` (its own window) they
-start from it (a new task from ``prefill``, when it was sent from another page): its briefing, its arts already asked for (ticked and fixed: ticking more
+start from it: its briefing, its arts already asked for (ticked and fixed: ticking more
 adds them, tasks.services.add_arts), its caption and channels; "post_sent" tells the save
 that "Create a post" was there, so switching it off clears the caption and the channels.
 
@@ -32,7 +32,7 @@ that "Create a post" was there, so switching it off clears the caption and the c
         <div class="mb-5">
             <label class="new-item-label" for="{{ prefix }}-briefing">{% translate "Briefing for creating the arts" %}</label>
             <textarea id="{{ prefix }}-briefing" name="briefing" rows="4" class="form-input-styled block w-full text-sm"
-                      placeholder="{% translate 'How the arts should be made: what they say and show' %}">{% firstof task.briefing prefill.briefing %}</textarea>
+                      placeholder="{% translate 'How the arts should be made: what they say and show' %}">{{ task.briefing|default:'' }}</textarea>
         </div>
         {% comment %}
         Reference images for the designers, from the media library: "Add" opens it
@@ -83,7 +83,7 @@ that "Create a post" was there, so switching it off clears the caption and the c
         <div class="mb-5">
             <label class="new-item-label" for="{{ prefix }}-caption">{% translate "Post caption" %}</label>
             <textarea id="{{ prefix }}-caption" name="post_caption" rows="4" class="form-input-styled block w-full text-sm"
-                      placeholder="{% translate 'The text the post goes out with' %}">{% firstof task.post_caption prefill.post_caption %}</textarea>
+                      placeholder="{% translate 'The text the post goes out with' %}">{{ task.post_caption|default:'' }}</textarea>
         </div>
         {% include "partials/_channel_picker.html" with options=channel_options model="channels" toggle="toggleChannelFormat" ref="postChannelRow" %}
     </fieldset>

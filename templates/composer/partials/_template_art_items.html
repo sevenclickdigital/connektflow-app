@@ -1,0 +1,49 @@
+{% load i18n %}
+{% comment %}
+The arts a content template asks the creative team to produce, one row each: the
+format (the task board's catalogue, apps.tasks.creative_formats: its kind and size),
+how many (a carousel's slides) and what each one shows. Posted as one JSON field,
+"art_items" (IdeaTemplateForm.clean_art_items); sent on to the task's "Request arts".
+
+Used by the operator's template form and the customer's "Send a template".
+Expects: options (creative_formats.format_options), items_json (the rows to start
+with, IdeaTemplateForm.initial_art_items_json), prefix (for the ids).
+{% endcomment %}
+<div x-data="{
+        nextKey: 1,
+        items: [],
+        init() { this.items = JSON.parse(this.$el.dataset.items || '[]').map(item => Object.assign({ key: this.nextKey++ }, item)); },
+        add() { if (this.items.length < 20) this.items.push({ key: this.nextKey++, format: '', count: 1, note: '' }); },
+        posted() { return JSON.stringify(this.items.filter(item => item.format).map(item => ({ format: item.format, count: item.count, note: item.note }))); },
+     }"
+     data-items="{{ items_json }}" class="flex flex-col gap-2">
+    <input type="hidden" name="art_items" :value="posted()">
+    <template x-for="(item, index) in items" :key="item.key">
+        <div class="rounded-lg border border-neutral-300 p-3 flex flex-col sm:flex-row sm:items-center gap-2">
+            <label class="sr-only" :for="'{{ prefix }}-art-format-' + item.key">{% translate "Format" %}</label>
+            <select x-model="item.format" :id="'{{ prefix }}-art-format-' + item.key" class="form-input-styled bb-select text-sm sm:w-72 cursor-pointer">
+                <option value="">{% translate "Choose the format" %}</option>
+                {% for network in options %}
+                <optgroup label="{{ network.label }}">
+                    {% for fmt in network.formats %}<option value="{{ fmt.key }}">{{ fmt.label }} · {{ fmt.size }}</option>{% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
+            <label class="sr-only" :for="'{{ prefix }}-art-count-' + item.key">{% translate "Quantity" %}</label>
+            <input type="number" min="1" max="20" x-model.number="item.count" :id="'{{ prefix }}-art-count-' + item.key"
+                   class="form-input-styled text-sm sm:w-20" title="{% translate 'Quantity' %}">
+            <label class="sr-only" :for="'{{ prefix }}-art-note-' + item.key">{% translate "What each one shows" %}</label>
+            <input type="text" maxlength="200" x-model="item.note" :id="'{{ prefix }}-art-note-' + item.key"
+                   class="form-input-styled text-sm flex-1 min-w-0" placeholder="{% translate 'What each one shows, like Cover with the title' %}">
+            <button type="button" class="self-end sm:self-auto w-8 h-8 rounded-lg flex items-center justify-center text-neutral-500 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                    @click="items.splice(index, 1)" title="{% translate 'Remove' %}" aria-label="{% translate 'Remove' %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+    </template>
+    <button type="button" class="self-start inline-flex items-center gap-1.5 text-sm font-semibold text-brand-800 hover:text-brand-900 cursor-pointer"
+            x-show="items.length < 20" @click="add()">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        {% translate "Add an art" %}
+    </button>
+</div>

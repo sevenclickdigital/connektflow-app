@@ -1,11 +1,10 @@
 {% load i18n %}
 {% comment %}
-The new task window. On the board it is rendered with the page and opened by a
-column's "Add task" with $dispatch('open-new-item', { column: '<column id>' }).
-Elsewhere (the idea hub, the calendar, the Radar) it is fetched already filled
-(tasks.views.render_task_window, ``standalone``) into
-tasks/partials/_task_window_host.html and opens at once. Script: newItemForm() in
-static/js/task-window.js.
+The new task window, on the task board: opened by a column's "Add task" with
+$dispatch('open-new-item', { column: '<column id>' }), or on arrival, filled, when
+another page sent something to the board (an idea, a template, a special date, a
+calendar day, a Radar offer: window_initial_json, from tasks.views._board_window).
+Script: newItemForm() in static/js/task-window.js.
 
 On the left the task's fields (title, description, priority, due date, today
 by default, assignees and tags; tasks/partials/_task_fields.html; the column
@@ -15,18 +14,12 @@ under the description, "Request arts" and "Create a post"
 On the right the checklists: one per network with its ticked formats, then
 the task's own. Posted to tasks:task_create, whose taskCreated closes it.
 
-Expects tasks.views.window_context. Standalone it also takes prefill (what the
-fields start from, tasks.services.blank_prefill, with window_initial_json for the
-script), action_url and hidden (where it posts, and what along), source_note (the
-"From …" line), and renders the labels, tag suggestions and emoji the board
-renders once for its page.
+Expects tasks.views.window_context and, optional, window_initial_json. Sent from
+another page, it shows where from (note), posts what that page needs along
+(hidden) and, for a Radar offer, posts to the Radar (submitTo, set on the request
+in htmx:configRequest).
 {% endcomment %}
-{% if standalone %}
-{{ task_window_labels|json_script:"task-window-labels" }}
-{{ tag_suggestions|json_script:"task-tag-suggestions" }}
-{{ emoji_categories|json_script:"task-emoji" }}
-{% endif %}
-<div x-data="newItemForm('{{ first_tab }}', $el)" x-cloak data-initial="{{ window_initial_json|default:'{}' }}" {% if standalone %}data-standalone{% endif %}
+<div x-data="newItemForm('{{ first_tab }}', $el)" x-cloak data-initial="{{ window_initial_json|default:'{}' }}"
      @open-new-item.window="open($event.detail)" @task-created.camel.window="close()" @keydown.escape.window="if (!showMediaPicker) close()"
      @media-picked.camel.window="if (referencePickerFor === 'new') addReferences($event.detail.assets)">
     <div class="new-item-overlay" x-show="isOpen" x-transition.opacity @click.self="close()">
@@ -36,8 +29,9 @@ renders once for its page.
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
                 <form x-ref="taskForm" class="flex flex-col flex-1 min-h-0"
-                      hx-post="{% if action_url %}{{ action_url }}{% else %}{% url 'tasks:task_create' workspace_id=workspace.id %}{% endif %}" hx-swap="none">
-                    {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+                      hx-post="{% url 'tasks:task_create' workspace_id=workspace.id %}" hx-swap="none"
+                      @htmx:config-request.camel="if (submitTo) $event.detail.path = submitTo">
+                    <template x-for="(value, name) in hidden" :key="name"><input type="hidden" :name="name" :value="value"></template>
                     <div class="new-item-split">
                     <div class="new-item-body !pt-7">
                         <div class="flex items-start gap-4 pr-10">
@@ -47,7 +41,7 @@ renders once for its page.
                             <div class="min-w-0">
                                 <h2 id="new-item-heading" class="text-xl font-bold text-neutral-950">{% translate "New task" %}</h2>
                                 <p class="text-sm text-neutral-600 mt-0.5">{% translate "Organise an activity, set deadlines and who is responsible." %}</p>
-                                {% if source_note %}<p class="text-xs font-semibold text-brand-800 mt-1.5">{{ source_note }}</p>{% endif %}
+                                <p class="text-xs font-semibold text-brand-800 mt-1.5" x-show="note" x-text="note"></p>
                             </div>
                         </div>
 
@@ -58,12 +52,15 @@ renders once for its page.
 
                     {% comment %}
                     Right: the task's checklists. With "Request arts" on, first one per
-                    network with its ticked formats (× unticks), as the task will have them;
-                    then the task's own, each with a title and its items ("New checklist"
-                    adds one), which travel as one JSON field, "checklists" (tasks.views.task_create).
+                    network with its ticked formats (× unticks), as the task will have them,
+                    each with how many and what each shows (artSpecs, posted as "art_items";
+                    filled from a template or an idea sent as a task); then the task's own,
+                    each with a title and its items ("New checklist" adds one), which travel
+                    as one JSON field, "checklists" (tasks.views.task_create).
                     {% endcomment %}
                     <aside class="new-item-checklists">
                         <input type="hidden" name="checklists" :value="checklistsJson()">
+                        <input type="hidden" name="art_items" :value="artItemsJson()" :disabled="!wantsArt">
                         <div class="flex items-center gap-2">
                             <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
                             <h4 class="text-base font-bold text-neutral-950">{% translate "Checklists" %}</h4>
@@ -80,13 +77,25 @@ renders once for its page.
                                     </div>
                                     <ul class="mt-1.5 space-y-1">
                                         <template x-for="art in group.items" :key="art.key">
-                                            <li class="group flex items-center gap-2 text-sm text-neutral-800 rounded-md px-1 py-0.5 hover:bg-neutral-50">
-                                                <span class="task-check" aria-hidden="true"></span>
-                                                <span class="flex-1 min-w-0">
-                                                    <span class="block truncate" x-text="art.label"></span>
-                                                    <span class="block text-[11px] text-neutral-500 tabular-nums" x-text="art.size + ' px'"></span>
-                                                </span>
-                                                <button type="button" class="text-neutral-500 hover:text-red-600 cursor-pointer opacity-60 group-hover:opacity-100" @click="untick(art.key)" :aria-label="removeLabel + ' ' + art.label">×</button>
+                                            <li class="group text-sm text-neutral-800 rounded-md px-1 py-1 hover:bg-neutral-50">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="task-check" aria-hidden="true"></span>
+                                                    <span class="flex-1 min-w-0">
+                                                        <span class="block truncate" x-text="art.label"></span>
+                                                        <span class="block text-[11px] text-neutral-500 tabular-nums" x-text="art.size + ' px'"></span>
+                                                    </span>
+                                                    <label class="flex items-center gap-1 text-[11px] text-neutral-600 flex-shrink-0" x-show="artSpecs[art.key]">
+                                                        <span aria-hidden="true">×</span>
+                                                        <span class="sr-only">{% translate "Quantity" %}</span>
+                                                        <input type="number" min="1" max="20" class="form-input-styled w-14 text-xs !py-1 !px-2"
+                                                               x-model.number="artSpecs[art.key].count">
+                                                    </label>
+                                                    <button type="button" class="text-neutral-500 hover:text-red-600 cursor-pointer opacity-60 group-hover:opacity-100" @click="untick(art.key)" :aria-label="removeLabel + ' ' + art.label">×</button>
+                                                </div>
+                                                <input type="text" maxlength="200" class="mt-1 ml-6 w-[calc(100%-1.5rem)] form-input-styled text-xs !py-1 !px-2"
+                                                       x-show="artSpecs[art.key]" x-model="artSpecs[art.key].note"
+                                                       placeholder="{% translate 'What each one shows, like Cover with the title' %}"
+                                                       aria-label="{% translate 'What each one shows' %}">
                                             </li>
                                         </template>
                                     </ul>
@@ -168,7 +177,7 @@ renders once for its page.
                             <button type="submit" class="btn-brand text-sm px-5" :disabled="wantsArt && picked < 1">
                                 <span x-show="!wantsArt">{% translate "Create task" %}</span>
                                 <span x-show="wantsArt && picked < 1" x-cloak>{% translate "Choose the formats" %}</span>
-                                <span x-show="wantsArt && picked >= 1" x-cloak><span x-text="picked"></span> · {% translate "Create task for the creative team" %}</span>
+                                <span x-show="wantsArt && picked >= 1" x-cloak><span x-text="artTotal()"></span> · {% translate "Create task for the creative team" %}</span>
                             </button>
                         </div>
                     </div>

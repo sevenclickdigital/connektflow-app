@@ -1,0 +1,110 @@
+{% load i18n %}{% get_current_language as LANGUAGE_CODE %}<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>{% block title %}{{ brand_name }}{% endblock %}</title>
+<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+<!--[if mso]><style>body, table, td, p, a, h1, span, strong { font-family: Arial, Helvetica, sans-serif !important; }</style><![endif]-->
+<style>
+  :root { color-scheme: light; supported-color-schemes: light; }
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse; }
+  img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+  a { color: #7C3AED; }
+  @media only screen and (max-width: 620px) {
+    .cf-outer { padding: 16px 10px !important; }
+    .cf-pad { padding-left: 22px !important; padding-right: 22px !important; }
+    .cf-h1 { font-size: 21px !important; line-height: 28px !important; }
+    .cf-btn { width: 100% !important; }
+    .cf-btn a { display: block !important; text-align: center !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;width:100%;background-color:#F5F3FF;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0F172A;">
+<div style="display:none;max-height:0;max-width:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#F5F3FF;opacity:0;">{% block preheader %}{% endblock %}&#8203;&zwnj;&nbsp;&#8203;&zwnj;&nbsp;&#8203;&zwnj;&nbsp;&#8203;&zwnj;&nbsp;&#8203;&zwnj;&nbsp;&#8203;&zwnj;&nbsp;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F5F3FF" style="background-color:#F5F3FF;">
+<tr>
+<td align="center" class="cf-outer" style="padding:32px 16px;">
+<!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;margin:0 auto;">
+
+  <tr>
+    <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E5E7EB;border-radius:12px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td class="cf-pad" style="padding:28px 40px 22px;border-bottom:1px solid #EDE9FE;">
+            <a href="{{ app_url }}" target="_blank" rel="noopener" style="text-decoration:none;">
+              <img src="{{ logo_url }}" width="180" height="26" alt="{{ brand_name }}" style="display:block;width:180px;max-width:180px;height:auto;border:0;font-size:18px;font-weight:700;color:#0F172A;">
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td class="cf-pad" style="padding:32px 40px 36px;font-size:15px;line-height:24px;color:#334155;">
+            {% block content %}{% endblock %}
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td class="cf-pad" align="center" style="padding:24px 40px 8px;font-size:12px;line-height:19px;color:#64748B;text-align:center;">
+      {% block reason %}{% endblock %}
+      {% if unsubscribe_url %}
+      <p style="margin:0 0 12px;">
+        <a href="{{ preferences_url }}" target="_blank" rel="noopener" style="color:#7C3AED;text-decoration:underline;">{% translate "Manage notification preferences" %}</a>
+        &nbsp;&middot;&nbsp;
+        <a href="{{ unsubscribe_url }}" target="_blank" rel="noopener" style="color:#7C3AED;text-decoration:underline;">{% translate "Unsubscribe from these emails" %}</a>
+      </p>
+      {% endif %}
+      <p style="margin:0 0 12px;">
+        {% blocktranslate with brand=brand_name %}This is an automatic message, please don't reply to it. {{ brand }} will never ask for your password by email.{% endblocktranslate %}
+        {% translate "Need help?" %} <a href="mailto:{{ support_email }}" style="color:#7C3AED;text-decoration:underline;">{{ support_email }}</a>
+      </p>
+      <p style="margin:0 0 12px;">
+        <a href="{{ app_url }}" target="_blank" rel="noopener" style="color:#64748B;text-decoration:underline;">{% blocktranslate with brand=brand_name %}Open {{ brand }}{% endblocktranslate %}</a>
+        &nbsp;&middot;&nbsp;
+        <a href="{{ privacy_url }}" target="_blank" rel="noopener" style="color:#64748B;text-decoration:underline;">{% translate "Privacy Policy" %}</a>
+        &nbsp;&middot;&nbsp;
+        <a href="{{ terms_url }}" target="_blank" rel="noopener" style="color:#64748B;text-decoration:underline;">{% translate "Terms of Service" %}</a>
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #E5E7EB;">
+        <tr>
+          <td align="center" style="padding:16px 0 0;font-size:12px;line-height:19px;color:#64748B;text-align:center;">
+            <p style="margin:0 0 10px;">
+              <strong style="color:#334155;">{% blocktranslate with brand=brand_name company=company_name %}{{ brand }} is a brand of the {{ company }} group{% endblocktranslate %}</strong>
+              {% if company_document %}<br>CNPJ {{ company_document }}{% endif %}
+              {% if company_service_area %}<br>{{ company_service_area }}{% endif %}
+            </p>
+            {% if company_address_lines %}
+            <p style="margin:0 0 10px;">
+              <strong style="color:#334155;">{% translate "Address" %}</strong>
+              {% for line in company_address_lines %}<br>{{ line }}{% endfor %}
+            </p>
+            {% endif %}
+            {% if company_phone %}
+            <p style="margin:0 0 10px;">
+              <strong style="color:#334155;">{% translate "WhatsApp and phone" %}</strong><br>
+              <a href="https://wa.me/{{ company_phone_digits }}" target="_blank" rel="noopener" style="color:#7C3AED;text-decoration:underline;">{{ company_phone }}</a>
+            </p>
+            {% endif %}
+            <p style="margin:0;color:#94A3B8;">&copy; {{ current_year }} {{ company_name }}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+</td>
+</tr>
+</table>
+</body>
+</html>

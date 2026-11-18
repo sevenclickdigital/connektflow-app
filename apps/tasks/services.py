@@ -14,6 +14,7 @@ from django.utils.translation import override
 
 from apps.members.models import WorkspaceMembership
 
+from . import creative_formats
 from .models import Task, TaskChecklist, TaskChecklistItem, TaskColumn, TaskComment
 
 
@@ -626,9 +627,11 @@ def default_art_assignees(workspace) -> list:
 
 
 def blank_prefill(**values) -> dict:
-    """What the new task window starts from (tasks.views.render_task_window): its texts,
+    """What the new task window starts from (tasks.views._board_window): its texts,
     due date, tags, the post's channels, reference images, the people responsible, the
-    two switches ("Request arts", "Create a post") and the idea it comes from."""
+    two switches ("Request arts", "Create a post"), the arts to ask for (``art_items``,
+    creative_formats.clean_art_items: their formats ticked, with count and note) and the
+    idea it comes from."""
     prefill: dict = {
         "title": "",
         "description": "",
@@ -641,11 +644,13 @@ def blank_prefill(**values) -> dict:
         "assignees": [],
         "wants_art": False,
         "wants_post": False,
+        "art_items": [],
         "idea": None,
     }
     prefill.update(values)
     prefill["title"] = str(prefill["title"])[:255]
     prefill["tags"] = clean_tags(prefill["tags"])
+    prefill["art_items"] = creative_formats.clean_art_items(prefill["art_items"])
     return prefill
 
 
@@ -657,8 +662,8 @@ def material_prefill(workspace, **values) -> dict:
 
 def prefill_from_idea(idea) -> dict:
     """An idea sent to the board: its title, its text as the post's caption (never the
-    briefing), its tags and channels, its images as references, the arts due the lead
-    days before its content date."""
+    briefing), the briefing and arts it took from its template, its tags and channels,
+    its images as references, the arts due the lead days before its content date."""
     from apps.composer.services import clean_channel_formats
     from apps.media_library.models import MediaAsset
 
@@ -671,6 +676,8 @@ def prefill_from_idea(idea) -> dict:
         idea.workspace,
         title=idea.title,
         post_caption=idea.description,
+        briefing=idea.briefing,
+        art_items=idea.art_items,
         due_date=art_due_date(idea.workspace, idea.target_date),
         tags=idea.tags,
         channels=clean_channel_formats(idea.workspace, idea.channel_formats),
@@ -681,27 +688,32 @@ def prefill_from_idea(idea) -> dict:
 
 def prefill_from_template(workspace, template, variation) -> dict:
     """A template sent to the board: its title, the text of the version chosen as the
-    caption, its category as the tag and the brand's accounts on its networks."""
+    caption, its briefing and the arts it asks for, its category as the tag and the
+    brand's accounts on its networks."""
     from apps.composer.services import channel_accounts, template_account_formats, template_text
 
     return material_prefill(
         workspace,
         title=template.title,
         post_caption=template_text(template, variation),
+        briefing=template.briefing,
+        art_items=template.art_items,
         tags=[str(template.get_category_display())],
         channels=template_account_formats(template.network_formats, channel_accounts(workspace)),
     )
 
 
-def prefill_from_date(workspace, *, title, day, brief="", tags=()) -> dict:
-    """A special date (or one of its content suggestions) sent to the board: its name, what
-    it is about as the briefing for the arts, its suggested tags, due the lead days before it."""
+def prefill_from_date(workspace, *, title, day, brief="", tags=(), briefing="", art_items=()) -> dict:
+    """A special date sent to the board: its name, its briefing for the arts (what it is
+    about, ``brief``, when it has none) and the arts it asks for, its suggested tags, due the
+    lead days before it."""
     return material_prefill(
         workspace,
         title=str(title).strip(),
-        briefing=str(brief).strip()[:2000],
+        briefing=(str(briefing).strip() or str(brief).strip())[:2000],
         due_date=art_due_date(workspace, day),
         tags=list(tags),
+        art_items=list(art_items),
     )
 
 
@@ -730,6 +742,7 @@ def request_arts(
     column=None,
     priority=Task.Priority.MEDIUM,
     tags=(),
+    art_items=(),
 ) -> Task:
     """One task with a checklist per network ("Instagram", "Facebook"…), each holding an
     item per requested format of that network, in catalogue order; then the task's own
@@ -740,9 +753,11 @@ def request_arts(
     Unknown keys are dropped; at least one known format is required. "Other to-dos" is
     written in the site's language, like the default column names. ``briefing`` says how
     the arts should be made; ``column`` (the first one by default), ``description``,
-    ``priority`` and ``tags`` are those of any task.
+    ``priority`` and ``tags`` are those of any task. ``art_items``
+    (creative_formats.clean_art_items) say how many of a format and what each shows: a
+    format asked 3 times becomes "Story 1/3", "Story 2/3"… with its note after the name.
     """
-    lists = _art_checklists(format_keys)
+    lists = _art_checklists(format_keys, art_items)
     if not lists:
         raise ValueError("No known format requested")
     # One checklist per network; then the task's own checklists and "Other to-dos".
@@ -775,12 +790,12 @@ def request_arts(
     return task
 
 
-def _art_checklists(format_keys) -> list[dict]:
+def _art_checklists(format_keys, art_items=()) -> list[dict]:
     """One checklist per network (``{"title", "items"}``), in catalogue order, with an art
-    item per known format of ``format_keys``, named by the format."""
-    from . import creative_formats
-
+    item per known format of ``format_keys``, named by the format; ``art_items`` give a
+    format's count (that many items, numbered) and note (after the name)."""
     wanted = set(format_keys)
+    specs = {item["format"]: item for item in creative_formats.clean_art_items(list(art_items))}
     lists: list[dict] = []
     for fmt in creative_formats.FORMATS:
         if fmt.key not in wanted:
@@ -788,9 +803,16 @@ def _art_checklists(format_keys) -> list[dict]:
         label = str(creative_formats.network(fmt.network).label)
         if not lists or lists[-1]["title"] != label:
             lists.append({"title": label, "items": []})
-        lists[-1]["items"].append(
-            {"text": str(fmt.label), "format_key": fmt.key, "width": fmt.width, "height": fmt.height}
-        )
+        spec = specs.get(fmt.key, {})
+        count = spec.get("count", 1)
+        note = spec.get("note", "")
+        for number in range(1, count + 1):
+            text = str(fmt.label) if count == 1 else f"{fmt.label} {number}/{count}"
+            if note:
+                text = f"{text} — {note}"
+            lists[-1]["items"].append(
+                {"text": text[:255], "format_key": fmt.key, "width": fmt.width, "height": fmt.height}
+            )
     return lists
 
 
@@ -820,8 +842,6 @@ def deliver_art(item, asset, actor) -> bool:
     reported, never refused: the designer may have a reason (a safe-area
     variant), and the reviewer sees the warning on the card.
     """
-    from . import creative_formats
-
     item.media_asset = asset
     item.is_done = True
     item.done_by = actor
@@ -860,8 +880,6 @@ def create_post_from_task(task, actor):
     """
     from apps.composer.models import PlatformPost, Post, PostMedia
     from apps.social_accounts.models import SocialAccount
-
-    from . import creative_formats
 
     delivered = []
     for item in task.checklist.select_related("media_asset").order_by("position"):

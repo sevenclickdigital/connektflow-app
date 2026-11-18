@@ -1,0 +1,14 @@
+{% load i18n %}{% comment %}
+Bulletproof call-to-action button for the email layout.
+include with url=... label=... [no_fallback=True]
+One look for every button: filled brand purple, white label.
+The fallback line repeats the URL as text, for clients that block buttons
+and for people copying the link to another device.
+{% endcomment %}<table role="presentation" cellpadding="0" cellspacing="0" border="0" class="cf-btn" style="margin:28px 0 0;">
+  <tr>
+    <td align="center" bgcolor="#7C3AED" style="border-radius:8px;background-color:#7C3AED;">
+      <a href="{{ url }}" target="_blank" rel="noopener" style="display:inline-block;padding:14px 28px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;line-height:20px;color:#FFFFFF;text-decoration:none;border-radius:8px;mso-padding-alt:0;"><!--[if mso]><i style="mso-font-width:200%;mso-text-raise:30pt" hidden>&emsp;</i><![endif]--><span style="mso-text-raise:15pt;">{{ label }}</span><!--[if mso]><i style="mso-font-width:200%" hidden>&emsp;&#8203;</i><![endif]--></a>
+    </td>
+  </tr>
+</table>
+{% if not no_fallback %}<p style="margin:18px 0 0;font-size:12px;line-height:18px;color:#64748B;">{% translate "If the button doesn't work, copy and paste this link into your browser:" %}<br><a href="{{ url }}" target="_blank" rel="noopener" style="color:#7C3AED;word-break:break-all;text-decoration:underline;">{{ url }}</a></p>{% endif %}

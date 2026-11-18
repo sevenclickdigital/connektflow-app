@@ -20,6 +20,8 @@ from typing import Any
 
 from django.utils.translation import gettext as _
 
+from apps.tasks import creative_formats
+
 
 def sync_post_scheduled_at(post):
     """Keep ``Post.scheduled_at`` in sync with the earliest child time.
@@ -1140,6 +1142,8 @@ def template_shelf(workspace) -> list[dict]:
                 "networks": template_network_labels(template),
                 "network_items": template_network_items(template),
                 "ideal_for": template.ideal_for,
+                "briefing": template.briefing,
+                "art_items": creative_formats.art_items_payload(template.art_items),
                 "variations": template_variations(template),
                 "favorite": template.id in favorites,
                 # The brand sent it: listed under "My templates", with where its review stands.

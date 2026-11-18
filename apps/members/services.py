@@ -4,13 +4,12 @@ import logging
 from datetime import timedelta
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.db.models import F, Q
-from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
+from apps.common.emails import build_email
 from apps.common.mail import EmailNotSentError, send_or_raise, transactional
 from apps.workspaces.models import Workspace
 
@@ -632,14 +631,10 @@ def _send_invite_email(invitation) -> bool:
         "app_url": app_url,
     }
 
-    subject = f"You've been invited to join {invitation.organization.name} on Connekt Flow"
-    text_content = render_to_string("members/email/invite.txt", context)
-    html_content = render_to_string("members/email/invite.html", context)
-
-    msg = EmailMultiAlternatives(
-        subject=subject,
-        body=text_content,
-        from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@localhost"),
+    msg = build_email(
+        subject=_("You've been invited to join %(org)s on Connekt Flow") % {"org": invitation.organization.name},
+        template_prefix="members/email/invite",
+        context=context,
         to=[invitation.email],
         # Someone is waiting on this to get into the product, so it is exempt
         # from the per-recipient cap (never the global one). The invite flood in
@@ -647,7 +642,6 @@ def _send_invite_email(invitation) -> bool:
         # daily cap, not by the notification cap.
         headers=transactional(),
     )
-    msg.attach_alternative(html_content, "text/html")
 
     try:
         send_or_raise(msg)

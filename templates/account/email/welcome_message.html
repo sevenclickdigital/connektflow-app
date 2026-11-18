@@ -1,0 +1,19 @@
+{% extends "account/email/base_message.html" %}
+{% load i18n account %}
+{% block title %}{% blocktranslate with brand=brand_name %}Welcome to {{ brand }}{% endblocktranslate %}{% endblock %}
+{% block preheader %}{% translate "Your account is ready. Here is how to get started." %}{% endblock %}
+{% block content %}{% user_display user as user_display %}
+<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% blocktranslate with brand=brand_name %}Welcome to {{ brand }}{% endblocktranslate %}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate %}Hi {{ user_display }},{% endblocktranslate %}</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% translate "Your account is ready. Three steps to get started:" %}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 4px;">
+  <tr>
+    <td style="padding:16px 18px;background-color:#F5F3FF;border-radius:8px;font-size:14px;line-height:24px;color:#475569;">
+      <strong style="color:#0F172A;">1.</strong> {% translate "Connect your social accounts." %}<br>
+      <strong style="color:#0F172A;">2.</strong> {% translate "Create and schedule your first post on the calendar." %}<br>
+      <strong style="color:#0F172A;">3.</strong> {% translate "Answer comments and messages from the inbox." %}
+    </td>
+  </tr>
+</table>
+{% blocktranslate with brand=brand_name asvar cta %}Open {{ brand }}{% endblocktranslate %}{% include "emails/_button.html" with url=app_url label=cta no_fallback=True %}
+{% endblock %}

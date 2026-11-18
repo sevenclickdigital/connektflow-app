@@ -291,6 +291,10 @@ class Idea(models.Model):
     channel_formats = models.JSONField(
         default=dict, blank=True, db_default=models.Value({}, output_field=models.JSONField())
     )
+    #: From the template it came from: how the arts should be made and which to produce
+    #: (IdeaTemplate.briefing, IdeaTemplate.art_items), for the task it is sent as.
+    briefing = models.TextField(blank=True, default="", db_default="")
+    art_items = models.JSONField(default=list, blank=True, db_default=models.Value([], output_field=models.JSONField()))
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1127,6 +1131,11 @@ class IdeaTemplate(models.Model):
         default=dict, blank=True, db_default=models.Value({}, output_field=models.JSONField())
     )
     ideal_for = models.CharField(max_length=200, blank=True, default="", db_default="")
+    #: How the arts should be made, for the creative team (a task's briefing).
+    briefing = models.TextField(blank=True, default="", db_default="")
+    #: The arts to produce: ``[{"format", "count", "note"}]``, formats of
+    #: ``apps.tasks.creative_formats`` (``clean_art_items``). Sent to a task's "Request arts".
+    art_items = models.JSONField(default=list, blank=True, db_default=models.Value([], output_field=models.JSONField()))
 
     #: Where a template stands: the operator's own are approved; one a
     #: customer sent waits hidden (``is_active`` off) until the operator

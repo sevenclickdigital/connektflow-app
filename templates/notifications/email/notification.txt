@@ -1,9 +1,8 @@
-{% load i18n %}{{ notification.title }}
-
+{% extends "emails/base.txt" %}
+{% load i18n %}
+{% block content %}{{ notification.title }}
+{% if notification.body %}
 {{ notification.body }}
-
-{% if notification.data.action_url %}{% translate "View details:" %} {{ notification.data.action_url }}{% endif %}
-
----
-{% translate "You received this because of your notification settings." %}
-{% translate "Manage preferences:" %} {{ app_url }}/notifications/preferences/
+{% endif %}
+{% if notification.data.action_url %}{% translate "View details:" %} {{ notification.data.action_url }}{% else %}{{ app_url }}{% endif %}{% endblock %}
+{% block reason %}{% blocktranslate with email=user.email %}You received this at {{ email }} because of your notification settings.{% endblocktranslate %}{% endblock %}

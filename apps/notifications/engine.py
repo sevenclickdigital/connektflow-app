@@ -19,11 +19,10 @@ import logging
 from datetime import timedelta
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
 from django.db.models import Count, F, Min, Q
-from django.template.loader import render_to_string
 from django.utils import timezone
 
+from apps.common.emails import build_email
 from apps.common.mail import EmailNotSentError, send_or_raise
 from apps.settings_manager.defaults import APP_DEFAULTS
 
@@ -36,7 +35,7 @@ from .models import (
     NotificationPreference,
     QuietHours,
 )
-from .unsubscribe import list_unsubscribe_headers
+from .unsubscribe import notification_email_parts
 
 logger = logging.getLogger(__name__)
 
@@ -364,25 +363,14 @@ def _dispatch_email(delivery: NotificationDelivery) -> None:
     notification = delivery.notification
     user = notification.user
 
-    context = {
-        "notification": notification,
-        "user": user,
-        "app_url": getattr(settings, "APP_URL", "http://localhost:8000"),
-    }
-
-    text_content = render_to_string("notifications/email/notification.txt", context)
-    html_content = render_to_string("notifications/email/notification.html", context)
-
-    subject = notification.title
-
-    msg = EmailMultiAlternatives(
-        subject=subject,
-        body=text_content,
-        from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@localhost"),
+    headers, links = notification_email_parts(user.pk, notification.event_type)
+    msg = build_email(
+        subject=notification.title,
+        template_prefix="notifications/email/notification",
+        context={"notification": notification, "user": user, **links},
         to=[user.email],
-        headers=list_unsubscribe_headers(user.pk, notification.event_type),
+        headers=headers,
     )
-    msg.attach_alternative(html_content, "text/html")
     send_or_raise(msg)
 
 
@@ -765,25 +753,20 @@ def _send_digest_email(user, event_type: str | None, notifications: list) -> Non
     heading = _digest_heading(event_type, total)
     shown = notifications[:BATCH_MAX_ITEMS]
 
-    context = {
-        "heading": heading,
-        "notifications": shown,
-        "total": total,
-        "overflow": total - len(shown),
-        "user": user,
-        "date": timezone.now(),
-        "app_url": getattr(settings, "APP_URL", "http://localhost:8000"),
-    }
-
-    text_content = render_to_string("notifications/email/digest.txt", context)
-    html_content = render_to_string("notifications/email/digest.html", context)
-
-    msg = EmailMultiAlternatives(
+    headers, links = notification_email_parts(user.pk, event_type)
+    msg = build_email(
         subject=heading,
-        body=text_content,
-        from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@localhost"),
+        template_prefix="notifications/email/digest",
+        context={
+            "heading": heading,
+            "notifications": shown,
+            "total": total,
+            "overflow": total - len(shown),
+            "user": user,
+            "date": timezone.now(),
+            **links,
+        },
         to=[user.email],
-        headers=list_unsubscribe_headers(user.pk, event_type),
+        headers=headers,
     )
-    msg.attach_alternative(html_content, "text/html")
     send_or_raise(msg)

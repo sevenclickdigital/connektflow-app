@@ -233,7 +233,7 @@ def test_a_digest_the_budget_drops_is_not_recorded_as_delivered(user):
     a lie in the delivery table — which is the system of record."""
     fail(user, BATCH_SIZE_TRIGGER)
 
-    with patch("apps.notifications.engine.EmailMultiAlternatives.send", return_value=0):
+    with patch("apps.common.emails.EmailMultiAlternatives.send", return_value=0):
         assert send_batched_email_digests() == 0
 
     rows = NotificationDelivery.objects.filter(batch_queued_at__isnull=False)

@@ -1,9 +1,8 @@
 """The one place outbound email can be stopped.
 
-Every email in the product is built inline with ``EmailMultiAlternatives`` in
-half a dozen places, plus allauth's own — there is no ``send_email()`` helper to
-hang a guard on. ``EMAIL_BACKEND`` is therefore the only true choke point, and
-this is it.
+Our own email is built by ``apps.common.emails.build_email`` and allauth's by
+its adapter, and anything can still construct a message by hand — so the guard
+lives in ``EMAIL_BACKEND``, the one point every message passes through.
 
 ``BudgetedEmailBackend`` wraps whatever backend ``EMAIL_INNER_BACKEND`` names
 rather than subclassing the SMTP one. Wrapping is what lets development

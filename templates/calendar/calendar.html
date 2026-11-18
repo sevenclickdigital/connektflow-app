@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static i18n task_window_tags %}
+{% load static i18n %}
 
 {% block title %}{% translate "Publish" %} - {{ workspace.name }} - Connekt Flow{% endblock %}
 
@@ -531,7 +531,6 @@
     .sb-column-action:hover { background: var(--sb-tint); }
     .sb-empty { font-size: 11.5px; color: var(--text-tertiary); text-align: center; padding: 10px 0; }
 </style>
-{% include "tasks/partials/_styles.html" %}
 {% endblock %}
 
 {% block content %}
@@ -594,7 +593,6 @@ ticked (see the `sel` Alpine store).{% endcomment %}
         </div>
     </div>
 </div>
-{% task_window_host %}
 {% endblock %}
 
 {% block extra_js %}
@@ -993,11 +991,10 @@ function calendarApp() {
             window.dispatchEvent(new CustomEvent('open-create-idea'));
         },
 
-        // The task board's new task window (tasks/partials/_task_window_host.html), due on the day.
+        // The task board, with its new task window open for a task due on the day.
         addTask() {
-            const date = this.addMenu.date;
             this.addMenu.open = false;
-            window.dispatchEvent(new CustomEvent('open-task-window', { detail: { url: '{% url "tasks:task_window" workspace_id=workspace.id %}?day=' + date } }));
+            window.location.href = '{% url "tasks:board" workspace_id=workspace.id %}?new=1&day=' + this.addMenu.date;
         },
 
         // The card a chip opens. Loaded on demand, placed beside the chip.

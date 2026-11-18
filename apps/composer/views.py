@@ -4067,6 +4067,9 @@ def idea_from_template(request, workspace_id, template_id):
         status=Idea.Status.UNASSIGNED,
         icon=icon,
         icon_tone=tone,
+        # How the arts are made and which: "Send as task" asks for them (tasks.services.prefill_from_idea).
+        briefing=template.briefing,
+        art_items=template.art_items,
     )
     # Meant for the brand's accounts on the networks the template suits, on its formats there.
     _set_idea_channel_formats(

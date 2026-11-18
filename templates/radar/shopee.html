@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n task_window_tags %}
+{% load i18n %}
 {% block page_title %}{% translate "Shopee Affiliates" %}{% endblock %}
 {% block content %}
 {% comment %}
@@ -149,6 +149,4 @@ The Favorites tab renders radar/partials/_favorites.html in place of the form.
 
     {% include "radar/partials/_share_dialog.html" %}
 </div>
-{% include "tasks/partials/_styles.html" %}
-{% task_window_host %}
 {% endblock %}

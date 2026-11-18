@@ -1,9 +1,12 @@
 """Forms for the Post Composer."""
 
+import json
+
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from apps.common.validators import normalize_tags, parse_and_truncate_tag_string
+from apps.tasks import creative_formats
 
 from . import idea_icons, services
 from .models import ContentCategory, Idea, IdeaTemplate, IdeaTemplateVariation, Post, PostTemplate
@@ -175,9 +178,12 @@ class IdeaTemplateForm(forms.ModelForm):
     # A value a network does not offer is dropped on save
     # (services.network_formats_from_targets), not a reason to refuse the form.
     targets.valid_value = lambda value: True  # type: ignore[method-assign]
+    #: The arts to produce, posted as JSON by composer/partials/_template_art_items.html.
+    art_items = forms.JSONField(required=False, widget=forms.HiddenInput)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.art_format_options = creative_formats.format_options()
         self.network_options = services.template_network_options()
         self.fields["targets"].choices = [
             (option["value"], option["short"]) for network in self.network_options for option in network["formats"]
@@ -203,6 +209,21 @@ class IdeaTemplateForm(forms.ModelForm):
             template.save()
         return template
 
+    def clean_art_items(self) -> list[dict]:
+        """Known formats only, each with its count and note (creative_formats.clean_art_items)."""
+        return creative_formats.clean_art_items(self.cleaned_data.get("art_items"))
+
+    def initial_art_items_json(self) -> str:
+        """The art rows the form shows: those posted, else the template's."""
+        if self.is_bound:
+            try:
+                raw = json.loads(self.data.get("art_items") or "[]")
+            except ValueError:
+                raw = []
+        else:
+            raw = self.instance.art_items if self.instance.pk else []
+        return json.dumps(creative_formats.clean_art_items(raw))
+
     def clean_icon(self):
         """Only a slug of the library is kept; anything else means "the category's"."""
         value = (self.cleaned_data.get("icon") or "").strip()
@@ -221,6 +242,8 @@ class IdeaTemplateForm(forms.ModelForm):
             "formats",
             "goals",
             "ideal_for",
+            "briefing",
+            "art_items",
             "is_active",
         ]
         labels = {
@@ -233,6 +256,8 @@ class IdeaTemplateForm(forms.ModelForm):
             "details": _("Detailed description"),
             "image": _("Cover image"),
             "ideal_for": _("Ideal for"),
+            "briefing": _("Briefing for creating the arts"),
+            "art_items": _("Arts to produce"),
         }
         help_texts = {
             "description": _("One or two lines on the card, saying what the idea is."),
@@ -240,6 +265,7 @@ class IdeaTemplateForm(forms.ModelForm):
             "details": _("Shown in the template's panel. Without it, the description is shown."),
             "image": _("The top of the card. Without one, the category's icon is shown."),
             "ideal_for": _("For example: tips, recommendations, lists."),
+            "briefing": _("How the arts should be made: what they say and show. Goes to the task's briefing."),
         }
         widgets = {
             "title": forms.TextInput(attrs={"class": "form-input-styled w-full"}),
@@ -248,6 +274,7 @@ class IdeaTemplateForm(forms.ModelForm):
             "category": forms.Select(attrs={"class": "form-input-styled w-full"}),
             "details": forms.Textarea(attrs={"class": "form-input-styled w-full", "rows": 3}),
             "ideal_for": forms.TextInput(attrs={"class": "form-input-styled w-full"}),
+            "briefing": forms.Textarea(attrs={"class": "form-input-styled w-full", "rows": 3}),
         }
 
 
@@ -287,6 +314,8 @@ class TemplateSubmissionForm(IdeaTemplateForm):
             "formats",
             "goals",
             "ideal_for",
+            "briefing",
+            "art_items",
         ]
 
     def clean_body(self):

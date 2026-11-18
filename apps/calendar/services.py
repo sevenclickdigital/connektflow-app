@@ -732,6 +732,7 @@ def special_dates_ahead(workspace, start, days=365) -> list[dict]:
     from django.utils.translation import gettext, ngettext
 
     from apps.composer.idea_icons import icon_markup
+    from apps.tasks.creative_formats import art_items_payload
 
     from .holidays import special_dates_between
     from .models import FavoriteSpecialDate, SpecialDate
@@ -762,6 +763,8 @@ def special_dates_ahead(workspace, start, days=365) -> list[dict]:
                 "description": entry["description"],
                 "suggestions": entry["suggestions"],
                 "tags": entry["tags"],
+                # The arts a task for the date asks for, as the panel lists them.
+                "art_items": art_items_payload(entry["art_items"]),
             }
         )
     return entries

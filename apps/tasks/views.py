@@ -12,7 +12,7 @@ from datetime import datetime
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Max
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -195,9 +195,9 @@ def window_labels() -> dict:
 
 
 def window_context(request) -> dict:
-    """What the new task window (tasks/partials/_new_item_modal.html) needs, wherever it opens:
-    the board's columns, the people, the networks and formats of "Request arts" and the
-    accounts of "Create a post"."""
+    """What the new task window (tasks/partials/_new_item_modal.html) needs: the board's
+    columns, the people, the networks and formats of "Request arts" and the accounts of
+    "Create a post"."""
     workspace = request.workspace
     groups = _art_catalogue(workspace)
     return {
@@ -284,6 +284,10 @@ def board(request, workspace_id):
         # The new task window, rendered on the board itself; the board's own columns (with
         # their cards) stay as they are.
         context.update({k: v for k, v in window_context(request).items() if k not in context})
+        # Sent from another page (an idea, a template, a date, a calendar day, a Radar offer):
+        # the window opens on arrival, filled from it.
+        window = _board_window(request)
+        context["window_initial_json"] = _window_initial(window) if window else ""
         # The media library window opens on the board's own folder.
         context["tasks_folder_id"] = str(services.media_folder(workspace).id)
     return render(request, "tasks/board.html", context)
@@ -299,7 +303,8 @@ def task_create(request, workspace_id):
 
     With ``request_art`` (the window's "Request arts" switch) it is an art request: at least
     one of the ticked ``formats``, each network's becoming a checklist ahead of the task's own,
-    with the ``briefing``. With ``make_post`` ("Create a post") it carries the ``post_caption``
+    with the ``briefing``; ``art_items`` (JSON, ``[{"format", "count", "note"}]``) say how many
+    of a format and what each shows. With ``make_post`` ("Create a post") it carries the ``post_caption``
     and the channels it goes out on (``channel_formats``, JSON, as an idea's).
 
     ``idea`` (one of the brand's ideas) links the task to the idea it came from.
@@ -345,6 +350,8 @@ def parse_task_post(request):
             "format_keys": format_keys,
             "briefing": request.POST.get("briefing", "").strip(),
             "references": request.POST.getlist("references"),
+            # How many of each format and what each shows (the window's art rows).
+            "art_items": creative_formats.clean_art_items(_json_list(request.POST.get("art_items"))),
         }
     column = None
     if _valid_uuid(request.POST.get("column")):
@@ -738,20 +745,51 @@ def column_reorder(request, workspace_id):
 # The new task window, opened from other pages
 # ---------------------------------------------------------------------------
 
+# Where send_to_board leaves what the board's window opens with, for one visit.
+_HANDOFF_KEY = "task_window_handoff"
+# What a handoff may fill (tasks.services.material_prefill keys).
+_HANDOFF_FIELDS = ("title", "description", "briefing", "post_caption")
 
-@login_required
-@require_board_access
-@require_permission("create_posts")
-@require_GET
-def task_window(request, workspace_id):
-    """The board's new task window, filled from what it is opened for: ``idea`` (one of the
-    brand's ideas), ``template`` (with ``variation``), a special date (``title``, ``day``,
-    ``brief``, ``tags``) or a day of the calendar (``day`` alone). Served into
-    tasks/partials/_task_window_host.html; it posts to ``tasks:task_create`` like the board's.
+
+def send_to_board(request, values, *, note="", submit_to="", hidden=None):
+    """Send the user to the task board with its new task window open and filled with
+    ``values`` (title, description, briefing, post_caption), for a source the board can't
+    read from the URL (a Radar offer: its data and the text edited in its dialog).
+
+    ``submit_to`` is where the window posts instead of ``tasks:task_create`` and ``hidden``
+    the name → value pairs it posts along; ``note`` is its "From …" line. Answers the
+    ``HX-Redirect`` to the board, which takes the handoff once (``_board_window``).
     """
+    request.session[_HANDOFF_KEY] = {
+        "workspace": str(request.workspace.id),
+        "values": {key: str(values.get(key, "")) for key in _HANDOFF_FIELDS},
+        "note": str(note),
+        "submit_to": submit_to,
+        "hidden": {str(k): str(v) for k, v in (hidden or {}).items()},
+    }
+    url = reverse("tasks:board", kwargs={"workspace_id": request.workspace.id}) + "?new=handoff"
+    return HttpResponse(status=204, headers={"HX-Redirect": url})
+
+
+def _board_window(request) -> dict | None:
+    """What the board's new task window opens with when the board is visited with ``?new``:
+    sent from an idea (``idea``), a template (``template`` with ``variation``), a special date
+    (``date``, its key in the special-dates tab, with ``day``), a day of the calendar (``day``
+    alone) or by
+    send_to_board (``new=handoff``). None without ``?new`` (or a handoff already taken).
+    Returns ``{"prefill", "note", "submit_to", "hidden"}``."""
     workspace = request.workspace
     params = request.GET
-    if _valid_uuid(params.get("idea")):
+    if "new" not in params:
+        return None
+    note, submit_to, hidden = "", "", {}
+    if params["new"] == "handoff":
+        data = request.session.pop(_HANDOFF_KEY, None)
+        if not data or data.get("workspace") != str(workspace.id):
+            return None
+        prefill = services.material_prefill(workspace, **data["values"])
+        note, submit_to, hidden = data["note"], data["submit_to"], data["hidden"]
+    elif _valid_uuid(params.get("idea")):
         from apps.composer.models import Idea
 
         idea = get_object_or_404(
@@ -759,62 +797,63 @@ def task_window(request, workspace_id):
         )
         prefill = services.prefill_from_idea(idea)
         note = _("From the idea “%(title)s”") % {"title": idea.title}
+        hidden = {"idea": str(idea.pk)}
     elif params.get("template", "").isdigit():
         from apps.composer.services import templates_for
 
         template = get_object_or_404(templates_for(workspace).prefetch_related("variations"), id=params["template"])
         prefill = services.prefill_from_template(workspace, template, params.get("variation"))
         note = _("From the template “%(title)s”") % {"title": template.title}
-    elif params.get("title"):
+    elif params.get("date") and _parse_day(params.get("day")):
+        from apps.calendar.holidays import date_by_key
+
+        day = _parse_day(params["day"])
+        entry = date_by_key(params["date"], day, workspace)
+        if entry is None:
+            raise Http404("No such special date for this brand on that day.")
         prefill = services.prefill_from_date(
             workspace,
-            title=params["title"],
-            day=_parse_day(params.get("day")),
-            brief=params.get("brief", ""),
-            tags=params.getlist("tags"),
+            title=entry["name"],
+            day=day,
+            brief=entry["description"],
+            tags=entry["tags"],
+            briefing=entry["briefing"],
+            art_items=entry["art_items"],
         )
         note = _("From the special date “%(title)s”") % {"title": prefill["title"]}
     else:
         prefill = services.prefill_for_day(workspace, _parse_day(params.get("day")))
-        note = ""
-    return render_task_window(request, prefill, source_note=note)
+    return {"prefill": prefill, "note": note, "submit_to": submit_to, "hidden": hidden}
 
 
-def render_task_window(request, prefill, *, action_url="", hidden=None, source_note=""):
-    """The new task window, standalone (fetched by tasks/partials/_task_window_host.html),
-    starting from ``prefill`` (``services.blank_prefill`` keys).
-
-    Other apps reuse it with ``action_url`` (where it posts instead of ``tasks:task_create``),
-    ``hidden`` (name → value pairs posted along) and ``source_note`` (the "From …" line);
-    see ``apps.radar.views.offer_task``.
-    """
-    workspace = request.workspace
-    context = window_context(request)
-    hidden = dict(hidden or {})
-    if prefill.get("idea"):
-        hidden["idea"] = str(prefill["idea"].pk)
-    initial = {
-        "assignees": [str(u.pk) for u in prefill["assignees"]],
-        "tags": prefill["tags"],
-        "channels": prefill["channels"],
-        "references": [_reference_json(asset) for asset in prefill["references"]],
-        "wantsArt": prefill["wants_art"],
-        "wantsPost": prefill["wants_post"],
-    }
-    context.update(
+def _window_initial(window) -> str:
+    """The board's new task window's data-initial for ``window`` (_board_window), as
+    newItemForm() (static/js/task-window.js) reads it: the fields' text, the state of its
+    pickers and switches, the arts to tick with their count and note, where it posts and
+    what along."""
+    prefill = window["prefill"]
+    due = prefill["due_date"]
+    return json.dumps(
         {
-            "standalone": True,
-            "prefill": prefill,
-            "window_initial_json": json.dumps(initial),
-            "action_url": action_url,
-            "hidden": hidden.items(),
-            "source_note": source_note,
-            "selected": set(),
-            "tag_suggestions": services.tag_suggestions(workspace),
-            "emoji_categories": emoji_catalogue(),
+            "fields": {
+                "title": prefill["title"],
+                "description": prefill["description"],
+                "briefing": prefill["briefing"],
+                "post_caption": prefill["post_caption"],
+                "due_date": due.isoformat() if due else "",
+            },
+            "assignees": [str(u.pk) for u in prefill["assignees"]],
+            "tags": prefill["tags"],
+            "channels": prefill["channels"],
+            "references": [_reference_json(asset) for asset in prefill["references"]],
+            "wantsArt": prefill["wants_art"],
+            "wantsPost": prefill["wants_post"],
+            "artItems": prefill["art_items"],
+            "note": window["note"],
+            "submitTo": window["submit_to"],
+            "hidden": window["hidden"],
         }
     )
-    return render(request, "tasks/partials/_new_item_modal.html", context)
 
 
 def _art_catalogue(workspace) -> list[dict]:

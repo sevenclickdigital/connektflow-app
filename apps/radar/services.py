@@ -9,6 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.core import signing
 from django.core.cache import cache
 from django.template.defaultfilters import floatformat
 from django.utils import formats, timezone
@@ -318,11 +319,32 @@ def _remember_offers(connection: OpportunityConnection, offers: list[Offer]) -> 
     cache.set_many({_offer_cache_key(connection, o.item_id): o for o in offers}, OFFER_MEMORY_SECONDS)
 
 
-def find_offer(connection: OpportunityConnection, item_id: int) -> Offer:
-    """The offer as last listed for this connection, else its favourite snapshot."""
+def _snapshot_salt(workspace_id) -> str:
+    return f"radar.offer:{workspace_id}"
+
+
+def offer_snapshot(workspace_id, offer: Offer) -> str:
+    """The offer as the page listed it, signed for this workspace: the share dialog sends it
+    back, so the offer is found even when the listing is no longer in the cache (a restart,
+    another worker's memory)."""
+    return signing.dumps(offer_to_dict(offer), salt=_snapshot_salt(workspace_id), compress=True)
+
+
+def find_offer(connection: OpportunityConnection, item_id: int, snapshot: str = "") -> Offer:
+    """The offer as last listed for this connection, else the signed ``snapshot`` the page
+    sent (offer_snapshot, up to OFFER_MEMORY_SECONDS old), else its favourite snapshot."""
     offer = cache.get(_offer_cache_key(connection, item_id))
     if offer is not None:
         return offer
+    if snapshot:
+        try:
+            data = signing.loads(snapshot, salt=_snapshot_salt(connection.workspace_id), max_age=OFFER_MEMORY_SECONDS)
+        except signing.BadSignature:
+            data = None
+        if data is not None:
+            listed = offer_from_dict(data)
+            if listed.item_id == item_id:
+                return listed
     saved = (
         SavedOffer.objects.for_workspace(connection.workspace_id)
         .filter(source=connection.source, item_id=item_id)
@@ -565,8 +587,9 @@ def search_terms(name: str) -> list[str]:
     return terms
 
 
-def share_payload(offers: list[Offer]) -> dict[str, dict]:
-    """What the share dialog needs per offer, for ``json_script``.
+def share_payload(offers: list[Offer], workspace_id) -> dict[str, dict]:
+    """What the share dialog needs per offer, for ``json_script``; ``snapshot`` is the offer
+    signed for the workspace (offer_snapshot), sent back with the dialog's actions.
 
     Every visible string is formatted and translated here, so the dialog's
     JavaScript only places values.
@@ -589,5 +612,6 @@ def share_payload(offers: list[Offer]) -> dict[str, dict]:
             "commission": commission_label(o),
             "terms": search_terms(o.name),
             "texts": share_texts(o),
+            "snapshot": offer_snapshot(workspace_id, o),
         }
     return payload

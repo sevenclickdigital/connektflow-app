@@ -8,6 +8,7 @@ Access is ``_staff_required``, borrowed from ``apps.billing.views`` like the
 flow template shelf does.
 """
 
+import json
 from datetime import date
 
 from django.contrib import messages
@@ -20,6 +21,7 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.billing.views import _staff_required
 from apps.common.validators import clean_display_name
 from apps.media_library.validators import image_storage_filename
+from apps.tasks import creative_formats
 
 from .holidays import special_dates_between
 from .models import DateSegment, SpecialDate
@@ -62,6 +64,7 @@ def dates(request):
             "built_in_dates": [d for d in built_in if d["built_in"]],
             "year": today.year,
             "kind_choices": SpecialDate.Kind.choices,
+            "art_format_options": creative_formats.format_options(),
         },
     )
 
@@ -110,6 +113,15 @@ def segment_delete(request, segment_id):
     return _back()
 
 
+def _posted_art_items(request) -> list:
+    """The add-date form's "art_items" (composer/partials/_template_art_items.html), as posted."""
+    try:
+        raw = json.loads(request.POST.get("art_items") or "[]")
+    except ValueError:
+        return []
+    return raw if isinstance(raw, list) else []
+
+
 @_staff_required
 @require_POST
 def date_create(request):
@@ -147,6 +159,8 @@ def date_create(request):
         suggestions=request.POST.get("suggestions", "").strip()[:2000],
         tags=request.POST.get("tags", "").strip()[:200],
         image=image or "",
+        briefing=request.POST.get("briefing", "").strip()[:2000],
+        art_items=creative_formats.clean_art_items(_posted_art_items(request)),
     )
     messages.success(request, _("Date added."))
     return _back()

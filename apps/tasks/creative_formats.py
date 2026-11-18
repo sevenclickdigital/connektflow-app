@@ -158,3 +158,71 @@ def ratio_matches(fmt_width: int, fmt_height: int, width: int, height: int) -> b
         return True
     expected = fmt_width / fmt_height
     return abs(width / height - expected) <= expected * RATIO_TOLERANCE
+
+
+# What a content template or an idea says the creative team will produce
+# ("art items"): ``[{"format": <key>, "count": n, "note": "…"}]``. The format gives
+# the piece's kind and size; ``count`` how many (a carousel's slides); ``note`` what
+# each one shows. Carried to the task's "Request arts" (tasks.services.request_arts).
+MAX_ART_ITEMS = 20
+MAX_ART_COUNT = 20
+MAX_ART_NOTE = 200
+
+
+def clean_art_items(raw) -> list[dict]:
+    """``raw`` (a list of dicts, as posted) kept to known formats, each once, with a count
+    between 1 and MAX_ART_COUNT and a note of at most MAX_ART_NOTE characters."""
+    items: list[dict] = []
+    seen: set[str] = set()
+    for entry in raw if isinstance(raw, list) else []:
+        if not isinstance(entry, dict):
+            continue
+        key = str(entry.get("format", ""))
+        if key in seen or get(key) is None:
+            continue
+        try:
+            count = int(entry.get("count", 1))
+        except (TypeError, ValueError):
+            count = 1
+        seen.add(key)
+        items.append(
+            {
+                "format": key,
+                "count": max(1, min(MAX_ART_COUNT, count)),
+                "note": str(entry.get("note", "")).strip()[:MAX_ART_NOTE],
+            }
+        )
+        if len(items) >= MAX_ART_ITEMS:
+            break
+    return items
+
+
+def art_items_payload(items) -> list[dict]:
+    """The art items as screens show them: network, the format's name, size, count, note."""
+    rows = []
+    for item in clean_art_items(items):
+        fmt = _BY_KEY[item["format"]]
+        rows.append(
+            {
+                **item,
+                "network": str(network(fmt.network).label),
+                "label": str(fmt.label),
+                "size": f"{fmt.width} × {fmt.height}",
+            }
+        )
+    return rows
+
+
+def format_options() -> list[dict]:
+    """Every network with its formats, for a format picker: ``{"label", "formats": [{"key", "label", "size"}]}``."""
+    return [
+        {
+            "label": net.label,
+            "formats": [
+                {"key": f.key, "label": str(f.label), "size": f"{f.width} × {f.height}"}
+                for f in FORMATS
+                if f.network == net.key
+            ],
+        }
+        for net in NETWORKS
+    ]

@@ -1,11 +1,9 @@
-// The task windows' behaviour, shared by every page that opens them: the task
-// board (tasks/board.html) and the pages that send something to it through
-// tasks/partials/_task_window_host.html (the idea hub, the calendar, the Radar).
+// The task board's windows (tasks/board.html): the new task window and the
+// task's own, which share their fields, and the art formats of "Request arts".
 //
-// They read three JSON blocks from the page: "task-window-labels" (translated
+// They read three JSON blocks the board renders: "task-window-labels" (translated
 // labels), "task-tag-suggestions" (the brand's tags) and "task-emoji" (the emoji
-// catalogue), rendered by the board or by the window itself when fetched
-// (tasks/partials/_new_item_modal.html, standalone).
+// catalogue).
 
 (function () {
     function readJson(id, fallback) {
@@ -164,18 +162,25 @@
 
     // The new task window (tasks/partials/_new_item_modal.html): the task's fields, its
     // checklists and "Request arts" (artPicker(): the network shown and the formats
-    // ticked, by network). ``el`` is the window's root: its data-initial holds what the
-    // window starts from (tags, channels, references, assignees, the two switches);
-    // with data-standalone (fetched by tasks/partials/_task_window_host.html) it opens
-    // at once, and closing it tells the host to drop it ("task-window-closed").
+    // ticked, by network). ``el`` is the window's root: its data-initial, when another page
+    // sent something to the board (tasks.views._board_window), holds what the window opens
+    // with on arrival: the fields' text, tags, channels, references, people, the two
+    // switches, the arts to tick with how many and what each shows (artItems), its
+    // "From …" note, and where it posts (submitTo) with what (hidden).
     window.newItemForm = function (firstTab, el) {
         var labels = readJson('task-window-labels', {});
+        var pickerRecount = window.artPicker(firstTab).recount;
         var initial = JSON.parse((el && el.dataset.initial) || '{}');
-        var standalone = !!(el && el.hasAttribute('data-standalone'));
         return Object.assign(window.taskFields(initial, 500), window.artPicker(firstTab), {
             isOpen: false,
             wantsArt: !!initial.wantsArt,
             wantsPost: !!initial.wantsPost,
+            note: initial.note || '',
+            submitTo: initial.submitTo || '',
+            hidden: Object.assign({}, initial.hidden || {}),
+            // Per ticked format: how many and what each shows ({ "<format>": { count, note } }),
+            // posted as "art_items"; every ticked format has one (recount).
+            artSpecs: {},
             checklists: [],
             nextKey: 1,
             checklistTitleLabel: labels.checklistTitle || '',
@@ -183,7 +188,31 @@
 
             init() {
                 this.recount();
-                if (standalone) this.open({ column: initial.column });
+                if (initial.fields) this.open({ fields: initial.fields, artItems: initial.artItems });
+            },
+
+            // artPicker's count, then a count and note for each format just ticked.
+            recount() {
+                pickerRecount.call(this);
+                var specs = this.artSpecs;
+                this.pickedList.forEach(function (art) {
+                    if (!specs[art.key]) specs[art.key] = { count: 1, note: '' };
+                });
+            },
+
+            // How many arts the task asks for: each ticked format times its count.
+            artTotal() {
+                var specs = this.artSpecs;
+                return this.pickedList.reduce(function (total, art) { return total + ((specs[art.key] || {}).count || 1); }, 0);
+            },
+
+            // What "art_items" posts: the ticked formats, each with its count and note.
+            artItemsJson() {
+                var specs = this.artSpecs;
+                return JSON.stringify(this.pickedList.map(function (art) {
+                    var spec = specs[art.key] || {};
+                    return { format: art.key, count: spec.count || 1, note: spec.note || '' };
+                }));
             },
 
             open(detail) {
@@ -194,8 +223,25 @@
                 var self = this;
                 // After x-show has shown the window: a hidden field can't take the focus.
                 setTimeout(function () {
-                    self.$refs.title.focus();
+                    // Written into the fields rather than rendered in them, so the form's
+                    // reset on closing leaves them blank for the next task.
+                    var fields = detail.fields || {};
+                    var form = self.$refs.taskForm;
+                    Object.keys(fields).forEach(function (name) {
+                        var field = form.querySelector('[name="' + name + '"]');
+                        if (field && fields[name]) field.value = fields[name];
+                    });
+                    // The arts asked for: their formats ticked, the first one's network shown.
+                    (detail.artItems || []).forEach(function (item) {
+                        var box = form.querySelector('input[name=formats][value="' + item.format + '"]');
+                        if (!box) return;
+                        box.checked = true;
+                        self.artSpecs[item.format] = { count: item.count || 1, note: item.note || '' };
+                        if (detail.artItems[0] === item) self.tab = box.dataset.network;
+                    });
+                    self.recount();
                     self.descLength = self.$refs.description.value.length;
+                    self.$refs.title.focus();
                 }, 50);
             },
 
@@ -203,11 +249,6 @@
                 if (!this.isOpen) return;
                 this.isOpen = false;
                 this.showEmoji = false;
-                if (standalone) {
-                    // Fetched for one source: the host drops it, the next one is fetched afresh.
-                    this.$dispatch('task-window-closed');
-                    return;
-                }
                 this.$refs.taskForm.reset();
                 this.descLength = 0;
                 this.assignees = [];
@@ -218,8 +259,21 @@
                 this.wantsPost = false;
                 this.channels = {};
                 this.references = [];
+                this.artSpecs = {};
                 this.tab = firstTab;
                 this.recount();
+                if (this.note || this.submitTo || initial.fields) {
+                    // Done with what was sent: the next task is the board's own, and a reload
+                    // doesn't open the window again.
+                    this.note = '';
+                    this.submitTo = '';
+                    this.hidden = {};
+                    initial = {};
+                    var params = new URLSearchParams(location.search);
+                    ['new', 'idea', 'template', 'variation', 'date', 'day'].forEach(function (key) { params.delete(key); });
+                    var query = params.toString();
+                    history.replaceState(null, '', location.pathname + (query ? '?' + query : ''));
+                }
             },
 
             // A new named checklist, with its title field ready to type in.
@@ -252,35 +306,5 @@
                 }));
             },
         });
-    };
-
-    // The host of the window on pages other than the board
-    // (tasks/partials/_task_window_host.html): fetches it for one source
-    // ($dispatch('open-task-window', { url, method, values })) and drops it when it
-    // closes or the task is created. referencePickerFor says which window asked the
-    // media library for reference photos; with ``ownPicker`` the host has the media
-    // library window (showMediaPicker), else the page's own opens.
-    window.taskWindowHost = function (ownPicker) {
-        var host = {
-            referencePickerFor: '',
-            loading: false,
-            openPicker(detail) {
-                this.referencePickerFor = (detail && detail.for) || '';
-                if (ownPicker) this.showMediaPicker = true;
-            },
-            load(detail) {
-                if (!detail || !detail.url || this.loading) return;
-                var self = this;
-                this.loading = true;
-                htmx.ajax(detail.method || 'GET', detail.url, { target: this.$refs.body, swap: 'innerHTML', values: detail.values })
-                    .finally(function () { self.loading = false; });
-            },
-            clear() {
-                this.referencePickerFor = '';
-                this.$refs.body.innerHTML = '';
-            },
-        };
-        if (ownPicker) host.showMediaPicker = false;
-        return host;
     };
 })();

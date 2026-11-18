@@ -34,7 +34,7 @@ The design source is the brand pack in `branding/` (logo, mascot poses and per-n
   | `orange-600` | `brand-800` | | `stone-900` | `neutral-950` |
   | `orange-700` | `brand-900` | | | |
 
-- Emails keep literal hex (mail clients ignore CSS variables): primary `#7C3AED`, text `#0F172A`, border `#E5E7EB`.
+- Emails keep literal hex (mail clients ignore CSS variables): primary `#7C3AED`, text `#0F172A`, border `#E5E7EB`, page `#F5F3FF`. The layout is `templates/emails/base.html`; its logo is `static/img/email/connektflow-wordmark-dark.png`, a PNG on white (mail clients do not show SVG) made from `branding/logo/connektflow-wordmark-dark.png`.
 - `amber-*` stays the warning colour; it is not brand.
 
 ## 3. Done

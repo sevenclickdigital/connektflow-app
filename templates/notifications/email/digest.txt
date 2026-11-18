@@ -1,12 +1,12 @@
-{% load i18n %}{{ heading }}
-{{ date|date:"N j, Y" }} - {% blocktranslate count counter=total %}{{ counter }} item{% plural %}{{ counter }} items{% endblocktranslate %}
+{% extends "emails/base.txt" %}
+{% load i18n %}
+{% block content %}{{ heading }}
+{{ date|date:"DATE_FORMAT" }} - {% blocktranslate count counter=total %}{{ counter }} item{% plural %}{{ counter }} items{% endblocktranslate %}
 {% for n in notifications %}
-- {{ n.title }}{% if n.body %}: {{ n.body|truncatewords:20 }}{% endif %} ({% blocktranslate with time=n.created_at|timesince %}{{ time }} ago{% endblocktranslate %})
+- {{ n.title }}{% if n.body %}: {{ n.body|truncatewords:20 }}{% endif %} ({% blocktranslate with time=n.created_at|timesince %}{{ time }} ago{% endblocktranslate %}){% if n.data.action_url %}
+  {{ n.data.action_url }}{% endif %}
 {% endfor %}{% if overflow %}
 {% blocktranslate %}...and {{ overflow }} more.{% endblocktranslate %}
 {% endif %}
-{% translate "View all:" %} {{ app_url }}/notifications/
-
----
-{% translate "You received this because of your notification settings." %}
-{% translate "Manage preferences:" %} {{ app_url }}/notifications/preferences/
+{% translate "View all:" %} {{ notifications_url }}{% endblock %}
+{% block reason %}{% blocktranslate with email=user.email %}You received this at {{ email }} because of your notification settings.{% endblocktranslate %}{% endblock %}

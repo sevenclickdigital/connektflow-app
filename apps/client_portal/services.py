@@ -7,10 +7,10 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import login
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
+from apps.common.emails import build_email
 from apps.common.mail import send_or_raise, transactional
 from apps.members.models import WorkspaceMembership
 
@@ -79,20 +79,15 @@ def generate_magic_link(workspace, client_user, created_by):
         "app_url": app_url,
     }
 
-    subject = f"{workspace.name} - Posts ready for your review"
-    text_content = render_to_string("client_portal/email/magic_link.txt", context)
-    html_content = render_to_string("client_portal/email/magic_link.html", context)
-
-    msg = EmailMultiAlternatives(
-        subject=subject,
-        body=text_content,
-        from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@localhost"),
+    msg = build_email(
+        subject=_("%(workspace)s - Posts ready for your review") % {"workspace": workspace.name},
+        template_prefix="client_portal/email/magic_link",
+        context=context,
         to=[client_user.email],
         # A login link a manager just asked us to send: the recipient is waiting
         # for it, so the per-recipient notification cap must not eat it.
         headers=transactional(),
     )
-    msg.attach_alternative(html_content, "text/html")
 
     try:
         send_or_raise(msg)

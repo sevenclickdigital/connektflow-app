@@ -1,0 +1,3 @@
+{% extends "emails/base.txt" %}
+{% load i18n %}
+{% block reason %}{% blocktranslate with brand=brand_name %}You're receiving this because of an action on your {{ brand }} account.{% endblocktranslate %}{% endblock %}

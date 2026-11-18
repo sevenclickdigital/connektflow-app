@@ -1,4 +1,7 @@
+import logging
+
 from allauth.account.signals import password_changed, password_reset, password_set, user_signed_up
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -8,6 +11,8 @@ from django.utils.translation import gettext
 #: and most of it keeps Brasília time. The browser's own timezone replaces
 #: it at sign-up when the browser reports one.
 SIGNUP_TIMEZONE = "America/Sao_Paulo"
+
+logger = logging.getLogger(__name__)
 
 
 def provision_organization_and_workspace(user):
@@ -167,6 +172,29 @@ def create_organization_on_signup(sender, request, user, **kwargs):
     if not kwargs.get("sociallogin"):
         user.tos_accepted_at = timezone.now()
         user.save(update_fields=["tos_accepted_at"])
+
+
+@receiver(user_signed_up)
+def send_welcome_email(sender, request, user, **kwargs):
+    """Welcome a new account by email, once the signup has committed.
+
+    Sent through allauth's adapter so it gets the same layout, brand context and
+    mail class as the rest of the account mail (``account/email/welcome_*``).
+    After the commit, so a signup that rolls back does not greet anyone, and a
+    failed send is logged without touching the account that was just created.
+    """
+    from allauth.account.adapter import get_adapter
+
+    if not user.email:
+        return
+
+    def _send():
+        try:
+            get_adapter(request).send_mail("account/email/welcome", user.email, {"user": user})
+        except Exception:
+            logger.exception("Could not send the welcome email to user %s", user.pk)
+
+    transaction.on_commit(_send)
 
 
 @receiver(password_changed)

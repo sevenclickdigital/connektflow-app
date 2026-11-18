@@ -8,6 +8,7 @@ from django.shortcuts import redirect, render
 
 from apps.accounts.models import OAuthConnection
 from apps.accounts.signup_links import custom_signup_url, mark_invite_lapsed, signup_allowed
+from apps.common.emails import email_context
 from apps.common.mail import transactional
 
 
@@ -71,7 +72,9 @@ class AccountAdapter(DefaultAccountAdapter):
     global daily cap still applies; nothing bypasses that.
 
     ``render_mail`` is the single seam every allauth email passes through, so
-    overriding it here covers all of them without touching a template. It also
+    overriding it here covers all of them without touching a template. It adds
+    the brand context of ``apps.common.emails`` (logo, legal footer), which the
+    ``account/email/*_message.html`` templates need, and it also
     points any ``signup_url`` in the context (the unknown-account email sent on
     a password reset for an address with no account) at ``CUSTOM_SIGNUP_URL``.
 
@@ -110,7 +113,7 @@ class AccountAdapter(DefaultAccountAdapter):
         return super().render_mail(
             template_prefix,
             email,
-            context,
+            {**email_context(), **context},
             headers={**(headers or {}), **transactional()},
         )
 

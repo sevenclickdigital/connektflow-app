@@ -1,9 +1,11 @@
-{% load i18n %}{% translate "Hi there," %}
+{% extends "emails/base.txt" %}
+{% load i18n %}
+{% block content %}{% translate "Hi there," %}
 
-{% blocktranslate with inviter=invited_by.display_name org=org_name %}{{ inviter }} has invited you to join {{ org }} as a team member on Connekt Flow.{% endblocktranslate %}
+{% blocktranslate with inviter=invited_by.display_name org=org_name brand=brand_name %}{{ inviter }} has invited you to join {{ org }} as a team member on {{ brand }}.{% endblocktranslate %}
 
 {% translate "Accept the invitation by visiting the link below:" %}
-
 {{ accept_url }}
 
-{% translate "This invitation expires in 7 days. If it expires, ask your team admin for a new one." %}
+{% translate "This invitation expires in 7 days. If it expires, ask your team admin for a new one." %}{% endblock %}
+{% block reason %}{% blocktranslate with org=org_name email=invitation.email %}You're receiving this because someone invited {{ email }} to {{ org }}. If you weren't expecting it, you can ignore this email.{% endblocktranslate %}{% endblock %}

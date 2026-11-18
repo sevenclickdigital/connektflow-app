@@ -1,10 +1,9 @@
-{% load account i18n %}{% autoescape off %}{% user_display user as user_display %}{% blocktranslate %}Hi {{ user_display }},{% endblocktranslate %}
+{% extends "account/email/base_message.txt" %}
+{% load account i18n %}
+{% block content %}{% user_display user as user_display %}{% blocktranslate %}Hi {{ user_display }},{% endblocktranslate %}
 
-{% translate "Thanks for signing up for Connekt Flow. Please confirm your email address by clicking the link below:" %}
+{% blocktranslate with brand=brand_name %}Thanks for signing up for {{ brand }}. Confirm your email address to activate your account.{% endblocktranslate %}
 
 {{ activate_url }}
 
-{% translate "If you didn't sign up, you can safely ignore this email." %}
-
-— {% translate "The Connekt Flow team" %}
-{% endautoescape %}
+{% translate "If you didn't sign up, you can safely ignore this email." %}{% endblock %}

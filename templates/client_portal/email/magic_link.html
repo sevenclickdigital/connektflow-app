@@ -1,55 +1,12 @@
-{% load i18n %}<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"></head>
-<body style="margin:0; padding:0; font-family: system-ui, -apple-system, sans-serif; background: #FAFAFF;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 20px;">
-        <tr>
-            <td align="center">
-                <table width="520" cellpadding="0" cellspacing="0" style="background: #FFFFFF; border-radius: 12px; border: 1px solid #E5E7EB; overflow: hidden;">
-                    <!-- Header -->
-                    <tr>
-                        <td style="padding: 32px 32px 0 32px;">
-                            <p style="font-size: 15px; font-weight: 700; color: #0F172A; margin: 0;">
-                                {{ workspace.name }}
-                            </p>
-                        </td>
-                    </tr>
-                    <!-- Body -->
-                    <tr>
-                        <td style="padding: 24px 32px 32px 32px;">
-                            <p style="font-size: 15px; color: #334155; line-height: 1.6; margin: 0 0 8px 0;">
-                                {% blocktranslate with name=client_user.display_name %}Hi {{ name }},{% endblocktranslate %}
-                            </p>
-                            <p style="font-size: 15px; color: #334155; line-height: 1.6; margin: 0 0 24px 0;">
-                                {% blocktranslate with sender=created_by.display_name %}{{ sender }} has shared content for your review.{% endblocktranslate %} {% translate "Click below to access your portal and approve or provide feedback on scheduled posts." %}
-                            </p>
-                            <!-- CTA Button -->
-                            <table cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <td align="center">
-                                        <a href="{{ magic_url }}"
-                                           style="display: inline-block; padding: 12px 32px; background: #7C3AED; color: #FFFFFF; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 9999px;">
-                                            {% translate "Review Posts" %}
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-                            <p style="font-size: 13px; color: #94A3B8; line-height: 1.6; margin: 24px 0 0 0;">
-                                {% translate "This link is valid for 30 days. If it expires, ask your account manager for a new one." %}
-                            </p>
-                        </td>
-                    </tr>
-                    <!-- Footer -->
-                    <tr>
-                        <td style="padding: 16px 32px; border-top: 1px solid #E5E7EB;">
-                            <p style="font-size: 12px; color: #94A3B8; margin: 0;">
-                                {% blocktranslate with workspace=workspace.name %}You're receiving this because you're a client of {{ workspace }}.{% endblocktranslate %}
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>
+{% extends "emails/base.html" %}
+{% load i18n %}
+{% block title %}{% blocktranslate with workspace=workspace.name %}{{ workspace }} - Posts ready for your review{% endblocktranslate %}{% endblock %}
+{% block preheader %}{% blocktranslate with sender=created_by.display_name %}{{ sender }} has shared content for your review.{% endblocktranslate %}{% endblock %}
+{% block content %}
+<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Posts ready for your review" %}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with name=client_user.display_name %}Hi {{ name }},{% endblocktranslate %}</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with sender=created_by.display_name workspace=workspace.name %}{{ sender }} has shared content for your review in <strong style="color:#0F172A;">{{ workspace }}</strong>.{% endblocktranslate %} {% translate "Open your portal to approve the scheduled posts or leave feedback." %}</p>
+{% translate "Review posts" as cta %}{% include "emails/_button.html" with url=magic_url label=cta %}
+<p style="margin:24px 0 0;font-size:13px;line-height:20px;color:#64748B;">{% translate "This link is valid for 30 days and signs you in without a password, so don't forward this email. If it expires, ask your account manager for a new one." %}</p>
+{% endblock %}
+{% block reason %}<p style="margin:0 0 12px;">{% blocktranslate with workspace=workspace.name %}You're receiving this because you're a client of {{ workspace }}.{% endblocktranslate %}</p>{% endblock %}

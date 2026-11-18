@@ -9,21 +9,19 @@ import secrets
 from datetime import timedelta
 
 from csp.decorators import csp_update
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.cache import cache
-from django.core.mail import EmailMultiAlternatives
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 from django_ratelimit.decorators import ratelimit
 
+from apps.common.emails import build_email
 from apps.common.mail import transactional
 from apps.common.validators import is_safe_url
 from apps.credentials.models import PlatformCredential
@@ -187,17 +185,13 @@ def send_link_email(request, workspace_id, link_id):
         "expires_at": link.expires_at,
     }
 
-    text_content = render_to_string("onboarding/email/connection_link.txt", context)
-    html_content = render_to_string("onboarding/email/connection_link.html", context)
-
-    msg = EmailMultiAlternatives(
-        subject=f"{org.name} - Connect your social accounts",
-        body=text_content,
-        from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@localhost"),
+    msg = build_email(
+        subject=_("%(org)s - Connect your social accounts") % {"org": org.name},
+        template_prefix="onboarding/email/connection_link",
+        context=context,
         to=[email],
         headers=transactional(),
     )
-    msg.attach_alternative(html_content, "text/html")
     # send() returns the number accepted, and the outbound budget drops a
     # message by returning 0 rather than raising. Telling someone the link was
     # sent when it was not is how they end up waiting for an email that is never
