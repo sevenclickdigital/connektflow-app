@@ -1,23 +1,28 @@
 """Public legal pages.
 
 Meta's App Review requires a Privacy Policy URL and a data-deletion URL that
-both resolve anonymously. These views therefore take no login decorator and
-read nothing from the database — App Review fetches them with no session.
+both resolve anonymously. These views therefore take no login decorator — App
+Review fetches them with no session.
+
+The privacy policy and the terms are written on the public site
+(connektflow-site, ``src/pages/privacidade.astro`` and ``termos.astro``); the
+app's own addresses redirect there, so links in sent emails keep working. The
+data-deletion page stays here: Meta posts its signed deletion requests to it,
+and it shows their status from the database.
 """
 
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponsePermanentRedirect
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-# Shown in the page header. Static rather than auto-updated: the date should
-# change when the text changes, not on every deploy.
-LAST_UPDATED = "15 de novembro de 2026"
-
 # Written as the Meta app's display name: App Review compares the legal pages
 # with it, so the two change together.
 APP_NAME = "Connekt Flow"
+
+PRIVACY_POLICY_URL = "https://connektflow.com.br/privacidade/"
+TERMS_OF_SERVICE_URL = "https://connektflow.com.br/termos/"
 
 
 def contact_email() -> str:
@@ -33,14 +38,14 @@ def contact_email() -> str:
 def _context():
     return {
         "app_name": APP_NAME,
-        "last_updated": LAST_UPDATED,
         "contact_email": contact_email(),
+        "privacy_url": PRIVACY_POLICY_URL,
     }
 
 
 def privacy_policy(request):
-    """Public Privacy Policy, linked from the Meta app configuration."""
-    return render(request, "legal/privacy_policy.html", _context())
+    """The Privacy Policy, on the public site."""
+    return HttpResponsePermanentRedirect(PRIVACY_POLICY_URL)
 
 
 @csrf_exempt
@@ -70,8 +75,8 @@ def data_deletion(request):
 
 
 def terms_of_service(request):
-    """Public Terms of Service, linked from the Meta app configuration."""
-    return render(request, "legal/terms_of_service.html", _context())
+    """The Terms of Service, on the public site."""
+    return HttpResponsePermanentRedirect(TERMS_OF_SERVICE_URL)
 
 
 # Meta reads the legal pages, and every image or video a post publishes, with

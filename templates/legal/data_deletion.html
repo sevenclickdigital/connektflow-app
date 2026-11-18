@@ -1,6 +1,6 @@
 {% comment %}
-Standalone public page — see legal/privacy_policy.html for why this does not
-extend base.html. Meta App Review requires this URL to resolve anonymously.
+Standalone public page — deliberately does not extend base.html, which assumes
+an authenticated user and a workspace context. Meta App Review requires this URL to resolve anonymously.
 {% endcomment %}
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -107,7 +107,7 @@ extend base.html. Meta App Review requires this URL to resolve anonymously.
 
     <p>
       Detalhes sobre quais dados tratamos e por quê estão na
-      <a href="{% url 'privacy_policy' %}">Política de Privacidade</a>.
+      <a href="{{ privacy_url }}">Política de Privacidade</a>.
     </p>
   </main>
 

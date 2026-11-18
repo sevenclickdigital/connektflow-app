@@ -65,7 +65,7 @@ def _address_lines(address: str) -> list[str]:
 
 def email_context(**extra) -> dict:
     """The brand and legal variables the email layout needs, plus ``extra``."""
-    from apps.common.legal_views import APP_NAME, contact_email
+    from apps.common.legal_views import APP_NAME, PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL, contact_email
 
     app_url = _app_url()
     phone = getattr(settings, "LEGAL_COMPANY_PHONE", "")
@@ -73,8 +73,8 @@ def email_context(**extra) -> dict:
         "brand_name": APP_NAME,
         "app_url": app_url,
         "logo_url": _absolute_static(LOGO_PATH),
-        "privacy_url": f"{app_url}/privacidade/",
-        "terms_url": f"{app_url}/termos/",
+        "privacy_url": PRIVACY_POLICY_URL,
+        "terms_url": TERMS_OF_SERVICE_URL,
         "support_email": contact_email(),
         "company_name": getattr(settings, "LEGAL_COMPANY_NAME", "") or APP_NAME,
         "company_document": getattr(settings, "LEGAL_COMPANY_DOCUMENT", ""),

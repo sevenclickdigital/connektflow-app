@@ -365,7 +365,7 @@ People and companies the workspace talks to (sidebar: Engajar → Contatos, for 
 
 ## Operational and compliance
 
-- Public legal pages for Meta App Review: `/privacidade/`, `/termos/` and `/exclusao-de-dados/` (`apps/common/legal_views.py`); the English `/privacy/`, `/terms/` and `/data-deletion/` still answer. `/robots.txt` (same module) allows Meta's crawlers by name, which read these pages and the media of every post.
+- Public legal pages for Meta App Review (`apps/common/legal_views.py`): `/exclusao-de-dados/` (also `/data-deletion/`) explains how to delete data, shows the status of a platform's deletion request and receives Meta's deletion callback. The Privacy Policy and the Terms live on the public site (`connektflow.com.br/privacidade/` and `/termos/`, repository `connektflow-site`); `/privacidade/`, `/termos/`, `/privacy/` and `/terms/` redirect there, and signup, terms acceptance and email footers link there. `/robots.txt` (same module) allows Meta's crawlers by name, which read these pages and the media of every post.
 - YouTube compliance (`youtube_compliance.py`, `YouTubeRevocation`): handles grant revocation and the retention lifecycle of YouTube data.
 - Field-level encryption of tokens and credentials (`apps/common/encryption.py`, keyed by `ENCRYPTION_KEY_SALT`).
 - `/health/` endpoint. Stale task locks are released when the worker starts.

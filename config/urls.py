@@ -22,9 +22,9 @@ urlpatterns = [
     # redirects back. The language picker in the sidebar posts here.
     path("i18n/", include("django.conf.urls.i18n")),
     # Public legal pages. Required by Meta App Review, which fetches them
-    # anonymously, so they must stay outside any auth-gated include. The
-    # Portuguese addresses are the ones the app links to; the English ones stay
-    # because platform app settings and sent emails may still point at them.
+    # anonymously, so they must stay outside any auth-gated include. Privacy
+    # and terms redirect to the public site; the English addresses stay because
+    # platform app settings and sent emails may still point at them.
     path("privacidade/", legal_views.privacy_policy, name="privacy_policy"),
     path("termos/", legal_views.terms_of_service, name="terms_of_service"),
     path("exclusao-de-dados/", legal_views.data_deletion, name="data_deletion"),

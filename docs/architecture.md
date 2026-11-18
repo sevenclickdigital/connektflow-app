@@ -291,7 +291,7 @@ STORAGE_BACKEND=s3     →  storages.backends.s3boto3.S3Boto3Storage (S3_* env v
 | Rate limiting | `django-ratelimit` on webhooks, invites, onboarding and social connects. `AuthRateLimitMiddleware` on auth. Its own limiter for the API. Disabled when `DEBUG`. |
 | Audit | `ApiKeyAuditLog`, `BillingEvent`, `AutomationLog`, impersonation sessions. There is no general audit log. |
 | Account deletion | Self-service in account settings, refused while the user is the sole owner of an org. No data-export feature. |
-| Webhooks | Signature or token verification per source (§8, §11). Legal pages `/privacidade/`, `/termos/`, `/exclusao-de-dados/` (and their English aliases `/privacy/`, `/terms/`, `/data-deletion/`) are public (required by Meta App Review). |
+| Webhooks | Signature or token verification per source (§8, §11). Legal pages are public (required by Meta App Review): `/exclusao-de-dados/` (and `/data-deletion/`) is served here and receives Meta's signed deletion callback; `/privacidade/` and `/termos/` (and `/privacy/`, `/terms/`) redirect to the public site, `connektflow.com.br/privacidade/` and `/termos/`, where the texts live (`connektflow-site`). |
 
 ---
 
