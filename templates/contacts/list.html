@@ -8,11 +8,15 @@
         <h1 class="page-title">{% translate "Contacts" %}</h1>
         <p class="page-description">{% translate "Manage your contacts, segment audiences and create personalised campaigns." %}</p>
     </div>
-    {% include "contacts/partials/_tabs.html" with active="contacts" %}
+    <div class="flex items-center gap-2">
+        {% include "composer/partials/_ideas_hero_toggle.html" with tab="contacts" %}
+        {% include "contacts/partials/_tabs.html" with active="contacts" %}
+    </div>
 </div>
 {% endblock %}
 
 {% block content %}
+{% include "composer/partials/_ideas_hero.html" with tab="contacts" %}
 {% comment %}
 The filter form swaps #contacts-results (rows + pagination) and pushes the URL,
 so a filtered list can be reloaded and shared. The channel pills (the

@@ -46,11 +46,16 @@ The Favorites tab renders radar/partials/_favorites.html in place of the form.
                 </div>
             </div>
         </div>
+        <div class="flex items-center gap-2">
+        {% include "composer/partials/_ideas_hero_toggle.html" with tab="shopee" %}
         <a href="{% url 'analytics:shopee' workspace_id=workspace_id connection_id=connection.id %}" class="btn-outline inline-flex items-center gap-1.5" style="width: auto;">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 14l4-4 4 4 6-6"/></svg>
             {% translate "Commissions and orders" %}
         </a>
+        </div>
     </div>
+
+    {% include "composer/partials/_ideas_hero.html" with tab="shopee" %}
 
     <nav class="flex gap-1 border-b border-neutral-300 mb-5" aria-label="{% translate 'Shopee Affiliates' %}">
         <a href="{% url 'radar:shopee' workspace_id=workspace_id %}" {% if tab == "offers" %}aria-current="page"{% endif %}

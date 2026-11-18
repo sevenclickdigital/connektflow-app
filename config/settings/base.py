@@ -464,6 +464,9 @@ CSP_IMG_SRC = ("'self'", "data:", "blob:", "https:")
 CSP_FONT_SRC = ("'self'",)
 CSP_CONNECT_SRC = ("'self'", "https://cdn.jsdelivr.net")
 CSP_MEDIA_SRC = ("'self'", "blob:", "https:")
+# The page banners' "See how it works" videos play in YouTube's privacy-enhanced
+# player (apps.onboarding.help_videos.embed_url); nothing else is framed.
+CSP_FRAME_SRC = ("'self'", "https://www.youtube-nocookie.com")
 CSP_FORM_ACTION = (
     "'self'",
     "https://accounts.google.com",

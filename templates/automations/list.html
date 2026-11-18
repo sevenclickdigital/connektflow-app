@@ -23,6 +23,7 @@ of the page with the rest of the width left empty.
             <p class="text-sm text-neutral-600 mt-0.5">{% translate "Reply to comments by keyword — a public reply, a DM, or both. Rules run in priority order and the first match wins." %}</p>
         </div>
         <div class="flex items-center gap-3 shrink-0">
+            {% include "composer/partials/_ideas_hero_toggle.html" with tab="automations" %}
             <a href="{% url 'automations:log' workspace_id=workspace.id %}"
                class="text-[13px] font-medium text-neutral-600 hover:text-neutral-800 transition-colors whitespace-nowrap">{% translate "Activity log" %}</a>
             {% if can_manage %}
@@ -40,6 +41,8 @@ of the page with the rest of the width left empty.
             {% endif %}
         </div>
     </div>
+
+    {% include "composer/partials/_ideas_hero.html" with tab="automations" %}
 
     {% if rules %}
     <div class="bg-white border border-neutral-300 rounded-xl overflow-hidden" style="box-shadow: var(--shadow-xs);">

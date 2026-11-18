@@ -13,7 +13,7 @@
     <div>
         <h1 class="page-title">
             {% if day.part_of_day == "morning" %}{% blocktranslate with name=day.first_name %}Good morning, {{ name }}.{% endblocktranslate %}{% elif day.part_of_day == "afternoon" %}{% blocktranslate with name=day.first_name %}Good afternoon, {{ name }}.{% endblocktranslate %}{% else %}{% blocktranslate with name=day.first_name %}Good evening, {{ name }}.{% endblocktranslate %}{% endif %}
-            {% if day.total %}{% blocktranslate count total=day.total %}Your day has {{ total }} thing.{% plural %}Your day has {{ total }} things.{% endblocktranslate %}{% else %}{% translate "Your day is clear." %}{% endif %}
+            {% if day.total %}{% blocktranslate count total=day.total %}Your day has {{ total }} item to review.{% plural %}Your day has {{ total }} items to review.{% endblocktranslate %}{% else %}{% translate "Your day is clear." %}{% endif %}
         </h1>
         <p class="page-description">
             {% if day.total %}{% spaceless %}
@@ -27,28 +27,13 @@
         </p>
     </div>
     <div class="flex flex-wrap items-center justify-end gap-2">
-        {# Brings back the hero card once it was closed (see composer/partials/_ideas_hero.html). #}
-        <button type="button" x-data="{ heroClosed: localStorage.getItem('cf:ideas-hero-closed:dashboard') === '1' }"
-                x-show="heroClosed" x-cloak
-                @ideas-hero-toggled.window="heroClosed = $event.detail.closed"
-                @click="$dispatch('ideas-hero-open')"
-                class="w-9 h-9 rounded-full flex items-center justify-center bg-brand-50 border border-brand-200 text-brand-700 hover:bg-brand-100 transition-colors cursor-pointer"
-                title="{% translate 'Show tips' %}" aria-label="{% translate 'Show tips' %}">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0012 2z"/></svg>
-        </button>
+        {% include "composer/partials/_ideas_hero_toggle.html" with tab="dashboard" %}
         {% if can_view_analytics %}
         <div class="a-pill-group" role="group" aria-label="{% translate 'Period' %}">
             {% for n in range_choices %}
             <a href="?range={{ n }}{% if active_account %}&account={{ active_account.id }}{% endif %}" class="{% if n == days %}active{% endif %}">{% blocktranslate %}{{ n }} days{% endblocktranslate %}</a>
             {% endfor %}
         </div>
-        {% endif %}
-        {% if request.workspace_membership.effective_permissions.create_posts %}
-        {% comment %}A post starts from a day of the calendar (its "+"), so it always has a date.{% endcomment %}
-        <a href="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=calendar" class="btn-brand text-sm px-4 py-2 inline-flex items-center gap-1.5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-            {% translate "New post" %}
-        </a>
         {% endif %}
     </div>
 </div>
@@ -116,11 +101,18 @@ plus failed posts and accounts that lost their connection.
         </div>
         {% include "analytics/_hero_chart.html" %}
         {% else %}
-        <div class="h-full flex flex-col items-center justify-center text-center py-8">
-            <img src="{% static 'img/moti/moti-procurando.webp' %}" alt="" class="h-28 mb-3">
-            <h2 class="text-base font-semibold text-neutral-950">{% translate "No results to show yet" %}</h2>
-            <p class="text-sm text-neutral-600 mt-1 max-w-sm">{% translate "Connect a network with reports to follow its reach, followers and engagement here." %}</p>
-            {% if can_connect_accounts %}<a href="{% url 'social_accounts:list' workspace_id=workspace.id %}" class="btn-brand text-sm px-4 py-2 mt-4">{% translate "Connect account" %}</a>{% endif %}
+        <div class="h-full flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 text-center sm:text-left py-8">
+            <img src="{% static 'img/moti/moti-conectar.webp' %}" alt="" class="h-28 sm:h-32 flex-shrink-0">
+            <div class="max-w-sm">
+                <h2 class="text-base font-semibold text-neutral-950">{% translate "No results to show yet" %}</h2>
+                <p class="text-sm text-neutral-600 mt-1">{% translate "Connect a network with reports to follow its reach, followers and engagement here." %}</p>
+                {% if can_connect_accounts %}
+                <a href="{% url 'social_accounts:list' workspace_id=workspace.id %}" class="btn-brand mt-4">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    {% translate "Connect Your First Account" %}
+                </a>
+                {% endif %}
+            </div>
         </div>
         {% endif %}
     </section>
@@ -172,7 +164,7 @@ plus failed posts and accounts that lost their connection.
     {% endfor %}
     {% if can_connect_accounts %}
     <a href="{% url 'social_accounts:list' workspace_id=workspace.id %}" class="flex items-center gap-4 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-4 hover:border-brand-300 transition-colors">
-        <img src="{% static 'img/moti/moti-procurando.webp' %}" alt="" class="h-16 flex-shrink-0">
+        <img src="{% static 'img/moti/moti-conectar.webp' %}" alt="" class="h-16 flex-shrink-0">
         <span>
             <span class="block text-sm font-semibold text-neutral-950">{% translate "Connect another network" %}</span>
             <span class="block text-xs text-neutral-600 mt-0.5">{% translate "TikTok, LinkedIn, YouTube and more" %}</span>

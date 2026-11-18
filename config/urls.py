@@ -108,6 +108,7 @@ urlpatterns = [
     path("calendar/staff/dates/", include("apps.calendar.staff_urls")),
     path("composer/staff/ideas/", include("apps.composer.staff_urls")),
     path("radar/staff/hashtags/", include("apps.radar.staff_urls")),
+    path("onboarding/staff/videos/", include("apps.onboarding.staff_urls")),
     # Client Portal (Stream F)
     path("portal/", include("apps.client_portal.urls")),
     path("notifications/", include("apps.notifications.urls")),

@@ -1,9 +1,10 @@
-{% load i18n static %}
+{% load i18n static help_video_tags %}
 {% comment %}
-The hero card at the top of each page of the create area (ideas, templates,
-special dates), of the task board ("tasks"), of the publishing calendar
-("calendar") and of the brand dashboard ("dashboard"): what the page is for
-and a pose of Moti.
+The hero card at the top of the pages of the sidebar (every one but the
+notifications): what the page is for and a pose of Moti. ``tab`` names the
+page: ideas, templates and dates (the create area), tasks, calendar,
+dashboard, inbox, automations, contacts, analytics, accounts, media, radar,
+shopee and instagram_research (the Radar's inner pages).
 
 Closing it is remembered per page in this browser (localStorage
 "cf:ideas-hero-closed:<tab>") and announced with the "ideas-hero-toggled"
@@ -13,11 +14,20 @@ button sends "ideas-hero-open" to bring the card back.
 It never shrinks (flex-shrink-0): on a page whose content scrolls inside a
 flex column, as the task board's, a tall board would otherwise squeeze it.
 
-Expects: tab.
+"See how it works" opens the page's YouTube video (onboarding.PageHelpVideo,
+set by the operator in the administrative area) in a modal; the player is
+only mounted while the modal is open, so closing it stops the video. A page
+without a video shows staff a link to add one and shows customers nothing,
+in a row that keeps its height either way.
+
+Expects: tab. Optional: hero_margin, the classes for the space below it
+(mb-6 by default; mb-0 where the page's own layout spaces it).
 {% endcomment %}
+{% page_help_video tab as help_video %}
 <section x-data="{
             key: 'cf:ideas-hero-closed:{{ tab }}',
             closed: false,
+            video: false,
             init() { this.closed = localStorage.getItem(this.key) === '1' },
             setClosed(value) {
                 this.closed = value;
@@ -29,7 +39,7 @@ Expects: tab.
          x-show="!closed" x-cloak
          x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
          x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-         class="relative flex-shrink-0 rounded-2xl border border-brand-200/70 mb-6 overflow-hidden flex items-center gap-6 px-6 sm:px-8 py-6"
+         class="relative flex-shrink-0 rounded-2xl border border-brand-200/70 {{ hero_margin|default:'mb-6' }} overflow-hidden flex items-center gap-6 px-6 sm:px-8 py-6"
          style="background: linear-gradient(100deg, color-mix(in srgb, var(--brand-50) 45%, white) 0%, var(--brand-50) 45%, var(--brand-100) 100%);">
 
     <button type="button" @click="setClosed(true)"
@@ -38,37 +48,108 @@ Expects: tab.
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
 
+    {% if tab == "templates" %}
+    {% translate "Start from a ready-made template" as hero_title %}
+    {% translate "Pick a starting point by category, make it your own and publish." as hero_text %}
+    {% elif tab == "tasks" %}
+    {% translate "Keep the team's work moving" as hero_title %}
+    {% translate "Shape the board your way, hand out the tasks and follow each one until it is done." as hero_text %}
+    {% elif tab == "calendar" %}
+    {% translate "Your content on schedule" as hero_title %}
+    {% translate "See everything that goes out this month, fill the empty days and keep every channel posting." as hero_text %}
+    {% elif tab == "dashboard" %}
+    {% translate "Your brand at a glance" as hero_title %}
+    {% translate "Follow each network's results, see what works best and sort out what is pending before it becomes a problem." as hero_text %}
+    {% elif tab == "inbox" %}
+    {% translate "Every conversation in one place" as hero_title %}
+    {% translate "Answer messages, comments and mentions from every channel without leaving this page, and keep no customer waiting." as hero_text %}
+    {% elif tab == "automations" %}
+    {% translate "Let the replies go out on their own" as hero_title %}
+    {% translate "Answer comments by keyword with a public reply, a DM or both, so every interested follower hears back at once." as hero_text %}
+    {% elif tab == "contacts" %}
+    {% translate "Know who talks to your brand" as hero_title %}
+    {% translate "Everyone who wrote or commented, with their channels, history and notes, ready for the next conversation." as hero_text %}
+    {% elif tab == "analytics" %}
+    {% translate "Understand what works" as hero_title %}
+    {% translate "Follow each network's reach, engagement and best posts, and compare periods to choose the next content." as hero_text %}
+    {% elif tab == "accounts" %}
+    {% translate "Connect your networks" as hero_title %}
+    {% translate "Link the profiles your brand uses to publish, answer and follow results, and keep every connection healthy." as hero_text %}
+    {% elif tab == "media" %}
+    {% translate "Your brand's files in one place" as hero_title %}
+    {% translate "Keep images and videos in folders and use them in any post without uploading them again." as hero_text %}
+    {% elif tab == "radar" %}
+    {% translate "Find what is worth posting" as hero_title %}
+    {% translate "Follow products, offers and the market's hashtags, and turn what stands out into content for your brand." as hero_text %}
+    {% elif tab == "shopee" %}
+    {% translate "Offers that pay you to post" as hero_title %}
+    {% translate "Pick Shopee products by niche and commission, save your favourites and turn the best ones into posts." as hero_text %}
+    {% elif tab == "instagram_research" %}
+    {% translate "See what works for others" as hero_title %}
+    {% translate "Follow other business profiles and the posts under a hashtag to find ideas for your own content." as hero_text %}
+    {% elif tab == "dates" %}
+    {% translate "Be ready for every special date" as hero_title %}
+    {% translate "See the dates that matter to your segment ahead of time and plan the content for each one." as hero_text %}
+    {% else %}
+    {% translate "Never run out of ideas" as hero_title %}
+    {% translate "Write ideas down the moment they come, sort them on the board and turn the good ones into posts." as hero_text %}
+    {% endif %}
     <div class="flex-1 min-w-0">
-        {% if tab == "templates" %}
-        <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Start from a ready-made template" %}</h2>
-        <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "Pick a starting point by category, make it your own and publish." %}</p>
-        {% elif tab == "tasks" %}
-        <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Keep the team's work moving" %}</h2>
-        <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "Shape the board your way, hand out the tasks and follow each one until it is done." %}</p>
-        {% elif tab == "calendar" %}
-        <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Your content on schedule" %}</h2>
-        <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "See everything that goes out this month, fill the empty days and keep every channel posting." %}</p>
-        {% elif tab == "dashboard" %}
-        <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Your brand at a glance" %}</h2>
-        <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "Follow each network's results, see what works best and sort out what is pending before it becomes a problem." %}</p>
-        {% elif tab == "dates" %}
-        <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Be ready for every special date" %}</h2>
-        <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "See the dates that matter to your segment ahead of time and plan the content for each one." %}</p>
-        {% else %}
-        <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Never run out of ideas" %}</h2>
-        <p class="text-base text-neutral-600 mt-2 max-w-xl">{% translate "Write ideas down the moment they come, sort them on the board and turn the good ones into posts." %}</p>
-        {% endif %}
+        <h2 class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.01em;">{{ hero_title }}</h2>
+        {# Two lines reserved for the text and one row for the button, so every banner has the same height. #}
+        <p class="text-base text-neutral-600 mt-2 max-w-xl min-h-12">{{ hero_text }}</p>
+        <div class="mt-4 min-h-11 flex items-center">
+            {% if help_video %}
+            <button type="button" @click="video = true" class="btn-outline">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10.5-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg>
+                {% translate "See how it works" %}
+            </button>
+            {% elif request.user.is_staff %}
+            <a href="{% url 'onboarding_staff:help_videos' %}" class="btn-ghost">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                {% translate "Add a video for this page" %}
+            </a>
+            {% endif %}
+        </div>
     </div>
 
-    {% if tab == "templates" %}
-    <img src="{% static 'img/moti/moti-modelos.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
-    {% elif tab == "tasks" %}
-    <img src="{% static 'img/moti/moti-tarefas.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
-    {% elif tab == "dashboard" %}
-    <img src="{% static 'img/moti/moti-computador.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
-    {% elif tab == "dates" or tab == "calendar" %}
-    <img src="{% static 'img/moti/moti-datas.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
-    {% else %}
-    <img src="{% static 'img/moti/moti-ideia.webp' %}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
+    {% if tab == "templates" %}{% static 'img/moti/moti-modelos.webp' as hero_image %}
+    {% elif tab == "tasks" %}{% static 'img/moti/moti-tarefas.webp' as hero_image %}
+    {% elif tab == "dashboard" %}{% static 'img/moti/moti-dashboard.webp' as hero_image %}
+    {% elif tab == "analytics" %}{% static 'img/moti/moti-relatorios.webp' as hero_image %}
+    {% elif tab == "dates" or tab == "calendar" %}{% static 'img/moti/moti-datas.webp' as hero_image %}
+    {% elif tab == "inbox" %}{% static 'img/moti/moti-inbox.webp' as hero_image %}
+    {% elif tab == "automations" %}{% static 'img/moti/moti-computador.webp' as hero_image %}
+    {% elif tab == "contacts" %}{% static 'img/moti/moti-contatos.webp' as hero_image %}
+    {% elif tab == "accounts" %}{% static 'img/moti/moti-contas.webp' as hero_image %}
+    {% elif tab == "media" %}{% static 'img/moti/moti-galeria.webp' as hero_image %}
+    {% elif tab == "radar" %}{% static 'img/moti/moti-radar.webp' as hero_image %}
+    {% elif tab == "shopee" %}{% static 'img/moti/moti-shopee.webp' as hero_image %}
+    {% elif tab == "instagram_research" %}{% static 'img/moti/moti-pesquisa.webp' as hero_image %}
+    {% else %}{% static 'img/moti/moti-ideia.webp' as hero_image %}
+    {% endif %}
+    <img src="{{ hero_image }}" alt="" class="hidden md:block h-40 -my-2 flex-shrink-0 mr-8 drop-shadow-lg">
+
+    {% if help_video %}
+    <template x-teleport="body">
+        <div x-show="video" x-cloak x-transition.opacity class="modal-overlay"
+             @click.self="video = false" @keydown.escape.window="video = false">
+            <div class="modal-panel is-video" role="dialog" aria-modal="true" aria-label="{{ hero_title }}">
+                <div class="px-5 py-3.5 pr-12 border-b border-neutral-300">
+                    <h2 class="modal-title">{{ hero_title }}</h2>
+                    <button type="button" @click="video = false" class="modal-close" title="{% translate 'Close' %}" aria-label="{% translate 'Close' %}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="aspect-video bg-neutral-950">
+                    <template x-if="video">
+                        <iframe src="{{ help_video.embed_url }}" title="{{ hero_title }}" class="w-full h-full block"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </template>
     {% endif %}
 </section>

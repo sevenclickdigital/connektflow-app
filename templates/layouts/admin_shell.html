@@ -88,6 +88,12 @@ decides what is drawn.
     <span class="sidebar-nav-label">{% translate "Market hashtags" %}</span>
 </a>
 
+<a href="{% url 'onboarding_staff:help_videos' %}"
+   class="sidebar-nav-item mb-1 {% if admin_active == 'help_videos' %}active{% endif %}">
+    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg>
+    <span class="sidebar-nav-label">{% translate "Help videos" %}</span>
+</a>
+
 <a href="{% url 'billing_staff:impersonation_log' %}"
    class="sidebar-nav-item mb-1 {% if admin_active == 'impersonations' %}active{% endif %}">
     <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>

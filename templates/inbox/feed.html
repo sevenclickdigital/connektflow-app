@@ -118,6 +118,7 @@
             <p class="text-xs text-neutral-600">{% translate "Every conversation, comment and mention from your channels, in one place." %}</p>
             {% endif %}
         </div>
+        {% include "composer/partials/_ideas_hero_toggle.html" with tab="inbox" %}
         {% if funnel %}{% include "inbox/partials/_inbox_tabs.html" with active="funnel" %}{% else %}{% include "inbox/partials/_inbox_tabs.html" with active="conversations" %}{% endif %}
         {% if sla_config %}
         <a href="{% url 'inbox:sla_config' workspace_id=workspace.id %}" class="btn-outline" title="{% translate 'SLA Settings' %}">
@@ -126,6 +127,8 @@
         </a>
         {% endif %}
     </div>
+
+    <div class="px-5 flex-shrink-0">{% include "composer/partials/_ideas_hero.html" with tab="inbox" hero_margin="my-4" %}</div>
 
     {% if funnel %}{% include "funnels/partials/_funnel_bar.html" %}{% else %}{% include "inbox/partials/_filter_bar.html" %}{% endif %}
 

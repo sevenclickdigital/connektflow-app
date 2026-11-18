@@ -6,7 +6,10 @@
             <h1 style="font-size: 1.5rem; font-weight: 600; color: var(--neutral-900); letter-spacing: -0.01em;">{% translate "Analytics" %}</h1>
             <p style="font-size: 0.8125rem; color: var(--text-tertiary); margin-top: 2px;">{% translate "Performance across your connected channels." %}</p>
         </div>
+        {% include "composer/partials/_ideas_hero_toggle.html" with tab="analytics" %}
     </div>
+
+    {% include "composer/partials/_ideas_hero.html" with tab="analytics" hero_margin="mb-0" %}
 
     {# Control row #}
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 1px solid var(--neutral-100);">

@@ -216,7 +216,7 @@ class TestAccountListView:
     def test_shows_empty_state(self, authenticated_client, workspace):
         url = reverse("social_accounts:list", kwargs={"workspace_id": workspace.id})
         response = authenticated_client.get(url)
-        assert b"No accounts connected yet" in response.content
+        assert b"plug in your first network" in response.content
 
     def test_disconnecting_the_last_account_reloads_the_whole_page(self, authenticated_client, workspace):
         """The card's disconnect posts to the list, not into the card: the counts,
@@ -241,7 +241,7 @@ class TestAccountListView:
         assert response.status_code == 302
         assert response.url == list_url
         page = authenticated_client.get(list_url).content.decode()
-        assert "No accounts connected yet" in page
+        assert "plug in your first network" in page
         assert 'data-name="facebook"' in page
 
 

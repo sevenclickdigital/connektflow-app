@@ -8,14 +8,18 @@
         <h1 class="page-title">{% translate "Social Accounts" %}</h1>
         <p class="page-description">{% translate "Manage your connections and add platforms to publish, analyse and automate your content." %}</p>
     </div>
+    <div class="flex items-center gap-2">
+    {% include "composer/partials/_ideas_hero_toggle.html" with tab="accounts" %}
     <a href="#connect-platforms" class="btn-brand" @click="$dispatch('show-available-platforms')">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         {% translate "Connect new platform" %}
     </a>
+    </div>
 </div>
 {% endblock %}
 
 {% block content %}
+{% include "composer/partials/_ideas_hero.html" with tab="accounts" %}
 {% comment %}
 Tabs, search and category filter run in the browser over data-state,
 data-category and data-name on each card: the whole page is already here.
@@ -94,10 +98,10 @@ data-category and data-name on each card: the whole page is already here.
         </p>
         {% else %}
         <div class="a-card py-8 px-6 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8 text-center sm:text-left">
-            <img src="{% static 'img/moti/moti-sem-conexao.webp' %}" alt="{% translate 'Moti, the Connekt Flow robot, puzzled by a broken link' %}" class="h-36 sm:h-40 flex-shrink-0">
+            <img src="{% static 'img/moti/moti-conectar.webp' %}" alt="{% translate 'Moti, the Connekt Flow robot, plugging in a cable' %}" class="h-36 sm:h-40 flex-shrink-0">
             <div class="max-w-sm">
-                <h3 class="text-base font-semibold text-neutral-950 mb-2">{% translate "No accounts connected yet" %}</h3>
-                <p class="text-sm text-neutral-600 mb-6">{% translate "Connect your social media accounts to start publishing content, tracking engagement, and managing your inbox." %}</p>
+                <h3 class="text-base font-semibold text-neutral-950 mb-2">{% translate "Let's plug in your first network" %}</h3>
+                <p class="text-sm text-neutral-600 mb-6">{% translate "Connect the networks your brand uses. From then on you publish, answer messages and follow the results all from here." %}</p>
                 <a href="#connect-platforms" class="btn-brand" @click="tab = 'available'">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     {% translate "Connect Your First Account" %}

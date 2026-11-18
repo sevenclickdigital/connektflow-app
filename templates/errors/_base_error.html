@@ -8,7 +8,8 @@ page produces a second 500, which Django answers with its bare built-in
 response. Everything here is self-contained: the product's stylesheet and
 tokens, no context processors, no includes, no JavaScript.
 
-Blocks: code, title, message, extra (optional, for the 500's reference id).
+Blocks: code, title, message, illustration (optional, above the code),
+extra (optional, for the 500's reference id).
 {% endcomment %}
 {% load i18n %}
 {% get_current_language as LANGUAGE_CODE %}
@@ -24,7 +25,9 @@ Blocks: code, title, message, extra (optional, for the 500's reference id).
   raises ValueError — which, on the 500 page, turns one error into a second
   one Django can only answer with its bare built-in response. The brand's
   colours and type are inlined below instead, so the page owes nothing to
-  the pipeline that may be what broke.
+  the pipeline that may be what broke. An illustration points at the
+  file's plain /static/ path, which the manifest storage keeps next to the
+  hashed copy; if it is missing the page still renders, just without it.
   {% endcomment %}
 </head>
 <body style="margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -32,6 +35,8 @@ Blocks: code, title, message, extra (optional, for the 500's reference id).
              font-family: var(--font-body, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif);">
 
   <main style="width: 100%; max-width: 30rem; text-align: center;">
+
+    {% block illustration %}{% endblock %}
 
     <!-- Status code -->
     <p style="margin: 0; font-size: 3.75rem; line-height: 1; font-weight: 800; letter-spacing: -0.03em;

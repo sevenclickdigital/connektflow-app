@@ -4,6 +4,8 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from django.utils.translation import pgettext_lazy
 
 from apps.common.managers import WorkspaceScopedManager
 
@@ -100,3 +102,39 @@ class OnboardingChecklist(models.Model):
     def __str__(self):
         status = "dismissed" if self.is_dismissed else "active"
         return f"Checklist for {self.user} in {self.workspace} ({status})"
+
+
+class PageHelpVideo(models.Model):
+    """The YouTube video behind a page banner's "See how it works" button.
+
+    Product-wide, not per workspace: the operator sets one link per page in
+    the administrative area (onboarding.staff_views) and every brand sees it.
+    A page without a row has no video, and its banner shows no button.
+    """
+
+    class Page(models.TextChoices):
+        DASHBOARD = "dashboard", pgettext_lazy("menu", "Dashboard")
+        CALENDAR = "calendar", _("Calendar")
+        TASKS = "tasks", _("Task board")
+        IDEAS = "ideas", _("Ideas")
+        TEMPLATES = "templates", _("Templates")
+        DATES = "dates", _("Special dates")
+        INBOX = "inbox", pgettext_lazy("menu", "Inbox")
+        AUTOMATIONS = "automations", pgettext_lazy("menu", "Automation")
+        CONTACTS = "contacts", pgettext_lazy("menu", "Contacts")
+        ANALYTICS = "analytics", _("Reports")
+        ACCOUNTS = "accounts", _("Social Accounts")
+        MEDIA = "media", _("Gallery")
+        RADAR = "radar", _("Radar")
+        SHOPEE = "shopee", _("Shopee Affiliates")
+        INSTAGRAM_RESEARCH = "instagram_research", _("Instagram research")
+
+    page = models.CharField(max_length=20, choices=Page.choices, unique=True)
+    video_url = models.URLField(max_length=300)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "onboarding_page_help_video"
+
+    def __str__(self):
+        return f"{self.page}: {self.video_url}"

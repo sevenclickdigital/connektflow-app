@@ -3,10 +3,14 @@
 {% block page_title %}{% translate "Radar" %}{% endblock %}
 {% block content %}
 <div class="w-full">
-    <div class="mb-8">
-        <h2 class="text-xl font-semibold text-neutral-950">{% translate "Radar" %}</h2>
-        <p class="text-sm text-neutral-600 mt-1">{% translate "Find products and offers worth sharing on the platforms you connected." %}</p>
+    <div class="mb-6 flex items-start justify-between gap-4">
+        <div>
+            <h2 class="text-xl font-semibold text-neutral-950">{% translate "Radar" %}</h2>
+            <p class="text-sm text-neutral-600 mt-1">{% translate "Find products and offers worth sharing on the platforms you connected." %}</p>
+        </div>
+        {% include "composer/partials/_ideas_hero_toggle.html" with tab="radar" %}
     </div>
+    {% include "composer/partials/_ideas_hero.html" with tab="radar" %}
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {% url 'social_accounts:list' workspace_id=workspace_id as social_accounts_url %}

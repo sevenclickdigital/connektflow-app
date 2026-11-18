@@ -78,7 +78,7 @@ docker-compose.dokploy.yml                         # production
 - **`RBACMiddleware`** (`apps/members/middleware.py`) attaches `request.org`, `request.org_membership`, `request.workspace` and `request.workspace_membership`. A user may belong to several organizations (`request.org_memberships`); `request.org` is the one of the workspace in the URL, else of the last workspace opened, else the first joined. It skips `/static/` and `/media/`.
 - **Data isolation is explicit, not automatic.** `apps/common/managers.py` provides `OrgScopedManager.for_org()` and `WorkspaceScopedManager.for_workspace()`. Views must call these themselves (or filter by workspace). Nothing filters querysets implicitly, and there is no PostgreSQL row-level security.
 - Workspace-scoped URLs follow the pattern `/workspace/<uuid:workspace_id>/...` (`config/urls.py`).
-- **Staff-only surfaces** (gated on `is_staff`, outside any workspace prefix): `/billing/staff/` (billing console, courtesy grants, impersonation log) and `/automations/staff/templates/` (flow template library). The impersonation rules are in `apps/accounts/impersonation.py`.
+- **Staff-only surfaces** (gated on `is_staff`, outside any workspace prefix): `/billing/staff/` (billing console, courtesy grants, impersonation log), `/automations/staff/templates/` (flow template library), `/composer/staff/ideas/`, `/calendar/staff/dates/`, `/radar/staff/hashtags/` and `/onboarding/staff/videos/` (the page banners' help videos). The impersonation rules are in `apps/accounts/impersonation.py`.
 
 ---
 
@@ -281,7 +281,7 @@ STORAGE_BACKEND=s3     →  storages.backends.s3boto3.S3Boto3Storage (S3_* env v
 | API keys | HMAC-SHA256 of the secret, lookup prefix, scoped per workspace (§13) |
 | Encryption at rest | AES-256-GCM model fields (`apps/common/encryption.py`). The key is derived from `SECRET_KEY` + `ENCRYPTION_KEY_SALT` via HKDF. There is no key-rotation command. Changing either value makes stored tokens unreadable. |
 | Data isolation | Explicit `for_org` / `for_workspace` plus membership checks (§3) |
-| CSRF / CSP | Django CSRF middleware. `django-csp` with script nonces. CSP is report-only in development. |
+| CSRF / CSP | Django CSRF middleware. `django-csp` with script nonces. Frames are allowed only from `youtube-nocookie.com` (`CSP_FRAME_SRC`, the banners' help videos). CSP is enforced in development too (`CSP_REPORT_ONLY=true` in `.env` turns it into reports). |
 | Rate limiting | `django-ratelimit` on webhooks, invites, onboarding and social connects. `AuthRateLimitMiddleware` on auth. Its own limiter for the API. Disabled when `DEBUG`. |
 | Audit | `ApiKeyAuditLog`, `BillingEvent`, `AutomationLog`, impersonation sessions. There is no general audit log. |
 | Account deletion | Self-service in account settings, refused while the user is the sole owner of an org. No data-export feature. |
@@ -340,5 +340,5 @@ These are read in `config/settings/base.py` but missing from `.env.example`: `SE
 
 - **Docker:** `docker compose up` merges `docker-compose.yml` with `docker-compose.override.yml`. You get `migrate`, `app` (runserver on :8000, source mounted), `worker`, `postgres` (:5432) and a `tailwind` watcher, all on `config.settings.development`.
 - **Without Docker:** see README, "Fully Local Development". It uses `DATABASE_URL=sqlite:///db.sqlite3`, `npm install` + `npm run start` in `theme/static_src`, then `runserver` and `run_studio_worker` in separate terminals.
-- **Development settings:** `ALLOWED_HOSTS=*`, console email with no caps, report-only CSP, `CSRF_TRUSTED_ORIGINS` for tunnels (ngrok), debug toolbar if installed.
+- **Development settings:** `ALLOWED_HOSTS=*`, console email with no caps, enforced CSP (report-only with `CSP_REPORT_ONLY=true`), `CSRF_TRUSTED_ORIGINS` for tunnels (ngrok), debug toolbar if installed.
 - **CI** (`.github/workflows/ci.yml`): ruff check + format → mypy (`apps/ config/ providers/ tests/`) → pytest against Postgres (after `makemigrations --check`) → Docker image build → gitleaks. CI does not deploy anything. Deploys are triggered in Dokploy.
