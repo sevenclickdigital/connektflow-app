@@ -701,7 +701,7 @@
                 <!-- Footer -->
                 <div class="idea-modal-footer" @click="editGroupDropdownOpen = false; editTagDropdownOpen = false">
                     <button type="button"
-                            @click="showDeleteIdeaConfirm = true"
+                            @click="deleteIdeaId = editingIdea.id; showDeleteIdeaConfirm = true"
                             class="btn-danger-soft px-4 py-2 mr-auto">
                         {% translate "Delete" %}
                     </button>
@@ -787,13 +787,13 @@
                     </button>
                     <button type="button"
                             @click="
-                                if (editingIdea && !deletingIdea) {
+                                if (deleteIdeaId && !deletingIdea) {
                                     deletingIdea = true;
-                                    const ideaId = editingIdea.id;
-                                    deleteIdea(ideaId);
-                                    editingIdea = null;
+                                    deleteIdea(deleteIdeaId);
+                                    if (editingIdea && editingIdea.id === deleteIdeaId) editingIdea = null;
                                     showDeleteIdeaConfirm = false;
                                     deletingIdea = false;
+                                    deleteIdeaId = '';
                                 }
                             "
                             :disabled="deletingIdea"
@@ -981,6 +981,8 @@ function kanbanBoard() {
         isEditSaving: false,
         _editMediaDragOver: false,
         showDeleteIdeaConfirm: false,
+        // The idea the delete confirmation is about: the one open in its window, or a card's (its menu).
+        deleteIdeaId: '',
         // The media library window, shared by the two idea windows: which
         // one asked for it decides where the chosen files go.
         showMediaPicker: false,
