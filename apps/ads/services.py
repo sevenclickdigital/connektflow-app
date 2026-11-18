@@ -232,14 +232,18 @@ class AssetChoices:
 
 
 def asset_choices(connection: AdsConnection, ad_account_id: str = "") -> AssetChoices:
-    """What the token reaches: ad accounts, the Pixels of the chosen one, and Pages."""
+    """What the token reaches: the ad accounts, and the Pixels and Pages of the chosen one.
+
+    Pixels and Pages come only from that account, so a Pixel or Page wired to
+    another account cannot be paired with it and skew its results.
+    """
     accounts = _call(connection, meta_ads.MetaAdsClient.ad_accounts)
     wanted = ad_account_id or connection.ad_account_id
     account = next((a for a in accounts if a.id == wanted), None)
     if account is None and len(accounts) == 1:
         account = accounts[0]
     pixels = _call(connection, meta_ads.MetaAdsClient.pixels, account.id) if account else []
-    pages = _call(connection, meta_ads.MetaAdsClient.pages)
+    pages = _call(connection, meta_ads.MetaAdsClient.pages, account.id) if account else []
     return AssetChoices(accounts=accounts, pixels=pixels, pages=pages, account=account)
 
 

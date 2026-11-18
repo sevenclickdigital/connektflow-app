@@ -212,7 +212,7 @@ class TestAdAccountBoundary:
         routes = {
             ("GET", "me/adaccounts"): {"data": [{"id": ACCOUNT, "name": "Loja", "currency": "BRL"}]},
             ("GET", f"{ACCOUNT}/adspixels"): {"data": [{"id": "px-1", "name": "Pixel"}]},
-            ("GET", "me/accounts"): {"data": [{"id": "page-1", "name": "Loja Page"}]},
+            ("GET", f"{ACCOUNT}/promote_pages"): {"data": [{"id": "page-1", "name": "Loja Page"}]},
         }
         graph, patch = fake_graph(routes)
         with patch, pytest.raises(services.AdsError):
@@ -229,6 +229,68 @@ class TestAdAccountBoundary:
             services.list_campaigns(connection)
         connection.refresh_from_db()
         assert connection.status == AdsConnection.Status.ERROR
+
+
+@pytest.mark.django_db
+class TestSettingsPage:
+    ROUTES = {
+        ("GET", "me/adaccounts"): {
+            "data": [
+                {"id": ACCOUNT, "name": "Loja", "currency": "BRL", "account_status": 1},
+                {"id": OTHER_ACCOUNT, "name": "Outra marca", "currency": "USD", "account_status": 1},
+            ]
+        },
+        ("GET", f"{ACCOUNT}/adspixels"): {
+            "data": [{"id": "px-1", "name": "Pixel da loja", "last_fired_time": "2026-11-17T12:00:00+0000"}]
+        },
+        ("GET", f"{OTHER_ACCOUNT}/adspixels"): {"data": [{"id": "px-9", "name": "Pixel da outra"}]},
+        ("GET", f"{ACCOUNT}/promote_pages"): {"data": [{"id": "page-1", "name": "Loja Page"}]},
+        ("GET", f"{OTHER_ACCOUNT}/promote_pages"): {"data": [{"id": "page-9", "name": "Outra Page"}]},
+    }
+
+    def test_lists_every_ad_account_with_the_chosen_one_marked(self, connection, manager):
+        graph, patch = fake_graph(self.ROUTES)
+        with patch:
+            response = _logged_in(manager).get(
+                reverse("ads:settings", kwargs={"workspace_id": connection.workspace_id})
+            )
+        assert response.status_code == 200
+        body = response.content.decode()
+        assert "Outra marca" in body
+        assert f'href="?account={ACCOUNT}"' in body
+        assert response.context["choices"].account.id == ACCOUNT
+        assert response.context["form"]["pixel_id"].value() == "px-1"
+
+    def test_picking_another_account_shows_only_its_pixels_and_pages(self, connection, manager):
+        graph, patch = fake_graph(self.ROUTES)
+        url = reverse("ads:settings", kwargs={"workspace_id": connection.workspace_id})
+        with patch:
+            response = _logged_in(manager).get(url, {"account": OTHER_ACCOUNT})
+        assert [p.id for p in response.context["choices"].pixels] == ["px-9"]
+        assert [p.id for p in response.context["choices"].pages] == ["page-9"]
+        body = response.content.decode()
+        assert "Pixel da loja" not in body
+        assert "Loja Page" not in body
+        # Nothing of the account in use is carried over to the one being looked at.
+        assert response.context["form"]["pixel_id"].value() in ("", "px-9")
+
+    def test_a_page_of_another_ad_account_is_refused(self, connection, manager):
+        graph, patch = fake_graph(self.ROUTES)
+        with patch, pytest.raises(services.AdsError):
+            services.choose_assets(connection, ad_account_id=OTHER_ACCOUNT, pixel_id="px-9", page_id="page-1")
+        connection.refresh_from_db()
+        assert (connection.ad_account_id, connection.page_id) == (ACCOUNT, "page-1")
+
+    def test_a_fresh_connection_starts_with_its_only_page_chosen(self, connection, manager):
+        connection.page_id = ""
+        connection.status = AdsConnection.Status.PENDING
+        connection.save()
+        graph, patch = fake_graph(self.ROUTES)
+        with patch:
+            response = _logged_in(manager).get(
+                reverse("ads:settings", kwargs={"workspace_id": connection.workspace_id})
+            )
+        assert response.context["form"]["page_id"].value() == "page-1"
 
 
 # ------------------------------------------------------------------

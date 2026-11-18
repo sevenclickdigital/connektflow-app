@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-18 12:05+0000\n"
+"POT-Creation-Date: 2026-11-18 13:39+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -177,15 +177,16 @@ msgid "You are back in your own account."
 msgstr "Você voltou para sua própria conta."
 
 #: apps/ads/forms.py:29 templates/ads/index.html:56
-#: templates/ads/settings.html:21
+#: templates/ads/settings.html:78
 msgid "Ad account"
 msgstr "Conta de anúncios"
 
 #: apps/ads/forms.py:30 templates/ads/index.html:57
+#: templates/ads/settings.html:118
 msgid "Pixel"
 msgstr "Pixel"
 
-#: apps/ads/forms.py:31
+#: apps/ads/forms.py:31 templates/ads/settings.html:152
 msgid "Facebook Page"
 msgstr "Página do Facebook"
 
@@ -194,10 +195,12 @@ msgid "inactive"
 msgstr "inativa"
 
 #: apps/ads/forms.py:45 templates/ads/index.html:57
+#: templates/ads/settings.html:126
 msgid "No Pixel"
 msgstr "Sem Pixel"
 
 #: apps/ads/forms.py:46 templates/ads/index.html:58
+#: templates/ads/settings.html:160
 msgid "No Page"
 msgstr "Sem Página"
 
@@ -490,57 +493,57 @@ msgstr "A Meta recusou o pedido: %(detail)s"
 msgid "no reason given"
 msgstr "nenhum motivo informado"
 
-#: apps/ads/services.py:251
+#: apps/ads/services.py:255
 msgid "Choose one of the ad accounts your Meta sign-in can manage."
 msgstr ""
 "Escolha uma das contas de anúncios que o seu login da Meta pode administrar."
 
-#: apps/ads/services.py:254
+#: apps/ads/services.py:258
 msgid "That Pixel does not belong to the chosen ad account."
 msgstr "Esse Pixel não pertence à conta de anúncios escolhida."
 
-#: apps/ads/services.py:257
+#: apps/ads/services.py:261
 msgid "Choose one of the Pages your Meta sign-in manages."
 msgstr "Escolha uma das Páginas que o seu login da Meta administra."
 
-#: apps/ads/services.py:380 apps/ads/services.py:383
+#: apps/ads/services.py:384 apps/ads/services.py:387
 msgid "This campaign was not found in the connected ad account."
 msgstr "Esta campanha não foi encontrada na conta de anúncios conectada."
 
-#: apps/ads/services.py:451
+#: apps/ads/services.py:455
 msgid "Unknown campaign status."
 msgstr "Status de campanha desconhecido."
 
-#: apps/ads/services.py:476
+#: apps/ads/services.py:480
 msgid "This ad set is not part of the campaign."
 msgstr "Este conjunto de anúncios não faz parte da campanha."
 
-#: apps/ads/services.py:480
+#: apps/ads/services.py:484
 msgid "This ad set has a lifetime budget. Change it in Meta Ads Manager."
 msgstr ""
 "Este conjunto de anúncios tem orçamento total. Altere-o no Gerenciador de "
 "Anúncios da Meta."
 
-#: apps/ads/services.py:524
+#: apps/ads/services.py:528
 msgid "Ad set"
 msgstr "Conjunto de anúncios"
 
-#: apps/ads/services.py:535 apps/ads/services.py:582
+#: apps/ads/services.py:539 apps/ads/services.py:586
 msgid ""
 "Choose a Pixel in the connection settings to run sales or lead campaigns."
 msgstr ""
 "Escolha um Pixel nas configurações da conexão para rodar campanhas de vendas "
 "ou de cadastros."
 
-#: apps/ads/services.py:560 apps/ads/services.py:564
+#: apps/ads/services.py:564 apps/ads/services.py:568
 msgid "The image is larger than Meta accepts (30 MB)."
 msgstr "A imagem é maior do que a Meta aceita (30 MB)."
 
-#: apps/ads/services.py:576
+#: apps/ads/services.py:580
 msgid "Finish connecting Meta Ads before creating campaigns."
 msgstr "Termine de conectar o Meta Ads antes de criar campanhas."
 
-#: apps/ads/services.py:578 templates/ads/campaign_new.html:18
+#: apps/ads/services.py:582 templates/ads/campaign_new.html:18
 msgid ""
 "Choose the Facebook Page your ads are published as in the connection "
 "settings."
@@ -548,7 +551,7 @@ msgstr ""
 "Escolha, nas configurações da conexão, a Página do Facebook em nome da qual "
 "os anúncios são publicados."
 
-#: apps/ads/services.py:580
+#: apps/ads/services.py:584
 msgid "Choose one of the offered objectives."
 msgstr "Escolha um dos objetivos oferecidos."
 
@@ -573,11 +576,11 @@ msgid "Meta Ads connected. Choose the ad account, Pixel and Page to use."
 msgstr ""
 "Meta Ads conectado. Escolha a conta de anúncios, o Pixel e a Página a usar."
 
-#: apps/ads/views.py:219
+#: apps/ads/views.py:222
 msgid "Meta Ads settings saved."
 msgstr "Configurações do Meta Ads salvas."
 
-#: apps/ads/views.py:241
+#: apps/ads/views.py:244
 msgid ""
 "Meta Ads disconnected. Campaigns keep running in the ad account until you "
 "stop them there."
@@ -585,37 +588,37 @@ msgstr ""
 "Meta Ads desconectado. As campanhas continuam rodando na conta de anúncios "
 "até você pausá-las lá."
 
-#: apps/ads/views.py:268
+#: apps/ads/views.py:271
 msgid "The image file could not be read. Choose another one."
 msgstr "Não foi possível ler o arquivo da imagem. Escolha outra."
 
-#: apps/ads/views.py:270
+#: apps/ads/views.py:273
 msgid "Campaign created, paused. Review it and activate it when you are ready."
 msgstr "Campanha criada, pausada. Revise e ative quando estiver tudo certo."
 
-#: apps/ads/views.py:335
+#: apps/ads/views.py:338
 msgid "Campaign activated. Meta reviews new ads before they start delivering."
 msgstr ""
 "Campanha ativada. A Meta revisa os anúncios novos antes de começar a "
 "veiculação."
 
-#: apps/ads/views.py:336
+#: apps/ads/views.py:339
 msgid "Campaign paused."
 msgstr "Campanha pausada."
 
-#: apps/ads/views.py:337
+#: apps/ads/views.py:340
 msgid "Campaign archived."
 msgstr "Campanha arquivada."
 
-#: apps/ads/views.py:353
+#: apps/ads/views.py:356
 msgid "Give the campaign a name of up to 200 characters."
 msgstr "Dê à campanha um nome de até 200 caracteres."
 
-#: apps/ads/views.py:360
+#: apps/ads/views.py:363
 msgid "Campaign renamed."
 msgstr "Campanha renomeada."
 
-#: apps/ads/views.py:389
+#: apps/ads/views.py:392
 msgid "Ad set updated."
 msgstr "Conjunto de anúncios atualizado."
 
@@ -1862,7 +1865,13 @@ msgid ""
 "story repeats the wish and invites followers to share one goal with the "
 "question sticker. The Reels shows quick clips of the team wishing everyone a "
 "good year and ends on the same wish as the post."
-msgstr "Abra o ano com uma mensagem de recomeço da marca. O post do feed traz um voto curto em letras grandes sobre fundo claro e limpo, com o número do ano como elemento visual principal e o logo pequeno no rodapé. O story repete o voto e convida os seguidores a compartilhar uma meta com a caixinha de perguntas. O Reels mostra cenas rápidas da equipe desejando um bom ano e termina com o mesmo voto do post."
+msgstr ""
+"Abra o ano com uma mensagem de recomeço da marca. O post do feed traz um "
+"voto curto em letras grandes sobre fundo claro e limpo, com o número do ano "
+"como elemento visual principal e o logo pequeno no rodapé. O story repete o "
+"voto e convida os seguidores a compartilhar uma meta com a caixinha de "
+"perguntas. O Reels mostra cenas rápidas da equipe desejando um bom ano e "
+"termina com o mesmo voto do post."
 
 #: apps/calendar/holidays.py:314
 msgid "The year's number large, short wish below, logo small at the bottom"
@@ -1870,7 +1879,8 @@ msgstr "Número do ano em destaque, voto curto abaixo, logo pequeno no rodapé"
 
 #: apps/calendar/holidays.py:315
 msgid "First with the wish; second with a question sticker asking for a goal"
-msgstr "Primeiro com o voto; segundo com a caixinha de perguntas pedindo uma meta"
+msgstr ""
+"Primeiro com o voto; segundo com a caixinha de perguntas pedindo uma meta"
 
 #: apps/calendar/holidays.py:316
 msgid "Team clips wishing a good year, ending on the post's wish"
@@ -1889,22 +1899,35 @@ msgid ""
 "colours turned up, not generic stock images. The story highlights the "
 "changed hours, and the Reels shows the team in light costumes or the "
 "products dressed up for the party."
-msgstr "Celebre o Carnaval com cor, mas dê primeiro a informação prática. O post principal é um carrossel: capa festiva com confete e serpentina, depois o horário de funcionamento de cada dia do feriado em letras grandes e fáceis de ler, fechando com uma mensagem de até depois da folia. Use as cores da própria marca mais intensas, não imagens genéricas de banco. O story destaca o horário alterado, e o Reels mostra a equipe com fantasias leves ou os produtos enfeitados para a festa."
+msgstr ""
+"Celebre o Carnaval com cor, mas dê primeiro a informação prática. O post "
+"principal é um carrossel: capa festiva com confete e serpentina, depois o "
+"horário de funcionamento de cada dia do feriado em letras grandes e fáceis "
+"de ler, fechando com uma mensagem de até depois da folia. Use as cores da "
+"própria marca mais intensas, não imagens genéricas de banco. O story destaca "
+"o horário alterado, e o Reels mostra a equipe com fantasias leves ou os "
+"produtos enfeitados para a festa."
 
 #: apps/calendar/holidays.py:332
 msgid ""
 "Festive cover; holiday hours; contact channels; last with the see-you-after-"
 "the-party farewell"
-msgstr "Capa festiva; horários do feriado; canais de contato; último com a despedida até depois da folia"
+msgstr ""
+"Capa festiva; horários do feriado; canais de contato; último com a despedida "
+"até depois da folia"
 
 #: apps/calendar/holidays.py:334
 msgid "Changed hours in large type; countdown sticker to reopening"
-msgstr "Horário alterado em destaque; figurinha de contagem regressiva para a reabertura"
+msgstr ""
+"Horário alterado em destaque; figurinha de contagem regressiva para a "
+"reabertura"
 
 #: apps/calendar/holidays.py:335
 msgid ""
 "Team in light costumes or products dressed up, fast cuts in a carnival mood"
-msgstr "Equipe com fantasias leves ou produtos enfeitados, cortes rápidos em clima de Carnaval"
+msgstr ""
+"Equipe com fantasias leves ou produtos enfeitados, cortes rápidos em clima "
+"de Carnaval"
 
 #: apps/calendar/holidays.py:336
 msgid "The holiday hours slide adapted to the square"
@@ -1919,13 +1942,22 @@ msgid ""
 "element and little text. The Reels shows these women talking to camera about "
 "their work, and the story invites followers to tag a woman who inspires "
 "them. No sales message."
-msgstr "Homenageie as mulheres com rostos reais, não com flores nem descontos. O carrossel apresenta as mulheres que constroem a marca: retrato de cada uma com nome, função e uma frase nas palavras dela, depois de uma capa que anuncia a data com sobriedade. Mantenha o design limpo, com as fotos como elemento principal e pouco texto. O Reels mostra essas mulheres falando para a câmera sobre o próprio trabalho, e o story convida os seguidores a marcar uma mulher que os inspira. Sem mensagem de venda."
+msgstr ""
+"Homenageie as mulheres com rostos reais, não com flores nem descontos. O "
+"carrossel apresenta as mulheres que constroem a marca: retrato de cada uma "
+"com nome, função e uma frase nas palavras dela, depois de uma capa que "
+"anuncia a data com sobriedade. Mantenha o design limpo, com as fotos como "
+"elemento principal e pouco texto. O Reels mostra essas mulheres falando para "
+"a câmera sobre o próprio trabalho, e o story convida os seguidores a marcar "
+"uma mulher que os inspira. Sem mensagem de venda."
 
 #: apps/calendar/holidays.py:351
 msgid ""
 "Restrained cover; one woman per slide with photo, name and quote; last with "
 "a thank-you"
-msgstr "Capa sóbria; uma mulher por slide com foto, nome e frase; último com o agradecimento"
+msgstr ""
+"Capa sóbria; uma mulher por slide com foto, nome e frase; último com o "
+"agradecimento"
 
 #: apps/calendar/holidays.py:353
 msgid "Short testimonies to camera from the women on the team"
@@ -1947,17 +1979,27 @@ msgid ""
 "products on offer, one per slide, with the old and the new price; the "
 "stories create urgency with a countdown; the Reels shows the products at a "
 "fast pace with the offer on screen. Close every piece with how to buy."
-msgstr "Venda com uma oferta clara no Dia do Consumidor. O desconto ou a condição é o protagonista de todas as peças: o número em tamanho muito grande, a foto do produto ao lado e o prazo de validade pequeno, mas visível. O carrossel mostra os produtos em oferta, um por slide, com o preço antigo e o novo; os stories criam urgência com contagem regressiva; o Reels mostra os produtos em ritmo rápido com a oferta na tela. Feche cada peça com como comprar."
+msgstr ""
+"Venda com uma oferta clara no Dia do Consumidor. O desconto ou a condição é "
+"o protagonista de todas as peças: o número em tamanho muito grande, a foto "
+"do produto ao lado e o prazo de validade pequeno, mas visível. O carrossel "
+"mostra os produtos em oferta, um por slide, com o preço antigo e o novo; os "
+"stories criam urgência com contagem regressiva; o Reels mostra os produtos "
+"em ritmo rápido com a oferta na tela. Feche cada peça com como comprar."
 
 #: apps/calendar/holidays.py:370
 msgid ""
 "Cover with the offer; one product per slide with old and new price; last "
 "with how to buy"
-msgstr "Capa com a oferta; um produto por slide com preço antigo e novo; último com como comprar"
+msgstr ""
+"Capa com a oferta; um produto por slide com preço antigo e novo; último com "
+"como comprar"
 
 #: apps/calendar/holidays.py:372
 msgid "Offer announcement; countdown sticker; last-day reminder with link"
-msgstr "Anúncio da oferta; figurinha de contagem regressiva; lembrete do último dia com link"
+msgstr ""
+"Anúncio da oferta; figurinha de contagem regressiva; lembrete do último dia "
+"com link"
 
 #: apps/calendar/holidays.py:373
 msgid "Products in quick cuts with the discount on screen"
@@ -1977,7 +2019,13 @@ msgid ""
 "reflection in elegant type and a discreet symbolic image, such as natural "
 "light or bread, with the brand's logo small. No offers or sales language. "
 "The story says whether the business is closed or open with different hours."
-msgstr "Marque a Sexta-feira Santa com uma mensagem calma e reflexiva e um aviso prático sobre o horário de funcionamento. O post usa cores suaves e neutras, uma frase curta de reflexão em tipografia elegante e uma imagem simbólica discreta, como luz natural ou pão, com o logo da marca pequeno. Sem ofertas nem linguagem de venda. O story informa se o negócio estará fechado ou aberto em horário diferente."
+msgstr ""
+"Marque a Sexta-feira Santa com uma mensagem calma e reflexiva e um aviso "
+"prático sobre o horário de funcionamento. O post usa cores suaves e neutras, "
+"uma frase curta de reflexão em tipografia elegante e uma imagem simbólica "
+"discreta, como luz natural ou pão, com o logo da marca pequeno. Sem ofertas "
+"nem linguagem de venda. O story informa se o negócio estará fechado ou "
+"aberto em horário diferente."
 
 #: apps/calendar/holidays.py:385
 msgid "Short reflection over a soft image, logo small"
@@ -2002,12 +2050,21 @@ msgid ""
 "order before the holiday, and the Reels shows the products being made or "
 "wrapped in an Easter mood. Warm, soft colours; the product photos are the "
 "main element."
-msgstr "Venda a Páscoa pelos momentos em família e pelos produtos que combinam com eles. O carrossel funciona como guia de presentes ou de cardápio: capa com ovos ou chocolate em foto acolhedora, depois uma sugestão por slide com foto, descrição curta e preço, fechando com o prazo para encomendas. O story destaca o prazo para pedir antes do feriado, e o Reels mostra os produtos sendo preparados ou embalados em clima de Páscoa. Cores quentes e suaves; as fotos dos produtos são o elemento principal."
+msgstr ""
+"Venda a Páscoa pelos momentos em família e pelos produtos que combinam com "
+"eles. O carrossel funciona como guia de presentes ou de cardápio: capa com "
+"ovos ou chocolate em foto acolhedora, depois uma sugestão por slide com "
+"foto, descrição curta e preço, fechando com o prazo para encomendas. O story "
+"destaca o prazo para pedir antes do feriado, e o Reels mostra os produtos "
+"sendo preparados ou embalados em clima de Páscoa. Cores quentes e suaves; as "
+"fotos dos produtos são o elemento principal."
 
 #: apps/calendar/holidays.py:399
 msgid ""
 "Warm cover; one product per slide with price; last with the order deadline"
-msgstr "Capa acolhedora; um produto por slide com preço; último com o prazo de encomenda"
+msgstr ""
+"Capa acolhedora; um produto por slide com preço; último com o prazo de "
+"encomenda"
 
 #: apps/calendar/holidays.py:400
 msgid "Order deadline in large type; link or contact to order"
@@ -2028,7 +2085,12 @@ msgid ""
 "muted tones, with a short line about freedom and the memory of the "
 "Inconfidência Mineira, and no offers. The story tells followers the "
 "business's hours on the holiday."
-msgstr "Marque o Dia de Tiradentes com uma mensagem cívica sóbria e o aviso do feriado. O post mostra a data e o nome em tipografia clara sobre fundo sólido em tons discretos, com uma frase curta sobre liberdade e a memória da Inconfidência Mineira, sem ofertas. O story informa aos seguidores o horário de funcionamento no feriado."
+msgstr ""
+"Marque o Dia de Tiradentes com uma mensagem cívica sóbria e o aviso do "
+"feriado. O post mostra a data e o nome em tipografia clara sobre fundo "
+"sólido em tons discretos, com uma frase curta sobre liberdade e a memória da "
+"Inconfidência Mineira, sem ofertas. O story informa aos seguidores o horário "
+"de funcionamento no feriado."
 
 #: apps/calendar/holidays.py:413
 msgid "Date and name in clear type, short line about freedom"
@@ -2047,13 +2109,21 @@ msgid ""
 "hours. No sales message. The Reels shows a quick sequence of the team's "
 "daily routine, and the LinkedIn post adapts the thank-you for a professional "
 "audience."
-msgstr "Use o Dia do Trabalhador para agradecer à equipe e mostrar as pessoas por trás da marca. O carrossel apresenta os membros da equipe trabalhando, em fotos reais, com nome e função em cada slide, abrindo com uma capa de agradecimento e fechando com o horário do feriado. Sem mensagem de venda. O Reels mostra uma sequência rápida da rotina da equipe, e o post do LinkedIn adapta o agradecimento para um público profissional."
+msgstr ""
+"Use o Dia do Trabalhador para agradecer à equipe e mostrar as pessoas por "
+"trás da marca. O carrossel apresenta os membros da equipe trabalhando, em "
+"fotos reais, com nome e função em cada slide, abrindo com uma capa de "
+"agradecimento e fechando com o horário do feriado. Sem mensagem de venda. O "
+"Reels mostra uma sequência rápida da rotina da equipe, e o post do LinkedIn "
+"adapta o agradecimento para um público profissional."
 
 #: apps/calendar/holidays.py:430
 msgid ""
 "Thank-you cover; one team member per slide at work; last with the holiday "
 "hours"
-msgstr "Capa de agradecimento; uma pessoa da equipe por slide trabalhando; último com o horário do feriado"
+msgstr ""
+"Capa de agradecimento; uma pessoa da equipe por slide trabalhando; último "
+"com o horário do feriado"
 
 #: apps/calendar/holidays.py:432
 msgid "Quick sequence of the team's routine, ending on the thank-you"
@@ -2071,13 +2141,22 @@ msgid ""
 "customers or team members talking about their mothers, ending on the gift "
 "guide. The stories push the delivery or purchase deadline before the second "
 "Sunday of May. Warm palette, real photos, the product always visible."
-msgstr "Venda o Dia das Mães com emoção e sugestões de presente claras. O carrossel principal é um guia de presentes por perfil de mãe, com foto do produto, descrição curta e preço em cada slide, depois de uma capa afetuosa. O Reels pode trazer clientes ou pessoas da equipe falando das mães, terminando no guia de presentes. Os stories reforçam o prazo de entrega ou de compra antes do segundo domingo de maio. Paleta quente, fotos reais, o produto sempre visível."
+msgstr ""
+"Venda o Dia das Mães com emoção e sugestões de presente claras. O carrossel "
+"principal é um guia de presentes por perfil de mãe, com foto do produto, "
+"descrição curta e preço em cada slide, depois de uma capa afetuosa. O Reels "
+"pode trazer clientes ou pessoas da equipe falando das mães, terminando no "
+"guia de presentes. Os stories reforçam o prazo de entrega ou de compra antes "
+"do segundo domingo de maio. Paleta quente, fotos reais, o produto sempre "
+"visível."
 
 #: apps/calendar/holidays.py:449
 msgid ""
 "Affectionate cover; one type of mother and gift per slide; last with how to "
 "buy"
-msgstr "Capa afetuosa; um perfil de mãe e um presente por slide; último com como comprar"
+msgstr ""
+"Capa afetuosa; um perfil de mãe e um presente por slide; último com como "
+"comprar"
 
 #: apps/calendar/holidays.py:451
 msgid "People talking about their mothers, ending on the gift guide"
@@ -2094,7 +2173,11 @@ msgid ""
 "processions, with one short, respectful line and the logo small. No offers. "
 "The story says whether the business opens on the holiday and on the bridge "
 "day, if there is one."
-msgstr "Marque o Corpus Christi com uma mensagem tranquila e um aviso prático sobre a folga. O post usa uma imagem suave, como os tapetes coloridos das procissões, com uma frase curta e respeitosa e o logo pequeno. Sem ofertas. O story informa se o negócio abre no feriado e no dia de ponte, se houver."
+msgstr ""
+"Marque o Corpus Christi com uma mensagem tranquila e um aviso prático sobre "
+"a folga. O post usa uma imagem suave, como os tapetes coloridos das "
+"procissões, com uma frase curta e respeitosa e o logo pequeno. Sem ofertas. "
+"O story informa se o negócio abre no feriado e no dia de ponte, se houver."
 
 #: apps/calendar/holidays.py:464
 msgid "Soft image of the procession carpets with a short line"
@@ -2112,13 +2195,21 @@ msgid ""
 "The Reels shows a gift or dinner being prepared to a romantic soundtrack, "
 "and the stories collect couples' stories with the question sticker and push "
 "the order deadline. Reds and pinks adjusted to the brand's colours."
-msgstr "Venda o Dia dos Namorados (12 de junho) como uma experiência para casais. O carrossel apresenta combos de presente ou de experiência a dois, um por slide, com foto produzida para dois, preço e uma frase romântica curta, depois de uma capa com a data. O Reels mostra a preparação de um presente ou de um jantar com trilha romântica, e os stories coletam histórias de casais com a caixinha de perguntas e reforçam o prazo de pedidos. Vermelhos e rosas ajustados às cores da marca."
+msgstr ""
+"Venda o Dia dos Namorados (12 de junho) como uma experiência para casais. O "
+"carrossel apresenta combos de presente ou de experiência a dois, um por "
+"slide, com foto produzida para dois, preço e uma frase romântica curta, "
+"depois de uma capa com a data. O Reels mostra a preparação de um presente ou "
+"de um jantar com trilha romântica, e os stories coletam histórias de casais "
+"com a caixinha de perguntas e reforçam o prazo de pedidos. Vermelhos e rosas "
+"ajustados às cores da marca."
 
 #: apps/calendar/holidays.py:481
 msgid ""
 "Cover with the date; one bundle for two per slide with price; last with how "
 "to order"
-msgstr "Capa com a data; um combo a dois por slide com preço; último com como pedir"
+msgstr ""
+"Capa com a data; um combo a dois por slide com preço; último com como pedir"
 
 #: apps/calendar/holidays.py:483
 msgid "A gift or dinner being prepared, romantic soundtrack"
@@ -2127,7 +2218,8 @@ msgstr "Preparação de um presente ou jantar, com trilha romântica"
 #: apps/calendar/holidays.py:484
 msgid ""
 "Question sticker for couples' stories; best bundle with link; order deadline"
-msgstr "Caixinha para histórias de casais; melhor combo com link; prazo de pedidos"
+msgstr ""
+"Caixinha para histórias de casais; melhor combo com link; prazo de pedidos"
 
 #: apps/calendar/holidays.py:490
 msgid ""
@@ -2137,13 +2229,22 @@ msgid ""
 "arraial. The Reels shows typical dishes or the team in country-style "
 "outfits, and the stories play with a junina quiz or a poll. Warm, rustic "
 "colours (straw, red, orange) and hand-drawn-style type."
-msgstr "Traga o clima de Festa Junina para a marca com bandeirinhas, fogueira, tecido xadrez e comidas típicas. O carrossel pode ser um cardápio temático ou uma lista de produtos, um item por slide com foto, depois de uma capa com o arraial da própria marca. O Reels mostra pratos típicos ou a equipe com roupa caipira, e os stories brincam com um quiz junino ou uma enquete. Cores quentes e rústicas (palha, vermelho, laranja) e tipografia com aspecto feito à mão."
+msgstr ""
+"Traga o clima de Festa Junina para a marca com bandeirinhas, fogueira, "
+"tecido xadrez e comidas típicas. O carrossel pode ser um cardápio temático "
+"ou uma lista de produtos, um item por slide com foto, depois de uma capa com "
+"o arraial da própria marca. O Reels mostra pratos típicos ou a equipe com "
+"roupa caipira, e os stories brincam com um quiz junino ou uma enquete. Cores "
+"quentes e rústicas (palha, vermelho, laranja) e tipografia com aspecto feito "
+"à mão."
 
 #: apps/calendar/holidays.py:500
 msgid ""
 "Arraial cover with bunting; one themed item per slide with photo; last with "
 "how to order"
-msgstr "Capa de arraial com bandeirinhas; um item temático por slide com foto; último com como pedir"
+msgstr ""
+"Capa de arraial com bandeirinhas; um item temático por slide com foto; "
+"último com como pedir"
 
 #: apps/calendar/holidays.py:502
 msgid "Typical dishes or the team in country-style outfits"
@@ -2167,17 +2268,28 @@ msgid ""
 "short story about their fathers, and the stories remind followers of the "
 "purchase deadline before the second Sunday of August. Sober, warm colours; "
 "real photos."
-msgstr "Venda o Dia dos Pais com histórias e ideias práticas de presente. O carrossel é um guia de presentes por perfil de pai, um produto por slide com foto, descrição curta e preço, depois de uma capa que fala com o filho ou a filha que está escolhendo o presente. O Reels traz pessoas da equipe ou clientes contando uma história curta sobre o pai, e os stories lembram o prazo de compra antes do segundo domingo de agosto. Cores sóbrias e quentes; fotos reais."
+msgstr ""
+"Venda o Dia dos Pais com histórias e ideias práticas de presente. O "
+"carrossel é um guia de presentes por perfil de pai, um produto por slide com "
+"foto, descrição curta e preço, depois de uma capa que fala com o filho ou a "
+"filha que está escolhendo o presente. O Reels traz pessoas da equipe ou "
+"clientes contando uma história curta sobre o pai, e os stories lembram o "
+"prazo de compra antes do segundo domingo de agosto. Cores sóbrias e quentes; "
+"fotos reais."
 
 #: apps/calendar/holidays.py:519
 msgid ""
 "Cover speaking to the buyer; one type of father and gift per slide; last "
 "with how to buy"
-msgstr "Capa falando com quem compra; um perfil de pai e presente por slide; último com como comprar"
+msgstr ""
+"Capa falando com quem compra; um perfil de pai e presente por slide; último "
+"com como comprar"
 
 #: apps/calendar/holidays.py:521
 msgid "Short stories about fathers told to camera, ending on the gift guide"
-msgstr "Histórias curtas sobre pais contadas para a câmera, terminando no guia de presentes"
+msgstr ""
+"Histórias curtas sobre pais contadas para a câmera, terminando no guia de "
+"presentes"
 
 #: apps/calendar/holidays.py:528
 msgid ""
@@ -2186,7 +2298,12 @@ msgid ""
 "applied to the brand's identity and a short message about Brazil, and no "
 "offers. The story gives the holiday hours. If the brand wants, a light Reels "
 "can show Brazilian elements of its own product or place."
-msgstr "Marque o Dia da Independência (7 de setembro) com tom cívico e as cores nacionais. O post mostra a data em letras grandes, com verde e amarelo aplicados à identidade da marca e uma mensagem curta sobre o Brasil, sem ofertas. O story informa o horário do feriado. Se a marca quiser, um Reels leve pode mostrar elementos brasileiros do próprio produto ou do espaço."
+msgstr ""
+"Marque o Dia da Independência (7 de setembro) com tom cívico e as cores "
+"nacionais. O post mostra a data em letras grandes, com verde e amarelo "
+"aplicados à identidade da marca e uma mensagem curta sobre o Brasil, sem "
+"ofertas. O story informa o horário do feriado. Se a marca quiser, um Reels "
+"leve pode mostrar elementos brasileiros do próprio produto ou do espaço."
 
 #: apps/calendar/holidays.py:534
 msgid "Date in large type in green and yellow, short message about Brazil"
@@ -2204,13 +2321,21 @@ msgid ""
 "and how to use it. The Reels can be the team saying thank you to camera, and "
 "the stories announce the benefit with a link or coupon. Warm, personal tone; "
 "the customers are the main element, not the products."
-msgstr "Agradeça aos clientes de forma pessoal e ofereça algo no Dia do Cliente. O carrossel abre com um obrigado em letras grandes, depois mostra fotos ou depoimentos reais de clientes (com autorização) e fecha com o benefício da data e como usá-lo. O Reels pode ser a equipe agradecendo para a câmera, e os stories anunciam o benefício com link ou cupom. Tom caloroso e pessoal; os clientes são o elemento principal, não os produtos."
+msgstr ""
+"Agradeça aos clientes de forma pessoal e ofereça algo no Dia do Cliente. O "
+"carrossel abre com um obrigado em letras grandes, depois mostra fotos ou "
+"depoimentos reais de clientes (com autorização) e fecha com o benefício da "
+"data e como usá-lo. O Reels pode ser a equipe agradecendo para a câmera, e "
+"os stories anunciam o benefício com link ou cupom. Tom caloroso e pessoal; "
+"os clientes são o elemento principal, não os produtos."
 
 #: apps/calendar/holidays.py:552
 msgid ""
 "Big thank-you on the cover; one customer or testimony per slide; last with "
 "the benefit"
-msgstr "Obrigado em destaque na capa; um cliente ou depoimento por slide; último com o benefício"
+msgstr ""
+"Obrigado em destaque na capa; um cliente ou depoimento por slide; último com "
+"o benefício"
 
 #: apps/calendar/holidays.py:554
 msgid "The team saying thank you to camera"
@@ -2229,13 +2354,22 @@ msgid ""
 "a poll and the order deadline. Bright colours and rounded type. Since the "
 "date shares the day with the Our Lady of Aparecida holiday, give the hours "
 "in the stories."
-msgstr "Venda o Dia das Crianças com brincadeira e cor, falando com os pais que compram. O carrossel é um guia de presentes por faixa etária, uma sugestão por slide com foto e preço, depois de uma capa ilustrada e divertida. O Reels mostra crianças (com autorização) ou os produtos de forma lúdica, e os stories trazem uma enquete e o prazo de pedidos. Cores vivas e tipografia arredondada. Como a data coincide com o feriado de Nossa Senhora Aparecida, informe o horário nos stories."
+msgstr ""
+"Venda o Dia das Crianças com brincadeira e cor, falando com os pais que "
+"compram. O carrossel é um guia de presentes por faixa etária, uma sugestão "
+"por slide com foto e preço, depois de uma capa ilustrada e divertida. O "
+"Reels mostra crianças (com autorização) ou os produtos de forma lúdica, e os "
+"stories trazem uma enquete e o prazo de pedidos. Cores vivas e tipografia "
+"arredondada. Como a data coincide com o feriado de Nossa Senhora Aparecida, "
+"informe o horário nos stories."
 
 #: apps/calendar/holidays.py:571
 msgid ""
 "Playful illustrated cover; one age group and gift per slide; last with how "
 "to buy"
-msgstr "Capa ilustrada e divertida; uma faixa etária e presente por slide; último com como comprar"
+msgstr ""
+"Capa ilustrada e divertida; uma faixa etária e presente por slide; último "
+"com como comprar"
 
 #: apps/calendar/holidays.py:573
 msgid "Children or products shown in a playful way"
@@ -2254,12 +2388,20 @@ msgid ""
 "Reels brings these testimonies to camera, and the LinkedIn post adapts the "
 "tribute. Sober, warm tone, with a notebook or blackboard texture as "
 "background."
-msgstr "Agradeça aos professores com histórias reais de quem nos ensinou. O carrossel abre com a pergunta 'Qual professor fez diferença na sua vida?' em letras grandes e mostra depoimentos curtos da equipe, cada um com foto e o nome do professor, fechando com um convite para os seguidores comentarem. O Reels traz esses depoimentos para a câmera, e o post do LinkedIn adapta a homenagem. Tom sóbrio e caloroso, com textura de caderno ou quadro-negro no fundo."
+msgstr ""
+"Agradeça aos professores com histórias reais de quem nos ensinou. O "
+"carrossel abre com a pergunta 'Qual professor fez diferença na sua vida?' em "
+"letras grandes e mostra depoimentos curtos da equipe, cada um com foto e o "
+"nome do professor, fechando com um convite para os seguidores comentarem. O "
+"Reels traz esses depoimentos para a câmera, e o post do LinkedIn adapta a "
+"homenagem. Tom sóbrio e caloroso, com textura de caderno ou quadro-negro no "
+"fundo."
 
 #: apps/calendar/holidays.py:587
 msgid ""
 "The question on the cover; one testimony per slide; last inviting comments"
-msgstr "Pergunta na capa; um depoimento por slide; último convidando a comentar"
+msgstr ""
+"Pergunta na capa; um depoimento por slide; último convidando a comentar"
 
 #: apps/calendar/holidays.py:588
 msgid "Team members talking to camera about a teacher who marked them"
@@ -2281,13 +2423,21 @@ msgid ""
 "scare or a transformation with the product, and the stories bring a trick-or-"
 "treat quiz with a coupon as the treat. Black, purple and orange adapted to "
 "the brand."
-msgstr "Use o Halloween com humor e sustos divertidos, nunca com cenas pesadas. O carrossel mostra os produtos fantasiados ou num cenário temático com abóboras, teias e doces, com a oferta ou o cardápio temático em letras grandes. O Reels faz um susto leve ou uma transformação com o produto, e os stories trazem um quiz de doces ou travessuras com um cupom como prêmio. Preto, roxo e laranja adaptados à marca."
+msgstr ""
+"Use o Halloween com humor e sustos divertidos, nunca com cenas pesadas. O "
+"carrossel mostra os produtos fantasiados ou num cenário temático com "
+"abóboras, teias e doces, com a oferta ou o cardápio temático em letras "
+"grandes. O Reels faz um susto leve ou uma transformação com o produto, e os "
+"stories trazem um quiz de doces ou travessuras com um cupom como prêmio. "
+"Preto, roxo e laranja adaptados à marca."
 
 #: apps/calendar/holidays.py:605
 msgid ""
 "Themed cover with the offer; one product in costume per slide; last with how "
 "to buy"
-msgstr "Capa temática com a oferta; um produto fantasiado por slide; último com como comprar"
+msgstr ""
+"Capa temática com a oferta; um produto fantasiado por slide; último com como "
+"comprar"
 
 #: apps/calendar/holidays.py:607
 msgid "Light scare or product transformation"
@@ -2304,7 +2454,12 @@ msgid ""
 "soft light, in muted tones, with the logo very small or left out. No offers, "
 "no promotional language and no humour. The story only gives the holiday "
 "hours, in the same visual tone."
-msgstr "Marque o Dia de Finados com silêncio e respeito. Um único post com uma frase curta de memória em tipografia delicada sobre uma imagem tranquila, como uma flor ou uma luz suave, em tons discretos, com o logo muito pequeno ou ausente. Sem ofertas, sem linguagem promocional e sem humor. O story apenas informa o horário do feriado, no mesmo tom visual."
+msgstr ""
+"Marque o Dia de Finados com silêncio e respeito. Um único post com uma frase "
+"curta de memória em tipografia delicada sobre uma imagem tranquila, como uma "
+"flor ou uma luz suave, em tons discretos, com o logo muito pequeno ou "
+"ausente. Sem ofertas, sem linguagem promocional e sem humor. O story apenas "
+"informa o horário do feriado, no mesmo tom visual."
 
 #: apps/calendar/holidays.py:620
 msgid "Short line of remembrance over a calm image, muted tones"
@@ -2320,7 +2475,11 @@ msgid ""
 "civic message. The post shows the date and the name in clear type over a "
 "solid background with discreet national colours and a line about "
 "citizenship, and no offers. The story gives the holiday hours."
-msgstr "Marque a Proclamação da República (15 de novembro) com uma mensagem cívica curta e sóbria. O post mostra a data e o nome em tipografia clara sobre fundo sólido com as cores nacionais discretas e uma frase sobre cidadania, sem ofertas. O story informa o horário do feriado."
+msgstr ""
+"Marque a Proclamação da República (15 de novembro) com uma mensagem cívica "
+"curta e sóbria. O post mostra a data e o nome em tipografia clara sobre "
+"fundo sólido com as cores nacionais discretas e uma frase sobre cidadania, "
+"sem ofertas. O story informa o horário do feriado."
 
 #: apps/calendar/holidays.py:632
 msgid "Date and name in clear type, line about citizenship"
@@ -2334,13 +2493,21 @@ msgid ""
 "name and a short sentence, after a cover that names the date and the legacy "
 "of Zumbi dos Palmares. The Reels gives voice to team members talking about "
 "representation. No offers; the design leaves room for faces and words."
-msgstr "Marque o Dia da Consciência Negra (20 de novembro) com respeito e conteúdo real, não com promoção. O carrossel apresenta pessoas negras da equipe, ou personalidades e referências afro-brasileiras ligadas à área da marca, com foto, nome e uma frase curta, depois de uma capa que traz a data e o legado de Zumbi dos Palmares. O Reels dá voz a pessoas da equipe falando sobre representatividade. Sem ofertas; o design dá espaço aos rostos e às palavras."
+msgstr ""
+"Marque o Dia da Consciência Negra (20 de novembro) com respeito e conteúdo "
+"real, não com promoção. O carrossel apresenta pessoas negras da equipe, ou "
+"personalidades e referências afro-brasileiras ligadas à área da marca, com "
+"foto, nome e uma frase curta, depois de uma capa que traz a data e o legado "
+"de Zumbi dos Palmares. O Reels dá voz a pessoas da equipe falando sobre "
+"representatividade. Sem ofertas; o design dá espaço aos rostos e às palavras."
 
 #: apps/calendar/holidays.py:649
 msgid ""
 "Cover with the date and Zumbi's legacy; one person or reference per slide; "
 "last with a reflection"
-msgstr "Capa com a data e o legado de Zumbi; uma pessoa ou referência por slide; último com uma reflexão"
+msgstr ""
+"Capa com a data e o legado de Zumbi; uma pessoa ou referência por slide; "
+"último com uma reflexão"
 
 #: apps/calendar/holidays.py:651
 msgid "Team members talking to camera about representation"
@@ -2362,17 +2529,28 @@ msgid ""
 "offers, one per slide, with old and new price; the stories run a countdown "
 "and reveal new offers each day; the Reels shows the products in fast cuts "
 "with the prices on screen. Always state the validity and how to buy."
-msgstr "Venda forte na Black Friday com o desconto como protagonista. Todas as peças usam fundo preto com a cor de destaque da marca, o percentual ou o preço em letras muito grandes e a foto do produto recortada. O carrossel lista as melhores ofertas, uma por slide, com preço antigo e novo; os stories fazem contagem regressiva e revelam novas ofertas a cada dia; o Reels mostra os produtos em cortes rápidos com os preços na tela. Sempre informe a validade e como comprar."
+msgstr ""
+"Venda forte na Black Friday com o desconto como protagonista. Todas as peças "
+"usam fundo preto com a cor de destaque da marca, o percentual ou o preço em "
+"letras muito grandes e a foto do produto recortada. O carrossel lista as "
+"melhores ofertas, uma por slide, com preço antigo e novo; os stories fazem "
+"contagem regressiva e revelam novas ofertas a cada dia; o Reels mostra os "
+"produtos em cortes rápidos com os preços na tela. Sempre informe a validade "
+"e como comprar."
 
 #: apps/calendar/holidays.py:668
 msgid ""
 "Cover with the biggest discount; one offer per slide with old and new price; "
 "last with how to buy"
-msgstr "Capa com o maior desconto; uma oferta por slide com preço antigo e novo; último com como comprar"
+msgstr ""
+"Capa com o maior desconto; uma oferta por slide com preço antigo e novo; "
+"último com como comprar"
 
 #: apps/calendar/holidays.py:670
 msgid "Countdown; one new offer per day with link; last-hours call"
-msgstr "Contagem regressiva; uma oferta nova por dia com link; chamada das últimas horas"
+msgstr ""
+"Contagem regressiva; uma oferta nova por dia com link; chamada das últimas "
+"horas"
 
 #: apps/calendar/holidays.py:671
 msgid "Products in fast cuts with prices on screen"
@@ -2390,13 +2568,22 @@ msgid ""
 "Reels shows gifts being wrapped or the team's Christmas message, and the "
 "stories push the delivery deadline before 25 December. Warm, festive palette "
 "(red, green, gold) adapted to the brand."
-msgstr "Construa o Natal como uma campanha que começa semanas antes. O carrossel é um guia de presentes por faixa de preço, um produto por slide com foto e preço, depois de uma capa com cenário natalino acolhedor, luzes e a embalagem da marca. O Reels mostra presentes sendo embrulhados ou a mensagem de Natal da equipe, e os stories reforçam o prazo de entrega antes de 25 de dezembro. Paleta quente e festiva (vermelho, verde, dourado) adaptada à marca."
+msgstr ""
+"Construa o Natal como uma campanha que começa semanas antes. O carrossel é "
+"um guia de presentes por faixa de preço, um produto por slide com foto e "
+"preço, depois de uma capa com cenário natalino acolhedor, luzes e a "
+"embalagem da marca. O Reels mostra presentes sendo embrulhados ou a mensagem "
+"de Natal da equipe, e os stories reforçam o prazo de entrega antes de 25 de "
+"dezembro. Paleta quente e festiva (vermelho, verde, dourado) adaptada à "
+"marca."
 
 #: apps/calendar/holidays.py:688
 msgid ""
 "Christmas cover; one price range and gift per slide; last with the delivery "
 "deadline"
-msgstr "Capa natalina; uma faixa de preço e presente por slide; último com o prazo de entrega"
+msgstr ""
+"Capa natalina; uma faixa de preço e presente por slide; último com o prazo "
+"de entrega"
 
 #: apps/calendar/holidays.py:690
 msgid "Gifts being wrapped or the team's Christmas message"
@@ -2405,7 +2592,9 @@ msgstr "Presentes sendo embrulhados ou mensagem de Natal da equipe"
 #: apps/calendar/holidays.py:691
 msgid ""
 "Gift suggestion with link; delivery deadline; Christmas Eve and Day hours"
-msgstr "Sugestão de presente com link; prazo de entrega; horário na véspera e no Natal"
+msgstr ""
+"Sugestão de presente com link; prazo de entrega; horário na véspera e no "
+"Natal"
 
 #: apps/calendar/holidays.py:693
 msgid "One gift idea per pin with product photo and price range"
@@ -2419,13 +2608,21 @@ msgid ""
 "The Reels condenses the year into a fast montage of photos and videos, and "
 "the stories give the hours for 31 December and 1 January. Elegant, festive "
 "palette with gold and white."
-msgstr "Feche o ano olhando para trás e agradecendo aos clientes. O carrossel mostra os destaques do ano em números e fotos (lançamentos, conquistas, clientes atendidos), um por slide, fechando com um agradecimento e um voto para o ano novo. O Reels resume o ano numa montagem rápida de fotos e vídeos, e os stories informam o horário de 31 de dezembro e 1º de janeiro. Paleta elegante e festiva, com dourado e branco."
+msgstr ""
+"Feche o ano olhando para trás e agradecendo aos clientes. O carrossel mostra "
+"os destaques do ano em números e fotos (lançamentos, conquistas, clientes "
+"atendidos), um por slide, fechando com um agradecimento e um voto para o ano "
+"novo. O Reels resume o ano numa montagem rápida de fotos e vídeos, e os "
+"stories informam o horário de 31 de dezembro e 1º de janeiro. Paleta "
+"elegante e festiva, com dourado e branco."
 
 #: apps/calendar/holidays.py:708
 msgid ""
 "Year-in-review cover; one highlight per slide in numbers or photos; last "
 "with thanks and a wish"
-msgstr "Capa de retrospectiva; um destaque por slide em números ou fotos; último com agradecimento e voto"
+msgstr ""
+"Capa de retrospectiva; um destaque por slide em números ou fotos; último com "
+"agradecimento e voto"
 
 #: apps/calendar/holidays.py:710
 msgid "Fast montage of the year's photos and videos"
@@ -3742,7 +3939,7 @@ msgstr "Ativo"
 #: apps/contacts/models.py:63
 msgctxt "contact status"
 msgid "Inactive"
-msgstr "Inativo"
+msgstr "Inativa"
 
 #: apps/contacts/models.py:66 apps/inbox/models.py:39
 msgid "Manual"
@@ -6990,8 +7187,8 @@ msgid "Are you sure you want to sign out?"
 msgstr "Tem certeza de que deseja sair?"
 
 #: templates/account/logout.html:28 templates/ads/campaign_new.html:85
-#: templates/api_keys/_issue_modal.html:73 templates/api_keys/_key_row.html:178
-#: templates/api_keys/_key_row.html:242
+#: templates/ads/settings.html:193 templates/api_keys/_issue_modal.html:73
+#: templates/api_keys/_key_row.html:178 templates/api_keys/_key_row.html:242
 #: templates/approvals/partials/_approval_row.html:148
 #: templates/automations/flow_builder.html:900
 #: templates/automations/flow_builder.html:1121
@@ -7545,7 +7742,7 @@ msgid "The Meta sign-in needs to be renewed."
 msgstr "O login da Meta precisa ser renovado."
 
 #: templates/ads/index.html:41 templates/ads/index.html:50
-#: templates/ads/settings.html:67 templates/analytics/_meta_ads_page.html:17
+#: templates/ads/settings.html:49 templates/analytics/_meta_ads_page.html:17
 msgid "Connect again"
 msgstr "Conectar de novo"
 
@@ -7634,16 +7831,69 @@ msgstr "Período"
 msgid "%(choice)s days"
 msgstr "%(choice)s dias"
 
-#: templates/ads/settings.html:3 templates/ads/settings.html:7
+#: templates/ads/settings.html:9 templates/ads/settings.html:16
 msgid "Meta Ads settings"
 msgstr "Configurações do Meta Ads"
 
-#: templates/ads/settings.html:8
-#, python-format
-msgid "Signed in to Meta as %(name)s."
-msgstr "Conectado à Meta como %(name)s."
+#: templates/ads/settings.html:22
+msgid ""
+"Choose the ad account your campaigns come from, the Pixel that measures "
+"their results and the Page the ads are published as."
+msgstr ""
+"Escolha a conta de anúncios das suas campanhas, o Pixel que mede os "
+"resultados e a Página em nome da qual os anúncios são publicados."
 
-#: templates/ads/settings.html:18
+#: templates/ads/settings.html:31
+msgid "ad account"
+msgid_plural "ad accounts"
+msgstr[0] "conta de anúncios"
+msgstr[1] "contas de anúncios"
+
+#: templates/ads/settings.html:41
+msgid "The Meta sign-in has expired."
+msgstr "O login da Meta expirou."
+
+#: templates/ads/settings.html:41
+#, python-format
+msgid "Signed in to Meta until %(date)s"
+msgstr "Login da Meta válido até %(date)s"
+
+#: templates/ads/settings.html:41
+msgid "Signed in to Meta"
+msgstr "Conectado à Meta"
+
+#: templates/ads/settings.html:51
+msgid ""
+"Sign in with another Facebook account, for example one that manages other ad "
+"accounts."
+msgstr ""
+"Entre com outra conta do Facebook, por exemplo uma que gerencie outras "
+"contas de anúncios."
+
+#: templates/ads/settings.html:51
+msgid "Use another Facebook login"
+msgstr "Usar outro login do Facebook"
+
+#: templates/ads/settings.html:54
+msgid "Disconnect Meta Ads? Campaigns keep running in the ad account."
+msgstr ""
+"Desconectar o Meta Ads? As campanhas continuam rodando na conta de anúncios."
+
+#: templates/ads/settings.html:56
+#: templates/social_accounts/partials/_account_card.html:95
+#: templates/social_accounts/partials/_account_card.html:193
+#: templates/social_accounts/partials/_account_card.html:233
+#: templates/social_accounts/partials/_disconnect_button.html:12
+#: templates/social_accounts/partials/_disconnect_confirm.html:56
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: templates/ads/settings.html:61
+#: templates/social_accounts/account_select.html:60
+msgid "Moti, the Connekt Flow robot, holding the Facebook logo"
+msgstr "Moti, o robô do Connekt Flow, segurando o logo do Facebook"
+
+#: templates/ads/settings.html:67
 msgid ""
 "This Meta sign-in manages no ad account. Sign in with a Facebook account "
 "that has access to one in Meta Business Suite, or create an ad account there."
@@ -7652,15 +7902,35 @@ msgstr ""
 "conta do Facebook que tenha acesso a uma no Meta Business Suite, ou crie uma "
 "conta de anúncios lá."
 
-#: templates/ads/settings.html:27
-msgid "Load Pixels"
-msgstr "Carregar Pixels"
+#: templates/ads/settings.html:79
+msgid ""
+"Campaigns, numbers and new campaigns all use this account. Changing it "
+"reloads its Pixels and Pages."
+msgstr ""
+"As campanhas, os números e as campanhas novas usam esta conta. Trocar a "
+"conta recarrega os Pixels e as Páginas dela."
 
-#: templates/ads/settings.html:28
-msgid "Changing the account reloads its Pixels."
-msgstr "Trocar a conta recarrega os Pixels dela."
+#: templates/ads/settings.html:83
+msgid "Search ad account"
+msgstr "Buscar conta de anúncios"
 
-#: templates/ads/settings.html:43
+#: templates/ads/settings.html:85
+msgid "Search ad account…"
+msgstr "Buscar conta de anúncios…"
+
+#: templates/ads/settings.html:105
+msgid "Inactive"
+msgstr "Inativa"
+
+#: templates/ads/settings.html:106
+msgid "In use"
+msgstr "Em uso"
+
+#: templates/ads/settings.html:111
+msgid "No ad account matches the search."
+msgstr "Nenhuma conta de anúncios corresponde à busca."
+
+#: templates/ads/settings.html:119
 msgid ""
 "The Pixel measures purchases and leads on your site. Sales and lead "
 "campaigns need one."
@@ -7668,16 +7938,60 @@ msgstr ""
 "O Pixel mede compras e cadastros no seu site. Campanhas de vendas e de "
 "cadastros precisam de um."
 
-#: templates/ads/settings.html:44
+#: templates/ads/settings.html:119
 #, python-format
-msgid "Pixel %(name)s is unavailable in Meta."
-msgstr "O Pixel %(name)s está indisponível na Meta."
+msgid "Only the Pixels of %(name)s are listed."
+msgstr "Aparecem só os Pixels de %(name)s."
 
-#: templates/ads/settings.html:53
+#: templates/ads/settings.html:127
+msgid "Awareness and traffic campaigns work without one."
+msgstr "Campanhas de reconhecimento e de tráfego funcionam sem Pixel."
+
+#: templates/ads/settings.html:138
+#, python-format
+msgid "last event %(date)s"
+msgstr "último evento em %(date)s"
+
+#: templates/ads/settings.html:138
+msgid "no event received yet"
+msgstr "nenhum evento recebido ainda"
+
+#: templates/ads/settings.html:140
+msgid "Unavailable"
+msgstr "Indisponível"
+
+#: templates/ads/settings.html:145
+msgid ""
+"This ad account has no Pixel yet. Create one in Meta Events Manager and come "
+"back to choose it."
+msgstr ""
+"Esta conta de anúncios ainda não tem Pixel. Crie um no Gerenciador de "
+"Eventos da Meta e volte para escolhê-lo."
+
+#: templates/ads/settings.html:153
 msgid "Ads created here are published as this Page."
 msgstr "Os anúncios criados aqui são publicados em nome desta Página."
 
-#: templates/ads/settings.html:56 templates/automations/flow_builder.html:262
+#: templates/ads/settings.html:153
+#, python-format
+msgid "Only the Pages %(name)s can advertise for are listed."
+msgstr "Aparecem só as Páginas que %(name)s pode anunciar."
+
+#: templates/ads/settings.html:161
+msgid "You can follow campaigns, but creating one needs a Page."
+msgstr "Dá para acompanhar as campanhas, mas criar uma precisa de uma Página."
+
+#: templates/ads/settings.html:180
+msgid ""
+"This ad account cannot advertise for any of your Pages yet. In Meta Business "
+"Suite, give the ad account access to the Page and come back to choose it."
+msgstr "Esta conta de anúncios ainda não pode anunciar para nenhuma das suas Páginas. No Meta Business Suite, dê à conta de anúncios acesso à Página e volte para escolhê-la."
+
+#: templates/ads/settings.html:190
+msgid "Choose an ad account"
+msgstr "Escolha uma conta de anúncios"
+
+#: templates/ads/settings.html:196 templates/automations/flow_builder.html:262
 #: templates/automations/flow_builder.html:904
 #: templates/billing/account_billing.html:230
 #: templates/calendar/staff_dates.html:65 templates/composer/categories.html:44
@@ -7694,33 +8008,6 @@ msgstr "Os anúncios criados aqui são publicados em nome desta Página."
 #: templates/workspaces/partials/_dashboard_goal.html:33
 msgid "Save"
 msgstr "Salvar"
-
-#: templates/ads/settings.html:63
-msgid "Sign-in"
-msgstr "Login"
-
-#: templates/ads/settings.html:64
-#, python-format
-msgid "Valid until %(date)s. Connect again before then."
-msgstr "Válido até %(date)s. Conecte de novo antes disso."
-
-#: templates/ads/settings.html:64
-msgid "Meta reports no expiry date."
-msgstr "A Meta não informa data de expiração."
-
-#: templates/ads/settings.html:68
-msgid "Disconnect Meta Ads? Campaigns keep running in the ad account."
-msgstr ""
-"Desconectar o Meta Ads? As campanhas continuam rodando na conta de anúncios."
-
-#: templates/ads/settings.html:68
-#: templates/social_accounts/partials/_account_card.html:95
-#: templates/social_accounts/partials/_account_card.html:193
-#: templates/social_accounts/partials/_account_card.html:233
-#: templates/social_accounts/partials/_disconnect_button.html:12
-#: templates/social_accounts/partials/_disconnect_confirm.html:56
-msgid "Disconnect"
-msgstr "Desconectar"
 
 #: templates/analytics/_delta_chip.html:1
 #, python-format
@@ -19728,10 +20015,6 @@ msgstr "Você pode selecionar uma ou várias contas para publicar e gerenciar."
 msgid "Moti, the Connekt Flow robot, holding the Instagram logo"
 msgstr "Moti, o robô do Connekt Flow, segurando o logo do Instagram"
 
-#: templates/social_accounts/account_select.html:60
-msgid "Moti, the Connekt Flow robot, holding the Facebook logo"
-msgstr "Moti, o robô do Connekt Flow, segurando o logo do Facebook"
-
 #: templates/social_accounts/account_select.html:68
 msgid "Search account"
 msgstr "Buscar conta"
@@ -21241,6 +21524,26 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 #: templates/workspaces/team.html:102
 msgid "Send invitation"
 msgstr "Enviar convite"
+
+#~ msgid "Load Pixels"
+#~ msgstr "Carregar Pixels"
+
+#~ msgid "Changing the account reloads its Pixels."
+#~ msgstr "Trocar a conta recarrega os Pixels e as Páginas dela."
+
+#, python-format
+#~ msgid "Pixel %(name)s is unavailable in Meta."
+#~ msgstr "O Pixel %(name)s está indisponível na Meta."
+
+#~ msgid "Sign-in"
+#~ msgstr "Login"
+
+#, python-format
+#~ msgid "Valid until %(date)s. Connect again before then."
+#~ msgstr "Válido até %(date)s. Conecte de novo antes disso."
+
+#~ msgid "Meta reports no expiry date."
+#~ msgstr "A Meta não informa data de expiração."
 
 #~ msgid ""
 #~ "Please confirm this email address for your Connekt Flow account by "

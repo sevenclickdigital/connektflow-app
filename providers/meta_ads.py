@@ -26,15 +26,16 @@ import base64
 import json
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
 
 import httpx
+from django.utils.dateparse import parse_datetime
 
 from .base import HttpProvider
 from .exceptions import APIError, ProviderError, RateLimitError, TokenExpiredError
 from .facebook import BASE_URL, OAUTH_URL
-from .meta_accounts import fetch_me_accounts
 from .meta_oauth import facebook_login_params
 
 logger = logging.getLogger(__name__)
@@ -107,6 +108,11 @@ class Pixel:
     name: str
     last_fired_time: str = ""
     is_unavailable: bool = False
+
+    @property
+    def last_fired(self) -> datetime | None:
+        """When the Pixel last received an event, or None if it never did."""
+        return parse_datetime(self.last_fired_time) if self.last_fired_time else None
 
 
 @dataclass(frozen=True)
@@ -333,14 +339,13 @@ class MetaAdsClient(HttpProvider):
             if row.get("id")
         ]
 
-    def pages(self, token: str) -> list[Page]:
-        raw = fetch_me_accounts(
-            self,
-            access_token=token,
-            base_url=BASE_URL,
-            fields="id,name,picture",
-            error_message="Failed to fetch pages",
-        )
+    def pages(self, token: str, ad_account_id: str) -> list[Page]:
+        """The Pages this ad account can promote, not every Page the person manages.
+
+        An ad must run as a Page the account is allowed to advertise for, and
+        offering the others lets someone pick a Page whose ads Meta refuses.
+        """
+        raw = self._get_all(token, f"{ad_account_id}/promote_pages", {"fields": "id,name,picture"})
         return [
             Page(
                 id=row["id"],

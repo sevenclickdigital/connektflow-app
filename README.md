@@ -467,7 +467,7 @@ Facebook and Instagram share the same Meta app credentials. Threads runs on the 
    The first marks that person's connection as needing a reconnect; the second deletes it with its stored data and answers with a confirmation code the person can check at `{APP_URL}/exclusao-de-dados/?code=…`.
 
    These have no fallback: until both are set, Threads shows as **Not Configured** on the connect page. Sending the Facebook App ID to Threads fails with error `4476002`.
-8. **Meta Ads** (sidebar → Ads) signs in through the same app (`PLATFORM_FACEBOOK_APP_ID` / `_SECRET`). Add the use case **"Create & manage ads with Marketing API"** and its permissions `ads_management`, `ads_read`, `business_management`, `pages_show_list` and `pages_manage_ads`, then add this redirect URI under **Facebook Login → Settings → Valid OAuth Redirect URIs**:
+8. **Meta Ads** (sidebar → Ads) signs in through the same app (`PLATFORM_FACEBOOK_APP_ID` / `_SECRET`). Add the use case **"Create & manage ads with Marketing API"** (`MARKETING_API_ADS_MANAGEMENT`). It brings `ads_management`, `ads_read`, `business_management`, `pages_read_engagement`, `pages_show_list` and the *Marketing API Access Tier* feature; under its **Permissions and features**, also add the optional `pages_manage_ads`, which creating an ad as the Page needs. Then add this redirect URI under **Facebook Login → Settings → Valid OAuth Redirect URIs**:
    ```
    {APP_URL}/ads/meta/callback/
    ```

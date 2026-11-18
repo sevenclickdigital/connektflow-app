@@ -197,13 +197,16 @@ def connection_settings(request, workspace_id):
             {"workspace_id": workspace_id, "connection": connection, "form": None, "error": str(exc)},
         )
 
+    same_account = bool(choices.account and choices.account.id == connection.ad_account_id)
     initial = {
         "ad_account_id": choices.account.id if choices.account else "",
-        "pixel_id": connection.pixel_id if choices.account and choices.account.id == connection.ad_account_id else "",
-        "page_id": connection.page_id,
+        "pixel_id": connection.pixel_id if same_account else "",
+        "page_id": connection.page_id if same_account else "",
     }
     if len(choices.pixels) == 1 and not initial["pixel_id"]:
         initial["pixel_id"] = choices.pixels[0].id
+    if len(choices.pages) == 1 and not initial["page_id"]:
+        initial["page_id"] = choices.pages[0].id
     form = AssetChoiceForm(request.POST or None, initial=initial, choices=choices)
     if request.method == "POST" and form.is_valid():
         try:
