@@ -126,6 +126,10 @@ docker compose exec app python manage.py createsuperuser
 Database migrations run automatically via the `migrate` Compose service before
 the `app` and `worker` services start, so there is no separate migrate step.
 
+Mail sent by the dev stack (signup, password reset, invitations, notifications)
+is caught by the `mailpit` Compose service and never delivered: open
+<http://localhost:8025> to read it.
+
 Tailwind compiles automatically via the `tailwind` Compose service. First build
 takes ~60–90 seconds (running `npm install` in a fresh container); subsequent
 starts are instant. Watch progress with `docker compose logs -f tailwind`.

@@ -13,6 +13,7 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.development
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/brightbean
+      - DEV_SMTP_HOST=mailpit
 
   worker:
     volumes:
@@ -20,6 +21,16 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.development
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/brightbean
+      - DEV_SMTP_HOST=mailpit
+
+  # Catches every mail the dev stack sends; read them at http://localhost:8025.
+  # Nothing is delivered anywhere. Bound to loopback only.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+    restart: unless-stopped
 
   tailwind:
     image: node:20-slim

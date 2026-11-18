@@ -34,7 +34,7 @@ STORAGES["staticfiles"] = {  # noqa: F405
     "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
 }
 
-# Console email in development. EMAIL_BACKEND stays the budget wrapper from
+# Console email in development by default. EMAIL_BACKEND stays the budget wrapper from
 # base.py so the real send path is what runs locally, but the caps are off
 # (negative = unlimited): the console backend exists to show you every message,
 # and inheriting the production 6-per-recipient-per-hour would silently swallow
@@ -42,6 +42,19 @@ STORAGES["staticfiles"] = {  # noqa: F405
 # counters are in the database and survive a restart. Set them to real values
 # locally when the budget itself is what you are testing.
 EMAIL_INNER_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# With DEV_SMTP_HOST set, messages go to a local mail catcher instead (Mailpit;
+# docker-compose.override.yml starts one and points this at it), so signup,
+# password reset and notification mails can be opened and clicked through. A
+# name of its own on purpose: EMAIL_HOST in .env may be the real provider, and
+# development must never deliver through it.
+_dev_smtp_host = _os.environ.get("DEV_SMTP_HOST", "").strip()
+if _dev_smtp_host:
+    EMAIL_INNER_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = _dev_smtp_host
+    EMAIL_PORT = int(_os.environ.get("DEV_SMTP_PORT", "1025"))
+    EMAIL_HOST_USER = ""
+    EMAIL_HOST_PASSWORD = ""
+    EMAIL_USE_TLS = False
 EMAIL_DAILY_SEND_LIMIT = -1
 EMAIL_RECIPIENT_HOURLY_LIMIT = -1
 EMAIL_RECIPIENT_DAILY_LIMIT = -1
