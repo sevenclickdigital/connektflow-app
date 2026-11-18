@@ -46,14 +46,14 @@ reloads its Pixels from Meta; the Pixel and Page rows are radios of the form.
                     <form method="post" action="{% url 'ads:connect' workspace_id=workspace_id %}" data-oauth-popup>
                         {% csrf_token %}
                         {% if connection.token_expiring_soon or connection.token_expired %}
-                        <button type="submit" class="btn-brand text-sm">{% translate "Connect again" %}</button>
+                        <button type="submit" class="btn-brand py-1.5 px-3 text-xs">{% translate "Connect again" %}</button>
                         {% else %}
-                        <button type="submit" class="btn-ghost text-sm" title="{% translate 'Sign in with another Facebook account, for example one that manages other ad accounts.' %}">{% translate "Use another Facebook login" %}</button>
+                        <button type="submit" class="btn-ghost py-1.5 px-3 text-xs" title="{% translate 'Sign in with another Facebook account, for example one that manages other ad accounts.' %}">{% translate "Use another Facebook login" %}</button>
                         {% endif %}
                     </form>
                     <form method="post" action="{% url 'ads:disconnect' workspace_id=workspace_id %}" data-confirm="{% translate 'Disconnect Meta Ads? Campaigns keep running in the ad account.' %}">
                         {% csrf_token %}
-                        <button type="submit" class="btn-ghost text-sm text-red-600">{% translate "Disconnect" %}</button>
+                        <button type="submit" class="btn-ghost py-1.5 px-3 text-xs text-red-600">{% translate "Disconnect" %}</button>
                     </form>
                 </div>
             </div>
