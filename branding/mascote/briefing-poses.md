@@ -480,7 +480,84 @@ lilases, capa roxa; cartões, prancheta, "#" e
 lâmpada em roxo, lilás e branco, sem logotipos (nem o do Instagram) e sem textos
 ```
 
-## 5. Modelo de pedido para uma pose nova
+## 5. Moti com as redes (série `redes/`)
+
+Uma imagem por rede social, com o Moti apresentando o ícone dela: para os cards e avisos de cada rede (conectar, reconectar, relatório da rede). Arquivos em `mascote/redes/moti_rede_<rede>.png`. Diferente do resto deste briefing, aqui o ícone oficial da rede **aparece**, porque a imagem existe para dizer de qual rede se trata.
+
+### O que está errado nas imagens atuais
+
+As 12 imagens de `redes/` foram geradas fora do padrão do personagem e precisam ser refeitas, todas:
+
+- **Logo errada no peito:** um "A" roxo no lugar do emblema da Connekt Flow.
+- **Fones sem emblema:** os módulos laterais da cabeça aparecem só com um anel, sem o símbolo aceso no centro.
+- **Brilho em volta do corpo:** algumas têm um halo roxo/branco e manchas escuras no fundo transparente (ex.: `moti_rede_instagram`, `moti_rede_youtube`), que sujam o recorte em fundo claro.
+
+### O formato certo (base: `moti_rede_youtube.png`)
+
+A composição de `moti_rede_youtube.png` é a referência de pose e enquadramento para a série toda; só o personagem é corrigido:
+
+- **Pose:** Moti de corpo inteiro, de pé, em três quartos virado para a esquerda. A mão do lado esquerdo da imagem segura, com a palma para cima, o ícone da rede à altura do ombro; a outra mão fica na cintura.
+- **Ícone:** o ícone oficial da rede em 3D, quadrado de cantos arredondados, com as cores e o desenho oficiais, mais ou menos do tamanho da cabeça do Moti, levemente inclinado. Três tracinhos de brilho roxos saindo do canto de cima, à esquerda do ícone.
+- **Expressão:** olhos em arco e sorriso pequeno, o "olha essa aqui".
+- **Capa:** sem capa (configuração sem capa do turnaround).
+- **Emblema:** o símbolo da Connekt Flow (`branding/logo/connektflow-symbol.png`) no centro do peito, pequeno e em relevo, e o mesmo símbolo aceso no centro de cada fone. O símbolo é: duas barras horizontais escuras em cima, a de baixo dobrando num ângulo reto e descendo pela direita, e embaixo à esquerda um traço roxo que desce, faz uma diagonal para a esquerda e corre na horizontal para a direita. Nunca uma letra.
+- **Formato:** PNG 1536 × 1024 (paisagem) com fundo transparente de verdade, sem halo, sem brilho no fundo, sem sombra no chão e sem manchas em volta. O Moti fica na metade direita e o ícone na metade esquerda, com cerca de 10% de margem nas bordas.
+
+### Pedido base (colar no gerador junto com as imagens)
+
+Anexar sempre três imagens: o turnaround oficial do Moti, o símbolo `branding/logo/connektflow-symbol.png` e `redes/moti_rede_youtube.png` (só como referência de pose). Trocar `<REDE>` e `<ÍCONE>` pela linha da tabela abaixo.
+
+```
+Pose do Moti para: série das redes, imagem da rede <REDE>
+Arquivo: moti_rede_<arquivo>
+Referências anexas: (1) turnaround oficial do Moti = identidade do personagem;
+(2) símbolo da Connekt Flow = emblema do peito e dos fones;
+(3) moti_rede_youtube.png = APENAS pose e enquadramento (o "A" no peito dessa
+imagem está errado, não copiar)
+Pose: corpo inteiro, de pé, em três quartos virado para a esquerda; numa mão,
+com a palma para cima à altura do ombro, segura à esquerda do corpo o ícone
+oficial da <REDE> em 3D: <ÍCONE>; a outra mão fica na cintura
+Expressão: olhos em arco e sorriso pequeno, "olha essa aqui"
+Detalhes: três tracinhos de brilho roxos saindo do canto de cima do ícone, à
+esquerda; nada mais em volta
+Capa: sem capa
+Emblema: o símbolo da Connekt Flow anexo, com a geometria exata (duas barras
+escuras em cima, a de baixo descendo pela direita em ângulo reto, e o traço roxo
+embaixo à esquerda), pequeno e em relevo no centro do peito, e o mesmo símbolo
+aceso em violeta no centro de cada fone; nunca uma letra "A" nem outro desenho
+Direção: olhando para o ícone, à esquerda
+Enquadramento: corpo inteiro; Moti na metade direita, ícone na metade esquerda
+Formato: PNG 1536 x 1024 com fundo transparente de verdade (sem quadriculado
+desenhado), sem halo nem brilho em volta do corpo, sem sombra no chão
+Estilo: o mesmo do turnaround — 3D branco perolado e roxo, viseira preta com
+olhos lilases; só o ícone da rede leva as cores oficiais dela
+```
+
+### Uma linha por rede
+
+| Rede | Arquivo | `<ÍCONE>` |
+|---|---|---|
+| YouTube | `moti_rede_youtube` | quadrado vermelho com o retângulo arredondado branco e o triângulo de play vermelho |
+| Instagram | `moti_rede_instagram` | quadrado com o degradê oficial (amarelo, laranja, rosa, roxo) e a câmera branca em contorno |
+| Facebook | `moti_rede_facebook` | quadrado azul (#1877F2) com o "f" branco |
+| Threads | `moti_rede_threads` | quadrado preto com o "@" estilizado do Threads em branco |
+| TikTok | `moti_rede_tiktok` | quadrado preto com a nota musical do TikTok em branco, com o deslocamento ciano e vermelho |
+| X | `moti_rede_x` | quadrado preto com o "X" do X em branco |
+| LinkedIn | `moti_rede_linkedin` | quadrado azul (#0A66C2) com o "in" branco |
+| Pinterest | `moti_rede_pinterest` | quadrado vermelho (#E60023) com o "P" branco do Pinterest |
+| Bluesky | `moti_rede_bluesky` | quadrado azul (#1185FE) com a borboleta branca do Bluesky |
+| Mastodon | `moti_rede_mastodon` | quadrado roxo-azulado (#6364FF) com o "m" branco do Mastodon |
+| WhatsApp | `moti_rede_whatsapp` | quadrado verde (#25D366) com o balão e o telefone brancos |
+| Google Business | `moti_rede_google_business` | quadrado branco com a loja de toldo nas cores do Google (azul, vermelho, amarelo, verde) |
+
+### Antes de aceitar uma imagem
+
+- O peito tem o símbolo da Connekt Flow, e não um "A". Os dois fones também têm o símbolo, aceso.
+- Ao abrir o PNG sobre fundo branco e sobre fundo escuro, não aparece halo, mancha nem quadriculado em volta.
+- O ícone é o oficial da rede, sem letras inventadas e sem texto.
+- Sem capa, corpo inteiro, e o mesmo tamanho e posição do Moti de `moti_rede_youtube.png`, para a série ficar igual lado a lado.
+
+## 6. Modelo de pedido para uma pose nova
 
 Copie e preencha:
 
