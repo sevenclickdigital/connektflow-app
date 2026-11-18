@@ -1,0 +1,36 @@
+{% load i18n ads_extras %}
+{% comment %}
+The ad sets of the edit dialog (views.campaign_ad_sets), each with its daily
+budget and end. Read from Meta when the dialog opens. An ad set with a
+lifetime budget only offers its end: Meta keeps that budget as it was set.
+{% endcomment %}
+<div class="space-y-3">
+{% if error %}
+<div class="alert-error">{{ error }}</div>
+{% else %}
+    {% for ad_set, form in ad_set_forms %}
+    <div class="rounded-xl border border-neutral-300 p-4">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+                <p class="text-sm font-semibold text-neutral-950">{{ ad_set.name }}</p>
+                <p class="text-xs text-neutral-600 mt-0.5">
+                    {% if ad_set.daily_budget %}{% blocktranslate with amount=ad_set.daily_budget|ads_money:connection.currency %}{{ amount }}/day{% endblocktranslate %}{% elif ad_set.lifetime_budget %}{% blocktranslate with amount=ad_set.lifetime_budget|ads_money:connection.currency %}{{ amount }} total{% endblocktranslate %}{% endif %}
+                    {% if ad_set.countries %} · {{ ad_set.countries|join:", " }}{% endif %}
+                    {% if ad_set.age_min %} · {% blocktranslate with min=ad_set.age_min max=ad_set.age_max|default:"65+" %}{{ min }}–{{ max }} years{% endblocktranslate %}{% endif %}
+                    {% if ad_set.end_time %} · {% blocktranslate with date=ad_set.end_time|date:"SHORT_DATETIME_FORMAT" %}ends {{ date }}{% endblocktranslate %}{% endif %}
+                </p>
+            </div>
+            <span class="pill pill-{{ ad_set.status_tone }}"><i></i>{{ ad_set.status_label }}</span>
+        </div>
+        <form method="post" action="{% url 'ads:ad_set_edit' workspace_id=workspace_id campaign_id=campaign.id ad_set_id=ad_set.id %}" class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+            {% csrf_token %}
+            {% if not ad_set.lifetime_budget %}{% include "components/_form_field.html" with field=form.daily_budget hide_optional=True %}{% endif %}
+            {% include "components/_form_field.html" with field=form.end_time hide_optional=True %}
+            <div><button type="submit" class="btn-outline">{% translate "Save ad set" %}</button></div>
+        </form>
+    </div>
+    {% empty %}
+    <p class="text-sm text-neutral-600">{% translate "This campaign has no ad sets." %}</p>
+    {% endfor %}
+{% endif %}
+</div>

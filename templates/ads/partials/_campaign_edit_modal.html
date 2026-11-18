@@ -1,0 +1,84 @@
+{% load i18n %}
+{% comment %}
+Everything that changes one campaign, in one dialog opened from the campaign
+page header: its name, pausing, activating or archiving it, and each ad set's
+daily budget and end. Expects campaign, rename_form, workspace_id; the opener
+sets ``editing`` (x-data on the header). The ad sets come from Meta, so they
+load only once the dialog shows (views.campaign_ad_sets).
+{% endcomment %}
+<div x-show="editing" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="campaign-edit-title"
+     x-transition.opacity @keydown.escape.window="editing = false">
+    <div class="modal-panel is-lg" @click.away="editing = false">
+        <button type="button" class="modal-close" @click="editing = false" aria-label="{% translate 'Close' %}">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="modal-header">
+            <div class="modal-icon is-brand">
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="modal-title" id="campaign-edit-title">{% translate "Edit campaign" %}</div>
+                <div class="modal-meta"><span class="pill pill-{{ campaign.status_tone }}"><i></i>{{ campaign.status_label }}</span><span>{{ campaign.objective_label }}</span></div>
+            </div>
+        </div>
+
+        <div class="modal-body">
+            <section>
+                <h3 class="text-sm font-semibold text-neutral-950 mb-2">{% translate "Name" %}</h3>
+                <form method="post" action="{% url 'ads:campaign_rename' workspace_id=workspace_id campaign_id=campaign.id %}" class="flex items-end gap-2">
+                    {% csrf_token %}
+                    <label class="flex-1 min-w-0">
+                        <span class="sr-only">{{ rename_form.name.label }}</span>
+                        <input type="text" name="{{ rename_form.name.html_name }}" value="{{ rename_form.name.value|default:'' }}" maxlength="200" required class="form-input-styled w-full">
+                    </label>
+                    <button type="submit" class="btn-outline">{% translate "Rename" %}</button>
+                </form>
+            </section>
+
+            <section class="pt-4 border-t border-neutral-100">
+                <h3 class="text-sm font-semibold text-neutral-950 mb-1">{% translate "Status" %}</h3>
+                {% if campaign.status == "ARCHIVED" %}
+                <p class="text-xs text-neutral-600">{% translate "Archived campaigns stay as they are: Meta does not let them run again." %}</p>
+                {% else %}
+                <p class="text-xs text-neutral-600 mb-3">{% if campaign.is_active %}{% translate "The campaign is running. Pausing stops the spending until you activate it again." %}{% else %}{% translate "The campaign is stopped. Activating it starts spending once Meta approves the ads." %}{% endif %}</p>
+                <div class="flex flex-wrap gap-2">
+                    {% if campaign.can_toggle %}
+                    <form method="post" action="{% url 'ads:campaign_status' workspace_id=workspace_id campaign_id=campaign.id %}"
+                          {% if not campaign.is_active %}data-confirm="{% translate 'Activate this campaign? Meta starts spending the budget once the ads are approved.' %}"{% endif %}>
+                        {% csrf_token %}
+                        {% if campaign.is_active %}
+                        <input type="hidden" name="status" value="PAUSED">
+                        <button type="submit" class="btn-outline">{% translate "Pause" %}</button>
+                        {% else %}
+                        <input type="hidden" name="status" value="ACTIVE">
+                        <button type="submit" class="btn-brand">{% translate "Activate" %}</button>
+                        {% endif %}
+                    </form>
+                    {% endif %}
+                    <form method="post" action="{% url 'ads:campaign_status' workspace_id=workspace_id campaign_id=campaign.id %}"
+                          data-confirm="{% translate 'Archive this campaign? It stops for good and cannot be activated again.' %}" data-confirm-tone="danger" data-confirm-label="{% translate 'Archive' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="ARCHIVED">
+                        <button type="submit" class="btn-danger-soft">{% translate "Archive" %}</button>
+                    </form>
+                </div>
+                {% endif %}
+            </section>
+
+            <section class="pt-4 border-t border-neutral-100">
+                <h3 class="text-sm font-semibold text-neutral-950 mb-1">{% translate "Daily budget" %}</h3>
+                <p class="text-xs text-neutral-600 mb-3">{% translate "The budget is set per ad set. Changing it applies from today; what was spent stays." %}</p>
+                <div hx-get="{% url 'ads:campaign_ad_sets' workspace_id=workspace_id campaign_id=campaign.id %}" hx-trigger="intersect once" hx-swap="outerHTML" data-inline-error="#campaign-ad-sets-status">
+                    <p id="campaign-ad-sets-status" class="flex items-center gap-2 text-sm text-neutral-600" role="status">
+                        <svg class="w-4 h-4 animate-spin text-brand-700" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        {% translate "Fetching the ad sets from Meta…" %}
+                    </p>
+                </div>
+            </section>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-ghost" @click="editing = false">{% translate "Close" %}</button>
+        </div>
+    </div>
+</div>

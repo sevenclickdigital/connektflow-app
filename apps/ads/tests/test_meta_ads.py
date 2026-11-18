@@ -476,6 +476,20 @@ class TestPermissions:
             404,
         )
 
+    def test_the_loaded_parts_are_closed_to_another_workspace(self, connection, organization):
+        from apps.workspaces.models import Workspace
+
+        other = Workspace.objects.create(name="Other", organization=organization)
+        outsider = _member(other, "ads-outsider2@example.com", WorkspaceMembership.WorkspaceRole.OWNER)
+        client = _logged_in(outsider)
+        graph, patch = fake_graph({})
+        kwargs = {"workspace_id": connection.workspace_id}
+        with patch:
+            assert client.get(reverse("ads:overview", kwargs=kwargs)).status_code in (302, 403, 404)
+            body_url = reverse("ads:campaign_body", kwargs={**kwargs, "campaign_id": "555"})
+            assert client.get(body_url).status_code in (302, 403, 404)
+        assert graph.calls == []
+
     def test_connect_sends_the_ads_permissions_to_meta(self, workspace, manager):
         client = _logged_in(manager)
         response = client.post(reverse("ads:connect", kwargs={"workspace_id": workspace.id}))
@@ -586,3 +600,82 @@ class TestReports:
     def test_no_report_without_a_connection(self, workspace, viewer):
         response = _logged_in(viewer).get(reverse("analytics:meta_ads", kwargs={"workspace_id": workspace.id}))
         assert response.status_code == 404
+
+
+@pytest.mark.django_db
+class TestLoadingFromMeta:
+    def test_the_page_shows_without_waiting_on_meta(self, workspace, viewer, connection):
+        graph, patch = fake_graph({})
+        with patch:
+            response = _logged_in(viewer).get(reverse("ads:index", kwargs={"workspace_id": workspace.id}))
+        assert response.status_code == 200
+        assert graph.calls == []
+        assert reverse("ads:overview", kwargs={"workspace_id": workspace.id}) in response.content.decode()
+
+    def test_the_overview_brings_the_campaigns(self, workspace, viewer, connection):
+        routes = {
+            ("GET", f"{ACCOUNT}/insights"): {"data": [{"spend": "10", "campaign_id": "777"}]},
+            ("GET", f"{ACCOUNT}/campaigns"): {"data": [{"id": "777", "name": "Black Friday", "status": "ACTIVE"}]},
+        }
+        graph, patch = fake_graph(routes)
+        with patch:
+            response = _logged_in(viewer).get(reverse("ads:overview", kwargs={"workspace_id": workspace.id}))
+        assert response.status_code == 200
+        assert "Black Friday" in response.content.decode()
+
+    def test_the_campaign_body_refuses_a_campaign_of_another_ad_account(self, workspace, viewer, connection):
+        graph, patch = fake_graph({("GET", "555"): {"id": "555", "name": "x", "account_id": "999"}})
+        url = reverse("ads:campaign_body", kwargs={"workspace_id": workspace.id, "campaign_id": "555"})
+        with patch:
+            response = _logged_in(viewer).get(url)
+        assert response.status_code == 200
+        assert "alert-error" in response.content.decode()
+        assert [path for _method, path, _data in graph.calls] == ["555"]
+
+
+@pytest.mark.django_db
+class TestEditDialog:
+    def test_a_manager_gets_the_edit_dialog_in_place_of_pause(self, workspace, manager, connection):
+        graph, patch = fake_graph(
+            {("GET", "777"): {"id": "777", "name": "Natal", "status": "ACTIVE", "account_id": "111"}}
+        )
+        url = reverse("ads:campaign_detail", kwargs={"workspace_id": workspace.id, "campaign_id": "777"})
+        with patch:
+            body = _logged_in(manager).get(url).content.decode()
+        assert 'aria-labelledby="campaign-edit-title"' in body
+        assert reverse("ads:campaign_ad_sets", kwargs={"workspace_id": workspace.id, "campaign_id": "777"}) in body
+        assert [path for _method, path, _data in graph.calls] == ["777"]
+
+    def test_a_viewer_neither_sees_nor_loads_the_dialog(self, workspace, viewer, connection):
+        graph, patch = fake_graph(
+            {("GET", "777"): {"id": "777", "name": "Natal", "status": "ACTIVE", "account_id": "111"}}
+        )
+        kwargs = {"workspace_id": workspace.id, "campaign_id": "777"}
+        client = _logged_in(viewer)
+        with patch:
+            body = client.get(reverse("ads:campaign_detail", kwargs=kwargs)).content.decode()
+            assert client.get(reverse("ads:campaign_ad_sets", kwargs=kwargs)).status_code == 403
+        assert "campaign-edit-title" not in body
+
+    def test_the_ad_sets_of_another_ad_account_campaign_are_never_read(self, workspace, manager, connection):
+        graph, patch = fake_graph({("GET", "555"): {"id": "555", "name": "x", "account_id": "999"}})
+        url = reverse("ads:campaign_ad_sets", kwargs={"workspace_id": workspace.id, "campaign_id": "555"})
+        with patch:
+            response = _logged_in(manager).get(url)
+        assert "alert-error" in response.content.decode()
+        assert [path for _method, path, _data in graph.calls] == ["555"]
+
+    def test_the_dialog_lists_each_ad_set_with_its_budget_form(self, workspace, manager, connection):
+        routes = {
+            ("GET", "777"): {"id": "777", "name": "Natal", "status": "ACTIVE", "account_id": "111"},
+            ("GET", "777/adsets"): {"data": [{"id": "s1", "name": "Mães 25-44", "daily_budget": "5000"}]},
+        }
+        graph, patch = fake_graph(routes)
+        url = reverse("ads:campaign_ad_sets", kwargs={"workspace_id": workspace.id, "campaign_id": "777"})
+        with patch:
+            body = _logged_in(manager).get(url).content.decode()
+        assert "Mães 25-44" in body
+        assert (
+            reverse("ads:ad_set_edit", kwargs={"workspace_id": workspace.id, "campaign_id": "777", "ad_set_id": "s1"})
+            in body
+        )

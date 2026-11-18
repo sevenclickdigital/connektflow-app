@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-18 14:19+0000\n"
+"POT-Creation-Date: 2026-11-18 14:45+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -215,6 +215,7 @@ msgid "Objective"
 msgstr "Objetivo"
 
 #: apps/ads/forms.py:58 apps/ads/forms.py:168
+#: templates/ads/partials/_campaign_edit_modal.html:69
 msgid "Daily budget"
 msgstr "Orçamento diário"
 
@@ -251,11 +252,11 @@ msgstr "Gênero"
 msgid "Everyone"
 msgstr "Todos"
 
-#: apps/ads/forms.py:81 apps/ads/services.py:601
+#: apps/ads/forms.py:81 apps/ads/services.py:607
 msgid "Men"
 msgstr "Homens"
 
-#: apps/ads/forms.py:81 apps/ads/services.py:601
+#: apps/ads/forms.py:81 apps/ads/services.py:607
 msgid "Women"
 msgstr "Mulheres"
 
@@ -337,21 +338,24 @@ msgid "Amount spent"
 msgstr "Valor gasto"
 
 #: apps/ads/reports.py:29 apps/analytics/metrics.py:16
-#: templates/ads/index.html:75 templates/ads/partials/_breakdowns.html:27
+#: templates/ads/partials/_breakdowns.html:27
 #: templates/ads/partials/_insights.html:17
+#: templates/ads/partials/_overview.html:21
 #: templates/analytics/_meta_ads_page.html:57
 msgid "Impressions"
 msgstr "Impressões"
 
 #: apps/ads/reports.py:30 apps/analytics/metrics.py:27
-#: templates/ads/index.html:76 templates/ads/partials/_breakdowns.html:29
+#: templates/ads/partials/_breakdowns.html:29
 #: templates/ads/partials/_insights.html:22
+#: templates/ads/partials/_overview.html:22
 #: templates/analytics/_meta_ads_page.html:58
 msgid "Link clicks"
 msgstr "Cliques no link"
 
 #: apps/ads/reports.py:31 apps/composer/idea_icons.py:98
-#: templates/ads/index.html:78 templates/analytics/_meta_ads_page.html:60
+#: templates/ads/partials/_overview.html:24
+#: templates/analytics/_meta_ads_page.html:60
 #: templates/workspaces/dashboard.html:91
 msgid "Results"
 msgstr "Resultados"
@@ -541,22 +545,22 @@ msgstr "CPM"
 msgid "This campaign was not found in the connected ad account."
 msgstr "Esta campanha não foi encontrada na conta de anúncios conectada."
 
-#: apps/ads/services.py:601
+#: apps/ads/services.py:607
 msgid "Not informed"
 msgstr "Não informado"
 
-#: apps/ads/services.py:610 apps/composer/services.py:975
+#: apps/ads/services.py:616 apps/composer/services.py:975
 #: apps/social_accounts/models.py:656
 msgid "Feed"
 msgstr "Feed"
 
-#: apps/ads/services.py:611 apps/ads/services.py:612 apps/ads/services.py:613
+#: apps/ads/services.py:617 apps/ads/services.py:618 apps/ads/services.py:619
 #: apps/analytics/services.py:783 apps/composer/models.py:1087
 #: templates/composer/partials/_crop_editor.html:67
 msgid "Stories"
 msgstr "Stories"
 
-#: apps/ads/services.py:614 apps/ads/services.py:615 apps/ads/services.py:616
+#: apps/ads/services.py:620 apps/ads/services.py:621 apps/ads/services.py:622
 #: apps/analytics/services.py:781 apps/composer/models.py:546
 #: apps/composer/models.py:1086 apps/composer/services.py:977
 #: apps/social_accounts/models.py:658 apps/tasks/creative_formats.py:81
@@ -564,89 +568,89 @@ msgstr "Stories"
 msgid "Reels"
 msgstr "Reels"
 
-#: apps/ads/services.py:617
+#: apps/ads/services.py:623
 msgid "Reels overlay"
 msgstr "Sobreposição em Reels"
 
-#: apps/ads/services.py:618
+#: apps/ads/services.py:624
 msgid "Explore"
 msgstr "Explorar"
 
-#: apps/ads/services.py:619 apps/ads/services.py:620
+#: apps/ads/services.py:625 apps/ads/services.py:626
 msgid "Explore home"
 msgstr "Início do Explorar"
 
-#: apps/ads/services.py:621 apps/ads/services.py:622
+#: apps/ads/services.py:627 apps/ads/services.py:628
 msgid "Profile feed"
 msgstr "Feed do perfil"
 
-#: apps/ads/services.py:623
+#: apps/ads/services.py:629
 msgid "Marketplace"
 msgstr "Marketplace"
 
-#: apps/ads/services.py:624
+#: apps/ads/services.py:630
 msgid "Video feeds"
 msgstr "Feeds de vídeo"
 
-#: apps/ads/services.py:625
+#: apps/ads/services.py:631
 msgid "In-stream video"
 msgstr "Vídeo in-stream"
 
-#: apps/ads/services.py:626
+#: apps/ads/services.py:632
 msgid "Right column"
 msgstr "Coluna da direita"
 
-#: apps/ads/services.py:627
+#: apps/ads/services.py:633
 msgid "Search results"
 msgstr "Resultados de busca"
 
-#: apps/ads/services.py:628 templates/inbox/feed.html:7
+#: apps/ads/services.py:634 templates/inbox/feed.html:7
 #: templates/inbox/feed.html:118 templates/inbox/message_detail.html:7
 msgid "Inbox"
 msgstr "Caixa de entrada"
 
-#: apps/ads/services.py:629
+#: apps/ads/services.py:635
 msgid "Apps and sites"
 msgstr "Apps e sites"
 
-#: apps/ads/services.py:630
+#: apps/ads/services.py:636
 msgid "Rewarded video"
 msgstr "Vídeo com recompensa"
 
-#: apps/ads/services.py:715
+#: apps/ads/services.py:721
 msgid "Unknown campaign status."
 msgstr "Status de campanha desconhecido."
 
-#: apps/ads/services.py:740
+#: apps/ads/services.py:746
 msgid "This ad set is not part of the campaign."
 msgstr "Este conjunto de anúncios não faz parte da campanha."
 
-#: apps/ads/services.py:744
+#: apps/ads/services.py:750
 msgid "This ad set has a lifetime budget. Change it in Meta Ads Manager."
 msgstr ""
 "Este conjunto de anúncios tem orçamento total. Altere-o no Gerenciador de "
 "Anúncios da Meta."
 
-#: apps/ads/services.py:788
+#: apps/ads/services.py:794
 msgid "Ad set"
 msgstr "Conjunto de anúncios"
 
-#: apps/ads/services.py:799 apps/ads/services.py:846
+#: apps/ads/services.py:805 apps/ads/services.py:852
 msgid ""
 "Choose a Pixel in the connection settings to run sales or lead campaigns."
 msgstr ""
 "Escolha um Pixel nas configurações da conexão para rodar campanhas de vendas "
 "ou de cadastros."
 
-#: apps/ads/services.py:824 apps/ads/services.py:828
+#: apps/ads/services.py:830 apps/ads/services.py:834
 msgid "The image is larger than Meta accepts (30 MB)."
 msgstr "A imagem é maior do que a Meta aceita (30 MB)."
 
-#: apps/ads/services.py:840
+#: apps/ads/services.py:846
 msgid "Finish connecting Meta Ads before creating campaigns."
 msgstr "Termine de conectar o Meta Ads antes de criar campanhas."
 
-#: apps/ads/services.py:842 templates/ads/campaign_new.html:18
+#: apps/ads/services.py:848 templates/ads/campaign_new.html:18
 msgid ""
 "Choose the Facebook Page your ads are published as in the connection "
 "settings."
@@ -654,36 +658,36 @@ msgstr ""
 "Escolha, nas configurações da conexão, a Página do Facebook em nome da qual "
 "os anúncios são publicados."
 
-#: apps/ads/services.py:844
+#: apps/ads/services.py:850
 msgid "Choose one of the offered objectives."
 msgstr "Escolha um dos objetivos oferecidos."
 
-#: apps/ads/views.py:134
+#: apps/ads/views.py:160
 msgid "The Meta sign-in was cancelled or refused."
 msgstr "O login da Meta foi cancelado ou recusado."
 
-#: apps/ads/views.py:142 apps/social_accounts/views.py:466
+#: apps/ads/views.py:168 apps/social_accounts/views.py:466
 msgid "Invalid or expired OAuth state. Please try again."
 msgstr "Estado de OAuth inválido ou expirado. Tente novamente."
 
-#: apps/ads/views.py:150 apps/social_accounts/views.py:472
+#: apps/ads/views.py:176 apps/social_accounts/views.py:472
 msgid "OAuth session mismatch. Please try again."
 msgstr "A sessão de OAuth não confere. Tente novamente."
 
-#: apps/ads/views.py:165 apps/social_accounts/views.py:459
+#: apps/ads/views.py:191 apps/social_accounts/views.py:459
 msgid "Missing authorization code or state parameter."
 msgstr "Código de autorização ou parâmetro de estado ausente."
 
-#: apps/ads/views.py:177
+#: apps/ads/views.py:203
 msgid "Meta Ads connected. Choose the ad account, Pixel and Page to use."
 msgstr ""
 "Meta Ads conectado. Escolha a conta de anúncios, o Pixel e a Página a usar."
 
-#: apps/ads/views.py:222
+#: apps/ads/views.py:248
 msgid "Meta Ads settings saved."
 msgstr "Configurações do Meta Ads salvas."
 
-#: apps/ads/views.py:244
+#: apps/ads/views.py:270
 msgid ""
 "Meta Ads disconnected. Campaigns keep running in the ad account until you "
 "stop them there."
@@ -691,37 +695,37 @@ msgstr ""
 "Meta Ads desconectado. As campanhas continuam rodando na conta de anúncios "
 "até você pausá-las lá."
 
-#: apps/ads/views.py:271
+#: apps/ads/views.py:297
 msgid "The image file could not be read. Choose another one."
 msgstr "Não foi possível ler o arquivo da imagem. Escolha outra."
 
-#: apps/ads/views.py:273
+#: apps/ads/views.py:299
 msgid "Campaign created, paused. Review it and activate it when you are ready."
 msgstr "Campanha criada, pausada. Revise e ative quando estiver tudo certo."
 
-#: apps/ads/views.py:338
+#: apps/ads/views.py:416
 msgid "Campaign activated. Meta reviews new ads before they start delivering."
 msgstr ""
 "Campanha ativada. A Meta revisa os anúncios novos antes de começar a "
 "veiculação."
 
-#: apps/ads/views.py:339
+#: apps/ads/views.py:417
 msgid "Campaign paused."
 msgstr "Campanha pausada."
 
-#: apps/ads/views.py:340
+#: apps/ads/views.py:418
 msgid "Campaign archived."
 msgstr "Campanha arquivada."
 
-#: apps/ads/views.py:356
+#: apps/ads/views.py:434
 msgid "Give the campaign a name of up to 200 characters."
 msgstr "Dê à campanha um nome de até 200 caracteres."
 
-#: apps/ads/views.py:363
+#: apps/ads/views.py:441
 msgid "Campaign renamed."
 msgstr "Campanha renomeada."
 
-#: apps/ads/views.py:392
+#: apps/ads/views.py:470
 msgid "Ad set updated."
 msgstr "Conjunto de anúncios atualizado."
 
@@ -3857,7 +3861,9 @@ msgstr "Data de nascimento"
 msgid "Company"
 msgstr "Empresa"
 
-#: apps/contacts/forms.py:105 templates/ads/index.html:72
+#: apps/contacts/forms.py:105
+#: templates/ads/partials/_campaign_edit_modal.html:39
+#: templates/ads/partials/_overview.html:18
 #: templates/analytics/_shopee_orders.html:27
 #: templates/automations/staff_template_list.html:73
 #: templates/billing/staff_console.html:69
@@ -4377,7 +4383,8 @@ msgstr "Marcar como lida"
 msgid "Resolve"
 msgstr "Resolver"
 
-#: apps/inbox/forms.py:51 templates/ads/campaign_detail.html:101
+#: apps/inbox/forms.py:51 templates/ads/partials/_campaign_edit_modal.html:59
+#: templates/ads/partials/_campaign_edit_modal.html:62
 #: templates/inbox/feed.html:147
 msgid "Archive"
 msgstr "Arquivar"
@@ -4840,8 +4847,8 @@ msgid "Reports"
 msgstr "Relatórios"
 
 #: apps/onboarding/models.py:126 apps/social_accounts/catalog.py:19
-#: templates/ads/campaign_detail.html:73 templates/ads/index.html:3
-#: templates/ads/partials/_breakdowns.html:15
+#: templates/ads/index.html:3 templates/ads/partials/_breakdowns.html:15
+#: templates/ads/partials/_campaign_body.html:14
 #: templates/analytics/_page_header.html:102 templates/base.html:782
 #: templates/social_accounts/partials/_meta_ads_card.html:11
 msgid "Ads"
@@ -7663,90 +7670,16 @@ msgid "Change Password"
 msgstr "Alterar senha"
 
 #: templates/ads/campaign_detail.html:3 templates/ads/campaign_detail.html:7
-#: templates/ads/campaign_new.html:22 templates/ads/index.html:71
+#: templates/ads/campaign_new.html:22 templates/ads/partials/_overview.html:17
 #: templates/analytics/_meta_ads_page.html:55
 msgid "Campaign"
 msgstr "Campanha"
 
-#: templates/ads/campaign_detail.html:20
-msgid ""
-"Activate this campaign? Meta starts spending the budget once the ads are "
-"approved."
-msgstr ""
-"Ativar esta campanha? A Meta começa a gastar o orçamento assim que os "
-"anúncios forem aprovados."
-
-#: templates/ads/campaign_detail.html:24
-#: templates/automations/flow_builder.html:277
-msgid "Pause"
-msgstr "Pausar"
-
-#: templates/ads/campaign_detail.html:27
-#: templates/intelligence/_overlay_not_subscribed_admin.html:29
-msgid "Activate"
-msgstr "Ativar"
-
-#: templates/ads/campaign_detail.html:43
-msgid "Ad sets"
-msgstr "Conjuntos de anúncios"
-
-#: templates/ads/campaign_detail.html:51 templates/ads/index.html:92
-#, python-format
-msgid "%(amount)s/day"
-msgstr "%(amount)s/dia"
-
-#: templates/ads/campaign_detail.html:51 templates/ads/index.html:93
-#, python-format
-msgid "%(amount)s total"
-msgstr "%(amount)s no total"
-
-#: templates/ads/campaign_detail.html:53
-#, python-format
-msgid "%(min)s–%(max)s years"
-msgstr "%(min)s–%(max)s anos"
-
-#: templates/ads/campaign_detail.html:54
-#, python-format
-msgid "ends %(date)s"
-msgstr "termina em %(date)s"
-
-#: templates/ads/campaign_detail.html:64
-msgid "Save ad set"
-msgstr "Salvar conjunto"
-
-#: templates/ads/campaign_detail.html:69
-msgid "This campaign has no ad sets."
-msgstr "Esta campanha não tem conjuntos de anúncios."
-
-#: templates/ads/campaign_detail.html:76
-#: templates/ads/partials/_breakdowns.html:39
-#, python-format
-msgid "%(name)s — see how people see this ad, on Meta"
-msgstr "%(name)s — veja como as pessoas veem este anúncio, na Meta"
-
-#: templates/ads/campaign_detail.html:82 templates/base.html:621
-#: templates/composer/compose.html:427
-msgid "Preview"
-msgstr "Prévia"
-
-#: templates/ads/campaign_detail.html:85
-msgid "This campaign has no ads."
-msgstr "Esta campanha não tem anúncios."
-
-#: templates/ads/campaign_detail.html:90
+#: templates/ads/campaign_detail.html:21
+#: templates/ads/partials/_campaign_edit_modal.html:20
 #: templates/calendar/partials/event_form.html:57
 msgid "Edit campaign"
 msgstr "Editar campanha"
-
-#: templates/ads/campaign_detail.html:95
-#: templates/funnels/partials/_settings_list.html:22
-msgid "Rename"
-msgstr "Renomear"
-
-#: templates/ads/campaign_detail.html:98
-msgid "Archive this campaign? It stops for good and cannot be activated again."
-msgstr ""
-"Arquivar esta campanha? Ela para de vez e não pode ser ativada de novo."
 
 #: templates/ads/campaign_new.html:3 templates/ads/campaign_new.html:7
 #: templates/ads/index.html:18 templates/calendar/partials/event_form.html:56
@@ -7859,83 +7792,6 @@ msgstr ""
 msgid "Page"
 msgstr "Página"
 
-#: templates/ads/index.html:66
-#: templates/calendar/partials/_period_toolbar.html:75
-#: templates/contacts/partials/_tabs.html:12
-msgid "Campaigns"
-msgstr "Campanhas"
-
-#: templates/ads/index.html:73
-msgid "Budget"
-msgstr "Orçamento"
-
-#: templates/ads/index.html:74 templates/ads/partials/_breakdowns.html:26
-#: templates/analytics/_meta_ads_page.html:56
-msgid "Spent"
-msgstr "Gasto"
-
-#: templates/ads/index.html:77 templates/ads/partials/_breakdowns.html:28
-#: templates/ads/partials/_insights.html:34
-#: templates/analytics/_meta_ads_page.html:59
-msgid "CTR"
-msgstr "CTR"
-
-#: templates/ads/index.html:79
-msgid ""
-"The number each campaign is judged by, given its objective, and how it moved "
-"against the previous period of the same length."
-msgstr ""
-"O número pelo qual cada campanha é avaliada, conforme o objetivo dela, e "
-"como ele variou em relação ao período anterior de mesma duração."
-
-#: templates/ads/index.html:79 templates/analytics/_post_detail.html:38
-msgid "Performance"
-msgstr "Desempenho"
-
-#: templates/ads/index.html:80 templates/ads/index.html:129
-#: templates/contacts/partials/_row.html:58
-#: templates/social_accounts/partials/_account_card.html:71
-msgid "More actions"
-msgstr "Mais ações"
-
-#: templates/ads/index.html:94
-msgid "On the ad sets"
-msgstr "Nos conjuntos"
-
-#: templates/ads/index.html:101
-#, python-format
-msgid "%(counter)s purchase"
-msgid_plural "%(counter)s purchases"
-msgstr[0] "%(counter)s compra"
-msgstr[1] "%(counter)s compras"
-
-#: templates/ads/index.html:102
-#, python-format
-msgid "%(counter)s lead"
-msgid_plural "%(counter)s leads"
-msgstr[0] "%(counter)s cadastro"
-msgstr[1] "%(counter)s cadastros"
-
-#: templates/ads/index.html:112 templates/ads/partials/_insights.html:62
-msgid "Pays back: the purchases brought back more than was spent on the ads."
-msgstr "Paga o investimento: as compras trouxeram mais do que foi gasto nos anúncios."
-
-#: templates/ads/index.html:112 templates/ads/partials/_insights.html:62
-msgid "Below spend: the purchases brought back less than was spent on the ads."
-msgstr "Abaixo do investimento: as compras trouxeram menos do que foi gasto nos anúncios."
-
-#: templates/ads/index.html:133
-msgid "See campaign details"
-msgstr "Ver detalhes da campanha"
-
-#: templates/ads/index.html:134
-msgid "Open in Meta Ads Manager"
-msgstr "Abrir no Gerenciador de Anúncios da Meta"
-
-#: templates/ads/index.html:140
-msgid "This ad account has no campaigns yet."
-msgstr "Esta conta de anúncios ainda não tem campanhas."
-
 #: templates/ads/partials/_breakdowns.html:11
 msgid "What brings the results"
 msgstr "De onde vêm os resultados"
@@ -7962,10 +7818,29 @@ msgstr "Posicionamentos"
 msgid "Placement"
 msgstr "Posicionamento"
 
+#: templates/ads/partials/_breakdowns.html:26
+#: templates/ads/partials/_overview.html:20
+#: templates/analytics/_meta_ads_page.html:56
+msgid "Spent"
+msgstr "Gasto"
+
+#: templates/ads/partials/_breakdowns.html:28
+#: templates/ads/partials/_insights.html:34
+#: templates/ads/partials/_overview.html:23
+#: templates/analytics/_meta_ads_page.html:59
+msgid "CTR"
+msgstr "CTR"
+
 #: templates/ads/partials/_breakdowns.html:29
 #: templates/ads/partials/_insights.html:49
 msgid "Purchases"
 msgstr "Compras"
+
+#: templates/ads/partials/_breakdowns.html:39
+#: templates/ads/partials/_campaign_body.html:17
+#, python-format
+msgid "%(name)s — see how people see this ad, on Meta"
+msgstr "%(name)s — veja como as pessoas veem este anúncio, na Meta"
 
 #: templates/ads/partials/_breakdowns.html:41
 msgid "Best"
@@ -7975,10 +7850,221 @@ msgstr "Melhor"
 msgid "Meta reported nothing for this period."
 msgstr "A Meta não informou nada para este período."
 
+#: templates/ads/partials/_campaign_ad_sets.html:17
+#: templates/ads/partials/_overview.html:38
+#, python-format
+msgid "%(amount)s/day"
+msgstr "%(amount)s/dia"
+
+#: templates/ads/partials/_campaign_ad_sets.html:17
+#: templates/ads/partials/_overview.html:39
+#, python-format
+msgid "%(amount)s total"
+msgstr "%(amount)s no total"
+
+#: templates/ads/partials/_campaign_ad_sets.html:19
+#, python-format
+msgid "%(min)s–%(max)s years"
+msgstr "%(min)s–%(max)s anos"
+
+#: templates/ads/partials/_campaign_ad_sets.html:20
+#, python-format
+msgid "ends %(date)s"
+msgstr "termina em %(date)s"
+
+#: templates/ads/partials/_campaign_ad_sets.html:29
+msgid "Save ad set"
+msgstr "Salvar conjunto"
+
+#: templates/ads/partials/_campaign_ad_sets.html:33
+msgid "This campaign has no ad sets."
+msgstr "Esta campanha não tem conjuntos de anúncios."
+
+#: templates/ads/partials/_campaign_body.html:23 templates/base.html:621
+#: templates/composer/compose.html:427
+msgid "Preview"
+msgstr "Prévia"
+
+#: templates/ads/partials/_campaign_body.html:26
+msgid "This campaign has no ads."
+msgstr "Esta campanha não tem anúncios."
+
+#: templates/ads/partials/_campaign_edit_modal.html:12
+#: templates/ads/partials/_campaign_edit_modal.html:81
+#: templates/automations/flow_builder.html:1105 templates/base.html:509
+#: templates/billing/staff_console.html:205
+#: templates/calendar/partials/event_form.html:47
+#: templates/calendar/partials/publish_calendar_shell.html:56
+#: templates/calendar/partials/publish_calendar_shell.html:68
+#: templates/components/_media_preview.html:23
+#: templates/composer/compose.html:2091
+#: templates/composer/create_landing.html:416
+#: templates/composer/create_landing.html:527
+#: templates/composer/create_landing.html:634
+#: templates/composer/create_landing.html:746
+#: templates/composer/partials/_crop_editor.html:22
+#: templates/composer/partials/_ideas_hero.html:143
+#: templates/composer/partials/_media_thumb_actions.html:26
+#: templates/composer/partials/_tag_groups.html:144
+#: templates/composer/partials/_tag_manager.html:60
+#: templates/composer/partials/template_gallery.html:92
+#: templates/contacts/partials/_import_modal.html:10
+#: templates/funnels/board.html:212 templates/inbox/feed.html:148
+#: templates/radar/partials/_share_dialog.html:18
+#: templates/radar/partials/_source_card.html:89
+#: templates/social_accounts/partials/_account_card.html:115
+#: templates/social_accounts/partials/_account_card.html:192
+#: templates/social_accounts/partials/_account_card.html:211
+#: templates/social_accounts/partials/_account_card.html:232
+#: templates/social_accounts/partials/_connect_guide.html:16
+#: templates/tasks/partials/_checklist_item.html:71
+#: templates/tasks/partials/_new_item_modal.html:28
+#: templates/tasks/partials/_task_modal.html:20
+#: templates/tasks/partials/_task_modal.html:278
+#: templates/workspaces/settings.html:166
+msgid "Close"
+msgstr "Fechar"
+
+#: templates/ads/partials/_campaign_edit_modal.html:27
+#: templates/api_keys/_issue_modal.html:33
+#: templates/automations/flow_builder.html:851
+#: templates/automations/flow_builder.html:1158
+#: templates/composer/categories.html:37
+#: templates/media_library/_asset_grid.html:42
+msgid "Name"
+msgstr "Nome"
+
+#: templates/ads/partials/_campaign_edit_modal.html:34
+#: templates/funnels/partials/_settings_list.html:22
+msgid "Rename"
+msgstr "Renomear"
+
+#: templates/ads/partials/_campaign_edit_modal.html:41
+msgid "Archived campaigns stay as they are: Meta does not let them run again."
+msgstr "Campanhas arquivadas ficam como estão: a Meta não deixa que voltem a rodar."
+
+#: templates/ads/partials/_campaign_edit_modal.html:43
+msgid ""
+"The campaign is running. Pausing stops the spending until you activate it "
+"again."
+msgstr "A campanha está rodando. Pausar interrompe o gasto até você ativá-la de novo."
+
+#: templates/ads/partials/_campaign_edit_modal.html:43
+msgid ""
+"The campaign is stopped. Activating it starts spending once Meta approves "
+"the ads."
+msgstr "A campanha está parada. Ao ativar, o gasto começa assim que a Meta aprovar os anúncios."
+
+#: templates/ads/partials/_campaign_edit_modal.html:47
+msgid ""
+"Activate this campaign? Meta starts spending the budget once the ads are "
+"approved."
+msgstr ""
+"Ativar esta campanha? A Meta começa a gastar o orçamento assim que os "
+"anúncios forem aprovados."
+
+#: templates/ads/partials/_campaign_edit_modal.html:51
+#: templates/automations/flow_builder.html:277
+msgid "Pause"
+msgstr "Pausar"
+
+#: templates/ads/partials/_campaign_edit_modal.html:54
+#: templates/intelligence/_overlay_not_subscribed_admin.html:29
+msgid "Activate"
+msgstr "Ativar"
+
+#: templates/ads/partials/_campaign_edit_modal.html:59
+msgid "Archive this campaign? It stops for good and cannot be activated again."
+msgstr ""
+"Arquivar esta campanha? Ela para de vez e não pode ser ativada de novo."
+
+#: templates/ads/partials/_campaign_edit_modal.html:70
+msgid ""
+"The budget is set per ad set. Changing it applies from today; what was spent "
+"stays."
+msgstr "O orçamento é definido por conjunto de anúncios. A mudança vale a partir de hoje; o que já foi gasto continua."
+
+#: templates/ads/partials/_campaign_edit_modal.html:74
+msgid "Fetching the ad sets from Meta…"
+msgstr "Buscando os conjuntos de anúncios na Meta…"
+
 #: templates/ads/partials/_insights.html:29
 #, python-format
 msgid "Frequency %(frequency)s"
 msgstr "Frequência %(frequency)s"
+
+#: templates/ads/partials/_insights.html:62
+#: templates/ads/partials/_overview.html:58
+msgid "Pays back: the purchases brought back more than was spent on the ads."
+msgstr ""
+"Paga o investimento: as compras trouxeram mais do que foi gasto nos anúncios."
+
+#: templates/ads/partials/_insights.html:62
+#: templates/ads/partials/_overview.html:58
+msgid "Below spend: the purchases brought back less than was spent on the ads."
+msgstr ""
+"Abaixo do investimento: as compras trouxeram menos do que foi gasto nos "
+"anúncios."
+
+#: templates/ads/partials/_overview.html:12
+#: templates/calendar/partials/_period_toolbar.html:75
+#: templates/contacts/partials/_tabs.html:12
+msgid "Campaigns"
+msgstr "Campanhas"
+
+#: templates/ads/partials/_overview.html:19
+msgid "Budget"
+msgstr "Orçamento"
+
+#: templates/ads/partials/_overview.html:25
+msgid ""
+"The number each campaign is judged by, given its objective, and how it moved "
+"against the previous period of the same length."
+msgstr ""
+"O número pelo qual cada campanha é avaliada, conforme o objetivo dela, e "
+"como ele variou em relação ao período anterior de mesma duração."
+
+#: templates/ads/partials/_overview.html:25
+#: templates/analytics/_post_detail.html:38
+msgid "Performance"
+msgstr "Desempenho"
+
+#: templates/ads/partials/_overview.html:26
+#: templates/ads/partials/_overview.html:75
+#: templates/contacts/partials/_row.html:58
+#: templates/social_accounts/partials/_account_card.html:71
+msgid "More actions"
+msgstr "Mais ações"
+
+#: templates/ads/partials/_overview.html:40
+msgid "On the ad sets"
+msgstr "Nos conjuntos"
+
+#: templates/ads/partials/_overview.html:47
+#, python-format
+msgid "%(counter)s purchase"
+msgid_plural "%(counter)s purchases"
+msgstr[0] "%(counter)s compra"
+msgstr[1] "%(counter)s compras"
+
+#: templates/ads/partials/_overview.html:48
+#, python-format
+msgid "%(counter)s lead"
+msgid_plural "%(counter)s leads"
+msgstr[0] "%(counter)s cadastro"
+msgstr[1] "%(counter)s cadastros"
+
+#: templates/ads/partials/_overview.html:79
+msgid "See campaign details"
+msgstr "Ver detalhes da campanha"
+
+#: templates/ads/partials/_overview.html:80
+msgid "Open in Meta Ads Manager"
+msgstr "Abrir no Gerenciador de Anúncios da Meta"
+
+#: templates/ads/partials/_overview.html:86
+msgid "This ad account has no campaigns yet."
+msgstr "Esta conta de anúncios ainda não tem campanhas."
 
 #: templates/ads/partials/_range_picker.html:2 templates/funnels/board.html:31
 #: templates/workspaces/dashboard.html:33
@@ -7989,6 +8075,10 @@ msgstr "Período"
 #, python-format
 msgid "%(choice)s days"
 msgstr "%(choice)s dias"
+
+#: templates/ads/partials/_skeleton.html:13
+msgid "Fetching the numbers from Meta…"
+msgstr "Buscando os números na Meta…"
 
 #: templates/ads/settings.html:9 templates/ads/settings.html:16
 msgid "Meta Ads settings"
@@ -8653,14 +8743,6 @@ msgid ""
 msgstr ""
 "O token em texto puro é exibido <strong>uma única vez</strong>, logo após a "
 "criação."
-
-#: templates/api_keys/_issue_modal.html:33
-#: templates/automations/flow_builder.html:851
-#: templates/automations/flow_builder.html:1158
-#: templates/composer/categories.html:37
-#: templates/media_library/_asset_grid.html:42
-msgid "Name"
-msgstr "Nome"
 
 #: templates/api_keys/_issue_modal.html:35
 msgid "e.g. Zapier bot, content pipeline"
@@ -9571,40 +9653,6 @@ msgstr "Os fluxos prontos aparecerão aqui assim que forem publicados."
 #: templates/automations/flow_builder.html:1086
 msgid "steps"
 msgstr "etapas"
-
-#: templates/automations/flow_builder.html:1105 templates/base.html:509
-#: templates/billing/staff_console.html:205
-#: templates/calendar/partials/event_form.html:47
-#: templates/calendar/partials/publish_calendar_shell.html:56
-#: templates/calendar/partials/publish_calendar_shell.html:68
-#: templates/components/_media_preview.html:23
-#: templates/composer/compose.html:2091
-#: templates/composer/create_landing.html:416
-#: templates/composer/create_landing.html:527
-#: templates/composer/create_landing.html:634
-#: templates/composer/create_landing.html:746
-#: templates/composer/partials/_crop_editor.html:22
-#: templates/composer/partials/_ideas_hero.html:143
-#: templates/composer/partials/_media_thumb_actions.html:26
-#: templates/composer/partials/_tag_groups.html:144
-#: templates/composer/partials/_tag_manager.html:60
-#: templates/composer/partials/template_gallery.html:92
-#: templates/contacts/partials/_import_modal.html:10
-#: templates/funnels/board.html:212 templates/inbox/feed.html:148
-#: templates/radar/partials/_share_dialog.html:18
-#: templates/radar/partials/_source_card.html:89
-#: templates/social_accounts/partials/_account_card.html:115
-#: templates/social_accounts/partials/_account_card.html:192
-#: templates/social_accounts/partials/_account_card.html:211
-#: templates/social_accounts/partials/_account_card.html:232
-#: templates/social_accounts/partials/_connect_guide.html:16
-#: templates/tasks/partials/_checklist_item.html:71
-#: templates/tasks/partials/_new_item_modal.html:28
-#: templates/tasks/partials/_task_modal.html:20
-#: templates/tasks/partials/_task_modal.html:278
-#: templates/workspaces/settings.html:166
-msgid "Close"
-msgstr "Fechar"
 
 #: templates/automations/flow_builder.html:1113
 msgid "Replace the flow with this template?"
@@ -21673,6 +21721,9 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 #: templates/workspaces/team.html:102
 msgid "Send invitation"
 msgstr "Enviar convite"
+
+#~ msgid "Ad sets"
+#~ msgstr "Conjuntos de anúncios"
 
 #~ msgid "Pays back"
 #~ msgstr "Paga o investimento"

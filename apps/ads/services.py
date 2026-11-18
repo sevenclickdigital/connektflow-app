@@ -525,8 +525,8 @@ class AdSet:
     age_max: int | None
 
 
-def campaign_detail(connection: AdsConnection, campaign_id: str, *, days: int = DEFAULT_RANGE) -> dict:
-    campaign, _row = get_campaign(connection, campaign_id)
+def campaign_ad_sets(connection: AdsConnection, campaign: Campaign) -> list[AdSet]:
+    """The ad sets of a campaign already checked by :func:`get_campaign`."""
     ad_sets = []
     for row in _call(connection, meta_ads.MetaAdsClient.ad_sets, campaign.id):
         targeting = row.get("targeting") or {}
@@ -546,6 +546,13 @@ def campaign_detail(connection: AdsConnection, campaign_id: str, *, days: int = 
                 age_max=targeting.get("age_max"),
             )
         )
+    return ad_sets
+
+
+def campaign_detail(connection: AdsConnection, campaign_id: str, *, days: int = DEFAULT_RANGE) -> dict:
+    """A campaign's numbers, where they come from and its ads. Its ad sets are read
+    apart (:func:`campaign_ad_sets`), only when the edit dialog opens."""
+    campaign, _row = get_campaign(connection, campaign_id)
     ads = []
     for row in _call(connection, meta_ads.MetaAdsClient.ads, campaign.id):
         label, tone = _status(row.get("effective_status") or row.get("status") or "")
@@ -571,7 +578,6 @@ def campaign_detail(connection: AdsConnection, campaign_id: str, *, days: int = 
     campaign.insights, campaign.previous = totals, before
     return {
         "campaign": campaign,
-        "ad_sets": ad_sets,
         "ads": ads,
         "totals": totals,
         "changes": compare_all(totals, before),

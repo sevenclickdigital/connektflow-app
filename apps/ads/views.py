@@ -69,8 +69,9 @@ def _ready_connection(request, workspace_id):
 @ratelimit(key="user", rate="30/m", method="GET", block=True)
 @require_GET
 def index(request, workspace_id):
-    """Connected: the account's numbers and campaigns. Not connected: whoever can
-    connect goes to Social Accounts; anyone else is told it is not set up."""
+    """Connected: the page, with a placeholder the numbers and campaigns load into
+    (``overview``). Not connected: whoever can connect goes to Social Accounts;
+    anyone else is told it is not set up."""
     connection = services.get_connection(request.workspace.id)
     context = {
         "workspace_id": workspace_id,
@@ -78,20 +79,45 @@ def index(request, workspace_id):
         "can_manage": _can_manage(request),
         "days": _days(request),
         "range_choices": services.RANGE_CHOICES,
-        "error": "",
     }
     if connection is None and context["can_manage"]:
         # Connecting happens on the Social Accounts page, with the other platforms.
         return redirect(f"{reverse('social_accounts:list', kwargs={'workspace_id': workspace_id})}#connect-platforms")
     if connection is not None and not connection.ad_account_id and context["can_manage"]:
         return redirect("ads:settings", workspace_id=workspace_id)
-    if connection is not None and connection.ad_account_id:
-        try:
-            context["overview"] = services.account_overview(connection, days=context["days"])
-            context["campaigns"] = services.list_campaigns(connection, days=context["days"])
-        except services.AdsError as exc:
-            context["error"] = str(exc)
     return render(request, "ads/index.html", context)
+
+
+@login_required
+@require_permission("view_analytics")
+@ratelimit(key="user", rate="30/m", method="GET", block=True)
+@require_GET
+def overview(request, workspace_id):
+    """The account's numbers and campaigns, read from Meta (six calls).
+
+    Loaded by the index page after it shows, so the person sees the page and a
+    placeholder instead of a browser waiting on Meta. A Meta refusal comes back
+    as the page's error box, with a 200 so HTMX swaps it in.
+    """
+    connection = services.get_connection(request.workspace.id)
+    if connection is None or not connection.ad_account_id:
+        return redirect("ads:index", workspace_id=workspace_id)
+    # The index already shows the sign-in error box; a failure caused by the
+    # same expired token should not repeat it.
+    already_failing = connection.status == AdsConnection.Status.ERROR
+    days = _days(request)
+    context = {
+        "workspace_id": workspace_id,
+        "connection": connection,
+        "days": days,
+        "error": "",
+    }
+    try:
+        context["overview"] = services.account_overview(connection, days=days)
+        context["campaigns"] = services.list_campaigns(connection, days=days)
+    except services.AdsError as exc:
+        context["error"] = "" if already_failing else str(exc)
+    return render(request, "ads/partials/_overview.html", context)
 
 
 # ------------------------------------------------------------------
@@ -290,6 +316,9 @@ def campaign_new(request, workspace_id):
 @ratelimit(key="user", rate="30/m", method="GET", block=True)
 @require_GET
 def campaign_detail(request, workspace_id, campaign_id):
+    """The campaign's header (one call to Meta, which also checks that the campaign
+    belongs to the connected ad account) and a placeholder its numbers load into
+    (``campaign_body``)."""
     connection, elsewhere = _ready_connection(request, workspace_id)
     if elsewhere:
         return elsewhere
@@ -303,16 +332,59 @@ def campaign_detail(request, workspace_id, campaign_id):
         "error": "",
     }
     try:
-        context.update(services.campaign_detail(connection, campaign_id, days=days))
+        context["campaign"], _row = services.get_campaign(connection, campaign_id)
     except services.AdsError as exc:
         context["error"] = str(exc)
         return render(request, "ads/campaign_detail.html", context, status=404)
     context["rename_form"] = CampaignRenameForm(initial={"name": context["campaign"].name})
-    context["ad_set_forms"] = [
-        (ad_set, AdSetEditForm(initial={"daily_budget": ad_set.daily_budget}, prefix=ad_set.id))
-        for ad_set in context["ad_sets"]
-    ]
     return render(request, "ads/campaign_detail.html", context)
+
+
+@login_required
+@require_permission("view_analytics")
+@ratelimit(key="user", rate="30/m", method="GET", block=True)
+@require_GET
+def campaign_body(request, workspace_id, campaign_id):
+    """The campaign's numbers, where they come from, its ad sets and ads (nine calls).
+
+    Loaded by the campaign page after it shows. Checks the campaign against the
+    connected ad account again: this is a URL of its own.
+    """
+    connection, elsewhere = _ready_connection(request, workspace_id)
+    if elsewhere:
+        return elsewhere
+    days = _days(request)
+    context = {"workspace_id": workspace_id, "connection": connection, "days": days, "error": ""}
+    try:
+        context.update(services.campaign_detail(connection, campaign_id, days=days))
+    except services.AdsError as exc:
+        context["error"] = str(exc)
+    return render(request, "ads/partials/_campaign_body.html", context)
+
+
+@login_required
+@require_permission("manage_social_accounts")
+@ratelimit(key="user", rate="30/m", method="GET", block=True)
+@require_GET
+def campaign_ad_sets(request, workspace_id, campaign_id):
+    """The ad sets of the edit dialog, each with its budget and end form. Read from
+    Meta only when the dialog opens; the campaign is checked again first."""
+    connection, elsewhere = _ready_connection(request, workspace_id)
+    if elsewhere:
+        return elsewhere
+    context = {"workspace_id": workspace_id, "connection": connection, "error": ""}
+    try:
+        campaign, _row = services.get_campaign(connection, campaign_id)
+        ad_sets = services.campaign_ad_sets(connection, campaign)
+    except services.AdsError as exc:
+        context["error"] = str(exc)
+    else:
+        context["campaign"] = campaign
+        context["ad_set_forms"] = [
+            (ad_set, AdSetEditForm(initial={"daily_budget": ad_set.daily_budget}, prefix=ad_set.id))
+            for ad_set in ad_sets
+        ]
+    return render(request, "ads/partials/_campaign_ad_sets.html", context)
 
 
 def _back_to_campaign(workspace_id, campaign_id):

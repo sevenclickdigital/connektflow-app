@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% load i18n ads_extras %}
+{% load i18n %}
 {% block title %}{% if campaign %}{{ campaign.name }}{% else %}{% translate "Campaign" %}{% endif %} - Connekt Flow{% endblock %}
 {% block page_header %}
-<div class="page-header">
+<div class="page-header" x-data="{ editing: false }">
     <div>
         <h1 class="page-title">{% if campaign %}{{ campaign.name }}{% else %}{% translate "Campaign" %}{% endif %}</h1>
         {% if campaign %}
@@ -15,18 +15,12 @@
     {% if campaign %}
     <div class="flex items-center gap-2 flex-wrap">
         {% include "ads/partials/_range_picker.html" %}
-        {% if can_manage and campaign.can_toggle %}
-        <form method="post" action="{% url 'ads:campaign_status' workspace_id=workspace_id campaign_id=campaign.id %}"
-              {% if not campaign.is_active %}data-confirm="{% translate 'Activate this campaign? Meta starts spending the budget once the ads are approved.' %}"{% endif %}>
-            {% csrf_token %}
-            {% if campaign.is_active %}
-            <input type="hidden" name="status" value="PAUSED">
-            <button type="submit" class="btn-outline">{% translate "Pause" %}</button>
-            {% else %}
-            <input type="hidden" name="status" value="ACTIVE">
-            <button type="submit" class="btn-brand">{% translate "Activate" %}</button>
-            {% endif %}
-        </form>
+        {% if can_manage %}
+        <button type="button" class="btn-outline" @click="editing = true">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+            {% translate "Edit campaign" %}
+        </button>
+        {% include "ads/partials/_campaign_edit_modal.html" %}
         {% endif %}
     </div>
     {% endif %}
@@ -37,71 +31,12 @@
 {% if error %}
 <div class="alert-error">{{ error }}</div>
 {% else %}
-{% include "ads/partials/_insights.html" with totals=totals series=series changes=changes currency=connection.currency %}
-{% include "ads/partials/_breakdowns.html" with breakdowns=breakdowns currency=connection.currency %}
-
-<h2 class="section-title">{% translate "Ad sets" %}</h2>
-<div class="space-y-3 mb-8">
-    {% for ad_set, form in ad_set_forms %}
-    <div class="a-card p-4">
-        <div class="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-                <p class="text-sm font-semibold text-neutral-950">{{ ad_set.name }}</p>
-                <p class="text-xs text-neutral-600 mt-0.5">
-                    {% if ad_set.daily_budget %}{% blocktranslate with amount=ad_set.daily_budget|ads_money:connection.currency %}{{ amount }}/day{% endblocktranslate %}{% elif ad_set.lifetime_budget %}{% blocktranslate with amount=ad_set.lifetime_budget|ads_money:connection.currency %}{{ amount }} total{% endblocktranslate %}{% endif %}
-                    {% if ad_set.countries %} · {{ ad_set.countries|join:", " }}{% endif %}
-                    {% if ad_set.age_min %} · {% blocktranslate with min=ad_set.age_min max=ad_set.age_max|default:"65+" %}{{ min }}–{{ max }} years{% endblocktranslate %}{% endif %}
-                    {% if ad_set.end_time %} · {% blocktranslate with date=ad_set.end_time|date:"SHORT_DATETIME_FORMAT" %}ends {{ date }}{% endblocktranslate %}{% endif %}
-                </p>
-            </div>
-            <span class="pill pill-{{ ad_set.status_tone }}"><i></i>{{ ad_set.status_label }}</span>
-        </div>
-        {% if can_manage %}
-        <form method="post" action="{% url 'ads:ad_set_edit' workspace_id=workspace_id campaign_id=campaign.id ad_set_id=ad_set.id %}" class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-            {% csrf_token %}
-            {% if not ad_set.lifetime_budget %}{% include "components/_form_field.html" with field=form.daily_budget hide_optional=True %}{% endif %}
-            {% include "components/_form_field.html" with field=form.end_time hide_optional=True %}
-            <div><button type="submit" class="btn-outline">{% translate "Save ad set" %}</button></div>
-        </form>
-        {% endif %}
-    </div>
-    {% empty %}
-    <p class="text-sm text-neutral-600">{% translate "This campaign has no ad sets." %}</p>
-    {% endfor %}
+{% comment %}
+The numbers come from Meta on every visit (nothing is stored), which takes a
+few seconds: the page shows at once and they load into this placeholder.
+{% endcomment %}
+<div hx-get="{% url 'ads:campaign_body' workspace_id=workspace_id campaign_id=campaign.id %}?range={{ days }}" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#ads-load-status">
+    {% include "ads/partials/_skeleton.html" %}
 </div>
-
-<h2 class="section-title">{% translate "Ads" %}</h2>
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
-    {% for ad in ads %}
-    {% if ad.preview_url %}<a href="{{ ad.preview_url }}" target="_blank" rel="noopener noreferrer" title="{% blocktranslate with name=ad.name %}{{ name }} — see how people see this ad, on Meta{% endblocktranslate %}" class="a-card a-card-hover p-3 flex items-center gap-3">{% else %}<div class="a-card p-3 flex items-center gap-3" title="{{ ad.name }}">{% endif %}
-        {% if ad.thumbnail_url %}<img src="{{ ad.thumbnail_url }}" alt="" class="w-12 h-12 rounded-md object-cover flex-shrink-0" loading="lazy" referrerpolicy="no-referrer">{% endif %}
-        <div class="min-w-0 flex-1">
-            <p class="text-sm font-semibold text-neutral-950 truncate">{{ ad.name }}</p>
-            <span class="pill pill-{{ ad.status_tone }} mt-1"><i></i>{{ ad.status_label }}</span>
-        </div>
-        {% if ad.preview_url %}<span class="flex-shrink-0 text-xs font-semibold text-brand-700 whitespace-nowrap">{% translate "Preview" %} ↗</span>{% endif %}
-    {% if ad.preview_url %}</a>{% else %}</div>{% endif %}
-    {% empty %}
-    <p class="text-sm text-neutral-600">{% translate "This campaign has no ads." %}</p>
-    {% endfor %}
-</div>
-
-{% if can_manage %}
-<h2 class="section-title">{% translate "Edit campaign" %}</h2>
-<div class="a-card p-4 flex items-end justify-between gap-4 flex-wrap">
-    <form method="post" action="{% url 'ads:campaign_rename' workspace_id=workspace_id campaign_id=campaign.id %}" class="flex items-end gap-3 flex-1 min-w-[16rem]">
-        {% csrf_token %}
-        {% include "components/_form_field.html" with field=rename_form.name class="flex-1" %}
-        <button type="submit" class="btn-outline">{% translate "Rename" %}</button>
-    </form>
-    {% if campaign.status != "ARCHIVED" %}
-    <form method="post" action="{% url 'ads:campaign_status' workspace_id=workspace_id campaign_id=campaign.id %}" data-confirm="{% translate 'Archive this campaign? It stops for good and cannot be activated again.' %}">
-        {% csrf_token %}
-        <input type="hidden" name="status" value="ARCHIVED">
-        <button type="submit" class="btn-danger-soft">{% translate "Archive" %}</button>
-    </form>
-    {% endif %}
-</div>
-{% endif %}
 {% endif %}
 {% endblock %}
