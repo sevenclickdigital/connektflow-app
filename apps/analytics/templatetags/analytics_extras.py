@@ -62,6 +62,18 @@ def fmt_signed(value) -> str:
     return f"{sign}{abs(v):.1f}%"
 
 
+@register.filter
+def fmt_arrow(value) -> str:
+    """The delta as an arrow and its size ("↑ 12.3%"), for chips whose colour carries good/bad."""
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return "0%"
+    if v == 0:
+        return "0%"
+    return f"{'↑' if v > 0 else '↓'} {abs(v):.1f}%"
+
+
 @register.simple_tag
 def sparkline(values, color: str = "var(--primary)", width: int = 160, height: int = 36):
     """Render an inline SVG sparkline. ``values`` is a list of numbers.

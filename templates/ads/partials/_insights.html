@@ -2,27 +2,30 @@
 {% comment %}
 The numbers of an ad account or a campaign for the chosen window.
 Takes totals (providers.meta_ads.Insights), series (services.daily_series),
-currency and days.
+currency and days. Optional changes (services.compare_all): each number then
+shows an arrow with its change against the previous window of the same length,
+green when it is good news and red when it is not (a lower cost per click is
+green); spend has no colour, spending more is a choice.
 {% endcomment %}
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
     <div class="a-card p-4">
         <p class="text-xs font-semibold text-neutral-600">{% translate "Amount spent" %}</p>
-        <p class="text-2xl font-bold text-neutral-950 mt-2">{{ totals.spend|ads_money:currency }}</p>
+        <p class="flex flex-wrap items-center gap-2 mt-2"><span class="text-2xl font-bold text-neutral-950">{{ totals.spend|ads_money:currency }}</span>{% if changes.spend %}{% include "analytics/_delta_chip.html" with delta=changes.spend.delta tone=changes.spend.tone arrow=True %}{% endif %}</p>
         <div class="mt-2">{% sparkline series.spend "var(--primary)" 150 28 %}</div>
     </div>
     <div class="a-card p-4">
         <p class="text-xs font-semibold text-neutral-600">{% translate "Impressions" %}</p>
-        <p class="text-2xl font-bold text-neutral-950 mt-2">{{ totals.impressions|fmt_metric }}</p>
+        <p class="flex flex-wrap items-center gap-2 mt-2"><span class="text-2xl font-bold text-neutral-950">{{ totals.impressions|fmt_metric }}</span>{% if changes.impressions %}{% include "analytics/_delta_chip.html" with delta=changes.impressions.delta tone=changes.impressions.tone arrow=True %}{% endif %}</p>
         <div class="mt-2">{% sparkline series.impressions "var(--primary)" 150 28 %}</div>
     </div>
     <div class="a-card p-4">
         <p class="text-xs font-semibold text-neutral-600">{% translate "Link clicks" %}</p>
-        <p class="text-2xl font-bold text-neutral-950 mt-2">{{ totals.link_clicks|fmt_metric }}</p>
+        <p class="flex flex-wrap items-center gap-2 mt-2"><span class="text-2xl font-bold text-neutral-950">{{ totals.link_clicks|fmt_metric }}</span>{% if changes.link_clicks %}{% include "analytics/_delta_chip.html" with delta=changes.link_clicks.delta tone=changes.link_clicks.tone arrow=True %}{% endif %}</p>
         <div class="mt-2">{% sparkline series.clicks "var(--primary)" 150 28 %}</div>
     </div>
     <div class="a-card p-4">
         <p class="text-xs font-semibold text-neutral-600">{% translate "Reach" %}</p>
-        <p class="text-2xl font-bold text-neutral-950 mt-2">{{ totals.reach|fmt_metric }}</p>
+        <p class="flex flex-wrap items-center gap-2 mt-2"><span class="text-2xl font-bold text-neutral-950">{{ totals.reach|fmt_metric }}</span>{% if changes.reach %}{% include "analytics/_delta_chip.html" with delta=changes.reach.delta tone=changes.reach.tone arrow=True %}{% endif %}</p>
         <p class="text-xs text-neutral-600 mt-2">{% blocktranslate with frequency=totals.frequency|floatformat:2 %}Frequency {{ frequency }}{% endblocktranslate %}</p>
     </div>
 </div>
@@ -30,25 +33,36 @@ currency and days.
     <div class="a-card p-3">
         <p class="text-xs text-neutral-600">{% translate "CTR" %}</p>
         <p class="text-base font-semibold text-neutral-950 mt-1">{{ totals.ctr|ads_percent }}</p>
+        {% if changes.ctr %}<div class="mt-1">{% include "analytics/_delta_chip.html" with delta=changes.ctr.delta tone=changes.ctr.tone arrow=True %}</div>{% endif %}
     </div>
     <div class="a-card p-3">
         <p class="text-xs text-neutral-600">{% translate "Cost per click" %}</p>
         <p class="text-base font-semibold text-neutral-950 mt-1">{{ totals.cpc|ads_money:currency }}</p>
+        {% if changes.cpc %}<div class="mt-1">{% include "analytics/_delta_chip.html" with delta=changes.cpc.delta tone=changes.cpc.tone arrow=True %}</div>{% endif %}
     </div>
     <div class="a-card p-3">
         <p class="text-xs text-neutral-600">{% translate "Cost per 1,000 impressions" %}</p>
         <p class="text-base font-semibold text-neutral-950 mt-1">{{ totals.cpm|ads_money:currency }}</p>
+        {% if changes.cpm %}<div class="mt-1">{% include "analytics/_delta_chip.html" with delta=changes.cpm.delta tone=changes.cpm.tone arrow=True %}</div>{% endif %}
     </div>
     <div class="a-card p-3">
         <p class="text-xs text-neutral-600">{% translate "Purchases" %}</p>
         <p class="text-base font-semibold text-neutral-950 mt-1">{{ totals.purchases|fmt_metric }}</p>
+        {% if changes.purchases %}<div class="mt-1">{% include "analytics/_delta_chip.html" with delta=changes.purchases.delta tone=changes.purchases.tone arrow=True %}</div>{% endif %}
     </div>
     <div class="a-card p-3">
         <p class="text-xs text-neutral-600">{% translate "Leads" %}</p>
         <p class="text-base font-semibold text-neutral-950 mt-1">{{ totals.leads|fmt_metric }}</p>
+        {% if changes.leads %}<div class="mt-1">{% include "analytics/_delta_chip.html" with delta=changes.leads.delta tone=changes.leads.tone arrow=True %}</div>{% endif %}
     </div>
     <div class="a-card p-3">
         <p class="text-xs text-neutral-600">{% translate "Return on ad spend" %}</p>
         <p class="text-base font-semibold text-neutral-950 mt-1">{% if totals.roas is not None %}{{ totals.roas|floatformat:2 }}×{% else %}—{% endif %}</p>
+        <div class="mt-1 flex flex-wrap items-center gap-1">
+            {% if totals.roas is not None %}
+            {% if totals.roas >= 1 %}<span class="pill pill-success" title="{% translate 'The purchases brought back more than was spent on the ads.' %}"><i></i>{% translate "Pays back" %}</span>{% else %}<span class="pill pill-error" title="{% translate 'The purchases brought back less than was spent on the ads.' %}"><i></i>{% translate "Below spend" %}</span>{% endif %}
+            {% endif %}
+            {% if changes.roas %}{% include "analytics/_delta_chip.html" with delta=changes.roas.delta tone=changes.roas.tone arrow=True %}{% endif %}
+        </div>
     </div>
 </div>

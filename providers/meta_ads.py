@@ -77,6 +77,8 @@ AD_FIELDS = "id,name,status,effective_status,creative{id,name,thumbnail_url}"
 INSIGHT_FIELDS = (
     "impressions,reach,frequency,clicks,inline_link_clicks,spend,ctr,cpc,cpm,actions,action_values,purchase_roas"
 )
+# What a broken-down or per-ad ``/insights`` row is about, kept in ``Insights.extra``.
+BREAKDOWN_KEYS = ("ad_id", "ad_name", "age", "gender", "publisher_platform", "platform_position")
 # ``actions`` entries counted as results, per what the campaign was set up for.
 RESULT_ACTION_TYPES = {
     "purchases": ("offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase"),
@@ -217,6 +219,7 @@ def parse_insights_row(row: dict) -> Insights:
         date_stop=row.get("date_stop", ""),
         campaign_id=row.get("campaign_id", ""),
         campaign_name=row.get("campaign_name", ""),
+        extra={key: str(row[key]) for key in BREAKDOWN_KEYS if row.get(key) not in (None, "")},
     )
 
 
@@ -377,11 +380,13 @@ class MetaAdsClient(HttpProvider):
         until: str,
         level: str = "",
         daily: bool = False,
+        breakdowns: str = "",
     ) -> list[Insights]:
         """``/insights`` of an account, campaign or ad set for ``since``..``until`` (YYYY-MM-DD).
 
-        ``level="campaign"`` on an account gives one row per campaign;
-        ``daily`` one row per day.
+        ``level="campaign"`` on an account gives one row per campaign and
+        ``level="ad"`` one per ad; ``daily`` one row per day; ``breakdowns``
+        (e.g. ``"age,gender"``) one row per value, read from ``Insights.extra``.
         """
         fields = INSIGHT_FIELDS
         params: dict = {"time_range": json.dumps({"since": since, "until": until})}
@@ -389,8 +394,12 @@ class MetaAdsClient(HttpProvider):
             params["level"] = level
             if level == "campaign":
                 fields = f"{fields},campaign_id,campaign_name"
+            elif level == "ad":
+                fields = f"{fields},ad_id,ad_name"
         if daily:
             params["time_increment"] = 1
+        if breakdowns:
+            params["breakdowns"] = breakdowns
         params["fields"] = fields
         return [parse_insights_row(row) for row in self._get_all(token, f"{object_id}/insights", params)]
 

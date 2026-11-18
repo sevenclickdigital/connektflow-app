@@ -7,6 +7,7 @@ answers like the Graph API for the paths each test needs.
 from __future__ import annotations
 
 import json
+from datetime import date, timedelta
 from decimal import Decimal
 from unittest import mock
 
@@ -291,6 +292,83 @@ class TestSettingsPage:
                 reverse("ads:settings", kwargs={"workspace_id": connection.workspace_id})
             )
         assert response.context["form"]["page_id"].value() == "page-1"
+
+
+# ------------------------------------------------------------------
+# Trends and where the results come from
+# ------------------------------------------------------------------
+
+
+def _row(**values):
+    return meta_ads.Insights(**values)
+
+
+class TestTrends:
+    def test_a_cheaper_click_is_good_news_and_more_spend_is_neither(self):
+        now, before = _row(cpc=Decimal("0.80"), spend=Decimal(200)), _row(cpc=Decimal("1.00"), spend=Decimal(100))
+        assert services.compare(now, before, "cpc") == services.Change(-20.0, "good")
+        assert services.compare(now, before, "spend") == services.Change(100.0, "neutral")
+        assert services.compare(_row(ctr=Decimal(1)), _row(ctr=Decimal(2)), "ctr") == services.Change(-50.0, "bad")
+
+    def test_nothing_to_compare_with_gives_no_change(self):
+        assert services.compare(_row(cpc=Decimal(1)), _row(), "cpc") is None
+        assert (
+            services.compare(_row(leads=0, spend=Decimal(10)), _row(leads=2, spend=Decimal(10)), "cost_per_lead")
+            is None
+        )
+
+    def test_the_previous_window_ends_the_day_before_the_current_one_starts(self):
+        since, _until = services.date_window(7)
+        before_since, before_until = services.previous_window(7)
+        assert date.fromisoformat(since) - date.fromisoformat(before_until) == timedelta(days=1)
+        assert date.fromisoformat(before_until) - date.fromisoformat(before_since) == timedelta(days=6)
+
+    def test_a_sales_campaign_pays_back_only_when_roas_reaches_one(self):
+        campaign = services._campaign_from_row({"id": "1", "objective": "OUTCOME_SALES"}, "BRL")
+        campaign.insights = _row(roas=Decimal("0.9"))
+        assert campaign.pays_back is False
+        campaign.insights = _row(roas=Decimal("1.0"))
+        assert campaign.pays_back is True
+        traffic = services._campaign_from_row({"id": "2", "objective": "OUTCOME_TRAFFIC"}, "BRL")
+        traffic.insights = _row(roas=Decimal(3))
+        assert traffic.pays_back is None
+        assert traffic.key_metric == "cpc"
+
+
+@pytest.mark.django_db
+class TestBreakdowns:
+    def test_the_best_slice_needs_a_tenth_of_the_spend(self, connection):
+        campaign = services._campaign_from_row({"id": "123", "objective": "OUTCOME_TRAFFIC"}, "BRL")
+        campaign.insights = _row(spend=Decimal(100))
+        placement = "publisher_platform,platform_position"
+        rows = {
+            # Cheapest click, but too little spend to count.
+            "tiny": {"spend": "2", "cpc": "0.10", "publisher_platform": "instagram", "platform_position": "reels"},
+            "good": {"spend": "50", "cpc": "0.50", "publisher_platform": "instagram", "platform_position": "story"},
+            "dear": {"spend": "48", "cpc": "1.20", "publisher_platform": "facebook", "platform_position": "feed"},
+        }
+
+        def answer(client, method, url, **kwargs):
+            params = kwargs.get("params") or {}
+            if params.get("breakdowns") == placement:
+                data = list(rows.values())
+            elif params.get("level") == "ad":
+                data = [{"spend": "100", "cpc": "0.7", "ad_id": "ad-1", "ad_name": "Vídeo"}]
+            else:
+                data = [{"spend": "100", "age": "25-34", "gender": "female"}]
+            return httpx.Response(200, json={"data": data}, request=httpx.Request(method, url))
+
+        with mock.patch.object(meta_ads.MetaAdsClient, "_request", autospec=True, side_effect=answer):
+            result = services.campaign_breakdowns(
+                connection, campaign, [{"id": "ad-1", "thumbnail_url": "https://x/t.jpg"}], days=7
+            )
+
+        best = [row.label for row in result["placements"] if row.is_best]
+        assert best == ["Instagram · Stories"]
+        assert [row.insights.spend for row in result["placements"]] == [Decimal(50), Decimal(48), Decimal(2)]
+        assert result["ads"][0].thumbnail_url == "https://x/t.jpg"
+        assert result["audience"][0].label.startswith("25-34 · ")
+        assert result["key_metric"] == "cpc"
 
 
 # ------------------------------------------------------------------

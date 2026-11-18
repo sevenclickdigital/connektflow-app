@@ -299,6 +299,8 @@ class Campaign:
     start_time: datetime | None
     stop_time: datetime | None
     insights: meta_ads.Insights = field(default_factory=meta_ads.Insights)
+    # The same numbers for the window of equal length just before.
+    previous: meta_ads.Insights = field(default_factory=meta_ads.Insights)
 
     @property
     def is_active(self) -> bool:
@@ -307,6 +309,109 @@ class Campaign:
     @property
     def can_toggle(self) -> bool:
         return self.status in ("ACTIVE", "PAUSED")
+
+    @property
+    def key_metric(self) -> str:
+        """The number that says whether this campaign works, given what it is for."""
+        return KEY_METRICS.get(self.objective, "cpm")
+
+    @property
+    def key_metric_label(self) -> str:
+        return str(KEY_METRIC_LABELS[self.key_metric])
+
+    @property
+    def key_metric_short(self) -> str:
+        """The label a table column has room for."""
+        return str(KEY_METRIC_SHORT_LABELS[self.key_metric])
+
+    @property
+    def key_value(self) -> Decimal | None:
+        return metric_value(self.insights, self.key_metric)
+
+    @property
+    def key_change(self) -> Change | None:
+        return compare(self.insights, self.previous, self.key_metric)
+
+    @property
+    def pays_back(self) -> bool | None:
+        """Sales campaigns only: whether the purchases brought back at least what was spent."""
+        if self.objective != "OUTCOME_SALES" or self.insights.roas is None:
+            return None
+        return self.insights.roas >= 1
+
+
+# ------------------------------------------------------------------
+# Comparison with the previous window
+# ------------------------------------------------------------------
+
+# Which way a metric is good news. ``None``: neither, spending more is a choice
+# rather than a result, so its change is shown without a colour.
+BETTER = {
+    "spend": None,
+    "impressions": "higher",
+    "reach": "higher",
+    "link_clicks": "higher",
+    "ctr": "higher",
+    "cpc": "lower",
+    "cpm": "lower",
+    "purchases": "higher",
+    "leads": "higher",
+    "roas": "higher",
+    "cost_per_lead": "lower",
+}
+
+# objective → the metric a campaign of that objective is judged by.
+KEY_METRICS = {
+    "OUTCOME_SALES": "roas",
+    "OUTCOME_LEADS": "cost_per_lead",
+    "OUTCOME_TRAFFIC": "cpc",
+    "OUTCOME_ENGAGEMENT": "cpc",
+    "OUTCOME_AWARENESS": "cpm",
+}
+
+KEY_METRIC_LABELS = {
+    "roas": _("Return on ad spend"),
+    "cost_per_lead": _("Cost per lead"),
+    "cpc": _("Cost per click"),
+    "cpm": _("Cost per 1,000 impressions"),
+}
+KEY_METRIC_SHORT_LABELS = {
+    "roas": _("ROAS"),
+    "cost_per_lead": _("Cost per lead"),
+    "cpc": _("CPC"),
+    "cpm": _("CPM"),
+}
+
+
+@dataclass(frozen=True)
+class Change:
+    """How a number moved against the previous window: ``delta`` in %, ``tone`` good/bad/neutral."""
+
+    delta: float
+    tone: str
+
+
+def metric_value(insights: meta_ads.Insights, key: str) -> Decimal | None:
+    if key == "cost_per_lead":
+        return insights.spend / insights.leads if insights.leads else None
+    value = getattr(insights, key)
+    return None if value is None else Decimal(value)
+
+
+def compare(current: meta_ads.Insights, previous: meta_ads.Insights, key: str) -> Change | None:
+    """The change of ``key`` between the two windows; None when the previous one has nothing to compare."""
+    now, before = metric_value(current, key), metric_value(previous, key)
+    if now is None or not before:
+        return None
+    delta = round(float((now - before) / before * 100), 1)
+    better = BETTER[key]
+    if not delta or better is None:
+        return Change(delta, "neutral")
+    return Change(delta, "good" if (delta > 0) == (better == "higher") else "bad")
+
+
+def compare_all(current: meta_ads.Insights, previous: meta_ads.Insights) -> dict[str, Change | None]:
+    return {key: compare(current, previous, key) for key in BETTER}
 
 
 def _parse_time(value) -> datetime | None:
@@ -348,24 +453,34 @@ def date_window(days: int) -> tuple[str, str]:
     return (today - timedelta(days=days - 1)).isoformat(), today.isoformat()
 
 
+def previous_window(days: int) -> tuple[str, str]:
+    """The ``days`` days just before :func:`date_window`, what its numbers are compared with."""
+    today = timezone.localdate()
+    return (today - timedelta(days=2 * days - 1)).isoformat(), (today - timedelta(days=days)).isoformat()
+
+
+def _per_campaign(connection: AdsConnection, since: str, until: str) -> dict[str, meta_ads.Insights]:
+    rows = _call(
+        connection,
+        meta_ads.MetaAdsClient.insights,
+        connection.ad_account_id,
+        since=since,
+        until=until,
+        level="campaign",
+    )
+    return {row.campaign_id: row for row in rows}
+
+
 def list_campaigns(connection: AdsConnection, *, days: int = DEFAULT_RANGE) -> list[Campaign]:
-    """The ad account's campaigns (archived ones last), each with its numbers for the window."""
+    """The ad account's campaigns (archived ones last), each with its numbers for the window
+    and for the window before it."""
     rows = _call(connection, meta_ads.MetaAdsClient.campaigns, connection.ad_account_id)
     campaigns = [_campaign_from_row(row, connection.currency) for row in rows]
-    since, until = date_window(days)
-    per_campaign = {
-        row.campaign_id: row
-        for row in _call(
-            connection,
-            meta_ads.MetaAdsClient.insights,
-            connection.ad_account_id,
-            since=since,
-            until=until,
-            level="campaign",
-        )
-    }
+    current = _per_campaign(connection, *date_window(days))
+    previous = _per_campaign(connection, *previous_window(days))
     for campaign in campaigns:
-        campaign.insights = per_campaign.get(campaign.id, meta_ads.Insights())
+        campaign.insights = current.get(campaign.id, meta_ads.Insights())
+        campaign.previous = previous.get(campaign.id, meta_ads.Insights())
     campaigns.sort(key=lambda c: (c.status in ("ARCHIVED", "DELETED"), c.status != "ACTIVE"))
     return campaigns
 
@@ -438,14 +553,140 @@ def campaign_detail(connection: AdsConnection, campaign_id: str, *, days: int = 
             }
         )
     since, until = date_window(days)
-    totals = _call(connection, meta_ads.MetaAdsClient.insights, campaign.id, since=since, until=until)
+    totals = _first(_call(connection, meta_ads.MetaAdsClient.insights, campaign.id, since=since, until=until))
+    before_since, before_until = previous_window(days)
+    before = _first(
+        _call(connection, meta_ads.MetaAdsClient.insights, campaign.id, since=before_since, until=before_until)
+    )
     daily = _call(connection, meta_ads.MetaAdsClient.insights, campaign.id, since=since, until=until, daily=True)
+    campaign.insights, campaign.previous = totals, before
     return {
         "campaign": campaign,
         "ad_sets": ad_sets,
         "ads": ads,
-        "totals": totals[0] if totals else meta_ads.Insights(),
+        "totals": totals,
+        "changes": compare_all(totals, before),
         "series": daily_series(daily, since, until),
+        "breakdowns": campaign_breakdowns(connection, campaign, ads, days=days),
+    }
+
+
+def _first(rows: list[meta_ads.Insights]) -> meta_ads.Insights:
+    return rows[0] if rows else meta_ads.Insights()
+
+
+# ------------------------------------------------------------------
+# Where a campaign's results come from
+# ------------------------------------------------------------------
+
+# A row needs at least this share of the campaign's spend to be called the best:
+# a placement that spent R$ 2 and sold once would otherwise always win.
+BEST_MIN_SPEND_SHARE = Decimal("0.1")
+
+GENDERS = {"male": _("Men"), "female": _("Women"), "unknown": _("Not informed")}
+PLATFORMS = {
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "messenger": "Messenger",
+    "audience_network": "Audience Network",
+    "threads": "Threads",
+}
+POSITIONS = {
+    "feed": _("Feed"),
+    "story": _("Stories"),
+    "instagram_stories": _("Stories"),
+    "facebook_stories": _("Stories"),
+    "reels": _("Reels"),
+    "instagram_reels": _("Reels"),
+    "facebook_reels": _("Reels"),
+    "facebook_reels_overlay": _("Reels overlay"),
+    "explore": _("Explore"),
+    "explore_home": _("Explore home"),
+    "instagram_explore_grid_home": _("Explore home"),
+    "profile_feed": _("Profile feed"),
+    "instagram_profile_feed": _("Profile feed"),
+    "marketplace": _("Marketplace"),
+    "video_feeds": _("Video feeds"),
+    "instream_video": _("In-stream video"),
+    "right_hand_column": _("Right column"),
+    "search": _("Search results"),
+    "messenger_inbox": _("Inbox"),
+    "an_classic": _("Apps and sites"),
+    "rewarded_video": _("Rewarded video"),
+}
+
+
+@dataclass
+class BreakdownRow:
+    """One slice of a campaign's results: an ad, an age and gender, or a placement."""
+
+    label: str
+    insights: meta_ads.Insights
+    key_value: Decimal | None = None
+    is_best: bool = False
+    detail: str = ""
+    thumbnail_url: str = ""
+
+
+def _placement_label(extra: dict) -> str:
+    platform = extra.get("publisher_platform", "")
+    position = extra.get("platform_position", "")
+    platform_label = PLATFORMS.get(platform, platform.replace("_", " ").title())
+    position_label = str(POSITIONS.get(position, position.replace("_", " ").capitalize()))
+    return f"{platform_label} · {position_label}" if position_label else platform_label
+
+
+def _audience_label(extra: dict) -> str:
+    gender = extra.get("gender", "")
+    return f"{extra.get('age', '')} · {GENDERS.get(gender, gender)}"
+
+
+def _rank(rows: list[BreakdownRow], key: str, total_spend: Decimal) -> list[BreakdownRow]:
+    """Rows by spend, the best one by the campaign's own metric marked."""
+    for row in rows:
+        row.key_value = metric_value(row.insights, key)
+    floor = total_spend * BEST_MIN_SPEND_SHARE
+    candidates = [r for r in rows if r.key_value is not None and r.key_value > 0 and r.insights.spend >= floor]
+    if len(candidates) > 1:
+        pick = max if BETTER[key] == "higher" else min
+        pick(candidates, key=lambda r: r.key_value or Decimal(0)).is_best = True
+    return sorted(rows, key=lambda r: r.insights.spend, reverse=True)
+
+
+def campaign_breakdowns(connection: AdsConnection, campaign: Campaign, ads: list[dict], *, days: int) -> dict:
+    """Which ads, audiences (age and gender) and placements bring a campaign's results.
+
+    Meta Ads has no keywords: what an advertiser compares instead is the
+    creative, who saw it and where. Each list is ranked by the metric the
+    campaign is judged by (``Campaign.key_metric``).
+    """
+    since, until = date_window(days)
+
+    def rows(**kwargs) -> list[meta_ads.Insights]:
+        return _call(connection, meta_ads.MetaAdsClient.insights, campaign.id, since=since, until=until, **kwargs)
+
+    thumbnails = {str(ad["id"]): ad.get("thumbnail_url", "") for ad in ads}
+    per_ad = [
+        BreakdownRow(
+            label=row.extra.get("ad_name", ""),
+            insights=row,
+            thumbnail_url=thumbnails.get(row.extra.get("ad_id", ""), ""),
+        )
+        for row in rows(level="ad")
+    ]
+    audience = [BreakdownRow(label=_audience_label(row.extra), insights=row) for row in rows(breakdowns="age,gender")]
+    placements = [
+        BreakdownRow(label=_placement_label(row.extra), insights=row)
+        for row in rows(breakdowns="publisher_platform,platform_position")
+    ]
+    key = campaign.key_metric
+    total = campaign.insights.spend
+    return {
+        "key_metric": key,
+        "key_metric_label": str(KEY_METRIC_LABELS[key]),
+        "ads": _rank(per_ad, key, total),
+        "audience": _rank(audience, key, total),
+        "placements": _rank(placements, key, total),
     }
 
 
@@ -647,8 +888,11 @@ def account_insights(connection: AdsConnection, *, since: str, until: str, daily
 
 
 def account_overview(connection: AdsConnection, *, days: int = DEFAULT_RANGE) -> dict:
-    """The ad account's totals and daily series for the window."""
+    """The ad account's totals and daily series for the window, and how each total
+    moved against the window before it."""
     since, until = date_window(days)
-    totals = account_insights(connection, since=since, until=until)
+    totals = _first(account_insights(connection, since=since, until=until))
+    before_since, before_until = previous_window(days)
+    before = _first(account_insights(connection, since=before_since, until=before_until))
     daily = account_insights(connection, since=since, until=until, daily=True)
-    return {"totals": totals[0] if totals else meta_ads.Insights(), "series": daily_series(daily, since, until)}
+    return {"totals": totals, "changes": compare_all(totals, before), "series": daily_series(daily, since, until)}

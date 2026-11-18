@@ -37,7 +37,8 @@
 {% if error %}
 <div class="alert-error">{{ error }}</div>
 {% else %}
-{% include "ads/partials/_insights.html" with totals=totals series=series currency=connection.currency %}
+{% include "ads/partials/_insights.html" with totals=totals series=series changes=changes currency=connection.currency %}
+{% include "ads/partials/_breakdowns.html" with breakdowns=breakdowns currency=connection.currency %}
 
 <h2 class="section-title">{% translate "Ad sets" %}</h2>
 <div class="space-y-3 mb-8">
