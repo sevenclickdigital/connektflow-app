@@ -7,6 +7,7 @@ app_name = "tasks"
 urlpatterns = [
     path("", views.board, name="board"),
     path("create/", views.task_create, name="task_create"),
+    path("window/", views.new_task_window, name="new_task_window"),
     path("art-settings/", views.art_settings, name="art_settings"),
     path("<uuid:task_id>/", views.task_detail, name="task_detail"),
     path("<uuid:task_id>/update/", views.task_update, name="task_update"),

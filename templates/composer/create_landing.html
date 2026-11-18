@@ -7,6 +7,8 @@
 
 
 {% block extra_head %}
+{# The board's new task window, opened over the page by a date's or a template's "Create task". #}
+{% include "tasks/partials/_styles.html" %}
 <style>
     /* The board's columns and their tones: .kanban-* in styles.css. */
 
@@ -97,7 +99,7 @@
         background: white;
         border-radius: 16px;
         width: 100%;
-        max-width: 640px;
+        max-width: var(--work-modal-width, 1120px);
         box-shadow: 0 20px 60px rgba(0,0,0,0.15);
         display: flex;
         flex-direction: column;
@@ -161,46 +163,6 @@
     .idea-media-row .media-thumb video { width: 100%; height: 100%; object-fit: cover; }
     .idea-media-row .media-thumb.is-moving { opacity: 0.4; }
     .idea-media-row .media-thumb.is-drop-target { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-ring); }
-    /* Emoji picker */
-    .emoji-picker-popup {
-        position: absolute;
-        bottom: calc(100% + 8px);
-        left: 0;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-        border: 1px solid var(--border);
-        width: 280px;
-        z-index: 120;
-        overflow: hidden;
-    }
-    .emoji-picker-search {
-        padding: 8px 8px 4px;
-    }
-    .emoji-picker-grid {
-        display: grid;
-        grid-template-columns: repeat(8, 1fr);
-        gap: 2px;
-        padding: 4px 8px 8px;
-        max-height: 200px;
-        overflow-y: auto;
-    }
-    .emoji-picker-item {
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-        border: none;
-        background: none;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: background 100ms;
-    }
-    .emoji-picker-item:hover {
-        background: var(--neutral-100);
-    }
 
 </style>
 {% endblock %}
@@ -209,6 +171,7 @@
 {{ idea_icons|json_script:"idea-icons-data" }}
 <div x-data="kanbanBoard()" class="-m-6 flex-grow flex flex-col"
      @tag-deleted.window="forgetTag($event.detail.name, $event.detail.used)"
+     @open-reference-picker.window="referencePickerFor = $event.detail.for; showMediaPicker = true"
      @media-picked.camel.window="addPickedMedia($event.detail.assets)">
 
     {% comment %}
@@ -420,6 +383,7 @@
                 <!-- Hidden fields -->
                 <input type="hidden" name="group" :value="createSelectedGroup">
                 <input type="hidden" name="calendar_event" :value="createEventId">
+                <input type="hidden" name="template" :value="createTemplateId">
                 <input type="hidden" name="tags" :value="createSelectedTags.join(',')">
                 <input type="hidden" name="tag_group" :value="createTagGroup">
                 <input type="hidden" name="tag_group_tags" :value="createTagGroupTags.join(',')">
@@ -543,8 +507,9 @@
                     </div>
                     {% comment %}
                     The idea's channels: the brand's connected accounts it is meant
-                    for. "Create post" starts the post on them. Filled in from the
-                    template's networks when the idea comes from the Templates tab.
+                    for. "Create post" (in the saved idea's window) starts the post on
+                    them. Filled in from the template's networks when the idea comes from
+                    the Templates tab.
                     {% endcomment %}
                     <div class="mt-5">
                         {% include "partials/_channel_picker.html" with options=idea_channel_options model="createChannelFormats" toggle="toggleChannelFormat" ref="createChannelRow" %}
@@ -570,45 +535,10 @@
 
                 <!-- Footer -->
                 <div class="idea-modal-footer" @click="createGroupDropdownOpen = false; createTagDropdownOpen = false">
-                    <span style="margin-right: auto; display: flex; align-items: center; color: var(--text-tertiary);">
-                        <div class="relative">
-                            <button type="button" @click.stop="emojiPickerOpen = !emojiPickerOpen" class="p-1 rounded hover:bg-neutral-100 transition-colors cursor-pointer" title="{% translate 'Emoji' %}" style="color: var(--text-tertiary);">
-                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                            </button>
-                            <div x-show="emojiPickerOpen" x-cloak @click.away="emojiPickerOpen = false"
-                                 x-transition:enter="transition ease-out duration-100"
-                                 x-transition:enter-start="opacity-0 scale-95"
-                                 x-transition:enter-end="opacity-100 scale-100"
-                                 class="emoji-picker-popup">
-                                <div class="emoji-picker-search">
-                                    <input type="text" placeholder="{% translate 'Search emoji...' %}" x-model="_emojiSearch"
-                                           class="w-full px-2 py-1.5 text-xs rounded border outline-none"
-                                           style="border-color: var(--border);"
-                                           @click.stop>
-                                </div>
-                                <div class="emoji-picker-grid">
-                                    <template x-for="emoji in _filteredEmojis()" :key="emoji.e">
-                                        <button type="button"
-                                                class="emoji-picker-item"
-                                                @click.stop="_insertEmoji(emoji.e); emojiPickerOpen = false"
-                                                x-text="emoji.e"
-                                                :title="emoji.n">
-                                        </button>
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
-                    </span>
-                    <button type="button" @click="createPostFromIdea($event, 'create')"
-                            :disabled="createMediaUploadCount > 0 || isCreateSaving"
-                            :class="(createMediaUploadCount > 0 || isCreateSaving) && 'opacity-50 cursor-not-allowed'"
-                            class="btn-soft px-4 py-2">
-                        {% translate "Create Post" %}
-                    </button>
                     <button type="submit"
                             :disabled="createMediaUploadCount > 0 || isCreateSaving"
                             :class="(createMediaUploadCount > 0 || isCreateSaving) && 'opacity-50 cursor-not-allowed'"
-                            class="btn-brand px-4 py-2">
+                            class="btn-brand px-4 py-2 ml-auto">
                         {% translate "Save Idea" %}
                     </button>
                 </div>
@@ -823,6 +753,13 @@
     {% url 'composer:idea_media_picker' workspace_id=workspace.id as picker_open_url %}
     {% include "composer/partials/_media_picker_modal.html" with picker_layer="z-[130]" %}
 
+    {% comment %}
+    The board's new task window, loaded here filled by a special date's or a template
+    version's "Create task" (tasks:new_task_window), so the user stays on the page. Its
+    reference photos use the media library above: referencePickerFor sends them to it.
+    {% endcomment %}
+    <div id="task-window-slot"></div>
+
     <!-- Delete Idea Confirmation Modal -->
     <template x-teleport="body">
         <div x-show="showDeleteIdeaConfirm" x-cloak
@@ -914,6 +851,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/emoji-picker.js' %}"></script>
+<script src="{% static 'js/task-window.js' %}"></script>
 {% translate "Unassigned" as lbl_cl_unassigned %}
 {% translate "Request validation failed." as lbl_cl_request_invalid %}
 {% translate "Request failed." as lbl_cl_request_failed %}
@@ -1022,6 +961,9 @@ function kanbanBoard() {
             return found ? found.markup : '';
         },
         createEventId: '',
+        // The template whose version opened the window (createIdeaFromTemplate), posted so the
+        // idea takes its briefing and arts; '' otherwise.
+        createTemplateId: '',
         showExploreModal: false,
         createGroupId: '',
         createSelectedGroup: '',
@@ -1040,7 +982,6 @@ function kanbanBoard() {
         showIdeaCreateTagModal: false,
         newIdeaTagName: '',
         ideaTagModalTarget: 'create',
-        emojiPickerOpen: false,
         _mediaDragOver: false,
         editingIdea: null,
         editSelectedGroup: '',
@@ -1058,6 +999,9 @@ function kanbanBoard() {
         // one asked for it decides where the chosen files go.
         showMediaPicker: false,
         mediaPickerTarget: 'create',
+        // Set while the new task window's reference photos are being picked: the
+        // files go to it (its own media-picked listener), not to the idea.
+        referencePickerFor: '',
         deletingIdea: false,
         allTags: [{% for tag in all_tags %}'{{ tag|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
         draggedIdeaId: null,
@@ -1183,13 +1127,44 @@ function kanbanBoard() {
             this.createSelectedGroup = this._defaultGroupId;
             this.showCreateModal = true;
             this.$nextTick(function () {
-                var form = document.querySelector('form[action$="/ideas/create/"]');
+                // The page's own idea window: the sidebar's quick one posts to the same address.
+                var titleField = document.getElementById('create_idea_title');
+                var form = titleField && titleField.form;
                 var input = form && form.querySelector('input[name=title]');
                 var text = form && form.querySelector('textarea[data-idea-desc]');
                 // The window keeps what was typed when it closes, so a date
                 // picked now replaces what an earlier one left there.
                 if (text) text.value = description || '';
                 if (input) { input.value = title; input.focus(); }
+            });
+        },
+
+        // A template version's "Create idea": the idea window, open and filled from the
+        // template (its title, the version's text, its tag, icon and channels) for the user to
+        // review and save; saving gives the idea the template's briefing and arts (idea_create).
+        createIdeaFromTemplate(template, variation) {
+            this._dropDateTagGroup();
+            this.createTagGroup = '';
+            this.createTagGroupTags = [];
+            this.createSelectedTags = (template.tags || []).slice();
+            this.createTargetDate = '';
+            this.createEventId = '';
+            this.createTemplateId = String(template.id);
+            this.createIcon = template.icon || '';
+            this.createIconTone = template.tone || '';
+            this.createChannelFormats = JSON.parse(JSON.stringify(template.channel_formats || {}));
+            this.createGroupId = this._defaultGroupId;
+            this.createSelectedGroup = this._defaultGroupId;
+            this.showCreateModal = true;
+            var body = ((template.variations || [])[variation] || {}).body || '';
+            this.$nextTick(function () {
+                // The page's own idea window: the sidebar's quick one posts to the same address.
+                var titleField = document.getElementById('create_idea_title');
+                var form = titleField && titleField.form;
+                var input = form && form.querySelector('input[name=title]');
+                var text = form && form.querySelector('textarea[data-idea-desc]');
+                if (text) text.value = body;
+                if (input) { input.value = template.title; input.focus(); }
             });
         },
 
@@ -1231,6 +1206,7 @@ function kanbanBoard() {
             this.createIconTone = '';
             this.iconPickerOpen = '';
             this.createEventId = '';
+            this.createTemplateId = '';
             this.createGroupId = '';
             this.createSelectedGroup = this._defaultGroupId;
             this.createSelectedTags = [];
@@ -1241,8 +1217,6 @@ function kanbanBoard() {
             this.createTagDropdownOpen = false;
             this.createTagSearch = '';
             this.closeIdeaCreateTagModal();
-            this.emojiPickerOpen = false;
-            this._emojiSearch = '';
             this.createMediaAssets = [];
             this.createMediaUploadCount = 0;
             this.isCreateSaving = false;
@@ -1262,49 +1236,6 @@ function kanbanBoard() {
 
         editPrimaryMediaAssetId() {
             return this.editMediaAssets.length ? this.editMediaAssets[0].asset_id : '';
-        },
-
-        // --- Emoji picker ---
-        _emojiSearch: '',
-        _emojiList: [
-            {e:'😀',n:'grinning'},{e:'😃',n:'smiley'},{e:'😄',n:'smile'},{e:'😁',n:'grin'},{e:'😆',n:'laughing'},
-            {e:'😅',n:'sweat smile'},{e:'🤣',n:'rofl'},{e:'😂',n:'joy'},{e:'🙂',n:'slight smile'},{e:'😊',n:'blush'},
-            {e:'😇',n:'innocent'},{e:'🥰',n:'love'},{e:'😍',n:'heart eyes'},{e:'🤩',n:'star struck'},{e:'😘',n:'kiss'},
-            {e:'😜',n:'wink tongue'},{e:'🤔',n:'thinking'},{e:'🤗',n:'hugging'},{e:'🤫',n:'shushing'},{e:'😎',n:'cool'},
-            {e:'🥳',n:'party'},{e:'😤',n:'triumph'},{e:'😱',n:'scream'},{e:'🥺',n:'pleading'},{e:'😢',n:'cry'},
-            {e:'👍',n:'thumbs up'},{e:'👎',n:'thumbs down'},{e:'👏',n:'clap'},{e:'🙌',n:'raised hands'},{e:'🤝',n:'handshake'},
-            {e:'💪',n:'strong'},{e:'✌️',n:'peace'},{e:'🤞',n:'crossed fingers'},{e:'👋',n:'wave'},{e:'🫡',n:'salute'},
-            {e:'❤️',n:'red heart'},{e:'🧡',n:'orange heart'},{e:'💛',n:'yellow heart'},{e:'💚',n:'green heart'},{e:'💙',n:'blue heart'},
-            {e:'💜',n:'purple heart'},{e:'🖤',n:'black heart'},{e:'🤍',n:'white heart'},{e:'💯',n:'hundred'},{e:'💥',n:'boom'},
-            {e:'⭐',n:'star'},{e:'🌟',n:'glowing star'},{e:'✨',n:'sparkles'},{e:'⚡',n:'lightning'},{e:'🔥',n:'fire'},
-            {e:'🎉',n:'party popper'},{e:'🎊',n:'confetti'},{e:'🏆',n:'trophy'},{e:'🎯',n:'bullseye'},{e:'🚀',n:'rocket'},
-            {e:'💡',n:'light bulb'},{e:'📌',n:'pin'},{e:'📎',n:'paperclip'},{e:'📝',n:'memo'},{e:'✏️',n:'pencil'},
-            {e:'✅',n:'check mark'},{e:'❌',n:'cross mark'},{e:'⚠️',n:'warning'},{e:'❓',n:'question'},{e:'❗',n:'exclamation'},
-            {e:'💬',n:'speech'},{e:'👀',n:'eyes'},{e:'🎨',n:'art'},{e:'📸',n:'camera'},{e:'🎬',n:'clapper'},
-            {e:'📱',n:'phone'},{e:'💻',n:'laptop'},{e:'📊',n:'chart'},{e:'📈',n:'trending up'},{e:'📅',n:'calendar'},
-            {e:'⏰',n:'alarm clock'},{e:'🔗',n:'link'},{e:'🔒',n:'lock'},{e:'🏷️',n:'label'},{e:'📣',n:'megaphone'},
-            {e:'🌍',n:'globe'},{e:'☀️',n:'sun'},{e:'🌙',n:'moon'},{e:'🌈',n:'rainbow'},{e:'🍕',n:'pizza'},
-            {e:'☕',n:'coffee'},{e:'🍺',n:'beer'},{e:'🎵',n:'music'},{e:'🐶',n:'dog'},{e:'🐱',n:'cat'},
-            {e:'✍️',n:'writing'},{e:'🧠',n:'brain'},{e:'💎',n:'gem'},{e:'🪄',n:'magic wand'},{e:'🎁',n:'gift'},
-        ],
-
-        _filteredEmojis() {
-            var q = (this._emojiSearch || '').toLowerCase().trim();
-            if (!q) return this._emojiList;
-            return this._emojiList.filter(function(em) { return em.n.includes(q); });
-        },
-
-        _insertEmoji(emoji) {
-            var desc = document.querySelector('textarea[data-idea-desc]');
-            if (desc) {
-                var start = desc.selectionStart;
-                var end = desc.selectionEnd;
-                desc.value = desc.value.substring(0, start) + emoji + desc.value.substring(end);
-                desc.selectionStart = desc.selectionEnd = start + emoji.length;
-                desc.focus();
-                desc.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            this._emojiSearch = '';
         },
 
         // --- Media file handling ---
@@ -1390,13 +1321,24 @@ function kanbanBoard() {
             }).finally(() => { this.crop.saving = false; });
         },
 
+        // The board's new task window, filled from ``url`` (tasks:new_task_window, sent by
+        // a special date's or a template version's "Create task"), opened over the page.
+        openTaskWindow(url) {
+            htmx.ajax('GET', url, { target: '#task-window-slot', swap: 'innerHTML' });
+        },
+
         openIdeaMediaPicker(target) {
+            this.referencePickerFor = '';
             this.mediaPickerTarget = target;
             this.showMediaPicker = true;
         },
 
         // Files chosen (or uploaded) in the media library window.
         addPickedMedia(assets) {
+            if (this.referencePickerFor) {
+                this.$nextTick(() => { this.referencePickerFor = ''; });
+                return;
+            }
             for (var i = 0; i < (assets || []).length; i += 1) {
                 this._appendUploadedMedia(this.mediaPickerTarget, assets[i], null);
             }

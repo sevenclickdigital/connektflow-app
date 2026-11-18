@@ -4,6 +4,8 @@ The new task window, on the task board: opened by a column's "Add task" with
 $dispatch('open-new-item', { column: '<column id>' }), or on arrival, filled, when
 another page sent something to the board (an idea, a template, a special date, a
 calendar day, a Radar offer: window_initial_json, from tasks.views._board_window).
+The Special dates and Templates pages load it alone, filled, over themselves
+(tasks.views.new_task_window, _new_item_window.html).
 Script: newItemForm() in static/js/task-window.js.
 
 On the left the task's fields (title, description, priority, due date, today
@@ -120,6 +122,11 @@ in htmx:configRequest).
                                                 <span class="flex-1 min-w-0 break-words" x-text="item.text"></span>
                                                 <span class="task-pill task-pill--art" x-show="item.width && item.height" x-text="item.width + ' × ' + item.height"></span>
                                                 <svg class="w-3.5 h-3.5 text-brand-700 flex-shrink-0" x-show="item.accepts_file" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/><path d="M12 4v12"/><path d="M7 9l5-5 5 5"/></svg>
+                                                <label class="flex items-center gap-1 text-[11px] text-neutral-600 flex-shrink-0">
+                                                    <span aria-hidden="true">×</span>
+                                                    <span class="sr-only">{% translate "Quantity" %}</span>
+                                                    <input type="number" min="1" max="20" class="form-input-styled w-14 text-xs !py-1 !px-2" x-model.number="item.count">
+                                                </label>
                                                 {% comment %}
                                                 The item's settings, as in the task's own window (tasks/partials/_checklist_item.html),
                                                 kept on the item here and sent with the task (clean_checklists).
@@ -175,9 +182,8 @@ in htmx:configRequest).
                         <button type="button" class="btn-outline text-sm px-5" @click="close()">{% translate "Cancel" %}</button>
                         <div class="flex items-center gap-3 ml-auto">
                             <button type="submit" class="btn-brand text-sm px-5" :disabled="wantsArt && picked < 1">
-                                <span x-show="!wantsArt">{% translate "Create task" %}</span>
+                                <span x-show="!(wantsArt && picked < 1)">{% translate "Create task" %}</span>
                                 <span x-show="wantsArt && picked < 1" x-cloak>{% translate "Choose the formats" %}</span>
-                                <span x-show="wantsArt && picked >= 1" x-cloak><span x-text="artTotal()"></span> · {% translate "Create task for the creative team" %}</span>
                             </button>
                         </div>
                     </div>

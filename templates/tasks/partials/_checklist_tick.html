@@ -1,0 +1,14 @@
+{% load i18n %}
+{% comment %}
+A checklist item's tick: a button for whoever can edit the task, a mark otherwise.
+Expects: item, task, workspace, can_edit; optional tick_class (extra classes).
+{% endcomment %}
+{% if can_edit %}
+<button type="button" class="task-check {{ tick_class|default:'mt-0.5' }}{% if item.is_done %} is-on{% endif %}"
+        hx-post="{% url 'tasks:item_toggle' workspace_id=workspace.id task_id=task.id item_id=item.id %}" hx-target="#task-modal-body"
+        aria-pressed="{{ item.is_done|yesno:'true,false' }}" aria-label="{% translate 'Mark as done' %}">
+{% else %}
+<span class="task-check {{ tick_class|default:'mt-0.5' }}{% if item.is_done %} is-on{% endif %}">
+{% endif %}
+    {% if item.is_done %}<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>{% endif %}
+{% if can_edit %}</button>{% else %}</span>{% endif %}

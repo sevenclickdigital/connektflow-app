@@ -180,13 +180,15 @@ its post is already approved, scheduled or out, or offering to plan one.
                     <div class="text-[10px] font-bold uppercase tracking-wide text-neutral-500 mt-0.5">{{ entry.date|date:"M" }}</div>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-neutral-950 truncate" title="{{ entry.name }}">{% if entry.emoji %}{{ entry.emoji }} {% endif %}{{ entry.name }}</p>
-                    <p class="text-xs text-neutral-600">{% if entry.days == 0 %}{% translate "today" %}{% else %}{% blocktranslate count days=entry.days %}in {{ days }} day{% plural %}in {{ days }} days{% endblocktranslate %}{% endif %}</p>
+                    {% if entry.more_url %}
+                    <a href="{{ entry.more_url }}" class="block text-sm font-semibold text-neutral-950 hover:text-brand-700 truncate" title="{{ entry.name }}">{{ entry.name }}</a>
+                    {% else %}
+                    <p class="text-sm font-semibold text-neutral-950 truncate" title="{{ entry.name }}">{{ entry.name }}</p>
+                    {% endif %}
+                    <p class="text-xs text-neutral-600">{% if entry.days == 0 %}{% translate "today" %}{% else %}{% blocktranslate count days=entry.days %}in {{ days }} day{% plural %}in {{ days }} days{% endblocktranslate %}{% endif %}{% if entry.has_post %} · <span class="font-semibold text-emerald-700">{% translate "Post ready" %}</span>{% endif %}</p>
                 </div>
-                {% if entry.has_post %}
-                <span class="flex-shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">{% translate "Post ready" %}</span>
-                {% elif perms.create_posts %}
-                <a href="{% url 'composer:compose' workspace_id=workspace.id %}?scheduled_date={{ entry.date|date:'Y-m-d' }}" class="flex-shrink-0 text-sm font-semibold text-brand-700 hover:text-brand-800">+ {% translate "Plan" context "verb: plan a post" %}</a>
+                {% if entry.more_url %}
+                <a href="{{ entry.more_url }}" class="flex-shrink-0 text-sm font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap">{% translate "See more" %} →</a>
                 {% endif %}
             </li>
             {% endfor %}

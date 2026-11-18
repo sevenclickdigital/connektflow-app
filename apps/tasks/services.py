@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 
 from django.conf import settings
@@ -148,8 +149,10 @@ MAX_CHECKLIST_ITEMS = 50
 def clean_checklists(raw) -> list[dict]:
     """Named checklists as posted (a list of ``{"title", "items"}``), trimmed and capped.
 
-    An item is its text, or ``{"text", "accepts_file", "width", "height"}`` when its
-    settings were set (the new task window's gear; the size cleaned by clean_item_size).
+    An item is its text, or ``{"text", "count", "accepts_file", "width", "height"}`` when
+    it has a count or settings (the new task window's gear; the size cleaned by
+    clean_item_size). A count above one becomes that many numbered items, "Text 1/3", as an
+    art asked for several times (_art_checklists), sharing the item's settings.
     A checklist without a title keeps a numbered "Checklist N"; one without items is kept
     (the team fills it later). Anything that isn't that shape is dropped.
     """
@@ -157,12 +160,33 @@ def clean_checklists(raw) -> list[dict]:
     for spec in raw if isinstance(raw, list) else []:
         if not isinstance(spec, dict):
             continue
-        items = [item for item in (_clean_item(raw_item) for raw_item in spec.get("items") or []) if item]
+        items = [item for raw_item in spec.get("items") or [] for item in _clean_items(raw_item)]
         title = str(spec.get("title") or "").strip()[:120] or _("Checklist %(number)s") % {
             "number": len(checklists) + 1
         }
         checklists.append({"title": title, "items": items[:MAX_CHECKLIST_ITEMS]})
     return checklists[:MAX_CHECKLISTS]
+
+
+def _clean_items(raw) -> list:
+    """One posted item as the items it becomes: none when blank, ``count`` numbered copies
+    when it asks for more than one (capped at creative_formats.MAX_ART_COUNT)."""
+    item = _clean_item(raw)
+    if not item:
+        return []
+    try:
+        count = int(raw.get("count", 1)) if isinstance(raw, dict) else 1
+    except (TypeError, ValueError):
+        count = 1
+    count = max(1, min(creative_formats.MAX_ART_COUNT, count))
+    if count == 1:
+        return [item]
+    text = item["text"] if isinstance(item, dict) else item
+    copies = []
+    for number in range(1, count + 1):
+        numbered = f"{text} {number}/{count}"[:255]
+        copies.append({**item, "text": numbered} if isinstance(item, dict) else numbered)
+    return copies
 
 
 def _clean_item(raw):
@@ -207,7 +231,75 @@ def checklist_groups(task, items) -> list[dict]:
         groups.append({"checklist": checklist, "items": [i for i in items if i.checklist_id == checklist.pk]})
     for group in groups:
         group["done"] = sum(1 for i in group["items"] if i.is_done)
+        group["rows"] = _art_runs(group["items"])
     return groups
+
+
+_NUMBERED = re.compile(r"^(?P<name>.+) (?P<number>\d+)/(?P<total>\d+)$")
+
+
+def _run_key(item):
+    """What makes ``item`` part of a set (_art_runs): its art format, or for a plain item the
+    name and total of a numbered copy ("Text 2/3", clean_checklists); None when neither."""
+    if item.format_key:
+        return ("format", item.format_key)
+    match = _NUMBERED.match(item.text)
+    return ("copy", match["name"], match["total"]) if match else None
+
+
+def _art_runs(items) -> list[dict]:
+    """A checklist's items as its window lists them: a run of two or more items of the
+    same art format in a row (a format asked for n times, ``_art_checklists``: "Portrait
+    post 1/6 — note", …), or numbered copies of one plain item ("Text 1/3", …), as one set,
+    ``{"set": {"label", "note", "width", "height", "done", "entries": [{"item", "label"}]}}``,
+    its name and note shown once and each item by its number; any other item alone,
+    ``{"item"}``. An item renamed since keeps its text."""
+    rows: list[dict] = []
+    run: list = []
+
+    def flush():
+        if len(run) > 1:
+            key = _run_key(run[0])
+            if key and key[0] == "copy":
+                name = key[1]
+            else:
+                fmt = creative_formats.get(run[0].format_key)
+                name = str(fmt.label) if fmt else ""
+            notes = {item.text.partition(" — ")[2] for item in run}
+            note = notes.pop() if len(notes) == 1 else ""
+            entries = []
+            for item in run:
+                short = item.text
+                if note and short.endswith(f" — {note}"):
+                    short = short[: -len(f" — {note}")]
+                if name and short.startswith(f"{name} "):
+                    short = short[len(name) + 1 :]
+                entries.append({"item": item, "label": short})
+            rows.append(
+                {
+                    "set": {
+                        "label": name,
+                        "note": note,
+                        "width": run[0].width,
+                        "height": run[0].height,
+                        "done": sum(1 for item in run if item.is_done),
+                        "entries": entries,
+                    }
+                }
+            )
+        else:
+            rows.extend({"item": item} for item in run)
+        run.clear()
+
+    for item in items:
+        key = _run_key(item)
+        if run and key is not None and key == _run_key(run[-1]):
+            run.append(item)
+            continue
+        flush()
+        run.append(item)
+    flush()
+    return rows
 
 
 MAX_ITEM_SIDE = 10000
@@ -690,7 +782,7 @@ def prefill_from_template(workspace, template, variation) -> dict:
     """A template sent to the board: its title, the text of the version chosen as the
     caption, its briefing and the arts it asks for, its category as the tag and the
     brand's accounts on its networks."""
-    from apps.composer.services import channel_accounts, template_account_formats, template_text
+    from apps.composer.services import channel_accounts, template_account_formats, template_tags, template_text
 
     return material_prefill(
         workspace,
@@ -698,7 +790,7 @@ def prefill_from_template(workspace, template, variation) -> dict:
         post_caption=template_text(template, variation),
         briefing=template.briefing,
         art_items=template.art_items,
-        tags=[str(template.get_category_display())],
+        tags=template_tags(template),
         channels=template_account_formats(template.network_formats, channel_accounts(workspace)),
     )
 

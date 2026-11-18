@@ -200,12 +200,6 @@
                 });
             },
 
-            // How many arts the task asks for: each ticked format times its count.
-            artTotal() {
-                var specs = this.artSpecs;
-                return this.pickedList.reduce(function (total, art) { return total + ((specs[art.key] || {}).count || 1); }, 0);
-            },
-
             // What "art_items" posts: the ticked formats, each with its count and note.
             artItemsJson() {
                 var specs = this.artSpecs;
@@ -259,9 +253,11 @@
                 this.wantsPost = false;
                 this.channels = {};
                 this.references = [];
-                this.artSpecs = {};
                 this.tab = firstTab;
                 this.recount();
+                // Once the checklist rows of the unticked formats are gone: they read
+                // artSpecs[format] until then.
+                this.$nextTick(function () { this.artSpecs = {}; }.bind(this));
                 if (this.note || this.submitTo || initial.fields) {
                     // Done with what was sent: the next task is the board's own, and a reload
                     // doesn't open the window again.
@@ -287,19 +283,21 @@
                 });
             },
 
-            // An item: its text and its settings (the gear: ask for a file, the file's size).
+            // An item: its text, how many (count: that many numbered items, as an art asked
+            // for several times) and its settings (the gear: ask for a file, the file's size).
             addItem(list) {
                 var text = list.text.trim();
-                if (text && list.items.length < 50) list.items.push({ text: text.slice(0, 255), accepts_file: false, width: '', height: '' });
+                if (text && list.items.length < 50) list.items.push({ text: text.slice(0, 255), count: 1, accepts_file: false, width: '', height: '' });
                 list.text = '';
             },
 
             // What the "checklists" field posts: [{ title, items }], the item typed but not added included;
-            // each item is its text, or { text, accepts_file, width, height } when it has settings.
+            // each item is its text, or { text, count, accepts_file, width, height } when it has a count
+            // above one or settings.
             checklistsJson() {
                 return JSON.stringify(this.checklists.map(function (list) {
                     var items = list.items.map(function (item) {
-                        return item.accepts_file || (item.width && item.height) ? item : item.text;
+                        return item.count > 1 || item.accepts_file || (item.width && item.height) ? item : item.text;
                     });
                     if (list.text.trim()) items.push(list.text.trim().slice(0, 255));
                     return { title: list.title.trim(), items: items };

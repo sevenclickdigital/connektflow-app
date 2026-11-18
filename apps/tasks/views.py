@@ -213,6 +213,28 @@ def window_context(request) -> dict:
     }
 
 
+@login_required
+@require_board_access
+@require_permission("create_posts")
+@require_GET
+def new_task_window(request, workspace_id):
+    """The board's new task window alone, filled from what another page sends (a special
+    date or one of its suggestions, a template version: the same parameters as the board's
+    ``?new``), for that page to open over itself instead of leaving for the board. It
+    posts to tasks:task_create like the board's own (tasks/partials/_new_item_window.html)."""
+    window = _board_window(request) if any(request.GET.get(key) for key in ("idea", "template", "date")) else None
+    if window is None:
+        raise Http404("Nothing to open the task window with.")
+    context = window_context(request)
+    context.update(
+        window_initial_json=_window_initial(window),
+        task_window_labels=window_labels(),
+        tag_suggestions=services.tag_suggestions(request.workspace),
+        emoji_categories=emoji_catalogue(),
+    )
+    return render(request, "tasks/partials/_new_item_window.html", context)
+
+
 def _parse_day(value):
     """A ``YYYY-MM-DD`` value as a date; blank, malformed or impossible (2026-13-01) → None."""
     try:
@@ -774,8 +796,9 @@ def send_to_board(request, values, *, note="", submit_to="", hidden=None):
 def _board_window(request) -> dict | None:
     """What the board's new task window opens with when the board is visited with ``?new``:
     sent from an idea (``idea``), a template (``template`` with ``variation``), a special date
-    (``date``, its key in the special-dates tab, with ``day``), a day of the calendar (``day``
-    alone) or by
+    (``date``, its key in the special-dates tab, with ``day``; with ``suggestion``, the index of
+    one of its content suggestions, the task is titled and briefed by that suggestion and
+    keeps the date's arts to produce), a day of the calendar (``day`` alone) or by
     send_to_board (``new=handoff``). None without ``?new`` (or a handoff already taken).
     Returns ``{"prefill", "note", "submit_to", "hidden"}``."""
     workspace = request.workspace
@@ -811,16 +834,32 @@ def _board_window(request) -> dict | None:
         entry = date_by_key(params["date"], day, workspace)
         if entry is None:
             raise Http404("No such special date for this brand on that day.")
-        prefill = services.prefill_from_date(
-            workspace,
-            title=entry["name"],
-            day=day,
-            brief=entry["description"],
-            tags=entry["tags"],
-            briefing=entry["briefing"],
-            art_items=entry["art_items"],
-        )
-        note = _("From the special date “%(title)s”") % {"title": prefill["title"]}
+        index = params.get("suggestion", "")
+        suggestions = entry["suggestions"]
+        if index:
+            if not index.isdigit() or int(index) >= len(suggestions):
+                raise Http404("No such suggestion for this special date.")
+            suggestion = suggestions[int(index)]
+            prefill = services.prefill_from_date(
+                workspace,
+                title=f"{entry['name']} · {suggestion['title']}",
+                day=day,
+                brief=entry["description"],
+                tags=entry["tags"],
+                briefing=suggestion["brief"] or entry["briefing"],
+                art_items=entry["art_items"],
+            )
+        else:
+            prefill = services.prefill_from_date(
+                workspace,
+                title=entry["name"],
+                day=day,
+                brief=entry["description"],
+                tags=entry["tags"],
+                briefing=entry["briefing"],
+                art_items=entry["art_items"],
+            )
+        note = _("From the special date “%(title)s”") % {"title": entry["name"]}
     else:
         prefill = services.prefill_for_day(workspace, _parse_day(params.get("day")))
     return {"prefill": prefill, "note": note, "submit_to": submit_to, "hidden": hidden}

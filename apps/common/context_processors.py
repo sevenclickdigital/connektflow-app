@@ -1,5 +1,7 @@
 """Context processors for sidebar and global template data."""
 
+from django.conf import settings
+
 
 def sidebar_context(request):
     """Inject sidebar data into every template context.
@@ -89,11 +91,13 @@ def sidebar_context(request):
     # Trustpilot review ask: only for users with at least one connected channel,
     # in any of their workspaces, so pages without a workspace (settings,
     # members) don't make it flicker in and out. Closing it lasts until the
-    # next login.
+    # next login. REVIEW_BANNER_ENABLED turns the whole ask off.
     show_review_banner = False
     dismissed_at = request.user.review_banner_dismissed_at
     last_login = request.user.last_login
-    if dismissed_at is None or (last_login is not None and last_login > dismissed_at):
+    if settings.REVIEW_BANNER_ENABLED and (
+        dismissed_at is None or (last_login is not None and last_login > dismissed_at)
+    ):
         show_review_banner = SocialAccount.objects.filter(
             workspace_id__in=[ws.id for ws in sidebar_workspaces],
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,

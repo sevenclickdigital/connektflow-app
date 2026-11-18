@@ -17,10 +17,6 @@ review each named checklist also takes comments ("Comment"), shown under it from
 {% url 'tasks:task_update' workspace_id=workspace.id task_id=task.id as update_url %}
 <div class="task-detail" x-data="taskEditForm($el)" data-initial="{{ task.edit_initial_json }}" data-first-tab="{{ first_tab }}"
      @media-picked.camel.window="if (referencePickerFor === 'edit') addReferences($event.detail.assets)">
-    <button type="button" @click="closeTask()" class="modal-close task-detail-close" aria-label="{% translate 'Close' %}">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
-    </button>
-
     {# The task's side starts folded into a strip, leaving the window to the checklists (taskSummaryOpen on the board). #}
     <div class="task-detail-split" :class="!taskSummaryOpen && 'is-folded'">
     <form id="task-edit-{{ task.id }}" class="task-detail-main"
@@ -42,7 +38,6 @@ review each named checklist also takes comments ("Comment"), shown under it from
             {% endif %}
         </div>
         <div class="new-item-body !pt-7" x-show="taskSummaryOpen" x-cloak>
-            {# No room kept for the close button: it sits over the checklists, on the right. #}
             <div class="flex items-start gap-4">
                 <span class="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center flex-shrink-0" aria-hidden="true">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
@@ -88,7 +83,7 @@ review each named checklist also takes comments ("Comment"), shown under it from
     adds one.
     {% endcomment %}
     <aside class="new-item-checklists task-detail-side">
-        <div class="flex items-center justify-between gap-3 mb-3 pr-10">
+        <div class="flex items-center justify-between gap-3 mb-3">
             <div class="task-field-label mb-0">{% translate "Checklists" %}</div>
             {% if task.checklist_total %}
             <span class="text-[11px] font-semibold text-neutral-600 tabular-nums">
@@ -135,8 +130,28 @@ review each named checklist also takes comments ("Comment"), shown under it from
                 </div>
                 {% endif %}
                 <ul class="space-y-1">
-                    {% for item in group.items %}
-                    {% include "tasks/partials/_checklist_item.html" %}
+                    {% for row in group.rows %}
+                    {% if row.set %}
+                    {% comment %}
+                    A format asked for several times (services._art_runs): its name, size and note
+                    once, then one short line per piece, each with its own tick and delivery.
+                    {% endcomment %}
+                    <li class="rounded-lg border border-neutral-200 px-3 py-2">
+                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span class="text-sm font-semibold text-neutral-900">{{ row.set.label }} <span class="text-neutral-500 font-medium">× {{ row.set.entries|length }}</span></span>
+                            {% if row.set.width and row.set.height %}<span class="task-pill task-pill--art">{{ row.set.width }} × {{ row.set.height }}</span>{% endif %}
+                            <span class="ml-auto text-[11px] font-semibold text-neutral-500 tabular-nums">{{ row.set.done }}/{{ row.set.entries|length }}</span>
+                        </div>
+                        {% if row.set.note %}<p class="text-xs text-neutral-600 mt-0.5">{{ row.set.note }}</p>{% endif %}
+                        <ul class="mt-2 flex flex-wrap items-start gap-2">
+                            {% for entry in row.set.entries %}
+                            {% include "tasks/partials/_checklist_item.html" with item=entry.item label=entry.label in_set=True %}
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    {% else %}
+                    {% include "tasks/partials/_checklist_item.html" with item=row.item label="" in_set=False %}
+                    {% endif %}
                     {% endfor %}
                 </ul>
                 {% if group.checklist %}

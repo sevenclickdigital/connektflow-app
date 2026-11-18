@@ -496,3 +496,24 @@ def test_the_dashboard_keeps_the_picked_dates_on_its_links(client, brand, instag
     assert f"start={start.isoformat()}&amp;end={end.isoformat()}" in body
     assert "range=30" in body  # the presets are still offered
     assert networks.status_code == 200
+
+
+def test_see_more_opens_the_special_dates_page_with_the_date_picked():
+    """Every date leads to the special-dates page: a special date picked there,
+    one of the brand's own events (not in that page's list) to the page as it is.
+    Without ``create_posts`` that page can't be opened, so no link."""
+    from types import SimpleNamespace
+
+    from apps.workspaces.views import _date_links
+
+    special = {"date": date(2026, 11, 27), "key": "b:black-friday", "event": None}
+    event = {"date": date(2026, 12, 2), "event": SimpleNamespace(pk=1)}
+    brand_id = "00000000-0000-0000-0000-000000000001"
+    dates_url = reverse("composer:create_dates", kwargs={"workspace_id": brand_id})
+
+    _date_links([special, event], brand_id, can_plan=True)
+    assert special["more_url"] == dates_url + "?date=b%3Ablack-friday&day=2026-11-27"
+    assert event["more_url"] == dates_url
+
+    _date_links([special, event], brand_id, can_plan=False)
+    assert special["more_url"] == event["more_url"] == ""

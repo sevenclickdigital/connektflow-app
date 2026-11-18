@@ -1,0 +1,12 @@
+{% comment %}
+The board's new task window for another page to open over itself (tasks.views.new_task_window):
+the window (_new_item_modal.html), filled and opened on arrival from window_initial_json, with
+the data its script reads by id, which the board renders on its own page. Swapped into the
+page's #task-window-slot, so loading it again replaces the window and these ids.
+The page loads tasks/partials/_styles.html and static/js/task-window.js, and its Alpine scope
+holds showMediaPicker and referencePickerFor (the reference photos' media library).
+{% endcomment %}
+{{ task_window_labels|json_script:"task-window-labels" }}
+{{ emoji_categories|json_script:"task-emoji" }}
+{{ tag_suggestions|json_script:"task-tag-suggestions" }}
+{% include "tasks/partials/_new_item_modal.html" %}

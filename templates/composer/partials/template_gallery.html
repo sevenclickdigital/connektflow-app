@@ -13,10 +13,8 @@ composer/partials/_ideas_hero.html.
 
 <div x-data="templateShelf()" class="min-w-0"
      data-version-label="{% translate 'Version {n}' %}"
-     data-compose-url="{% url 'composer:compose' workspace_id=workspace.id %}"
-     data-idea-url="{% url 'composer:idea_from_template' workspace_id=workspace.id template_id=999999999 %}"
      data-favorite-url="{% url 'composer:template_favorite_toggle' workspace_id=workspace.id template_id=999999999 %}"
-     data-task-url="{% url 'tasks:board' workspace_id=workspace.id %}">
+     data-task-url="{% url 'tasks:new_task_window' workspace_id=workspace.id %}">
 
     {% comment %}
     Filters in the special dates' style: search, a Category menu with the
@@ -276,7 +274,7 @@ composer/partials/_ideas_hero.html.
         </div>
 
         <!-- The template picked -->
-        <div class="lg:col-span-4 lg:sticky lg:top-4 min-w-0 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:rounded-xl" style="scrollbar-width: thin;">
+        <div class="lg:col-span-4 lg:sticky lg:top-4 min-w-0 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto" style="scrollbar-width: thin;">
             <template x-if="selected">
                 {# The same panel as the special dates': the picture in a rounded box, the category in its corner. #}
                 <div class="a-card p-4">
@@ -288,6 +286,12 @@ composer/partials/_ideas_hero.html.
                             <svg class="w-14 h-14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="selected.icon_markup"></svg>
                         </template>
                         <span class="pill bg-white shadow-sm absolute top-3 right-3" :class="'icon-tone-' + selected.tone" x-text="selected.category_label"></span>
+                        <button type="button" class="absolute bottom-3 right-3 w-9 h-9 inline-flex items-center justify-center rounded-lg bg-white text-brand-700 shadow-sm hover:bg-brand-50 cursor-pointer"
+                                @click="toggleFavorite(selected.id)" :aria-pressed="isFavorite(selected.id).toString()"
+                                :title="isFavorite(selected.id) ? $el.dataset.on : $el.dataset.off" :aria-label="isFavorite(selected.id) ? $el.dataset.on : $el.dataset.off"
+                                data-off="{% translate 'Save to favorites' %}" data-on="{% translate 'Remove from favorites' %}">
+                            <svg class="w-4 h-4" :fill="isFavorite(selected.id) ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                        </button>
                     </div>
                     <div class="pt-4">
                     <span x-show="selected.mine" class="pill" :class="{ pending: 'pill-warning', rejected: 'pill-error' }[selected.review] || 'pill-success'"><i></i><span x-text="selected.review_label"></span></span>
@@ -296,7 +300,10 @@ composer/partials/_ideas_hero.html.
 
                     <div class="mt-4 pt-4 border-t border-neutral-200"
                          x-show="selected.formats.length || selected.goals.length || selected.ideal_for || selected.network_items.length">
-                        <h3 class="text-sm font-semibold text-neutral-950 mb-3">{% translate "Characteristics" %}</h3>
+                        <h3 class="flex items-center gap-2 text-sm font-semibold text-neutral-950 mb-3">
+                            <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+                            {% translate "Characteristics" %}
+                        </h3>
                         <ul class="flex flex-col gap-2.5 text-sm text-neutral-800">
                             <li class="flex items-start gap-2.5" x-show="selected.formats.length">
                                 <span class="w-6 h-6 rounded-md icon-tone-brand flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg></span>
@@ -336,79 +343,69 @@ composer/partials/_ideas_hero.html.
                         </ul>
                     </div>
 
-                    {# The arts the template asks for (creative_formats.art_items_payload), sent on to "Send as task". #}
+                    {% comment %}
+                    The versions of the text, one row each (its text in the tooltip), like a special date's
+                    content suggestions: the "⋯" menu opens the idea window or the task window filled from that version.
+                    {% endcomment %}
+                    <div class="mt-4 pt-4 border-t border-neutral-200" x-show="selected.variations.length">
+                        <h3 class="flex items-center gap-2 text-sm font-semibold text-neutral-950 mb-3">
+                            <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+                            {% translate "Versions of the text" %}
+                        </h3>
+                        <ul class="flex flex-col gap-2">
+                            <template x-for="(item, index) in selected.variations" :key="index">
+                                <li class="relative flex items-center gap-3 text-sm text-neutral-800 pl-3 pr-1.5 py-1.5 rounded-lg bg-brand-50" x-data="{ menu: false }" :title="item.body">
+                                    <svg class="w-4 h-4 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="versionIcon(index)"></svg>
+                                    <span class="flex-1 min-w-0 py-1 truncate" x-text="versionTitle(item, index)"></span>
+                                    <button type="button" @click="menu = !menu" :aria-expanded="menu.toString()" aria-haspopup="menu"
+                                            class="w-8 h-8 flex-shrink-0 inline-flex items-center justify-center rounded-md text-neutral-500 hover:text-neutral-950 hover:bg-white cursor-pointer" aria-label="{% translate 'More actions' %}">
+                                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                                    </button>
+                                    {# The last row's menu opens upwards, clear of the panel's bottom edge. #}
+                                    <div x-show="menu" x-cloak @click.outside="menu = false" @keydown.escape.window="menu = false" x-transition role="menu"
+                                         class="absolute right-0 z-20 w-48 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1"
+                                         :class="index === selected.variations.length - 1 ? 'bottom-full mb-1' : 'top-full mt-1'">
+                                        <button type="button" role="menuitem" @click="menu = false; createIdeaFromTemplate(selected, index)" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Create idea" %}</button>
+                                        <button type="button" role="menuitem" @click="menu = false; openTaskWindow(taskUrl(index))" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Create task" %}</button>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    {# The arts the template asks for (creative_formats.art_items_payload), sent on to a version's "Create task". #}
                     <div class="mt-4 pt-4 border-t border-neutral-200" x-show="selected.art_items.length || selected.briefing">
-                        <button type="button" class="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
+                        <button type="button" class="w-full flex items-center gap-2 text-left text-sm font-semibold text-neutral-950 cursor-pointer"
                                 @click="toggleSection('arts')" :aria-expanded="(openSection === 'arts').toString()">
-                            <span class="min-w-0">
-                                <span class="block text-sm font-semibold text-neutral-950">{% translate "Arts to produce" %}</span>
-                                <span class="block text-xs text-neutral-600 truncate" x-show="openSection !== 'arts'"
-                                      x-text="selected.art_items.map(item => item.count + '× ' + item.label).join(', ')"></span>
-                            </span>
+                            <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                            <span class="flex-1">{% translate "Arts to produce" %} <span class="text-neutral-500 font-medium tabular-nums" x-show="selected.art_items.length" x-text="'(' + selected.art_items.reduce((total, item) => total + item.count, 0) + ')'"></span></span>
                             <svg class="w-4 h-4 text-neutral-500 transition-transform" :class="openSection === 'arts' && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
                         </button>
-                        <div class="flex flex-col gap-2 mt-2" x-show="openSection === 'arts'" x-transition.opacity>
-                            <p class="text-xs text-neutral-700 whitespace-pre-line" x-show="selected.briefing" x-text="selected.briefing"></p>
-                            <template x-for="item in selected.art_items" :key="item.format">
-                                <div class="px-3 py-2 rounded-lg border border-neutral-200">
-                                    <p class="text-sm font-medium text-neutral-950">
-                                        <span x-text="item.count + '× ' + item.label"></span>
-                                        <span class="text-xs font-normal text-neutral-500" x-text="item.network + ' · ' + item.size"></span>
-                                    </p>
-                                    <p class="text-xs text-neutral-600" x-show="item.note" x-text="item.note"></p>
-                                </div>
-                            </template>
+                        <div class="mt-3" x-show="openSection === 'arts'" x-transition.opacity>
+                            <p class="text-xs text-neutral-700 whitespace-pre-line mb-3" x-show="selected.briefing" x-text="selected.briefing"></p>
+                            <ul class="flex flex-col gap-2">
+                                <template x-for="item in selected.art_items" :key="item.format">
+                                    <li class="px-3 py-2 rounded-lg border border-neutral-200 text-sm text-neutral-800">
+                                        <span class="font-medium text-neutral-950" x-text="item.count + '× ' + item.label"></span>
+                                        <span class="text-xs text-neutral-500" x-text="item.network + ' · ' + item.size"></span>
+                                        <span class="block text-xs text-neutral-600" x-show="item.note" x-text="item.note"></span>
+                                    </li>
+                                </template>
+                            </ul>
                         </div>
                     </div>
 
-                    {# Which version of the text opens: only when there is more than one. #}
-                    <div class="mt-4 pt-4 border-t border-neutral-200" x-show="selected.variations.length > 1">
-                        <button type="button" class="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
-                                @click="toggleSection('versions')" :aria-expanded="(openSection === 'versions').toString()">
-                            <span class="min-w-0">
-                                <span class="block text-sm font-semibold text-neutral-950">{% translate "Versions of the text" %}</span>
-                                <span class="block text-xs text-neutral-600 truncate" x-show="openSection !== 'versions'"
-                                      x-text="selected.variations[variation].title || $root.dataset.versionLabel.replace('{n}', variation + 1)"></span>
-                            </span>
-                            <svg class="w-4 h-4 text-neutral-500 transition-transform" :class="openSection === 'versions' && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-                        </button>
-                        <div class="flex flex-col gap-1.5 mt-2" x-show="openSection === 'versions'" x-transition.opacity>
-                            <template x-for="(item, index) in selected.variations" :key="index">
-                                <label class="flex items-start gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-colors"
-                                       :class="variation === index ? 'border-brand-300 bg-brand-50' : 'border-neutral-200 hover:border-neutral-300'">
-                                    <input type="radio" class="mt-0.5 accent-brand-700" :checked="variation === index" @change="variation = index">
-                                    <span class="min-w-0">
-                                        <span class="block text-sm font-medium text-neutral-950" x-text="item.title || $root.dataset.versionLabel.replace('{n}', index + 1)"></span>
-                                        <span class="block text-xs text-neutral-600 line-clamp-2" x-text="item.body"></span>
-                                    </span>
-                                </label>
+                    {# The tag an idea or a task made from the template gets (services.template_tags). #}
+                    <div class="mt-4 pt-4 border-t border-neutral-200" x-show="selected.tags.length">
+                        <h3 class="flex items-center gap-2 text-sm font-semibold text-neutral-950 mb-3">
+                            <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01"/></svg>
+                            {% translate "Suggested tags" %}
+                        </h3>
+                        <div class="flex flex-wrap gap-1.5">
+                            <template x-for="tag in selected.tags" :key="tag">
+                                <span class="pill pill-neutral" x-text="tag"></span>
                             </template>
                         </div>
-                    </div>
-
-                    <div class="flex flex-col gap-2 mt-6">
-                        <a :href="composeUrl()" class="btn-brand w-full">
-                            {% translate "Use this template" %}
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                        </a>
-                        <form method="post" :action="ideaUrl()">
-                            {% csrf_token %}
-                            <input type="hidden" name="variation" :value="variation">
-                            <button type="submit" class="btn-soft w-full">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                                {% translate "Add to my ideas" %}
-                            </button>
-                        </form>
-                        {# The task board, with its new task window open and filled from the template. #}
-                        <a :href="taskUrl()" class="btn-soft w-full">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                            {% translate "Send as task" %}
-                        </a>
-                        <button type="button" class="btn-ghost w-full" @click="toggleFavorite(selected.id)" :aria-pressed="isFavorite(selected.id).toString()">
-                            <svg class="w-4 h-4" :fill="isFavorite(selected.id) ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-                            <span x-show="!isFavorite(selected.id)">{% translate "Save to favorites" %}</span>
-                            <span x-show="isFavorite(selected.id)">{% translate "Saved to favorites" %}</span>
-                        </button>
                     </div>
                     </div>
                 </div>
@@ -429,12 +426,11 @@ function templateShelf() {
         mineOnly: false,
         query: '',
         selectedId: shelf.length ? shelf[0].id : null,
-        variation: 0,
-        // Whether the panel's "versions of the text" section is open: '' or 'versions'.
+        // Whether the panel's "arts to produce" section is open: '' or 'arts'.
         openSection: '',
         toggleSection(name) { this.openSection = this.openSection === name ? '' : name; },
         get selected() { return this.shelf.find(item => item.id === this.selectedId) || null; },
-        select(id) { this.selectedId = id; this.variation = 0; },
+        select(id) { this.selectedId = id; this.openSection = ''; },
         isFavorite(id) { return this.favorites.includes(id); },
         // Whether a card passes the category, the favorites and "my templates" toggles and the search.
         shows(el) {
@@ -450,13 +446,23 @@ function templateShelf() {
         visibleCount() {
             return [...this.$root.querySelectorAll('[data-id]')].filter(el => this.shows(el)).length;
         },
-        composeUrl() {
-            const base = this.$root.dataset.composeUrl;
-            return base + '?template=' + this.selectedId + (this.variation ? '&variation=' + this.variation : '');
+        // The page's URLs, read from the shelf's root: $el, not $root, since the versions'
+        // menus have an x-data of their own.
+        urls() { return this.$el.closest('[data-task-url]').dataset; },
+        // The icons beside the versions, taken in turn, as beside a special date's
+        // content suggestions (suggestionIcon in _special_dates_tab.html).
+        versionIcon(index) {
+            const icons = [
+                '<path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0012 2z"/>',
+                '<path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01"/>',
+                '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>',
+                '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/>',
+            ];
+            return icons[index % icons.length];
         },
-        ideaUrl() { return this.$root.dataset.ideaUrl.replace(PLACEHOLDER, this.selectedId); },
-        taskUrl() {
-            return this.$root.dataset.taskUrl + '?new=1&template=' + this.selectedId + (this.variation ? '&variation=' + this.variation : '');
+        versionTitle(item, index) { return item.title || this.urls().versionLabel.replace('{n}', index + 1); },
+        taskUrl(variation) {
+            return this.urls().taskUrl + '?new=1&template=' + this.selectedId + (variation ? '&variation=' + variation : '');
         },
         toggleFavorite(id) {
             fetch(this.$root.dataset.favoriteUrl.replace(PLACEHOLDER, id), {

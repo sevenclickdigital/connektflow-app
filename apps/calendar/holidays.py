@@ -298,7 +298,7 @@ BUILT_IN_CONTENT = {
     ),
 }
 
-# What a brand's task for a built-in date asks the creative team for ("Send as task"):
+# What a brand's task for a built-in date asks the creative team for ("Create task"):
 # slug → (briefing, ((format, count, note), …)), formats of apps.tasks.creative_formats.
 # The operator's dates carry the same in SpecialDate.briefing / art_items.
 BUILT_IN_ARTS: dict = {

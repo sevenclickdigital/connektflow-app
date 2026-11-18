@@ -453,6 +453,9 @@ EMAIL_RECIPIENT_HOURLY_LIMIT = env.int("EMAIL_RECIPIENT_HOURLY_LIMIT", default=6
 EMAIL_RECIPIENT_DAILY_LIMIT = env.int("EMAIL_RECIPIENT_DAILY_LIMIT", default=20)
 RESEND_WEBHOOK_SECRET = env("RESEND_WEBHOOK_SECRET", default="")
 
+# The Trustpilot review ask in the sidebar (templates/partials/_review_banner.html).
+REVIEW_BANNER_ENABLED = env.bool("REVIEW_BANNER_ENABLED", default=False)
+
 # Sender identity in every email footer (apps/common/emails.py) and the contact
 # on the legal pages. Anti-spam rules (CAN-SPAM, Gmail/Yahoo sender guidelines)
 # and the LGPD expect the sender to be identifiable: who sends, where, and how

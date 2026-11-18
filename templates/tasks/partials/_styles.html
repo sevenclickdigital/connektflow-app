@@ -13,12 +13,22 @@ Styles of the task board, its card and the art request form. Included once per p
     .task-board .kanban-column.is-closed { min-width: 56px; flex: 0 0 56px; }
     .kanban-column-strip.drag-over { background: var(--kanban-tone-badge); }
     .task-card { cursor: pointer; user-select: none; }
+    /* A delivered piece of a set (tasks/partials/_checklist_item.html): the art as a tile, a dark
+       gradient over it so the tick, the number, the download and the size read on any image. */
+    .art-tile { width: 140px; }
+    .art-tile .art-tile-thumb { width: 140px; height: 140px; border-radius: 10px; }
+    .art-tile-mask { position: absolute; inset: 0; border-radius: 10px; pointer-events: none; z-index: 1;
+        background: linear-gradient(to bottom, rgba(15,23,42,.72), rgba(15,23,42,.15) 40%, rgba(15,23,42,.15) 50%, rgba(15,23,42,.85)); }
+    .art-tile-top, .art-tile-bottom { text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+    .art-tile-top { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 2; display: flex; align-items: center; gap: 6px; }
+    .art-tile-bottom { position: absolute; left: 8px; right: 36px; bottom: 7px; z-index: 2; display: flex; flex-direction: column; font-size: 11.5px; line-height: 1.25; }
+    .art-tile .thumb-actions { z-index: 3; }
     .task-card.is-dragging { opacity: .5; transform: rotate(2deg); }
     /* The new task window (tasks/partials/_new_item_modal.html).
        The form's body scrolls between its header and its footer; every box between the panel and the
        body is a flex column with min-height: 0, or the body never scrolls. */
     .new-item-overlay { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(2px); }
-    .new-item-panel { width: 100%; max-width: 1120px; height: min(860px, calc(100vh - 32px)); display: flex; background: white; border-radius: 20px; box-shadow: var(--shadow-xl); overflow: hidden; }
+    .new-item-panel { width: 100%; max-width: var(--work-modal-width, 1120px); height: min(860px, calc(100vh - 32px)); display: flex; background: white; border-radius: 20px; box-shadow: var(--shadow-xl); overflow: hidden; }
     .new-item-main { position: relative; flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
     /* The task's form: its fields on the left, its checklists on the right, each scrolling on its own. */
     .new-item-split { flex: 1; min-height: 0; display: flex; }
@@ -80,14 +90,24 @@ Styles of the task board, its card and the art request form. Included once per p
     /* A window over the board, centred when it fits (margin-block: auto), scrolling with the backdrop when it doesn't. */
     .task-modal-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(28,25,23,.45); display: flex; align-items: flex-start; justify-content: center; padding: 16px; overflow-y: auto; }
     .task-modal { background: white; border-radius: 16px; width: 100%; max-width: 1040px; margin-block: auto; box-shadow: 0 24px 60px rgba(28,25,23,.3); }
-    /* The task's window (tasks/partials/_task_modal.html): as tall as the new task window, its fields
+    /* The task's window (tasks/partials/_task_modal.html): as tall as the new task window (less the
+       close button's room, below), its fields
        and its checklists each scrolling on their own, the save bar always in view. */
-    .task-modal.is-detail { max-width: 1120px; height: min(860px, calc(100vh - 32px)); display: flex; overflow: hidden; border-radius: 20px; }
-    .task-modal.is-detail > #task-modal-body { flex: 1; min-width: 0; display: flex; }
+    .task-modal.is-detail { position: relative; max-width: var(--work-modal-width, 1120px); height: min(860px, calc(100vh - 32px)); display: flex; border-radius: 20px; }
+    /* The body clips the window's content, not the window, so the close button can sit on its corner. */
+    .task-modal.is-detail > #task-modal-body { flex: 1; min-width: 0; display: flex; overflow: hidden; border-radius: inherit; }
+    /* From 640px the close button floats off the window's top-right corner, so the window leaves it
+       room on every side; on a phone it straddles the corner instead. */
+    @media (min-width: 640px) {
+        .task-modal.is-detail { max-width: min(var(--work-modal-width, 1120px), calc(100vw - 96px)); height: min(860px, calc(100vh - 96px)); }
+        .task-modal.is-detail .task-modal-close { top: -34px; right: -38px; }
+    }
+    .task-modal-close { position: absolute; top: -14px; right: -14px; z-index: 10; width: 36px; height: 36px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; background: white; color: var(--neutral-700); border: 1px solid var(--neutral-200); box-shadow: var(--shadow-lg); cursor: pointer; transition: color var(--dur-fast) ease, transform var(--dur-fast) ease; }
+    .task-modal-close:hover { color: var(--brand-700); transform: scale(1.06); }
+    .task-modal-close:active { transform: scale(0.96); }
     .task-detail { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .task-detail-split { flex: 1; min-height: 0; display: flex; }
     .task-detail-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-    .task-detail-close { position: absolute; top: 16px; right: 16px; z-index: 5; }
     /* Folded (the window's default): the task's side is a strip and the checklists take the rest. */
     .task-detail-split.is-folded .task-detail-main { flex: 0 0 72px; border-right: 1px solid var(--neutral-200); }
     .task-detail-split.is-folded .new-item-checklists { flex: 1; width: auto; border-left: 0; }
@@ -109,12 +129,12 @@ Styles of the task board, its card and the art request form. Included once per p
     .task-up-busy { display: none; }
     .htmx-request .task-up-idle { display: none; }
     .htmx-request .task-up-busy { display: inline; }
-    .task-modal-close { position: absolute; top: 12px; right: 12px; z-index: 10; }
     /* The art request's channels (tasks/partials/_art_formats.html): the networks listed on the
-       left, the shown one's formats as cards in one row on the right, scrolling sideways; side by
+       left, the shown one's formats as cards in two rows on the right, scrolling sideways; side by
        side from 640px, the list exactly as tall as the formats beside it. */
-    .art-channels { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 12px; border-radius: 16px; border: 1px solid var(--neutral-200); background: color-mix(in srgb, var(--brand-50) 40%, white); }
+    .art-channels { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
     .art-channel-list { max-height: 228px; overflow-y: auto; padding: 4px; border-radius: 12px; border: 1px solid var(--neutral-200); background: white; }
+    .art-channel-list.has-more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); }
     .art-channel { display: flex; align-items: center; gap: 8px; padding: 2px 10px 2px 2px; border-radius: 10px; }
     .art-channel + .art-channel { margin-top: 2px; }
     .art-channel:hover { background: var(--neutral-50); }
@@ -124,7 +144,10 @@ Styles of the task board, its card and the art request form. Included once per p
     .art-channel-formats { padding: 6px 4px; }
     .art-format-row { overflow-x: auto; scrollbar-width: none; padding: 3px; margin: -3px; }
     .art-format-row::-webkit-scrollbar { display: none; }
-    .art-format-row .art-format { flex: 0 0 148px; }
+    /* Two rows of cards, filled column by column, scrolled sideways with the arrows. The rows
+       have a fixed height (a card with its pills on a second line), so the block, and the
+       network list beside it, keep their size whatever the network's number of formats. */
+    .art-format-grid { display: grid; grid-template-rows: repeat(2, 78px); grid-auto-flow: column; grid-auto-columns: 200px; gap: 8px 12px; align-items: stretch; }
     @media (min-width: 640px) {
         .art-channels { grid-template-columns: 220px minmax(0, 1fr); }
         /* The list takes no height of its own (contain: size): the row of cards sets it, and the list scrolls. */
@@ -132,13 +155,13 @@ Styles of the task board, its card and the art request form. Included once per p
     }
     /* A format to tick: its glyph on a lilac tile, then name, size and proportion; the tick,
        top right, fills when picked. */
-    .art-format { position: relative; display: flex; flex-direction: column; align-items: flex-start; padding: 12px; border-radius: 14px; border: 1.5px solid var(--border); background: white; cursor: pointer; transition: border-color .12s ease, box-shadow .12s ease, background .12s ease; }
+    .art-format { position: relative; display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; border: 1.5px solid var(--border); background: white; cursor: pointer; transition: border-color .12s ease, box-shadow .12s ease, background .12s ease; }
     .art-format:hover { border-color: var(--brand-300); box-shadow: 0 4px 14px rgba(28,25,23,.07); }
     .art-format:has(input:checked) { border-color: var(--brand-500); background: color-mix(in srgb, var(--brand-50) 60%, white); box-shadow: 0 0 0 3px rgba(124, 58, 237, .12); }
     .art-format:has(input:focus-visible) { outline: 2px solid #7C3AED; outline-offset: 2px; }
     .art-format input { position: absolute; opacity: 0; pointer-events: none; }
-    .art-icon-box { align-self: center; width: 56px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--brand-50), var(--brand-100)); color: var(--brand-700); }
-    .art-ratio { display: inline-flex; align-items: center; padding: 0 7px; border-radius: 9999px; font-size: 11px; font-weight: 600; line-height: 18px; background: var(--brand-50); color: var(--neutral-700); font-variant-numeric: tabular-nums; }
-    .art-tick { position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; border-radius: 9999px; border: 2px solid var(--neutral-400); background: white; display: flex; align-items: center; justify-content: center; color: white; }
+    .art-icon-box { flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--brand-50), var(--brand-100)); color: var(--brand-700); }
+    .art-ratio { display: inline-flex; align-items: center; padding: 0 6px; border-radius: 9999px; font-size: 10px; font-weight: 600; line-height: 16px; background: var(--brand-50); color: var(--neutral-700); font-variant-numeric: tabular-nums; }
+    .art-tick { position: absolute; top: 8px; right: 8px; width: 16px; height: 16px; border-radius: 9999px; border: 1.5px solid var(--neutral-400); background: white; display: flex; align-items: center; justify-content: center; color: white; }
     .art-format:has(input:checked) .art-tick { background: var(--brand-700); border-color: var(--brand-700); }
 </style>

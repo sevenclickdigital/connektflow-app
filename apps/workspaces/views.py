@@ -9,6 +9,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import Http404
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
@@ -371,6 +372,24 @@ def _workspace_tz(workspace):
         return zoneinfo.ZoneInfo("UTC")
 
 
+def _date_links(entries, workspace_id, can_plan):
+    """Give each upcoming date its "See more" link (``more_url``), or none.
+
+    Every date opens the special-dates page, which needs ``create_posts``. A
+    special date opens there picked (``?date=<key>&day=<iso>``); the brand's own
+    events are not in that page's list, so theirs opens it as it is.
+    """
+    dates_url = reverse("composer:create_dates", kwargs={"workspace_id": workspace_id})
+    for entry in entries:
+        if not can_plan:
+            entry["more_url"] = ""
+        elif entry.get("key") and not entry.get("event"):
+            entry["more_url"] = f"{dates_url}?{urlencode({'date': entry['key'], 'day': entry['date'].isoformat()})}"
+        else:
+            entry["more_url"] = dates_url
+    return entries
+
+
 @login_required
 @require_workspace_role("viewer")
 @require_GET
@@ -439,7 +458,9 @@ def workspace_dashboard(request, workspace_id):
             # The task board is the team's: clients work through the portal (tasks.views.require_board_access).
             "my_tasks": dashboard.my_open_tasks(workspace, request.user, today) if is_team else None,
             "day": dashboard.day_summary(workspace, request.user, perms, today, tz, is_team=is_team),
-            "upcoming_dates": dashboard.upcoming_dates_with_posts(workspace, today, tz),
+            "upcoming_dates": _date_links(
+                dashboard.upcoming_dates_with_posts(workspace, today, tz), workspace.id, perms.get("create_posts")
+            ),
             "today": today,
         }
     )

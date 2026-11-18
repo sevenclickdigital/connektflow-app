@@ -330,3 +330,33 @@ def test_every_template_category_has_an_icon_and_a_tone():
     for category in [*IdeaTemplate.Category.values, "all"]:
         icon, tone = idea_icons.CATEGORY_STYLE[category]
         assert icon in idea_icons.ICONS and tone in idea_icons.TONES
+
+
+@pytest.mark.django_db
+def test_a_template_version_opens_the_idea_window_and_saving_it_keeps_the_templates_arts(client):
+    """ "Create idea" on a template version fills the idea window (the shelf carries the icon
+    and channels for it); what the user saves there takes the template's briefing and arts
+    and counts as a use of it. A template off the shelf is ignored."""
+    from apps.composer.models import Idea, IdeaTemplateUse
+    from apps.composer.services import template_shelf
+
+    user, workspace = _brand()
+    client.force_login(user)
+    arts = [{"format": "ig_story", "count": 2, "note": "Contagem"}]
+    template = IdeaTemplate.objects.create(
+        title="Passo a passo", body="Texto", category="story", briefing="Fundo liso", art_items=arts
+    )
+    hidden = IdeaTemplate.objects.create(title="Fora de linha", is_active=False, briefing="Não", art_items=arts)
+
+    shelf = {item["id"]: item for item in template_shelf(workspace)}
+    assert shelf[template.id]["icon"] and "channel_formats" in shelf[template.id]
+
+    url = reverse("composer:idea_create", kwargs={"workspace_id": workspace.id})
+    client.post(url, {"title": "Minha versão", "description": "Editado", "template": str(template.id)})
+    client.post(url, {"title": "Sem modelo", "template": str(hidden.id)})
+
+    idea = Idea.objects.get(workspace=workspace, title="Minha versão")
+    assert (idea.description, idea.briefing, idea.art_items) == ("Editado", "Fundo liso", arts)
+    assert IdeaTemplateUse.objects.filter(workspace=workspace, template=template).count() == 1
+    plain = Idea.objects.get(workspace=workspace, title="Sem modelo")
+    assert (plain.briefing, plain.art_items) == ("", [])

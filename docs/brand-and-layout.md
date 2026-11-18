@@ -66,6 +66,6 @@ The design source is the brand pack in `branding/` (logo, mascot poses and per-n
 
 - Publicações, Galeria, Radar and Notificações sit under "Mais" until they are placed in a group.
 - Whether the sidebar "+ Novo" button stays or the primary action moves to each page header (the pack's mock has no "+ Novo"). It stays for now: it is the only entry to the quick "new idea" modal.
-- The Trustpilot review card (`templates/partials/_review_banner.html`) asks for a review of BrightBean on its Trustpilot page and says the product is free. Remove it, or point it at Connekt Flow's own review page.
+- The Trustpilot review card (`templates/partials/_review_banner.html`) asks for a review of BrightBean on its Trustpilot page and says the product is free. It is off (`REVIEW_BANNER_ENABLED`, default false) until it points at Connekt Flow's own review page.
 - Dark mode: not specified by the pack.
 - Moti's art is to be revised for the Connekt Flow identity; until the new images arrive the current ones stay.

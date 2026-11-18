@@ -304,7 +304,7 @@ class SpecialDate(models.Model):
     tags = models.CharField(max_length=200, blank=True, default="")
     image = models.ImageField(upload_to="special_dates/", blank=True)
     is_active = models.BooleanField(default=True)
-    #: For the task a brand makes of the date ("Send as task"): how the arts should be
+    #: For the task a brand makes of the date ("Create task"): how the arts should be
     #: made and which to produce (``[{"format", "count", "note"}]``, formats of
     #: ``apps.tasks.creative_formats``), as a content template carries them.
     briefing = models.TextField(blank=True, default="", db_default="")

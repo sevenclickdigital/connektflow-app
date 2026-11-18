@@ -1092,6 +1092,14 @@ def template_variations(template) -> list[dict]:
     return versions
 
 
+def template_tags(template) -> list[str]:
+    """The tags an idea or a task made from ``template`` gets: its category's name.
+    Shown under "Suggested tags" in the template's panel."""
+    from apps.common.validators import parse_and_truncate_tag_string
+
+    return parse_and_truncate_tag_string(str(template.get_category_display()))
+
+
 def template_text(template, variation) -> str:
     """The text of version ``variation`` (0 is the template's own), or the
     template's own when that version does not exist."""
@@ -1125,6 +1133,7 @@ def template_shelf(workspace) -> list[dict]:
     goals = dict(IdeaTemplate.Goal.choices)
     shelf = []
     reviews = dict(IdeaTemplate.Review.choices)
+    accounts = list(channel_accounts(workspace))
     for template in templates_for(workspace).prefetch_related("variations"):
         shelf.append(
             {
@@ -1135,6 +1144,10 @@ def template_shelf(workspace) -> list[dict]:
                 "category": template.category,
                 "category_label": str(template.get_category_display()),
                 "tone": idea_icons.category_style(template.category)[1],
+                # What a version's "Create idea" opens the idea window with: the category's icon
+                # (or the template's own) and the brand's accounts on its networks, on its formats.
+                "icon": template.icon or idea_icons.category_style(template.category)[0],
+                "channel_formats": template_account_formats(template.network_formats, accounts),
                 "icon_markup": idea_icons.icon_markup(template.icon or idea_icons.category_style(template.category)[0]),
                 "image": template.image.url if template.image else "",
                 "formats": [str(formats[key]) for key in template.formats if key in formats],
@@ -1144,6 +1157,7 @@ def template_shelf(workspace) -> list[dict]:
                 "ideal_for": template.ideal_for,
                 "briefing": template.briefing,
                 "art_items": creative_formats.art_items_payload(template.art_items),
+                "tags": template_tags(template),
                 "variations": template_variations(template),
                 "favorite": template.id in favorites,
                 # The brand sent it: listed under "My templates", with where its review stands.

@@ -4,22 +4,38 @@ One to-do in the task's window: the tick, the text and, for an item that takes
 a file (an art item, or one whose settings ask for a file), its size, the
 delivered file and the upload; a plain item may carry a reference image. While
 editing, its gear opens its settings (ask for a file, the file's size).
-Expects: item, task, workspace, can_edit, can_upload.
+Expects: item, task, workspace, can_edit, can_upload; optional label (the text shown,
+item.text otherwise) and in_set (a piece of a format asked for several times, under its
+set's name and size: a bordered chip side by side with the others, its size not repeated).
 {% endcomment %}
-<li class="group flex items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-neutral-50 -mx-2">
-    {% if can_edit %}
-    <button type="button" class="task-check mt-0.5{% if item.is_done %} is-on{% endif %}"
-            hx-post="{% url 'tasks:item_toggle' workspace_id=workspace.id task_id=task.id item_id=item.id %}" hx-target="#task-modal-body"
-            aria-pressed="{{ item.is_done|yesno:'true,false' }}" aria-label="{% translate 'Mark as done' %}">
-    {% else %}
-    <span class="task-check mt-0.5{% if item.is_done %} is-on{% endif %}">
-    {% endif %}
-        {% if item.is_done %}<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>{% endif %}
-    {% if can_edit %}</button>{% else %}</span>{% endif %}
+{% if in_set and item.takes_file and item.media_asset and item.media_asset.file %}
+{% comment %}
+A delivered piece of a set: the art as a tile, darkened at its edges, with the tick and
+the piece's number over its top and the download and size over its bottom; the
+proportion warning under it.
+{% endcomment %}
+<li class="art-tile">
+    <div class="relative">
+        {% include "tasks/partials/_art_thumb.html" with thumb_class="art-tile-thumb" %}
+        <div class="art-tile-mask" aria-hidden="true"></div>
+        <div class="art-tile-top">
+            {% include "tasks/partials/_checklist_tick.html" with tick_class="" %}
+            <span class="text-[13px] font-semibold text-white {% if item.is_done %}line-through opacity-80{% endif %}">{{ label|default:item.text }}</span>
+        </div>
+        <div class="art-tile-bottom">
+            <a href="{{ item.media_asset.file.url }}" download class="font-semibold text-white hover:underline">{% translate "Download" %}</a>
+            {% if item.media_asset.width %}<span class="text-white/80 tabular-nums">{{ item.media_asset.width }} × {{ item.media_asset.height }}</span>{% endif %}
+        </div>
+    </div>
+    {% if not item.ratio_ok %}<p class="mt-1 text-[11.5px] leading-tight text-amber-600 font-semibold">{% translate "Proportions differ from the format" %}</p>{% endif %}
+</li>
+{% else %}
+<li class="group flex items-start {% if in_set %}gap-2 rounded-lg border border-neutral-200 bg-white pl-2.5 pr-1.5 py-1.5{% else %}gap-2.5 rounded-lg px-2 py-1.5 hover:bg-neutral-50 -mx-2{% endif %}">
+    {% include "tasks/partials/_checklist_tick.html" with tick_class="" %}
     <div class="flex-1 min-w-0">
         <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span class="text-sm {% if item.is_done %}text-neutral-500 line-through{% else %}text-neutral-900{% endif %}">{{ item.text }}</span>
-        {% if item.width and item.height %}<span class="task-pill task-pill--art">{{ item.width }} × {{ item.height }}</span>{% endif %}
+        <span class="text-sm {% if item.is_done %}text-neutral-500 line-through{% else %}text-neutral-900{% endif %}">{{ label|default:item.text }}</span>
+        {% if item.width and item.height and not in_set %}<span class="task-pill task-pill--art">{{ item.width }} × {{ item.height }}</span>{% endif %}
         {% if item.takes_file %}
         {% comment %}
         The first delivery, on the item's own line, as an icon: it opens the media library
@@ -39,58 +55,7 @@ Expects: item, task, workspace, can_edit, can_upload.
         {% if item.takes_file %}
         {% if item.media_asset and item.media_asset.file %}
         <div class="mt-1.5 flex flex-wrap items-center gap-2">
-            {% comment %}
-            The delivered art as the composer shows a post's image: hovering it shows
-            the settings button, whose menu removes the art from the item, opens the
-            image editor (crop, with the aspect-ratio presets, starting on the item's own
-            format) or replaces the file. Clicking the image shows it large, in a window over
-            the task's (components/_media_preview.html, on the board).
-            {% endcomment %}
-            <div class="media-thumb flex-shrink-0" x-data="{ menu: false }">
-                <a href="{{ item.media_asset.file.url }}" class="block w-full h-full" aria-label="{% translate 'Open the file' %}"
-                   @click.prevent="$dispatch('preview-media', { url: $el.href, video: {% if item.media_asset.media_type == "video" %}true{% else %}false{% endif %}, title: $el.dataset.title })" data-title="{{ item.text }}">
-                    {% if item.media_asset.media_type == "video" %}
-                    <video src="{{ item.media_asset.file.url }}#t=0.5" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>
-                    {% else %}
-                    <img src="{% if item.media_asset.thumbnail %}{{ item.media_asset.thumbnail.url }}{% else %}{{ item.media_asset.file.url }}{% endif %}" alt="{{ item.text }}" draggable="false">
-                    {% endif %}
-                </a>
-                {% if can_edit %}
-                <div class="thumb-actions">
-                    <button type="button" class="thumb-action" title="{% translate 'Settings' %}" aria-label="{% translate 'Settings' %}" @click.stop="menu = true"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button>
-                </div>
-                <div class="thumb-menu" x-show="menu" x-cloak @click.outside="menu = false" @keydown.escape.window="menu = false">
-                    <button type="button" class="thumb-menu-item text-red-600" @click.stop="menu = false"
-                            hx-post="{% url 'tasks:item_art_remove' workspace_id=workspace.id task_id=task.id item_id=item.id %}" hx-target="#task-modal-body"
-                            hx-confirm="{% translate 'Remove this art from the item? The file stays in the media library.' %}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        {% translate "Remove" %}
-                    </button>
-                    <button type="button" class="thumb-menu-item" @click.stop="menu = false" aria-label="{% translate 'Close' %}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                    {% if item.media_asset.media_type == "image" %}
-                    <button type="button" class="thumb-menu-item"
-                            @click.stop="menu = false; $dispatch('crop-task-art', { url: '{{ item.media_asset.file.url|escapejs }}', cropUrl: '{% url 'tasks:item_art_crop' workspace_id=workspace.id task_id=task.id item_id=item.id %}', width: {{ item.width|default:0 }}, height: {{ item.height|default:0 }}, target: '{{ item.text|escapejs }} · {{ item.width }} × {{ item.height }}' })">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2v14a2 2 0 002 2h14M2 6h14a2 2 0 012 2v14"/></svg>
-                        {% translate "Edit" %}
-                    </button>
-                    {% else %}<span></span>{% endif %}
-                    {% if can_upload %}
-                    {# Replace: picking a file uploads it in place of this art (into the "Tasks" folder). #}
-                    <form class="thumb-menu-item" hx-post="{% url 'tasks:item_deliver' workspace_id=workspace.id task_id=task.id item_id=item.id %}" hx-target="#task-modal-body"
-                          hx-encoding="multipart/form-data" hx-trigger="change" hx-indicator="this">
-                        <label class="w-full h-full flex flex-col items-center justify-center gap-0.5 cursor-pointer" @click.stop>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/><path d="M12 4v12"/><path d="M7 9l5-5 5 5"/></svg>
-                            <span class="task-up-idle">{% translate "Replace" %}</span>
-                            <span class="task-up-busy">{% translate "Uploading…" %}</span>
-                            <input type="file" name="file" accept="image/*,video/*" class="sr-only">
-                        </label>
-                    </form>
-                    {% else %}<span></span>{% endif %}
-                </div>
-                {% endif %}
-            </div>
+            {% include "tasks/partials/_art_thumb.html" with thumb_class="" %}
             <div class="text-[11.5px] leading-tight">
                 <a href="{{ item.media_asset.file.url }}" download class="font-semibold text-neutral-800 hover:text-brand-800">{% translate "Download" %}</a>
                 {% if item.media_asset.width %}<div class="text-neutral-500 tabular-nums">{{ item.media_asset.width }} × {{ item.media_asset.height }}</div>{% endif %}
@@ -156,3 +121,4 @@ Expects: item, task, workspace, can_edit, can_upload.
     </button>
     {% endif %}
 </li>
+{% endif %}

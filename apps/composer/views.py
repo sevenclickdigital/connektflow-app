@@ -103,6 +103,7 @@ from .services import (
     tag_usage,
     template_account_formats,
     template_shelf,
+    template_tags,
     template_text,
     templates_for,
     toggle_template_favorite,
@@ -4062,7 +4063,7 @@ def idea_from_template(request, workspace_id, template_id):
         author=request.user,
         title=template.title[:255],
         description=template_text(template, request.POST.get("variation")),
-        tags=parse_and_truncate_tag_string(str(template.get_category_display())),
+        tags=template_tags(template),
         group=IdeaGroup.objects.for_workspace(workspace.id).order_by("position", "created_at").first(),
         status=Idea.Status.UNASSIGNED,
         icon=icon,
@@ -4141,8 +4142,12 @@ def create_landing(request, workspace_id, tab="ideas"):
             template_categories=[{"slug": slug, "label": label} for slug, label in IdeaTemplate.Category.choices],
         )
     if tab == "dates":
+        from apps.tasks.creative_formats import NETWORKS
+
         date_segments = date_segments_for(workspace)
         context.update(
+            # The networks whose icon the date's "Characteristics" may show.
+            art_networks=[net.key for net in NETWORKS],
             date_segments=date_segments,
             chosen_segment_count=sum(1 for item in date_segments if item["chosen"]),
             special_date_categories=special_date_categories(),
@@ -4249,6 +4254,10 @@ def idea_create(request, workspace_id):
             media_asset_ids.append(str(legacy_asset.id))
 
     media_asset_ids = _normalize_media_asset_ids(media_asset_ids)
+    # Started from a template version's "Create idea": the idea takes the template's briefing
+    # and arts to produce, as idea_from_template gives them, and counts as one of its uses.
+    template_id = request.POST.get("template", "")
+    template = templates_for(workspace).filter(id=template_id).first() if template_id.isdigit() else None
 
     with transaction.atomic():
         idea = Idea.objects.create(
@@ -4257,6 +4266,8 @@ def idea_create(request, workspace_id):
             title=title,
             description=description,
             tags=tags,
+            briefing=template.briefing if template else "",
+            art_items=template.art_items if template else [],
             group=group,
             status=Idea.Status.UNASSIGNED,
             media_asset_id=media_asset_ids[0] if media_asset_ids else None,
@@ -4271,6 +4282,8 @@ def idea_create(request, workspace_id):
         if "channel_formats" in request.POST:
             _set_idea_channel_formats(idea, workspace, parse_channel_formats(request.POST["channel_formats"]))
 
+    if template:
+        record_template_use(workspace, template)
     # Sync any new tags to the Tag model
     _sync_tags_to_model(workspace, tags)
     # An idea started from a special date files the date's tags it kept under

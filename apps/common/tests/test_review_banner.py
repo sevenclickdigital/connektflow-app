@@ -29,7 +29,7 @@ BANNER = "Enjoying Connekt Flow?"
 TRUSTPILOT_URL = "https://www.trustpilot.com/review/brightbean.xyz"
 
 
-@override_settings(LANGUAGE_CODE="en-us")
+@override_settings(LANGUAGE_CODE="en-us", REVIEW_BANNER_ENABLED=True)
 class ReviewBannerTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -70,6 +70,11 @@ class ReviewBannerTests(TestCase):
     def test_unhealthy_channels_do_not_count(self):
         self._connect(self.ws, status=SocialAccount.ConnectionStatus.DISCONNECTED)
         self.assertNotContains(self._workspace_page(), BANNER)
+
+    def test_hidden_while_the_review_ask_is_turned_off(self):
+        self._connect(self.ws)
+        with self.settings(REVIEW_BANNER_ENABLED=False):
+            self.assertNotContains(self._workspace_page(), BANNER)
 
     def test_shown_with_a_connected_channel(self):
         self._connect(self.ws)

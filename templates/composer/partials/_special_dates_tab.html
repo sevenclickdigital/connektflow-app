@@ -18,8 +18,8 @@ translated on the server.
 {{ special_dates_ahead|json_script:"special-dates-data" }}
 {{ special_date_categories|json_script:"special-dates-categories" }}
 
-<div x-data="specialDatesTab()" x-cloak data-general-label="{% translate 'General dates only' %}"
-     data-task-url="{% url 'tasks:board' workspace_id=workspace.id %}">
+<div x-data="specialDatesTab()" x-cloak data-general-label="{% translate 'General dates only' %}" data-no-segment-label="{% translate 'General' context 'a special date of no segment' %}"
+     data-task-url="{% url 'tasks:new_task_window' workspace_id=workspace.id %}">
     {% comment %}
     Filters, all of the same height: search, type, segment and favorites,
     combined. The segment menu lists the segments the brand follows (their
@@ -166,6 +166,7 @@ translated on the server.
                 <template x-for="entry in visible" :key="entry.iso + entry.name">
                     <div class="a-card a-card-hover p-4 flex items-center gap-4 cursor-pointer"
                          :class="isSelected(entry) && 'ring-2 ring-inset ring-brand-300'"
+                         x-init="if (scrollToPicked && isSelected(entry)) { scrollToPicked = false; $nextTick(() => $el.scrollIntoView({ block: 'center' })); }"
                          @click="select(entry)">
                         <div class="w-11 text-center flex-shrink-0">
                             <div class="text-xl font-semibold text-neutral-950 tabular-nums leading-none" x-text="entry.day"></div>
@@ -195,7 +196,7 @@ translated on the server.
         </div>
 
         {# Right: the date picked #}
-        <div class="lg:col-span-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:rounded-xl" style="scrollbar-width: thin;">
+        <div class="lg:col-span-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto" style="scrollbar-width: thin;">
             <template x-if="selected">
                 {# The same panel as the templates': the picture in a rounded box, the kind in its corner. #}
                 <div class="a-card p-4">
@@ -208,6 +209,12 @@ translated on the server.
                             <svg class="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="selected.icon_markup"></svg>
                         </template>
                         <span class="pill absolute top-3 right-3 shadow-sm" :class="pillClass(selected.kind)"><i></i><span x-text="selected.kind_label"></span></span>
+                        <button type="button" class="absolute bottom-3 right-3 w-9 h-9 inline-flex items-center justify-center rounded-lg bg-white text-brand-700 shadow-sm hover:bg-brand-50 cursor-pointer"
+                                @click="toggleFavorite(selected)" :aria-pressed="selected.favorite.toString()"
+                                :title="selected.favorite ? $el.dataset.on : $el.dataset.off" :aria-label="selected.favorite ? $el.dataset.on : $el.dataset.off"
+                                data-off="{% translate 'Save to favorites' %}" data-on="{% translate 'Remove from favorites' %}">
+                            <svg class="w-4 h-4" :fill="selected.favorite ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                        </button>
                     </div>
                     <div class="pt-4">
                         <h2 class="text-xl font-semibold text-neutral-950" x-text="selected.name"></h2>
@@ -219,6 +226,50 @@ translated on the server.
                         </p>
                         <p class="text-sm text-neutral-700 mt-3 leading-relaxed" x-show="selected.description" x-text="selected.description"></p>
 
+                        {# What the date is, as a template's "Characteristics": its kind, segment, and the formats and networks of its arts. #}
+                        <div class="mt-5 pt-5 border-t border-neutral-200">
+                            <h3 class="flex items-center gap-2 text-sm font-semibold text-neutral-950 mb-3">
+                                <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+                                {% translate "Characteristics" %}
+                            </h3>
+                            <ul class="flex flex-col gap-2.5 text-sm text-neutral-800">
+                                <li class="flex items-start gap-2.5">
+                                    <span class="w-6 h-6 rounded-md icon-tone-brand flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01"/></svg></span>
+                                    <span><strong class="font-semibold">{% translate "Type" %}:</strong> <span x-text="selected.kind_label"></span></span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="w-6 h-6 rounded-md icon-tone-brand flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1"/></svg></span>
+                                    <span><strong class="font-semibold">{% translate "Segment" %}:</strong> <span x-text="selected.segment || $el.closest('[data-no-segment-label]').dataset.noSegmentLabel"></span></span>
+                                </li>
+                                <li class="flex items-start gap-2.5" x-show="selected.art_items.length">
+                                    <span class="w-6 h-6 rounded-md icon-tone-brand flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg></span>
+                                    <span><strong class="font-semibold">{% translate "Format" %}:</strong> <span x-text="artFormats(selected).join(', ')"></span></span>
+                                </li>
+                                <li class="flex items-center gap-2.5" x-show="selected.art_items.length">
+                                    <span class="w-6 h-6 rounded-md icon-tone-brand flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span>
+                                    <div class="min-w-0 flex-1 flex flex-wrap items-center gap-1.5">
+                                        <strong class="font-semibold">{% translate "Networks" %}:</strong>
+                                        {# One chip per network, as a template's: its icon and, where it has more than the feed post, its formats' glyphs; its arts in the tooltip. #}
+                                        <template x-for="net in artNetworks(selected)" :key="net.key">
+                                            <span class="inline-flex items-center gap-1 h-6 px-2 rounded-full border border-neutral-200 bg-white text-neutral-600"
+                                                  :title="net.label + ': ' + net.labels.join(', ')" :aria-label="net.label + ': ' + net.labels.join(', ')">
+                                                {% for key in art_networks %}
+                                                <span class="w-3.5 h-3.5 flex items-center justify-center [&>svg]:w-3.5 [&>svg]:h-3.5" x-show="net.key === '{{ key }}'">{% include "partials/_platform_icon.html" with platform=key size="sm" %}</span>
+                                                {% endfor %}
+                                                <template x-for="format in net.formats" :key="format">
+                                                    <span x-show="net.formats.length > 1 || format !== 'default'" class="flex items-center text-brand-700">
+                                                        <span x-show="format === 'default'">{% include "partials/_format_icon.html" with format="default" show_default=True %}</span>
+                                                        <span x-show="format === 'story'">{% include "partials/_format_icon.html" with format="story" %}</span>
+                                                        <span x-show="format === 'reel'">{% include "partials/_format_icon.html" with format="reel" %}</span>
+                                                    </span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
                         <div class="mt-5 pt-5 border-t border-neutral-200" x-show="selected.suggestions.length">
                             <h3 class="flex items-center gap-2 text-sm font-semibold text-neutral-950 mb-3">
                                 <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
@@ -226,28 +277,40 @@ translated on the server.
                             </h3>
                             <ul class="flex flex-col gap-2">
                                 <template x-for="(suggestion, index) in selected.suggestions" :key="suggestion.title">
-                                    <li>
-                                        <button type="button" class="w-full flex items-center gap-3 text-left text-sm text-neutral-800 px-3 py-2.5 rounded-lg bg-brand-50 hover:bg-brand-100 hover:text-brand-900 cursor-pointer transition-colors"
-                                                @click="createIdeaForDate(selected.name + ' · ' + suggestion.title, selected.iso, '', suggestion.brief || selected.description, selected.tags, selected.name)">
-                                            <svg class="w-4 h-4 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="suggestionIcon(index)"></svg>
-                                            <span class="flex-1 min-w-0" x-text="suggestion.title"></span>
-                                            <span class="flex-shrink-0 px-2.5 py-1 rounded-md bg-white text-xs font-semibold text-brand-800 shadow-sm">{% translate "Create idea" %}</span>
+                                    <li class="relative flex items-center gap-3 text-sm text-neutral-800 pl-3 pr-1.5 py-1.5 rounded-lg bg-brand-50" x-data="{ menu: false }">
+                                        <svg class="w-4 h-4 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="suggestionIcon(index)"></svg>
+                                        <span class="flex-1 min-w-0 py-1" x-text="suggestion.title"></span>
+                                        <button type="button" @click="menu = !menu" :aria-expanded="menu.toString()" aria-haspopup="menu"
+                                                class="w-8 h-8 flex-shrink-0 inline-flex items-center justify-center rounded-md text-neutral-500 hover:text-neutral-950 hover:bg-white cursor-pointer" aria-label="{% translate 'More actions' %}">
+                                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
                                         </button>
+                                        <div x-show="menu" x-cloak @click.outside="menu = false" @keydown.escape.window="menu = false" x-transition role="menu"
+                                             class="absolute right-0 top-full mt-1 z-20 w-44 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1">
+                                            <button type="button" role="menuitem" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer"
+                                                    @click="menu = false; createIdeaForDate(selected.name + ' · ' + suggestion.title, selected.iso, '', suggestion.brief || selected.description, selected.tags, selected.name)">{% translate "Create idea" %}</button>
+                                            <button type="button" role="menuitem" @click="menu = false; openTaskWindow(taskUrl(selected, index))" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Create task" %}</button>
+                                        </div>
                                     </li>
                                 </template>
                             </ul>
                         </div>
 
-                        {# The arts a task for the date asks for ("Send as task" below). #}
-                        <div class="mt-5 pt-5 border-t border-neutral-200" x-show="selected.art_items.length">
-                            <h3 class="flex items-center gap-2 text-sm font-semibold text-neutral-950 mb-3">
+                        {% comment %}
+                        The arts a task for the date asks for (each suggestion's "Create task"), folded:
+                        closed on arrival and again whenever another date is picked.
+                        {% endcomment %}
+                        <div class="mt-5 pt-5 border-t border-neutral-200" x-show="selected.art_items.length"
+                             x-data="{ open: false }" x-effect="selected; open = false">
+                            <button type="button" class="w-full flex items-center gap-2 text-left text-sm font-semibold text-neutral-950 cursor-pointer"
+                                    @click="open = !open" :aria-expanded="open.toString()" aria-controls="special-date-arts">
                                 <svg class="w-4 h-4 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                                {% translate "Arts to produce" %}
-                            </h3>
-                            <ul class="flex flex-col gap-1.5">
+                                <span class="flex-1">{% translate "Arts to produce" %} <span class="text-neutral-500 font-medium tabular-nums" x-text="'(' + selected.art_items.reduce((total, item) => total + item.count, 0) + ')'"></span></span>
+                                <svg class="w-4 h-4 text-neutral-500 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                            <ul id="special-date-arts" class="flex flex-col gap-2 mt-3" x-show="open" x-transition.opacity>
                                 <template x-for="item in selected.art_items" :key="item.format">
-                                    <li class="text-sm text-neutral-800">
-                                        <span class="font-medium" x-text="item.count + '× ' + item.label"></span>
+                                    <li class="px-3 py-2 rounded-lg border border-neutral-200 text-sm text-neutral-800">
+                                        <span class="font-medium text-neutral-950" x-text="item.count + '× ' + item.label"></span>
                                         <span class="text-xs text-neutral-500" x-text="item.network + ' · ' + item.size"></span>
                                         <span class="block text-xs text-neutral-600" x-show="item.note" x-text="item.note"></span>
                                     </li>
@@ -275,20 +338,7 @@ translated on the server.
                             <span class="pill pill-brand" x-text="selected.segment"></span>
                         </div>
 
-                        <button type="button" class="btn-brand w-full mt-6" @click="createIdeaForDate(selected.name, selected.iso, '', '', selected.tags, selected.name)">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"/></svg>
-                            {% translate "Create idea with this theme" %}
-                        </button>
-                        {# The task board, with its new task window open and filled from the date. #}
-                        <a :href="taskUrl(selected)" class="btn-soft w-full mt-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                            {% translate "Send as task" %}
-                        </a>
-                        <button type="button" class="btn-ghost w-full mt-2" @click="toggleFavorite(selected)" :aria-pressed="selected.favorite">
-                            <svg class="w-4 h-4" :fill="selected.favorite ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-                            <span x-show="!selected.favorite">{% translate "Save to favorites" %}</span>
-                            <span x-show="selected.favorite">{% translate "Saved to favorites" %}</span>
-                        </button>
+
                     </div>
                 </div>
             </template>
@@ -299,6 +349,13 @@ translated on the server.
 <script nonce="{{ request.csp_nonce }}">
 function specialDatesTab() {
     const dates = JSON.parse(document.getElementById('special-dates-data').textContent) || [];
+    // ?date=<key>&day=<iso> (the dashboard's "See more") opens with that date picked;
+    // the day tells apart the same date repeated inside the 12 months.
+    const params = new URLSearchParams(window.location.search);
+    const asked = params.get('date');
+    const picked = asked
+        ? dates.find(d => d.key === asked && d.iso === params.get('day')) || dates.find(d => d.key === asked)
+        : null;
     return {
         dates,
         // The date kinds (the categories list also carries "segment" and
@@ -311,18 +368,34 @@ function specialDatesTab() {
         segment: '',
         favorites: false,
         query: '',
-        selected: dates[0] || null,
+        selected: picked || dates[0] || null,
+        scrollToPicked: !!picked,
         isSelected(entry) { return this.selected === entry; },
-        // The task board's new task window for a date: the board reads the date by its key
-        // (its name, briefing, arts to produce and tags; tasks.views._board_window).
-        taskUrl(entry) {
-            const params = new URLSearchParams({ new: '1', date: entry.key, day: entry.iso });
-            return this.$root.dataset.taskUrl + '?' + params.toString();
+        // The new task window for one of a date's content suggestions, opened over this page
+        // (tasks:new_task_window reads the date by its key and the suggestion by its index).
+        taskUrl(entry, suggestion) {
+            const params = new URLSearchParams({ new: '1', date: entry.key, day: entry.iso, suggestion });
+            // $el, not $root: the suggestions' menus have an x-data of their own.
+            return this.$el.closest('[data-task-url]').dataset.taskUrl + '?' + params.toString();
         },
         inSegment(entry, segment) {
             if (!segment) return true;
             if (segment === this.GENERAL) return !entry.segment;
             return entry.segment === segment;
+        },
+        // The formats and the networks of a date's arts, each once, in the arts' order.
+        artFormats(entry) { return [...new Set(entry.art_items.map(item => item.label))]; },
+        // Per network: its key and name, its arts' names and their publishing formats (feed,
+        // Story, Reels), each once, as a template's network chips.
+        artNetworks(entry) {
+            const seen = new Map();
+            entry.art_items.forEach(item => {
+                if (!seen.has(item.network_key)) seen.set(item.network_key, { key: item.network_key, label: item.network, labels: [], formats: [] });
+                const net = seen.get(item.network_key);
+                if (!net.labels.includes(item.label)) net.labels.push(item.label);
+                if (['default', 'story', 'reel'].includes(item.publish_format) && !net.formats.includes(item.publish_format)) net.formats.push(item.publish_format);
+            });
+            return [...seen.values()];
         },
         kindLabel(key) { return (this.kinds.find(item => item.key === key) || {}).label || ''; },
         segmentLabel(segment) { return segment === this.GENERAL ? this.$root.dataset.generalLabel : segment; },
