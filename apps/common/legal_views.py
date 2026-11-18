@@ -27,7 +27,7 @@ def contact_email() -> str:
     Keep in step with the Meta app's "Email de contato": App Review compares the
     two, and a mismatch reads as an inconsistent policy.
     """
-    return getattr(settings, "LEGAL_CONTACT_EMAIL", "") or "robison@sevenclick.com.br"
+    return getattr(settings, "LEGAL_CONTACT_EMAIL", "") or "contato@connektflow.com.br"
 
 
 def _context():
