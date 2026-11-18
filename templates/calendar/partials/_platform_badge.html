@@ -1,12 +1,7 @@
 {% comment %}
 Square platform badge in the platform's colour (.cal-pill-icon + .pi-<platform>).
-The shared platform icon draws YouTube as a text label, so its play glyph is drawn here.
 Usage: {% include "calendar/partials/_platform_badge.html" with platform="instagram" size="3" extra_class="" %}
 {% endcomment %}
 <span class="cal-pill-icon pi-{{ platform }} {{ extra_class }}">
-    {% if platform == "youtube" %}
-    <svg class="w-{{ size|default:'3' }} h-{{ size|default:'3' }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
-    {% else %}
     {% include "social_accounts/partials/_platform_icon.html" with platform=platform size=size|default:"3" %}
-    {% endif %}
 </span>

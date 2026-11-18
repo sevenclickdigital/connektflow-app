@@ -56,7 +56,7 @@ this panel.
         <div x-show="slide === {{ forloop.counter0 }}" {% if not forloop.first %}x-cloak{% endif %}>
             <!-- Platform label + char badge -->
             <div class="px-3.5 py-2 border-b flex items-center gap-2" style="border-color: #E5E7EB;">
-                {% if s.account.platform != "youtube" %}{% include "partials/_platform_icon.html" with platform=s.account.platform size="sm" %}{% endif %}
+                {% include "partials/_platform_icon.html" with platform=s.account.platform size="sm" %}
                 <span class="text-[11px] font-semibold text-neutral-600 flex-1 truncate">{% blocktranslate with platform=s.label %}{{ platform }} Preview{% endblocktranslate %}</span>
                 {% if s.format != "story" %}
                 <span class="text-[10px] font-semibold tabular-nums px-2 py-0.5 rounded-full

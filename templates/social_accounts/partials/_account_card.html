@@ -27,11 +27,7 @@ that finds the job finished brings the toast with the result.
     <div class="flex items-start gap-3">
         {% include "social_accounts/partials/_platform_tile.html" with platform=account.platform %}
         <div class="flex-1 min-w-0">
-            {% if account.platform == "youtube" %}
-            <a href="https://www.youtube.com/channel/{{ account.account_platform_id|urlencode }}" target="_blank" rel="noopener noreferrer" class="text-base font-medium text-neutral-950 underline underline-offset-2">YouTube</a>
-            {% else %}
             <h3 class="text-base font-medium text-neutral-950 truncate">{{ account.get_platform_display }}</h3>
-            {% endif %}
             <p class="text-xs text-neutral-600 truncate">{{ account.platform|platform_description }}</p>
             {% with messaging=account.messaging_state %}
             {% if messaging %}

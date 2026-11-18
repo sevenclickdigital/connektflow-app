@@ -26,7 +26,7 @@ locked (format keys ticked and fixed: a task's arts already asked for, which don
                     :aria-selected="tab === '{{ group.network.key }}' ? 'true' : 'false'">
                 <span class="w-5 h-5 flex items-center justify-center flex-shrink-0" aria-hidden="true">
                     {% with platform=group.network.platforms.0 %}
-                    {% if platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=platform size="md" %}{% endif %}
+                    {% include "partials/_platform_icon.html" with platform=platform size="md" %}
                     {% endwith %}
                 </span>
                 <span class="min-w-0 text-left text-sm truncate {% if group.accounts %}font-semibold text-neutral-950{% else %}text-neutral-700{% endif %}">{{ group.network.label }}</span>

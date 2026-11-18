@@ -7,7 +7,7 @@ Context: message, post_preview, workspace.
         <div class="inbox-fact">
             <dt>{% translate "Channel" %}</dt>
             <dd>
-                {% if message.social_account.platform != "youtube" %}{% include "partials/_platform_icon.html" with platform=message.social_account.platform size="sm" %}{% endif %}
+                {% include "partials/_platform_icon.html" with platform=message.social_account.platform size="sm" %}
                 <span class="min-w-0">
                     <span class="block truncate">{% if message.social_account.platform == "youtube" %}YouTube{% else %}{{ message.social_account.get_platform_display }}{% endif %}</span>
                     <span class="block truncate text-xs font-normal text-neutral-500">{{ message.social_account.account_name|default:message.social_account.account_handle }}</span>

@@ -24,11 +24,7 @@ status, sentiment and assignment actions; also the body of message_detail.html.
         {% endif %}
         <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                {% if message.social_account.platform == "youtube" %}
-                <a href="{% if message.extra.video_id %}https://www.youtube.com/watch?v={{ message.extra.video_id|urlencode }}{% else %}https://www.youtube.com/channel/{{ message.social_account.account_platform_id|urlencode }}{% endif %}" target="_blank" rel="noopener noreferrer" class="text-[11px] font-semibold text-neutral-600 underline underline-offset-2">YouTube</a>
-                {% else %}
                 {% include "partials/_platform_icon.html" with platform=message.social_account.platform size="sm" %}
-                {% endif %}
                 <span class="text-base font-semibold text-neutral-950 truncate">{{ message.sender_name }}</span>
                 {% if message.sender_handle %}
                 <span class="text-xs text-neutral-500 truncate">{% if message.social_account.platform == "whatsapp" %}+{% else %}@{% endif %}{{ message.sender_handle }}</span>

@@ -132,7 +132,7 @@
                             <div class="flex items-start gap-2">
                                 <div class="relative flex-shrink-0">
                                     {% if card.sender_avatar_url %}<img src="{{ card.sender_avatar_url }}" alt="" class="w-8 h-8 rounded-full object-cover">{% else %}<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-neutral-600" style="background: var(--surface-2);">{{ card.sender_name|make_list|first|upper }}</div>{% endif %}
-                                    {% if card.social_account.platform != "youtube" %}<span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=card.social_account.platform size="sm" %}</span>{% endif %}
+                                    <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=card.social_account.platform size="sm" %}</span>
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <p class="text-[13px] font-semibold text-neutral-900 truncate">{{ card.sender_name }}</p>

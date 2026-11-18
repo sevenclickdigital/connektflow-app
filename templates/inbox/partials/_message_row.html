@@ -19,11 +19,9 @@ all and thread_unread of them unread (inbox_feed).
             {{ message.sender_name|make_list|first|upper }}
         </div>
         {% endif %}
-        {% if message.social_account.platform != "youtube" %}
         <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white flex items-center justify-center ring-1 ring-neutral-100">
             {% include "partials/_platform_icon.html" with platform=message.social_account.platform size="sm" %}
         </span>
-        {% endif %}
         <label class="inbox-row-check absolute -top-1 -left-1 w-5 h-5 rounded-md bg-white ring-1 ring-neutral-300 flex items-center justify-center cursor-pointer"
                :class="isSelected('{{ message.id }}') && 'is-checked'" @click.stop>
             <span class="sr-only">{% translate "Select" %}</span>

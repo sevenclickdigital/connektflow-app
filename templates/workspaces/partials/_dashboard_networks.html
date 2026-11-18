@@ -16,7 +16,7 @@ account's analytics, so the dashboard shows first and this row loads after
                 {% else %}
                 <div class="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center font-bold text-neutral-600">{{ card.account.account_name|make_list|first|upper }}</div>
                 {% endif %}
-                <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">{% if card.account.platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=card.account.platform size="sm" %}{% endif %}</div>
+                <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=card.account.platform size="sm" %}</div>
             </div>
             <span class="text-sm font-semibold text-neutral-950 truncate">{{ card.account.account_name }}</span>
         </div>
