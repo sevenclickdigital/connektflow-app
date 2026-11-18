@@ -73,7 +73,7 @@ ADSET_FIELDS = (
     "id,name,status,effective_status,daily_budget,lifetime_budget,start_time,end_time,"
     "optimization_goal,billing_event,targeting,promoted_object"
 )
-AD_FIELDS = "id,name,status,effective_status,creative{id,name,thumbnail_url}"
+AD_FIELDS = "id,name,status,effective_status,preview_shareable_link,creative{id,name,thumbnail_url}"
 INSIGHT_FIELDS = (
     "impressions,reach,frequency,clicks,inline_link_clicks,spend,ctr,cpc,cpm,actions,action_values,purchase_roas"
 )

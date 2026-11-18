@@ -310,12 +310,23 @@ class TestTrends:
         assert services.compare(now, before, "spend") == services.Change(100.0, "neutral")
         assert services.compare(_row(ctr=Decimal(1)), _row(ctr=Decimal(2)), "ctr") == services.Change(-50.0, "bad")
 
-    def test_nothing_to_compare_with_gives_no_change(self):
-        assert services.compare(_row(cpc=Decimal(1)), _row(), "cpc") is None
+    def test_a_number_the_previous_window_did_not_have_still_gets_a_neutral_change(self):
+        assert services.compare(_row(roas=Decimal(2)), _row(), "roas") == services.Change(100.0, "neutral", True)
+        assert services.compare(_row(purchases=0), _row(purchases=0), "purchases") == services.Change(
+            0.0, "neutral", True
+        )
+
+    def test_no_value_now_gives_no_change(self):
         assert (
             services.compare(_row(leads=0, spend=Decimal(10)), _row(leads=2, spend=Decimal(10)), "cost_per_lead")
             is None
         )
+        assert services.compare(_row(), _row(roas=Decimal(3)), "roas") is None
+
+    def test_only_an_https_preview_link_reaches_the_page(self):
+        assert services._https_url("https://fb.me/adspreview/abc") == "https://fb.me/adspreview/abc"
+        assert services._https_url("javascript:alert(1)") == ""
+        assert services._https_url(None) == ""
 
     def test_the_previous_window_ends_the_day_before_the_current_one_starts(self):
         since, _until = services.date_window(7)

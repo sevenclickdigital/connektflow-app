@@ -385,10 +385,15 @@ KEY_METRIC_SHORT_LABELS = {
 
 @dataclass(frozen=True)
 class Change:
-    """How a number moved against the previous window: ``delta`` in %, ``tone`` good/bad/neutral."""
+    """How a number moved against the previous window: ``delta`` in %, ``tone`` good/bad/neutral.
+
+    ``from_nothing``: the previous window had no such number (no purchases, no
+    clicks), so any value now reads as +100% and is not judged good or bad.
+    """
 
     delta: float
     tone: str
+    from_nothing: bool = False
 
 
 def metric_value(insights: meta_ads.Insights, key: str) -> Decimal | None:
@@ -399,10 +404,12 @@ def metric_value(insights: meta_ads.Insights, key: str) -> Decimal | None:
 
 
 def compare(current: meta_ads.Insights, previous: meta_ads.Insights, key: str) -> Change | None:
-    """The change of ``key`` between the two windows; None when the previous one has nothing to compare."""
+    """The change of ``key`` between the two windows; None only when there is no value now."""
     now, before = metric_value(current, key), metric_value(previous, key)
-    if now is None or not before:
+    if now is None:
         return None
+    if not before:
+        return Change(100.0 if now else 0.0, "neutral", from_nothing=True)
     delta = round(float((now - before) / before * 100), 1)
     better = BETTER[key]
     if not delta or better is None:
@@ -550,6 +557,8 @@ def campaign_detail(connection: AdsConnection, campaign_id: str, *, days: int = 
                 "status_label": label,
                 "status_tone": tone,
                 "thumbnail_url": creative.get("thumbnail_url") or "",
+                # Meta's preview page: the ad as people see it, in each placement.
+                "preview_url": _https_url(row.get("preview_shareable_link")),
             }
         )
     since, until = date_window(days)
@@ -569,6 +578,12 @@ def campaign_detail(connection: AdsConnection, campaign_id: str, *, days: int = 
         "series": daily_series(daily, since, until),
         "breakdowns": campaign_breakdowns(connection, campaign, ads, days=days),
     }
+
+
+def _https_url(value) -> str:
+    """``value`` when it is an https link, else "": it goes into an href."""
+    value = str(value or "")
+    return value if value.startswith("https://") else ""
 
 
 def _first(rows: list[meta_ads.Insights]) -> meta_ads.Insights:
@@ -624,8 +639,8 @@ class BreakdownRow:
     insights: meta_ads.Insights
     key_value: Decimal | None = None
     is_best: bool = False
-    detail: str = ""
     thumbnail_url: str = ""
+    preview_url: str = ""
 
 
 def _placement_label(extra: dict) -> str:
@@ -665,15 +680,18 @@ def campaign_breakdowns(connection: AdsConnection, campaign: Campaign, ads: list
     def rows(**kwargs) -> list[meta_ads.Insights]:
         return _call(connection, meta_ads.MetaAdsClient.insights, campaign.id, since=since, until=until, **kwargs)
 
-    thumbnails = {str(ad["id"]): ad.get("thumbnail_url", "") for ad in ads}
-    per_ad = [
-        BreakdownRow(
-            label=row.extra.get("ad_name", ""),
-            insights=row,
-            thumbnail_url=thumbnails.get(row.extra.get("ad_id", ""), ""),
+    by_id = {str(ad["id"]): ad for ad in ads}
+    per_ad = []
+    for row in rows(level="ad"):
+        ad = by_id.get(row.extra.get("ad_id", ""), {})
+        per_ad.append(
+            BreakdownRow(
+                label=row.extra.get("ad_name", ""),
+                insights=row,
+                thumbnail_url=ad.get("thumbnail_url", ""),
+                preview_url=ad.get("preview_url", ""),
+            )
         )
-        for row in rows(level="ad")
-    ]
     audience = [BreakdownRow(label=_audience_label(row.extra), insights=row) for row in rows(breakdowns="age,gender")]
     placements = [
         BreakdownRow(label=_placement_label(row.extra), insights=row)
@@ -684,6 +702,7 @@ def campaign_breakdowns(connection: AdsConnection, campaign: Campaign, ads: list
     return {
         "key_metric": key,
         "key_metric_label": str(KEY_METRIC_LABELS[key]),
+        "key_metric_short": str(KEY_METRIC_SHORT_LABELS[key]),
         "ads": _rank(per_ad, key, total),
         "audience": _rank(audience, key, total),
         "placements": _rank(placements, key, total),

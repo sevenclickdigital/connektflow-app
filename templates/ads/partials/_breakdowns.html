@@ -27,7 +27,7 @@ and its placements, each ranked by the campaign's own metric
                     <th class="px-4 py-3 font-semibold text-right">{% translate "Impressions" %}</th>
                     <th class="px-4 py-3 font-semibold text-right">{% translate "CTR" %}</th>
                     <th class="px-4 py-3 font-semibold text-right">{% if key == "roas" %}{% translate "Purchases" %}{% elif key == "cost_per_lead" %}{% translate "Leads" %}{% else %}{% translate "Link clicks" %}{% endif %}</th>
-                    <th class="px-4 py-3 font-semibold text-right">{{ breakdowns.key_metric_label }}</th>
+                    <th class="px-4 py-3 font-semibold text-right" title="{{ breakdowns.key_metric_label }}">{{ breakdowns.key_metric_short }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -36,7 +36,8 @@ and its placements, each ranked by the campaign's own metric
                     <td class="px-4 py-3">
                         <span class="flex items-center gap-3 min-w-0">
                             {% if name == "ads" %}{% if row.thumbnail_url %}<img src="{{ row.thumbnail_url }}" alt="" class="w-9 h-9 rounded-md object-cover flex-shrink-0" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="w-9 h-9 rounded-md bg-neutral-100 flex-shrink-0" aria-hidden="true"></span>{% endif %}{% endif %}
-                            <span class="font-semibold text-neutral-950 truncate">{{ row.label|default:"—" }}</span>
+                            {% if row.preview_url %}<a href="{{ row.preview_url }}" target="_blank" rel="noopener noreferrer" title="{% blocktranslate with name=row.label %}{{ name }} — see how people see this ad, on Meta{% endblocktranslate %}" class="font-semibold text-neutral-950 hover:text-brand-700 whitespace-nowrap">{{ row.label|truncatechars:40 }}</a>
+                            {% else %}<span title="{{ row.label }}" class="font-semibold text-neutral-950 whitespace-nowrap">{{ row.label|default:"—"|truncatechars:40 }}</span>{% endif %}
                             {% if row.is_best %}<span class="pill pill-success flex-shrink-0"><i></i>{% translate "Best" %}</span>{% endif %}
                         </span>
                     </td>
