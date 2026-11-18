@@ -109,12 +109,20 @@ data-category and data-name on each card: the whole page is already here.
             </div>
         </div>
         {% endif %}
-        {% if meta_ads.connection %}
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-4">
+    </section>
+
+    <!-- Connected ad accounts -->
+    {% if meta_ads.connection %}
+    <section x-show="tab !== 'available'" class="mb-8">
+        <h2 class="section-title">
+            <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8v18l-18-8z"/><path d="M7 12.5V18a2 2 0 004 0v-3.5"/></svg>
+            {% translate "Ad accounts" %}
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {% include "social_accounts/partials/_meta_ads_card.html" %}
         </div>
-        {% endif %}
     </section>
+    {% endif %}
 
     <!-- Platforms left to connect -->
     {% if available_platforms %}
