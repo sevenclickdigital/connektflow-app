@@ -383,7 +383,7 @@ def test_favourites_are_per_workspace(workspace, shopee):
     page = intruder.get(_url("shopee_favorites", other))
 
     assert b"Product 5" not in page.content
-    assert intruder.post(_url("offer_art_request", other), {"prefill": "1", "item_id": "5"}).status_code == 204
+    assert intruder.post(_url("offer_task", other), {"prefill": "1", "item_id": "5"}).status_code == 204
     assert not Task.objects.exists()
 
 
@@ -394,21 +394,21 @@ def _fake_image(self, url):
     return buffer.getvalue(), "image/png"
 
 
-def test_create_task_opens_the_art_request_filled_from_the_offer(workspace, owner, shopee):
+def test_create_task_opens_the_task_window_filled_from_the_offer(workspace, owner, shopee):
     _list(shopee, [_offer(21)])
 
     response = _client(owner).post(
-        _url("offer_art_request", workspace),
+        _url("offer_task", workspace),
         {"prefill": "1", "item_id": "21", "caption": "Look at this"},
         HTTP_HX_REQUEST="true",
     )
 
     body = response.content.decode()
-    assert response.status_code == 200
-    assert 'value="Arts: Product 21"' in body
+    assert response.status_code == 200 and "data-standalone" in body
+    assert 'value="Post offer: Product 21"' in body
     assert "Look at this</textarea>" in body
     assert "https://s.shopee.com.br/21" in body
-    assert f'action="{_url("offer_art_request", workspace)}"' in body
+    assert f'hx-post="{_url("offer_task", workspace)}"' in body
     assert 'name="item_id" value="21"' in body
     assert not Task.objects.exists()
 
@@ -417,11 +417,13 @@ def test_art_request_from_an_offer_has_the_formats_the_image_and_a_draft_post(wo
     _list(shopee, [_offer(21)])
     with patch("apps.radar.services.ShopeeAffiliateClient.download_image", _fake_image):
         response = _client(owner).post(
-            _url("offer_art_request", workspace),
+            _url("offer_task", workspace),
             {
                 "item_id": "21",
-                "title": "Arts: Product 21",
+                "title": "Post offer: Product 21",
+                "request_art": "1",
                 "briefing": "Brief",
+                "make_post": "1",
                 "post_caption": "Look at this",
                 "formats": ["ig_feed_portrait", "ig_story"],
             },
@@ -429,7 +431,7 @@ def test_art_request_from_an_offer_has_the_formats_the_image_and_a_draft_post(wo
         )
 
     task = Task.objects.get(workspace=workspace)
-    assert response["HX-Redirect"] == reverse("tasks:board", kwargs={"workspace_id": workspace.id}) + f"?task={task.pk}"
+    assert "taskCreated" in response["HX-Trigger"]
     assert task.post_caption == "Look at this"
     assert task.briefing == "Brief"
     assert task.post.caption == "Look at this"
@@ -441,15 +443,26 @@ def test_art_request_from_an_offer_has_the_formats_the_image_and_a_draft_post(wo
     assert items[-1].media_asset_id == media.media_asset_id
 
 
+def test_a_plain_task_from_an_offer_keeps_the_image_and_the_offer_text(workspace, owner, shopee):
+    _list(shopee, [_offer(22)])
+    with patch("apps.radar.services.ShopeeAffiliateClient.download_image", _fake_image):
+        _client(owner).post(
+            _url("offer_task", workspace), {"item_id": "22", "title": "Post it"}, HTTP_HX_REQUEST="true"
+        )
+
+    task = Task.objects.get(workspace=workspace)
+    assert "https://s.shopee.com.br/22" in task.post.caption
+    assert task.checklist.get().media_asset_id is not None
+
+
 def test_art_request_from_an_offer_needs_a_format(workspace, owner, shopee):
     _list(shopee, [_offer(21)])
 
     response = _client(owner).post(
-        _url("offer_art_request", workspace), {"item_id": "21", "title": "Arts"}, HTTP_HX_REQUEST="true"
+        _url("offer_task", workspace), {"item_id": "21", "title": "Arts", "request_art": "1"}, HTTP_HX_REQUEST="true"
     )
 
-    assert response.status_code == 200
-    assert b"Choose at least one format." in response.content
+    assert "Choose at least one format." in response["HX-Trigger"]
     assert not Task.objects.exists()
 
 
@@ -486,7 +499,7 @@ def test_viewers_cannot_create_tasks_or_posts(workspace, shopee):
     _list(shopee, [_offer(41)])
     viewer = _client(_user("viewer@example.com", workspace, Role.VIEWER))
 
-    assert viewer.post(_url("offer_art_request", workspace), {"prefill": "1", "item_id": "41"}).status_code == 403
+    assert viewer.post(_url("offer_task", workspace), {"prefill": "1", "item_id": "41"}).status_code == 403
     assert viewer.post(_url("offer_post", workspace), {"item_id": "41"}).status_code == 403
     assert viewer.post(_url("offer_favorite", workspace), {"item_id": "41"}).status_code == 403
 

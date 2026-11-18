@@ -15,7 +15,8 @@ composer/partials/_ideas_hero.html.
      data-version-label="{% translate 'Version {n}' %}"
      data-compose-url="{% url 'composer:compose' workspace_id=workspace.id %}"
      data-idea-url="{% url 'composer:idea_from_template' workspace_id=workspace.id template_id=999999999 %}"
-     data-favorite-url="{% url 'composer:template_favorite_toggle' workspace_id=workspace.id template_id=999999999 %}">
+     data-favorite-url="{% url 'composer:template_favorite_toggle' workspace_id=workspace.id template_id=999999999 %}"
+     data-task-url="{% url 'tasks:task_window' workspace_id=workspace.id %}">
 
     {% comment %}
     Filters in the special dates' style: search, a Category menu with the
@@ -363,6 +364,11 @@ composer/partials/_ideas_hero.html.
                                 {% translate "Add to my ideas" %}
                             </button>
                         </form>
+                        {# The task board's new task window, filled from the template (create_landing's task window host). #}
+                        <button type="button" class="btn-soft w-full" @click="$dispatch('open-task-window', { url: taskUrl() })">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                            {% translate "Send as task" %}
+                        </button>
                         <button type="button" class="btn-ghost w-full" @click="toggleFavorite(selected.id)" :aria-pressed="isFavorite(selected.id).toString()">
                             <svg class="w-4 h-4" :fill="isFavorite(selected.id) ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
                             <span x-show="!isFavorite(selected.id)">{% translate "Save to favorites" %}</span>
@@ -414,6 +420,9 @@ function templateShelf() {
             return base + '?template=' + this.selectedId + (this.variation ? '&variation=' + this.variation : '');
         },
         ideaUrl() { return this.$root.dataset.ideaUrl.replace(PLACEHOLDER, this.selectedId); },
+        taskUrl() {
+            return this.$root.dataset.taskUrl + '?template=' + this.selectedId + (this.variation ? '&variation=' + this.variation : '');
+        },
         toggleFavorite(id) {
             fetch(this.$root.dataset.favoriteUrl.replace(PLACEHOLDER, id), {
                 method: 'POST',

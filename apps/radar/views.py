@@ -11,7 +11,6 @@ from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.dateparse import parse_date
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from django_ratelimit.decorators import ratelimit
@@ -20,7 +19,6 @@ from apps.billing.storage_usage import WorkspaceStorageExceededError
 from apps.common.htmx import toast_response
 from apps.media_library.quotas import StorageQuotaExceededError
 from apps.members.decorators import require_permission
-from apps.tasks import creative_formats
 from providers.exceptions import OAuthError, ProviderError
 
 from . import instagram as ig_research
@@ -274,15 +272,15 @@ def offer_favorite(request, workspace_id):
 @require_permission("create_posts")
 @ratelimit(key="user", rate="30/m", method="POST", block=True)
 @require_POST
-def offer_art_request(request, workspace_id):
-    """ "Create task" from the share dialog: the board's art request form, filled from the offer.
+def offer_task(request, workspace_id):
+    """ "Create task" from the share dialog: the board's new task window, filled from the offer.
 
-    Opened with ``prefill=1`` (and the dialog's text as ``caption``) it answers
-    the form; submitted, it creates the art request task with the product image
-    and a draft post attached, then sends the user to the task on the board.
+    Opened with ``prefill=1`` (and the dialog's text as ``caption``) it answers the window
+    (tasks.views.render_task_window), which posts back here; submitted, it creates the task
+    with the product image and a draft post attached, like the board's window would.
     """
     from apps.tasks import services as task_services
-    from apps.tasks.views import render_art_request_form
+    from apps.tasks.views import parse_task_post, render_task_window
 
     connection = _shopee_connection(request)
     item_id = _item_id(request)
@@ -293,66 +291,35 @@ def offer_art_request(request, workspace_id):
     except services.OfferUnavailableError:
         return _offer_gone()
 
-    def form_response(form, *, selected=(), chosen_assignees=None, error=""):
-        return render_art_request_form(
+    if request.POST.get("prefill"):
+        prefill = task_services.material_prefill(
+            request.workspace,
+            title=_("Post offer: %(name)s") % {"name": offer.name},
+            briefing=services.offer_brief(offer),
+            post_caption=_caption(request, offer),
+        )
+        return render_task_window(
             request,
-            form=form,
-            selected=selected,
-            chosen_assignees=chosen_assignees,
-            error=error,
-            action_url=reverse("radar:offer_art_request", kwargs={"workspace_id": workspace_id}),
+            prefill,
+            action_url=reverse("radar:offer_task", kwargs={"workspace_id": workspace_id}),
             hidden={"item_id": item_id},
             source_note=_("From the Shopee offer “%(name)s”") % {"name": offer.name},
         )
 
-    if request.POST.get("prefill"):
-        return form_response(
-            {
-                "title": (_("Arts: %(title)s") % {"title": offer.name})[:255],
-                "briefing": services.offer_brief(offer),
-                "post_caption": _caption(request, offer),
-                "due_date": "",
-            }
-        )
-
-    format_keys = request.POST.getlist("formats")
-    title = request.POST.get("title", "").strip()
-    form = {
-        "title": title,
-        "briefing": request.POST.get("briefing", ""),
-        "post_caption": request.POST.get("post_caption", ""),
-        "due_date": request.POST.get("due_date", ""),
-        "extra_items": request.POST.getlist("extra_items"),
-    }
-    chosen = set(request.POST.getlist("assignees"))
-    error = ""
-    if not title:
-        error = _("Give the request a title.")
-    elif not any(creative_formats.get(k) for k in format_keys):
-        error = _("Choose at least one format.")
+    fields, art, error = parse_task_post(request)
     if error:
-        return form_response(form, selected=format_keys, chosen_assignees=chosen, error=error)
-
+        return toast_response(tone="error", title=error)
+    caption = fields["post_caption"][:MAX_CAPTION_LENGTH] or services.share_texts(offer)["direct"]
     try:
-        task = services.create_offer_task(
-            connection,
-            offer,
-            form["post_caption"].strip()[:MAX_CAPTION_LENGTH],
-            request.user,
-            title=title,
-            description=form["briefing"].strip(),
-            format_keys=format_keys,
-            assignees=task_services.resolve_assignees(request.workspace, list(chosen)),
-            due_date=parse_date(form["due_date"]) or None,
-            extra_items=request.POST.getlist("extra_items"),
-        )
+        services.create_offer_task(connection, offer, caption, request.user, art=art, **fields)
     except _IMAGE_ERRORS as exc:
         title_msg, body = _image_error(exc, workspace_id)
-        return form_response(form, selected=format_keys, chosen_assignees=chosen, error=f"{title_msg}. {body}")
-
-    messages.success(request, _("Task created with the product image and a draft post."))
-    board = reverse("tasks:board", kwargs={"workspace_id": workspace_id})
-    return HttpResponse(headers={"HX-Redirect": f"{board}?task={task.pk}"})
+        return toast_response(tone="error", title=title_msg, body=body)
+    return toast_response(
+        tone="success",
+        title=_("Task created with the product image and a draft post."),
+        events={"tasksChanged": True, "taskCreated": True},
+    )
 
 
 @login_required

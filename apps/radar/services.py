@@ -459,52 +459,30 @@ def create_offer_task(
     caption: str,
     user,
     *,
-    title: str = "",
-    description: str | None = None,
-    format_keys=(),
-    assignees=(),
-    due_date=None,
-    extra_items=(),
+    art: dict | None = None,
+    **fields,
 ):
-    """A task to post the offer.
+    """A task to post the offer, from the new task window's ``fields``
+    (``apps.tasks.views.parse_task_post``).
 
-    With ``format_keys`` it is an art request (one checklist item per format,
-    ``apps.tasks.services.request_arts``), whose briefing is ``description``; either way the product image is
-    copied to the media library once and used twice: as a checklist item to
-    work from, and in the draft post attached to the task.
+    With ``art`` (its formats, briefing and references) it is an art request
+    (``apps.tasks.services.request_arts``); either way the product image is copied to the
+    media library once and used twice: as a checklist item to work from, and in the
+    draft post attached to the task, which goes out with ``caption``.
     """
     from apps.tasks.models import TaskChecklistItem
     from apps.tasks.services import create_task, request_arts
 
     asset = import_offer_image(connection, offer, user)
     post = create_offer_post(connection, offer, caption, user, asset=asset)
-    title = title or _("Post offer: %(name)s") % {"name": offer.name}
-    description = offer_brief(offer) if description is None else description
+    fields["title"] = fields.get("title") or _("Post offer: %(name)s") % {"name": offer.name}
+    fields["post_caption"] = caption
     image_item = {"text": _("Product image (copy in the media library)")[:255], "media_asset": asset}
-    if format_keys:
-        task = request_arts(
-            connection.workspace,
-            user,
-            title=title,
-            format_keys=format_keys,
-            briefing=description,
-            post_caption=caption,
-            assignees=assignees,
-            due_date=due_date,
-            extra_items=extra_items,
-        )
+    if art:
+        task = request_arts(connection.workspace, user, **art, **fields)
         TaskChecklistItem.objects.create(task=task, position=task.checklist.count(), **image_item)
     else:
-        task = create_task(
-            connection.workspace,
-            user,
-            title=title,
-            description=description,
-            post_caption=caption,
-            assignees=list(assignees),
-            due_date=due_date,
-            items=[image_item],
-        )
+        task = create_task(connection.workspace, user, items=[image_item], **fields)
     task.post = post
     task.save(update_fields=["post", "updated_at"])
     return task

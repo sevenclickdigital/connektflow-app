@@ -141,13 +141,4 @@ Styles of the task board, its card and the art request form. Included once per p
     .art-ratio { display: inline-flex; align-items: center; padding: 0 7px; border-radius: 9999px; font-size: 11px; font-weight: 600; line-height: 18px; background: var(--brand-50); color: var(--neutral-700); font-variant-numeric: tabular-nums; }
     .art-tick { position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; border-radius: 9999px; border: 2px solid var(--neutral-400); background: white; display: flex; align-items: center; justify-content: center; color: white; }
     .art-format:has(input:checked) .art-tick { background: var(--brand-700); border-color: var(--brand-700); }
-    .art-request-grid { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr auto; }
-    /* The form's foot spans both columns (grid-column) and stays at the bottom while the form scrolls. */
-    .art-request-footer { grid-column: 1 / -1; position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; background: white; border-top: 1px solid var(--neutral-200); }
-    .art-checklist { padding: 12px; border-radius: 12px; border: 1px solid var(--neutral-200); background: white; }
-    .art-request-side { background: #FAFAFF; border-top: 1px solid #F5F3FF; }
-    @media (min-width: 1024px) {
-        .art-request-grid { grid-template-columns: minmax(0, 1fr) 360px; }
-        .art-request-side { border-top: 0; border-left: 1px solid #F5F3FF; border-radius: 0 16px 16px 0; }
-    }
 </style>

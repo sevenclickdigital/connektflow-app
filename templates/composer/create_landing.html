@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static i18n %}
+{% load static i18n task_window_tags %}
 
 {% block title %}{% translate "Create" %} - {{ workspace.name }} - Connekt Flow{% endblock %}
 
@@ -210,7 +210,8 @@
 {{ idea_icons|json_script:"idea-icons-data" }}
 <div x-data="kanbanBoard()" class="-m-6 flex-grow flex flex-col"
      @tag-deleted.window="forgetTag($event.detail.name, $event.detail.used)"
-     @media-picked.camel.window="addPickedMedia($event.detail.assets)">
+     @media-picked.camel.window="addPickedMedia($event.detail.assets)"
+     @open-reference-picker.window="openIdeaMediaPicker('task')" @open-tag-groups.window="openTagGroups()">
 
     {% comment %}
     Ideas, Templates and Special dates are three pages of the same area: each
@@ -792,9 +793,9 @@
                         {% translate "Delete" %}
                     </button>
                     <button type="button"
-                            @click="const url = '{% url 'tasks:request_arts' workspace_id=workspace.id %}?idea=' + editingIdea.id; editingIdea = null; $dispatch('open-art-request', { url: url })"
+                            @click="const url = '{% url 'tasks:task_window' workspace_id=workspace.id %}?idea=' + editingIdea.id; editingIdea = null; $dispatch('open-task-window', { url: url })"
                             class="btn-ghost px-4 py-2">
-                        {% translate "Request arts" %}
+                        {% translate "Send as task" %}
                     </button>
                     <button type="button" @click="createPostFromIdea($event, 'edit')"
                             :disabled="editMediaUploadCount > 0 || isEditSaving"
@@ -911,8 +912,14 @@
         </div>
     </template>
 
+    {% comment %}
+    "Send as task" (an idea, a template, a special date): the task board's new task
+    window, filled from it. Inside this component: the reference photos open this
+    page's media library ("open-reference-picker", target "task") and the tag groups
+    its own window.
+    {% endcomment %}
+    {% task_window_host own_picker=False own_tags=False %}
 </div>
-{% include "tasks/partials/_request_arts_host.html" %}
 {% endblock %}
 
 {% block extra_js %}
@@ -1399,6 +1406,8 @@ function kanbanBoard() {
 
         // Files chosen (or uploaded) in the media library window.
         addPickedMedia(assets) {
+            // Reference photos for the task window: its own listener takes them.
+            if (this.mediaPickerTarget === 'task') return;
             for (var i = 0; i < (assets || []).length; i += 1) {
                 this._appendUploadedMedia(this.mediaPickerTarget, assets[i], null);
             }

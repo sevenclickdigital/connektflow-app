@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import io
 import json
-from datetime import date, timedelta
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -14,7 +13,7 @@ from django.utils import timezone
 from PIL import Image
 
 from apps.accounts.models import User
-from apps.composer.models import Idea, PlatformPost
+from apps.composer.models import PlatformPost
 from apps.media_library.services import _fk_referenced_asset_ids
 from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.notifications.models import EventType, Notification
@@ -86,10 +85,6 @@ def _connect(workspace, platform, name):
     )
 
 
-def _request_url(workspace):
-    return reverse("tasks:request_arts", kwargs={"workspace_id": workspace.id})
-
-
 def _deliver(client, task, item, upload):
     return client.post(
         reverse(
@@ -100,47 +95,6 @@ def _deliver(client, task, item, upload):
     )
 
 
-def test_requesting_arts_makes_one_task_with_an_item_per_format(workspace, owner, designer):
-    idea = Idea.objects.create(workspace=workspace, title="Mother's Day", target_date=date(2026, 5, 10))
-
-    response = _client(owner).post(
-        _request_url(workspace),
-        {
-            "idea": idea.id,
-            "title": "Arts: Mother's Day",
-            "formats": ["ig_story", "ig_feed_portrait", "not_a_format"],
-            "assignees": [str(designer.pk)],
-        },
-    )
-
-    task = Task.objects.get()
-    assert response.status_code == 302 and str(task.pk) in response["Location"]
-    assert task.idea == idea
-    assert list(task.assignees.all()) == [designer]
-    # Catalogue order, not click order; unknown keys dropped.
-    assert [(i.text, i.width, i.height) for i in task.checklist.all()] == [
-        ("Portrait post", 1080, 1350),
-        ("Story", 1080, 1920),
-    ]
-
-
-def test_the_form_dates_the_arts_before_the_content(workspace, owner):
-    target = timezone.localdate() + timedelta(days=20)
-    idea = Idea.objects.create(workspace=workspace, title="Launch", target_date=target)
-
-    body = _client(owner).get(_request_url(workspace), {"idea": idea.id}).content.decode()
-
-    assert (target - timedelta(days=3)).isoformat() in body
-    assert "Arts: Launch" in body
-
-
-def test_a_request_without_formats_is_refused(workspace, owner):
-    response = _client(owner).post(_request_url(workspace), {"title": "Nothing", "formats": []})
-
-    assert response.status_code == 400
-    assert not Task.objects.exists()
-
-
 def test_the_default_art_assignee_is_used_when_nobody_is_picked(workspace, owner, designer):
     settings_row = services.art_settings(workspace)
     settings_row.art_assignee = designer
@@ -149,13 +103,6 @@ def test_the_default_art_assignee_is_used_when_nobody_is_picked(workspace, owner
     task = services.request_arts(workspace, owner, title="Arts", format_keys=["fb_cover"])
 
     assert list(task.assignees.all()) == [designer]
-
-
-def test_an_idea_of_another_workspace_cannot_be_used(workspace, owner):
-    other = Workspace.objects.create(organization=workspace.organization, name="Other")
-    idea = Idea.objects.create(workspace=other, title="Theirs")
-
-    assert _client(owner).get(_request_url(workspace), {"idea": idea.id}).status_code == 404
 
 
 def test_delivering_every_art_leaves_the_review_to_the_button_which_tells_the_author(workspace, owner, designer):
@@ -258,20 +205,6 @@ def test_no_post_without_a_publishable_delivered_art(workspace, owner):
     assert task.post is None
 
 
-def test_the_modal_gets_the_form_and_a_redirect_to_the_new_task(workspace, owner):
-    _connect(workspace, "instagram", "Insta")
-    client = _client(owner)
-
-    form = client.get(_request_url(workspace), HTTP_HX_REQUEST="true").content.decode()
-    invalid = client.post(_request_url(workspace), {"title": "Arts"}, HTTP_HX_REQUEST="true")
-    created = client.post(_request_url(workspace), {"title": "Arts", "formats": ["ig_story"]}, HTTP_HX_REQUEST="true")
-
-    assert "<html" not in form and "art-channel" in form and "Insta" in form
-    assert invalid.status_code == 200 and "Choose at least one format." in invalid.content.decode()
-    task = Task.objects.get()
-    assert created.status_code == 204 and created["HX-Redirect"].endswith(f"?task={task.pk}")
-
-
 def test_the_post_uses_the_caption_never_the_briefing(workspace, owner):
     _connect(workspace, "instagram", "Insta")
     task = services.request_arts(
@@ -287,33 +220,6 @@ def test_the_post_uses_the_caption_never_the_briefing(workspace, owner):
     post = services.create_post_from_task(task, owner)
 
     assert post.caption == "Our new collection is here!"
-
-
-def test_an_ideas_text_becomes_the_caption_not_the_briefing(workspace, owner):
-    idea = Idea.objects.create(workspace=workspace, title="Launch", description="Launch caption")
-
-    body = _client(owner).get(_request_url(workspace), {"idea": idea.id}, HTTP_HX_REQUEST="true").content.decode()
-
-    briefing = body.split('name="briefing"')[1].split("</textarea>")[0]
-    caption = body.split('name="post_caption"')[1].split("</textarea>")[0]
-    assert "Launch caption" in caption
-    assert "Launch caption" not in briefing
-
-
-def test_every_channel_on_offer_is_listed_and_hidden_ones_are_not(workspace, owner):
-    from apps.social_accounts.models import PlatformVisibility
-
-    _connect(workspace, "instagram", "Insta")
-    PlatformVisibility.objects.update_or_create(platform="pinterest", defaults={"is_visible": False})
-
-    body = _client(owner).get(_request_url(workspace), HTTP_HX_REQUEST="true").content.decode()
-
-    assert "All formats of TikTok" in body and "All formats of Bluesky" in body
-    assert "Pinterest" not in body
-    # Instagram is listed once, with its connected account.
-    assert body.count("All formats of Instagram") == 1
-    instagram_row = body.split("All formats of Instagram")[0].rsplit('class="art-channel"', 1)[1]
-    assert "Insta" in instagram_row and "Not connected" not in instagram_row
 
 
 def test_unconnected_choices_treat_both_instagram_routes_as_one_network():
@@ -408,16 +314,14 @@ def test_another_workspace_cannot_crop_or_remove_an_art(workspace, owner):
 
 
 def test_the_request_makes_a_checklist_per_network_and_one_for_the_other_to_dos(workspace, owner):
-    _client(owner).post(
-        _request_url(workspace),
-        {
-            "title": "Arts: launch",
-            "formats": ["fb_story", "ig_story", "ig_feed_portrait"],
-            "extra_items": ["Approve with the client", "  "],
-        },
+    task = services.request_arts(
+        workspace,
+        owner,
+        title="Arts: launch",
+        format_keys=["fb_story", "ig_story", "ig_feed_portrait"],
+        extra_items=["Approve with the client", "  "],
     )
 
-    task = Task.objects.get()
     lists = [(c.title, [(i.text, i.format_key) for i in c.items.order_by("position")]) for c in task.checklists.all()]
     assert lists == [
         ("Instagram", [("Portrait post", "ig_feed_portrait"), ("Story", "ig_story")]),
@@ -428,34 +332,9 @@ def test_the_request_makes_a_checklist_per_network_and_one_for_the_other_to_dos(
 
 
 def test_a_request_without_other_to_dos_has_only_the_networks(workspace, owner):
-    _client(owner).post(_request_url(workspace), {"title": "Arts", "formats": ["ig_story"]})
+    task = services.request_arts(workspace, owner, title="Arts", format_keys=["ig_story"])
 
-    assert list(Task.objects.get().checklists.values_list("title", flat=True)) == ["Instagram"]
-
-
-def test_a_refused_request_keeps_the_extra_to_dos_typed(workspace, owner):
-    body = (
-        _client(owner)
-        .post(
-            _request_url(workspace),
-            {"title": "", "formats": ["ig_story"], "extra_items": ["Keep me"]},
-            HTTP_HX_REQUEST="true",
-        )
-        .content.decode()
-    )
-
-    assert "Keep me" in body and not Task.objects.exists()
-
-
-def test_the_form_starts_with_the_default_art_assignee_picked(workspace, owner, designer):
-    settings_row = services.art_settings(workspace)
-    settings_row.art_assignee = designer
-    settings_row.save()
-
-    body = _client(owner).get(_request_url(workspace), HTTP_HX_REQUEST="true").content.decode()
-
-    picked = body.split('data-picked="', 1)[1].split('"', 1)[0]
-    assert str(designer.pk) in picked and str(owner.pk) not in picked
+    assert list(task.checklists.values_list("title", flat=True)) == ["Instagram"]
 
 
 def _create_url(workspace):
@@ -553,14 +432,6 @@ def test_an_art_task_shows_its_briefing_in_its_window(workspace, owner):
     )
 
     assert 'name="briefing"' in body and "Bold type</textarea>" in body
-
-
-def test_a_request_from_elsewhere_still_opens_the_task_on_the_board(workspace, owner):
-    response = _client(owner).post(
-        _request_url(workspace), {"title": "Arts", "formats": ["ig_story"]}, HTTP_HX_REQUEST="true"
-    )
-
-    assert f"?task={Task.objects.get().pk}" in response["HX-Redirect"]
 
 
 def test_the_new_task_window_makes_a_post_task_with_its_caption_and_channels(workspace, owner):

@@ -18,7 +18,8 @@ translated on the server.
 {{ special_dates_ahead|json_script:"special-dates-data" }}
 {{ special_date_categories|json_script:"special-dates-categories" }}
 
-<div x-data="specialDatesTab()" x-cloak data-general-label="{% translate 'General dates only' %}">
+<div x-data="specialDatesTab()" x-cloak data-general-label="{% translate 'General dates only' %}"
+     data-task-url="{% url 'tasks:task_window' workspace_id=workspace.id %}">
     {% comment %}
     Filters, all of the same height: search, type, segment and favorites,
     combined. The segment menu lists the segments the brand follows (their
@@ -261,6 +262,11 @@ translated on the server.
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"/></svg>
                             {% translate "Create idea with this theme" %}
                         </button>
+                        {# The task board's new task window, filled from the date (create_landing's task window host). #}
+                        <button type="button" class="btn-soft w-full mt-2" @click="$dispatch('open-task-window', { url: taskUrl(selected) })">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                            {% translate "Send as task" %}
+                        </button>
                         <button type="button" class="btn-ghost w-full mt-2" @click="toggleFavorite(selected)" :aria-pressed="selected.favorite">
                             <svg class="w-4 h-4" :fill="selected.favorite ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
                             <span x-show="!selected.favorite">{% translate "Save to favorites" %}</span>
@@ -290,6 +296,12 @@ function specialDatesTab() {
         query: '',
         selected: dates[0] || null,
         isSelected(entry) { return this.selected === entry; },
+        // The new task window for a date: its name, day, what it is about and its tags.
+        taskUrl(entry) {
+            const params = new URLSearchParams({ title: entry.name, day: entry.iso, brief: entry.description || '' });
+            (entry.tags || []).forEach(tag => params.append('tags', tag));
+            return this.$root.dataset.taskUrl + '?' + params.toString();
+        },
         inSegment(entry, segment) {
             if (!segment) return true;
             if (segment === this.GENERAL) return !entry.segment;

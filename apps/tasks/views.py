@@ -7,18 +7,18 @@ import functools
 import json
 import uuid
 import zoneinfo
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Max
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.translation import gettext as _
-from django.views.decorators.http import require_GET, require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from apps.common.htmx import toast_response, trigger_response
 from apps.composer.emoji import emoji_catalogue
@@ -180,11 +180,36 @@ def _board_config(request) -> dict:
         "canEdit": _can_edit(request),
         "labels": {
             "moveFailed": _("The task could not be moved. Try again."),
-            "remove": _("Remove"),
-            "checklistTitle": _("Checklist title"),
-            "checklistItem": _("Add an item"),
             "cropFailed": _("The image could not be saved. Try again."),
         },
+    }
+
+
+def window_labels() -> dict:
+    """The task windows' translated labels (static/js/task-window.js reads them)."""
+    return {
+        "remove": _("Remove"),
+        "checklistTitle": _("Checklist title"),
+        "checklistItem": _("Add an item"),
+    }
+
+
+def window_context(request) -> dict:
+    """What the new task window (tasks/partials/_new_item_modal.html) needs, wherever it opens:
+    the board's columns, the people, the networks and formats of "Request arts" and the
+    accounts of "Create a post"."""
+    workspace = request.workspace
+    groups = _art_catalogue(workspace)
+    return {
+        "workspace": workspace,
+        "columns": services.ensure_columns(workspace),
+        "members": services.assignable_members(workspace),
+        "priorities": Task.Priority.choices,
+        "today": timezone.localdate(),
+        "groups": groups,
+        "first_tab": groups[0]["network"].key if groups else "",
+        "channel_options": list(channel_accounts(workspace)),
+        "task_window_labels": window_labels(),
     }
 
 
@@ -254,11 +279,11 @@ def board(request, workspace_id):
     }
     if request.htmx and request.htmx.target == "task-board":
         return render(request, "tasks/partials/_board.html", context)
+    context["task_window_labels"] = window_labels()
     if context["can_edit"]:
-        # The new task window's "Request arts": the networks and their formats.
-        context["groups"] = _art_catalogue(workspace)
-        context["first_tab"] = context["groups"][0]["network"].key if context["groups"] else ""
-        context["channel_options"] = list(channel_accounts(workspace))
+        # The new task window, rendered on the board itself; the board's own columns (with
+        # their cards) stay as they are.
+        context.update({k: v for k, v in window_context(request).items() if k not in context})
         # The media library window opens on the board's own folder.
         context["tasks_folder_id"] = str(services.media_folder(workspace).id)
     return render(request, "tasks/board.html", context)
@@ -277,16 +302,50 @@ def task_create(request, workspace_id):
     with the ``briefing``. With ``make_post`` ("Create a post") it carries the ``post_caption``
     and the channels it goes out on (``channel_formats``, JSON, as an idea's).
 
+    ``idea`` (one of the brand's ideas) links the task to the idea it came from.
+
     Success fires ``taskCreated`` (the window closes) besides refreshing the board.
+    """
+    workspace = request.workspace
+    fields, art, error = parse_task_post(request)
+    if error:
+        return toast_response(tone="error", title=error)
+    if _valid_uuid(request.POST.get("idea")):
+        from apps.composer.models import Idea
+
+        fields["idea"] = get_object_or_404(Idea, id=request.POST["idea"], workspace=workspace)
+    if art is not None:
+        services.request_arts(workspace, request.user, **art, **fields)
+        done = _("Art request created.")
+    else:
+        services.create_task(workspace, request.user, **fields)
+        done = _("Task created.")
+    return toast_response(tone="success", title=done, events={BOARD_CHANGED: True, "taskCreated": True})
+
+
+def parse_task_post(request):
+    """The new task window's fields, as posted (tasks/partials/_new_item_modal.html), for
+    ``services.create_task``; with "Request arts" on, also the art request's own (``art``:
+    formats, briefing, references) for ``services.request_arts``, else ``art`` is None.
+
+    Returns ``(fields, art, error)``: ``error`` is the message to show when the window
+    can't be saved as it is. Also used by the pages that post the window elsewhere
+    (``apps.radar.views.offer_task``).
     """
     workspace = request.workspace
     title = request.POST.get("title", "").strip()
     if not title:
-        return toast_response(tone="error", title=_("Give the task a title."))
-    wants_art = request.POST.get("request_art") == "1"
-    format_keys = request.POST.getlist("formats")
-    if wants_art and not any(creative_formats.get(k) for k in format_keys):
-        return toast_response(tone="error", title=_("Choose at least one format."))
+        return {}, None, _("Give the task a title.")
+    art = None
+    if request.POST.get("request_art") == "1":
+        format_keys = request.POST.getlist("formats")
+        if not any(creative_formats.get(k) for k in format_keys):
+            return {}, None, _("Choose at least one format.")
+        art = {
+            "format_keys": format_keys,
+            "briefing": request.POST.get("briefing", "").strip(),
+            "references": request.POST.getlist("references"),
+        }
     column = None
     if _valid_uuid(request.POST.get("column")):
         column = get_object_or_404(TaskColumn, id=request.POST["column"], workspace=workspace)
@@ -308,20 +367,7 @@ def task_create(request, workspace_id):
         "tags": request.POST.getlist("tags"),
         "checklists": services.clean_checklists(_json_list(request.POST.get("checklists"))),
     }
-    if wants_art:
-        services.request_arts(
-            workspace,
-            request.user,
-            format_keys=format_keys,
-            briefing=request.POST.get("briefing", "").strip(),
-            references=request.POST.getlist("references"),
-            **fields,
-        )
-        done = _("Art request created.")
-    else:
-        services.create_task(workspace, request.user, **fields)
-        done = _("Task created.")
-    return toast_response(tone="success", title=done, events={BOARD_CHANGED: True, "taskCreated": True})
+    return fields, art, ""
 
 
 @login_required
@@ -689,85 +735,86 @@ def column_reorder(request, workspace_id):
 
 
 # ---------------------------------------------------------------------------
-# Art requests
+# The new task window, opened from other pages
 # ---------------------------------------------------------------------------
 
 
 @login_required
 @require_board_access
 @require_permission("create_posts")
-@require_http_methods(["GET", "POST"])
-def request_arts(request, workspace_id):
-    """Pick the formats a piece of content needs; creates one task with an item per format.
-
-    A valid request sends the user to the board with the new task open. The board itself
-    asks for arts from its new task window (task_create with ``request_art``).
+@require_GET
+def task_window(request, workspace_id):
+    """The board's new task window, filled from what it is opened for: ``idea`` (one of the
+    brand's ideas), ``template`` (with ``variation``), a special date (``title``, ``day``,
+    ``brief``, ``tags``) or a day of the calendar (``day`` alone). Served into
+    tasks/partials/_task_window_host.html; it posts to ``tasks:task_create`` like the board's.
     """
-    from apps.composer.models import Idea
-
     workspace = request.workspace
-    idea = None
-    idea_id = request.GET.get("idea") or request.POST.get("idea")
-    if idea_id and _valid_uuid(idea_id):
-        idea = get_object_or_404(Idea, id=idea_id, workspace=workspace)
-    task_settings = services.art_settings(workspace)
+    params = request.GET
+    if _valid_uuid(params.get("idea")):
+        from apps.composer.models import Idea
 
-    if request.method == "POST":
-        format_keys = request.POST.getlist("formats")
-        title = request.POST.get("title", "").strip()
-        error = ""
-        if not title:
-            error = _("Give the request a title.")
-        elif not any(creative_formats.get(k) for k in format_keys):
-            error = _("Choose at least one format.")
-        if not error:
-            task = services.request_arts(
-                workspace,
-                request.user,
-                title=title,
-                briefing=request.POST.get("briefing", "").strip(),
-                post_caption=request.POST.get("post_caption", "").strip(),
-                format_keys=format_keys,
-                assignees=services.resolve_assignees(workspace, request.POST.getlist("assignees")),
-                due_date=_parse_day(request.POST.get("due_date")),
-                idea=idea,
-                extra_items=request.POST.getlist("extra_items"),
-            )
-            board_url = f"{reverse('tasks:board', kwargs={'workspace_id': workspace.id})}?task={task.pk}"
-            if request.htmx:
-                return HttpResponse(status=204, headers={"HX-Redirect": board_url})
-            return redirect(board_url)
-        selected = set(format_keys)
-        chosen_assignees = set(request.POST.getlist("assignees"))
-        form = {
-            "title": title,
-            "briefing": request.POST.get("briefing", ""),
-            "post_caption": request.POST.get("post_caption", ""),
-            "due_date": request.POST.get("due_date", ""),
-            "extra_items": request.POST.getlist("extra_items"),
-        }
+        idea = get_object_or_404(
+            Idea.objects.prefetch_related("media_attachments__media_asset"), id=params["idea"], workspace=workspace
+        )
+        prefill = services.prefill_from_idea(idea)
+        note = _("From the idea “%(title)s”") % {"title": idea.title}
+    elif params.get("template", "").isdigit():
+        from apps.composer.services import templates_for
+
+        template = get_object_or_404(templates_for(workspace).prefetch_related("variations"), id=params["template"])
+        prefill = services.prefill_from_template(workspace, template, params.get("variation"))
+        note = _("From the template “%(title)s”") % {"title": template.title}
+    elif params.get("title"):
+        prefill = services.prefill_from_date(
+            workspace,
+            title=params["title"],
+            day=_parse_day(params.get("day")),
+            brief=params.get("brief", ""),
+            tags=params.getlist("tags"),
+        )
+        note = _("From the special date “%(title)s”") % {"title": prefill["title"]}
     else:
-        error = ""
-        selected = set()
-        chosen_assignees = {str(task_settings.art_assignee_id)} if task_settings.art_assignee_id else set()
-        due = None
-        if idea and idea.target_date:
-            due = max(timezone.localdate(), idea.target_date - timedelta(days=task_settings.art_lead_days))
-        form = {
-            "title": _("Arts: %(title)s") % {"title": idea.title} if idea else "",
-            "briefing": "",
-            "post_caption": idea.description if idea else "",
-            "due_date": due.isoformat() if due else "",
-        }
+        prefill = services.prefill_for_day(workspace, _parse_day(params.get("day")))
+        note = ""
+    return render_task_window(request, prefill, source_note=note)
 
-    return render_art_request_form(
-        request,
-        form=form,
-        selected=selected,
-        chosen_assignees=chosen_assignees,
-        error=error,
-        idea=idea,
+
+def render_task_window(request, prefill, *, action_url="", hidden=None, source_note=""):
+    """The new task window, standalone (fetched by tasks/partials/_task_window_host.html),
+    starting from ``prefill`` (``services.blank_prefill`` keys).
+
+    Other apps reuse it with ``action_url`` (where it posts instead of ``tasks:task_create``),
+    ``hidden`` (name → value pairs posted along) and ``source_note`` (the "From …" line);
+    see ``apps.radar.views.offer_task``.
+    """
+    workspace = request.workspace
+    context = window_context(request)
+    hidden = dict(hidden or {})
+    if prefill.get("idea"):
+        hidden["idea"] = str(prefill["idea"].pk)
+    initial = {
+        "assignees": [str(u.pk) for u in prefill["assignees"]],
+        "tags": prefill["tags"],
+        "channels": prefill["channels"],
+        "references": [_reference_json(asset) for asset in prefill["references"]],
+        "wantsArt": prefill["wants_art"],
+        "wantsPost": prefill["wants_post"],
+    }
+    context.update(
+        {
+            "standalone": True,
+            "prefill": prefill,
+            "window_initial_json": json.dumps(initial),
+            "action_url": action_url,
+            "hidden": hidden.items(),
+            "source_note": source_note,
+            "selected": set(),
+            "tag_suggestions": services.tag_suggestions(workspace),
+            "emoji_categories": emoji_catalogue(),
+        }
     )
+    return render(request, "tasks/partials/_new_item_modal.html", context)
 
 
 def _art_catalogue(workspace) -> list[dict]:
@@ -782,53 +829,6 @@ def _art_catalogue(workspace) -> list[dict]:
     )
     visible = [value for value, _label in PlatformVisibility.visible_choices()]
     return creative_formats.catalogue(accounts, visible)
-
-
-def render_art_request_form(
-    request,
-    *,
-    form,
-    selected=(),
-    chosen_assignees=None,
-    error="",
-    idea=None,
-    action_url="",
-    hidden=None,
-    source_note="",
-):
-    """The art request form, in the modal (htmx) or as its own page.
-
-    Other apps reuse it with ``action_url`` (where it posts instead of
-    ``tasks:request_arts``), ``hidden`` (name → value pairs posted along) and
-    ``source_note`` (the "From …" line); see ``apps.radar.views.offer_art_request``.
-    ``chosen_assignees=None`` preselects the workspace's default art assignee.
-    """
-    workspace = request.workspace
-    if chosen_assignees is None:
-        task_settings = services.art_settings(workspace)
-        chosen_assignees = {str(task_settings.art_assignee_id)} if task_settings.art_assignee_id else set()
-    groups = _art_catalogue(workspace)
-    # In the modal (htmx) only the form is swapped in, and an invalid form is
-    # answered 200 so htmx swaps it in with its error.
-    return render(
-        request,
-        "tasks/partials/_request_arts_form.html" if request.htmx else "tasks/request_arts.html",
-        {
-            "workspace": workspace,
-            "idea": idea,
-            "groups": groups,
-            "selected": set(selected),
-            "members": services.assignable_members(workspace),
-            "chosen_assignees": chosen_assignees,
-            "form": form,
-            "error": error,
-            "first_tab": groups[0]["network"].key if groups else "",
-            "action_url": action_url,
-            "hidden": (hidden or {}).items(),
-            "source_note": source_note,
-        },
-        status=400 if error and not request.htmx else 200,
-    )
 
 
 @login_required

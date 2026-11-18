@@ -7,7 +7,8 @@ composer/partials/_tag_field.html). The Alpine state and methods they use (colum
 tags, tagQuery…) come from taskFields() in tasks/board.html.
 
 Expects: prefix (for the ids), columns, priorities, members, today; optional
-task (the task being edited: fills the fields and adds its post date), desc_limit (a maximum
+task (the task being edited: fills the fields and adds its post date) or prefill
+(what a new task starts from, tasks.services.blank_prefill), desc_limit (a maximum
 length for the description, with a counter), after_description (a template shown right under
 the description: the new task window's switches), hide_column (no
 column field: the column travels hidden, the one the window was opened for;
@@ -18,7 +19,7 @@ fields follow the board's ``taskEditing``: disabled, and not even opened, until 
     <div>
         <label class="new-item-label" for="{{ prefix }}-title">{% translate "Task title" %} <span class="text-red-600" aria-hidden="true">*</span></label>
         <input id="{{ prefix }}-title" x-ref="title" name="title" type="text" maxlength="255" required autocomplete="off"
-               value="{{ task.title|default:'' }}" placeholder="{% translate 'E.g. Review the post caption' %}" class="form-input-styled w-full text-sm">
+               value="{% firstof task.title prefill.title %}" placeholder="{% translate 'E.g. Review the post caption' %}" class="form-input-styled w-full text-sm">
     </div>
 
     <div>
@@ -26,7 +27,7 @@ fields follow the board's ``taskEditing``: disabled, and not even opened, until 
         <textarea id="{{ prefix }}-description" x-ref="description" name="description" rows="4" {% if desc_limit %}maxlength="{{ desc_limit }}"{% endif %}
                   @input="descLength = $el.value.length"
                   placeholder="{% translate 'Say what needs to be done, references, links or notes…' %}"
-                  class="form-input-styled block w-full text-sm">{{ task.description|default:'' }}</textarea>
+                  class="form-input-styled block w-full text-sm">{% firstof task.description prefill.description %}</textarea>
         {% if desc_limit %}<p class="text-right text-xs text-neutral-500 mt-1 tabular-nums"><span x-text="descLength">0</span>/{{ desc_limit }}</p>{% endif %}
     </div>
 
@@ -63,7 +64,7 @@ fields follow the board's ``taskEditing``: disabled, and not even opened, until 
         <div>
             <label class="new-item-label" for="{{ prefix }}-due">{% translate "Due date" %}</label>
             <input id="{{ prefix }}-due" name="due_date" type="date" class="form-input-styled w-full text-sm"
-                   value="{% if task %}{{ task.due_date|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}">
+                   value="{% if task %}{{ task.due_date|date:'Y-m-d' }}{% elif prefill.due_date %}{{ prefill.due_date|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}">
         </div>
         {# Without the column, the responsible take its place in this row and the tags have the next one. #}
         {% if hide_column %}{% include "tasks/partials/_task_assignees.html" %}{% endif %}

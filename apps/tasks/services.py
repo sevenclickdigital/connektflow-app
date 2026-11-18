@@ -609,6 +609,108 @@ def art_settings(workspace):
     return task_settings
 
 
+def art_due_date(workspace, content_date):
+    """When the arts for content dated ``content_date`` are due: the brand's lead days
+    before it (TaskSettings.art_lead_days), never before today; None without a date."""
+    from datetime import timedelta
+
+    if not content_date:
+        return None
+    return max(timezone.localdate(), content_date - timedelta(days=art_settings(workspace).art_lead_days))
+
+
+def default_art_assignees(workspace) -> list:
+    """Who an art request goes to when nobody is picked: the brand's art assignee, while a member."""
+    default = art_settings(workspace).art_assignee
+    return [default] if default and default in assignable_members(workspace) else []
+
+
+def blank_prefill(**values) -> dict:
+    """What the new task window starts from (tasks.views.render_task_window): its texts,
+    due date, tags, the post's channels, reference images, the people responsible, the
+    two switches ("Request arts", "Create a post") and the idea it comes from."""
+    prefill: dict = {
+        "title": "",
+        "description": "",
+        "briefing": "",
+        "post_caption": "",
+        "due_date": None,
+        "tags": [],
+        "channels": {},
+        "references": [],
+        "assignees": [],
+        "wants_art": False,
+        "wants_post": False,
+        "idea": None,
+    }
+    prefill.update(values)
+    prefill["title"] = str(prefill["title"])[:255]
+    prefill["tags"] = clean_tags(prefill["tags"])
+    return prefill
+
+
+def material_prefill(workspace, **values) -> dict:
+    """A piece of content sent to the board to be made: both switches on, so the arts are
+    asked for and the post they become is set, with the brand's art assignee."""
+    return blank_prefill(wants_art=True, wants_post=True, assignees=default_art_assignees(workspace), **values)
+
+
+def prefill_from_idea(idea) -> dict:
+    """An idea sent to the board: its title, its text as the post's caption (never the
+    briefing), its tags and channels, its images as references, the arts due the lead
+    days before its content date."""
+    from apps.composer.services import clean_channel_formats
+    from apps.media_library.models import MediaAsset
+
+    images = [
+        attachment.media_asset
+        for attachment in sorted(idea.media_attachments.all(), key=lambda a: a.position)
+        if attachment.media_asset.media_type == MediaAsset.MediaType.IMAGE
+    ]
+    return material_prefill(
+        idea.workspace,
+        title=idea.title,
+        post_caption=idea.description,
+        due_date=art_due_date(idea.workspace, idea.target_date),
+        tags=idea.tags,
+        channels=clean_channel_formats(idea.workspace, idea.channel_formats),
+        references=images[:10],
+        idea=idea,
+    )
+
+
+def prefill_from_template(workspace, template, variation) -> dict:
+    """A template sent to the board: its title, the text of the version chosen as the
+    caption, its category as the tag and the brand's accounts on its networks."""
+    from apps.composer.services import channel_accounts, template_account_formats, template_text
+
+    return material_prefill(
+        workspace,
+        title=template.title,
+        post_caption=template_text(template, variation),
+        tags=[str(template.get_category_display())],
+        channels=template_account_formats(template.network_formats, channel_accounts(workspace)),
+    )
+
+
+def prefill_from_date(workspace, *, title, day, brief="", tags=()) -> dict:
+    """A special date (or one of its content suggestions) sent to the board: its name, what
+    it is about as the briefing for the arts, its suggested tags, due the lead days before it."""
+    return material_prefill(
+        workspace,
+        title=str(title).strip(),
+        briefing=str(brief).strip()[:2000],
+        due_date=art_due_date(workspace, day),
+        tags=list(tags),
+    )
+
+
+def prefill_for_day(workspace, day) -> dict:
+    """A task for a day of the calendar: due that day (today when it is past or blank)."""
+    today = timezone.localdate()
+    return blank_prefill(due_date=max(today, day) if day else None)
+
+
 def request_arts(
     workspace,
     actor,
@@ -650,9 +752,7 @@ def request_arts(
         with override(settings.LANGUAGE_CODE):
             lists.append({"title": str(_("Other to-dos")), "items": extras})
     if not assignees:
-        default = art_settings(workspace).art_assignee
-        if default and default in assignable_members(workspace):
-            assignees = [default]
+        assignees = default_art_assignees(workspace)
     task = create_task(
         workspace,
         actor,
