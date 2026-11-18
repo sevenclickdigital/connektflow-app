@@ -25,18 +25,19 @@ in htmx:configRequest).
      @open-new-item.window="open($event.detail)" @task-created.camel.window="close()" @keydown.escape.window="if (!showMediaPicker) close()"
      @media-picked.camel.window="if (referencePickerFor === 'new') addReferences($event.detail.assets)">
     <div class="new-item-overlay" x-show="isOpen" x-transition.opacity @click.self="close()">
+        <div class="modal-frame is-work">
+        <button type="button" class="modal-close-float" @click="close()" aria-label="{% translate 'Close' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
         <div class="new-item-panel" role="dialog" aria-modal="true" aria-labelledby="new-item-heading">
             <div class="new-item-main">
-                <button type="button" class="modal-close z-10" @click="close()" aria-label="{% translate 'Close' %}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                </button>
                 <form x-ref="taskForm" class="flex flex-col flex-1 min-h-0"
                       hx-post="{% url 'tasks:task_create' workspace_id=workspace.id %}" hx-swap="none"
                       @htmx:config-request.camel="if (submitTo) $event.detail.path = submitTo">
                     <template x-for="(value, name) in hidden" :key="name"><input type="hidden" :name="name" :value="value"></template>
                     <div class="new-item-split">
                     <div class="new-item-body !pt-7">
-                        <div class="flex items-start gap-4 pr-10">
+                        <div class="flex items-start gap-4">
                             <span class="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center flex-shrink-0">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
                             </span>
@@ -189,6 +190,7 @@ in htmx:configRequest).
                     </div>
                 </form>
             </div>
+        </div>
         </div>
     </div>
 </div>

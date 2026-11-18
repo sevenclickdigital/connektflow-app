@@ -116,7 +116,7 @@
 
     <div class="task-modal-backdrop" x-show="taskOpen" x-cloak @click.self="closeTask()">
         <div class="task-modal is-detail" role="dialog" aria-modal="true" aria-label="{% translate 'Task' %}">
-            <button type="button" @click="closeTask()" class="task-modal-close" aria-label="{% translate 'Close' %}">
+            <button type="button" @click="closeTask()" class="modal-close-float" aria-label="{% translate 'Close' %}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
             <div id="task-modal-body"></div>

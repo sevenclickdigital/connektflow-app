@@ -29,6 +29,10 @@ Styles of the task board, its card and the art request form. Included once per p
        body is a flex column with min-height: 0, or the body never scrolls. */
     .new-item-overlay { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(2px); }
     .new-item-panel { width: 100%; max-width: var(--work-modal-width, 1120px); height: min(860px, calc(100vh - 32px)); display: flex; background: white; border-radius: 20px; box-shadow: var(--shadow-xl); overflow: hidden; }
+    /* Inside a .modal-frame (styles.css) the frame holds the width and the close button, the panel fills it. */
+    .modal-frame.is-work { max-width: var(--work-modal-width, 1120px); }
+    .modal-frame > .new-item-panel { max-width: none; }
+    @media (min-width: 640px) { .modal-frame > .new-item-panel { height: min(860px, calc(100vh - 96px)); } }
     .new-item-main { position: relative; flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
     /* The task's form: its fields on the left, its checklists on the right, each scrolling on its own. */
     .new-item-split { flex: 1; min-height: 0; display: flex; }
@@ -96,15 +100,10 @@ Styles of the task board, its card and the art request form. Included once per p
     .task-modal.is-detail { position: relative; max-width: var(--work-modal-width, 1120px); height: min(860px, calc(100vh - 32px)); display: flex; border-radius: 20px; }
     /* The body clips the window's content, not the window, so the close button can sit on its corner. */
     .task-modal.is-detail > #task-modal-body { flex: 1; min-width: 0; display: flex; overflow: hidden; border-radius: inherit; }
-    /* From 640px the close button floats off the window's top-right corner, so the window leaves it
-       room on every side; on a phone it straddles the corner instead. */
+    /* From 640px the window leaves room on every side for its close button (.modal-close-float, styles.css). */
     @media (min-width: 640px) {
         .task-modal.is-detail { max-width: min(var(--work-modal-width, 1120px), calc(100vw - 96px)); height: min(860px, calc(100vh - 96px)); }
-        .task-modal.is-detail .task-modal-close { top: -34px; right: -38px; }
     }
-    .task-modal-close { position: absolute; top: -14px; right: -14px; z-index: 10; width: 36px; height: 36px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; background: white; color: var(--neutral-700); border: 1px solid var(--neutral-200); box-shadow: var(--shadow-lg); cursor: pointer; transition: color var(--dur-fast) ease, transform var(--dur-fast) ease; }
-    .task-modal-close:hover { color: var(--brand-700); transform: scale(1.06); }
-    .task-modal-close:active { transform: scale(0.96); }
     .task-detail { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .task-detail-split { flex: 1; min-height: 0; display: flex; }
     .task-detail-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
