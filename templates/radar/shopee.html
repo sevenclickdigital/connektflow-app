@@ -142,7 +142,18 @@ The Favorites tab renders radar/partials/_favorites.html in place of the form.
 
             </div>
 
+            {% if lazy %}
+            {% comment %}
+            The offers come from Shopee (cached a few minutes): the page shows
+            at once and they load here. Same id as the results block, so the
+            filter form's hx-target still finds it while it loads.
+            {% endcomment %}
+            <div id="radar-offers" hx-get="{{ request.get_full_path }}" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#lazy-load-status">
+                {% translate "Fetching the offers from Shopee…" as loading_label %}{% include "components/_skeleton.html" with variant="cards" label=loading_label %}
+            </div>
+            {% else %}
             {% include "radar/partials/_offers.html" %}
+            {% endif %}
         </section>
     </form>
     {% endif %}

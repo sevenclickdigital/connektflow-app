@@ -152,9 +152,14 @@ def _page(workspace, connection_id):
 def test_member_sees_the_commission(workspace, connection):
     client = Client()
     client.force_login(_member("viewer@example.com", workspace))
-    with patch(CONVERSIONS, return_value=ConversionReport([_conversion("A", _today_at(9), commission="12.5")])):
-        response = client.get(_page(workspace, connection.id))
+    with patch(
+        CONVERSIONS, return_value=ConversionReport([_conversion("A", _today_at(9), commission="12.5")])
+    ) as fetch:
+        page = client.get(_page(workspace, connection.id))
+        assert not fetch.called  # the page shows first; the orders load after
+        response = client.get(_page(workspace, connection.id), {"partial": "body"}, HTTP_HX_REQUEST="true")
 
+    assert page.status_code == 200
     assert response.status_code == 200
     assert "R$\xa012.50" in response.content.decode()
     assert "s3cret" not in response.content.decode()
@@ -189,7 +194,7 @@ def test_shopee_failure_is_shown(workspace, connection):
     client = Client()
     client.force_login(_member("viewer@example.com", workspace))
     with patch(CONVERSIONS, side_effect=RateLimitError("Shopee Affiliate error 10030", platform="Shopee Affiliate")):
-        response = client.get(_page(workspace, connection.id))
+        response = client.get(_page(workspace, connection.id), {"partial": "body"}, HTTP_HX_REQUEST="true")
 
     assert response.status_code == 200
     assert "Shopee is limiting requests right now" in response.content.decode()

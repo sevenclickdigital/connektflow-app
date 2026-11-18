@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-18 14:45+0000\n"
+"POT-Creation-Date: 2026-11-18 15:56+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -177,16 +177,16 @@ msgid "You are back in your own account."
 msgstr "Você voltou para sua própria conta."
 
 #: apps/ads/forms.py:29 templates/ads/index.html:56
-#: templates/ads/settings.html:78
+#: templates/ads/partials/_settings_body.html:23
 msgid "Ad account"
 msgstr "Conta de anúncios"
 
 #: apps/ads/forms.py:30 templates/ads/index.html:57
-#: templates/ads/settings.html:118
+#: templates/ads/partials/_settings_body.html:63
 msgid "Pixel"
 msgstr "Pixel"
 
-#: apps/ads/forms.py:31 templates/ads/settings.html:152
+#: apps/ads/forms.py:31 templates/ads/partials/_settings_body.html:97
 msgid "Facebook Page"
 msgstr "Página do Facebook"
 
@@ -195,12 +195,12 @@ msgid "inactive"
 msgstr "inativa"
 
 #: apps/ads/forms.py:45 templates/ads/index.html:57
-#: templates/ads/settings.html:126
+#: templates/ads/partials/_settings_body.html:71
 msgid "No Pixel"
 msgstr "Sem Pixel"
 
 #: apps/ads/forms.py:46 templates/ads/index.html:58
-#: templates/ads/settings.html:160
+#: templates/ads/partials/_settings_body.html:105
 msgid "No Page"
 msgstr "Sem Página"
 
@@ -341,7 +341,7 @@ msgstr "Valor gasto"
 #: templates/ads/partials/_breakdowns.html:27
 #: templates/ads/partials/_insights.html:17
 #: templates/ads/partials/_overview.html:21
-#: templates/analytics/_meta_ads_page.html:57
+#: templates/analytics/_meta_ads_body.html:54
 msgid "Impressions"
 msgstr "Impressões"
 
@@ -349,13 +349,13 @@ msgstr "Impressões"
 #: templates/ads/partials/_breakdowns.html:29
 #: templates/ads/partials/_insights.html:22
 #: templates/ads/partials/_overview.html:22
-#: templates/analytics/_meta_ads_page.html:58
+#: templates/analytics/_meta_ads_body.html:55
 msgid "Link clicks"
 msgstr "Cliques no link"
 
 #: apps/ads/reports.py:31 apps/composer/idea_icons.py:98
 #: templates/ads/partials/_overview.html:24
-#: templates/analytics/_meta_ads_page.html:60
+#: templates/analytics/_meta_ads_body.html:57
 #: templates/workspaces/dashboard.html:91
 msgid "Results"
 msgstr "Resultados"
@@ -372,7 +372,7 @@ msgstr "Tráfego"
 #: apps/composer/models.py:1092 templates/contacts/list.html:90
 #: templates/contacts/partials/_results.html:89
 #: templates/inbox/partials/_message_details.html:91
-#: templates/workspaces/dashboard.html:156
+#: templates/workspaces/partials/_dashboard_networks.html:35
 msgid "Engagement"
 msgstr "Engajamento"
 
@@ -662,32 +662,32 @@ msgstr ""
 msgid "Choose one of the offered objectives."
 msgstr "Escolha um dos objetivos oferecidos."
 
-#: apps/ads/views.py:160
+#: apps/ads/views.py:161
 msgid "The Meta sign-in was cancelled or refused."
 msgstr "O login da Meta foi cancelado ou recusado."
 
-#: apps/ads/views.py:168 apps/social_accounts/views.py:466
+#: apps/ads/views.py:169 apps/social_accounts/views.py:466
 msgid "Invalid or expired OAuth state. Please try again."
 msgstr "Estado de OAuth inválido ou expirado. Tente novamente."
 
-#: apps/ads/views.py:176 apps/social_accounts/views.py:472
+#: apps/ads/views.py:177 apps/social_accounts/views.py:472
 msgid "OAuth session mismatch. Please try again."
 msgstr "A sessão de OAuth não confere. Tente novamente."
 
-#: apps/ads/views.py:191 apps/social_accounts/views.py:459
+#: apps/ads/views.py:192 apps/social_accounts/views.py:459
 msgid "Missing authorization code or state parameter."
 msgstr "Código de autorização ou parâmetro de estado ausente."
 
-#: apps/ads/views.py:203
+#: apps/ads/views.py:204
 msgid "Meta Ads connected. Choose the ad account, Pixel and Page to use."
 msgstr ""
 "Meta Ads conectado. Escolha a conta de anúncios, o Pixel e a Página a usar."
 
-#: apps/ads/views.py:248
+#: apps/ads/views.py:253
 msgid "Meta Ads settings saved."
 msgstr "Configurações do Meta Ads salvas."
 
-#: apps/ads/views.py:270
+#: apps/ads/views.py:265
 msgid ""
 "Meta Ads disconnected. Campaigns keep running in the ad account until you "
 "stop them there."
@@ -695,37 +695,37 @@ msgstr ""
 "Meta Ads desconectado. As campanhas continuam rodando na conta de anúncios "
 "até você pausá-las lá."
 
-#: apps/ads/views.py:297
+#: apps/ads/views.py:292
 msgid "The image file could not be read. Choose another one."
 msgstr "Não foi possível ler o arquivo da imagem. Escolha outra."
 
-#: apps/ads/views.py:299
+#: apps/ads/views.py:294
 msgid "Campaign created, paused. Review it and activate it when you are ready."
 msgstr "Campanha criada, pausada. Revise e ative quando estiver tudo certo."
 
-#: apps/ads/views.py:416
+#: apps/ads/views.py:405
 msgid "Campaign activated. Meta reviews new ads before they start delivering."
 msgstr ""
 "Campanha ativada. A Meta revisa os anúncios novos antes de começar a "
 "veiculação."
 
-#: apps/ads/views.py:417
+#: apps/ads/views.py:406
 msgid "Campaign paused."
 msgstr "Campanha pausada."
 
-#: apps/ads/views.py:418
+#: apps/ads/views.py:407
 msgid "Campaign archived."
 msgstr "Campanha arquivada."
 
-#: apps/ads/views.py:434
+#: apps/ads/views.py:423
 msgid "Give the campaign a name of up to 200 characters."
 msgstr "Dê à campanha um nome de até 200 caracteres."
 
-#: apps/ads/views.py:441
+#: apps/ads/views.py:430
 msgid "Campaign renamed."
 msgstr "Campanha renomeada."
 
-#: apps/ads/views.py:470
+#: apps/ads/views.py:459
 msgid "Ad set updated."
 msgstr "Conjunto de anúncios atualizado."
 
@@ -782,7 +782,7 @@ msgstr "Novos seguidores"
 #: apps/analytics/metrics.py:30 templates/analytics/_page_header.html:122
 #: templates/composer/compose.html:2477
 #: templates/radar/partials/_instagram_results.html:28
-#: templates/workspaces/dashboard.html:147
+#: templates/workspaces/partials/_dashboard_networks.html:26
 msgid "Followers"
 msgstr "Seguidores"
 
@@ -2830,13 +2830,13 @@ msgstr "%(first)s–%(last)s de %(month)s de %(year)s"
 
 #: apps/calendar/services.py:754
 #: templates/composer/partials/_upcoming_dates.html:26
-#: templates/workspaces/dashboard.html:230
+#: templates/workspaces/dashboard.html:189
 msgid "today"
 msgstr "hoje"
 
 #: apps/calendar/services.py:756
 #: templates/composer/partials/_upcoming_dates.html:26
-#: templates/workspaces/dashboard.html:230
+#: templates/workspaces/dashboard.html:189
 #, python-format
 msgid "in %(days)s day"
 msgid_plural "in %(days)s days"
@@ -2932,7 +2932,7 @@ msgstr "Abra a publicação e escolha quando ela sai antes de agendá-la."
 
 #: apps/calendar/views.py:1079 apps/inbox/views.py:165
 #: templates/organizations/cross_calendar.html:140
-#: templates/workspaces/dashboard.html:201
+#: templates/workspaces/dashboard.html:160
 msgid "Today"
 msgstr "Hoje"
 
@@ -5076,7 +5076,7 @@ msgstr "Encontrada no Instagram"
 msgid "Commission"
 msgstr "Comissão"
 
-#: apps/radar/reports.py:45 templates/analytics/_shopee_page.html:97
+#: apps/radar/reports.py:45 templates/analytics/_shopee_body.html:94
 msgid "Orders"
 msgstr "Pedidos"
 
@@ -5315,7 +5315,7 @@ msgstr "Link de afiliado: %(link)s"
 msgid "Product page: %(link)s"
 msgstr "Página do produto: %(link)s"
 
-#: apps/radar/services.py:500 apps/radar/views.py:297
+#: apps/radar/services.py:500 apps/radar/views.py:303
 #, python-format
 msgid "Post offer: %(name)s"
 msgstr "Publicar oferta: %(name)s"
@@ -5446,40 +5446,40 @@ msgstr "Shopee Afiliados conectada."
 msgid "%(source)s disconnected."
 msgstr "%(source)s desconectada."
 
-#: apps/radar/views.py:183 apps/radar/views.py:231
+#: apps/radar/views.py:187 apps/radar/views.py:237
 msgid "Connect Shopee Affiliates to see offers."
 msgstr "Conecte a Shopee Afiliados para ver as ofertas."
 
-#: apps/radar/views.py:301
+#: apps/radar/views.py:307
 #, python-format
 msgid "From the Shopee offer “%(name)s”"
 msgstr "Da oferta da Shopee “%(name)s”"
 
-#: apps/radar/views.py:317
+#: apps/radar/views.py:323
 msgid "Task created with the product image and a draft post."
 msgstr "Tarefa criada com a imagem do produto e um rascunho de publicação."
 
-#: apps/radar/views.py:377
+#: apps/radar/views.py:383
 msgid "This offer is no longer loaded"
 msgstr "Esta oferta não está mais carregada"
 
-#: apps/radar/views.py:378
+#: apps/radar/views.py:384
 msgid "Reload the offers and try again."
 msgstr "Recarregue as ofertas e tente de novo."
 
-#: apps/radar/views.py:389
+#: apps/radar/views.py:395
 msgid "Media storage is full"
 msgstr "O armazenamento de mídia está cheio"
 
-#: apps/radar/views.py:389
+#: apps/radar/views.py:395
 msgid "Free up space in the media library to copy the product image."
 msgstr "Libere espaço na galeria para copiar a imagem do produto."
 
-#: apps/radar/views.py:392 apps/radar/views.py:393
+#: apps/radar/views.py:398 apps/radar/views.py:399
 msgid "Could not copy the product image"
 msgstr "Não foi possível copiar a imagem do produto"
 
-#: apps/radar/views.py:393
+#: apps/radar/views.py:399
 msgid "Shopee sent an image the media library does not accept."
 msgstr "A Shopee enviou uma imagem que a galeria não aceita."
 
@@ -6469,7 +6469,7 @@ msgid "Add an item"
 msgstr "Adicionar item"
 
 #: apps/tasks/views.py:260 templates/tasks/board.html:70
-#: templates/workspaces/dashboard.html:188
+#: templates/workspaces/dashboard.html:147
 msgid "My tasks"
 msgstr "Minhas tarefas"
 
@@ -7283,8 +7283,9 @@ msgid "Are you sure you want to sign out?"
 msgstr "Tem certeza de que deseja sair?"
 
 #: templates/account/logout.html:28 templates/ads/campaign_new.html:85
-#: templates/ads/settings.html:193 templates/api_keys/_issue_modal.html:73
-#: templates/api_keys/_key_row.html:178 templates/api_keys/_key_row.html:242
+#: templates/ads/partials/_settings_body.html:138
+#: templates/api_keys/_issue_modal.html:73 templates/api_keys/_key_row.html:178
+#: templates/api_keys/_key_row.html:242
 #: templates/approvals/partials/_approval_row.html:148
 #: templates/automations/flow_builder.html:900
 #: templates/automations/flow_builder.html:1121
@@ -7393,8 +7394,8 @@ msgid "Didn't receive the email?"
 msgstr "Não recebeu o e-mail?"
 
 #: templates/account/password_reset_done.html:35
-#: templates/analytics/_meta_ads_page.html:19
-#: templates/analytics/_shopee_page.html:16
+#: templates/analytics/_meta_ads_body.html:16
+#: templates/analytics/_shopee_body.html:13
 #: templates/calendar/partials/_board_columns.html:83
 #: templates/social_accounts/partials/_account_card.html:184
 msgid "Try again"
@@ -7671,7 +7672,7 @@ msgstr "Alterar senha"
 
 #: templates/ads/campaign_detail.html:3 templates/ads/campaign_detail.html:7
 #: templates/ads/campaign_new.html:22 templates/ads/partials/_overview.html:17
-#: templates/analytics/_meta_ads_page.html:55
+#: templates/analytics/_meta_ads_body.html:52
 msgid "Campaign"
 msgstr "Campanha"
 
@@ -7680,6 +7681,11 @@ msgstr "Campanha"
 #: templates/calendar/partials/event_form.html:57
 msgid "Edit campaign"
 msgstr "Editar campanha"
+
+#: templates/ads/campaign_detail.html:39 templates/ads/index.html:67
+#: templates/analytics/_meta_ads_page.html:15
+msgid "Fetching the numbers from Meta…"
+msgstr "Buscando os números na Meta…"
 
 #: templates/ads/campaign_new.html:3 templates/ads/campaign_new.html:7
 #: templates/ads/index.html:18 templates/calendar/partials/event_form.html:56
@@ -7775,7 +7781,7 @@ msgid "The Meta sign-in needs to be renewed."
 msgstr "O login da Meta precisa ser renovado."
 
 #: templates/ads/index.html:41 templates/ads/index.html:50
-#: templates/ads/settings.html:49 templates/analytics/_meta_ads_page.html:17
+#: templates/ads/settings.html:40 templates/analytics/_meta_ads_body.html:14
 msgid "Connect again"
 msgstr "Conectar de novo"
 
@@ -7820,14 +7826,14 @@ msgstr "Posicionamento"
 
 #: templates/ads/partials/_breakdowns.html:26
 #: templates/ads/partials/_overview.html:20
-#: templates/analytics/_meta_ads_page.html:56
+#: templates/analytics/_meta_ads_body.html:53
 msgid "Spent"
 msgstr "Gasto"
 
 #: templates/ads/partials/_breakdowns.html:28
 #: templates/ads/partials/_insights.html:34
 #: templates/ads/partials/_overview.html:23
-#: templates/analytics/_meta_ads_page.html:59
+#: templates/analytics/_meta_ads_body.html:56
 msgid "CTR"
 msgstr "CTR"
 
@@ -7941,19 +7947,23 @@ msgstr "Renomear"
 
 #: templates/ads/partials/_campaign_edit_modal.html:41
 msgid "Archived campaigns stay as they are: Meta does not let them run again."
-msgstr "Campanhas arquivadas ficam como estão: a Meta não deixa que voltem a rodar."
+msgstr ""
+"Campanhas arquivadas ficam como estão: a Meta não deixa que voltem a rodar."
 
 #: templates/ads/partials/_campaign_edit_modal.html:43
 msgid ""
 "The campaign is running. Pausing stops the spending until you activate it "
 "again."
-msgstr "A campanha está rodando. Pausar interrompe o gasto até você ativá-la de novo."
+msgstr ""
+"A campanha está rodando. Pausar interrompe o gasto até você ativá-la de novo."
 
 #: templates/ads/partials/_campaign_edit_modal.html:43
 msgid ""
 "The campaign is stopped. Activating it starts spending once Meta approves "
 "the ads."
-msgstr "A campanha está parada. Ao ativar, o gasto começa assim que a Meta aprovar os anúncios."
+msgstr ""
+"A campanha está parada. Ao ativar, o gasto começa assim que a Meta aprovar "
+"os anúncios."
 
 #: templates/ads/partials/_campaign_edit_modal.html:47
 msgid ""
@@ -7982,7 +7992,9 @@ msgstr ""
 msgid ""
 "The budget is set per ad set. Changing it applies from today; what was spent "
 "stays."
-msgstr "O orçamento é definido por conjunto de anúncios. A mudança vale a partir de hoje; o que já foi gasto continua."
+msgstr ""
+"O orçamento é definido por conjunto de anúncios. A mudança vale a partir de "
+"hoje; o que já foi gasto continua."
 
 #: templates/ads/partials/_campaign_edit_modal.html:74
 msgid "Fetching the ad sets from Meta…"
@@ -8076,73 +8088,7 @@ msgstr "Período"
 msgid "%(choice)s days"
 msgstr "%(choice)s dias"
 
-#: templates/ads/partials/_skeleton.html:13
-msgid "Fetching the numbers from Meta…"
-msgstr "Buscando os números na Meta…"
-
-#: templates/ads/settings.html:9 templates/ads/settings.html:16
-msgid "Meta Ads settings"
-msgstr "Configurações do Meta Ads"
-
-#: templates/ads/settings.html:22
-msgid ""
-"Choose the ad account your campaigns come from, the Pixel that measures "
-"their results and the Page the ads are published as."
-msgstr ""
-"Escolha a conta de anúncios das suas campanhas, o Pixel que mede os "
-"resultados e a Página em nome da qual os anúncios são publicados."
-
-#: templates/ads/settings.html:31
-msgid "ad account"
-msgid_plural "ad accounts"
-msgstr[0] "conta de anúncios"
-msgstr[1] "contas de anúncios"
-
-#: templates/ads/settings.html:41
-msgid "The Meta sign-in has expired."
-msgstr "O login da Meta expirou."
-
-#: templates/ads/settings.html:41
-#, python-format
-msgid "Signed in to Meta until %(date)s"
-msgstr "Login da Meta válido até %(date)s"
-
-#: templates/ads/settings.html:41
-msgid "Signed in to Meta"
-msgstr "Conectado à Meta"
-
-#: templates/ads/settings.html:51
-msgid ""
-"Sign in with another Facebook account, for example one that manages other ad "
-"accounts."
-msgstr ""
-"Entre com outra conta do Facebook, por exemplo uma que gerencie outras "
-"contas de anúncios."
-
-#: templates/ads/settings.html:51
-msgid "Use another Facebook login"
-msgstr "Usar outro login do Facebook"
-
-#: templates/ads/settings.html:54
-msgid "Disconnect Meta Ads? Campaigns keep running in the ad account."
-msgstr ""
-"Desconectar o Meta Ads? As campanhas continuam rodando na conta de anúncios."
-
-#: templates/ads/settings.html:56
-#: templates/social_accounts/partials/_account_card.html:95
-#: templates/social_accounts/partials/_account_card.html:193
-#: templates/social_accounts/partials/_account_card.html:233
-#: templates/social_accounts/partials/_disconnect_button.html:12
-#: templates/social_accounts/partials/_disconnect_confirm.html:56
-msgid "Disconnect"
-msgstr "Desconectar"
-
-#: templates/ads/settings.html:61
-#: templates/social_accounts/account_select.html:60
-msgid "Moti, the Connekt Flow robot, holding the Facebook logo"
-msgstr "Moti, o robô do Connekt Flow, segurando o logo do Facebook"
-
-#: templates/ads/settings.html:67
+#: templates/ads/partials/_settings_body.html:12
 msgid ""
 "This Meta sign-in manages no ad account. Sign in with a Facebook account "
 "that has access to one in Meta Business Suite, or create an ad account there."
@@ -8151,7 +8097,7 @@ msgstr ""
 "conta do Facebook que tenha acesso a uma no Meta Business Suite, ou crie uma "
 "conta de anúncios lá."
 
-#: templates/ads/settings.html:79
+#: templates/ads/partials/_settings_body.html:24
 msgid ""
 "Campaigns, numbers and new campaigns all use this account. Changing it "
 "reloads its Pixels and Pages."
@@ -8159,27 +8105,27 @@ msgstr ""
 "As campanhas, os números e as campanhas novas usam esta conta. Trocar a "
 "conta recarrega os Pixels e as Páginas dela."
 
-#: templates/ads/settings.html:83
+#: templates/ads/partials/_settings_body.html:28
 msgid "Search ad account"
 msgstr "Buscar conta de anúncios"
 
-#: templates/ads/settings.html:85
+#: templates/ads/partials/_settings_body.html:30
 msgid "Search ad account…"
 msgstr "Buscar conta de anúncios…"
 
-#: templates/ads/settings.html:105
+#: templates/ads/partials/_settings_body.html:50
 msgid "Inactive"
 msgstr "Inativa"
 
-#: templates/ads/settings.html:106
+#: templates/ads/partials/_settings_body.html:51
 msgid "In use"
 msgstr "Em uso"
 
-#: templates/ads/settings.html:111
+#: templates/ads/partials/_settings_body.html:56
 msgid "No ad account matches the search."
 msgstr "Nenhuma conta de anúncios corresponde à busca."
 
-#: templates/ads/settings.html:119
+#: templates/ads/partials/_settings_body.html:64
 msgid ""
 "The Pixel measures purchases and leads on your site. Sales and lead "
 "campaigns need one."
@@ -8187,29 +8133,29 @@ msgstr ""
 "O Pixel mede compras e cadastros no seu site. Campanhas de vendas e de "
 "cadastros precisam de um."
 
-#: templates/ads/settings.html:119
+#: templates/ads/partials/_settings_body.html:64
 #, python-format
 msgid "Only the Pixels of %(name)s are listed."
 msgstr "Aparecem só os Pixels de %(name)s."
 
-#: templates/ads/settings.html:127
+#: templates/ads/partials/_settings_body.html:72
 msgid "Awareness and traffic campaigns work without one."
 msgstr "Campanhas de reconhecimento e de tráfego funcionam sem Pixel."
 
-#: templates/ads/settings.html:138
+#: templates/ads/partials/_settings_body.html:83
 #, python-format
 msgid "last event %(date)s"
 msgstr "último evento em %(date)s"
 
-#: templates/ads/settings.html:138
+#: templates/ads/partials/_settings_body.html:83
 msgid "no event received yet"
 msgstr "nenhum evento recebido ainda"
 
-#: templates/ads/settings.html:140
+#: templates/ads/partials/_settings_body.html:85
 msgid "Unavailable"
 msgstr "Indisponível"
 
-#: templates/ads/settings.html:145
+#: templates/ads/partials/_settings_body.html:90
 msgid ""
 "This ad account has no Pixel yet. Create one in Meta Events Manager and come "
 "back to choose it."
@@ -8217,20 +8163,20 @@ msgstr ""
 "Esta conta de anúncios ainda não tem Pixel. Crie um no Gerenciador de "
 "Eventos da Meta e volte para escolhê-lo."
 
-#: templates/ads/settings.html:153
+#: templates/ads/partials/_settings_body.html:98
 msgid "Ads created here are published as this Page."
 msgstr "Os anúncios criados aqui são publicados em nome desta Página."
 
-#: templates/ads/settings.html:153
+#: templates/ads/partials/_settings_body.html:98
 #, python-format
 msgid "Only the Pages %(name)s can advertise for are listed."
 msgstr "Aparecem só as Páginas que %(name)s pode anunciar."
 
-#: templates/ads/settings.html:161
+#: templates/ads/partials/_settings_body.html:106
 msgid "You can follow campaigns, but creating one needs a Page."
 msgstr "Dá para acompanhar as campanhas, mas criar uma precisa de uma Página."
 
-#: templates/ads/settings.html:180
+#: templates/ads/partials/_settings_body.html:125
 msgid ""
 "This ad account cannot advertise for any of your Pages yet. In Meta Business "
 "Suite, give the ad account access to the Page and come back to choose it."
@@ -8239,11 +8185,12 @@ msgstr ""
 "Páginas. No Meta Business Suite, dê à conta de anúncios acesso à Página e "
 "volte para escolhê-la."
 
-#: templates/ads/settings.html:190
+#: templates/ads/partials/_settings_body.html:135
 msgid "Choose an ad account"
 msgstr "Escolha uma conta de anúncios"
 
-#: templates/ads/settings.html:196 templates/automations/flow_builder.html:262
+#: templates/ads/partials/_settings_body.html:141
+#: templates/automations/flow_builder.html:262
 #: templates/automations/flow_builder.html:904
 #: templates/billing/account_billing.html:230
 #: templates/calendar/staff_dates.html:65 templates/composer/categories.html:44
@@ -8260,6 +8207,66 @@ msgstr "Escolha uma conta de anúncios"
 #: templates/workspaces/partials/_dashboard_goal.html:33
 msgid "Save"
 msgstr "Salvar"
+
+#: templates/ads/settings.html:9 templates/ads/settings.html:16
+msgid "Meta Ads settings"
+msgstr "Configurações do Meta Ads"
+
+#: templates/ads/settings.html:22
+msgid ""
+"Choose the ad account your campaigns come from, the Pixel that measures "
+"their results and the Page the ads are published as."
+msgstr ""
+"Escolha a conta de anúncios das suas campanhas, o Pixel que mede os "
+"resultados e a Página em nome da qual os anúncios são publicados."
+
+#: templates/ads/settings.html:32
+msgid "The Meta sign-in has expired."
+msgstr "O login da Meta expirou."
+
+#: templates/ads/settings.html:32
+#, python-format
+msgid "Signed in to Meta until %(date)s"
+msgstr "Login da Meta válido até %(date)s"
+
+#: templates/ads/settings.html:32
+msgid "Signed in to Meta"
+msgstr "Conectado à Meta"
+
+#: templates/ads/settings.html:42
+msgid ""
+"Sign in with another Facebook account, for example one that manages other ad "
+"accounts."
+msgstr ""
+"Entre com outra conta do Facebook, por exemplo uma que gerencie outras "
+"contas de anúncios."
+
+#: templates/ads/settings.html:42
+msgid "Use another Facebook login"
+msgstr "Usar outro login do Facebook"
+
+#: templates/ads/settings.html:45
+msgid "Disconnect Meta Ads? Campaigns keep running in the ad account."
+msgstr ""
+"Desconectar o Meta Ads? As campanhas continuam rodando na conta de anúncios."
+
+#: templates/ads/settings.html:47
+#: templates/social_accounts/partials/_account_card.html:95
+#: templates/social_accounts/partials/_account_card.html:193
+#: templates/social_accounts/partials/_account_card.html:233
+#: templates/social_accounts/partials/_disconnect_button.html:12
+#: templates/social_accounts/partials/_disconnect_confirm.html:56
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: templates/ads/settings.html:52
+#: templates/social_accounts/account_select.html:60
+msgid "Moti, the Connekt Flow robot, holding the Facebook logo"
+msgstr "Moti, o robô do Connekt Flow, segurando o logo do Facebook"
+
+#: templates/ads/settings.html:64
+msgid "Fetching your ad accounts from Meta…"
+msgstr "Buscando suas contas de anúncios na Meta…"
 
 #: templates/analytics/_delta_chip.html:1
 #, python-format
@@ -8390,15 +8397,15 @@ msgstr "Análises do Instagram."
 msgid "Reconnect for analytics"
 msgstr "Reconectar para ver as análises"
 
-#: templates/analytics/_meta_ads_page.html:13
+#: templates/analytics/_meta_ads_body.html:10
 msgid "Meta did not send the report"
 msgstr "A Meta não enviou o relatório"
 
-#: templates/analytics/_meta_ads_page.html:28
+#: templates/analytics/_meta_ads_body.html:25
 msgid "No ads ran in this period"
 msgstr "Nenhum anúncio foi veiculado neste período"
 
-#: templates/analytics/_meta_ads_page.html:29
+#: templates/analytics/_meta_ads_body.html:26
 msgid ""
 "When a campaign of the ad account delivers, its spend, impressions, clicks "
 "and results show up here."
@@ -8406,11 +8413,11 @@ msgstr ""
 "Quando uma campanha da conta de anúncios for veiculada, o gasto, as "
 "impressões, os cliques e os resultados aparecem aqui."
 
-#: templates/analytics/_meta_ads_page.html:30
+#: templates/analytics/_meta_ads_body.html:27
 msgid "See campaigns"
 msgstr "Ver campanhas"
 
-#: templates/analytics/_meta_ads_page.html:40
+#: templates/analytics/_meta_ads_body.html:37
 #, python-format
 msgid ""
 "Results are the purchases and leads the Pixel recorded. %(active)s of "
@@ -8425,15 +8432,15 @@ msgstr[1] ""
 "Resultados são as compras e os cadastros que o Pixel registrou. %(active)s "
 "de %(counter)s campanhas ativas."
 
-#: templates/analytics/_meta_ads_page.html:48
+#: templates/analytics/_meta_ads_body.html:45
 msgid "Campaigns that spent most"
 msgstr "Campanhas que mais gastaram"
 
-#: templates/analytics/_meta_ads_page.html:49
+#: templates/analytics/_meta_ads_body.html:46
 msgid "All campaigns"
 msgstr "Todas as campanhas"
 
-#: templates/analytics/_meta_ads_page.html:77
+#: templates/analytics/_meta_ads_body.html:74
 msgid "No campaign spent in this period."
 msgstr "Nenhuma campanha gastou neste período."
 
@@ -8473,6 +8480,10 @@ msgstr "Reconectar"
 #: templates/analytics/_page.html:26 templates/analytics/_page.html:78
 msgid "All posts"
 msgstr "Todas as publicações"
+
+#: templates/analytics/_page.html:89
+msgid "Loading the posts…"
+msgstr "Carregando os posts…"
 
 #: templates/analytics/_page_header.html:6 templates/analytics/index.html:4
 #: templates/analytics/meta_ads.html:4 templates/analytics/no_accounts.html:4
@@ -8580,6 +8591,75 @@ msgstr "%(page_from)s–%(page_to)s de %(total)s"
 msgid "Page %(page)s of %(total_pages)s"
 msgstr "Página %(page)s de %(total_pages)s"
 
+#: templates/analytics/_shopee_body.html:10
+msgid "Shopee did not send the report"
+msgstr "A Shopee não enviou o relatório"
+
+#: templates/analytics/_shopee_body.html:21
+msgid "No sales through your links yet"
+msgstr "Ainda não há vendas pelos seus links"
+
+#: templates/analytics/_shopee_body.html:23
+#, python-format
+msgid ""
+"Shopee reports the orders of the last %(max_days)s days. When someone buys "
+"through one of your affiliate links, the order and its commission show up "
+"here."
+msgstr ""
+"A Shopee informa os pedidos dos últimos %(max_days)s dias. Quando alguém "
+"comprar por um dos seus links de afiliado, o pedido e a comissão aparecem "
+"aqui."
+
+#: templates/analytics/_shopee_body.html:25
+msgid "Find offers to share"
+msgstr "Encontrar ofertas para divulgar"
+
+#: templates/analytics/_shopee_body.html:39
+msgid ""
+"Commission, orders and sales include pending orders and leave out cancelled "
+"ones; Shopee confirms the commission when the order is completed."
+msgstr ""
+"Comissão, pedidos e vendas incluem os pedidos pendentes e deixam de fora os "
+"cancelados; a Shopee confirma a comissão quando o pedido é concluído."
+
+#: templates/analytics/_shopee_body.html:40
+#, python-format
+msgid ""
+"Shopee only reports the last %(max_days)s days, so this range has no "
+"previous period to compare."
+msgstr ""
+"A Shopee só informa os últimos %(max_days)s dias, então este intervalo não "
+"tem período anterior para comparar."
+
+#: templates/analytics/_shopee_body.html:41
+msgid ""
+"Shopee sent more orders than this page reads at once; the oldest ones are "
+"missing."
+msgstr ""
+"A Shopee enviou mais pedidos do que esta página lê de uma vez; os mais "
+"antigos ficaram de fora."
+
+#: templates/analytics/_shopee_body.html:52
+msgid "Top products"
+msgstr "Produtos que mais renderam"
+
+#: templates/analytics/_shopee_body.html:60
+#: templates/analytics/_shopee_body.html:79
+#, python-format
+msgid "%(counter)s order"
+msgid_plural "%(counter)s orders"
+msgstr[0] "%(counter)s pedido"
+msgstr[1] "%(counter)s pedidos"
+
+#: templates/analytics/_shopee_body.html:65
+#: templates/analytics/_shopee_body.html:86
+msgid "No sales in this period."
+msgstr "Nenhuma venda neste período."
+
+#: templates/analytics/_shopee_body.html:72
+msgid "Where sales came from"
+msgstr "De onde vieram as vendas"
+
 #: templates/analytics/_shopee_orders.html:6
 msgid "order"
 msgid_plural "orders"
@@ -8622,74 +8702,9 @@ msgstr "Página anterior"
 msgid "Next page"
 msgstr "Próxima página"
 
-#: templates/analytics/_shopee_page.html:13
-msgid "Shopee did not send the report"
-msgstr "A Shopee não enviou o relatório"
-
-#: templates/analytics/_shopee_page.html:24
-msgid "No sales through your links yet"
-msgstr "Ainda não há vendas pelos seus links"
-
-#: templates/analytics/_shopee_page.html:26
-#, python-format
-msgid ""
-"Shopee reports the orders of the last %(max_days)s days. When someone buys "
-"through one of your affiliate links, the order and its commission show up "
-"here."
-msgstr ""
-"A Shopee informa os pedidos dos últimos %(max_days)s dias. Quando alguém "
-"comprar por um dos seus links de afiliado, o pedido e a comissão aparecem "
-"aqui."
-
-#: templates/analytics/_shopee_page.html:28
-msgid "Find offers to share"
-msgstr "Encontrar ofertas para divulgar"
-
-#: templates/analytics/_shopee_page.html:42
-msgid ""
-"Commission, orders and sales include pending orders and leave out cancelled "
-"ones; Shopee confirms the commission when the order is completed."
-msgstr ""
-"Comissão, pedidos e vendas incluem os pedidos pendentes e deixam de fora os "
-"cancelados; a Shopee confirma a comissão quando o pedido é concluído."
-
-#: templates/analytics/_shopee_page.html:43
-#, python-format
-msgid ""
-"Shopee only reports the last %(max_days)s days, so this range has no "
-"previous period to compare."
-msgstr ""
-"A Shopee só informa os últimos %(max_days)s dias, então este intervalo não "
-"tem período anterior para comparar."
-
-#: templates/analytics/_shopee_page.html:44
-msgid ""
-"Shopee sent more orders than this page reads at once; the oldest ones are "
-"missing."
-msgstr ""
-"A Shopee enviou mais pedidos do que esta página lê de uma vez; os mais "
-"antigos ficaram de fora."
-
-#: templates/analytics/_shopee_page.html:55
-msgid "Top products"
-msgstr "Produtos que mais renderam"
-
-#: templates/analytics/_shopee_page.html:63
-#: templates/analytics/_shopee_page.html:82
-#, python-format
-msgid "%(counter)s order"
-msgid_plural "%(counter)s orders"
-msgstr[0] "%(counter)s pedido"
-msgstr[1] "%(counter)s pedidos"
-
-#: templates/analytics/_shopee_page.html:68
-#: templates/analytics/_shopee_page.html:89
-msgid "No sales in this period."
-msgstr "Nenhuma venda neste período."
-
-#: templates/analytics/_shopee_page.html:75
-msgid "Where sales came from"
-msgstr "De onde vieram as vendas"
+#: templates/analytics/_shopee_page.html:15
+msgid "Fetching the orders from Shopee…"
+msgstr "Buscando os pedidos na Shopee…"
 
 #: templates/analytics/_shopee_status_card.html:7
 msgid "Commission per order"
@@ -9615,6 +9630,7 @@ msgstr "Enviar"
 #: templates/calendar/partials/publish_approvals.html:110
 #: templates/calendar/partials/publish_calendar_shell.html:59
 #: templates/calendar/partials/publish_calendar_shell.html:76
+#: templates/components/_skeleton.html:20
 #: templates/composer/partials/_tag_manager.html:83
 #: templates/radar/partials/_source_card.html:94
 msgid "Loading…"
@@ -11006,7 +11022,7 @@ msgstr "Pago"
 #: templates/billing/account_billing.html:152
 #: templates/billing/staff_subscriptions.html:65
 #: templates/billing/staff_subscriptions.html:112
-#: templates/workspaces/dashboard.html:199
+#: templates/workspaces/dashboard.html:158
 msgid "Overdue"
 msgstr "Em atraso"
 
@@ -14820,7 +14836,7 @@ msgstr "Mostrar dicas"
 #: templates/composer/partials/_special_dates_tab.html:160
 #: templates/composer/partials/_upcoming_dates.html:8
 #: templates/composer/partials/_upcoming_dates.html:10
-#: templates/workspaces/dashboard.html:217
+#: templates/workspaces/dashboard.html:176
 msgid "Upcoming dates"
 msgstr "Próximas datas"
 
@@ -20048,6 +20064,10 @@ msgstr "Vendidos mín."
 msgid "Applied to the offers already loaded."
 msgstr "Aplicados às ofertas já carregadas."
 
+#: templates/radar/shopee.html:153
+msgid "Fetching the offers from Shopee…"
+msgstr "Buscando as ofertas na Shopee…"
+
 #: templates/radar/shopee_connect.html:3 templates/radar/shopee_connect.html:15
 msgid "Connect Shopee Affiliates"
 msgstr "Conectar Shopee Afiliados"
@@ -21297,86 +21317,78 @@ msgstr ""
 msgid "By network"
 msgstr "Por rede"
 
-#: templates/workspaces/dashboard.html:170
-msgid "Connect another network"
-msgstr "Conecte mais uma rede"
+#: templates/workspaces/dashboard.html:134
+msgid "Calculating each network's numbers…"
+msgstr "Calculando os números de cada rede…"
 
-#: templates/workspaces/dashboard.html:171
-msgid "TikTok, LinkedIn, YouTube and more"
-msgstr "TikTok, LinkedIn, YouTube e mais"
-
-#: templates/workspaces/dashboard.html:172
-msgid "Connect account"
-msgstr "Conectar conta"
-
-#: templates/workspaces/dashboard.html:189
+#: templates/workspaces/dashboard.html:148
 msgid "See board"
 msgstr "Ver quadro"
 
-#: templates/workspaces/dashboard.html:210
+#: templates/workspaces/dashboard.html:169
 msgid "No open task assigned to you."
 msgstr "Nenhuma tarefa sua em aberto."
 
-#: templates/workspaces/dashboard.html:218
+#: templates/workspaces/dashboard.html:177
 msgid "See all"
 msgstr "Ver todas"
 
-#: templates/workspaces/dashboard.html:233
+#: templates/workspaces/dashboard.html:192
 msgid "Post ready"
 msgstr "Post pronto"
 
-#: templates/workspaces/dashboard.html:235
+#: templates/workspaces/dashboard.html:194
 msgctxt "verb: plan a post"
 msgid "Plan"
 msgstr "Planejar"
 
-#: templates/workspaces/dashboard.html:241
+#: templates/workspaces/dashboard.html:200
 msgid "No special date or campaign in the next 90 days."
 msgstr "Nenhuma data comemorativa ou campanha nos próximos 90 dias."
 
-#: templates/workspaces/dashboard.html:250
+#: templates/workspaces/dashboard.html:209
 #, python-format
 msgid "Best posts · %(name)s"
 msgstr "Melhores posts · %(name)s"
 
-#: templates/workspaces/dashboard.html:251
+#: templates/workspaces/dashboard.html:210
 msgid "See reports"
 msgstr "Ver relatórios"
 
-#: templates/workspaces/dashboard.html:266
+#: templates/workspaces/dashboard.html:225
 msgid "No caption"
 msgstr "Sem legenda"
 
-#: templates/workspaces/dashboard.html:273
+#: templates/workspaces/dashboard.html:232
 #, python-format
 msgid "No posts published on this network in the last %(days)s days."
 msgstr "Nenhum post publicado nesta rede nos últimos %(days)s dias."
 
-#: templates/workspaces/dashboard.html:278
+#: templates/workspaces/dashboard.html:237
 msgid "What works best"
 msgstr "O que mais funciona"
 
-#: templates/workspaces/dashboard.html:284
+#: templates/workspaces/dashboard.html:243
 #, python-format
 msgid "%(total)s post"
 msgid_plural "%(total)s posts"
 msgstr[0] "%(total)s post"
 msgstr[1] "%(total)s posts"
 
-#: templates/workspaces/dashboard.html:293
+#: templates/workspaces/dashboard.html:252
 msgid "Best day"
 msgstr "Melhor dia"
 
-#: templates/workspaces/dashboard.html:294
+#: templates/workspaces/dashboard.html:253
 msgid "Best time"
 msgstr "Melhor horário"
 
-#: templates/workspaces/dashboard.html:294
+#: templates/workspaces/dashboard.html:253
 #, python-format
 msgid "%(start)sh–%(end)sh"
 msgstr "%(start)sh–%(end)sh"
 
-#: templates/workspaces/dashboard.html:296
+#: templates/workspaces/dashboard.html:255
 msgid ""
 "The best day and time show up once there are a few more published posts with "
 "results."
@@ -21384,7 +21396,7 @@ msgstr ""
 "O melhor dia e horário aparecem quando houver mais alguns posts publicados "
 "com resultados."
 
-#: templates/workspaces/dashboard.html:298
+#: templates/workspaces/dashboard.html:257
 msgid ""
 "Average engagement rate per post (engagements ÷ views or reach), calculated "
 "by Connekt Flow from the network's numbers."
@@ -21392,7 +21404,7 @@ msgstr ""
 "Taxa média de engajamento por post (interações ÷ visualizações ou alcance), "
 "calculada pelo Connekt Flow com os números da rede."
 
-#: templates/workspaces/dashboard.html:301
+#: templates/workspaces/dashboard.html:260
 #, python-format
 msgid "No published post with results in the last %(days)s days yet."
 msgstr "Ainda não há post publicado com resultados nos últimos %(days)s dias."
@@ -21518,6 +21530,18 @@ msgid "%(days)s day left in the month."
 msgid_plural "%(days)s days left in the month."
 msgstr[0] "falta %(days)s dia para acabar o mês."
 msgstr[1] "faltam %(days)s dias para acabar o mês."
+
+#: templates/workspaces/partials/_dashboard_networks.html:49
+msgid "Connect another network"
+msgstr "Conecte mais uma rede"
+
+#: templates/workspaces/partials/_dashboard_networks.html:50
+msgid "TikTok, LinkedIn, YouTube and more"
+msgstr "TikTok, LinkedIn, YouTube e mais"
+
+#: templates/workspaces/partials/_dashboard_networks.html:51
+msgid "Connect account"
+msgstr "Conectar conta"
 
 #: templates/workspaces/settings.html:9
 msgid "Name, logo and lifecycle of this workspace."
@@ -21721,6 +21745,11 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 #: templates/workspaces/team.html:102
 msgid "Send invitation"
 msgstr "Enviar convite"
+
+#~ msgid "ad account"
+#~ msgid_plural "ad accounts"
+#~ msgstr[0] "conta de anúncios"
+#~ msgstr[1] "contas de anúncios"
 
 #~ msgid "Ad sets"
 #~ msgstr "Conjuntos de anúncios"
@@ -22010,9 +22039,6 @@ msgstr "Enviar convite"
 
 #~ msgid "Save Template"
 #~ msgstr "Salvar modelo"
-
-#~ msgid "Loading templates…"
-#~ msgstr "Carregando modelos…"
 
 #~ msgid "Internal team notes - not visible to clients…"
 #~ msgstr "Notas internas da equipe — não visíveis para clientes…"

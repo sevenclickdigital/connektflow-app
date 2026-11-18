@@ -62,8 +62,8 @@
     The numbers come from Meta on every visit (nothing is stored), which takes a
     few seconds: the page shows at once and they load into this placeholder.
     {% endcomment %}
-    <div hx-get="{% url 'ads:overview' workspace_id=workspace_id %}?range={{ days }}" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#ads-load-status">
-        {% include "ads/partials/_skeleton.html" %}
+    <div hx-get="{% url 'ads:overview' workspace_id=workspace_id %}?range={{ days }}" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#lazy-load-status">
+        {% translate "Fetching the numbers from Meta…" as loading_label %}{% include "components/_skeleton.html" with label=loading_label %}
     </div>
 {% endif %}
 {% endblock %}

@@ -177,7 +177,11 @@ def disconnect(request, workspace_id, connection_id):
 @require_permission("create_posts")
 @require_GET
 def shopee(request, workspace_id):
-    """The Shopee offers screen. HTMX requests get only the results block."""
+    """The Shopee offers screen. HTMX requests get only the results block.
+
+    The page itself does not wait on Shopee: it shows the filters at once and
+    the results block loads after (``lazy``), with the same URL over HTMX.
+    """
     connection = _shopee_connection(request)
     if connection is None:
         messages.info(request, _("Connect Shopee Affiliates to see offers."))
@@ -187,11 +191,12 @@ def shopee(request, workspace_id):
     filters = form.to_filters()
     results = None
     error = ""
-    try:
-        results = services.list_offers(connection, filters)
-    except ProviderError as exc:
-        logger.warning("Shopee Affiliate offers failed for workspace %s: %s", workspace_id, exc)
-        error = services.describe_error(exc)
+    if request.htmx:
+        try:
+            results = services.list_offers(connection, filters)
+        except ProviderError as exc:
+            logger.warning("Shopee Affiliate offers failed for workspace %s: %s", workspace_id, exc)
+            error = services.describe_error(exc)
 
     query = {k: v for k, v in request.GET.items() if k != "pages" and v}
     context = {
@@ -218,6 +223,7 @@ def shopee(request, workspace_id):
     }
     if request.htmx:
         return render(request, "radar/partials/_offers.html", context)
+    context["lazy"] = True
     return render(request, "radar/shopee.html", context)
 
 

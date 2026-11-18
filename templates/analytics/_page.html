@@ -76,7 +76,17 @@
                 <div style="padding: 16px 20px; border-bottom: 1px solid var(--neutral-100);">
                     <h3 style="font-size: 0.9375rem; font-weight: 600; color: var(--text-primary);">{% translate "All posts" %}</h3>
                 </div>
+                {% if table %}
                 {% include "analytics/_post_table.html" %}
+                {% else %}
+                {% comment %}
+                Every post with its numbers is the slowest part of the page: it
+                loads after, with the id its sorting and filters swap.
+                {% endcomment %}
+                <div id="analytics-post-table" hx-get="{{ table_url }}" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#analytics-post-table-status" style="padding: 16px 20px;">
+                    {% translate "Loading the posts…" as loading_label %}{% include "components/_skeleton.html" with variant="table" label=loading_label status_id="analytics-post-table-status" %}
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

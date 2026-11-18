@@ -21,6 +21,7 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.ads import reports as ads_reports
 from apps.ads import services as ads_services
 from apps.ads.models import AdsConnection
+from apps.common.htmx import lazy_body_urls
 from apps.composer.models import PlatformPost
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
@@ -226,14 +227,20 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
         metric=request.GET.get("chart_metric"),
         bundle=bundle,
     )
-    table = services.all_posts_for(
-        account,
-        days_filter=_parse_days_filter(request.GET.get("table_range", str(days))),
-        sort_key=request.GET.get("sort") or PLATFORM_PRIMARY.get(account.platform),
-        sort_dir=request.GET.get("dir", "desc"),
-        type_filter=request.GET.get("type", "all"),
-        page=_parse_page(request.GET.get("page")),
-    )
+    wants_table = bool(request.headers.get("HX-Request")) and request.GET.get("partial") == "table"
+    # The table of every post is the slowest part: the page shows without it
+    # and the table loads after (``partial=table``, the same request its
+    # sorting and filters make).
+    posts_table = None
+    if wants_table:
+        posts_table = services.all_posts_for(
+            account,
+            days_filter=_parse_days_filter(request.GET.get("table_range", str(days))),
+            sort_key=request.GET.get("sort") or PLATFORM_PRIMARY.get(account.platform),
+            sort_dir=request.GET.get("dir", "desc"),
+            type_filter=request.GET.get("type", "all"),
+            page=_parse_page(request.GET.get("page")),
+        )
 
     context.update(
         {
@@ -248,13 +255,14 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
             # ``null`` for days not reported yet: Chart.js draws those as a gap.
             "chart_series_json": json.dumps([None if v is None else round(v, 4) for v in chart["derived"].series]),
             "chart_labels_json": json.dumps(chart["labels"]),
-            "table": table,
+            "table": posts_table,
+            "table_url": lazy_body_urls(request, "table")["body_url"],
         }
     )
 
     if request.headers.get("HX-Request") and request.GET.get("partial") == "chart":
         return render(request, "analytics/_hero_chart.html", context)
-    if request.headers.get("HX-Request") and request.GET.get("partial") == "table":
+    if wants_table:
         return render(request, "analytics/_post_table.html", context)
     if request.headers.get("HX-Request") and request.GET.get("partial") == "page":
         # Full-page swap when account switcher is clicked via HTMX
@@ -289,7 +297,11 @@ def shopee_report(request: HttpRequest, workspace_id, connection_id) -> HttpResp
         "days": days,
         "range_choices": RANGE_CHOICES,
         "primary_color": "var(--primary)",
+        **lazy_body_urls(request),
     }
+    # The orders come from Shopee: the page shows at once and they load after.
+    if not request.headers.get("HX-Request") or not request.GET.get("partial"):
+        return render(request, "analytics/shopee.html", context)
     try:
         report = radar_reports.build_report(
             connection,
@@ -302,7 +314,7 @@ def shopee_report(request: HttpRequest, workspace_id, connection_id) -> HttpResp
     except ProviderError as exc:
         logger.warning("Shopee Affiliates report failed for connection %s: %s", connection.id, exc)
         context["report_error"] = describe_error(exc)
-        return render(request, "analytics/shopee.html", context)
+        return render(request, "analytics/_shopee_body.html", context)
 
     context.update(report)
     chart = report["chart"]
@@ -313,7 +325,7 @@ def shopee_report(request: HttpRequest, workspace_id, connection_id) -> HttpResp
         return render(request, "analytics/_hero_chart.html", context)
     if request.headers.get("HX-Request") and request.GET.get("partial") == "table":
         return render(request, "analytics/_shopee_orders.html", context)
-    return render(request, "analytics/shopee.html", context)
+    return render(request, "analytics/_shopee_body.html", context)
 
 
 @login_required
@@ -340,12 +352,16 @@ def meta_ads_report(request: HttpRequest, workspace_id) -> HttpResponse:
         "days": days,
         "range_choices": RANGE_CHOICES,
         "primary_color": "var(--primary)",
+        **lazy_body_urls(request),
     }
+    # Four calls to Meta, uncached: the page shows at once and the numbers load after.
+    if not request.headers.get("HX-Request") or not request.GET.get("partial"):
+        return render(request, "analytics/meta_ads.html", context)
     try:
         report = ads_reports.build_report(connection, days=days, metric=request.GET.get("chart_metric"))
     except ads_services.AdsError as exc:
         context["report_error"] = str(exc)
-        return render(request, "analytics/meta_ads.html", context)
+        return render(request, "analytics/_meta_ads_body.html", context)
 
     context.update(report)
     chart = report["chart"]
@@ -353,7 +369,7 @@ def meta_ads_report(request: HttpRequest, workspace_id) -> HttpResponse:
     context["chart_labels_json"] = json.dumps(chart["labels"])
     if request.headers.get("HX-Request") and request.GET.get("partial") == "chart":
         return render(request, "analytics/_hero_chart.html", context)
-    return render(request, "analytics/meta_ads.html", context)
+    return render(request, "analytics/_meta_ads_body.html", context)
 
 
 @login_required

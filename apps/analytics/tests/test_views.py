@@ -16,6 +16,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
+from apps.analytics import services as analytics_services
 from apps.analytics.models import AccountInsightsSnapshot
 from apps.composer.models import PlatformPost, Post
 from apps.members.models import OrgMembership, WorkspaceMembership
@@ -330,3 +331,26 @@ def test_sidebar_reports_link_follows_view_analytics(workspace):
 
     assert link not in contributor.content.decode()
     assert link in viewer.content.decode()
+
+
+@pytest.mark.django_db
+def test_the_posts_table_loads_after_the_page(owner_client, workspace):
+    account = _account(workspace, "instagram_login", "Direct IG")
+    AccountInsightsSnapshot.objects.create(
+        social_account=account, metric_key="impressions", date=timezone.now().date(), value=10
+    )
+    url = _account_url(workspace, account)
+
+    with patch(
+        "apps.analytics.services.all_posts_for",
+        wraps=analytics_services.all_posts_for,
+    ) as posts:
+        page = owner_client.get(url, {"range": "7", "type": "reels"})
+        assert not posts.called
+        table = owner_client.get(url, {"range": "7", "type": "reels", "partial": "table"}, HTTP_HX_REQUEST="true")
+
+    assert page.context["table"] is None
+    assert 'id="analytics-post-table" hx-get=' in page.content.decode()
+    assert "type=reels&amp;partial=table" in page.content.decode()
+    assert table.status_code == 200
+    assert table.context["table"] is not None

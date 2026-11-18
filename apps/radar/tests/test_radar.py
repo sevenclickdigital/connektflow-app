@@ -308,12 +308,23 @@ def test_load_more_reuses_cached_pages_and_drops_duplicates(shopee):
 
 def test_refused_credentials_flag_the_connection_and_show_why(workspace, owner, shopee):
     with patch("apps.radar.services.ShopeeAffiliateClient.search_offers", side_effect=OAuthError("10020")):
-        response = _client(owner).get(_url("shopee", workspace))
+        response = _client(owner).get(_url("shopee", workspace), HTTP_HX_REQUEST="true")
 
     assert response.status_code == 200
     assert b"Reconnect Shopee Affiliates" in response.content
     shopee.refresh_from_db()
     assert shopee.status == OpportunityConnection.Status.ERROR
+
+
+def test_the_offers_page_shows_before_asking_shopee(workspace, owner, shopee):
+    with patch("apps.radar.services.ShopeeAffiliateClient.search_offers") as search:
+        response = _client(owner).get(_url("shopee", workspace), {"category": "100631"})
+
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert not search.called
+    assert 'id="radar-offers" hx-get=' in body
+    assert "category=100631" in body
 
 
 def test_htmx_filter_request_returns_only_the_results(workspace, owner, shopee):

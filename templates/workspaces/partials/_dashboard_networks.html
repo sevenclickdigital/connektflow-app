@@ -1,0 +1,55 @@
+{% load i18n static analytics_extras %}
+{% comment %}
+The "By network" cards of the dashboard: followers, the platform's primary
+metric and engagement for every connected account. Each card recomputes that
+account's analytics, so the dashboard shows first and this row loads after
+(workspace_dashboard with partial=networks).
+{% endcomment %}
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-5">
+    {% for card in network_cards %}
+    <a href="?range={{ days }}&account={{ card.account.id }}"
+       class="block bg-white border rounded-xl p-4 transition-colors {% if card.account.id == active_account.id %}border-brand-300 ring-2 ring-brand-100{% else %}border-neutral-300 hover:border-brand-300{% endif %}">
+        <div class="flex items-center gap-2.5 mb-3">
+            <div class="relative flex-shrink-0">
+                {% if card.account.avatar_url %}
+                <img src="{{ card.account.avatar_url }}" alt="" class="w-8 h-8 rounded-full object-cover">
+                {% else %}
+                <div class="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center font-bold text-neutral-600">{{ card.account.account_name|make_list|first|upper }}</div>
+                {% endif %}
+                <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">{% if card.account.platform == "youtube" %}{% include "partials/_youtube_badge_icon.html" %}{% else %}{% include "partials/_platform_icon.html" with platform=card.account.platform size="sm" %}{% endif %}</div>
+            </div>
+            <span class="text-sm font-semibold text-neutral-950 truncate">{{ card.account.account_name }}</span>
+        </div>
+        {% if card.available %}
+        <dl class="grid grid-cols-3 gap-2">
+            <div class="min-w-0">
+                <dt class="text-xs text-neutral-600">{% translate "Followers" %}</dt>
+                <dd class="text-lg font-bold text-neutral-950">{{ card.followers|fmt_metric }}</dd>
+            </div>
+            <div class="min-w-0">
+                <dt class="text-xs text-neutral-600 truncate">{% translate card.primary.label %}</dt>
+                <dd class="text-lg font-bold text-neutral-950">{% if card.primary.derived.available %}{{ card.primary.derived.value|fmt_metric:card.primary.derived.kind }}{% else %}—{% endif %}</dd>
+                {% if card.primary.derived.available and card.primary.derived.comparison_available %}<dd>{% include "analytics/_delta_chip.html" with delta=card.primary.derived.delta %}</dd>{% endif %}
+            </div>
+            <div class="min-w-0">
+                <dt class="text-xs text-neutral-600">{% translate "Engagement" %}</dt>
+                <dd class="text-lg font-bold text-neutral-950">{% if card.engagement %}{{ card.engagement.value|fmt_metric:"percent" }}{% else %}—{% endif %}</dd>
+                {% if card.engagement and card.engagement.comparison_available %}<dd>{% include "analytics/_delta_chip.html" with delta=card.engagement.delta %}</dd>{% endif %}
+            </div>
+        </dl>
+        {% else %}
+        <p class="text-xs text-neutral-600">{{ card.reason }}</p>
+        {% endif %}
+    </a>
+    {% endfor %}
+    {% if can_connect_accounts %}
+    <a href="{% url 'social_accounts:list' workspace_id=workspace.id %}" class="flex items-center gap-4 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-4 hover:border-brand-300 transition-colors">
+        <img src="{% static 'img/moti/moti-conectar.webp' %}" alt="" class="h-16 flex-shrink-0">
+        <span>
+            <span class="block text-sm font-semibold text-neutral-950">{% translate "Connect another network" %}</span>
+            <span class="block text-xs text-neutral-600 mt-0.5">{% translate "TikTok, LinkedIn, YouTube and more" %}</span>
+            <span class="block text-sm font-semibold text-brand-700 mt-2">+ {% translate "Connect account" %}</span>
+        </span>
+    </a>
+    {% endif %}
+</div>

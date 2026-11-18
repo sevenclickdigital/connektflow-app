@@ -249,11 +249,21 @@ class TestSettingsPage:
         ("GET", f"{OTHER_ACCOUNT}/promote_pages"): {"data": [{"id": "page-9", "name": "Outra Page"}]},
     }
 
+    def test_the_page_shows_before_the_lists_load(self, connection, manager):
+        graph, patch = fake_graph(self.ROUTES)
+        url = reverse("ads:settings", kwargs={"workspace_id": connection.workspace_id})
+        with patch:
+            response = _logged_in(manager).get(url, {"account": OTHER_ACCOUNT})
+        assert graph.calls == []
+        assert f"account={OTHER_ACCOUNT}&amp;partial=body" in response.content.decode()
+
     def test_lists_every_ad_account_with_the_chosen_one_marked(self, connection, manager):
         graph, patch = fake_graph(self.ROUTES)
         with patch:
             response = _logged_in(manager).get(
-                reverse("ads:settings", kwargs={"workspace_id": connection.workspace_id})
+                reverse("ads:settings", kwargs={"workspace_id": connection.workspace_id}),
+                {"partial": "body"},
+                HTTP_HX_REQUEST="true",
             )
         assert response.status_code == 200
         body = response.content.decode()
@@ -266,7 +276,9 @@ class TestSettingsPage:
         graph, patch = fake_graph(self.ROUTES)
         url = reverse("ads:settings", kwargs={"workspace_id": connection.workspace_id})
         with patch:
-            response = _logged_in(manager).get(url, {"account": OTHER_ACCOUNT})
+            response = _logged_in(manager).get(
+                url, {"account": OTHER_ACCOUNT, "partial": "body"}, HTTP_HX_REQUEST="true"
+            )
         assert [p.id for p in response.context["choices"].pixels] == ["px-9"]
         assert [p.id for p in response.context["choices"].pages] == ["page-9"]
         body = response.content.decode()
@@ -289,7 +301,9 @@ class TestSettingsPage:
         graph, patch = fake_graph(self.ROUTES)
         with patch:
             response = _logged_in(manager).get(
-                reverse("ads:settings", kwargs={"workspace_id": connection.workspace_id})
+                reverse("ads:settings", kwargs={"workspace_id": connection.workspace_id}),
+                {"partial": "body"},
+                HTTP_HX_REQUEST="true",
             )
         assert response.context["form"]["page_id"].value() == "page-1"
 
@@ -585,9 +599,15 @@ class TestReports:
     }
 
     def test_meta_ads_appears_in_the_reports(self, workspace, viewer, connection):
+        url = reverse("analytics:meta_ads", kwargs={"workspace_id": workspace.id})
+        client = _logged_in(viewer)
         graph, patch = fake_graph(self.REPORT_ROUTES)
         with patch:
-            response = _logged_in(viewer).get(reverse("analytics:meta_ads", kwargs={"workspace_id": workspace.id}))
+            page = client.get(url)
+            assert graph.calls == []
+            response = client.get(url, {"partial": "body"}, HTTP_HX_REQUEST="true")
+        assert page.status_code == 200
+        assert "partial=body" in page.content.decode()
         assert response.status_code == 200
         assert response.context["active_ads"] == connection
         assert [card["metric"] for card in response.context["hero_cards"]] == [

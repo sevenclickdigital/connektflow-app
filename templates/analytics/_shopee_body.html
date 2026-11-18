@@ -1,0 +1,100 @@
+{% load analytics_extras i18n %}
+{% comment %}
+The report of the Shopee Affiliates connection, loaded after the page shows
+(views.shopee_report with partial=body): the platform answers in seconds.
+{% endcomment %}
+<div style="display: contents;">
+{% if report_error %}
+<div class="a-card" style="padding: 18px 22px; background: var(--warning-50); border-color: var(--warning-500); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+    <div>
+        <div style="font-weight: 700; color: var(--warning-700);">{% translate "Shopee did not send the report" %}</div>
+        <div style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 2px;">{{ report_error }}</div>
+    </div>
+    <a href="{{ page_url }}" class="btn-outline" style="width: auto; padding: 8px 18px;">{% translate "Try again" %}</a>
+</div>
+{% elif is_fresh %}
+<div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px;">
+    <div style="text-align: center; max-width: 440px;">
+        <div style="width: 72px; height: 72px; border-radius: var(--radius-2xl); background: var(--primary-soft); color: var(--primary); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+            {% include "social_accounts/partials/_platform_icon.html" with platform="shopee_affiliate" size="8" %}
+        </div>
+        <h2 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">{% translate "No sales through your links yet" %}</h2>
+        <p style="font-size: 0.9375rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px;">
+            {% blocktranslate %}Shopee reports the orders of the last {{ max_days }} days. When someone buys through one of your affiliate links, the order and its commission show up here.{% endblocktranslate %}
+        </p>
+        <a href="{% url 'radar:shopee' workspace_id=workspace.id %}" class="btn-brand" style="width: auto; padding: 9px 20px;">{% translate "Find offers to share" %}</a>
+    </div>
+</div>
+{% else %}
+<div style="display: flex; flex-direction: column; gap: 20px;">
+    <div class="a-hero-row">
+        {% for c in hero_cards %}
+            <div class="a-kpi">{% include "analytics/_stat_card.html" with metric_key=c.metric label=c.label derived=c.derived %}</div>
+        {% endfor %}
+        <div class="a-eng-card">{% include "analytics/_shopee_status_card.html" %}</div>
+    </div>
+    <p class="a-calc-note" style="display: flex; align-items: flex-start; gap: 6px; margin-top: -8px;">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="flex-shrink: 0; margin-top: 1px;" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span>
+            {% translate "Commission, orders and sales include pending orders and leave out cancelled ones; Shopee confirms the commission when the order is completed." %}
+            {% if not comparable %}{% blocktranslate %}Shopee only reports the last {{ max_days }} days, so this range has no previous period to compare.{% endblocktranslate %}{% endif %}
+            {% if not report_complete %}{% translate "Shopee sent more orders than this page reads at once; the oldest ones are missing." %}{% endif %}
+        </span>
+    </p>
+
+    <div class="a-card" style="padding: 20px;">
+        {% include "analytics/_hero_chart.html" %}
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 20px;">
+        <div class="a-card">
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--neutral-100);">
+                <h3 style="font-size: 0.9375rem; font-weight: 600; color: var(--text-primary);">{% translate "Top products" %}</h3>
+            </div>
+            <ul style="padding: 6px 12px;">
+                {% for product in top_products %}
+                <li style="display: flex; align-items: center; gap: 10px; padding: 8px; {% if not forloop.last %}border-bottom: 1px solid var(--neutral-100);{% endif %}">
+                    {% if product.image_url %}<img src="{{ product.image_url }}" alt="" loading="lazy" style="width: 36px; height: 36px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--surface-2);">{% else %}<div style="width: 36px; height: 36px; border-radius: 6px; background: var(--surface-2); flex-shrink: 0;"></div>{% endif %}
+                    <span style="flex: 1; min-width: 0;">
+                        <span style="display: block; font-size: 0.8125rem; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ product.name }}</span>
+                        <span style="display: block; font-size: 0.6875rem; color: var(--text-tertiary);">{% blocktranslate count counter=product.orders %}{{ counter }} order{% plural %}{{ counter }} orders{% endblocktranslate %}{% if product.shop_name %} · {{ product.shop_name }}{% endif %}</span>
+                    </span>
+                    <span class="a-mono" style="font-size: 0.8125rem; font-weight: 700; color: var(--text-primary); white-space: nowrap;">{{ product.commission|fmt_metric:"currency" }}</span>
+                </li>
+                {% empty %}
+                <li style="padding: 20px 8px; text-align: center; font-size: 0.8125rem; color: var(--text-tertiary);">{% translate "No sales in this period." %}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="a-card">
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--neutral-100);">
+                <h3 style="font-size: 0.9375rem; font-weight: 600; color: var(--text-primary);">{% translate "Where sales came from" %}</h3>
+            </div>
+            <ul style="padding: 12px 20px 16px; display: flex; flex-direction: column; gap: 12px;">
+                {% for source in referrers %}
+                <li>
+                    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 0.8125rem;">
+                        <span style="color: var(--text-primary);">{{ source.label }}</span>
+                        <span class="a-mono" style="color: var(--text-secondary);">{% blocktranslate count counter=source.orders %}{{ counter }} order{% plural %}{{ counter }} orders{% endblocktranslate %} · {{ source.share }}%</span>
+                    </div>
+                    <div style="margin-top: 5px; height: 6px; border-radius: var(--radius-full); background: var(--surface-2); overflow: hidden;">
+                        <div style="height: 100%; width: {{ source.share }}%; background: var(--primary); border-radius: var(--radius-full);"></div>
+                    </div>
+                </li>
+                {% empty %}
+                <li style="padding: 8px 0; text-align: center; font-size: 0.8125rem; color: var(--text-tertiary);">{% translate "No sales in this period." %}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="a-card">
+        <div style="padding: 16px 20px; border-bottom: 1px solid var(--neutral-100);">
+            <h3 style="font-size: 0.9375rem; font-weight: 600; color: var(--text-primary);">{% translate "Orders" %}</h3>
+        </div>
+        {% include "analytics/_shopee_orders.html" %}
+    </div>
+</div>
+{% endif %}
+</div>

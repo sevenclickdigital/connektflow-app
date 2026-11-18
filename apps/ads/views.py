@@ -20,6 +20,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from django_ratelimit.decorators import ratelimit
 
+from apps.common.htmx import lazy_body_urls, wants_lazy_body
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
 from apps.social_accounts.views import _sign_state, _unsign_state, finish_in_popup
@@ -209,19 +210,23 @@ def meta_callback(request):
 @ratelimit(key="user", rate="20/m", block=True)
 @require_http_methods(["GET", "POST"])
 def connection_settings(request, workspace_id):
-    """Pick the ad account, the Pixel and the Page. ``?account=`` reloads the Pixels of another account."""
+    """Pick the ad account, the Pixel and the Page. ``?account=`` reloads the Pixels of another account.
+
+    A GET shows the page at once; the lists, read from Meta (up to three calls),
+    load into it after (``partial=body``). A POST that fails renders them inline.
+    """
     connection = services.get_connection(request.workspace.id)
     if connection is None:
         return redirect("ads:index", workspace_id=workspace_id)
+    base = {"workspace_id": workspace_id, "connection": connection, **lazy_body_urls(request)}
+    if request.method == "GET" and not wants_lazy_body(request):
+        return render(request, "ads/settings.html", base)
+    body_template = "ads/partials/_settings_body.html" if request.method == "GET" else "ads/settings.html"
     wanted = request.POST.get("ad_account_id") or request.GET.get("account", "")
     try:
         choices = services.asset_choices(connection, wanted)
     except services.AdsError as exc:
-        return render(
-            request,
-            "ads/settings.html",
-            {"workspace_id": workspace_id, "connection": connection, "form": None, "error": str(exc)},
-        )
+        return render(request, body_template, {**base, "form": None, "error": str(exc)})
 
     same_account = bool(choices.account and choices.account.id == connection.ad_account_id)
     initial = {
@@ -247,17 +252,7 @@ def connection_settings(request, workspace_id):
         else:
             messages.success(request, _("Meta Ads settings saved."))
             return redirect("ads:index", workspace_id=workspace_id)
-    return render(
-        request,
-        "ads/settings.html",
-        {
-            "workspace_id": workspace_id,
-            "connection": connection,
-            "form": form,
-            "choices": choices,
-            "error": "",
-        },
-    )
+    return render(request, body_template, {**base, "form": form, "choices": choices, "error": ""})
 
 
 @login_required

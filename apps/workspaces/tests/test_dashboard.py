@@ -71,10 +71,13 @@ def test_a_member_sees_the_dashboard_with_its_networks(client, brand, instagram)
     AnalyticsPlatformConfig.objects.update_or_create(platform="instagram", defaults={"is_enabled": True})
     _member(client, brand, ROLE.VIEWER)
 
-    response = client.get(_url(brand))
+    page = client.get(_url(brand))
+    response = client.get(_url(brand), {"partial": "networks"}, HTTP_HX_REQUEST="true")
 
+    assert page.status_code == 200
+    assert page.context["active_account"] == instagram
+    assert "partial=networks" in page.content.decode()
     assert response.status_code == 200
-    assert response.context["active_account"] == instagram
     assert [card["account"] for card in response.context["network_cards"]] == [instagram]
 
 
@@ -111,10 +114,12 @@ def test_without_reports_permission_no_network_numbers_are_shown(client, brand, 
     AnalyticsPlatformConfig.objects.update_or_create(platform="instagram", defaults={"is_enabled": True})
     _member(client, brand, ROLE.CONTRIBUTOR)
 
-    response = client.get(_url(brand))
+    page = client.get(_url(brand))
+    response = client.get(_url(brand), {"partial": "networks"}, HTTP_HX_REQUEST="true")
 
-    assert response.status_code == 200
-    assert response.context["active_account"] is None
+    assert page.status_code == 200
+    assert page.context["active_account"] is None
+    assert "partial=networks" not in page.content.decode()
     assert response.context["network_cards"] == []
 
 

@@ -380,8 +380,9 @@ def workspace_dashboard(request, workspace_id):
     ``?range=7|30|90`` sets the period of every number, ``?account=<id>`` the
     network the results chart, top posts and "what works" read from. Both are
     plain links; the chart's metric chips swap only the chart
-    (``?partial=chart``), and the goal card re-fetches itself
-    (``?partial=goal``) after it is saved.
+    (``?partial=chart``), the goal card re-fetches itself
+    (``?partial=goal``) after it is saved, and the "By network" cards load
+    after the page (``?partial=networks``), each recomputing its account.
     """
     from apps.analytics import services as analytics
     from apps.social_accounts.models import AnalyticsPlatformConfig
@@ -444,7 +445,10 @@ def workspace_dashboard(request, workspace_id):
             "today": today,
         }
     )
-    bundle = None
+    if request.htmx and request.GET.get("partial") == "networks":
+        # Each card recomputes its account's analytics: loaded after the page.
+        context["network_cards"] = [dashboard.network_card(account, days) for account in accounts]
+        return render(request, "workspaces/partials/_dashboard_networks.html", context)
     if selected is not None:
         bundle = analytics.account_analytics_bundle(selected, days)
         chart = analytics.hero_chart_data(selected, days, metric=request.GET.get("chart_metric"), bundle=bundle)
@@ -470,10 +474,6 @@ def workspace_dashboard(request, workspace_id):
                 "performance": analytics.post_performance(selected, days, tz),
             }
         )
-    context["network_cards"] = [
-        dashboard.network_card(account, days, bundle if selected and account.id == selected.id else None)
-        for account in accounts
-    ]
     return render(request, "workspaces/dashboard.html", context)
 
 

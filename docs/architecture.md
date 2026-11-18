@@ -86,7 +86,7 @@ docker-compose.dokploy.yml                         # production
 
 Server-rendered HTML. The only build step is Tailwind. In development it runs as `npm run start` in `theme/static_src` (or the `tailwind` service in `docker-compose.override.yml`). In the image, `npm run build` runs in the `Dockerfile`.
 
-- HTMX handles partial swaps, inline actions and polling. `django_htmx.middleware.HtmxMiddleware` is installed.
+- HTMX handles partial swaps, inline actions and polling. `django_htmx.middleware.HtmxMiddleware` is installed. A page whose part waits on a platform's API or a heavy calculation renders at once and loads that part into a placeholder (`templates/components/_skeleton.html`, `apps.common.htmx.lazy_body_urls`): the Meta Ads pages and settings, the Meta Ads and Shopee reports, the Radar's Shopee offers, the posts table of an account's report and the dashboard's "By network" cards.
 - Alpine.js handles client-side UI: dropdowns, modals, drag and drop, character counters. CSP allows `'unsafe-eval'` because the standard Alpine build needs it (`base.py`).
 - HTMX and Alpine are vendored (`static/js/htmx.min.js`, `static/js/alpine.min.js`), as is Cropper.js under `static/js/vendor/`. Static files are served by WhiteNoise (`CompressedManifestStaticFilesStorage` in production).
 - Confirmations use one dialog, `templates/components/_confirm_dialog.html` (included by `base.html`): it handles every `hx-confirm` through htmx's `htmx:confirm` event and every form with `data-confirm`, so no page opens the browser's `confirm()`.
