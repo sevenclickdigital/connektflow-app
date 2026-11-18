@@ -25,11 +25,24 @@ def _migrate(target):
     MigrationExecutor(connection).migrate([target])
 
 
+def _migrate_everything_to_head():
+    """Put every app back on its latest migration.
+
+    Rewinding composer to ``0024`` also unapplies the later composer migrations
+    and every migration of another app that depends on them (``tasks`` among
+    them). Going forward to ``HEAD`` alone would leave all of those out, and a
+    later transactional test then meets a missing table (``tasks_task_assignees``
+    when it deletes a user).
+    """
+    executor = MigrationExecutor(connection)
+    executor.migrate(executor.loader.graph.leaf_nodes())
+
+
 @pytest.fixture
 def at_0024(db):
     _migrate(BEFORE)
     yield MigrationExecutor(connection).loader.project_state(BEFORE).apps
-    _migrate(HEAD)
+    _migrate_everything_to_head()
 
 
 @pytest.mark.django_db(transaction=True)

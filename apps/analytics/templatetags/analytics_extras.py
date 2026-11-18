@@ -15,6 +15,9 @@ from django.utils.safestring import mark_safe
 
 register = template.Library()
 
+# Symbols for the currencies amounts usually come in; any other shows its code.
+CURRENCY_SYMBOLS = {"BRL": "R$", "USD": "US$", "EUR": "€", "GBP": "£"}
+
 
 @register.filter
 def fmt_metric(value, kind: str = "count") -> str:
@@ -27,9 +30,12 @@ def fmt_metric(value, kind: str = "count") -> str:
         return "0"
     if kind == "percent":
         return f"{v:.1f}%"
-    if kind == "currency":
-        # Amounts in BRL, the only currency a source reports in today.
-        return "R$\u00a0" + formats.number_format(round(v, 2), 2, use_l10n=True, force_grouping=True)
+    if kind == "currency" or kind.startswith("currency:"):
+        # "currency" is BRL; "currency:USD" names another (a Meta ad account
+        # can run in any currency).
+        code = kind.partition(":")[2] or "BRL"
+        symbol = CURRENCY_SYMBOLS.get(code.upper(), code.upper())
+        return f"{symbol}\u00a0" + formats.number_format(round(v, 2), 2, use_l10n=True, force_grouping=True)
     if kind == "minutes":
         # minutes → "Xh" or "X.Ym" depending on magnitude
         if v >= 60:

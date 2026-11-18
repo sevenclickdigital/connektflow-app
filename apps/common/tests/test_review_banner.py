@@ -29,6 +29,7 @@ BANNER = "Enjoying Connekt Flow?"
 TRUSTPILOT_URL = "https://www.trustpilot.com/review/brightbean.xyz"
 
 
+@override_settings(LANGUAGE_CODE="en-us")
 class ReviewBannerTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(

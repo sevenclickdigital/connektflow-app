@@ -123,6 +123,7 @@ class PageHelpVideo(models.Model):
         AUTOMATIONS = "automations", pgettext_lazy("menu", "Automation")
         CONTACTS = "contacts", pgettext_lazy("menu", "Contacts")
         ANALYTICS = "analytics", _("Reports")
+        ADS = "ads", _("Ads")
         ACCOUNTS = "accounts", _("Social Accounts")
         MEDIA = "media", _("Gallery")
         RADAR = "radar", _("Radar")

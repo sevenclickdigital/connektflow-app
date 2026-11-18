@@ -123,6 +123,12 @@ Consistency beats personal preference. Use this table; if a term is missing, add
 | No results | Nenhum resultado |
 | Try again | Tentar novamente |
 | Learn more | Saiba mais |
+| Ads (Meta Ads) | Anúncios |
+| Ad account | Conta de anúncios |
+| Campaign | Campanha |
+| Ad set | Conjunto de anúncios |
+| Budget | Orçamento |
+| Pixel | Pixel |
 
 Known drift in the current catalogue (fix when touching those screens): `Delete` is translated "Deletar" in places — it should be "Excluir"; standalone `Template` became "Modelos" — singular "Modelo" unless the UI shows a list title.
 

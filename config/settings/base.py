@@ -73,6 +73,7 @@ LOCAL_APPS = [
     "apps.calendar",
     "apps.tasks",
     "apps.radar",
+    "apps.ads",
     "apps.contacts",
     "apps.funnels",
     "apps.publisher",
@@ -590,6 +591,12 @@ _INSTAGRAM_LOGIN_CREDENTIALS = {
 # Threads has its own app identity: a Meta app carrying the "Access the Threads
 # API" use case gets a Threads App ID / Secret distinct from the Facebook pair
 # (App settings -> Basic -> Threads App ID). Sending the Facebook App ID to
+# Meta Ads signs in through the same Meta app as Facebook Pages. This optional
+# Login for Business configuration must carry the ads permissions
+# (ads_management, ads_read, business_management, pages_show_list,
+# pages_manage_ads); the Pages one above has none of them, so it is not reused.
+# Unset, the Login dialog asks for those permissions directly.
+PLATFORM_META_ADS_CONFIG_ID = env("PLATFORM_META_ADS_CONFIG_ID", default="")
 # threads.com/oauth/authorize fails with error 4476002 ("No app ID was provided
 # in the request"), so these deliberately do NOT fall back to _META_CREDENTIALS.
 # Left unset, Threads stays unconfigured and resolves through the org's

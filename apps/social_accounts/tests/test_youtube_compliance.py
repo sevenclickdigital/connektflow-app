@@ -4,6 +4,7 @@ import json
 from datetime import timedelta
 from io import StringIO
 from unittest.mock import Mock, patch
+from zoneinfo import ZoneInfo
 
 import pytest
 from django.core.management import call_command
@@ -235,13 +236,16 @@ def test_a_grant_that_no_longer_reaches_the_channel_stops_the_inbox(channel):
 
 def test_history_keeps_180_days_and_drops_arbitrary_old_response_payloads(channel):
     now = timezone.now()
+    # The history is counted in YouTube's day (US/Pacific), which is a day
+    # behind UTC for the first hours of every UTC day.
+    youtube_today = now.astimezone(ZoneInfo("America/Los_Angeles")).date()
     old = AccountInsightsSnapshot.objects.create(
-        social_account=channel, metric_key="views", date=now.date() - timedelta(days=181), value=4
+        social_account=channel, metric_key="views", date=youtube_today - timedelta(days=181), value=4
     )
     retained = AccountInsightsSnapshot.objects.create(
         social_account=channel,
         metric_key="views",
-        date=now.date() - timedelta(days=179),
+        date=youtube_today - timedelta(days=179),
         value=3,
         raw={"source": "youtube_analytics", "copied_profile": "Old"},
     )
@@ -338,7 +342,8 @@ def test_pending_inbox_and_snapshot_writers_cannot_recreate_purged_data(channel)
     assert not InboxMessage.objects.exists()
 
 
-def test_org_request_purges_youtube_immediately_and_preserves_other_platforms(channel, user):
+def test_org_request_purges_youtube_immediately_and_preserves_other_platforms(channel, user, settings):
+    settings.LANGUAGE_CODE = "en-us"  # asserts the English wording
     org = channel.workspace.organization
     OrgMembership.objects.filter(user=user).delete()
     OrgMembership.objects.create(user=user, organization=org, org_role="owner")

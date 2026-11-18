@@ -43,11 +43,13 @@ urlpatterns = [
     path("members/", include("apps.members.urls")),
     path("settings/", include("apps.settings_manager.urls")),
     path("social-accounts/", include("apps.social_accounts.urls")),
+    path("ads/", include("apps.ads.callback_urls")),
     # Content Pipeline (Stream A)
     path("workspace/<uuid:workspace_id>/", include("apps.composer.urls")),
     path("workspace/<uuid:workspace_id>/calendar/", include("apps.calendar.urls")),
     path("workspace/<uuid:workspace_id>/tasks/", include("apps.tasks.urls")),
     path("workspace/<uuid:workspace_id>/radar/", include("apps.radar.urls")),
+    path("workspace/<uuid:workspace_id>/ads/", include("apps.ads.urls")),
     path("workspace/<uuid:workspace_id>/contacts/", include("apps.contacts.urls")),
     path("workspace/<uuid:workspace_id>/funnels/", include("apps.funnels.urls")),
     path("workspace/<uuid:workspace_id>/inbox/", include("apps.inbox.urls")),

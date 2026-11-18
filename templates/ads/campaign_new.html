@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "New campaign" %} - Connekt Flow{% endblock %}
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "New campaign" %}</h1>
+        <p class="page-description">{% blocktranslate with account=connection.ad_account_name page=connection.page_name|default:"—" %}In the ad account {{ account }}, published as {{ page }}. It is created paused: nothing is spent until you activate it.{% endblocktranslate %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="max-w-3xl space-y-6">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    {% if not connection.page_id %}
+    <div class="alert-info">{% translate "Choose the Facebook Page your ads are published as in the connection settings." %} <a class="btn-link" href="{% url 'ads:settings' workspace_id=workspace_id %}">{% translate "Settings" %}</a></div>
+    {% endif %}
+
+    <section class="a-card p-5 space-y-4">
+        <h2 class="section-title">{% translate "Campaign" %}</h2>
+        {% include "components/_form_field.html" with field=form.name %}
+        <fieldset>
+            <legend class="block text-sm font-semibold text-neutral-950 mb-2">{{ form.objective.label }}</legend>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {% for radio in form.objective %}
+                <label class="flex items-center gap-2 a-card px-3 py-2 cursor-pointer hover:border-brand-700">
+                    {{ radio.tag }} <span class="text-sm text-neutral-950">{{ radio.choice_label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <p class="text-xs mt-1.5 text-neutral-600">{% translate "Sales and Leads optimise for the Pixel's purchase and lead events." %}{% if connection.pixel_name %} {% blocktranslate with pixel=connection.pixel_name %}Pixel: {{ pixel }}.{% endblocktranslate %}{% endif %}</p>
+            {% for error in form.objective.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
+        </fieldset>
+    </section>
+
+    <section class="a-card p-5 space-y-4">
+        <h2 class="section-title">{% translate "Budget and schedule" %}</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {% include "components/_form_field.html" with field=form.daily_budget %}
+            {% include "components/_form_field.html" with field=form.start_time %}
+            {% include "components/_form_field.html" with field=form.end_time %}
+        </div>
+        <p class="text-xs text-neutral-600">{% translate "Without a start, delivery begins as soon as the campaign is activated. Without an end, it runs until you pause it." %}</p>
+    </section>
+
+    <section class="a-card p-5 space-y-4">
+        <h2 class="section-title">{% translate "Audience" %}</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            {% include "components/_form_field.html" with field=form.countries class="sm:col-span-2" %}
+            {% include "components/_form_field.html" with field=form.age_min %}
+            {% include "components/_form_field.html" with field=form.age_max %}
+            {% include "components/_form_field.html" with field=form.gender class="sm:col-span-2" %}
+        </div>
+    </section>
+
+    <section class="a-card p-5 space-y-4">
+        <h2 class="section-title">{% translate "Ad" %}</h2>
+        <fieldset>
+            <legend class="block text-sm font-semibold text-neutral-950 mb-2">{{ form.image.label }}</legend>
+            {% if images %}
+            <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {% for asset in images %}
+                <label class="relative block cursor-pointer rounded-lg overflow-hidden border border-neutral-300 has-[:checked]:ring-2 has-[:checked]:ring-brand-700">
+                    <input type="radio" name="{{ form.image.html_name }}" value="{{ asset.id }}" class="sr-only" {% if form.image.value|stringformat:"s" == asset.id|stringformat:"s" %}checked{% endif %} required>
+                    <img src="{% if asset.thumbnail %}{{ asset.thumbnail.url }}{% else %}{{ asset.file.url }}{% endif %}" alt="{{ asset.filename }}" class="w-full aspect-square object-cover" loading="lazy">
+                </label>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-neutral-600">{% translate "There are no images in the gallery yet." %} <a class="btn-link" href="{% url 'media_library:index' workspace_id=workspace_id %}">{% translate "Open the gallery" %}</a></p>
+            {% endif %}
+            {% for error in form.image.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
+        </fieldset>
+        {% include "components/_form_field.html" with field=form.message %}
+        {% include "components/_form_field.html" with field=form.headline %}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {% include "components/_form_field.html" with field=form.link class="sm:col-span-2" %}
+            {% include "components/_form_field.html" with field=form.call_to_action %}
+        </div>
+    </section>
+
+    <div class="flex justify-end gap-2">
+        <a href="{% url 'ads:index' workspace_id=workspace_id %}" class="btn-outline">{% translate "Cancel" %}</a>
+        <button type="submit" class="btn-brand" {% if not connection.page_id %}disabled{% endif %}>{% translate "Create paused campaign" %}</button>
+    </div>
+</form>
+{% endblock %}

@@ -16,6 +16,7 @@ CATEGORIES: tuple[tuple[str, str], ...] = (
     ("professional", _("Professional")),
     ("discovery", _("Discovery")),
     ("local", _("Local business")),
+    ("ads", _("Ads")),
     ("other", _("Other")),
 )
 
@@ -202,6 +203,37 @@ _CONNECT_GUIDES = {
         ),
         "note": "",
     },
+}
+
+# Meta Ads is not a SocialAccount (apps.ads), but it is offered on the same page
+# and opens with the same guide.
+_CONNECT_GUIDES["meta_ads"] = {
+    "steps": (
+        (
+            _("Sign in with Facebook"),
+            _(
+                "Use the Facebook profile that has access to the ad account in Meta Business Suite, "
+                "as admin or advertiser."
+            ),
+        ),
+        (
+            _SIGN_IN_AND_ALLOW,
+            _(
+                "When Meta asks, select the ad account, its Pixel and the Facebook Page, and keep every permission ticked."
+            ),
+        ),
+        (
+            _("Choose the ad account, the Pixel and the Page"),
+            _(
+                "Back here, pick the ad account the campaigns run in, the Pixel that measures your site "
+                "and the Page the ads are published as."
+            ),
+        ),
+    ),
+    "note": _(
+        "The ad account has to be active and have a payment method in Meta. Sales and lead campaigns also "
+        "need the Pixel installed on your site, and every ad needs a Facebook Page."
+    ),
 }
 
 # Connected by a form of our own, or by the platform's embedded window, rather

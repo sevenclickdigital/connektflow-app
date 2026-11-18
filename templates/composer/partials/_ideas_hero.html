@@ -3,8 +3,8 @@
 The hero card at the top of the pages of the sidebar (every one but the
 notifications): what the page is for and a pose of Moti. ``tab`` names the
 page: ideas, templates and dates (the create area), tasks, calendar,
-dashboard, inbox, automations, contacts, analytics, accounts, media, radar,
-shopee and instagram_research (the Radar's inner pages).
+dashboard, inbox, automations, contacts, analytics, ads, accounts, media,
+radar, shopee and instagram_research (the Radar's inner pages).
 
 Closing it is remembered per page in this browser (localStorage
 "cf:ideas-hero-closed:<tab>") and announced with the "ideas-hero-toggled"
@@ -87,6 +87,9 @@ Expects: tab. Optional: hero_margin, the classes for the space below it
     {% elif tab == "instagram_research" %}
     {% translate "See what works for others" as hero_title %}
     {% translate "Follow other business profiles and the posts under a hashtag to find ideas for your own content." as hero_text %}
+    {% elif tab == "ads" %}
+    {% translate "Your Meta campaigns in one place" as hero_title %}
+    {% translate "Follow what each campaign spends and brings back, create new ones step by step and switch them on when you are ready." as hero_text %}
     {% elif tab == "dates" %}
     {% translate "Be ready for every special date" as hero_title %}
     {% translate "See the dates that matter to your segment ahead of time and plan the content for each one." as hero_text %}
@@ -116,7 +119,7 @@ Expects: tab. Optional: hero_margin, the classes for the space below it
     {% if tab == "templates" %}{% static 'img/moti/moti-modelos.webp' as hero_image %}
     {% elif tab == "tasks" %}{% static 'img/moti/moti-tarefas.webp' as hero_image %}
     {% elif tab == "dashboard" %}{% static 'img/moti/moti-dashboard.webp' as hero_image %}
-    {% elif tab == "analytics" %}{% static 'img/moti/moti-relatorios.webp' as hero_image %}
+    {% elif tab == "analytics" or tab == "ads" %}{% static 'img/moti/moti-relatorios.webp' as hero_image %}
     {% elif tab == "dates" or tab == "calendar" %}{% static 'img/moti/moti-datas.webp' as hero_image %}
     {% elif tab == "inbox" %}{% static 'img/moti/moti-inbox.webp' as hero_image %}
     {% elif tab == "automations" %}{% static 'img/moti/moti-computador.webp' as hero_image %}

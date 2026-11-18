@@ -19,7 +19,7 @@ from .base import REQUEST_TIMEOUT
 from .exceptions import APIError
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from .base import SocialProvider
+    from .base import HttpProvider
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ META_ACCOUNTS_MIN_REQUEST_SECONDS = 1.0
 
 
 def fetch_me_accounts(
-    provider: SocialProvider,
+    provider: HttpProvider,
     *,
     access_token: str,
     base_url: str,

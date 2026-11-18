@@ -1,0 +1,54 @@
+{% load i18n ads_extras analytics_extras %}
+{% comment %}
+The numbers of an ad account or a campaign for the chosen window.
+Takes totals (providers.meta_ads.Insights), series (services.daily_series),
+currency and days.
+{% endcomment %}
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+    <div class="a-card p-4">
+        <p class="text-xs font-semibold text-neutral-600">{% translate "Amount spent" %}</p>
+        <p class="text-2xl font-bold text-neutral-950 mt-2">{{ totals.spend|ads_money:currency }}</p>
+        <div class="mt-2">{% sparkline series.spend "var(--primary)" 150 28 %}</div>
+    </div>
+    <div class="a-card p-4">
+        <p class="text-xs font-semibold text-neutral-600">{% translate "Impressions" %}</p>
+        <p class="text-2xl font-bold text-neutral-950 mt-2">{{ totals.impressions|fmt_metric }}</p>
+        <div class="mt-2">{% sparkline series.impressions "var(--primary)" 150 28 %}</div>
+    </div>
+    <div class="a-card p-4">
+        <p class="text-xs font-semibold text-neutral-600">{% translate "Link clicks" %}</p>
+        <p class="text-2xl font-bold text-neutral-950 mt-2">{{ totals.link_clicks|fmt_metric }}</p>
+        <div class="mt-2">{% sparkline series.clicks "var(--primary)" 150 28 %}</div>
+    </div>
+    <div class="a-card p-4">
+        <p class="text-xs font-semibold text-neutral-600">{% translate "Reach" %}</p>
+        <p class="text-2xl font-bold text-neutral-950 mt-2">{{ totals.reach|fmt_metric }}</p>
+        <p class="text-xs text-neutral-600 mt-2">{% blocktranslate with frequency=totals.frequency|floatformat:2 %}Frequency {{ frequency }}{% endblocktranslate %}</p>
+    </div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+    <div class="a-card p-3">
+        <p class="text-xs text-neutral-600">{% translate "CTR" %}</p>
+        <p class="text-base font-semibold text-neutral-950 mt-1">{{ totals.ctr|ads_percent }}</p>
+    </div>
+    <div class="a-card p-3">
+        <p class="text-xs text-neutral-600">{% translate "Cost per click" %}</p>
+        <p class="text-base font-semibold text-neutral-950 mt-1">{{ totals.cpc|ads_money:currency }}</p>
+    </div>
+    <div class="a-card p-3">
+        <p class="text-xs text-neutral-600">{% translate "Cost per 1,000 impressions" %}</p>
+        <p class="text-base font-semibold text-neutral-950 mt-1">{{ totals.cpm|ads_money:currency }}</p>
+    </div>
+    <div class="a-card p-3">
+        <p class="text-xs text-neutral-600">{% translate "Purchases" %}</p>
+        <p class="text-base font-semibold text-neutral-950 mt-1">{{ totals.purchases|fmt_metric }}</p>
+    </div>
+    <div class="a-card p-3">
+        <p class="text-xs text-neutral-600">{% translate "Leads" %}</p>
+        <p class="text-base font-semibold text-neutral-950 mt-1">{{ totals.leads|fmt_metric }}</p>
+    </div>
+    <div class="a-card p-3">
+        <p class="text-xs text-neutral-600">{% translate "Return on ad spend" %}</p>
+        <p class="text-base font-semibold text-neutral-950 mt-1">{% if totals.roas is not None %}{{ totals.roas|floatformat:2 }}×{% else %}—{% endif %}</p>
+    </div>
+</div>

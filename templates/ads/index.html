@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load i18n ads_extras analytics_extras %}
+{% block title %}{% translate "Ads" %} - Connekt Flow{% endblock %}
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "Meta Ads" %}</h1>
+        <p class="page-description">{% translate "Campaigns of your Meta ad account, their status and their results." %}</p>
+    </div>
+    {% if connection.ad_account_id %}
+    <div class="flex items-center gap-2 flex-wrap">
+        {% include "composer/partials/_ideas_hero_toggle.html" with tab="ads" %}
+        {% include "ads/partials/_range_picker.html" %}
+        {% if can_manage %}
+        <a href="{% url 'ads:settings' workspace_id=workspace_id %}" class="btn-outline">{% translate "Settings" %}</a>
+        <a href="{% url 'ads:campaign_new' workspace_id=workspace_id %}" class="btn-brand">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            {% translate "New campaign" %}
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+{% include "composer/partials/_ideas_hero.html" with tab="ads" %}
+{% if not connection %}
+<div class="a-card p-6 max-w-xl">
+    <p class="text-sm text-neutral-600">{% translate "Meta Ads is not connected to this brand yet. Ask a workspace owner or manager to connect it in Social Accounts." %}</p>
+</div>
+{% elif not connection.ad_account_id %}
+<div class="a-card p-6 max-w-xl">
+    <p class="text-sm text-neutral-600">{% translate "Meta Ads is connected, but no ad account was chosen yet. Ask a workspace owner or manager to finish the setup." %}</p>
+</div>
+{% else %}
+    {% if connection.status == "error" %}
+    <div class="alert-error mb-4 flex items-center justify-between gap-4 flex-wrap">
+        <span>{{ connection.last_error|default:_("The Meta sign-in needs to be renewed.") }}</span>
+        {% if can_manage %}
+        <form method="post" action="{% url 'ads:connect' workspace_id=workspace_id %}" data-oauth-popup>{% csrf_token %}<button type="submit" class="btn-outline">{% translate "Connect again" %}</button></form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if connection.token_expiring_soon and connection.status != "error" %}
+    <div class="alert-info mb-4 flex items-center justify-between gap-4 flex-wrap">
+        <span>{% blocktranslate with date=connection.token_expires_at|date:"SHORT_DATE_FORMAT" %}The Meta sign-in expires on {{ date }}. Connect again before then so the campaigns keep showing here.{% endblocktranslate %}</span>
+        {% if can_manage %}
+        <form method="post" action="{% url 'ads:connect' workspace_id=workspace_id %}" data-oauth-popup>{% csrf_token %}<button type="submit" class="btn-outline">{% translate "Connect again" %}</button></form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="flex items-center gap-x-6 gap-y-1 flex-wrap text-sm text-neutral-600 mb-4">
+        <span>{% translate "Ad account" %}: <strong class="text-neutral-950">{{ connection.ad_account_name }}</strong> · {{ connection.currency }}</span>
+        <span>{% translate "Pixel" %}: <strong class="text-neutral-950">{% if connection.pixel_name %}{{ connection.pixel_name }}{% else %}{% translate "No Pixel" %}{% endif %}</strong></span>
+        <span>{% translate "Page" %}: <strong class="text-neutral-950">{% if connection.page_name %}{{ connection.page_name }}{% else %}{% translate "No Page" %}{% endif %}</strong></span>
+    </div>
+
+    {% if error %}
+    {% if connection.status != "error" %}<div class="alert-error mb-4">{{ error }}</div>{% endif %}
+    {% else %}
+    {% include "ads/partials/_insights.html" with totals=overview.totals series=overview.series currency=connection.currency %}
+
+    <h2 class="section-title">{% translate "Campaigns" %}</h2>
+    <div class="a-card overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-xs text-neutral-600 border-b border-neutral-300">
+                    <th class="px-4 py-3 font-semibold">{% translate "Campaign" %}</th>
+                    <th class="px-4 py-3 font-semibold">{% translate "Status" %}</th>
+                    <th class="px-4 py-3 font-semibold">{% translate "Budget" %}</th>
+                    <th class="px-4 py-3 font-semibold text-right">{% translate "Spent" %}</th>
+                    <th class="px-4 py-3 font-semibold text-right">{% translate "Impressions" %}</th>
+                    <th class="px-4 py-3 font-semibold text-right">{% translate "Link clicks" %}</th>
+                    <th class="px-4 py-3 font-semibold text-right">{% translate "CTR" %}</th>
+                    <th class="px-4 py-3 font-semibold text-right">{% translate "Results" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for campaign in campaigns %}
+                <tr class="border-b border-neutral-300 last:border-0 hover:bg-neutral-50">
+                    <td class="px-4 py-3">
+                        <a href="{% url 'ads:campaign_detail' workspace_id=workspace_id campaign_id=campaign.id %}?range={{ days }}" class="font-semibold text-neutral-950 hover:text-brand-700">{{ campaign.name }}</a>
+                        <p class="text-xs text-neutral-600">{{ campaign.objective_label }}</p>
+                    </td>
+                    <td class="px-4 py-3"><span class="pill pill-{{ campaign.status_tone }}"><i></i>{{ campaign.status_label }}</span></td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        {% if campaign.daily_budget %}{% blocktranslate with amount=campaign.daily_budget|ads_money:connection.currency %}{{ amount }}/day{% endblocktranslate %}
+                        {% elif campaign.lifetime_budget %}{% blocktranslate with amount=campaign.lifetime_budget|ads_money:connection.currency %}{{ amount }} total{% endblocktranslate %}
+                        {% else %}<span class="text-neutral-600">{% translate "On the ad sets" %}</span>{% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">{{ campaign.insights.spend|ads_money:connection.currency }}</td>
+                    <td class="px-4 py-3 text-right">{{ campaign.insights.impressions|fmt_metric }}</td>
+                    <td class="px-4 py-3 text-right">{{ campaign.insights.link_clicks|fmt_metric }}</td>
+                    <td class="px-4 py-3 text-right">{{ campaign.insights.ctr|ads_percent }}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        {% if campaign.insights.purchases %}{% blocktranslate count counter=campaign.insights.purchases %}{{ counter }} purchase{% plural %}{{ counter }} purchases{% endblocktranslate %}
+                        {% elif campaign.insights.leads %}{% blocktranslate count counter=campaign.insights.leads %}{{ counter }} lead{% plural %}{{ counter }} leads{% endblocktranslate %}
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="px-4 py-8 text-center text-neutral-600">{% translate "This ad account has no campaigns yet." %}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% include "social_accounts/partials/_oauth_popup.html" %}
+{% endblock %}

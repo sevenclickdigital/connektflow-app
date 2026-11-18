@@ -6,6 +6,8 @@ often makes the connection fail, and the button that actually starts it.
 The copy comes from apps/social_accounts/catalog.py. Open while the page's
 Alpine state ``guide`` holds this platform.
 Context: ``platform`` (a row of ``available_platforms``, with ``guide`` and ``flow``), ``workspace_id``.
+A platform that does not connect through social_accounts:connect (Meta Ads)
+carries its own ``connect_url``.
 {% endcomment %}
 <div x-show="guide === '{{ platform.value }}'" x-cloak class="modal-overlay" role="dialog" aria-modal="true"
      aria-labelledby="connect-guide-title-{{ platform.value }}"
@@ -42,7 +44,7 @@ Context: ``platform`` (a row of ``available_platforms``, with ``guide`` and ``fl
             {% if platform.flow == "whatsapp" %}
             <button type="button" class="btn-brand" data-whatsapp-signup @click="guide = null">{% translate "Continue" %}</button>
             {% else %}
-            <form method="post" action="{% url 'social_accounts:connect' workspace_id=workspace_id %}" {% if platform.flow == "oauth" %}data-oauth-popup{% endif %} @submit="guide = null">
+            <form method="post" action="{% if platform.connect_url %}{{ platform.connect_url }}{% else %}{% url 'social_accounts:connect' workspace_id=workspace_id %}{% endif %}" {% if platform.flow == "oauth" %}data-oauth-popup{% endif %} @submit="guide = null">
                 {% csrf_token %}
                 <input type="hidden" name="platform" value="{{ platform.value }}">
                 <button type="submit" class="btn-brand">{% translate "Continue" %}</button>

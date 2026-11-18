@@ -8,6 +8,7 @@ def sidebar_context(request):
         sidebar_workspaces: list of workspace objects the user belongs to
         sidebar_org_groups: those workspaces by organization, for the switcher
         sidebar_unread_inbox_count: unread inbox messages, for the badge
+        sidebar_has_ads: whether the workspace has Meta Ads connected, for the Ads entry
     """
     if not hasattr(request, "user") or not request.user.is_authenticated:
         return {}
@@ -77,6 +78,14 @@ def sidebar_context(request):
         sidebar_idea_columns = [{"id": str(g.id), "label": g.name} for g in groups] if groups.exists() else []
         sidebar_idea_tags = list(Tag.objects.for_workspace(workspace.id).values_list("name", flat=True))
 
+    # The Ads entry only exists once Meta Ads is connected with an ad account:
+    # the whole section reads that account.
+    sidebar_has_ads = False
+    if workspace:
+        from apps.ads.models import AdsConnection
+
+        sidebar_has_ads = AdsConnection.objects.for_workspace(workspace.id).exclude(ad_account_id="").exists()
+
     # Trustpilot review ask: only for users with at least one connected channel,
     # in any of their workspaces, so pages without a workspace (settings,
     # members) don't make it flicker in and out. Closing it lasts until the
@@ -96,6 +105,7 @@ def sidebar_context(request):
         "can_create_organization": bool(getattr(request, "org_memberships", [])),
         "can_create_workspace": can_create_workspace,
         "sidebar_unread_inbox_count": sidebar_unread_inbox_count,
+        "sidebar_has_ads": sidebar_has_ads,
         "sidebar_pending_approvals": sidebar_pending_approvals,
         "sidebar_idea_columns": sidebar_idea_columns,
         "sidebar_idea_tags": sidebar_idea_tags,

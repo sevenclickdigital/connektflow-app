@@ -234,6 +234,15 @@ def _overview_context(request, workspace_id):
     # Ones the user can connect right now first; unconfigured ones trail.
     available_platforms.sort(key=lambda platform: not platform["configured"])
     problem_count = sum(1 for a in accounts if a.health == "error")
+    meta_ads = _meta_ads_card(request, workspace_id)
+    connected_count = len(accounts) - problem_count
+    available_count = len(available_platforms)
+    if meta_ads["connection"] is None:
+        available_count += 1
+    elif meta_ads["connection"].status == "error":
+        problem_count += 1
+    else:
+        connected_count += 1
     return {
         "accounts": accounts,
         "workspace_id": workspace_id,
@@ -241,13 +250,38 @@ def _overview_context(request, workspace_id):
         "available_platforms": available_platforms,
         "categories": CATEGORIES,
         "stats": {
-            "connected": len(accounts) - problem_count,
-            "available": len(available_platforms),
+            "connected": connected_count,
+            "available": available_count,
             "problems": problem_count,
-            "total": len(accounts) + len(available_platforms),
+            "total": len(accounts) + len(available_platforms) + 1,
         },
+        "meta_ads": meta_ads,
         "opportunity_cards": source_cards(workspace_id),
         "whatsapp_signup": _whatsapp_signup_config(request.org.id, available_platforms),
+    }
+
+
+def _meta_ads_card(request, workspace_id):
+    """The Meta Ads card: an ad account is not a ``SocialAccount``, so it has its own connection.
+
+    ``connection`` is None while the workspace has not signed in; ``configured``
+    says whether the Meta app is set up for the Connect button to work.
+    """
+    from django.urls import reverse
+
+    from apps.ads import services as ads_services
+
+    return {
+        "connection": ads_services.get_connection(workspace_id),
+        "configured": ads_services.is_configured(request.org.id),
+        # Shaped like a row of ``available_platforms`` for _connect_guide.html.
+        "platform": {
+            "value": "meta_ads",
+            "label": _("Meta Ads"),
+            "guide": connect_guide("meta_ads"),
+            "flow": "oauth",
+            "connect_url": reverse("ads:connect", kwargs={"workspace_id": workspace_id}),
+        },
     }
 
 

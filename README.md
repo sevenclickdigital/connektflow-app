@@ -467,6 +467,11 @@ Facebook and Instagram share the same Meta app credentials. Threads runs on the 
    The first marks that person's connection as needing a reconnect; the second deletes it with its stored data and answers with a confirmation code the person can check at `{APP_URL}/exclusao-de-dados/?code=…`.
 
    These have no fallback: until both are set, Threads shows as **Not Configured** on the connect page. Sending the Facebook App ID to Threads fails with error `4476002`.
+8. **Meta Ads** (sidebar → Ads) signs in through the same app (`PLATFORM_FACEBOOK_APP_ID` / `_SECRET`). Add the use case **"Create & manage ads with Marketing API"** and its permissions `ads_management`, `ads_read`, `business_management`, `pages_show_list` and `pages_manage_ads`, then add this redirect URI under **Facebook Login → Settings → Valid OAuth Redirect URIs**:
+   ```
+   {APP_URL}/ads/meta/callback/
+   ```
+   With a Login for Business configuration, create a separate one carrying those permissions and set `PLATFORM_META_ADS_CONFIG_ID`; the Pages one (`PLATFORM_FACEBOOK_CONFIG_ID`) has none of them and is not reused. The Marketing API runs on the same Graph version as Facebook (`providers/meta_ads.py` imports it from `providers/facebook.py`).
 
 ### Meta App Review: permissions and features to request
 
@@ -479,6 +484,7 @@ Everything above works for people with a role on the app (admin, developer, test
 | **Instagram Public Content Access** | Feature | Radar → Instagram research → Hashtags (`ig_hashtag_search`, `top_media`, `recent_media`) | The Hashtags tab says the search isn't enabled |
 | **Human Agent** | Feature | Replying to a Messenger / Instagram DM between 24 hours and 7 days after the customer wrote | Replies close at 24 hours; see [Instagram DMs and reply windows](#instagram-dms-and-reply-windows) |
 | `whatsapp_business_management`, `whatsapp_business_messaging` | Advanced Access | WhatsApp | See [WhatsApp](#whatsapp-cloud-api-via-embedded-signup) |
+| `ads_management`, `ads_read`, `pages_manage_ads` + **Ads Management Standard Access** | Advanced Access / Feature | Meta Ads (step 8) | Only app roles can connect; Standard Access lifts the development-tier Marketing API rate limits |
 
 These need **no new request**, only the permissions already in step 3 and the Instagram webhook fields in step 5:
 

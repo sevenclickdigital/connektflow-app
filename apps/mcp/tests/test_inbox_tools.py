@@ -153,7 +153,8 @@ def draft_only_client(db, user, memberships, workspace, account):
 
 
 @pytest.mark.django_db
-def test_mcp_late_dm_retains_draft_even_when_app_and_actor_are_authorized(full_client, message):
+def test_mcp_late_dm_retains_draft_even_when_app_and_actor_are_authorized(full_client, message, settings):
+    settings.LANGUAGE_CODE = "en-us"  # asserts the English wording
     stamp = timezone.now() - timedelta(hours=30)
     message.message_type = "dm"
     message.sender_handle = "customer"

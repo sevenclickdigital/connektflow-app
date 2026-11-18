@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Meta Ads settings" %} - Connekt Flow{% endblock %}
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "Meta Ads settings" %}</h1>
+        <p class="page-description">{% blocktranslate with name=connection.meta_user_name %}Signed in to Meta as {{ name }}.{% endblocktranslate %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-xl">
+    {% if error %}
+    <div class="alert-error mb-4">{{ error }}</div>
+    {% elif not choices.accounts %}
+    <div class="alert-info mb-4">{% translate "This Meta sign-in manages no ad account. Sign in with a Facebook account that has access to one in Meta Business Suite, or create an ad account there." %}</div>
+    {% else %}
+    <form method="get" class="mb-2" x-data>
+        <label for="pick-account" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Ad account" %}</label>
+        <select id="pick-account" name="account" class="form-input-styled w-full" @change="$el.form.submit()">
+            {% for value, label in form.fields.ad_account_id.choices %}
+            <option value="{{ value }}" {% if choices.account and choices.account.id == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn-outline mt-2">{% translate "Load Pixels" %}</button></noscript>
+        <p class="text-xs text-neutral-600 mt-1">{% translate "Changing the account reloads its Pixels." %}</p>
+    </form>
+
+    <form method="post" class="a-card p-5 space-y-4 mt-4">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert-error">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+        <input type="hidden" name="ad_account_id" value="{{ choices.account.id|default:'' }}">
+        {% if form.ad_account_id.errors %}<p class="text-sm text-red-600">{{ form.ad_account_id.errors|join:" " }}</p>{% endif %}
+        <div>
+            <label for="{{ form.pixel_id.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1">{{ form.pixel_id.label }}</label>
+            <select name="pixel_id" id="{{ form.pixel_id.id_for_label }}" class="form-input-styled w-full">
+                {% for value, label in form.fields.pixel_id.choices %}
+                <option value="{{ value }}" {% if form.pixel_id.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <p class="text-xs text-neutral-600 mt-1">{% translate "The Pixel measures purchases and leads on your site. Sales and lead campaigns need one." %}</p>
+            {% for pixel in choices.pixels %}{% if pixel.is_unavailable %}<p class="text-xs text-red-600 mt-1">{% blocktranslate with name=pixel.name %}Pixel {{ name }} is unavailable in Meta.{% endblocktranslate %}</p>{% endif %}{% endfor %}
+        </div>
+        <div>
+            <label for="{{ form.page_id.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1">{{ form.page_id.label }}</label>
+            <select name="page_id" id="{{ form.page_id.id_for_label }}" class="form-input-styled w-full">
+                {% for value, label in form.fields.page_id.choices %}
+                <option value="{{ value }}" {% if form.page_id.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <p class="text-xs text-neutral-600 mt-1">{% translate "Ads created here are published as this Page." %}</p>
+        </div>
+        <div class="flex justify-end">
+            <button type="submit" class="btn-brand" {% if not choices.account %}disabled{% endif %}>{% translate "Save" %}</button>
+        </div>
+    </form>
+    {% endif %}
+
+    <div class="a-card p-5 mt-6 flex items-center justify-between gap-4 flex-wrap">
+        <div>
+            <p class="text-sm font-semibold text-neutral-950">{% translate "Sign-in" %}</p>
+            <p class="text-xs text-neutral-600">{% if connection.token_expires_at %}{% blocktranslate with date=connection.token_expires_at|date:"SHORT_DATE_FORMAT" %}Valid until {{ date }}. Connect again before then.{% endblocktranslate %}{% else %}{% translate "Meta reports no expiry date." %}{% endif %}</p>
+        </div>
+        <div class="flex gap-2">
+            <form method="post" action="{% url 'ads:connect' workspace_id=workspace_id %}" data-oauth-popup>{% csrf_token %}<button type="submit" class="btn-outline">{% translate "Connect again" %}</button></form>
+            <form method="post" action="{% url 'ads:disconnect' workspace_id=workspace_id %}" data-confirm="{% translate 'Disconnect Meta Ads? Campaigns keep running in the ad account.' %}">{% csrf_token %}<button type="submit" class="btn-danger-soft">{% translate "Disconnect" %}</button></form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% include "social_accounts/partials/_oauth_popup.html" %}
+{% endblock %}

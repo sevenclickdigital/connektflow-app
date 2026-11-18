@@ -355,7 +355,7 @@ class DiscardCheckoutViewTests(TestCase):
 # ---------------------------------------------------------------------------
 
 
-@override_settings(ROOT_URLCONF="apps.intelligence.tests.test_discard_checkout")
+@override_settings(ROOT_URLCONF="apps.intelligence.tests.test_discard_checkout", LANGUAGE_CODE="en-us")
 class SubscribeTemplateBranchingTests(TestCase):
     """Render the {% block content %} body of subscribe.html in isolation.
 

@@ -30,11 +30,12 @@ def test_one_click_post_turns_the_email_off(client, user):
 
 
 @pytest.mark.django_db
-def test_a_get_shows_the_page_without_changing_anything(client, user):
+def test_a_get_shows_the_page_without_changing_anything(client, user, settings):
     """Mail scanners and link prefetchers — Outlook Safe Links, corporate
     gateways, antivirus proxies — fetch every URL they find in a message,
     including the List-Unsubscribe header. If a GET unsubscribed, they would
     silently switch off people's publish-failure alerts."""
+    settings.LANGUAGE_CODE = "en-us"  # asserts the English wording
     res = client.get(url_for(user))
 
     assert res.status_code == 200

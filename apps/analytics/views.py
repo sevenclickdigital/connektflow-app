@@ -18,6 +18,9 @@ from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
+from apps.ads import reports as ads_reports
+from apps.ads import services as ads_services
+from apps.ads.models import AdsConnection
 from apps.composer.models import PlatformPost
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
@@ -60,6 +63,12 @@ def _source_accounts(workspace) -> list[OpportunityConnection]:
         .filter(source=OpportunityConnection.Source.SHOPEE_AFFILIATE)
         .order_by("created_at")
     )
+
+
+def _ads_connection(workspace) -> AdsConnection | None:
+    """The workspace's Meta Ads connection once an ad account is chosen, for the switcher."""
+    connection = ads_services.get_connection(workspace.id)
+    return connection if connection is not None and connection.ad_account_id else None
 
 
 def _parse_range(value: str | None) -> int:
@@ -108,6 +117,8 @@ def analytics_index(request: HttpRequest, workspace_id) -> HttpResponse:
     sources = _source_accounts(workspace)
     if sources:
         return redirect("analytics:shopee", workspace_id=workspace.id, connection_id=sources[0].id)
+    if _ads_connection(workspace) is not None:
+        return redirect("analytics:meta_ads", workspace_id=workspace.id)
     if not enabled:
         raise Http404("Analytics is disabled.")
     return render(request, "analytics/no_accounts.html", {"workspace": workspace})
@@ -159,6 +170,7 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
         "active_account": account,
         "accounts": accounts,
         "source_accounts": _source_accounts(workspace),
+        "ads_connection": _ads_connection(workspace),
         "days": days,
         "range_choices": RANGE_CHOICES,
         "primary_color": primary_color,
@@ -272,6 +284,7 @@ def shopee_report(request: HttpRequest, workspace_id, connection_id) -> HttpResp
         "workspace": workspace,
         "accounts": services.analytics_accounts(workspace, enabled) if enabled else [],
         "source_accounts": sources,
+        "ads_connection": _ads_connection(workspace),
         "active_source": connection,
         "days": days,
         "range_choices": RANGE_CHOICES,
@@ -301,6 +314,46 @@ def shopee_report(request: HttpRequest, workspace_id, connection_id) -> HttpResp
     if request.headers.get("HX-Request") and request.GET.get("partial") == "table":
         return render(request, "analytics/_shopee_orders.html", context)
     return render(request, "analytics/shopee.html", context)
+
+
+@login_required
+@require_GET
+@require_permission("view_analytics")
+def meta_ads_report(request: HttpRequest, workspace_id) -> HttpResponse:
+    """Analytics for the workspace's Meta Ads account: spend, impressions, clicks, results.
+
+    Same page, range toggle, cards and chart as a social account's analytics;
+    the numbers come from ``apps.ads.reports``.
+    """
+    workspace = _get_workspace(request, workspace_id)
+    connection = _ads_connection(workspace)
+    if connection is None:
+        raise Http404("No Meta Ads connection.")
+    enabled = AnalyticsPlatformConfig.enabled_platforms()
+    days = _parse_range(request.GET.get("range"))
+    context: dict = {
+        "workspace": workspace,
+        "accounts": services.analytics_accounts(workspace, enabled) if enabled else [],
+        "source_accounts": _source_accounts(workspace),
+        "ads_connection": connection,
+        "active_ads": connection,
+        "days": days,
+        "range_choices": RANGE_CHOICES,
+        "primary_color": "var(--primary)",
+    }
+    try:
+        report = ads_reports.build_report(connection, days=days, metric=request.GET.get("chart_metric"))
+    except ads_services.AdsError as exc:
+        context["report_error"] = str(exc)
+        return render(request, "analytics/meta_ads.html", context)
+
+    context.update(report)
+    chart = report["chart"]
+    context["chart_series_json"] = json.dumps([None if v is None else round(v, 2) for v in chart["derived"].series])
+    context["chart_labels_json"] = json.dumps(chart["labels"])
+    if request.headers.get("HX-Request") and request.GET.get("partial") == "chart":
+        return render(request, "analytics/_hero_chart.html", context)
+    return render(request, "analytics/meta_ads.html", context)
 
 
 @login_required

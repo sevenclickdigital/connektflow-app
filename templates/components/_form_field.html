@@ -11,6 +11,7 @@ unless hide_optional is set (fields that are only required together).
         {{ field.label }}{% if not field.field.required and not hide_optional %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span>{% endif %}
     </label>
     {{ field }}
+    {% if field.help_text %}<p class="text-xs mt-1.5 text-neutral-600">{{ field.help_text }}</p>{% endif %}
     {% for error in field.errors %}
     <p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>
     {% endfor %}
