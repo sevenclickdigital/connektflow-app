@@ -106,32 +106,15 @@
         max-height: calc(100vh - 80px);
         position: relative;
     }
-    .idea-modal-close {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: none;
-        background: none;
-        border-radius: 6px;
-        color: var(--text-tertiary);
-        cursor: pointer;
-        transition: color 150ms, background 150ms;
-        z-index: 1;
-    }
-    .idea-modal-close:hover {
-        color: var(--text-primary);
-        background: var(--neutral-100);
-    }
+    /* The window inside a .modal-frame (styles.css), which holds its width and the close button
+       floating off its corner (.modal-close-float). */
+    .modal-frame.is-idea { max-width: var(--work-modal-width, 1120px); }
+    .modal-frame > .idea-modal { max-width: none; }
     .idea-modal-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 20px 50px 12px 24px;
+        padding: 20px 24px 12px 24px;
     }
     /* The form between the modal and its body passes the modal's height down,
        so the body (not the whole window) scrolls when the idea is long; the
@@ -371,11 +354,11 @@
          class="idea-modal-overlay"
          @click.self="closeCreateModal()"
          @keydown.escape.window="closeCreateModal()">
+        <div class="modal-frame is-idea">
+        <button type="button" class="modal-close-float" @click="closeCreateModal()" aria-label="{% translate 'Close' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
         <div class="idea-modal" @click.stop>
-            <!-- Close button -->
-            <button type="button" class="idea-modal-close" @click="closeCreateModal()" title="{% translate 'Close' %}">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
             <form action="{% url 'composer:idea_create' workspace_id=workspace.id %}"
                   method="post"
                   enctype="multipart/form-data"
@@ -545,6 +528,7 @@
                 </div>
             </form>
         </div>
+        </div>
     </div>
 
     <!-- Edit Idea Modal -->
@@ -552,11 +536,11 @@
          class="idea-modal-overlay"
          @click.self="editingIdea = null"
          @keydown.escape.window="editingIdea = null">
+        <div class="modal-frame is-idea">
+        <button type="button" class="modal-close-float" @click="editingIdea = null" aria-label="{% translate 'Close' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
         <div class="idea-modal" @click.stop>
-            <!-- Close button -->
-            <button type="button" class="idea-modal-close" @click="editingIdea = null" title="{% translate 'Close' %}">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
             <form :action="editingIdea ? `/workspace/{{ workspace.id }}/ideas/${editingIdea.id}/edit/` : ''"
                   method="post"
                   enctype="multipart/form-data"
@@ -740,6 +724,7 @@
                     </button>
                 </div>
             </form>
+        </div>
         </div>
     </div>
 
