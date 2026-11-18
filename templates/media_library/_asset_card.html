@@ -19,8 +19,11 @@ checkbox shows its position in the selection, and the star button is dropped
      the gallery already uses.
      {% endcomment %}
      :class="isPicked('{{ asset.id }}') && 'ml-asset-card-picked'"
-     {% else %}
+     {% elif asset.is_shared or not request.workspace_membership.effective_permissions.edit_media and not request.workspace_membership.effective_permissions.delete_media %}
      @click="openDetail('{{ asset.id }}')"
+     {% else %}
+     @click="selected.length ? toggleSelected('{{ asset.id }}') : openDetail('{{ asset.id }}')"
+     :class="selected.includes('{{ asset.id }}') && 'ml-asset-card-picked'"
      {% endif %}
      {% if asset.processing_status == 'pending' or asset.processing_status == 'processing' %}
      hx-get="{% url 'media_library:processing_status' workspace_id=workspace.id asset_id=asset.id %}"
@@ -84,6 +87,18 @@ checkbox shows its position in the selection, and the star button is dropped
       <span x-text="pickedPosition('{{ asset.id }}')"></span>
     </div>
     {% else %}
+    {% if not asset.is_shared and request.workspace_membership.effective_permissions.edit_media or not asset.is_shared and request.workspace_membership.effective_permissions.delete_media %}
+    {% comment %}
+    The gallery's selection (library_index.html): ticking files shows the bar that
+    moves or deletes them together. While some are ticked, a click on a card ticks it too.
+    {% endcomment %}
+    <label class="absolute top-2 right-2 w-6 h-6 rounded-md bg-white/90 flex items-center justify-center cursor-pointer transition-opacity"
+           :class="selected.includes('{{ asset.id }}') || selected.length ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+           @click.stop>
+      <input type="checkbox" class="bb-checkbox" value="{{ asset.id }}" aria-label="{% blocktranslate with name=asset.original_filename %}Select {{ name }}{% endblocktranslate %}"
+             :checked="selected.includes('{{ asset.id }}')" @change="toggleSelected('{{ asset.id }}')">
+    </label>
+    {% endif %}
     <!-- Star button -->
     <button @click.stop
             class="absolute bottom-2 right-2 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"

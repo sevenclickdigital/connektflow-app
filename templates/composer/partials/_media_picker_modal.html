@@ -27,16 +27,39 @@ to sit above another one).
     w-[min(1100px,calc(100vw-4rem))], emitting the invalid
     `min(1100px,100vw - 4rem)` and losing the width entirely.
     {% endcomment %}
-    <div class="relative bg-white rounded-2xl shadow-xl border border-neutral-300 flex flex-col w-full max-w-[1100px] h-[calc(100vh-2rem)] sm:h-[85vh] mx-2 sm:mx-4 overflow-hidden"
+    {% comment %}
+    The frame holds the width and the close button floating off the window's corner
+    (.modal-frame / .modal-close-float, styles.css), outside the panel, which clips its content.
+    {% endcomment %}
+    <div class="modal-frame max-w-[1100px] mx-2 sm:mx-4"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100">
-        <div class="px-4 sm:px-6 py-4 border-b border-neutral-100 flex items-center justify-between shrink-0">
-            <h2 class="text-base font-semibold text-neutral-950">{% translate "Media Library" %}</h2>
-            <button @click="showMediaPicker = false"
-                    class="w-8 h-8 rounded-lg border border-neutral-300 text-neutral-500 hover:text-neutral-700 hover:border-neutral-400 flex items-center justify-center transition-all duration-150 cursor-pointer">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+    <button type="button" class="modal-close-float" @click="showMediaPicker = false" aria-label="{% translate 'Close' %}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="relative bg-white rounded-2xl shadow-xl border border-neutral-300 flex flex-col w-full h-[calc(100vh-2rem)] sm:h-[85vh] overflow-hidden">
+        {% comment %}
+        The header's actions, as on the gallery page: they ask the picker loaded below
+        (media_picker.html) to open its new folder field or its file chooser.
+        {% endcomment %}
+        <div class="px-4 sm:px-6 py-3 border-b border-neutral-100 flex items-center justify-between gap-3 shrink-0">
+            <h2 class="text-base font-semibold text-neutral-950">{% translate "Gallery" %}</h2>
+            <div class="flex items-center gap-2">
+                {% if request.workspace_membership.effective_permissions.manage_media %}
+                {# Only from sm: the folders column, where its field opens, is hidden on a phone. #}
+                <div class="hidden sm:block">
+                <button type="button" class="btn-soft" @click="window.dispatchEvent(new CustomEvent('picker-new-folder'))">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/><path d="M12 11v6m-3-3h6"/></svg>
+                    {% translate "New folder" %}
+                </button>
+                </div>
+                {% endif %}
+                <button type="button" class="btn-brand" @click="window.dispatchEvent(new CustomEvent('picker-upload'))">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m-4-8l4-4 4 4"/></svg>
+                    {% translate "Upload" %}
+                </button>
+            </div>
         </div>
         <div class="flex-1 min-h-0 flex flex-col"
              hx-get="{{ picker_open_url }}"
@@ -46,5 +69,6 @@ to sit above another one).
                 <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
             </div>
         </div>
+    </div>
     </div>
 </div>

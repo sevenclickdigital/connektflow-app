@@ -15,6 +15,8 @@ urlpatterns = [
     # Tags
     path("tags/autocomplete/", views.tag_autocomplete, name="tag_autocomplete"),
     # Assets
+    path("bulk/move/", views.asset_bulk_move, name="asset_bulk_move"),
+    path("bulk/delete/", views.asset_bulk_delete, name="asset_bulk_delete"),
     path("<uuid:asset_id>/", views.asset_detail, name="asset_detail"),
     path("<uuid:asset_id>/edit/", views.asset_edit, name="asset_edit"),
     path("<uuid:asset_id>/star/", views.asset_star_toggle, name="asset_star"),

@@ -1,6 +1,7 @@
 """Media library views - all function-based, matching existing project patterns."""
 
 import json
+import uuid
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -9,8 +10,10 @@ from django.core.paginator import Paginator
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
+from django.utils.translation import ngettext
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from apps.billing.storage_usage import storage_status
 from apps.common.htmx import toast_response
 from apps.common.validators import normalize_tags
 from apps.members.decorators import require_org_role, require_permission
@@ -156,8 +159,27 @@ def library_index(request, workspace_id):
         "settings_active": "media",
         # Workspaces whose gallery this user may switch to from here.
         "gallery_workspaces": _sibling_workspaces(request.user, workspace),
+        "storage": storage_status(workspace),
+        # The bulk "Move" window's choices (selected files, library_index.html).
+        "move_folders": _folder_choices(workspace),
     }
     return render(request, "media_library/library_index.html", context)
+
+
+def _folder_choices(workspace):
+    """The workspace's folders as (id, "Parent / Child") pairs, sorted by that path."""
+    folders = {f.pk: f for f in MediaFolder.objects.filter(workspace=workspace)}
+
+    def path(folder):
+        names = []
+        seen = set()
+        while folder and folder.pk not in seen:
+            seen.add(folder.pk)
+            names.append(folder.name)
+            folder = folders.get(folder.parent_folder_id)
+        return " / ".join(reversed(names))
+
+    return sorted(((pk, path(f)) for pk, f in folders.items()), key=lambda item: item[1].lower())
 
 
 def _sibling_workspaces(user, workspace):
@@ -505,6 +527,67 @@ def asset_move(request, workspace_id, asset_id):
             },
         )
     return JsonResponse({"status": "ok"})
+
+
+def _selected_assets(request, workspace):
+    """The workspace's own files among the ``ids`` posted (shared and foreign ids are ignored)."""
+    ids = []
+    for raw in request.POST.getlist("ids"):
+        try:
+            ids.append(uuid.UUID(raw))
+        except ValueError:
+            continue
+    return MediaAsset.objects.for_workspace(workspace.id).filter(pk__in=ids)
+
+
+@login_required
+@require_permission("edit_media")
+@require_POST
+def asset_bulk_move(request, workspace_id):
+    """Move the selected files into one folder (or out of folders, with no ``folder_id``)."""
+    workspace = _get_workspace_or_404(request, workspace_id)
+    folder_id = request.POST.get("folder_id")
+    folder = get_object_or_404(MediaFolder, pk=folder_id, workspace=workspace) if folder_id else None
+    moved = _selected_assets(request, workspace).update(folder=folder)
+    if folder:
+        title = ngettext("%(count)s file moved to %(folder)s.", "%(count)s files moved to %(folder)s.", moved) % {
+            "count": moved,
+            "folder": folder.name,
+        }
+    else:
+        title = ngettext("%(count)s file taken out of folders.", "%(count)s files taken out of folders.", moved) % {
+            "count": moved
+        }
+    return toast_response(tone="success", title=title, events={"assets-changed": True})
+
+
+@login_required
+@require_permission("delete_media")
+@require_POST
+def asset_bulk_delete(request, workspace_id):
+    """Delete the selected files; one a scheduled post still uses is kept, and the toast says so."""
+    workspace = _get_workspace_or_404(request, workspace_id)
+    deleted = kept = 0
+    for asset in _selected_assets(request, workspace):
+        try:
+            delete_asset(asset)
+            deleted += 1
+        except ProtectedAssetError:
+            kept += 1
+    if kept:
+        return toast_response(
+            tone="warn",
+            title=ngettext("%(count)s file deleted.", "%(count)s files deleted.", deleted) % {"count": deleted},
+            body=ngettext(
+                "%(count)s file is used by a scheduled post and was kept.",
+                "%(count)s files are used by scheduled posts and were kept.",
+                kept,
+            )
+            % {"count": kept},
+            events={"assets-changed": True},
+        )
+    title = ngettext("%(count)s file deleted.", "%(count)s files deleted.", deleted) % {"count": deleted}
+    return toast_response(tone="success", title=title, events={"assets-changed": True})
 
 
 @login_required

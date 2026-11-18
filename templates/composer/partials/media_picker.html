@@ -36,119 +36,74 @@ rules have to arrive with it.
 {% endcomment %}
 {% include "media_library/_library_styles.html" %}
 
-<div class="flex flex-col h-full" x-data="mediaPicker()">
-
-  <!-- ── Toolbar: search, type filters, sort, upload ─────────── -->
-  <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-3 border-b shrink-0"
-       style="border-color: var(--surface-2, #F5F3FF);">
-
-    <!-- Search -->
-    <div class="relative flex-1 min-w-[160px] sm:max-w-xs">
-      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style="color: var(--text-ghost, #94A3B8);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-      <input type="search"
-             name="q"
-             value="{{ query }}"
-             placeholder="{% translate 'Search media...' %}"
-             class="input-focus w-full pl-9 pr-4 py-2 text-sm border rounded-lg outline-none"
-             style="border-color: var(--border, #E5E7EB); background: var(--surface-0, #FFF);"
-             hx-get="{{ picker_url }}"
-             hx-trigger="keyup changed delay:400ms, search"
-             hx-target="#picker-asset-grid"
-             hx-swap="innerHTML"
-             hx-include="[name='picker-sort'], [name='picker-type'], [name='picker-folder']">
-    </div>
-
-    {% comment %}
-    The non-search filters ride along as hidden inputs so hx-include can
-    carry them on every request: picking a type, then searching, has to keep
-    the type. Alpine owns their values; HTMX only reads them.
-    {% endcomment %}
-    <input type="hidden" name="picker-type" :value="type">
-    <input type="hidden" name="picker-folder" :value="folder">
-
-    <!-- Type filters -->
-    <div class="flex items-center gap-1.5 overflow-x-auto flex-nowrap">
-      <button type="button"
-              @click="type = ''"
-              class="ml-filter-pill shrink-0"
-              :class="type === '' && 'active'"
-              hx-get="{{ picker_url }}"
-              hx-target="#picker-asset-grid"
-              hx-swap="innerHTML"
-              hx-include="[name='q'], [name='picker-sort'], [name='picker-folder']">{% translate "All" %}</button>
-      {% for type_val, type_label in file_types %}
-      <button type="button"
-              @click="type = '{{ type_val }}'"
-              class="ml-filter-pill shrink-0"
-              :class="type === '{{ type_val }}' && 'active'"
-              hx-get="{{ picker_url }}?type={{ type_val }}"
-              hx-target="#picker-asset-grid"
-              hx-swap="innerHTML"
-              hx-include="[name='q'], [name='picker-sort'], [name='picker-folder']">{{ type_label }}</button>
-      {% endfor %}
-    </div>
-
-    <div class="flex-1"></div>
-
-    <!-- Sort -->
-    <select name="picker-sort"
-            class="text-xs border rounded-lg pl-3 pr-7 py-2 outline-none cursor-pointer appearance-none"
-            style="border-color: var(--border, #E5E7EB); color: var(--text-secondary, #475569); background-image: url(&quot;data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2378716C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E&quot;); background-repeat: no-repeat; background-position: right 8px center;"
-            hx-get="{{ picker_url }}"
-            hx-trigger="change"
-            hx-target="#picker-asset-grid"
-            hx-swap="innerHTML"
-            hx-include="[name='q'], [name='picker-type'], [name='picker-folder']">
-      <option value="-date" {% if current_sort == '-date' or current_sort == '-created_at' %}selected{% endif %}>{% translate "Newest first" %}</option>
-      <option value="date" {% if current_sort == 'date' %}selected{% endif %}>{% translate "Oldest first" %}</option>
-      <option value="name" {% if current_sort == 'name' %}selected{% endif %}>{% translate "Name A-Z" %}</option>
-      <option value="-name" {% if current_sort == '-name' %}selected{% endif %}>{% translate "Name Z-A" %}</option>
-      <option value="-size" {% if current_sort == '-size' %}selected{% endif %}>{% translate "Largest first" %}</option>
-      <option value="size" {% if current_sort == 'size' %}selected{% endif %}>{% translate "Smallest first" %}</option>
-    </select>
-
-    {% comment %}
-    Upload posts straight to the composer's own endpoint, which attaches the
-    file to the post (or the pending session) as well as storing it — so a
-    file picked up here lands in the post without a second trip through the
-    grid. ``uploadsComplete`` refreshes the grid so it also shows up there.
-    {% endcomment %}
-    <button type="button" @click="$refs.pickerFile.click()"
-            class="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-brand-800 bg-brand-50 border border-brand-200 rounded-full hover:bg-brand-100 hover:border-brand-300 transition-all duration-150 cursor-pointer shrink-0">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-      {% translate "Upload" %}
-    </button>
-    <input type="file" x-ref="pickerFile" multiple class="hidden"
-           accept="{{ accepted_file_types }}"
-           @change="upload($event.target.files, '{{ picker_upload_url }}')">
-  </div>
+<div class="flex flex-col h-full" x-data="mediaPicker()"
+     @picker-upload.window="$refs.pickerFile.click()"
+     @picker-new-folder.window="if ($refs.newFolderName) { newFolderOpen = true; $nextTick(() => $refs.newFolderName.focus()); }">
 
   <!-- ── Body: folders + grid ────────────────────────────────── -->
   <div class="flex flex-1 min-h-0">
 
     <!-- Folders -->
-    <aside class="hidden sm:block w-44 shrink-0 border-r overflow-y-auto py-3 px-2"
+    <aside class="hidden sm:block w-56 shrink-0 border-r overflow-y-auto p-4"
            style="border-color: var(--surface-2, #F5F3FF);">
+      {% comment %}
+      As in the gallery: "Folders" with its "+" on top (the window's "New folder"
+      does the same, picker-new-folder), the new folder's field right under it.
+      {% endcomment %}
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-tertiary, #64748B);">{% translate "Folders" %}</span>
+        {% if request.workspace_membership.effective_permissions.manage_media %}
+        <button type="button" @click="newFolderOpen = true; $nextTick(() => $refs.newFolderName.focus())"
+                class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-neutral-100 cursor-pointer transition-colors"
+                style="color: var(--text-tertiary, #64748B);"
+                title="{% translate 'New folder' %}" aria-label="{% translate 'New folder' %}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+        {% endif %}
+      </div>
+      {% if request.workspace_membership.effective_permissions.manage_media %}
+      {% url 'media_library:folder_create' workspace_id=workspace.id as folder_create_url %}
+      <div x-show="newFolderOpen" x-cloak class="mb-2"
+           data-error="{% translate 'Could not create the folder. A folder with this name may already exist.' %}">
+        <form class="px-1 space-y-1.5"
+              @submit.prevent="createFolder('{{ folder_create_url }}', '{{ picker_url }}', $el.parentElement.dataset.error)"
+              @keydown.escape.stop="newFolderOpen = false; newFolderName = ''">
+          <input type="text" x-ref="newFolderName" x-model="newFolderName" maxlength="255"
+                 placeholder="{% translate 'Folder name' %}" aria-label="{% translate 'Folder name' %}"
+                 class="input-focus w-full px-2.5 py-1.5 text-sm border rounded-lg outline-none"
+                 style="border-color: var(--border, #E5E7EB); background: var(--surface-0, #FFF);">
+          <div class="flex items-center gap-1.5">
+            <button type="submit" :disabled="!newFolderName.trim() || creatingFolder"
+                    class="px-2.5 py-1 text-xs font-semibold text-white rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    style="background: var(--primary, #7C3AED);">{% translate "Create" %}</button>
+            <button type="button" @click="newFolderOpen = false; newFolderName = ''"
+                    class="px-2.5 py-1 text-xs font-medium rounded-md cursor-pointer"
+                    style="color: var(--text-secondary, #475569);">{% translate "Cancel" %}</button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+
       <button type="button"
               @click="folder = ''"
-              class="ml-folder-item w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm cursor-pointer"
+              class="ml-folder-item w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm cursor-pointer"
               :class="folder === '' && 'active'"
               hx-get="{{ picker_url }}"
               hx-target="#picker-asset-grid"
               hx-swap="innerHTML"
               hx-include="[name='q'], [name='picker-sort'], [name='picker-type']">
-        <svg class="w-4 h-4 shrink-0" style="color: var(--text-ghost, #94A3B8);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2l2 2h6a2 2 0 012 2v2M4 6v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2H4z"/></svg>
         <span class="truncate">{% translate "All media" %}</span>
       </button>
 
       <button type="button"
               @click="folder = ''"
-              class="ml-folder-item w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm cursor-pointer"
+              class="ml-folder-item w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm cursor-pointer"
               hx-get="{{ picker_url }}?starred=1"
               hx-target="#picker-asset-grid"
               hx-swap="innerHTML"
               hx-include="[name='q'], [name='picker-sort'], [name='picker-type']">
-        <svg class="w-4 h-4 shrink-0" style="color: var(--text-ghost, #94A3B8);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
         <span class="truncate">{% translate "Favorites" %}</span>
       </button>
 
@@ -159,7 +114,6 @@ rules have to arrive with it.
       <div id="picker-folders">
       {% if folders %}
       <div class="mt-3 pt-3 border-t" style="border-color: var(--surface-2, #F5F3FF);">
-        <p class="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-ghost, #94A3B8);">{% translate "Folders" %}</p>
         {% for folder_item in folders %}
         <button type="button" data-folder-id="{{ folder_item.id }}"
                 @click="folder = '{{ folder_item.id }}'"
@@ -190,39 +144,115 @@ rules have to arrive with it.
       {% endif %}
       </div>
 
-      {% if request.workspace_membership.effective_permissions.manage_media %}
-      {% url 'media_library:folder_create' workspace_id=workspace.id as folder_create_url %}
-      <div class="mt-3 pt-3 border-t" style="border-color: var(--surface-2, #F5F3FF);"
-           data-error="{% translate 'Could not create the folder. A folder with this name may already exist.' %}">
-        <button type="button" x-show="!newFolderOpen" @click="newFolderOpen = true; $nextTick(() => $refs.newFolderName.focus())"
-                class="ml-folder-item w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm cursor-pointer"
-                style="color: var(--primary, #7C3AED);">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 10v6m-3-3h6M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-          <span class="truncate">{% translate "New folder" %}</span>
-        </button>
-        <form x-show="newFolderOpen" x-cloak class="px-1 space-y-1.5"
-              @submit.prevent="createFolder('{{ folder_create_url }}', '{{ picker_url }}', $el.parentElement.dataset.error)"
-              @keydown.escape.stop="newFolderOpen = false; newFolderName = ''">
-          <input type="text" x-ref="newFolderName" x-model="newFolderName" maxlength="255"
-                 placeholder="{% translate 'Folder name' %}" aria-label="{% translate 'Folder name' %}"
-                 class="input-focus w-full px-2.5 py-1.5 text-sm border rounded-lg outline-none"
-                 style="border-color: var(--border, #E5E7EB); background: var(--surface-0, #FFF);">
-          <div class="flex items-center gap-1.5">
-            <button type="submit" :disabled="!newFolderName.trim() || creatingFolder"
-                    class="px-2.5 py-1 text-xs font-semibold text-white rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    style="background: var(--primary, #7C3AED);">{% translate "Create" %}</button>
-            <button type="button" @click="newFolderOpen = false; newFolderName = ''"
-                    class="px-2.5 py-1 text-xs font-medium rounded-md cursor-pointer"
-                    style="color: var(--text-secondary, #475569);">{% translate "Cancel" %}</button>
-          </div>
-        </form>
-      </div>
-      {% endif %}
     </aside>
 
     <!-- Grid -->
-    <div id="picker-asset-grid" class="flex-1 overflow-y-auto p-4 sm:p-5 min-h-0">
-      {% include "media_library/_asset_grid.html" %}
+    {% comment %}As in the gallery: the folders run the whole height, the toolbar sits over the grid only.{% endcomment %}
+    <div class="flex-1 min-w-0 flex flex-col min-h-0">
+    <!-- ── Toolbar: search, type filters, sort ─────────── -->
+    <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-3 border-b shrink-0"
+         style="border-color: var(--surface-2, #F5F3FF);">
+
+      <!-- Search -->
+      <div class="relative flex-1 min-w-[160px] sm:max-w-xs">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style="color: var(--text-ghost, #94A3B8);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input type="search"
+               name="q"
+               value="{{ query }}"
+               placeholder="{% translate 'Search media...' %}"
+               class="input-focus w-full pl-9 pr-4 py-2 text-sm border rounded-lg outline-none"
+               style="border-color: var(--border, #E5E7EB); background: var(--surface-0, #FFF);"
+               hx-get="{{ picker_url }}"
+               hx-trigger="keyup changed delay:400ms, search"
+               hx-target="#picker-asset-grid"
+               hx-swap="innerHTML"
+               hx-include="[name='picker-sort'], [name='picker-type'], [name='picker-folder']">
+      </div>
+
+      {% comment %}
+      The non-search filters ride along as hidden inputs so hx-include can
+      carry them on every request: picking a type, then searching, has to keep
+      the type. Alpine owns their values; HTMX only reads them.
+      {% endcomment %}
+      <input type="hidden" name="picker-type" :value="type">
+      <input type="hidden" name="picker-folder" :value="folder">
+
+      <!-- Type filters -->
+      <div class="flex items-center gap-1.5 overflow-x-auto flex-nowrap">
+        <button type="button"
+                @click="type = ''"
+                class="ml-filter-pill shrink-0"
+                :class="type === '' && 'active'"
+                hx-get="{{ picker_url }}"
+                hx-target="#picker-asset-grid"
+                hx-swap="innerHTML"
+                hx-include="[name='q'], [name='picker-sort'], [name='picker-folder']">{% translate "All" %}</button>
+        {% for type_val, type_label in file_types %}
+        <button type="button"
+                @click="type = '{{ type_val }}'"
+                class="ml-filter-pill shrink-0"
+                :class="type === '{{ type_val }}' && 'active'"
+                hx-get="{{ picker_url }}?type={{ type_val }}"
+                hx-target="#picker-asset-grid"
+                hx-swap="innerHTML"
+                hx-include="[name='q'], [name='picker-sort'], [name='picker-folder']">{{ type_label }}</button>
+        {% endfor %}
+      </div>
+
+      <div class="flex-1"></div>
+
+      <!-- Sort -->
+      <select name="picker-sort"
+              class="text-xs border rounded-lg pl-3 pr-7 py-2 outline-none cursor-pointer appearance-none"
+              style="border-color: var(--border, #E5E7EB); color: var(--text-secondary, #475569); background-image: url(&quot;data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2378716C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E&quot;); background-repeat: no-repeat; background-position: right 8px center;"
+              hx-get="{{ picker_url }}"
+              hx-trigger="change"
+              hx-target="#picker-asset-grid"
+              hx-swap="innerHTML"
+              hx-include="[name='q'], [name='picker-type'], [name='picker-folder']">
+        <option value="-date" {% if current_sort == '-date' or current_sort == '-created_at' %}selected{% endif %}>{% translate "Newest first" %}</option>
+        <option value="date" {% if current_sort == 'date' %}selected{% endif %}>{% translate "Oldest first" %}</option>
+        <option value="name" {% if current_sort == 'name' %}selected{% endif %}>{% translate "Name A-Z" %}</option>
+        <option value="-name" {% if current_sort == '-name' %}selected{% endif %}>{% translate "Name Z-A" %}</option>
+        <option value="-size" {% if current_sort == '-size' %}selected{% endif %}>{% translate "Largest first" %}</option>
+        <option value="size" {% if current_sort == 'size' %}selected{% endif %}>{% translate "Smallest first" %}</option>
+      </select>
+
+      {% comment %}
+      The window's "Upload" (picker-upload) opens this chooser. Upload posts straight
+      to the composer's own endpoint, which attaches the file to the post (or the
+      pending session) as well as storing it — so a file picked up here lands in the
+      post without a second trip through the grid. ``uploadsComplete`` refreshes the
+      grid so it also shows up there.
+      {% endcomment %}
+      <input type="file" x-ref="pickerFile" multiple class="hidden"
+             accept="{{ accepted_file_types }}"
+             @change="upload($event.target.files, '{{ picker_upload_url }}')">
+    </div>
+
+      {% comment %}The files being sent, as the gallery's upload list (.ml-dropzone); filled by upload().{% endcomment %}
+      <div x-show="uploadQueue.length" x-cloak class="px-4 sm:px-5 pt-4 shrink-0">
+        <div class="ml-dropzone px-4 py-3 space-y-1">
+          <template x-for="(file, i) in uploadQueue" :key="i">
+            <div class="flex items-center gap-3 py-1">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
+                   style="background: var(--surface-2, #F5F3FF); color: var(--text-tertiary, #64748B);">
+                <span x-text="file.name.split('.').pop().toUpperCase().slice(0,3)"></span>
+              </div>
+              <p class="flex-1 min-w-0 text-xs font-medium truncate" style="color: var(--text-primary, #0F172A);" x-text="file.name"></p>
+              <span x-show="file.status === 'uploading'" class="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 shrink-0">
+                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                {% translate "Uploading…" %}
+              </span>
+              <span x-show="file.status === 'complete'" class="text-xs font-semibold shrink-0" style="color: var(--success-500, #22C55E);">{% translate "Done" %}</span>
+              <span x-show="file.status === 'error'" class="text-xs font-semibold shrink-0" style="color: var(--error-500, #EF4444);">{% translate "Failed" %}</span>
+            </div>
+          </template>
+        </div>
+      </div>
+      <div id="picker-asset-grid" class="flex-1 overflow-y-auto p-4 sm:p-5 min-h-0">
+        {% include "media_library/_asset_grid.html" %}
+      </div>
     </div>
   </div>
 
@@ -289,6 +319,7 @@ rules have to arrive with it.
       type: '{{ current_type|default:"" }}',
       folder: '{{ current_folder|default:"" }}',
       newFolderOpen: false,
+      uploadQueue: [],
       newFolderName: '',
       creatingFolder: false,
 
@@ -386,7 +417,15 @@ rules have to arrive with it.
 
       upload(files, url) {
         if (!files || !files.length) return;
-        const uploads = Array.from(files).map(file => {
+        // Each file shows in the "uploading" list above the grid until its answer
+        // comes back, then as done or failed; the done ones leave shortly after, the failed ones a little later.
+        // The entries kept are the ones read back from the list: Alpine's reactive
+        // copies, so a status set on them redraws the row.
+        const entries = Array.from(files).map(file => {
+          this.uploadQueue.push({ name: file.name, status: 'uploading' });
+          return this.uploadQueue[this.uploadQueue.length - 1];
+        });
+        const uploads = Array.from(files).map((file, i) => {
           const body = new FormData();
           body.append('file', file);
           // Into the folder on screen, as the gallery's own upload does.
@@ -395,9 +434,28 @@ rules have to arrive with it.
             method: 'POST',
             headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
             body,
+          }).then(response => {
+            entries[i].status = response.ok ? 'complete' : 'error';
+            return response;
+          }, error => {
+            entries[i].status = 'error';
+            throw error;
           });
         });
-        Promise.all(uploads).then(responses => {
+        Promise.allSettled(uploads).then(settled => {
+          setTimeout(() => {
+            this.uploadQueue = this.uploadQueue.filter(entry => !entries.includes(entry) || entry.status === 'error');
+          }, 1500);
+          setTimeout(() => {
+            this.uploadQueue = this.uploadQueue.filter(entry => !entries.includes(entry));
+          }, 6000);
+          if (settled.some(result => result.status === 'rejected')) {
+            document.body.dispatchEvent(new CustomEvent('showToast', {
+              detail: { tone: 'error', title: '{% translate "Upload failed" %}' },
+            }));
+          }
+          return settled.filter(result => result.status === 'fulfilled').map(result => result.value);
+        }).then(responses => {
           htmx.trigger('body', 'uploadsComplete');
           {% if picker_target == "idea" %}
           // Nothing attaches an upload made here, so each stored file is

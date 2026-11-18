@@ -48,7 +48,8 @@ the folder list and the grid, like ``inbox/feed.html``.
 {% endcomment %}
 <div x-data="{ ...mediaLibrary(), folderSidebarOpen: false }" class="ml-shell flex"
      @ml-new-folder.window="showNewFolder = true"
-     @ml-upload.window="$refs.fileInput.click()">
+     @ml-upload.window="$refs.fileInput.click()"
+     @assets-changed.window="window.location.reload()">
 
   <!-- Mobile folder sidebar toggle -->
   <button @click="folderSidebarOpen = !folderSidebarOpen"
@@ -105,6 +106,16 @@ the folder list and the grid, like ``inbox/feed.html``.
         {% include "media_library/_folder_tree.html" %}
       </div>
     </div>
+
+    {% comment %}
+    The brand's storage, at the foot of the folders (an upload reloads the page, so it follows).
+    Left out for a brand without a subscription.
+    {% endcomment %}
+    {% if storage.has_subscription %}
+    <div class="mt-auto px-4 py-3 border-t" style="border-color: var(--surface-2, #F5F3FF);">
+      {% include "billing/_storage_meter.html" %}
+    </div>
+    {% endif %}
   </div>
 
   <!-- ═══════ MAIN CONTENT ═══════ -->
@@ -303,6 +314,77 @@ the folder list and the grid, like ``inbox/feed.html``.
     {% include "media_library/_folder_form.html" %}
   </div>
 
+  {% with perms=request.workspace_membership.effective_permissions %}
+  {% if perms.edit_media or perms.delete_media %}
+  {% comment %}
+  Floating selection bar, the same as the contacts' and the Publish list's: how many
+  files are ticked, "Move" (a window to pick the folder) and "Delete", and × to clear.
+  Both post the ticked ids (#ml-selected-ids) and answer with a toast and
+  assets-changed, which reloads the page.
+  {% endcomment %}
+  <div id="ml-selected-ids" class="hidden">
+    <template x-for="id in selected" :key="id"><input type="hidden" name="ids" :value="id"></template>
+  </div>
+  <div x-show="selected.length" x-cloak
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="translate-y-full opacity-0" x-transition:enter-end="translate-y-0 opacity-100"
+       class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1 bg-neutral-950 text-white rounded-full shadow-2xl pl-4 pr-2 py-2">
+    <span class="text-sm font-medium whitespace-nowrap"
+          data-one="{% translate '{n} selected' context 'media' %}" data-many="{% translate '{n} selected' context 'media, plural' %}"
+          x-text="(selected.length === 1 ? $el.dataset.one : $el.dataset.many).replace('{n}', selected.length)"></span>
+    <span class="w-px h-5 bg-white/20 mx-1.5" aria-hidden="true"></span>
+    {% if perms.edit_media %}
+    <button type="button" @click="moveOpen = true"
+            class="px-3 py-1.5 text-xs font-semibold rounded-full hover:bg-white/10 transition-colors">{% translate "Move" %}</button>
+    {% endif %}
+    {% if perms.delete_media %}
+    <button type="button" class="px-3 py-1.5 text-xs font-semibold rounded-full text-red-300 hover:bg-red-500/20 transition-colors"
+            hx-post="{% url 'media_library:asset_bulk_delete' workspace_id=workspace.id %}" hx-swap="none"
+            hx-include="#ml-selected-ids"
+            hx-confirm="{% translate 'Delete the selected files? This cannot be undone.' %}"
+            data-confirm-tone="danger" data-confirm-label="{% translate 'Delete' %}">{% translate "Delete" %}</button>
+    {% endif %}
+    <button type="button" @click="selected = []" class="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
+            title="{% translate 'Clear selection' %}" aria-label="{% translate 'Clear selection' %}">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  {% if perms.edit_media %}
+  {# The folder to move the ticked files into; "No folder" takes them out of folders. #}
+  <div x-show="moveOpen" x-cloak class="modal-overlay z-[80]" role="dialog" aria-modal="true" aria-labelledby="ml-move-title"
+       x-transition.opacity @keydown.escape.window="moveOpen = false">
+    <form class="modal-panel" @click.outside="moveOpen = false"
+          hx-post="{% url 'media_library:asset_bulk_move' workspace_id=workspace.id %}" hx-swap="none"
+          hx-include="#ml-selected-ids" @htmx:after-request="if ($event.detail.successful) moveOpen = false">
+      <h2 id="ml-move-title" class="text-base font-semibold text-neutral-950">{% translate "Move to folder" %}</h2>
+      <p class="text-sm text-neutral-600 mt-1"
+         data-one="{% translate 'Pick the folder for the selected file.' %}" data-many="{% translate 'Pick the folder for the {n} selected files.' %}"
+         x-text="selected.length === 1 ? $el.dataset.one : $el.dataset.many.replace('{n}', selected.length)"></p>
+      <div class="mt-4 max-h-72 overflow-y-auto space-y-1">
+        <label class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-neutral-50 cursor-pointer text-sm text-neutral-800">
+          <input type="radio" name="folder_id" value="" class="bb-checkbox" checked>
+          <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2l2 2h6a2 2 0 012 2v2M4 6v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2H4z"/></svg>
+          {% translate "No folder" %}
+        </label>
+        {% for folder_id, folder_label in move_folders %}
+        <label class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-neutral-50 cursor-pointer text-sm text-neutral-800">
+          <input type="radio" name="folder_id" value="{{ folder_id }}" class="bb-checkbox">
+          <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          <span class="truncate">{{ folder_label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button type="button" class="btn-ghost" @click="moveOpen = false">{% translate "Cancel" %}</button>
+        <button type="submit" class="btn-brand">{% translate "Move" %}</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+  {% endif %}
+  {% endwith %}
+
   <!-- ═══════ DETAIL SLIDE-OVER ═══════ -->
   <div x-show="detailOpen" x-cloak
        class="fixed inset-0 z-50 flex justify-end"
@@ -342,6 +424,13 @@ the folder list and the grid, like ``inbox/feed.html``.
 function mediaLibrary() {
   return {
     viewMode: 'grid',
+    // Files ticked on the grid or the list, for the bulk bar (move / delete).
+    selected: [],
+    moveOpen: false,
+    toggleSelected(id) {
+      const at = this.selected.indexOf(id);
+      if (at >= 0) this.selected.splice(at, 1); else this.selected.push(id);
+    },
     dragOver: false,
     uploading: false,
     uploadQueue: [],
