@@ -110,6 +110,7 @@ When a hook reports a problem, fix it before moving on. When it asks the reuse q
 - `provider-integration` — adding or changing a social platform integration.
 - `worker-tasks` — background tasks, recurring jobs, the worker.
 - `pytest-project` — writing and running tests in this project.
+- `security-audit` (vendored from `cloudflare/security-audit-skill`) — security questions, focused vulnerability reviews and, only when explicitly asked, the full audit workflow, which writes its reports to `~/security-audit-skill/`, outside the repository.
 - `django-safe-migration` (plugin from `vintasoftware/django-ai-plugins`, enabled in `.claude/settings.json`) — writing or reviewing any migration. Use it every time a migration is created, not only when asked.
 
 ## django-safe-migration
