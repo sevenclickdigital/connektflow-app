@@ -17,7 +17,7 @@ from django.views.decorators.http import require_POST
 
 from apps.common.htmx import toast_response
 from apps.common.validators import is_valid_hex_color
-from apps.composer.models import ContentCategory, PlatformPost, Post
+from apps.composer.models import ContentCategory, PlatformPost, Post, any_tag_q
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
 from apps.social_accounts.models import SocialAccount
@@ -147,14 +147,7 @@ def _get_filtered_posts(workspace, request):
         qs = qs.filter(category_id__in=categories)
 
     # Tag filter (OR - match posts containing any selected tag)
-    tags = request.GET.getlist("tag")
-    if tags:
-        from django.db.models import Q
-
-        tag_q = Q()
-        for tag in tags:
-            tag_q |= Q(tags__contains=[tag])
-        qs = qs.filter(tag_q)
+    qs = qs.filter(any_tag_q(request.GET.getlist("tag")))
 
     # Date range
     start_date = request.GET.get("start_date")
@@ -244,14 +237,7 @@ def _get_filtered_platform_posts(workspace, request):
         qs = qs.filter(post__category_id__in=categories)
 
     # Tag filter (OR)
-    tags = request.GET.getlist("tag")
-    if tags:
-        from django.db.models import Q
-
-        tag_q = Q()
-        for tag in tags:
-            tag_q |= Q(post__tags__contains=[tag])
-        qs = qs.filter(tag_q)
+    qs = qs.filter(any_tag_q(request.GET.getlist("tag"), "post__tags"))
 
     return qs
 
@@ -398,10 +384,8 @@ def _publish_tab_counts(workspace, request):
     approvals = _approval_posts_in_month(
         Post.objects.for_workspace(workspace.id).filter(Exists(pp_match)), request, workspace
     )
-    # Tag is a Post-level attribute (can't cross child rows) — apply it directly.
-    tag = request.GET.get("tag")
-    if tag:
-        approvals = approvals.filter(tags__contains=[tag])
+    # Tags are a Post-level attribute (can't cross child rows) — apply them directly.
+    approvals = approvals.filter(any_tag_q(request.GET.getlist("tag")))
 
     return {
         "queue_count": _pp("queue"),
@@ -445,12 +429,7 @@ def _filter_by_account(qs, request):
 def _apply_pp_publish_filters(qs, request):
     """Apply channel, platform and tag filters to a PlatformPost queryset."""
     qs = _filter_by_account(qs, request)
-
-    tag = request.GET.get("tag")
-    if tag:
-        qs = qs.filter(post__tags__contains=[tag])
-
-    return qs
+    return qs.filter(any_tag_q(request.GET.getlist("tag"), "post__tags"))
 
 
 def _shown_month_bounds(request, workspace):
@@ -672,10 +651,8 @@ def _get_tab_context(request, workspace, tab: str) -> dict:
         .prefetch_related("platform_posts__social_account", "media_attachments__media_asset", "versions")
         .order_by("scheduled_at", "-created_at")
     )
-    # Tag is a Post-level attribute (can't cross child rows) — apply it directly.
-    tag = request.GET.get("tag")
-    if tag:
-        posts_qs = posts_qs.filter(tags__contains=[tag])
+    # Tags are a Post-level attribute (can't cross child rows) — apply them directly.
+    posts_qs = posts_qs.filter(any_tag_q(request.GET.getlist("tag")))
 
     posts = list(posts_qs[:200])
 
@@ -727,7 +704,8 @@ def _get_tab_context(request, workspace, tab: str) -> dict:
     _filter_params = [("channel", c) for c in _get_channel_filters(request)]
     _filter_params += [("platform", p) for p in request.GET.getlist("platform")]
     _filter_params += [("date", request.GET["date"])] if request.GET.get("date") else []
-    _filter_params += [(k, request.GET[k]) for k in ("tag", "tz") if request.GET.get(k)]
+    _filter_params += [("tag", t) for t in request.GET.getlist("tag")]
+    _filter_params += [("tz", request.GET["tz"])] if request.GET.get("tz") else []
     filter_qs = urlencode(_filter_params)
 
     return {
@@ -856,7 +834,7 @@ def calendar_view(request, workspace_id):
             start=start,
             end=end,
             platforms=request.GET.getlist("platform"),
-            tag=request.GET.get("tag", ""),
+            tags=request.GET.getlist("tag"),
         )
         # Filter changes reload only the columns; the toolbar and pills stay put.
         if is_htmx and request.GET.get("_columns"):

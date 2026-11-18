@@ -643,7 +643,7 @@ function statusBoard() {
     return {
         dragId: null,
         platform: [{% for code in active_filters.platforms %}'{{ code|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
-        activeTag: '{{ active_filters.tags.0|default:""|escapejs }}',
+        tags: [{% for tag in active_filters.tags %}'{{ tag|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
         periodDate: '{{ target_date|date:"Y-m-d" }}',
         init() {
             // A move (or a delete from a card's menu) changes the columns: reload them.
@@ -653,7 +653,7 @@ function statusBoard() {
         _params() {
             const params = new URLSearchParams({ mode: 'board', date: this.periodDate });
             this.platform.forEach((code) => params.append('platform', code));
-            if (this.activeTag) params.set('tag', this.activeTag);
+            this.tags.forEach((tag) => params.append('tag', tag));
             return params;
         },
         reloadBoard() {
@@ -723,9 +723,9 @@ function calendarApp() {
         activeView: '{{ view_type|escapejs }}',
         draggedPlatformPostId: null,
         calendarFilters: {
-            status: '{{ active_filters.statuses.0|default:"" }}',
+            status: [{% for status in active_filters.statuses %}'{{ status|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
             platform: [{% for code in active_filters.platforms %}'{{ code|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
-            tag: '{{ active_filters.tags.0|default:"" }}',
+            tag: [{% for tag in active_filters.tags %}'{{ tag|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
         },
 
         reloadCalendar() {
@@ -737,9 +737,9 @@ function calendarApp() {
             params.set('mode', 'calendar');
             params.set('view', this.activeView);
             params.set('date', '{{ target_date|date:"Y-m-d" }}');
-            if (this.calendarFilters.status) params.set('status', this.calendarFilters.status);
+            this.calendarFilters.status.forEach((status) => params.append('status', status));
             this.calendarFilters.platform.forEach((code) => params.append('platform', code));
-            if (this.calendarFilters.tag) params.set('tag', this.calendarFilters.tag);
+            this.calendarFilters.tag.forEach((tag) => params.append('tag', tag));
             const url = '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString();
             htmx.ajax('GET', url, {target: '#calendar-content', swap: 'innerHTML'});
         },
@@ -749,9 +749,9 @@ function calendarApp() {
         goToPeriod(date, view) {
             const params = new URLSearchParams({ mode: 'calendar', view: view || this.activeView });
             if (date) params.set('date', date);
-            if (this.calendarFilters.status) params.set('status', this.calendarFilters.status);
+            this.calendarFilters.status.forEach((status) => params.append('status', status));
             this.calendarFilters.platform.forEach((code) => params.append('platform', code));
-            if (this.calendarFilters.tag) params.set('tag', this.calendarFilters.tag);
+            this.calendarFilters.tag.forEach((tag) => params.append('tag', tag));
             window.location = '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString();
         },
 
@@ -896,9 +896,9 @@ function calendarApp() {
             const body = document.getElementById('cal-day-body');
             body.innerHTML = '<div class="p-8 text-center text-xs text-neutral-500">' + body.dataset.loading + '</div>';
             const params = new URLSearchParams({ date: this.dayModal.date });
-            if (this.calendarFilters.status) params.set('status', this.calendarFilters.status);
+            this.calendarFilters.status.forEach((status) => params.append('status', status));
             this.calendarFilters.platform.forEach((code) => params.append('platform', code));
-            if (this.calendarFilters.tag) params.set('tag', this.calendarFilters.tag);
+            this.calendarFilters.tag.forEach((tag) => params.append('tag', tag));
             htmx.ajax('GET', '{% url "calendar:day_posts" workspace_id=workspace.id %}?' + params.toString(),
                       { target: body, swap: 'innerHTML' });
         },
@@ -1058,7 +1058,7 @@ function publishList() {
     return {
         activeTab: '{{ active_tab|default:"queue"|escapejs }}',
         platform: [{% for code in active_filters.platforms %}'{{ code|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
-        activeTag: '{{ active_filters.tags.0|default:""|escapejs }}',
+        tags: [{% for tag in active_filters.tags %}'{{ tag|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
         // The month shown; the tabs list only what falls in it.
         periodDate: '{{ target_date|date:"Y-m-d" }}',
 
@@ -1083,7 +1083,7 @@ function publishList() {
             const params = new URLSearchParams({ mode: 'list', tab: this.activeTab });
             if (date) params.set('date', date);
             this.platform.forEach((code) => params.append('platform', code));
-            if (this.activeTag) params.set('tag', this.activeTag);
+            this.tags.forEach((tag) => params.append('tag', tag));
             window.location = '{% url "calendar:calendar" workspace_id=workspace.id %}?' + params.toString();
         },
 
@@ -1095,7 +1095,7 @@ function publishList() {
             Alpine.store('sel').clear();
             const params = new URLSearchParams({ date: this.periodDate });
             this.platform.forEach((code) => params.append('platform', code));
-            if (this.activeTag) params.set('tag', this.activeTag);
+            this.tags.forEach((tag) => params.append('tag', tag));
             const url = this.tabUrls[this.activeTab] + '?' + params.toString();
             htmx.ajax('GET', url, {target: '#tab-content', swap: 'innerHTML'});
         }

@@ -94,6 +94,21 @@ def test_the_board_lists_this_workspaces_posts_by_stage(workspace, owner, page):
     assert "Not ours" not in body
 
 
+def test_the_board_keeps_posts_with_any_of_the_tags_picked(workspace, owner, page):
+    user, client = owner
+    for caption, tags in (("Promo post", ["promo"]), ("Culture post", ["culture"]), ("Other post", ["other"])):
+        post = Post.objects.create(workspace=workspace, author=user, caption=caption, tags=tags)
+        PlatformPost.objects.create(post=post, social_account=page, status=S.DRAFT)
+
+    body = client.get(
+        reverse("calendar:calendar", kwargs={"workspace_id": workspace.id}),
+        {"mode": "board", "tag": ["promo", "culture"]},
+    ).content.decode()
+
+    assert "Promo post" in body and "Culture post" in body
+    assert "Other post" not in body
+
+
 def test_dropping_a_draft_on_approval_submits_it(workspace, owner, page):
     user, client = owner
     pp = _pp(workspace, user, page, S.DRAFT)

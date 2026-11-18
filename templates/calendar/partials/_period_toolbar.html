@@ -9,7 +9,7 @@ and filters — and the models named by platform_model / status_model / tag_mode
 Context: period_label, prev_date, next_date, month_options, show_drafts,
 show_holidays, show_events, can_create_posts, status_choices, all_tags, platform_options, workspace;
 nav_query (e.g. "mode=list&tab=queue"), platform_model (an array: the networks shown, empty = all),
-status_model (optional), tag_model, onchange,
+status_model (optional) and tag_model (arrays too: the statuses and tags shown, empty = all), onchange,
 drafts_switch (the calendar's "Drafts" button; the list and board have their own drafts views).
 {% endcomment %}
 {% url 'calendar:calendar' workspace_id=workspace.id as publish_url %}
@@ -77,15 +77,16 @@ drafts_switch (the calendar's "Drafts" button; the list and board have their own
                 aria-pressed="{{ show_holidays|yesno:'true,false' }}"
                 title="{% translate 'Show Brazilian holidays and commercial dates' %}"
                 class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all duration-150 {% if show_holidays %}border-amber-300 bg-amber-50 text-amber-700{% else %}border-neutral-300 text-neutral-600 hover:bg-neutral-50{% endif %}">
-            🎉 {% translate "Special dates" %}
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            {% translate "Special dates" %}
         </button>
         {% endif %}
         {% if platform_options %}
         {% ui_select model=platform_model options=platform_options multiple=True onchange=onchange placeholder=_("All networks") icon="channel" %}
         {% endif %}
         {% if status_model %}
-        {% ui_select model=status_model options=status_choices onchange=onchange placeholder=_("All Posts") icon="status" %}
+        {% ui_select model=status_model options=status_choices multiple=True onchange=onchange placeholder=_("All Posts") icon="status" %}
         {% endif %}
-        {% ui_select model=tag_model options=all_tags onchange=onchange placeholder=_("Tags") icon="tag" %}
+        {% ui_select model=tag_model options=all_tags multiple=True onchange=onchange placeholder=_("Tags") icon="tag" %}
     </div>
 </div>

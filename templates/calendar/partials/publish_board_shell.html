@@ -12,7 +12,7 @@ Expects: status_board (apps.calendar.status_board.board_columns), workspace, plu
      data-move-url="{% url 'calendar:status_board_move' workspace_id=workspace.id platform_post_id='00000000-0000-0000-0000-000000000000' %}"
      data-move-failed="{% translate 'The post could not be moved. Try again.' %}">
 
-    {% include "calendar/partials/_period_toolbar.html" with nav_query="mode=board" platform_model="platform" tag_model="activeTag" onchange="reloadBoard()" %}
+    {% include "calendar/partials/_period_toolbar.html" with nav_query="mode=board" platform_model="platform" tag_model="tags" onchange="reloadBoard()" %}
 
     <div id="board-content" class="flex-1 min-h-0 flex flex-col">
         {% include "calendar/partials/_board_columns.html" %}

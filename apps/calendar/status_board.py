@@ -18,7 +18,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 
-from apps.composer.models import PlatformPost
+from apps.composer.models import PlatformPost, any_tag_q
 
 S = PlatformPost.Status
 
@@ -41,7 +41,11 @@ class Column:
 COLUMNS: tuple[Column, ...] = (
     Column("draft", gettext_lazy("Draft"), (S.DRAFT,), True, "brand"),
     Column(
-        "review", gettext_lazy("In approval"), (S.PENDING_REVIEW, S.PENDING_CLIENT, S.CHANGES_REQUESTED), True, "warning"
+        "review",
+        gettext_lazy("In approval"),
+        (S.PENDING_REVIEW, S.PENDING_CLIENT, S.CHANGES_REQUESTED),
+        True,
+        "warning",
     ),
     Column("approved", gettext_lazy("Approved"), (S.APPROVED, S.ON_HOLD), True, "info"),
     Column("scheduled", gettext_lazy("Scheduled"), (S.SCHEDULED, S.PUBLISHING), True, "brand"),
@@ -68,11 +72,11 @@ def column(key) -> Column | None:
     return _BY_KEY.get(key)
 
 
-def board_columns(workspace, *, start=None, end=None, platforms=(), tag=""):
+def board_columns(workspace, *, start=None, end=None, platforms=(), tags=()):
     """Columns with their cards, each column's rows ordered by when they go out.
 
     ``start``/``end`` keep the cards dated in that range (published, scheduled or
-    proposed) plus the undated ones; ``platforms`` and ``tag`` narrow them further.
+    proposed) plus the undated ones; ``platforms`` and ``tags`` (any of them) narrow them further.
     """
     rows = (
         PlatformPost.objects.filter(post__workspace=workspace)
@@ -90,8 +94,7 @@ def board_columns(workspace, *, start=None, end=None, platforms=(), tag=""):
         rows = rows.exclude(status=S.PUBLISHED, published_at__lt=timezone.now() - timedelta(days=PUBLISHED_WINDOW_DAYS))
     if platforms:
         rows = rows.filter(social_account__platform__in=platforms)
-    if tag:
-        rows = rows.filter(post__tags__contains=[tag])
+    rows = rows.filter(any_tag_q(tags, "post__tags"))
     by_status: dict[str, list] = {}
     for pp in rows:
         by_status.setdefault(pp.status, []).append(pp)

@@ -335,6 +335,17 @@ class IdeaMedia(models.Model):
         return f"IdeaMedia(pos={self.position}): {self.media_asset.filename}"
 
 
+def any_tag_q(tags, field="tags"):
+    """A filter keeping rows whose ``field`` (a JSON list of tag names) holds any of ``tags``.
+
+    Empty ``tags`` keeps every row. For a related model pass its path, e.g. ``"post__tags"``.
+    """
+    query = models.Q()
+    for tag in tags:
+        query |= models.Q(**{f"{field}__contains": [tag]})
+    return query
+
+
 class Post(models.Model):
     """A piece of content created in the composer.
 
