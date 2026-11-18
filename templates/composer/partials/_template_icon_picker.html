@@ -7,16 +7,18 @@ field. Used by the operator's template form and by the customer's "send a
 template" window.
 
 Expects: icons (composer.idea_icons.icon_library()), current (the slug picked,
-or ""), name (the field's name, "icon"). The markup comes from the app's own
+or ""), name (the field's name, "icon"); inline (optional) draws it inside a
+text field on the right, as the idea's window does (the field's wrapper is
+"relative" and leaves room on its right). The markup comes from the app's own
 icon library, not from users.
 {% endcomment %}
-<div class="relative inline-block" x-data="{ pickerOpen: false, icon: '{{ current|escapejs }}' }"
+<div class="{% if inline %}absolute right-1.5 top-1/2 -translate-y-1/2{% else %}relative inline-block{% endif %}" x-data="{ pickerOpen: false, icon: '{{ current|escapejs }}' }"
      @click.outside="pickerOpen = false" @keydown.escape="pickerOpen = false"
      @template-submitted.camel.window="icon = ''">
     <input type="hidden" name="{{ name }}" :value="icon">
     <div class="flex items-center gap-3">
         <button type="button" @click="pickerOpen = !pickerOpen" :aria-expanded="pickerOpen.toString()"
-                class="w-11 h-11 rounded-xl flex items-center justify-center cursor-pointer transition-colors border"
+                class="{% if inline %}w-8 h-8 rounded-lg{% else %}w-11 h-11 rounded-xl{% endif %} flex items-center justify-center cursor-pointer transition-colors border"
                 :class="icon ? 'bg-brand-50 text-brand-800 border-brand-200 hover:bg-brand-100' : 'border-dashed border-neutral-300 text-neutral-600 hover:border-neutral-400'"
                 title="{% translate 'Choose an icon' %}" aria-label="{% translate 'Choose an icon' %}">
             <span x-show="!icon" class="text-[10px] font-semibold">{% translate "Auto" context "icon picker" %}</span>
@@ -24,11 +26,11 @@ icon library, not from users.
             <svg x-show="icon === '{{ item.slug }}'" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ item.markup|safe }}</svg>
             {% endfor %}
         </button>
-        <span class="text-xs text-neutral-600" x-show="!icon">{% translate "Without one, the category's icon is shown." %}</span>
+        {% if not inline %}<span class="text-xs text-neutral-600" x-show="!icon">{% translate "Without one, the category's icon is shown." %}</span>{% endif %}
     </div>
 
     <div x-show="pickerOpen" x-cloak x-transition
-         class="absolute left-0 top-full mt-2 z-50 p-2.5 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300">
+         class="absolute {% if inline %}right-0{% else %}left-0{% endif %} top-full mt-2 z-50 w-max p-2.5 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300">
         <div class="grid grid-cols-7 gap-1">
             <button type="button" @click="icon = ''; pickerOpen = false"
                     class="w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-semibold cursor-pointer border border-dashed"

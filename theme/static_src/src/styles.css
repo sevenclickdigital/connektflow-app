@@ -1063,7 +1063,9 @@ input.idea-title-input::placeholder {
 /* Category chip */
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--radius-md); font-size: 12px; font-weight: 600; color: var(--text-secondary); background: var(--surface-0); border: 1px solid var(--border); cursor: pointer; font-family: inherit; white-space: nowrap; transition: all var(--dur-fast) ease; }
 .chip:hover { border-color: var(--border-hover); }
-.chip.active { border-color: var(--primary-ring); color: var(--primary); background: var(--brand-50); }
+/* A chip can wrap a checkbox (an sr-only input): ticked, it shows as active. */
+.chip.active, .chip:has(> input:checked) { border-color: var(--primary-ring); color: var(--primary); background: var(--brand-50); }
+.chip:has(> input:focus-visible) { box-shadow: 0 0 0 3px var(--primary-ring); }
 
 /* Icon tile (stat cards, platform icons) */
 .tile { width: 40px; height: 40px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
