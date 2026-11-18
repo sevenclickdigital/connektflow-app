@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-18 21:09+0000\n"
+"POT-Creation-Date: 2026-11-18 21:25+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -3317,7 +3317,7 @@ msgstr "Escreva o texto do modelo."
 msgid "The cover can have at most 5 MB."
 msgstr "A capa pode ter no máximo 5 MB."
 
-#: apps/composer/idea_icons.py:20 templates/tasks/partials/_task_card.html:52
+#: apps/composer/idea_icons.py:20 templates/tasks/partials/_task_card.html:77
 msgid "Idea"
 msgstr "Ideia"
 
@@ -7470,7 +7470,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/social_accounts/partials/_posting_slots_grid.html:87
 #: templates/social_accounts/partials/_posting_slots_grid.html:121
 #: templates/tasks/partials/_checklist_item.html:114
-#: templates/tasks/partials/_column.html:65
+#: templates/tasks/partials/_column.html:71
 #: templates/tasks/partials/_new_item_modal.html:185
 #: templates/tasks/partials/_task_modal.html:196
 #: templates/workspaces/partials/_dashboard_goal.html:34
@@ -12161,20 +12161,20 @@ msgstr "Não foi possível reagendar essa publicação."
 
 #: templates/calendar/partials/_board_columns.html:24
 #: templates/composer/partials/kanban_column.html:23
-#: templates/tasks/partials/_column.html:22
+#: templates/tasks/partials/_column.html:23
 #, python-format
 msgid "Open the column %(name)s"
 msgstr "Abrir a coluna %(name)s"
 
 #: templates/calendar/partials/_board_columns.html:37
 #: templates/composer/partials/kanban_column.html:44
-#: templates/tasks/partials/_column.html:104
+#: templates/tasks/partials/_column.html:110
 msgid "Close column"
 msgstr "Fechar coluna"
 
 #: templates/calendar/partials/_board_columns.html:37
 #: templates/composer/partials/kanban_column.html:44
-#: templates/tasks/partials/_column.html:104
+#: templates/tasks/partials/_column.html:110
 #, python-format
 msgid "Close the column %(name)s"
 msgstr "Fechar a coluna %(name)s"
@@ -12347,7 +12347,7 @@ msgstr "Data e hora"
 
 #: templates/calendar/partials/_list_table.html:23
 #: templates/composer/partials/idea_card.html:76
-#: templates/tasks/partials/_task_card.html:49
+#: templates/tasks/partials/_task_card.html:74
 #: templates/tasks/partials/_task_summary.html:29
 msgid "No date"
 msgstr "Sem data"
@@ -13524,7 +13524,7 @@ msgstr "O que você quer compartilhar?"
 #: templates/social_accounts/list.html:154
 #: templates/social_accounts/list.html:159
 #: templates/social_accounts/partials/_posting_slots_grid.html:116
-#: templates/tasks/partials/_column.html:64
+#: templates/tasks/partials/_column.html:70
 #: templates/tasks/partials/_new_item_modal.html:171
 #: templates/tasks/partials/_new_item_options.html:59
 #: templates/tasks/partials/_task_modal.html:209
@@ -14498,7 +14498,7 @@ msgstr "Escolher um ícone"
 #: templates/composer/create_landing.html:440
 #: templates/composer/create_landing.html:619
 #: templates/composer/create_landing.html:624
-#: templates/tasks/partials/_column.html:79
+#: templates/tasks/partials/_column.html:85
 msgid "Colour"
 msgstr "Cor"
 
@@ -15649,6 +15649,7 @@ msgid "Open idea"
 msgstr "Abrir ideia"
 
 #: templates/composer/partials/idea_card.html:51
+#: templates/tasks/partials/_task_card.html:27
 msgid "Move to"
 msgstr "Mover para"
 
@@ -20987,53 +20988,54 @@ msgstr "Remover item"
 msgid "Mark as done"
 msgstr "Marcar como feito"
 
-#: templates/tasks/partials/_column.html:38
+#: templates/tasks/partials/_column.html:39
 msgid "Column name"
 msgstr "Nome da coluna"
 
 #: templates/tasks/partials/_column.html:50
+#: templates/tasks/partials/_column.html:127
+msgid "Add task"
+msgstr "Adicionar tarefa"
+
+#: templates/tasks/partials/_column.html:56
 msgid "Column options"
 msgstr "Opções da coluna"
 
-#: templates/tasks/partials/_column.html:60
+#: templates/tasks/partials/_column.html:66
 msgid "New column on the right"
 msgstr "Nova coluna à direita"
 
-#: templates/tasks/partials/_column.html:62
+#: templates/tasks/partials/_column.html:68
 msgid "E.g. Waiting for the client"
 msgstr "Ex.: Aguardando o cliente"
 
-#: templates/tasks/partials/_column.html:72
+#: templates/tasks/partials/_column.html:78
 msgid "Rename column"
 msgstr "Renomear coluna"
 
-#: templates/tasks/partials/_column.html:77
+#: templates/tasks/partials/_column.html:83
 msgid "Add a column to the right"
 msgstr "Adicionar coluna à direita"
 
-#: templates/tasks/partials/_column.html:89
+#: templates/tasks/partials/_column.html:95
 msgid "Move left"
 msgstr "Mover para a esquerda"
 
-#: templates/tasks/partials/_column.html:90
+#: templates/tasks/partials/_column.html:96
 msgid "Move right"
 msgstr "Mover para a direita"
 
-#: templates/tasks/partials/_column.html:95
+#: templates/tasks/partials/_column.html:101
 msgid "Delete this column? Its tasks go to the column beside it."
 msgstr "Excluir esta coluna? As tarefas dela vão para a coluna ao lado."
 
-#: templates/tasks/partials/_column.html:95
+#: templates/tasks/partials/_column.html:101
 msgid "Delete this column?"
 msgstr "Excluir esta coluna?"
 
-#: templates/tasks/partials/_column.html:96
+#: templates/tasks/partials/_column.html:102
 msgid "Delete column"
 msgstr "Excluir coluna"
-
-#: templates/tasks/partials/_column.html:121
-msgid "Add task"
-msgstr "Adicionar tarefa"
 
 #: templates/tasks/partials/_new_item_modal.html:45
 msgid "New task"
@@ -21094,7 +21096,24 @@ msgstr "O texto com que a publicação vai sair"
 msgid "Nobody yet"
 msgstr "Ninguém ainda"
 
-#: templates/tasks/partials/_task_card.html:37
+#: templates/tasks/partials/_task_card.html:19
+msgid "Task options"
+msgstr "Opções da tarefa"
+
+#: templates/tasks/partials/_task_card.html:25
+msgid "Open task"
+msgstr "Abrir tarefa"
+
+#: templates/tasks/partials/_task_card.html:35
+#: templates/tasks/partials/_task_modal.html:246
+msgid "Delete this task? This cannot be undone."
+msgstr "Excluir esta tarefa? Isso não pode ser desfeito."
+
+#: templates/tasks/partials/_task_card.html:36
+msgid "Delete task"
+msgstr "Excluir tarefa"
+
+#: templates/tasks/partials/_task_card.html:62
 msgid "Checklist progress"
 msgstr "Progresso da checklist"
 
@@ -21179,10 +21198,6 @@ msgstr "O que deve mudar neste grupo?"
 #: templates/tasks/partials/_task_modal.html:226
 msgid "Checklist title, e.g. Shooting"
 msgstr "Título da checklist, ex.: Gravação"
-
-#: templates/tasks/partials/_task_modal.html:246
-msgid "Delete this task? This cannot be undone."
-msgstr "Excluir esta tarefa? Isso não pode ser desfeito."
 
 #: templates/tasks/partials/_task_modal.html:250
 msgid "Open the post"
@@ -22577,9 +22592,6 @@ msgstr "Enviar convite"
 
 #~ msgid "Linked to"
 #~ msgstr "Vinculado a"
-
-#~ msgid "Delete task"
-#~ msgstr "Excluir tarefa"
 
 #~ msgid "created the task"
 #~ msgstr "criou a tarefa"

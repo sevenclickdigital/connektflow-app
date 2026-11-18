@@ -89,6 +89,24 @@ def test_a_viewer_sees_the_board_but_cannot_change_it(workspace, owner):
     assert Task.objects.filter(pk=task.pk).exists()
 
 
+def test_the_card_menu_moves_to_the_other_columns_and_deletes_only_for_editors(workspace, owner):
+    task = services.create_task(workspace, owner, title="Plan")
+    viewer = _user("viewer@example.com", workspace, Role.VIEWER)
+    other_columns = TaskColumn.objects.for_workspace(workspace.id).exclude(pk=task.column_id)
+
+    body = _client(owner).get(_url("board", workspace)).content.decode()
+    seen = _client(viewer).get(_url("board", workspace)).content.decode()
+
+    assert "Open task" in body and "Open task" in seen
+    for column in other_columns:
+        assert f"moveTask('{task.id}', '{column.id}')" in body
+    assert f"moveTask('{task.id}', '{task.column_id}')" not in body
+    assert _url("task_delete", workspace, task_id=task.id) in body
+    assert f"moveTask('{task.id}'" not in seen
+    assert _url("task_delete", workspace, task_id=task.id) not in seen
+    assert "open-new-item" not in seen
+
+
 def test_tasks_of_another_workspace_are_not_reachable(workspace, owner):
     other = Workspace.objects.create(organization=workspace.organization, name="Other")
     WorkspaceMembership.objects.create(user=owner, workspace=other, workspace_role=Role.OWNER)

@@ -307,10 +307,16 @@ function taskBoard() {
             if (!id) return;
             var cards = Array.from(zone.querySelectorAll('.task-card'));
             var at = cards.findIndex(function (c) { return c.dataset.taskId === id; });
+            // Not among the zone's cards (dropped on a closed column): the end of the column.
+            this.moveTask(id, columnId, at < 0 ? 100000 : at);
+        },
+
+        // The card's "Move to" menu, and a drop: the task goes to the column, at the
+        // position given or else at its end, and the board reloads either way.
+        moveTask(id, columnId, position) {
             var body = new FormData();
             body.append('column', columnId);
-            // Not among the zone's cards (dropped on a closed column): the end of the column.
-            body.append('position', String(at < 0 ? 100000 : at));
+            body.append('position', String(position === undefined ? 100000 : position));
             fetch(urlFor(cfg.moveUrl, id), { method: 'POST', body: body, headers: { 'X-CSRFToken': csrf() } })
                 .then(function (r) { if (!r.ok) throw new Error(String(r.status)); })
                 .catch(function () {

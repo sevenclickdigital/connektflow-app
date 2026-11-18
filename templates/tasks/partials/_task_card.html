@@ -3,7 +3,8 @@
 A task on the board, drawn like an idea card (.kanban-card), without an image:
 a task holds several arts and none is "the" cover. The title with its priority when
 not the usual one, the description's first lines, its tags, the checklist's progress
-and, at the foot, the due date, whether it came from an idea and who is on it.
+and, at the foot, the due date, whether it came from an idea and who is on it. Its
+menu opens the task and, for whoever can edit, moves it to another column or deletes it.
 {% endcomment %}
 <article class="kanban-card task-card{% if column.is_done %} is-complete{% endif %}" data-task-id="{{ task.id }}"
          {% if can_edit %}draggable="true" @dragstart="dragStart($event, '{{ task.id }}')" @dragend="dragEnd($event)"{% endif %}
@@ -13,6 +14,31 @@ and, at the foot, the due date, whether it came from an idea and who is on it.
         {% if task.priority != "medium" %}
         <span class="task-pill task-pill--{{ task.priority }} flex-shrink-0">{{ task.get_priority_display }}</span>
         {% endif %}
+        {# The menu moves the card without dragging, which is how it reaches a closed column on a touch screen. #}
+        <div class="relative -mr-2 -mt-1 flex-shrink-0" x-data="{ open: false }" @click.stop>
+            <button type="button" class="w-7 h-7 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 flex items-center justify-center cursor-pointer"
+                    @click="open = !open" :aria-expanded="open.toString()" aria-label="{% translate 'Task options' %}" title="{% translate 'Task options' %}">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+            </button>
+            <div x-show="open" x-cloak @click.outside="open = false" @keydown.escape="open = false" x-transition
+                 class="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 min-w-[180px]">
+                <button type="button" class="w-full text-left px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50 cursor-pointer"
+                        @click="open = false; openTask('{{ task.id }}')">{% translate "Open task" %}</button>
+                {% if can_edit %}
+                <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500 border-t border-neutral-200 mt-1">{% translate "Move to" %}</div>
+                {% for other in columns %}{% if other.id != column.id %}
+                <button type="button" class="w-full text-left px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50 cursor-pointer truncate"
+                        @click="open = false; moveTask('{{ task.id }}', '{{ other.id }}')">{{ other.name }}</button>
+                {% endif %}{% endfor %}
+                <div class="border-t border-neutral-200 mt-1 pt-1">
+                    <button type="button" class="w-full text-left px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 cursor-pointer"
+                            hx-post="{% url 'tasks:task_delete' workspace_id=workspace.id task_id=task.id %}" hx-swap="none"
+                            hx-confirm="{% translate 'Delete this task? This cannot be undone.' %}"
+                            @click="open = false">{% translate "Delete task" %}</button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
     {% if task.description %}
     <p class="mt-1 text-xs text-neutral-600 leading-snug line-clamp-2 whitespace-pre-line break-words">{{ task.description }}</p>
