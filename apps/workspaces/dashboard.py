@@ -157,13 +157,30 @@ _READY_STATUSES = (
 )
 
 
-def upcoming_dates_with_posts(workspace, today: date, tz, limit: int = 4) -> list[dict[str, Any]]:
-    """The next special dates and brand events (calendar.services.upcoming_dates,
-    so the calendar's own settings decide which show), each with ``has_post``:
-    whether a post is approved, scheduled or out on that day."""
-    from apps.calendar.services import upcoming_dates
+def upcoming_dates_with_posts(workspace, today: date, tz, limit: int = 4, fallback: int = 3) -> list[dict[str, Any]]:
+    """The brand's events and special dates of the next 90 days, each with
+    ``has_post``: whether a post is approved, scheduled or out on that day.
 
-    entries = upcoming_dates(workspace, today, days=90)[:limit]
+    Special dates come even when the calendar grid hides them: that switch is
+    about the grid, and this card leads to the special-dates page ("See all"),
+    which lists them anyway. When nothing falls in the next 90 days, the card
+    offers the brand's next ``fallback`` special dates of the coming year, so it
+    never sits empty while there is something to plan for."""
+    from apps.calendar.holidays import special_dates_between
+    from apps.calendar.services import special_dates_enabled, upcoming_dates
+
+    entries = upcoming_dates(workspace, today, days=90)
+    if not special_dates_enabled(workspace):
+        entries += [
+            {**d, "event": None, "days": (d["date"] - today).days}
+            for d in special_dates_between(today, today + timedelta(days=90), workspace)
+        ]
+    entries = sorted(entries, key=lambda e: e["date"])[:limit]
+    if not entries:
+        entries = [
+            {**d, "event": None, "days": (d["date"] - today).days}
+            for d in special_dates_between(today, today + timedelta(days=365), workspace)[:fallback]
+        ]
     if not entries:
         return []
     start = timezone.make_aware(datetime.combine(entries[0]["date"], time.min), tz)

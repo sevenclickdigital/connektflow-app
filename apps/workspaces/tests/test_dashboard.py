@@ -409,6 +409,7 @@ def test_upcoming_dates_say_whether_the_day_already_has_its_post(brand, instagra
             {"date": second, "days": 10, "name": "B", "emoji": "", "event": None},
         ],
     )
+    monkeypatch.setattr("apps.calendar.services.special_dates_enabled", lambda workspace: True)
     # 23:30 in São Paulo on the 20th is already the 21st in UTC: still the 20th's post.
     _platform_post(
         instagram, status=PlatformPost.Status.SCHEDULED, scheduled_at=datetime(2026, 11, 20, 23, 30, tzinfo=TZ)
@@ -418,6 +419,47 @@ def test_upcoming_dates_say_whether_the_day_already_has_its_post(brand, instagra
     entries = dashboard.upcoming_dates_with_posts(brand, date(2026, 11, 17), TZ)
 
     assert [(e["name"], e["has_post"]) for e in entries] == [("A", True), ("B", False)]
+
+
+@pytest.mark.django_db
+def test_upcoming_dates_list_special_dates_even_when_the_calendar_hides_them(brand, monkeypatch):
+    """The calendar's switch hides special dates from its grid only: the card
+    puts them among the brand's own events, by date."""
+    from apps.workspaces import dashboard
+
+    today = date(2026, 11, 18)
+    event_day = date(2026, 11, 19)
+    monkeypatch.setattr(
+        "apps.calendar.services.upcoming_dates",
+        lambda workspace, start, days: [{"date": event_day, "days": 1, "name": "Launch", "emoji": "", "event": None}],
+    )
+    monkeypatch.setattr("apps.calendar.services.special_dates_enabled", lambda workspace: False)
+
+    entries = dashboard.upcoming_dates_with_posts(brand, today, TZ)
+
+    names = [e["name"] for e in entries]
+    assert names[0] == "Launch"
+    assert "Black Friday" in names
+    assert [e["date"] for e in entries] == sorted(e["date"] for e in entries)
+    assert all(e["days"] == (e["date"] - today).days for e in entries)
+
+
+@pytest.mark.django_db
+def test_upcoming_dates_fall_back_to_the_next_special_dates_when_none_is_near(brand, monkeypatch):
+    """Nothing in the next 90 days: the card still lists the brand's next three
+    special dates of the year, with their distance."""
+    from apps.workspaces import dashboard
+
+    monkeypatch.setattr("apps.calendar.services.upcoming_dates", lambda workspace, start, days: [])
+    monkeypatch.setattr("apps.calendar.services.special_dates_enabled", lambda workspace: True)
+    today = date(2026, 11, 18)
+
+    entries = dashboard.upcoming_dates_with_posts(brand, today, TZ)
+
+    assert len(entries) == 3
+    assert [e["date"] for e in entries] == sorted(e["date"] for e in entries)
+    assert all(e["date"] >= today and e["days"] == (e["date"] - today).days for e in entries)
+    assert all(e["event"] is None and e["has_post"] is False for e in entries)
 
 
 # --- period -------------------------------------------------------------------
