@@ -27,7 +27,7 @@ from apps.api.limits import check_platform_quota
 from apps.api.pagination import decode_offset_cursor, encode_offset_cursor
 from apps.api.schemas import PostResponse
 from apps.composer.models import PlatformPost, Post
-from apps.composer.services import create_post, transition_platform_post
+from apps.composer.services import can_edit_post, create_post, transition_platform_post
 from apps.inbox.models import InboxMessage, InboxReply
 from apps.inbox.services import (
     ReplyStateError,
@@ -67,6 +67,17 @@ def _require_perm(context: dict[str, Any], permission_key: str) -> None:
     membership = context["membership"]
     if not membership.effective_permissions.get(permission_key, False):
         raise JsonRpcError(INVALID_PARAMS, f"Permission denied: {permission_key}")
+
+
+def _require_can_edit(post: Post, context: dict[str, Any]) -> None:
+    """Refuse a mutation of someone else's post without ``edit_others_posts``.
+
+    Mirrors REST's ``_require_can_edit``: an OAuth caller reaches every post of
+    the workspace, so the author rule of the web app has to hold here too.
+    """
+    membership = context["membership"]
+    if not can_edit_post(post, context["api_key"].issued_by, membership.effective_permissions):
+        raise JsonRpcError(INVALID_PARAMS, "Permission denied: edit_others_posts")
 
 
 def _parse_uuid(value: Any, field_name: str) -> UUID:
@@ -201,7 +212,10 @@ def _list_accounts(args: dict, context: dict[str, Any]) -> dict:
     from apps.api.schemas import AccountSummary
 
     accounts = [AccountSummary.from_social_account(sa).model_dump(mode="json") for sa in api_key.social_accounts.all()]
-    return _wrap_text({"accounts": accounts})
+    # An OAuth caller acts in the workspace they last opened, which can change
+    # between calls; naming it lets the client notice before it writes.
+    workspace = api_key.workspace
+    return _wrap_text({"accounts": accounts, "workspace": {"id": str(workspace.id), "name": workspace.name}})
 
 
 register_tool(
@@ -210,8 +224,8 @@ register_tool(
         description=(
             "List the social media accounts this API key is allowed to act on. "
             "Returns id, platform, account_name, account_handle, connection_status, char_limit, "
-            "escaped_chars, needs_title, supports_first_comment, requires_video, and requires_media. "
-            "Call this first to discover which "
+            "escaped_chars, needs_title, supports_first_comment, requires_video, and requires_media, "
+            "plus the workspace (id, name) every tool call acts in. Call this first to discover which "
             "social_account_id values are valid and what each platform requires."
         ),
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
@@ -532,6 +546,7 @@ def _cancel_post(args: dict, context: dict[str, Any]) -> dict:
         raise JsonRpcError(INVALID_PARAMS, "post_id is required")
     api_key = context["api_key"]
     post = _get_post_for_key(api_key, args["post_id"])
+    _require_can_edit(post, context)
     scheduled = [pp for pp in post.platform_posts.all() if pp.status == "scheduled"]
     if not scheduled:
         raise JsonRpcError(INVALID_PARAMS, "No scheduled platform posts to cancel")
@@ -599,6 +614,7 @@ def _schedule_draft(args: dict, context: dict[str, Any]) -> dict:
 
     api_key = context["api_key"]
     post = _get_post_for_key(api_key, args["post_id"])
+    _require_can_edit(post, context)
     drafts = [pp for pp in post.platform_posts.all() if pp.status == "draft"]
     if not drafts:
         raise JsonRpcError(INVALID_PARAMS, "No draft platform posts to schedule")

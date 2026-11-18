@@ -225,7 +225,7 @@ class TestScheduleRouteHonoursApprovalWorkflow:
 
         # Pre-create a draft directly (bypassing create_post so we can
         # isolate the schedule route).
-        post = Post.objects.create(workspace=workspace, caption="needs approval")
+        post = Post.objects.create(workspace=workspace, author=user, caption="needs approval")
         PlatformPost.objects.create(post=post, social_account=social_account, status="draft")
 
         when = (timezone.now() + timedelta(hours=1)).isoformat()
@@ -725,10 +725,10 @@ class TestPatchScheduledAtRequiresPublishDirectly:
     def test_patch_scheduled_at_on_scheduled_post_requires_publish_directly(
         self, write_only_client, write_only_membership, workspace, social_account
     ):
-        # Admin pre-schedules a post (bypassing HTTP perm checks so we
-        # can isolate the PATCH route's gate).
+        # The key's issuer has a scheduled post (created directly, so the
+        # PATCH route's gate is the only one in play).
         original_when = timezone.now() + timedelta(days=7)
-        post = Post.objects.create(workspace=workspace, caption="admin scheduled")
+        post = Post.objects.create(workspace=workspace, author=write_only_membership.user, caption="admin scheduled")
         pp = PlatformPost.objects.create(
             post=post,
             social_account=social_account,
@@ -736,7 +736,7 @@ class TestPatchScheduledAtRequiresPublishDirectly:
             scheduled_at=original_when,
         )
 
-        # Editor-scope key (create_posts only) tries to push it to "now".
+        # The create_posts-only key tries to push it to "now".
         when_now = timezone.now().isoformat()
         r = write_only_client.patch(
             f"/api/v1/posts/{post.id}",
@@ -758,7 +758,7 @@ class TestPatchScheduledAtRequiresPublishDirectly:
         scheduled post (the legitimate "fix a typo before it publishes"
         flow). Only `scheduled_at` mutations need the elevated permission.
         """
-        post = Post.objects.create(workspace=workspace, caption="original")
+        post = Post.objects.create(workspace=workspace, author=write_only_membership.user, caption="original")
         PlatformPost.objects.create(
             post=post,
             social_account=social_account,
@@ -784,7 +784,7 @@ class TestPatchScheduledAtRequiresPublishDirectly:
         on Post.scheduled_at until the draft is later promoted via a
         path that DOES require publish_directly).
         """
-        post = Post.objects.create(workspace=workspace, caption="just a draft")
+        post = Post.objects.create(workspace=workspace, author=write_only_membership.user, caption="just a draft")
         PlatformPost.objects.create(post=post, social_account=social_account, status="draft")
 
         future = (timezone.now() + timedelta(days=1)).isoformat()

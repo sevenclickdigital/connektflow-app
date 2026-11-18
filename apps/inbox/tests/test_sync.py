@@ -1130,3 +1130,39 @@ def test_deep_sweep_resumes_and_uses_start_as_next_baseline(workspace):
     assert provider.get_messages.call_args_list[1].kwargs["page_token"] == "page-51"
     assert account.inbox_last_deep_sweep_at == sweep_started_at
     assert account.inbox_deep_sweep_cursor == ""
+
+
+@pytest.mark.django_db
+def test_an_over_long_sender_name_does_not_end_the_poll(connected_account, user):
+    from apps.members.models import WorkspaceMembership
+    from apps.notifications.models import Notification
+
+    WorkspaceMembership.objects.create(
+        user=user, workspace=connected_account.workspace, workspace_role=WorkspaceMembership.WorkspaceRole.OWNER
+    )
+    InboxMessage.objects.create(
+        workspace=connected_account.workspace,
+        social_account=connected_account,
+        platform_message_id="earlier",
+        message_type=InboxMessage.MessageType.DM,
+        sender_name="Sender",
+        body="so this is not the account's first sync",
+        received_at=timezone.now() - timedelta(days=1),
+    )
+    long_name = _msg("long")
+    long_name.sender_name = "n" * 300
+    long_name.extra = {"sender_avatar_url": "https://cdn.example/" + "a" * 600}
+
+    with patch("apps.inbox.tasks.get_provider") as get_provider:
+        get_provider.return_value.get_messages.return_value = [_msg("newer"), long_name, _msg("older", minutes_ago=1)]
+        InboxSyncEngine().sync_all()
+
+    stored = InboxMessage.objects.get(social_account=connected_account, platform_message_id="long")
+    assert stored.sender_name == "n" * 255
+    assert stored.sender_avatar_url == ""
+    assert InboxMessage.objects.filter(social_account=connected_account, platform_message_id="older").exists()
+    connected_account.refresh_from_db()
+    assert connected_account.inbox_last_polled_at is not None
+    titles = Notification.objects.filter(user=user).values_list("title", flat=True)
+    assert len(titles) == 3
+    assert max(len(title) for title in titles) <= 255

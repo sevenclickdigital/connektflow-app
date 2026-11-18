@@ -496,7 +496,8 @@ def _parse_graph(request):
     """The posted canvas, validated for shape and size. Returns ``(graph, error)``.
 
     Only the envelope is validated here — that it is an object with a bounded
-    list of nodes. Per-node meaning is the compiler's, and the compiler is
+    list of nodes — and each node's position is forced to a number, because the
+    editor draws with it. Per-node meaning is the compiler's, and the compiler is
     deliberately tolerant (see :func:`apps.automations.flow._nodes`), because a
     malformed node is a front-end bug and refusing the whole save would lose the
     author's other work.
@@ -524,7 +525,7 @@ def _parse_graph(request):
     # Stored as exactly these two keys. The canvas may carry viewport state and
     # other editor scratch; persisting it would let an arbitrary client write
     # unbounded JSON into a column nothing validates.
-    return {"nodes": nodes or [], "edges": edges or []}, None
+    return {"nodes": flow_compiler.numeric_positions(nodes or []), "edges": edges or []}, None
 
 
 def _create_flow(request, workspace, platform_post):

@@ -19,6 +19,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.composer.models import PlatformPost
+from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
 from apps.radar import reports as radar_reports
 from apps.radar.models import OpportunityConnection
@@ -38,6 +39,7 @@ DEFAULT_RANGE = 30
 
 @login_required
 @require_GET
+@require_permission("view_analytics")
 def analytics_status(request, workspace_id, account_id):
     workspace = _get_workspace(request, workspace_id)
     account = get_object_or_404(SocialAccount, pk=account_id, workspace=workspace, platform="instagram")
@@ -93,6 +95,7 @@ def _parse_page(value: str | None) -> int:
 
 
 @login_required
+@require_permission("view_analytics")
 def analytics_index(request: HttpRequest, workspace_id) -> HttpResponse:
     """Landing route: redirects to the first connected account with analytics."""
     workspace = _get_workspace(request, workspace_id)
@@ -111,6 +114,7 @@ def analytics_index(request: HttpRequest, workspace_id) -> HttpResponse:
 
 
 @login_required
+@require_permission("view_analytics")
 def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpResponse:
     """Main analytics page for one connected SocialAccount."""
     workspace = _get_workspace(request, workspace_id)
@@ -249,6 +253,7 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
 
 @login_required
 @require_GET
+@require_permission("view_analytics")
 def shopee_report(request: HttpRequest, workspace_id, connection_id) -> HttpResponse:
     """Analytics for a Shopee Affiliates connection: the orders its links brought.
 
@@ -299,6 +304,7 @@ def shopee_report(request: HttpRequest, workspace_id, connection_id) -> HttpResp
 
 
 @login_required
+@require_permission("view_analytics")
 def post_detail(request: HttpRequest, workspace_id, post_id) -> HttpResponse:
     """HTMX-loaded payload for the slide-over post-detail drawer."""
     workspace = _get_workspace(request, workspace_id)
@@ -321,6 +327,7 @@ def post_detail(request: HttpRequest, workspace_id, post_id) -> HttpResponse:
 
 @login_required
 @require_GET
+@require_permission("view_analytics")
 def history_offer(request: HttpRequest, workspace_id, account_id) -> HttpResponse:
     """How many of this channel's own posts are not in the table yet.
 
@@ -390,7 +397,7 @@ def history_import_view(request: HttpRequest, workspace_id, account_id) -> HttpR
 def _can_import_history(request, workspace) -> bool:
     """Importing spends the channel's API quota, so it takes the channel permission.
 
-    Reading analytics takes only membership; this writes rows and makes calls
+    Reading analytics takes ``view_analytics``; this writes rows and makes calls
     on the account's behalf, which is the thing ``manage_social_accounts``
     governs everywhere else.
     """

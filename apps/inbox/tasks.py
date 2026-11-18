@@ -16,7 +16,7 @@ from django.utils import timezone
 from apps.common import quota
 from apps.members.models import WorkspaceMembership
 from apps.notifications.engine import notify
-from apps.notifications.models import EventType
+from apps.notifications.models import EventType, Notification
 from apps.social_accounts.models import SocialAccount
 from providers import get_provider
 from providers.exceptions import ProviderError, QuotaExceededError, TokenExpiredError
@@ -640,16 +640,18 @@ class InboxSyncEngine:
     @transaction.atomic
     def _upsert_message(self, account, msg, notify=True, related_post_id=None):
         """Create or update an inbox message, deduplicating by platform_message_id."""
-        defaults = {
-            "workspace": account.workspace,
-            "sender_name": msg.sender_name,
-            "sender_handle": msg.extra.get("sender_handle", msg.sender_id),
-            "sender_avatar_url": msg.extra.get("sender_avatar_url", ""),
-            "body": msg.text,
-            "message_type": msg.message_type,
-            "received_at": msg.timestamp,
-            "extra": msg.extra,
-        }
+        defaults = InboxMessage.fit_platform_fields(
+            {
+                "workspace": account.workspace,
+                "sender_name": msg.sender_name,
+                "sender_handle": msg.extra.get("sender_handle", msg.sender_id),
+                "sender_avatar_url": msg.extra.get("sender_avatar_url", ""),
+                "body": msg.text,
+                "message_type": msg.message_type,
+                "received_at": msg.timestamp,
+                "extra": msg.extra,
+            }
+        )
         if account.platform == "youtube":
             from apps.social_accounts.models import SocialAccount
 
@@ -702,11 +704,15 @@ class InboxSyncEngine:
             ).select_related("user")
             users = [m.user for m in memberships]
 
+        # The sender's name is the platform's and can fill the title column by itself.
+        title = f"New {message.get_message_type_display()} from {message.sender_name}"
+        title = title[: Notification._meta.get_field("title").max_length]
+
         for user in users:
             notify(
                 user=user,
                 event_type=EventType.NEW_INBOX_MESSAGE,
-                title=f"New {message.get_message_type_display()} from {message.sender_name}",
+                title=title,
                 body=message.body[:200],
                 data={
                     "message_id": str(message.id),

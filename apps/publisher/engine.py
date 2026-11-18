@@ -45,12 +45,14 @@ from apps.social_accounts.error_messages import (
     PUBLISH_INTERRUPTED_MESSAGE,
     PUBLISH_RATE_LIMIT_MESSAGE,
     PUBLISH_UNCONFIRMED_MESSAGE,
+    PUBLISH_WORKSPACE_ARCHIVED_MESSAGE,
     STORY_PROGRESS_MESSAGE,
     exhausted_publish_message,
     friendly_first_comment_error,
     friendly_publish_error,
     is_credential_rejection,
 )
+from apps.workspaces.models import Workspace
 from providers import VIDEO_POST_TYPES, get_provider
 from providers.exceptions import ProviderError, PublishError, RateLimitError
 from providers.types import (
@@ -658,6 +660,19 @@ class PublishEngine:
             return {"success": False, "error": error_msg}
 
         try:
+            # Nothing goes out for an archived workspace, by any route (the cycle,
+            # a retry, a manual delivery). Failing the post rather than leaving it
+            # scheduled tells its author, and keeps a post whose date passed during
+            # the archive from going out the moment the workspace is restored; it
+            # can be published again from there. Asked of the database because the
+            # row in hand may have been loaded before the archive.
+            if Workspace.objects.filter(pk=platform_post.post.workspace_id, is_archived=True).exists():
+                raise PublishError(
+                    PUBLISH_WORKSPACE_ARCHIVED_MESSAGE,
+                    platform=platform_post.social_account.get_platform_display(),
+                    retryable=False,
+                )
+
             # Get the provider for this platform
             result = self._dispatch_to_provider(platform_post, media_cache=media_cache)
 
@@ -910,12 +925,20 @@ class PublishEngine:
 
             # Resolve thumbnail_asset_id → temp file path for providers that
             # need to upload a custom thumbnail (YouTube).
+            from apps.media_library.models import MediaAsset
+
+            def own_asset(asset_id):
+                # Only an asset of the post's own workspace, or one shared across
+                # its organization: the id comes from the composer's form.
+                workspace = platform_post.post.workspace
+                return MediaAsset.objects.for_workspace_with_shared(workspace.id, workspace.organization_id).get(
+                    id=asset_id
+                )
+
             thumb_asset_id = extra.pop("thumbnail_asset_id", None)
             if thumb_asset_id:
-                from apps.media_library.models import MediaAsset
-
                 try:
-                    thumb_asset = MediaAsset.objects.get(id=thumb_asset_id)
+                    thumb_asset = own_asset(thumb_asset_id)
                     if thumb_asset.file:
                         suffix = os.path.splitext(thumb_asset.filename)[1] or ".jpg"
                         tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)  # noqa: SIM115
@@ -930,7 +953,7 @@ class PublishEngine:
             cover_asset_id = extra.pop("cover_image_asset_id", None)
             if cover_asset_id:
                 try:
-                    cover_asset = MediaAsset.objects.get(id=cover_asset_id)
+                    cover_asset = own_asset(cover_asset_id)
                     if cover_asset.file:
                         suffix = os.path.splitext(cover_asset.filename)[1] or ".jpg"
                         tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)  # noqa: SIM115

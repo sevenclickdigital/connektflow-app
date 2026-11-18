@@ -34,6 +34,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods
 
+from apps.accounts import impersonation
 from apps.api_keys import services
 from apps.api_keys.models import ApiKey
 from apps.members.models import (
@@ -373,7 +374,13 @@ def issue_key(request):
     The plaintext token is shown to the user **once** in this response;
     we never store it. Subsequent requests can see the key in the list,
     but never see the token.
+
+    Refused during an impersonation session: the key would keep acting
+    for the customer after the operator's takeover ended.
     """
+    if impersonation.is_impersonating(request):
+        raise PermissionDenied("API keys cannot be issued during an impersonation session.")
+
     name = (request.POST.get("name") or "").strip()
     workspace_id = request.POST.get("workspace_id") or ""
     account_ids = request.POST.getlist("social_account_ids")

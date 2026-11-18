@@ -276,6 +276,28 @@ class TestVerifyToken:
 
         assert services.verify_token(issued.plaintext_token) is None
 
+    def test_deactivated_issuer_returns_none_until_reactivated(self, workspace, workspace_owner, social_account):
+        """A key acts as its issuer, so it stops with the account — on the very
+        next call, even while the key row is still cached as active.
+        """
+        issuer = workspace_owner.user
+        issued = services.issue_api_key(
+            workspace=workspace,
+            social_accounts=[social_account],
+            issued_by=issuer,
+            name="deactivated",
+            permissions=[],
+        )
+        assert services.verify_token(issued.plaintext_token) is not None
+
+        issuer.is_active = False
+        issuer.save(update_fields=["is_active"])
+        assert services.verify_token(issued.plaintext_token) is None
+
+        issuer.is_active = True
+        issuer.save(update_fields=["is_active"])
+        assert services.verify_token(issued.plaintext_token) is not None
+
     def test_issuer_deleted_returns_none(self, workspace, workspace_owner, social_account):
         """If the issuer is hard-deleted, ``issued_by`` is set to NULL by
         ``on_delete=SET_NULL``. verify_token must reject the now-orphaned key.

@@ -303,6 +303,89 @@ def transition_platform_post(
     return platform_post
 
 
+def can_edit_post(post, user, effective_permissions) -> bool:
+    """Whether ``user`` may edit, unschedule or schedule ``post``.
+
+    Authors change their own posts; anyone else needs ``edit_others_posts``.
+    A post with no author (its author was deleted) belongs to nobody.
+    """
+    if effective_permissions.get("edit_others_posts", False):
+        return True
+    user_id = getattr(user, "id", None)
+    return user_id is not None and post.author_id == user_id
+
+
+def base_content_snapshot(post):
+    """Reviewable base content used to detect edits to an approved post."""
+    return (post.title, post.caption, post.first_comment, tuple(post.tags or []))
+
+
+#: Rows whose content a reviewer has cleared: approved, or approved and then scheduled.
+_REVIEWED_STATUSES = ("approved", "scheduled")
+
+
+def reviewed_content_snapshot(post):
+    """Everything of ``post`` that is published and that a reviewer cleared.
+
+    The base fields and the ordered media, plus — for each row already
+    approved or scheduled — what that row publishes instead of the base: its
+    own title, caption and first comment, and its platform options. Compare two
+    of them with :func:`reviewed_content_changed`.
+    """
+    rows = {
+        pp.id: (
+            pp.platform_specific_title,
+            pp.platform_specific_caption,
+            pp.platform_specific_first_comment,
+            pp.platform_extra or {},
+        )
+        for pp in post.platform_posts.filter(status__in=_REVIEWED_STATUSES)
+    }
+    media = tuple(post.media_attachments.order_by("position", "id").values_list("media_asset_id", flat=True))
+    return (*base_content_snapshot(post), media), rows
+
+
+def reviewed_content_changed(before, after) -> bool:
+    """Whether a write changed what the reviewer cleared (see ``reviewed_content_snapshot``).
+
+    A row that was added or removed in between is not a change to the others.
+    """
+    shared_before, rows_before = before
+    shared_after, rows_after = after
+    if shared_before != shared_after:
+        return True
+    return any(rows_after.get(row_id, content) != content for row_id, content in rows_before.items())
+
+
+def revert_approved_to_review(post, *, include_scheduled=False):
+    """Option A: editing an approved post's content sends it back for re-approval.
+
+    Silently reverts any ``approved`` children to ``pending_review`` so edited
+    content can't publish without a fresh review. (The explicit "Resubmit for
+    review" button additionally notifies reviewers; this is the safety net for
+    plain saves/autosaves and the Agent API's PATCH.) Returns the reverted children.
+
+    ``include_scheduled`` also takes ``scheduled`` children out of the publish
+    path and back to review. Pass it when the member who edited needs an
+    approval to schedule (``needs_approval_to_schedule``): their scheduled rows
+    got there on a reviewer's word for the content as it was.
+    """
+    from apps.composer.models import PlatformPost
+
+    reverted = []
+    for pp in post.platform_posts.all():
+        if include_scheduled and pp.status == "scheduled":
+            # There is no scheduled → pending_review edge; draft is the way out.
+            pp.transition_to("draft")
+        elif pp.status != "approved":
+            continue
+        if pp.can_transition_to("pending_review"):
+            pp.transition_to("pending_review")
+            pp.save(update_fields=[*PlatformPost.TRANSITION_FIELDS, "updated_at"])
+            reverted.append(pp)
+    return reverted
+
+
 def create_draft_post(*, workspace, author, caption: str, title: str = "", media_asset_ids: Iterable[Any] = ()):
     """A draft ``Post`` aimed at every connected account, for the composer to finish.
 
@@ -418,6 +501,17 @@ def _require_approval_gate_passes(workspace) -> None:
             "Workspace requires approval before scheduling; create the post as a "
             "draft and route it through the approval workflow."
         )
+
+
+def needs_approval_to_schedule(workspace, effective_permissions) -> bool:
+    """Whether a member with these permissions may only schedule content a reviewer approved.
+
+    True in a workspace whose approval workflow is required, for a member
+    without ``publish_directly``.
+    """
+    return workspace.approval_workflow_mode in _APPROVAL_MODES_BLOCKING_DIRECT_SCHEDULE and not (
+        effective_permissions.get("publish_directly", False)
+    )
 
 
 def usable_media_types(assets) -> set[str]:

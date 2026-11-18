@@ -1366,8 +1366,12 @@ function flowBuilder() {
 
         init() {
             const stored = JSON.parse(document.getElementById('flow-graph').textContent || '{}');
+            // Positions end up inside the SVG markup edgeMarkup() builds, so
+            // they are numbers here whatever the stored graph holds.
             this.nodes = (stored.nodes || []).map(n => ({
                 ...n,
+                x: Number(n.x) || 0,
+                y: Number(n.y) || 0,
                 data: n.data || {},
             }));
             this.edges = stored.edges || [];
@@ -1988,6 +1992,8 @@ function flowBuilder() {
             // Horizontal control points: the ports face sideways, so a bezier
             // that leaves and arrives horizontally reads as a connection rather
             // than as a diagonal crossing the canvas.
+            // The result is written into markup (edgeMarkup), so only numbers go in.
+            [x1, y1, x2, y2] = [x1, y1, x2, y2].map(v => Number(v) || 0);
             const dx = Math.max(40, Math.abs(x2 - x1) / 2);
             return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
         },

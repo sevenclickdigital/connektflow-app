@@ -384,14 +384,17 @@ def verify_token(raw: str) -> ApiKey | None:
 
 
 def _issuer_still_authorized(api_key: ApiKey) -> bool:
-    """True iff ``api_key.issued_by`` still has a WorkspaceMembership in the
-    key's workspace.
+    """True iff ``api_key.issued_by`` is an active user who still has a
+    WorkspaceMembership in the key's workspace.
 
     Returns False when the issuer was deleted (FK set to NULL by
-    ``on_delete=SET_NULL``) or when their workspace membership has been
-    removed. Demotion within the workspace is handled separately by the
-    per-request permission intersection in the Ninja auth class — this
-    function only gates *any* access at all.
+    ``on_delete=SET_NULL``), was deactivated (``is_active=False`` — the key
+    acts as that user, so it stops with the account), or when their workspace
+    membership has been removed. Queried on every authentication rather than
+    read from the cached key row, so it takes effect on the next request.
+    Demotion within the workspace is handled separately by the per-request
+    permission intersection in the Ninja auth class — this function only gates
+    *any* access at all.
     """
     from apps.members.models import WorkspaceMembership
 
@@ -399,6 +402,7 @@ def _issuer_still_authorized(api_key: ApiKey) -> bool:
         return False
     return WorkspaceMembership.objects.filter(
         user_id=api_key.issued_by_id,
+        user__is_active=True,
         workspace_id=api_key.workspace_id,
     ).exists()
 

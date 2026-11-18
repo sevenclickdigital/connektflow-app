@@ -41,8 +41,12 @@ from apps.api.schemas import (
 )
 from apps.composer.models import Post
 from apps.composer.services import (
+    base_content_snapshot,
+    can_edit_post,
     create_post,
     media_change_blocker,
+    needs_approval_to_schedule,
+    revert_approved_to_review,
     sync_post_scheduled_at,
     transition_platform_post,
     usable_media_types,
@@ -67,6 +71,19 @@ def _require_perm(request: HttpRequest, key: str) -> None:
     membership = getattr(request, "workspace_membership", None)
     if membership is None or not membership.effective_permissions.get(key, False):
         raise HttpError(403, f"Permission denied: {key}")
+
+
+def _require_can_edit(request: HttpRequest, post: Post) -> None:
+    """Refuse a mutation of someone else's post without ``edit_others_posts``.
+
+    The same author rule the composer and the status board apply. The acting
+    user is the key's issuer (or the OAuth member), and the permission is read
+    from the key-intersected membership.
+    """
+    membership = getattr(request, "workspace_membership", None)
+    perms = membership.effective_permissions if membership else {}
+    if not can_edit_post(post, request.user, perms):
+        raise HttpError(403, "Permission denied: edit_others_posts")
 
 
 def _resolve_account(request: HttpRequest, social_account_id: uuid.UUID) -> SocialAccount:
@@ -301,6 +318,7 @@ def update(request, post_id: uuid.UUID, payload: UpdatePostRequest):
     enforce_http_rate_limits(request, is_write=True)
     _require_perm(request, "create_posts")  # mirrors composer's create-or-edit perm
     post = _get_workspace_post(request, post_id)
+    _require_can_edit(request, post)
 
     # Only allow updates while editable.
     if not post.is_editable:
@@ -357,6 +375,9 @@ def update(request, post_id: uuid.UUID, payload: UpdatePostRequest):
         if reason:
             raise HttpError(422, reason)
 
+    content_before = base_content_snapshot(post)
+    media_changed = False
+
     with transaction.atomic():
         update_fields: list[str] = []
         if payload.caption is not None:
@@ -394,6 +415,8 @@ def update(request, post_id: uuid.UUID, payload: UpdatePostRequest):
             # the only remaining failure modes are DB-level — the atomic
             # block rolls back the whole route if any single
             # ``PostMedia.objects.create`` raises.
+            media_before = list(post.media_attachments.order_by("position").values_list("media_asset_id", flat=True))
+            media_changed = media_before != wanted_media
             post.media_attachments.all().delete()
             for position, mid in enumerate(wanted_media):
                 PostMedia.objects.create(
@@ -404,6 +427,14 @@ def update(request, post_id: uuid.UUID, payload: UpdatePostRequest):
 
         if update_fields:
             post.save(update_fields=[*update_fields, "updated_at"])
+
+        # An approval covers the content that was reviewed: changing it sends
+        # the approved children back to review, as the composer does — and the
+        # scheduled ones too when the key may only schedule approved content.
+        if media_changed or base_content_snapshot(post) != content_before:
+            membership = getattr(request, "workspace_membership", None)
+            perms = membership.effective_permissions if membership else {}
+            revert_approved_to_review(post, include_scheduled=needs_approval_to_schedule(post.workspace, perms))
 
         sync_post_scheduled_at(post)
 
@@ -421,6 +452,7 @@ def schedule(request, post_id: uuid.UUID, payload: ScheduleRequest):
     _require_perm(request, "create_posts")
     _require_perm(request, "publish_directly")
     post = _get_workspace_post(request, post_id)
+    _require_can_edit(request, post)
 
     # Schedule every draft child; a single-account key produces one child,
     # but defensively we apply the transition to all draft children so we
@@ -460,6 +492,7 @@ def cancel(request, post_id: uuid.UUID):
     enforce_http_rate_limits(request, is_write=True)
     _require_perm(request, "create_posts")
     post = _get_workspace_post(request, post_id)
+    _require_can_edit(request, post)
 
     scheduled_children = list(post.platform_posts.filter(status="scheduled"))
     if not scheduled_children:

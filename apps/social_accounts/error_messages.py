@@ -74,6 +74,11 @@ PUBLISH_INTERRUPTED_MESSAGE = (
     "Publishing was interrupted before we could confirm it. "
     "Check the account to see whether the post went out, then publish again if it didn't."
 )
+# Ours, not a platform's: the publisher refuses to act for an archived workspace.
+PUBLISH_WORKSPACE_ARCHIVED_MESSAGE = (
+    "This workspace was archived when the post was due, so it wasn't published. "
+    "Restore the workspace, then publish the post again."
+)
 # The platform took the upload and then never finished processing it. Distinct
 # from a rejection: there is nothing to fix and nothing to see on the account.
 PUBLISH_CONFIRM_TIMEOUT_MESSAGE = (

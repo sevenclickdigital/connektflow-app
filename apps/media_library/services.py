@@ -13,7 +13,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import connection
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
@@ -372,6 +372,90 @@ def delete_asset(asset):
             version.thumbnail.delete(save=False)
 
     asset.delete()
+
+
+# Names per background task: bounded work per run, and a failed batch is
+# retried on its own.
+STORED_FILE_REMOVAL_BATCH = 500
+
+
+def _stored_file_columns():
+    """Every column that names a file under a public media prefix and belongs to a tenant."""
+    from apps.workspaces.models import Workspace
+
+    return (
+        (MediaAsset, "file"),
+        (MediaAsset, "thumbnail"),
+        (MediaAssetVersion, "file"),
+        (MediaAssetVersion, "thumbnail"),
+        (Workspace, "icon"),
+    )
+
+
+def tenant_stored_files(workspace_ids, *, organization_id=None) -> list[str]:
+    """Storage names of the files the given workspaces (and organization) own.
+
+    Deleting a workspace or an organization cascades over the rows and leaves
+    the files, and nothing can find a file once its row is gone — so the caller
+    collects the names with this before deleting and hands them to
+    ``schedule_stored_file_removal``.
+    """
+    from apps.workspaces.models import Workspace
+
+    owned = Q(workspace_id__in=workspace_ids)
+    if organization_id is not None:
+        owned |= Q(organization_id=organization_id)
+    assets = MediaAsset.objects.filter(owned)
+
+    names: set[str] = set()
+    for row in assets.values_list("file", "thumbnail").iterator():
+        names.update(row)
+    for row in MediaAssetVersion.objects.filter(media_asset__in=assets).values_list("file", "thumbnail").iterator():
+        names.update(row)
+    names.update(Workspace.objects.filter(id__in=workspace_ids).values_list("icon", flat=True))
+    names.discard("")
+    return sorted(names)
+
+
+def schedule_stored_file_removal(names) -> None:
+    """Queue the removal of ``names`` from storage on the worker.
+
+    Call it inside the transaction that deletes the rows: the task rows commit
+    or roll back with the deletion, so files are never removed for a tenant
+    that is still there.
+    """
+    from .tasks import remove_stored_files
+
+    names = list(names)
+    for start in range(0, len(names), STORED_FILE_REMOVAL_BATCH):
+        remove_stored_files(names[start : start + STORED_FILE_REMOVAL_BATCH])
+
+
+def delete_stored_files(names) -> dict:
+    """Delete ``names`` from storage, skipping any a row still points at.
+
+    A version shares its file with the asset until it is edited, so a name can
+    outlive one of its rows. A storage failure is logged and counted, and the
+    rest of the list is still attempted.
+
+    Returns ``{"deleted", "kept", "errors"}``.
+    """
+    from .storage import delete_object
+
+    wanted = set(names)
+    still_used: set[str] = set()
+    for model, field in _stored_file_columns():
+        still_used.update(model.objects.filter(**{f"{field}__in": wanted}).values_list(field, flat=True))
+
+    result = {"deleted": 0, "kept": len(wanted & still_used), "errors": 0}
+    for name in sorted(wanted - still_used):
+        try:
+            delete_object(name)
+            result["deleted"] += 1
+        except Exception:
+            result["errors"] += 1
+            logger.exception("Could not delete stored file %s of a deleted tenant", name)
+    return result
 
 
 def _check_post_references(asset):

@@ -108,6 +108,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Directly after authentication: a takeover whose operator was deactivated
+    # or demoted must end before anything serves the request as the customer.
+    "apps.accounts.middleware.ImpersonationGuardMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "apps.accounts.middleware.AuthRateLimitMiddleware",
     "apps.accounts.middleware.TosAcceptanceMiddleware",

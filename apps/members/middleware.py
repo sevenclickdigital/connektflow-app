@@ -10,6 +10,9 @@ from .models import OrgMembership, WorkspaceMembership
 # membership queries — once per file, and a media-heavy page requests dozens.
 CONTEXT_FREE_PATH_PREFIXES = ("/static/", "/media/")
 
+# The one workspace view an archived workspace still answers.
+ARCHIVED_WORKSPACE_VIEW = "workspaces:settings"
+
 
 class RBACMiddleware:
     """Attach org and workspace context to the request.
@@ -114,6 +117,11 @@ class RBACMiddleware:
         )
         if not ws_membership:
             raise PermissionDenied("You do not have access to this workspace.")
+
+        # An archived workspace is closed to everything but its settings page,
+        # which is where it is restored or deleted.
+        if ws_membership.workspace.is_archived and request.resolver_match.view_name != ARCHIVED_WORKSPACE_VIEW:
+            raise PermissionDenied("This workspace is archived.")
 
         request.workspace = ws_membership.workspace
         request.workspace_membership = ws_membership

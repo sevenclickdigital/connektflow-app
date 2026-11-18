@@ -16,6 +16,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from apps.analytics.metrics import PLATFORM_PRIMARY
 from apps.billing import services
 from apps.common.htmx import toast_response
+from apps.media_library.services import schedule_stored_file_removal, tenant_stored_files
 from apps.members.decorators import require_workspace_role
 from apps.members.models import OrgMembership, WorkspaceMembership
 
@@ -105,6 +106,9 @@ def workspace_settings(request, workspace_id):
     )
 
     if request.method == "POST":
+        if not is_owner_or_manager:
+            raise Http404
+
         action = request.POST.get("action")
 
         if action == "archive_workspace" and is_owner_or_manager:
@@ -139,6 +143,7 @@ def workspace_settings(request, workspace_id):
                     messages.error(request, _("Cannot delete the last workspace in the organization."))
                     return redirect("workspaces:settings", workspace_id=workspace.id)
                 workspace_name = workspace.name
+                schedule_stored_file_removal(tenant_stored_files([workspace.id]))
                 workspace.delete()
             messages.success(
                 request, _('Workspace "%(name)s" has been permanently deleted.') % {"name": workspace_name}
@@ -181,9 +186,12 @@ def workspace_settings(request, workspace_id):
         elif "icon" in request.FILES:
             icon = request.FILES["icon"]
 
-            # Validate file type
-            allowed_types = ("image/jpeg", "image/png", "image/webp", "image/gif")
-            if icon.content_type not in allowed_types:
+            # The type comes from the file's bytes and the stored name gets
+            # the matching extension: workspaces/icons/ is served publicly, by suffix.
+            from apps.media_library.validators import image_storage_filename
+
+            storage_name = image_storage_filename(icon)
+            if not storage_name:
                 messages.error(request, _("Logo must be a JPEG, PNG, WebP, or GIF image."))
                 return redirect("workspaces:settings", workspace_id=workspace.id)
 
@@ -196,6 +204,7 @@ def workspace_settings(request, workspace_id):
             # Delete old icon before saving new one
             if workspace.icon:
                 workspace.icon.delete(save=False)
+            icon.name = storage_name
             workspace.icon = icon
 
         workspace.save()

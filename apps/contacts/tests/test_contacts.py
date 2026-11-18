@@ -391,3 +391,33 @@ class TestInboxPanel:
         )
 
         assert services.contact_for_message(message) is None
+
+
+class TestPhoto:
+    def _png(self):
+        import io
+
+        from PIL import Image
+
+        buffer = io.BytesIO()
+        Image.new("RGB", (4, 4), "white").save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    def test_a_photo_is_renamed_to_the_extension_of_its_bytes(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from apps.contacts.forms import clean_photo
+
+        upload = SimpleUploadedFile("carla.html", self._png(), content_type="image/png")
+
+        assert clean_photo(upload) == ""
+        assert upload.name == "carla.png"
+
+    def test_a_file_that_is_not_an_image_is_refused_whatever_it_declares(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from apps.contacts.forms import clean_photo
+
+        upload = SimpleUploadedFile("carla.png", b"<!doctype html><p>x</p>", content_type="image/png")
+
+        assert clean_photo(upload) != ""

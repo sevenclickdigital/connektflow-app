@@ -12,6 +12,7 @@ import shutil
 import tempfile
 
 from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -120,3 +121,36 @@ class CommentAttachmentAccessTests(TestCase):
         )
 
         self.assertEqual(self.client.get(url).status_code, 404)
+
+
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
+class CommentAttachmentUploadTests(TestCase):
+    """The attachment is served by its stored suffix, so the upload decides neither type nor name."""
+
+    def setUp(self):
+        self.org = Organization.objects.create(name="Test Org")
+        self.workspace = Workspace.objects.create(organization=self.org, name="WS")
+        self.member = _make_user("member@example.com")
+        OrgMembership.objects.create(user=self.member, organization=self.org, org_role="owner")
+        WorkspaceMembership.objects.create(user=self.member, workspace=self.workspace, workspace_role="editor")
+        self.post = Post.objects.create(workspace=self.workspace, author=self.member, caption="p")
+        self.client.force_login(self.member)
+
+    def _add(self, upload):
+        url = reverse("approvals:add_comment", kwargs={"workspace_id": self.workspace.id, "post_id": self.post.id})
+        return self.client.post(url, {"body": "see this", "attachment": upload})
+
+    def test_a_file_that_is_not_an_image_is_refused(self):
+        response = self._add(SimpleUploadedFile("note.html", b"<!doctype html><p>x</p>", content_type="image/png"))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(PostComment.objects.filter(post=self.post).exists())
+
+    def test_an_image_is_stored_under_the_extension_of_its_bytes(self):
+        png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+
+        response = self._add(SimpleUploadedFile("note.html", png, content_type="image/png"))
+
+        self.assertEqual(response.status_code, 200)
+        comment = PostComment.objects.get(post=self.post)
+        self.assertTrue(comment.attachment.name.endswith(".png"), comment.attachment.name)

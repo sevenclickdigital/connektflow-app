@@ -4,13 +4,15 @@ Covers V2 (hex-color CSS injection), V6 (queue category IDOR), and V7
 (missing role check on custom calendar events).
 """
 
+from datetime import timedelta
+
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.calendar.models import CustomCalendarEvent, Queue
-from apps.composer.models import ContentCategory
+from apps.calendar.models import CustomCalendarEvent, Queue, QueueEntry
+from apps.composer.models import ContentCategory, PlatformPost, Post
 from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
 from apps.social_accounts.models import SocialAccount
@@ -162,3 +164,123 @@ class QueueCreateCategoryIdorTests(TestCase):
         )
         self.assertLess(response.status_code, 400)
         self.assertTrue(Queue.objects.filter(workspace=self.ws_a, name="Test Queue").exists())
+
+
+class QueueMutationPermissionTests(TestCase):
+    """Queue writes take a write permission; changing a queued post takes rights over that post."""
+
+    def setUp(self):
+        self.org = Organization.objects.create(name="Queue Org")
+        self.workspace = Workspace.objects.create(organization=self.org, name="Queue WS")
+        self.users = {}
+        for role in ("owner", "contributor", "client", "viewer"):
+            user = _make_user(f"{role}@example.com")
+            OrgMembership.objects.create(
+                user=user, organization=self.org, org_role="owner" if role == "owner" else "member"
+            )
+            WorkspaceMembership.objects.create(user=user, workspace=self.workspace, workspace_role=role)
+            self.users[role] = user
+        self.account = SocialAccount.objects.create(
+            workspace=self.workspace,
+            platform="bluesky",
+            account_name="bsky",
+            account_platform_id="did:plc:queue",
+            connection_status="connected",
+        )
+        self.queue = Queue.objects.create(workspace=self.workspace, name="Q", social_account=self.account)
+        now = timezone.now()
+        self.first_at = now + timedelta(days=1)
+        self.second_at = now + timedelta(days=2)
+        self.owner_entry, self.owner_pp = self._queue_post(self.users["owner"], self.first_at, 0)
+        self.own_entry, self.own_pp = self._queue_post(self.users["contributor"], self.second_at, 1)
+
+    def _queue_post(self, author, slot, position):
+        post = Post.objects.create(workspace=self.workspace, author=author, caption="queued")
+        pp = PlatformPost.objects.create(
+            post=post, social_account=self.account, status=PlatformPost.Status.SCHEDULED, scheduled_at=slot
+        )
+        entry = QueueEntry.objects.create(queue=self.queue, post=post, position=position, assigned_slot_datetime=slot)
+        return entry, pp
+
+    def _url(self, name, **kwargs):
+        return reverse(f"calendar:{name}", kwargs={"workspace_id": self.workspace.id, **kwargs})
+
+    def _assert_schedule_untouched(self):
+        self.owner_pp.refresh_from_db()
+        self.own_pp.refresh_from_db()
+        self.assertEqual(self.owner_pp.status, PlatformPost.Status.SCHEDULED)
+        self.assertEqual(self.owner_pp.scheduled_at, self.first_at)
+        self.assertEqual(self.own_pp.scheduled_at, self.second_at)
+
+    def test_read_only_roles_cannot_create_or_delete_a_queue(self):
+        for role in ("viewer", "client", "contributor"):
+            with self.subTest(role=role):
+                self.client.force_login(self.users[role])
+                created = self.client.post(
+                    self._url("queue_create"), data={"name": "Mine", "social_account_id": str(self.account.id)}
+                )
+                deleted = self.client.post(self._url("queue_delete", queue_id=self.queue.id))
+                self.assertEqual(created.status_code, 403)
+                self.assertEqual(deleted.status_code, 403)
+        self.assertEqual(list(Queue.objects.filter(workspace=self.workspace)), [self.queue])
+
+    def test_read_only_roles_cannot_change_another_authors_entry(self):
+        entry_kwargs = {"queue_id": self.queue.id, "entry_id": self.owner_entry.id}
+        for role in ("viewer", "client", "contributor"):
+            with self.subTest(role=role):
+                self.client.force_login(self.users[role])
+                removed = self.client.post(self._url("queue_entry_remove", **entry_kwargs), HTTP_HX_REQUEST="true")
+                reslotted = self.client.post(self._url("queue_entry_reslot", **entry_kwargs), HTTP_HX_REQUEST="true")
+                reordered = self.client.post(
+                    self._url("queue_reorder", queue_id=self.queue.id),
+                    data={"entry_ids": f"{self.own_entry.id},{self.owner_entry.id}"},
+                )
+                self.assertEqual(removed.status_code, 403)
+                self.assertEqual(reslotted.status_code, 403)
+                self.assertEqual(reordered.status_code, 403)
+        self.assertTrue(QueueEntry.objects.filter(id=self.owner_entry.id).exists())
+        self._assert_schedule_untouched()
+
+    def test_author_removes_their_own_entry(self):
+        self.client.force_login(self.users["contributor"])
+        response = self.client.post(
+            self._url("queue_entry_remove", queue_id=self.queue.id, entry_id=self.own_entry.id),
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(QueueEntry.objects.filter(id=self.own_entry.id).exists())
+        self.own_pp.refresh_from_db()
+        self.assertEqual(self.own_pp.status, PlatformPost.Status.DRAFT)
+
+    def test_owner_reorders_removes_and_deletes(self):
+        self.client.force_login(self.users["owner"])
+        reordered = self.client.post(
+            self._url("queue_reorder", queue_id=self.queue.id),
+            data={"entry_ids": f"{self.own_entry.id},{self.owner_entry.id}"},
+        )
+        self.assertEqual(reordered.status_code, 200)
+        self.owner_pp.refresh_from_db()
+        self.own_pp.refresh_from_db()
+        self.assertEqual(self.own_pp.scheduled_at, self.first_at)
+        self.assertEqual(self.owner_pp.scheduled_at, self.second_at)
+
+        removed = self.client.post(
+            self._url("queue_entry_remove", queue_id=self.queue.id, entry_id=self.own_entry.id),
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertEqual(removed.status_code, 204)
+        self.assertFalse(QueueEntry.objects.filter(id=self.own_entry.id).exists())
+
+        deleted = self.client.post(self._url("queue_delete", queue_id=self.queue.id))
+        self.assertLess(deleted.status_code, 400)
+        self.assertFalse(Queue.objects.filter(id=self.queue.id).exists())
+
+    def test_queue_pages_hide_the_controls_the_member_cannot_use(self):
+        self.client.force_login(self.users["viewer"])
+        listing = self.client.get(self._url("queue_list"))
+        detail = self.client.get(self._url("queue_detail", queue_id=self.queue.id))
+        self.assertNotContains(listing, self._url("queue_create"))
+        self.assertNotContains(listing, self._url("queue_delete", queue_id=self.queue.id))
+        self.assertNotContains(
+            detail, self._url("queue_entry_remove", queue_id=self.queue.id, entry_id=self.owner_entry.id)
+        )

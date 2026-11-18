@@ -412,12 +412,13 @@ class IdeaMediaPickerTests(MediaPickerTestCase):
         other = Workspace.objects.create(organization=Organization.objects.create(name="Other Org"), name="Other")
         foreign = MediaFolder.objects.create(organization=other.organization, workspace=other, name="Theirs")
         url = reverse("composer:idea_upload_media", kwargs={"workspace_id": self.workspace.id})
+        png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
 
         kept = self.client.post(
-            url, {"file": SimpleUploadedFile("a.png", b"x", "image/png"), "folder_id": str(folder.id)}
+            url, {"file": SimpleUploadedFile("a.png", png, "image/png"), "folder_id": str(folder.id)}
         )
         dropped = self.client.post(
-            url, {"file": SimpleUploadedFile("b.png", b"x", "image/png"), "folder_id": str(foreign.id)}
+            url, {"file": SimpleUploadedFile("b.png", png, "image/png"), "folder_id": str(foreign.id)}
         )
 
         self.assertEqual(MediaAsset.objects.get(id=kept.json()["asset_id"]).folder, folder)

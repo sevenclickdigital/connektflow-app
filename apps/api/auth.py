@@ -11,7 +11,8 @@ Defense-in-depth checks on every request:
 
 * HMAC compare on the secret part (constant-time)
 * Key not revoked, not expired
-* Issuer still has a ``WorkspaceMembership`` in the key's workspace
+* Issuer is still an active user with a ``WorkspaceMembership`` in the key's
+  workspace
 * Per-request permission intersection of (key.permissions) ∩
   (issuer's current effective workspace permissions) — silently shrinks
   the key's grants if the issuer is demoted, with no scheduled job
@@ -37,6 +38,7 @@ from ninja.security import HttpBearer
 from apps.api.limits import is_failed_auth_ip_blocked, record_failed_auth
 from apps.api_keys.models import ApiKey
 from apps.api_keys.services import TOKEN_PREFIX, touch_last_used, verify_token
+from apps.workspaces.models import Workspace
 
 LOG = logging.getLogger(__name__)
 
@@ -151,6 +153,14 @@ class ApiKeyAuth(HttpBearer):
             # unrecognised key is the expected, adversarial-probe path.
             LOG.info("Bearer auth rejected: API key not recognised, revoked, or expired.")
             record_failed_auth(request)
+            return None
+
+        # An archived workspace accepts no work. Asked of the database rather
+        # than read from ``api_key.workspace``, which verify_token may serve
+        # from its cache for a few seconds after the archive. Not counted as a
+        # failed attempt: the credential itself is genuine.
+        if Workspace.objects.filter(pk=api_key.workspace_id, is_archived=True).exists():
+            LOG.info("Bearer auth rejected: the workspace of API key %s is archived.", api_key.pk)
             return None
 
         # Resolve effective permissions and attach the membership shim.
@@ -301,6 +311,10 @@ def _resolve_oauth_actor(token: str) -> OAuthMcpActor | None:
     if tok.user_id is None:
         # WARNING: a token row with no user is a data anomaly, not normal traffic.
         LOG.warning("Bearer auth rejected: OAuth access token %s is not bound to a user.", tok.pk)
+        return None
+    if not tok.user.is_active:
+        # INFO: a deactivated account is an operator decision, not an anomaly.
+        LOG.info("Bearer auth rejected: OAuth access token belongs to deactivated user %s.", tok.user_id)
         return None
     # is_valid([scope]) == (not is_expired()) and allow_scopes([scope]); split so the
     # log names whether expiry or scope was the cause.

@@ -275,8 +275,16 @@ def accept_invitation(invitation, user, *, require_email_match=True):
     invitation.accepted_at = timezone.now()
     invitation.save(update_fields=["accepted_at"])
 
-    # Set last workspace for dashboard redirect
-    if invitation.workspace_assignments:
+    # Set last workspace for dashboard redirect. A workspace the user already
+    # works in stays the current one: OAuth MCP grants act in it, and another
+    # organization's invitation must not move a connected agent there.
+    has_current_workspace = (
+        bool(user.last_workspace_id)
+        and WorkspaceMembership.objects.filter(
+            user=user, workspace_id=user.last_workspace_id, workspace__is_archived=False
+        ).exists()
+    )
+    if invitation.workspace_assignments and not has_current_workspace:
         import uuid as uuid_mod
 
         first_ws_id = uuid_mod.UUID(str(invitation.workspace_assignments[0]["workspace_id"]))

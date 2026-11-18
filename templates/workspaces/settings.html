@@ -16,6 +16,7 @@
     <h2 class="section-title">{% translate "Identity" %}</h2>
     <div class="a-card divide-y divide-neutral-300">
         <!-- Workspace name -->
+        {% if is_owner_or_manager %}
         <form method="POST" class="p-6">
             {% csrf_token %}
             <label for="name" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Workspace Name" %}</label>
@@ -25,6 +26,12 @@
                 <button type="submit" class="btn-brand">{% translate "Save Changes" %}</button>
             </div>
         </form>
+        {% else %}
+        <div class="p-6">
+            <p class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Workspace Name" %}</p>
+            <p class="text-sm text-neutral-600">{{ workspace.name }}</p>
+        </div>
+        {% endif %}
 
         {% if is_owner_or_manager %}
         <form method="POST" class="p-6">
@@ -75,6 +82,7 @@
         {% endif %}
 
         <!-- Logo -->
+        {% if is_owner_or_manager %}
         <form method="POST" enctype="multipart/form-data" class="p-6" x-data="{
             preview: '{% if workspace.icon %}{{ workspace.icon.url }}{% endif %}',
             hasExisting: {{ workspace.icon|yesno:'true,false' }},
@@ -116,6 +124,7 @@
                 </label>
             </div>
         </form>
+        {% endif %}
     </div>
 </section>
 

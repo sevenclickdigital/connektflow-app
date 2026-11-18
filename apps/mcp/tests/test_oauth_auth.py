@@ -161,6 +161,20 @@ class TestMcpOAuthChallenge:
         r = c.post(MCP_URL, data=json.dumps(_rpc("ping")), content_type="application/json")
         assert r.status_code == 401
 
+    def test_deactivated_user_token_returns_401_until_reactivated(self):
+        user, _ws, _sa = _make_user_with_workspace("stopped-oauth@example.com", WorkspaceMembership.WorkspaceRole.OWNER)
+        c = _SecureClient(HTTP_AUTHORIZATION=f"Bearer {_mint_oauth_token(user)}")
+        assert _post(c, _rpc("ping"))[0] == 200
+
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+        r = c.post(MCP_URL, data=json.dumps(_rpc("ping")), content_type="application/json")
+        assert r.status_code == 401
+
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+        assert _post(c, _rpc("ping"))[0] == 200
+
 
 @pytest.mark.django_db
 class TestMcpOAuthSuccess:
@@ -178,6 +192,7 @@ class TestMcpOAuthSuccess:
         assert status == 200
         payload = json.loads(body["result"]["content"][0]["text"])
         assert str(sa.id) in {a["id"] for a in payload["accounts"]}
+        assert payload["workspace"] == {"id": str(_ws.id), "name": _ws.name}
 
     def test_owner_can_create_draft(self):
         user, _ws, sa = _make_user_with_workspace("creator-oauth@example.com", WorkspaceMembership.WorkspaceRole.OWNER)
@@ -343,3 +358,64 @@ class TestOAuthInternalNotesVisibility:
         assert status == 200
         payload = json.loads(body["result"]["content"][0]["text"])
         assert payload["internal_notes"] == "board-only context"
+
+
+@pytest.mark.django_db
+class TestMcpOAuthOthersPosts:
+    """An OAuth caller reaches every post of the workspace, so changing a
+    colleague's post needs ``edit_others_posts``, as it does in the web app.
+    """
+
+    def _colleague_post(self, ws, sa, status):
+        from apps.accounts.models import User
+        from apps.composer.models import PlatformPost, Post
+
+        colleague = User.objects.create_user(email=f"colleague-{status}@example.com", password="testpass123")
+        post = Post.objects.create(workspace=ws, author=colleague, caption="theirs")
+        scheduled_at = timezone.now() + timedelta(days=1) if status == "scheduled" else None
+        return PlatformPost.objects.create(post=post, social_account=sa, status=status, scheduled_at=scheduled_at)
+
+    def _call(self, user, name, arguments):
+        c = _SecureClient(HTTP_AUTHORIZATION=f"Bearer {_mint_oauth_token(user)}")
+        return _post(c, _rpc("tools/call", {"name": name, "arguments": arguments}))[1]
+
+    def test_contributor_cannot_cancel_a_colleagues_post(self):
+        user, ws, sa = _make_user_with_workspace(
+            "contrib-cancel@example.com", WorkspaceMembership.WorkspaceRole.CONTRIBUTOR
+        )
+        pp = self._colleague_post(ws, sa, "scheduled")
+
+        body = self._call(user, "cancel_post", {"post_id": str(pp.post_id)})
+
+        assert body["error"]["code"] == INVALID_PARAMS
+        assert body["error"]["message"] == "Permission denied: edit_others_posts"
+        pp.refresh_from_db()
+        assert pp.status == "scheduled"
+        assert pp.scheduled_at is not None
+
+    def test_contributor_can_cancel_their_own_post(self):
+        from apps.composer.models import PlatformPost, Post
+
+        user, ws, sa = _make_user_with_workspace(
+            "contrib-own@example.com", WorkspaceMembership.WorkspaceRole.CONTRIBUTOR
+        )
+        post = Post.objects.create(workspace=ws, author=user, caption="mine")
+        pp = PlatformPost.objects.create(
+            post=post, social_account=sa, status="scheduled", scheduled_at=timezone.now() + timedelta(days=1)
+        )
+
+        body = self._call(user, "cancel_post", {"post_id": str(post.id)})
+
+        assert body["result"]["isError"] is False
+        pp.refresh_from_db()
+        assert pp.status == "draft"
+
+    def test_editor_can_cancel_a_colleagues_post(self):
+        user, ws, sa = _make_user_with_workspace("editor-cancel@example.com", WorkspaceMembership.WorkspaceRole.EDITOR)
+        pp = self._colleague_post(ws, sa, "scheduled")
+
+        body = self._call(user, "cancel_post", {"post_id": str(pp.post_id)})
+
+        assert body["result"]["isError"] is False
+        pp.refresh_from_db()
+        assert pp.status == "draft"

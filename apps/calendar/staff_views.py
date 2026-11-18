@@ -19,6 +19,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from apps.billing.views import _staff_required
 from apps.common.validators import clean_display_name
+from apps.media_library.validators import image_storage_filename
 
 from .holidays import special_dates_between
 from .models import DateSegment, SpecialDate
@@ -128,9 +129,12 @@ def date_create(request):
         messages.error(request, _("Enter the name of the date."))
         return _back()
     image = request.FILES.get("image")
-    if image and (image.content_type not in _IMAGE_TYPES or image.size > _IMAGE_MAX_BYTES):
-        messages.error(request, _("The image must be a JPEG, PNG or WebP of up to 2 MB."))
-        return _back()
+    if image:
+        storage_name = image_storage_filename(image, _IMAGE_TYPES)
+        if not storage_name or image.size > _IMAGE_MAX_BYTES:
+            messages.error(request, _("The image must be a JPEG, PNG or WebP of up to 2 MB."))
+            return _back()
+        image.name = storage_name
     kind = request.POST.get("kind", "")
     SpecialDate.objects.create(
         segment=segment,

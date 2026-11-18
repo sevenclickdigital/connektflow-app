@@ -12,7 +12,7 @@
     <div class="flex flex-wrap items-center justify-end gap-2">
     {% include "composer/partials/_ideas_hero_toggle.html" with tab="calendar" %}
     <!-- List / Calendar / Board toggle -->
-    <div class="a-pill-group" x-data="{ activeMode: '{{ mode|default:'calendar' }}' }">
+    <div class="a-pill-group" x-data="{ activeMode: '{{ mode|default:'calendar'|escapejs }}' }">
             <button class="{% if mode == 'list' %}active{% endif %}" :class="{ active: activeMode === 'list' }"
                     @click="activeMode = 'list'"
                     hx-get="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=list&tab={{ active_tab|default:'queue' }}&_switch_mode=1"
@@ -745,7 +745,7 @@ function statusBoard() {
 
 function calendarApp() {
     return {
-        activeView: '{{ view_type }}',
+        activeView: '{{ view_type|escapejs }}',
         draggedPlatformPostId: null,
         calendarFilters: {
             status: '{{ active_filters.statuses.0|default:"" }}',
@@ -1074,7 +1074,7 @@ function calendarApp() {
 
 function publishList() {
     return {
-        activeTab: '{{ active_tab|default:"queue" }}',
+        activeTab: '{{ active_tab|default:"queue"|escapejs }}',
         platform: [{% for code in active_filters.platforms %}'{{ code|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
         activeTag: '{{ active_filters.tags.0|default:""|escapejs }}',
         // The month shown; the tabs list only what falls in it.

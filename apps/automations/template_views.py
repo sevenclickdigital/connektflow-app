@@ -38,6 +38,7 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.automations import flow as flow_compiler
 from apps.automations.models import FlowTemplate
 from apps.billing.views import _staff_required
+from apps.media_library.validators import image_storage_filename
 from apps.members.decorators import require_permission
 
 logger = logging.getLogger(__name__)
@@ -261,8 +262,10 @@ def _parse_graph(request):
         return None, _("The canvas could not be read.")
 
     nodes = graph.get("nodes")
-    if isinstance(nodes, list) and len(nodes) > MAX_NODES:
-        return None, _("This flow has too many steps.")
+    if isinstance(nodes, list):
+        if len(nodes) > MAX_NODES:
+            return None, _("This flow has too many steps.")
+        graph["nodes"] = flow_compiler.numeric_positions(nodes)
     return graph, None
 
 
@@ -302,6 +305,7 @@ def template_details(request, template_id):
     if upload:
         thumbnail_error = _thumbnail_error(upload)
         if thumbnail_error is None:
+            upload.name = image_storage_filename(upload, THUMBNAIL_TYPES)
             template.thumbnail = upload
             fields.append("thumbnail")
     elif request.POST.get("remove_thumbnail") == "on" and template.thumbnail:
@@ -324,7 +328,7 @@ def _thumbnail_error(upload):
     """Why this upload is not usable as a thumbnail, or ``None`` if it is."""
     if upload.size > MAX_THUMBNAIL_BYTES:
         return _("The image is too large. Use one under 4 MB.")
-    if (upload.content_type or "") not in THUMBNAIL_TYPES:
+    if not image_storage_filename(upload, THUMBNAIL_TYPES):
         return _("Use a PNG, JPEG, WebP or GIF image.")
     return None
 

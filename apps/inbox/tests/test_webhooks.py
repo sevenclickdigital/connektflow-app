@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import json
+from unittest.mock import patch
 
 import pytest
 from django.test import override_settings
@@ -966,3 +967,111 @@ class TestFacebookFeedItemFiltering:
         from apps.inbox.sentiment import analyze_sentiment
 
         assert message.sentiment == analyze_sentiment("this is great, thanks!")
+
+
+ENV_META_SECRET = {
+    "facebook": {"app_id": "1", "app_secret": "ENV_SECRET"},
+    "instagram": {"app_id": "1", "app_secret": "ENV_SECRET"},
+}
+
+
+@pytest.mark.django_db(transaction=True)
+class TestOneEventDoesNotCostTheDelivery:
+    """One POST carries events of several organizations' accounts.
+
+    Run without a wrapping transaction, as a real request is: the unsend takes a
+    row lock, which only fails outside one.
+    """
+
+    def _account(self, name, platform_id):
+        from apps.organizations.models import Organization
+        from apps.workspaces.models import Workspace
+
+        org = Organization.objects.create(name=name)
+        return SocialAccount.objects.create(
+            workspace=Workspace.objects.create(name=f"{name} WS", organization=org),
+            platform="instagram",
+            account_platform_id=platform_id,
+            account_name=name,
+        )
+
+    def _dm(self, mid, **message):
+        return {"sender": {"id": "customer-1"}, "timestamp": 1700000000000, "message": {"mid": mid, **message}}
+
+    def _post(self, client, entries):
+        body = json.dumps({"object": "instagram", "entry": entries}).encode()
+        return client.post(
+            reverse("inbox_webhooks:webhook_facebook"),
+            data=body,
+            content_type="application/json",
+            HTTP_X_HUB_SIGNATURE_256=_sign_body(body, "ENV_SECRET"),
+        )
+
+    @override_settings(PLATFORM_CREDENTIALS_FROM_ENV=ENV_META_SECRET)
+    def test_an_unsent_dm_is_blanked_and_the_other_accounts_event_is_stored(self, client):
+        first = self._account("First", "111")
+        second = self._account("Second", "222")
+        self._post(client, [{"id": "111", "messaging": [self._dm("m_a_1", text="to be unsent")]}])
+
+        response = self._post(
+            client,
+            [
+                {"id": "111", "messaging": [self._dm("m_a_1", is_deleted=True)]},
+                {"id": "222", "messaging": [self._dm("m_b_1", text="hello")]},
+            ],
+        )
+
+        assert response.status_code == 200
+        unsent = InboxMessage.objects.get(social_account=first, platform_message_id="m_a_1")
+        assert unsent.body == ""
+        assert unsent.extra["is_deleted"] is True
+        assert InboxMessage.objects.filter(social_account=second, platform_message_id="m_b_1").exists()
+
+    @override_settings(PLATFORM_CREDENTIALS_FROM_ENV=ENV_META_SECRET)
+    def test_an_event_that_fails_is_logged_and_the_rest_are_stored(self, client, caplog):
+        from apps.inbox import webhooks
+
+        first = self._account("First", "111")
+        second = self._account("Second", "222")
+        real_create = webhooks._create_if_new
+
+        def create(**kwargs):
+            if kwargs["platform_message_id"] == "m_broken":
+                raise RuntimeError("cannot file this one")
+            return real_create(**kwargs)
+
+        with patch.object(webhooks, "_create_if_new", side_effect=create), caplog.at_level("ERROR"):
+            response = self._post(
+                client,
+                [
+                    {"id": "111", "messaging": [self._dm("m_broken", text="x"), self._dm("m_a_2", text="kept")]},
+                    {"id": "222", "messaging": [self._dm("m_b_1", text="hello")]},
+                ],
+            )
+
+        assert response.status_code == 200
+        assert not InboxMessage.objects.filter(platform_message_id="m_broken").exists()
+        assert InboxMessage.objects.filter(social_account=first, platform_message_id="m_a_2").exists()
+        assert InboxMessage.objects.filter(social_account=second, platform_message_id="m_b_1").exists()
+        assert any(
+            "m_broken" in record.getMessage() and str(first.id) in record.getMessage() for record in caplog.records
+        )
+
+
+@pytest.mark.django_db
+def test_a_sender_name_longer_than_its_column_is_cut_not_refused(ig_account):
+    from apps.inbox.webhooks import _create_if_new
+
+    message = _create_if_new(
+        account=ig_account,
+        platform_message_id="long-name-1",
+        message_type=InboxMessage.MessageType.DM,
+        sender_name="n" * 300,
+        sender_id="i" * 300,
+        body="hi",
+        extra={},
+    )
+
+    assert message is not None
+    assert message.sender_name == "n" * 255
+    assert message.sender_handle == "i" * 255

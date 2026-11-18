@@ -1,7 +1,7 @@
 import uuid
 
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 
 
 class Organization(models.Model):
@@ -86,6 +86,7 @@ class Organization(models.Model):
         """
         from apps.accounts.models import User
         from apps.accounts.signals import provision_organization_and_workspace
+        from apps.media_library.services import schedule_stored_file_removal, tenant_stored_files
         from apps.members.models import OrgMembership
         from apps.workspaces.models import Workspace
 
@@ -95,7 +96,11 @@ class Organization(models.Model):
         if ws_ids:
             User.objects.filter(last_workspace_id__in=ws_ids).update(last_workspace_id=None)
 
-        self.delete()  # CASCADE: workspaces, memberships, credentials, media, etc.
+        # The cascade removes rows only; the files are queued for removal in the
+        # same transaction, from names read while the rows still exist.
+        with transaction.atomic():
+            schedule_stored_file_removal(tenant_stored_files(ws_ids, organization_id=self.pk))
+            self.delete()  # CASCADE: workspaces, memberships, credentials, media, etc.
 
         requesting_user_id = requesting_user.pk if requesting_user else None
         for uid in member_ids:

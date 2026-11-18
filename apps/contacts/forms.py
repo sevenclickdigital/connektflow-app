@@ -227,8 +227,15 @@ def parse_channels(post) -> tuple[list[ChannelInput], list[str]]:
 
 
 def clean_photo(upload) -> str:
-    """The error for an uploaded photo, or "" when it can be stored."""
-    if upload.content_type not in PHOTO_TYPES:
+    """The error for an uploaded photo, or "" when it can be stored.
+
+    An accepted upload is renamed to the extension its bytes justify, so the
+    stored key never carries one the client chose.
+    """
+    from apps.media_library.validators import image_storage_filename
+
+    storage_name = image_storage_filename(upload, PHOTO_TYPES)
+    if not storage_name:
         return str(_("The photo must be a JPEG, PNG or WebP image."))
     if upload.size > MAX_PHOTO_BYTES:
         return str(_("The photo must be under 2 MB."))
@@ -240,4 +247,5 @@ def clean_photo(upload) -> str:
     except Exception:
         return str(_("Could not read the image file."))
     upload.seek(0)
+    upload.name = storage_name
     return ""

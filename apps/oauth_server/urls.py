@@ -18,9 +18,7 @@ app_name = "oauth2_provider"
 # Chromium enforces form-action across the whole redirect chain, so the redirect
 # target must be allowlisted on the consent page or the flow dies silently there.
 # csp_update appends to the global CSP_FORM_ACTION, scoping the relaxation here only.
-authorize_view = csp_update(FORM_ACTION="https://claude.ai https://claude.com")(
-    oauth2_views.AuthorizationView.as_view()
-)
+authorize_view = csp_update(FORM_ACTION="https://claude.ai https://claude.com")(views.AuthorizationView.as_view())
 
 urlpatterns = [
     path("authorize/", authorize_view, name="authorize"),

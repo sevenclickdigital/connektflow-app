@@ -1,0 +1,20 @@
+# The image is built with `COPY . .`, so anything not listed here ends up in
+# every layer of the app, migrate and worker images. Secrets and local data
+# must never be part of the build context; the container gets its settings from
+# the environment at run time.
+.env
+.env.*
+!.env.example
+!.env.dokploy.example
+_local_dumps/
+media/
+test_media/
+
+.git/
+.venv/
+**/node_modules/
+**/__pycache__/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.DS_Store

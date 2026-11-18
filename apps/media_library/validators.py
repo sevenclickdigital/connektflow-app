@@ -104,6 +104,20 @@ def storage_filename(original_name, sniffed_mime):
     return f"{stem or 'upload'}.{extension}"
 
 
+def image_storage_filename(uploaded_file, allowed_mimes=ALLOWED_MIME_TYPES["image"]):
+    """The name to store an image-only upload under, or None when it is not one.
+
+    For the image fields filled outside ``services.create_asset`` (avatar,
+    workspace logo, contact photo, comment attachment…): the bytes must sniff
+    as one of ``allowed_mimes``, and the returned name carries the extension
+    those bytes justify. Assign it to ``uploaded_file.name`` before storing.
+    """
+    sniffed = sniff_mime(uploaded_file)
+    if sniffed not in allowed_mimes:
+        return None
+    return storage_filename(uploaded_file.name, sniffed)
+
+
 # Magic-byte signatures for sniffing the *real* MIME of an uploaded file.
 # Trusting `uploaded_file.content_type` is unsafe because that value is set by
 # the client. Sniffing the first bytes prevents masquerade attacks (e.g. an

@@ -396,6 +396,8 @@ def cross_workspace_calendar(request):
 
     # View type (month/week/day)
     view_type = request.GET.get("view", "month")
+    if view_type not in {"month", "week", "day"}:
+        view_type = "month"
 
     target_date_str = request.GET.get("date")
     if target_date_str:

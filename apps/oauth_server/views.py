@@ -19,12 +19,16 @@ import time
 from urllib.parse import urlparse
 
 from django.core.cache import cache
+from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
+from oauth2_provider import views as oauth2_views
 from oauth2_provider.models import get_application_model
+
+from apps.accounts import impersonation
 
 from .metadata import authorization_server_metadata, protected_resource_metadata
 
@@ -41,6 +45,20 @@ _DCR_GLOBAL_LIMIT = 1000
 _DCR_RATE_WINDOW = 60 * 60  # seconds
 _DCR_PER_IP_KEY_PREFIX = "oauth_dcr_ip:"
 _DCR_GLOBAL_KEY = "oauth_dcr_registrations_global"
+
+
+class AuthorizationView(oauth2_views.AuthorizationView):
+    """The consent screen, closed to impersonation sessions.
+
+    A grant outlives the browser session that approved it, so one approved
+    by an operator inside a customer's account would keep acting as the
+    customer after the takeover ended.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        if impersonation.is_impersonating(request):
+            raise PermissionDenied("Apps cannot be connected during an impersonation session.")
+        return super().dispatch(request, *args, **kwargs)
 
 
 def _dcr_error(error: str, description: str, status: int = 400) -> JsonResponse:

@@ -1,5 +1,6 @@
 import hashlib
 
+from django.conf import settings
 from django.core.cache import cache
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -11,6 +12,7 @@ AUTH_RATE_LIMITED_PATHS = (
     "/accounts/signup/",
     "/accounts/password/reset/",
     "/accounts/password/reset/key/",
+    "/admin/login/",
 )
 
 # Rate limit: 10 POST requests per minute per IP for auth endpoints
@@ -36,6 +38,27 @@ EXEMPT_PATH_PREFIXES = (
 )
 
 
+class ImpersonationGuardMiddleware:
+    """End an impersonation session once its operator stops being one.
+
+    Runs right after ``AuthenticationMiddleware`` so that no later
+    middleware or view serves the request as the customer.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Cookie check first: reading the session loads it from the database
+        # and marks the response ``Vary: Cookie``, which a request without a
+        # session (static files, bearer API calls) should not pay for.
+        if settings.SESSION_COOKIE_NAME in request.COOKIES:
+            from apps.accounts import impersonation
+
+            impersonation.end_if_operator_revoked(request)
+        return self.get_response(request)
+
+
 class TosAcceptanceMiddleware:
     """Redirect authenticated users to the ToS acceptance page if they haven't accepted yet."""
 
@@ -58,7 +81,7 @@ class TosAcceptanceMiddleware:
 
 
 class AuthRateLimitMiddleware:
-    """Rate-limit POST requests to authentication endpoints (login, signup, password reset)."""
+    """Rate-limit POST requests to authentication endpoints (login, admin login, signup, password reset)."""
 
     def __init__(self, get_response):
         self.get_response = get_response

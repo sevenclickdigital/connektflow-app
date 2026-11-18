@@ -83,3 +83,70 @@ class EditCommentWorkspaceScopeTests(TestCase):
         self.assertLess(response.status_code, 400)
         self.comment.refresh_from_db()
         self.assertEqual(self.comment.body, "rewritten")
+
+
+class DeleteCommentWorkspaceScopeTests(TestCase):
+    """delete_comment only reaches comments of the workspace in the URL."""
+
+    def setUp(self):
+        self.victim_org = Organization.objects.create(name="Victim Org")
+        self.victim_ws = Workspace.objects.create(organization=self.victim_org, name="Victim WS")
+        self.author = _make_user("author@example.com")
+        OrgMembership.objects.create(user=self.author, organization=self.victim_org, org_role="owner")
+        WorkspaceMembership.objects.create(user=self.author, workspace=self.victim_ws, workspace_role="owner")
+        self.post = Post.objects.create(workspace=self.victim_ws, author=self.author, caption="v")
+        self.comment = PostComment.objects.create(
+            post=self.post, author=self.author, body="internal note", visibility=PostComment.Visibility.INTERNAL
+        )
+
+        self.other_org = Organization.objects.create(name="Other Org")
+        self.other_ws = Workspace.objects.create(organization=self.other_org, name="Other WS")
+        self.outsider = _make_user("outsider@example.com")
+        OrgMembership.objects.create(user=self.outsider, organization=self.other_org, org_role="owner")
+        WorkspaceMembership.objects.create(user=self.outsider, workspace=self.other_ws, workspace_role="owner")
+        self.other_post = Post.objects.create(workspace=self.other_ws, author=self.outsider, caption="o")
+
+    def _url(self, workspace, post):
+        return reverse(
+            "approvals:delete_comment",
+            kwargs={"workspace_id": workspace.id, "post_id": post.id, "comment_id": self.comment.id},
+        )
+
+    def _assert_not_deleted(self):
+        self.comment.refresh_from_db()
+        self.assertIsNone(self.comment.deleted_at)
+
+    def test_moderator_of_another_workspace_cannot_delete(self):
+        self.client.force_login(self.outsider)
+
+        through_foreign_post = self.client.post(self._url(self.other_ws, self.post))
+        self.assertEqual(through_foreign_post.status_code, 404)
+        self._assert_not_deleted()
+
+        through_own_post = self.client.post(self._url(self.other_ws, self.other_post))
+        self.assertEqual(through_own_post.status_code, 400)
+        self._assert_not_deleted()
+
+    def test_member_cannot_borrow_the_right_from_a_second_workspace(self):
+        editor = _make_user("editor@example.com")
+        OrgMembership.objects.create(user=editor, organization=self.victim_org, org_role="member")
+        WorkspaceMembership.objects.create(user=editor, workspace=self.victim_ws, workspace_role="editor")
+        managed_ws = Workspace.objects.create(organization=self.victim_org, name="Managed WS")
+        WorkspaceMembership.objects.create(user=editor, workspace=managed_ws, workspace_role="manager")
+        managed_post = Post.objects.create(workspace=managed_ws, author=editor, caption="m")
+        self.client.force_login(editor)
+
+        response = self.client.post(self._url(managed_ws, managed_post))
+        self.assertEqual(response.status_code, 400)
+        self._assert_not_deleted()
+
+        in_own_workspace = self.client.post(self._url(self.victim_ws, self.post))
+        self.assertEqual(in_own_workspace.status_code, 403)
+        self._assert_not_deleted()
+
+    def test_moderator_of_the_workspace_deletes(self):
+        self.client.force_login(self.author)
+        response = self.client.post(self._url(self.victim_ws, self.post))
+        self.assertEqual(response.status_code, 200)
+        self.comment.refresh_from_db()
+        self.assertIsNotNone(self.comment.deleted_at)

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import pytest
 from django.contrib.auth import SESSION_KEY
+from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
@@ -432,8 +433,8 @@ class TestImpersonatedSessionHasNoStaffPower:
 @pytest.mark.django_db
 class TestPrivilegeIsNotSnapshotted:
     def test_demoting_the_operator_mid_takeover_removes_their_power(self, client, operator, customer):
-        """``real_user`` re-reads the operator every request, so a demotion
-        takes effect on the next one instead of at session expiry."""
+        """The operator is re-read every request, so a demotion takes
+        effect on the next one instead of at session expiry."""
         client.force_login(operator)
         client.post(_start_url(customer))
 
@@ -442,7 +443,48 @@ class TestPrivilegeIsNotSnapshotted:
 
         client.post(STOP_URL)
 
-        assert client.get(STAFF_CONSOLE).status_code == 403
+        # Neither the customer nor a restored operator login.
+        assert _session_user_id(client) is None
+        assert client.get(STAFF_CONSOLE).status_code == 302
+
+    @pytest.mark.parametrize("revoked_flag", ["is_staff", "is_active"])
+    def test_takeover_ends_on_the_next_request_once_the_operator_is_revoked(
+        self, client, operator, customer, revoked_flag
+    ):
+        workspace = Workspace.objects.get(organization__name="Client Co")
+        settings_url = f"/workspaces/{workspace.pk}/settings/"
+        client.force_login(operator)
+        client.post(_start_url(customer))
+        assert client.get("/workspaces/").status_code == 200
+
+        User.objects.filter(pk=operator.pk).update(**{revoked_flag: False})
+        response = client.post(settings_url, {"name": "Renamed after revocation"})
+
+        assert response.status_code == 302
+        assert "/accounts/login/" in response.url
+        workspace.refresh_from_db()
+        assert workspace.name == "Client Social"
+        assert _session_user_id(client) is None
+        assert ImpersonationSession.objects.get().ended_at is not None
+
+    def test_takeover_continues_while_the_operator_is_still_one(self, client, operator, customer):
+        client.force_login(operator)
+        client.post(_start_url(customer))
+
+        assert client.get("/workspaces/").status_code == 200
+        assert _session_user_id(client) == str(customer.pk)
+        assert ImpersonationSession.objects.get().ended_at is None
+
+    def test_customers_own_session_is_untouched_by_the_operators_revocation(self, client, operator, customer):
+        operator_browser = Client()
+        operator_browser.force_login(operator)
+        operator_browser.post(_start_url(customer))
+        client.force_login(customer)
+
+        User.objects.filter(pk=operator.pk).update(is_active=False)
+
+        assert client.get("/workspaces/").status_code == 200
+        assert _session_user_id(client) == str(customer.pk)
 
     def test_deactivating_the_operator_mid_takeover_ends_the_session(self, client, operator, customer):
         client.force_login(operator)

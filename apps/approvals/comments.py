@@ -7,7 +7,9 @@ import re
 
 from django.db.models import Prefetch
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
+from apps.media_library.validators import image_storage_filename
 from apps.members.models import WorkspaceMembership
 from apps.notifications.engine import notify
 from apps.notifications.models import EventType
@@ -35,6 +37,13 @@ def create_comment(post, author, body, visibility, parent_id=None, attachment=No
     """
     if attachment and attachment.size > MAX_ATTACHMENT_SIZE:
         raise ValueError("Attachment exceeds 5MB limit.")
+    if attachment:
+        # PostComment.attachment is filled without a form, so nothing else
+        # checks that it is an image or decides the extension it is served by.
+        storage_name = image_storage_filename(attachment)
+        if not storage_name:
+            raise ValueError(_("Use a PNG, JPEG, WebP or GIF image."))
+        attachment.name = storage_name
 
     parent_comment = None
     if parent_id:
@@ -88,9 +97,10 @@ def update_comment(comment_id, user, body, *, workspace=None):
 
 
 def delete_comment(comment_id, user, workspace):
-    """Soft-delete a comment. Authors and managers can delete."""
+    """Soft-delete a comment of ``workspace``. Authors and managers can delete."""
     comment = PostComment.objects.filter(
         id=comment_id,
+        post__workspace=workspace,
         deleted_at__isnull=True,
     ).first()
 

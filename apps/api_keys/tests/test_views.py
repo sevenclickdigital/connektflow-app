@@ -300,6 +300,34 @@ class TestIssue:
         assert keys[0].name == "test bot"
         assert "create_posts" in (keys[0].permissions or [])
 
+    def test_refused_during_an_impersonation_session(self, admin_user, admin_memberships, workspace, social_account):
+        """A key issued by an operator inside the customer's account would
+        outlive the takeover."""
+        from django.test import Client
+
+        from apps.accounts.models import User
+
+        operator = User.objects.create_user(
+            email="ui-operator@example.com", password="testpass123", is_staff=True, tos_accepted_at=timezone.now()
+        )
+        browser = Client()
+        browser.force_login(operator)
+        browser.post(reverse("accounts:start_impersonation", kwargs={"user_id": admin_user.pk}))
+        assert browser.session["_auth_user_id"] == str(admin_user.pk)
+
+        r = browser.post(
+            reverse("api_keys:issue"),
+            {
+                "name": "takeover bot",
+                "workspace_id": str(workspace.id),
+                "social_account_ids": [str(social_account.id)],
+                "permissions": ["create_posts"],
+            },
+        )
+
+        assert r.status_code == 403
+        assert not ApiKey.objects.filter(workspace=workspace).exists()
+
     def test_issue_redirects_and_reload_does_not_resurface_or_reissue(self, admin_client, workspace, social_account):
         """Post/Redirect/Get: issuing lands on the list (not the POST
         endpoint), reveals the token exactly once, and a reload neither

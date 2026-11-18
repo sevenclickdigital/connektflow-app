@@ -141,9 +141,12 @@ def _handle_photo_update(request, user):
 
     avatar = request.FILES["avatar"]
 
-    # Validate file type
-    allowed_types = ("image/jpeg", "image/png", "image/webp", "image/gif")
-    if avatar.content_type not in allowed_types:
+    # The type comes from the file's bytes and the stored name gets the
+    # matching extension: avatars/ is served publicly, by suffix.
+    from apps.media_library.validators import image_storage_filename
+
+    storage_name = image_storage_filename(avatar)
+    if not storage_name:
         messages.error(request, _("Photo must be a JPEG, PNG, WebP, or GIF image."))
         return
 
@@ -178,6 +181,7 @@ def _handle_photo_update(request, user):
     if user.avatar:
         user.avatar.delete(save=False)
 
+    avatar.name = storage_name
     user.avatar = avatar
     user.save(update_fields=["avatar", "updated_at"])
     messages.success(request, _("Photo updated."))
@@ -213,6 +217,14 @@ def _handle_password_update(request, user):
     user.save(update_fields=["password", "updated_at"])
     update_session_auth_hash(request, user)
     messages.success(request, _("Password changed."))
+    # This form does not go through allauth, so its password_changed signal
+    # (apps.accounts.signals) never fires here.
+    from apps.oauth_server.services import revoke_user_tokens
+
+    if revoke_user_tokens(user):
+        messages.info(
+            request, _("The apps connected to your account were disconnected. Authorize them again to keep using them.")
+        )
 
 
 def _handle_account_deletion(request, user):

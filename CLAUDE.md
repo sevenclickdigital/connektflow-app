@@ -46,6 +46,8 @@ When the code and a doc disagree, the code is right — fix the doc in the same 
 - Colours come from the tokens, exposed to Tailwind as `brand-*` (primary is `brand-700`) and `neutral-*` (border `neutral-300`, secondary text `neutral-600`). Never `orange-*`, `stone-*` or their hex values — see `docs/brand-and-layout.md` §2.
 - Styles come from the tokens and component classes in `theme/static_src/src/styles.css` (`btn-*`, `.alert-*`, status pills…). Check `docs/style-guide.html` before inventing a class. After CSS/template class changes, the Tailwind watcher or `npm run build` in `theme/static_src` must run.
 - Alpine: pointer gestures that must not select text use `preventDefault`, not `.stop` (which only stops Alpine propagation).
+- Alpine and HTMX expression attributes (`x-data`, `x-init`, `@event`, `:attr`, `hx-vals`) are JavaScript: a `{{ value }}` from the request or from stored user data is evaluated there even though it is HTML-escaped. Validate the value against its allowed set in the view and hand data over with `json_script` or a `data-*` attribute.
+- A workspace URL only proves membership (any role, including viewer and client). Every view that changes something needs its own `require_permission`, and a view that changes another member's post also needs the author-or-`edit_others_posts` rule (`apps.composer.services.can_edit_post`).
 - Skill: `django-templates`.
 
 ### Services and models

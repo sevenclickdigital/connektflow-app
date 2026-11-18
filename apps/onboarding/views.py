@@ -25,6 +25,7 @@ from django.views.decorators.http import require_GET, require_POST
 from django_ratelimit.decorators import ratelimit
 
 from apps.common.mail import transactional
+from apps.common.validators import is_safe_url
 from apps.credentials.models import PlatformCredential
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
@@ -51,6 +52,7 @@ logger = logging.getLogger(__name__)
 CONNECTION_LINK_OAUTH_SESSION_KEY = "connection_link_oauth"
 OAUTH_STATE_MAX_AGE = 600  # 10 minutes
 MAX_OAUTH_INITIATIONS_PER_HOUR = 20
+DONE_NOTIFICATION_REPEAT_SECONDS = 24 * 60 * 60
 
 
 # ------------------------------------------------------------------
@@ -580,6 +582,8 @@ def connection_done(request, token):
     link = _get_connection_link_or_none(token)
     if not link:
         return render(request, "onboarding/connection_expired.html", status=404)
+    if not link.is_active:
+        return render(request, "onboarding/connection_expired.html", status=400)
 
     # Count connected accounts via this link
     connected_count = ConnectionLinkUsage.objects.filter(connection_link=link).count()
@@ -599,17 +603,21 @@ def connection_done(request, token):
         ],
     ).select_related("user")
 
-    for membership in managers:
-        notify(
-            user=membership.user,
-            event_type=EventType.CLIENT_CONNECTED_ACCOUNTS,
-            title="Client connected accounts",
-            body=f"{connected_count} account(s) connected to {link.workspace.name}: {account_names}",
-            data={
-                "workspace_id": str(link.workspace_id),
-                "connection_link_id": str(link.id),
-            },
-        )
+    # The endpoint is public: pressing "Done" again tells the team only when the
+    # link has connected more accounts since the last time.
+    announced_key = f"connection_link_done:{link.id}:{connected_count}"
+    if cache.add(announced_key, True, timeout=DONE_NOTIFICATION_REPEAT_SECONDS):
+        for membership in managers:
+            notify(
+                user=membership.user,
+                event_type=EventType.CLIENT_CONNECTED_ACCOUNTS,
+                title="Client connected accounts",
+                body=f"{connected_count} account(s) connected to {link.workspace.name}: {account_names}",
+                data={
+                    "workspace_id": str(link.workspace_id),
+                    "connection_link_id": str(link.id),
+                },
+            )
 
     return render(
         request,
@@ -680,6 +688,17 @@ def connection_mastodon_start(request, token):
     instance_url = _normalize_mastodon_instance_url(request.POST.get("instance_url", ""))
     if not instance_url:
         request.session["connection_link_error"] = "Instance URL is required."
+        return redirect("onboarding:connection_page", token=token)
+
+    if not _check_rate_limit(token):
+        request.session["connection_link_error"] = "Too many connection attempts. Please try again later."
+        return redirect("onboarding:connection_page", token=token)
+
+    # The server is about to request this host: only public addresses, as in connect_mastodon.
+    if not is_safe_url(instance_url):
+        request.session["connection_link_error"] = _(
+            "Invalid instance URL. Private or reserved addresses are not allowed."
+        )
         return redirect("onboarding:connection_page", token=token)
 
     org = link.workspace.organization

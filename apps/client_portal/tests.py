@@ -9,8 +9,10 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.client_portal.models import MagicLinkToken
 from apps.client_portal.services import consume_magic_link, peek_magic_link
+from apps.composer.models import PlatformPost, Post
 from apps.members.models import WorkspaceMembership
 from apps.organizations.models import Organization
+from apps.social_accounts.models import SocialAccount
 from apps.workspaces.models import Workspace
 
 
@@ -114,3 +116,60 @@ class MagicLinkEntryViewTests(MagicLinkTestBase):
         response = replay.post(self._entry_url())
         self.assertRedirects(response, reverse("client_portal:magic_link_expired"))
         self.assertIsNone(replay.session.get("is_portal_session"))
+
+
+class PortalSessionRoleChangeTests(MagicLinkTestBase):
+    """An open portal session follows the member's current role."""
+
+    def setUp(self):
+        super().setUp()
+        self.account = SocialAccount.objects.create(
+            workspace=self.workspace,
+            platform="linkedin_personal",
+            account_platform_id="li-portal",
+            account_name="LI",
+            connection_status="connected",
+        )
+        self.pending = self._post("pending_client")
+        self.approved = self._post("approved")
+        self.client.force_login(self.client_user)
+        session = self.client.session
+        session["is_portal_session"] = True
+        session["portal_workspace_id"] = str(self.workspace.id)
+        session.save()
+
+    def _post(self, status):
+        post = Post.objects.create(workspace=self.workspace, caption=status)
+        PlatformPost.objects.create(post=post, social_account=self.account, status=status)
+        return post
+
+    def _status(self, post):
+        return PlatformPost.objects.get(post=post).status
+
+    def test_demoted_member_cannot_act_or_read_through_the_portal(self):
+        WorkspaceMembership.objects.filter(user=self.client_user, workspace=self.workspace).update(
+            workspace_role=WorkspaceMembership.WorkspaceRole.VIEWER
+        )
+        expired = reverse("client_portal:magic_link_expired")
+
+        for name, post in (
+            ("approve", self.pending),
+            ("reject", self.pending),
+            ("request_changes", self.pending),
+            ("request_hold", self.approved),
+        ):
+            with self.subTest(action=name):
+                response = self.client.post(
+                    reverse(f"client_portal:{name}", kwargs={"post_id": post.id}), data={"comment": "x"}
+                )
+                self.assertRedirects(response, expired, fetch_redirect_response=False)
+        self.assertRedirects(
+            self.client.get(reverse("client_portal:approval_queue")), expired, fetch_redirect_response=False
+        )
+        self.assertEqual(self._status(self.pending), "pending_client")
+        self.assertEqual(self._status(self.approved), "approved")
+
+    def test_client_still_approves(self):
+        response = self.client.post(reverse("client_portal:approve", kwargs={"post_id": self.pending.id}))
+        self.assertRedirects(response, reverse("client_portal:approval_queue"), fetch_redirect_response=False)
+        self.assertNotEqual(self._status(self.pending), "pending_client")

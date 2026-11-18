@@ -32,7 +32,8 @@ def portal_auth_required(view_func):
         except Workspace.DoesNotExist:
             return redirect("client_portal:magic_link_expired")
 
-        # Verify user has client membership in this workspace
+        # The session outlives a role change, so the approval right is read from
+        # the membership as it is now, on every request.
         membership = (
             WorkspaceMembership.objects.filter(
                 user=request.user,
@@ -42,7 +43,7 @@ def portal_auth_required(view_func):
             .first()
         )
 
-        if not membership:
+        if not membership or not membership.effective_permissions.get("approve_posts", False):
             return redirect("client_portal:magic_link_expired")
 
         request.portal_workspace = workspace

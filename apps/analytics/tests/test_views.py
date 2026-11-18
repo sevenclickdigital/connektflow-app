@@ -6,14 +6,18 @@ the queryset feeding the switcher, so a connected Instagram (Direct) account
 simply wasn't there and nothing anywhere said why.
 """
 
+import uuid
 from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
+from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.analytics.models import AccountInsightsSnapshot
+from apps.composer.models import PlatformPost, Post
 from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
 from apps.social_accounts.models import AnalyticsPlatformConfig, SocialAccount
@@ -264,3 +268,65 @@ def test_youtube_daily_counts_are_not_reconstructed_from_lifetime_snapshots(owne
     assert response.context["chart"]["derived"].available is False
     # Today has no snapshot yet: a gap in the chart, not a drop to zero views.
     assert response.context["chart_series_json"].endswith("null]")
+
+
+def _member_client(workspace, role):
+    user = User.objects.create_user(
+        email=f"analytics-{role}@example.com", password="testpass123", tos_accepted_at=timezone.now()
+    )
+    WorkspaceMembership.objects.create(user=user, workspace=workspace, workspace_role=role)
+    member_client = Client()
+    member_client.force_login(user)
+    return member_client
+
+
+def _read_urls(workspace, account):
+    ids = {"workspace_id": workspace.id}
+    pp = PlatformPost.objects.create(
+        post=Post.objects.create(workspace=workspace, caption="measured"),
+        social_account=account,
+        status=PlatformPost.Status.PUBLISHED,
+    )
+    return [
+        reverse("analytics:index", kwargs=ids),
+        reverse("analytics:account", kwargs={**ids, "account_id": account.id}),
+        reverse("analytics:status", kwargs={**ids, "account_id": account.id}),
+        reverse("analytics:history_offer", kwargs={**ids, "account_id": account.id}),
+        reverse("analytics:post_detail", kwargs={**ids, "post_id": pp.id}),
+        reverse("analytics:shopee", kwargs={**ids, "connection_id": uuid.uuid4()}),
+    ]
+
+
+@pytest.mark.django_db
+def test_member_without_view_analytics_is_refused_on_every_page(workspace):
+    account = _account(workspace, "instagram_login", "Direct IG")
+    contributor = _member_client(workspace, WorkspaceMembership.WorkspaceRole.CONTRIBUTOR)
+
+    with patch("apps.analytics.history_import.importable_count") as count:
+        statuses = [contributor.get(url).status_code for url in _read_urls(workspace, account)]
+
+    assert statuses == [403] * 6
+    count.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_viewer_still_reads_analytics(workspace):
+    account = _account(workspace, "instagram_login", "Direct IG")
+    viewer = _member_client(workspace, WorkspaceMembership.WorkspaceRole.VIEWER)
+
+    response = viewer.get(_account_url(workspace, account))
+
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_sidebar_reports_link_follows_view_analytics(workspace):
+    _account(workspace, "instagram_login", "Direct IG")
+    link = reverse("analytics:index", kwargs={"workspace_id": workspace.id})
+    page = reverse("calendar:queue_list", kwargs={"workspace_id": workspace.id})
+
+    contributor = _member_client(workspace, WorkspaceMembership.WorkspaceRole.CONTRIBUTOR).get(page)
+    viewer = _member_client(workspace, WorkspaceMembership.WorkspaceRole.VIEWER).get(page)
+
+    assert link not in contributor.content.decode()
+    assert link in viewer.content.decode()

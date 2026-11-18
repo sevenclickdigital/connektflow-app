@@ -39,6 +39,7 @@ editor can say so.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -48,6 +49,7 @@ __all__ = [
     "compile_graph",
     "default_graph",
     "instantiate_graph",
+    "numeric_positions",
     "rule_can_act",
     "unsupported_nodes",
 ]
@@ -268,6 +270,30 @@ def _nodes(graph: Any) -> list[dict[str, Any]]:
     if not isinstance(nodes, list):
         return []
     return [node for node in nodes if isinstance(node, dict) and isinstance(node.get("type"), str)]
+
+
+def numeric_positions(nodes: list[Any]) -> list[Any]:
+    """The posted nodes with ``x`` and ``y`` forced to finite numbers.
+
+    The editor writes the coordinates into the SVG markup of the connecting
+    lines, so a position that is not a number would be read there as markup.
+    Anything else becomes 0 instead of refusing the save, like the rest of the
+    tolerant reading of a graph. Entries that are not nodes pass through for
+    :func:`_nodes` to skip.
+    """
+    return [
+        {**node, "x": _coordinate(node.get("x")), "y": _coordinate(node.get("y"))} if isinstance(node, dict) else node
+        for node in nodes
+    ]
+
+
+def _coordinate(value: Any) -> int | float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0
+    try:
+        return value if math.isfinite(value) else 0
+    except OverflowError:
+        return 0
 
 
 def unsupported_nodes(graph: Any) -> list[str]:

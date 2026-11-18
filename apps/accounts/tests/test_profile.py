@@ -95,3 +95,43 @@ def test_an_account_from_before_first_and_last_name_is_offered_its_name_split(us
 
     assert form.initial["first_name"] == "Test"
     assert form.initial["last_name"] == "User"
+
+
+def _avatar(name, body=None):
+    import io
+
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from PIL import Image
+
+    if body is None:
+        buffer = io.BytesIO()
+        Image.new("RGB", (200, 200), "white").save(buffer, format="PNG")
+        body = buffer.getvalue()
+    return SimpleUploadedFile(name, body, content_type="image/png")
+
+
+@pytest.mark.django_db
+def test_a_photo_is_stored_under_the_extension_of_its_bytes(client, user, settings, tmp_path):
+    """avatars/ is served publicly by suffix, so the client's extension is never kept."""
+    settings.MEDIA_ROOT = tmp_path
+    client.force_login(user)
+
+    client.post(reverse("accounts:settings"), {"action": "update_photo", "avatar": _avatar("me.html")})
+
+    user.refresh_from_db()
+    assert user.avatar.name.startswith("avatars/")
+    assert user.avatar.name.endswith(".png")
+
+
+@pytest.mark.django_db
+def test_a_photo_that_is_not_an_image_is_refused(client, user, settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    client.force_login(user)
+
+    client.post(
+        reverse("accounts:settings"),
+        {"action": "update_photo", "avatar": _avatar("me.png", b"<!doctype html><p>not an image</p>")},
+    )
+
+    user.refresh_from_db()
+    assert not user.avatar

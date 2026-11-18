@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-18 02:23+0000\n"
+"POT-Creation-Date: 2026-11-18 03:53+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -85,51 +85,59 @@ msgstr "Perfil atualizado."
 msgid "Photo removed."
 msgstr "Foto removida."
 
-#: apps/accounts/views.py:147
+#: apps/accounts/views.py:150
 msgid "Photo must be a JPEG, PNG, WebP, or GIF image."
 msgstr "A foto deve ser uma imagem JPEG, PNG, WebP ou GIF."
 
-#: apps/accounts/views.py:153
+#: apps/accounts/views.py:156
 msgid "Photo must be under 2 MB."
 msgstr "A foto deve ter menos de 2 MB."
 
-#: apps/accounts/views.py:169
+#: apps/accounts/views.py:172
 msgid "Photo must be at least 180×180 pixels."
 msgstr "A foto deve ter no mínimo 180×180 pixels."
 
-#: apps/accounts/views.py:172
+#: apps/accounts/views.py:175
 msgid "Could not read image file."
 msgstr "Não foi possível ler o arquivo de imagem."
 
-#: apps/accounts/views.py:183
+#: apps/accounts/views.py:187
 msgid "Photo updated."
 msgstr "Foto atualizada."
 
-#: apps/accounts/views.py:193
+#: apps/accounts/views.py:197
 msgid "Current password is required."
 msgstr "A senha atual é obrigatória."
 
-#: apps/accounts/views.py:197
+#: apps/accounts/views.py:201
 msgid "Current password is incorrect."
 msgstr "A senha atual está incorreta."
 
-#: apps/accounts/views.py:201
+#: apps/accounts/views.py:205
 msgid "New password cannot be empty."
 msgstr "A nova senha não pode ficar em branco."
 
-#: apps/accounts/views.py:205
+#: apps/accounts/views.py:209
 msgid "New password must be at least 8 characters."
 msgstr "A nova senha deve ter no mínimo 8 caracteres."
 
-#: apps/accounts/views.py:209
+#: apps/accounts/views.py:213
 msgid "New passwords do not match."
 msgstr "As senhas não coincidem."
 
-#: apps/accounts/views.py:215
+#: apps/accounts/views.py:219
 msgid "Password changed."
 msgstr "Senha alterada."
 
-#: apps/accounts/views.py:245
+#: apps/accounts/views.py:226
+msgid ""
+"The apps connected to your account were disconnected. Authorize them again "
+"to keep using them."
+msgstr ""
+"Os aplicativos conectados à sua conta foram desconectados. Autorize-os "
+"novamente para continuar usando."
+
+#: apps/accounts/views.py:257
 #, python-format
 msgid ""
 "You are the sole owner of: %(orgs)s. Transfer ownership or delete the "
@@ -138,15 +146,15 @@ msgstr ""
 "Você é o único proprietário de: %(orgs)s. Transfira a propriedade ou exclua "
 "a organização antes de excluir sua conta."
 
-#: apps/accounts/views.py:255
+#: apps/accounts/views.py:267
 msgid "Your account has been deleted."
 msgstr "Sua conta foi excluída."
 
-#: apps/accounts/views.py:276
+#: apps/accounts/views.py:288
 msgid "You are signed in"
 msgstr "Você entrou"
 
-#: apps/accounts/views.py:292
+#: apps/accounts/views.py:304
 msgid "You must agree to the Terms of Service and Privacy Policy to continue."
 msgstr ""
 "Você precisa aceitar os Termos de Serviço e a Política de Privacidade para "
@@ -251,7 +259,7 @@ msgid "Engagement rate"
 msgstr "Taxa de engajamento"
 
 #: apps/analytics/services.py:781 apps/composer/models.py:542
-#: apps/composer/models.py:1082 apps/composer/services.py:881
+#: apps/composer/models.py:1082 apps/composer/services.py:975
 #: apps/social_accounts/models.py:658 apps/tasks/creative_formats.py:81
 #: apps/tasks/creative_formats.py:87
 msgid "Reels"
@@ -284,29 +292,33 @@ msgstr "Imagem única"
 msgid "Text"
 msgstr "Texto"
 
-#: apps/api_keys/views.py:470
+#: apps/api_keys/views.py:477
 #, python-format
 msgid "Revoked key “%(name)s”."
 msgstr "Chave “%(name)s” revogada."
 
-#: apps/api_keys/views.py:472
+#: apps/api_keys/views.py:479
 #, python-format
 msgid "Key “%(name)s” was already revoked."
 msgstr "A chave “%(name)s” já havia sido revogada."
 
-#: apps/api_keys/views.py:501
+#: apps/api_keys/views.py:508
 #, python-format
 msgid "Key “%(name)s” is not active; it can't be edited."
 msgstr "A chave “%(name)s” não está ativa; não é possível editá-la."
 
-#: apps/api_keys/views.py:534
+#: apps/api_keys/views.py:541
 #, python-format
 msgid "Updated “%(name)s”."
 msgstr "“%(name)s” atualizada."
 
+#: apps/approvals/comments.py:45 apps/automations/template_views.py:332
+msgid "Use a PNG, JPEG, WebP or GIF image."
+msgstr "Use uma imagem PNG, JPEG, WebP ou GIF."
+
 #: apps/approvals/templatetags/approval_extras.py:13
 #: apps/calendar/status_board.py:41 apps/composer/models.py:460
-#: apps/inbox/models.py:187 templates/automations/flow_builder.html:100
+#: apps/inbox/models.py:204 templates/automations/flow_builder.html:100
 #: templates/automations/staff_template_list.html:104
 #: templates/calendar/calendar.html:560
 #: templates/calendar/partials/publish_calendar_shell.html:94
@@ -376,7 +388,7 @@ msgstr "Publicado parcialmente"
 
 #: apps/approvals/templatetags/approval_extras.py:35 apps/billing/models.py:406
 #: apps/composer/models.py:469 apps/composer/models.py:549
-#: apps/composer/models.py:973 apps/inbox/models.py:189
+#: apps/composer/models.py:973 apps/inbox/models.py:206
 #: apps/notifications/models.py:42
 #: templates/calendar/partials/publish_calendar_shell.html:100
 #: templates/inbox/partials/_draft_reply_item.html:6
@@ -445,42 +457,38 @@ msgstr "Em execução"
 msgid "Paused"
 msgstr "Pausada"
 
-#: apps/automations/template_views.py:152
-#: apps/automations/template_views.py:287
+#: apps/automations/template_views.py:153
+#: apps/automations/template_views.py:290
 msgid "Give the template a name."
 msgstr "Dê um nome ao modelo."
 
-#: apps/automations/template_views.py:255
+#: apps/automations/template_views.py:256
 msgid "The canvas was empty."
 msgstr "A tela estava vazia."
 
-#: apps/automations/template_views.py:259
-#: apps/automations/template_views.py:261
+#: apps/automations/template_views.py:260
+#: apps/automations/template_views.py:262
 msgid "The canvas could not be read."
 msgstr "Não foi possível ler a tela."
 
-#: apps/automations/template_views.py:265
+#: apps/automations/template_views.py:267
 msgid "This flow has too many steps."
 msgstr "Este fluxo tem etapas demais."
 
-#: apps/automations/template_views.py:319 apps/composer/staff_views.py:93
+#: apps/automations/template_views.py:323 apps/composer/staff_views.py:93
 msgid "Template saved."
 msgstr "Modelo salvo."
 
-#: apps/automations/template_views.py:326
+#: apps/automations/template_views.py:330
 msgid "The image is too large. Use one under 4 MB."
 msgstr "A imagem é grande demais. Use uma com menos de 4 MB."
 
-#: apps/automations/template_views.py:328
-msgid "Use a PNG, JPEG, WebP or GIF image."
-msgstr "Use uma imagem PNG, JPEG, WebP ou GIF."
-
-#: apps/automations/template_views.py:344
+#: apps/automations/template_views.py:348
 #, python-format
 msgid "“%(name)s” was deleted."
 msgstr "“%(name)s” foi excluído."
 
-#: apps/automations/template_views.py:362
+#: apps/automations/template_views.py:366
 #, python-format
 msgid "%(name)s (copy)"
 msgstr "%(name)s (cópia)"
@@ -809,7 +817,7 @@ msgstr ""
 "assinatura para mantê-la ativa."
 
 #: apps/billing/views.py:1428 apps/billing/views.py:1725
-#: apps/workspaces/views.py:318
+#: apps/workspaces/views.py:327
 msgid "Unknown action."
 msgstr "Ação desconhecida."
 
@@ -1559,50 +1567,50 @@ msgstr "Dos seus segmentos"
 #: templates/composer/partials/media_picker.html:154
 #: templates/composer/partials/template_gallery.html:65
 #: templates/composer/partials/template_gallery.html:208
-#: templates/radar/shopee.html:64
+#: templates/radar/shopee.html:66
 msgid "Favorites"
 msgstr "Favoritas"
 
 #
-#: apps/calendar/staff_views.py:73 apps/calendar/staff_views.py:93
+#: apps/calendar/staff_views.py:74 apps/calendar/staff_views.py:94
 msgid "Enter the name of the segment."
 msgstr "Informe o nome do segmento."
 
-#: apps/calendar/staff_views.py:75 apps/calendar/staff_views.py:95
+#: apps/calendar/staff_views.py:76 apps/calendar/staff_views.py:96
 msgid "There is already a segment with this name."
 msgstr "Já existe um segmento com este nome."
 
 #
-#: apps/calendar/staff_views.py:78
+#: apps/calendar/staff_views.py:79
 msgid "Segment created."
 msgstr "Segmento criado."
 
-#: apps/calendar/staff_views.py:100
+#: apps/calendar/staff_views.py:101
 msgid "Segment updated."
 msgstr "Segmento atualizado."
 
-#: apps/calendar/staff_views.py:108
+#: apps/calendar/staff_views.py:109
 msgid "Segment deleted, with its dates."
 msgstr "Segmento excluído, com as datas dele."
 
-#: apps/calendar/staff_views.py:125
+#: apps/calendar/staff_views.py:126
 msgid "Enter a valid day and month."
 msgstr "Informe um dia e um mês válidos."
 
-#: apps/calendar/staff_views.py:128
+#: apps/calendar/staff_views.py:129
 msgid "Enter the name of the date."
 msgstr "Informe o nome da data."
 
 #
-#: apps/calendar/staff_views.py:132
+#: apps/calendar/staff_views.py:135
 msgid "The image must be a JPEG, PNG or WebP of up to 2 MB."
 msgstr "A imagem deve ser JPEG, PNG ou WebP de até 2 MB."
 
-#: apps/calendar/staff_views.py:147
+#: apps/calendar/staff_views.py:151
 msgid "Date added."
 msgstr "Data adicionada."
 
-#: apps/calendar/staff_views.py:158
+#: apps/calendar/staff_views.py:162
 msgid "Date removed."
 msgstr "Data removida."
 
@@ -1631,7 +1639,7 @@ msgstr "Você só pode mover as suas publicações."
 msgid "You don't have permission to approve posts."
 msgstr "Você não tem permissão para aprovar publicações."
 
-#: apps/calendar/status_board.py:123
+#: apps/calendar/status_board.py:123 apps/composer/views.py:1676
 msgid "This post has to be approved before it is scheduled."
 msgstr "Esta publicação precisa ser aprovada antes de ser agendada."
 
@@ -1639,60 +1647,60 @@ msgstr "Esta publicação precisa ser aprovada antes de ser agendada."
 msgid "Open the post and choose when it goes out before scheduling it."
 msgstr "Abra a publicação e escolha quando ela sai antes de agendá-la."
 
-#: apps/calendar/views.py:1065 apps/inbox/views.py:165
+#: apps/calendar/views.py:1079 apps/inbox/views.py:165
 #: templates/organizations/cross_calendar.html:140
 #: templates/workspaces/dashboard.html:201
 msgid "Today"
 msgstr "Hoje"
 
-#: apps/calendar/views.py:1067
+#: apps/calendar/views.py:1081
 msgid "Tomorrow"
 msgstr "Amanhã"
 
-#: apps/calendar/views.py:1247
+#: apps/calendar/views.py:1261
 #: templates/calendar/partials/_period_toolbar.html:88
-#: templates/organizations/cross_calendar.html:182
+#: templates/organizations/cross_calendar.html:186
 msgid "All Posts"
 msgstr "Todas as publicações"
 
-#: apps/calendar/views.py:1358
+#: apps/calendar/views.py:1372
 #, python-format
 msgid "%(platform)s post"
 msgstr "Post do %(platform)s"
 
-#: apps/calendar/views.py:2088 apps/calendar/views.py:2137
+#: apps/calendar/views.py:2119 apps/calendar/views.py:2168
 msgid "Fill in the name and the dates."
 msgstr "Preencha o nome e as datas."
 
-#: apps/calendar/views.py:2091 apps/calendar/views.py:2142
+#: apps/calendar/views.py:2122 apps/calendar/views.py:2173
 msgid "Choose a valid colour."
 msgstr "Escolha uma cor válida."
 
-#: apps/calendar/views.py:2097
+#: apps/calendar/views.py:2128
 msgid "Enter valid dates."
 msgstr "Informe datas válidas."
 
-#: apps/calendar/views.py:2121
+#: apps/calendar/views.py:2152
 msgid "Campaign added to the calendar."
 msgstr "Campanha adicionada ao calendário."
 
-#: apps/calendar/views.py:2164
+#: apps/calendar/views.py:2195
 msgid "Campaign updated."
 msgstr "Campanha atualizada."
 
-#: apps/calendar/views.py:2180
+#: apps/calendar/views.py:2211
 msgid "Campaign deleted."
 msgstr "Campanha excluída."
 
-#: apps/calendar/views.py:2246
+#: apps/calendar/views.py:2277
 msgid "Unknown column."
 msgstr "Coluna desconhecida."
 
-#: apps/calendar/views.py:2254
+#: apps/calendar/views.py:2285
 msgid "The post was not moved."
 msgstr "A publicação não foi movida."
 
-#: apps/calendar/views.py:2280
+#: apps/calendar/views.py:2311
 #, python-format
 msgid "Moved to “%(column)s”."
 msgstr "Movida para “%(column)s”."
@@ -2026,7 +2034,7 @@ msgid "Deadline"
 msgstr "Prazo"
 
 #: apps/composer/idea_icons.py:51 apps/composer/models.py:543
-#: apps/composer/services.py:882 apps/social_accounts/models.py:659
+#: apps/composer/services.py:976 apps/social_accounts/models.py:659
 #: apps/tasks/creative_formats.py:107 templates/accounts/settings.html:47
 msgid "Photo"
 msgstr "Foto"
@@ -2145,14 +2153,14 @@ msgid "On Hold"
 msgstr "Em espera"
 
 #: apps/composer/models.py:540 apps/composer/models.py:1080
-#: apps/composer/services.py:879 apps/social_accounts/models.py:656
+#: apps/composer/services.py:973 apps/social_accounts/models.py:656
 #: apps/tasks/creative_formats.py:112 templates/analytics/_post_table.html:50
 #: templates/base.html:485 templates/inbox/partials/_entry_facts.html:29
 #: templates/tasks/partials/_task_summary.html:81
 msgid "Post"
 msgstr "Publicação"
 
-#: apps/composer/models.py:541 apps/composer/services.py:880
+#: apps/composer/models.py:541 apps/composer/services.py:974
 #: apps/social_accounts/models.py:657 apps/tasks/creative_formats.py:80
 #: apps/tasks/creative_formats.py:86
 msgctxt "publishing format"
@@ -2195,7 +2203,7 @@ msgstr "Educação"
 msgid "Waiting for approval"
 msgstr "Aguardando aprovação"
 
-#: apps/composer/services.py:471
+#: apps/composer/services.py:565
 #, python-format
 msgid ""
 "%(platform)s can only publish videos. Add a video to this post before "
@@ -2204,7 +2212,7 @@ msgstr ""
 "O %(platform)s só publica vídeos. Adicione um vídeo a esta publicação antes "
 "de agendá-la."
 
-#: apps/composer/services.py:475
+#: apps/composer/services.py:569
 #, python-format
 msgid ""
 "%(platform)s needs an image or a video. Add one to this post before "
@@ -2213,23 +2221,23 @@ msgstr ""
 "O %(platform)s precisa de uma imagem ou um vídeo. Adicione um a esta "
 "publicação antes de agendá-la."
 
-#: apps/composer/services.py:497 templates/composer/compose.html:2517
+#: apps/composer/services.py:591 templates/composer/compose.html:2517
 #: templates/composer/partials/_preview_vertical.html:101
 msgid "A Story needs at least one photo or video."
 msgstr "Um Story precisa de pelo menos uma foto ou um vídeo."
 
-#: apps/composer/services.py:499 templates/composer/compose.html:2518
+#: apps/composer/services.py:593 templates/composer/compose.html:2518
 #: templates/composer/partials/_preview_vertical.html:101
 msgid "A Reel needs exactly one video."
 msgstr "Um Reel precisa de exatamente um vídeo."
 
-#: apps/composer/services.py:500 templates/composer/compose.html:2519
+#: apps/composer/services.py:594 templates/composer/compose.html:2519
 #: templates/composer/partials/_preview_vertical.html:16
 #: templates/composer/partials/_preview_vertical.html:22
 msgid "A profile photo needs exactly one image."
 msgstr "Uma foto do perfil precisa de exatamente uma imagem."
 
-#: apps/composer/services.py:583
+#: apps/composer/services.py:677
 #, python-format
 msgid ""
 "%(platform)s takes up to %(limit)d photos in one post and this one has "
@@ -2238,7 +2246,7 @@ msgstr ""
 "O %(platform)s aceita até %(limit)d fotos em uma publicação e esta tem "
 "%(count)d. Remova algumas antes de agendá-la."
 
-#: apps/composer/services.py:620
+#: apps/composer/services.py:714
 msgid ""
 "Pinterest needs a board for every pin. Choose one for this post in the "
 "composer before scheduling it."
@@ -2246,13 +2254,13 @@ msgstr ""
 "O Pinterest precisa de uma pasta para cada pin. Escolha uma para esta "
 "publicação no editor antes de agendá-la."
 
-#: apps/composer/services.py:667
+#: apps/composer/services.py:761
 #, python-format
 msgid "This post is scheduled as %(format)s on %(platform)s. %(reason)s"
 msgstr ""
 "Esta publicação está agendada como %(format)s no %(platform)s. %(reason)s"
 
-#: apps/composer/services.py:678
+#: apps/composer/services.py:772
 #, python-format
 msgid ""
 "This post is scheduled to %(platform)s, which needs a video on it. Keep one "
@@ -2262,7 +2270,7 @@ msgstr ""
 "nela. Mantenha um na publicação ou cancele primeiro o agendamento no "
 "%(platform)s."
 
-#: apps/composer/services.py:683
+#: apps/composer/services.py:777
 #, python-format
 msgid ""
 "This post is scheduled to %(platform)s, which needs an image or a video on "
@@ -2272,7 +2280,7 @@ msgstr ""
 "ou um vídeo nela. Mantenha um na publicação ou cancele primeiro o "
 "agendamento no %(platform)s."
 
-#: apps/composer/services.py:879 apps/social_accounts/models.py:656
+#: apps/composer/services.py:973 apps/social_accounts/models.py:656
 msgid "Feed"
 msgstr "Feed"
 
@@ -2288,7 +2296,7 @@ msgstr "Modelo recusado."
 msgid "Template deleted."
 msgstr "Modelo excluído."
 
-#: apps/composer/views.py:144
+#: apps/composer/views.py:149
 msgid ""
 "No open posting slot within the scheduling horizon — add posting slots or "
 "free one up."
@@ -2296,12 +2304,12 @@ msgstr ""
 "Nenhum horário livre dentro do período de agendamento — adicione horários de "
 "publicação ou libere um."
 
-#: apps/composer/views.py:623
+#: apps/composer/views.py:664
 #, python-format
 msgid "Select a Pinterest board for %(account)s."
 msgstr "Selecione uma pasta do Pinterest para %(account)s."
 
-#: apps/composer/views.py:721
+#: apps/composer/views.py:762
 #, python-format
 msgid ""
 "%(account)s: Instagram publishes a single video in the feed as a Reel. "
@@ -2310,32 +2318,32 @@ msgstr ""
 "%(account)s: o Instagram publica um vídeo único no feed como Reel. Escolha "
 "Feed ou Reels, não os dois."
 
-#: apps/composer/views.py:792
+#: apps/composer/views.py:833
 #, python-format
 msgid "%(platforms)s can only publish videos."
 msgid_plural "%(platforms)s can only publish videos."
 msgstr[0] "O %(platforms)s só publica vídeos."
 msgstr[1] "%(platforms)s só publicam vídeos."
 
-#: apps/composer/views.py:796 apps/composer/views.py:805
-#: apps/composer/views.py:5048 templates/composer/compose.html:1231
+#: apps/composer/views.py:837 apps/composer/views.py:846
+#: apps/composer/views.py:5124 templates/composer/compose.html:1231
 msgid "and"
 msgstr "e"
 
-#: apps/composer/views.py:801
+#: apps/composer/views.py:842
 #, python-format
 msgid "%(platforms)s needs an image or a video."
 msgid_plural "%(platforms)s need an image or a video."
 msgstr[0] "O %(platforms)s precisa de uma imagem ou um vídeo."
 msgstr[1] "%(platforms)s precisam de uma imagem ou um vídeo."
 
-#: apps/composer/views.py:813
+#: apps/composer/views.py:854
 msgid "Add a video to this post, or deselect that account."
 msgid_plural "Add a video to this post, or deselect those accounts."
 msgstr[0] "Adicione um vídeo a esta publicação ou desmarque essa conta."
 msgstr[1] "Adicione um vídeo a esta publicação ou desmarque essas contas."
 
-#: apps/composer/views.py:821
+#: apps/composer/views.py:862
 msgid "Add an image or a video to this post, or deselect that account."
 msgid_plural ""
 "Add an image or a video to this post, or deselect those accounts."
@@ -2344,88 +2352,88 @@ msgstr[0] ""
 msgstr[1] ""
 "Adicione uma imagem ou um vídeo a esta publicação ou desmarque essas contas."
 
-#: apps/composer/views.py:1640 templates/composer/compose.html:2508
+#: apps/composer/views.py:1714 templates/composer/compose.html:2508
 msgid "Scheduled time must be in the future."
 msgstr "O horário agendado precisa estar no futuro."
 
-#: apps/composer/views.py:1652
+#: apps/composer/views.py:1727
 msgid "Date and time required."
 msgstr "Data e hora são obrigatórias."
 
-#: apps/composer/views.py:1673 apps/composer/views.py:1714
+#: apps/composer/views.py:1750 apps/composer/views.py:1794
 msgid "No active queue found for the selected channel."
 msgstr "Nenhuma fila ativa encontrada para o canal selecionado."
 
-#: apps/composer/views.py:1979
+#: apps/composer/views.py:2069
 msgid "Read-only — not saved"
 msgstr "Somente leitura — não salvo"
 
-#: apps/composer/views.py:2029
+#: apps/composer/views.py:2106
 msgid "Nothing to save yet"
 msgstr "Nada para salvar ainda"
 
-#: apps/composer/views.py:2059
+#: apps/composer/views.py:2136
 #, python-format
 msgid "Saved %(time)s"
 msgstr "Salvo às %(time)s"
 
-#: apps/composer/views.py:2284 apps/composer/views.py:3151
-#: apps/composer/views.py:4099
+#: apps/composer/views.py:2363 apps/composer/views.py:3233
+#: apps/composer/views.py:4158
 msgid "No file provided"
 msgstr "Nenhum arquivo enviado"
 
-#: apps/composer/views.py:2288
+#: apps/composer/views.py:2368
 msgid "Only image files are allowed"
 msgstr "Apenas arquivos de imagem são permitidos"
 
-#: apps/composer/views.py:2547
+#: apps/composer/views.py:2614
 msgid "Could not read video duration."
 msgstr "Não foi possível ler a duração do vídeo."
 
-#: apps/composer/views.py:2562
+#: apps/composer/views.py:2629
 msgid "Could not extract frames."
 msgstr "Não foi possível extrair os quadros."
 
-#: apps/composer/views.py:2603
+#: apps/composer/views.py:2670
 msgid "Missing search query"
 msgstr "Informe um termo de busca"
 
-#: apps/composer/views.py:2616
+#: apps/composer/views.py:2683
 msgid "Could not reach Unsplash. Try again."
 msgstr "Não foi possível acessar o Unsplash. Tente novamente."
 
-#: apps/composer/views.py:2621
+#: apps/composer/views.py:2688
 msgid "Unsplash rate limit reached. Try again in a few minutes."
 msgstr ""
 "Limite de requisições do Unsplash atingido. Tente novamente em alguns "
 "minutos."
 
-#: apps/composer/views.py:2623 templates/composer/compose.html:2496
+#: apps/composer/views.py:2690 templates/composer/compose.html:2496
 msgid "Unsplash search failed. Try again."
 msgstr "A busca no Unsplash falhou. Tente novamente."
 
-#: apps/composer/views.py:2650
+#: apps/composer/views.py:2717
 msgid "Unexpected response from Unsplash. Try again."
 msgstr "Resposta inesperada do Unsplash. Tente novamente."
 
-#: apps/composer/views.py:2675
+#: apps/composer/views.py:2744
 msgid "No photos selected"
 msgstr "Nenhuma foto selecionada"
 
-#: apps/composer/views.py:2678
+#: apps/composer/views.py:2747
 #, python-format
 msgid "Select at most %(count)s photos per import."
 msgstr "Selecione no máximo %(count)s fotos por importação."
 
-#: apps/composer/views.py:2789
+#: apps/composer/views.py:2859
 msgid "Could not import the selected photos."
 msgstr "Não foi possível importar as fotos selecionadas."
 
-#: apps/composer/views.py:2839
+#: apps/composer/views.py:2909
 msgid "Failed to fetch boards"
 msgstr "Não foi possível carregar as pastas"
 
-#: apps/composer/views.py:2879
+#: apps/composer/views.py:2949
 msgid ""
 "Place search isn't enabled for this app on Meta yet: it needs the Page "
 "Public Metadata Access feature approved in App Review."
@@ -2433,46 +2441,46 @@ msgstr ""
 "A busca de locais ainda não está liberada para este app na Meta: ela precisa "
 "do recurso Page Public Metadata Access aprovado na revisão do app."
 
-#: apps/composer/views.py:2883
+#: apps/composer/views.py:2953
 msgid "Could not search places right now. Try again in a moment."
 msgstr "Não foi possível buscar locais agora. Tente de novo em instantes."
 
-#: apps/composer/views.py:3347 apps/composer/views.py:3426
+#: apps/composer/views.py:3412 apps/composer/views.py:3495
 msgid "This post has already published and can't be edited."
 msgstr "Esta publicação já foi publicada e não pode ser editada."
 
-#: apps/composer/views.py:3471
+#: apps/composer/views.py:3540
 msgid "Marked as published. Thank you!"
 msgstr "Marcado como publicado. Obrigado!"
 
-#: apps/composer/views.py:3564
+#: apps/composer/views.py:3617
 msgid "You don't have permission to delete this post."
 msgstr "Você não tem permissão para excluir esta publicação."
 
-#: apps/composer/views.py:3650
+#: apps/composer/views.py:3718
 msgid "Brainstorming"
 msgstr "Brainstorming"
 
-#: apps/composer/views.py:3651
+#: apps/composer/views.py:3719
 msgctxt "idea column"
 msgid "Under review"
 msgstr "Em avaliação"
 
-#: apps/composer/views.py:3652
+#: apps/composer/views.py:3720
 msgctxt "idea column"
 msgid "Approved"
 msgstr "Aprovadas"
 
-#: apps/composer/views.py:3653
+#: apps/composer/views.py:3721
 msgctxt "idea column"
 msgid "Discarded"
 msgstr "Descartadas"
 
-#: apps/composer/views.py:3685
+#: apps/composer/views.py:3753
 msgid "This is a place to plan ✍️ your content"
 msgstr "Este é o lugar para planejar ✍️ seu conteúdo"
 
-#: apps/composer/views.py:3687
+#: apps/composer/views.py:3755
 msgid ""
 "Save your Ideas before converting them into posts. Brainstorm, plan ahead, "
 "and keep everything organized in one place."
@@ -2480,82 +2488,82 @@ msgstr ""
 "Salve suas ideias antes de transformá-las em publicações. Tenha ideias, "
 "planeje com antecedência e mantenha tudo organizado em um só lugar."
 
-#: apps/composer/views.py:3719
+#: apps/composer/views.py:3787
 msgid "First ideas to explore."
 msgstr "Ideias iniciais para explorar."
 
-#: apps/composer/views.py:3720
+#: apps/composer/views.py:3788
 msgid "Weighing whether it works and in which format."
 msgstr "Analisando a viabilidade e o formato."
 
-#: apps/composer/views.py:3721
+#: apps/composer/views.py:3789
 msgid "Ideas ready for production."
 msgstr "Ideias prontas para produção."
 
-#: apps/composer/views.py:3722
+#: apps/composer/views.py:3790
 msgid "Ideas that will not be used."
 msgstr "Ideias que não serão utilizadas."
 
-#: apps/composer/views.py:3938 apps/media_library/cropping.py:32
+#: apps/composer/views.py:4006 apps/media_library/cropping.py:32
 #: apps/tasks/views.py:898
 msgid "Storage quota exceeded. Free up space or upgrade your plan."
 msgstr ""
 "Cota de armazenamento excedida. Libere espaço ou faça upgrade do seu plano."
 
-#: apps/composer/views.py:4017
+#: apps/composer/views.py:4076
 msgid "The template is now one of your ideas."
 msgstr "O modelo agora é uma das suas ideias."
 
-#: apps/composer/views.py:4508
+#: apps/composer/views.py:4573
 msgid "Name is required."
 msgstr "O nome é obrigatório."
 
-#: apps/composer/views.py:4537
+#: apps/composer/views.py:4602
 msgid "Column must be empty before deleting."
 msgstr "A coluna precisa estar vazia antes de ser excluída."
 
-#: apps/composer/views.py:4772
+#: apps/composer/views.py:4842
 msgid "CSV file too large (max 5 MB)."
 msgstr "Arquivo CSV muito grande (máx. 5 MB)."
 
-#: apps/composer/views.py:4782
+#: apps/composer/views.py:4852
 msgid "CSV file is empty."
 msgstr "O arquivo CSV está vazio."
 
-#: apps/composer/views.py:5083
+#: apps/composer/views.py:5160
 msgid "Tag name is required."
 msgstr "O nome da tag é obrigatório."
 
-#: apps/composer/views.py:5086
+#: apps/composer/views.py:5163
 msgid "Unknown tag kind."
 msgstr "Tipo de etiqueta desconhecido."
 
-#: apps/composer/views.py:5101
+#: apps/composer/views.py:5178
 msgid "Group name is required."
 msgstr "O nome do grupo é obrigatório."
 
-#: apps/composer/views.py:5112
+#: apps/composer/views.py:5189
 msgid "A group with this name already exists."
 msgstr "Já existe um grupo com este nome."
 
-#: apps/composer/views.py:5135
+#: apps/composer/views.py:5212
 msgid "The template was not sent."
 msgstr "O modelo não foi enviado."
 
-#: apps/composer/views.py:5148
+#: apps/composer/views.py:5225
 #, python-format
 msgid "You already have %(count)s templates waiting for approval."
 msgstr "Você já tem %(count)s modelos aguardando aprovação."
 
-#: apps/composer/views.py:5153
+#: apps/composer/views.py:5230
 msgid "Template sent. Thank you!"
 msgstr "Modelo enviado. Obrigado!"
 
-#: apps/composer/views.py:5154
+#: apps/composer/views.py:5231
 msgid "It reaches every brand's shelf once our team approves it."
 msgstr "Ele aparece para todas as marcas assim que a nossa equipe aprovar."
 
-#: apps/composer/views.py:5186
+#: apps/composer/views.py:5263
 msgid "This tag no longer exists."
 msgstr "Esta tag não existe mais."
 
@@ -2699,17 +2707,17 @@ msgid "A contact can have up to %(max)s channels."
 msgstr "Um contato pode ter até %(max)s canais."
 
 #
-#: apps/contacts/forms.py:232
+#: apps/contacts/forms.py:239
 msgid "The photo must be a JPEG, PNG or WebP image."
 msgstr "A foto deve ser uma imagem JPEG, PNG ou WebP."
 
 #
-#: apps/contacts/forms.py:234
+#: apps/contacts/forms.py:241
 msgid "The photo must be under 2 MB."
 msgstr "A foto deve ter menos de 2 MB."
 
 #
-#: apps/contacts/forms.py:241
+#: apps/contacts/forms.py:248
 msgid "Could not read the image file."
 msgstr "Não foi possível ler o arquivo de imagem."
 
@@ -3216,22 +3224,22 @@ msgstr "Negativo"
 msgid "Auto"
 msgstr "Automático"
 
-#: apps/inbox/models.py:148 templates/funnels/board.html:99
+#: apps/inbox/models.py:165 templates/funnels/board.html:99
 msgctxt "inbox message origin"
 msgid "Feed"
 msgstr "Feed"
 
-#: apps/inbox/models.py:149 templates/funnels/board.html:101
+#: apps/inbox/models.py:166 templates/funnels/board.html:101
 msgctxt "inbox message origin"
 msgid "Story"
 msgstr "Story"
 
-#: apps/inbox/models.py:150 templates/funnels/board.html:100
+#: apps/inbox/models.py:167 templates/funnels/board.html:100
 msgctxt "inbox message origin"
 msgid "Reels"
 msgstr "Reels"
 
-#: apps/inbox/models.py:188
+#: apps/inbox/models.py:205
 #: templates/calendar/partials/publish_list_shell.html:24
 #: templates/inbox/partials/_reply_item.html:13
 msgid "Sent"
@@ -3395,23 +3403,23 @@ msgstr ""
 msgid "Give the folder a name."
 msgstr "Dê um nome à pasta."
 
-#: apps/members/services.py:528 apps/workspaces/views.py:310
+#: apps/members/services.py:536 apps/workspaces/views.py:319
 msgid "This person is not a member of the organization that owns this brand."
 msgstr "Essa pessoa não é membro da organização dona desta marca."
 
-#: apps/members/services.py:530
+#: apps/members/services.py:538
 msgid "Unknown role."
 msgstr "Função desconhecida."
 
-#: apps/members/services.py:534 apps/workspaces/views.py:295
+#: apps/members/services.py:542 apps/workspaces/views.py:304
 msgid "You cannot grant a role higher than your own in this brand."
 msgstr "Você não pode dar uma função acima da sua nesta marca."
 
-#: apps/members/services.py:539
+#: apps/members/services.py:547
 msgid "You cannot change someone whose role is higher than your own."
 msgstr "Você não pode alterar alguém com função acima da sua."
 
-#: apps/members/services.py:545
+#: apps/members/services.py:553
 msgid "A brand needs at least one owner."
 msgstr "A marca precisa de pelo menos um proprietário."
 
@@ -3614,7 +3622,7 @@ msgstr "Radar"
 
 #: apps/onboarding/models.py:129 apps/radar/models.py:20
 #: apps/radar/sources.py:35 templates/radar/shopee.html:3
-#: templates/radar/shopee.html:44 templates/radar/shopee.html:60
+#: templates/radar/shopee.html:44 templates/radar/shopee.html:62
 msgid "Shopee Affiliates"
 msgstr "Shopee Afiliados"
 
@@ -3634,30 +3642,36 @@ msgstr "Vídeo salvo em %(page)s."
 msgid "Video removed from %(page)s."
 msgstr "Vídeo removido de %(page)s."
 
-#: apps/onboarding/views.py:141
+#: apps/onboarding/views.py:143
 msgid "Connection link created."
 msgstr "Link de conexão criado."
 
-#: apps/onboarding/views.py:157
+#: apps/onboarding/views.py:159
 msgid "Connection link revoked."
 msgstr "Link de conexão revogado."
 
-#: apps/onboarding/views.py:171
+#: apps/onboarding/views.py:173
 msgid "Email address is required."
 msgstr "O e-mail é obrigatório."
 
-#: apps/onboarding/views.py:175
+#: apps/onboarding/views.py:177
 msgid "This connection link is no longer active."
 msgstr "Este link de conexão não está mais ativo."
 
-#: apps/onboarding/views.py:206
+#: apps/onboarding/views.py:208
 msgid "We could not send that link right now. Please try again shortly."
 msgstr "Não foi possível enviar o link agora. Tente novamente em instantes."
 
-#: apps/onboarding/views.py:210
+#: apps/onboarding/views.py:212
 #, python-format
 msgid "Connection link sent to %(email)s."
 msgstr "Link de conexão enviado para %(email)s."
+
+#: apps/onboarding/views.py:700 apps/social_accounts/views.py:935
+msgid "Invalid instance URL. Private or reserved addresses are not allowed."
+msgstr ""
+"URL de instância inválida. Endereços privados ou reservados não são "
+"permitidos."
 
 #: apps/organizations/views.py:91
 msgid "Enter the name of your organization and of your brand."
@@ -4625,7 +4639,7 @@ msgstr "Autorize o aplicativo na janela do X."
 msgid "The account appears here, ready to publish."
 msgstr "A conta aparece aqui, pronta para publicar."
 
-#: apps/social_accounts/error_messages.py:96
+#: apps/social_accounts/error_messages.py:101
 msgid ""
 "The network refused to delete this post with the permissions this account "
 "granted. Reconnect the account, or untick the option to remove the post only "
@@ -4635,7 +4649,7 @@ msgstr ""
 "concedeu. Reconecte a conta ou desmarque a opção para remover a publicação "
 "só do Connekt Flow."
 
-#: apps/social_accounts/error_messages.py:99
+#: apps/social_accounts/error_messages.py:104
 msgid ""
 "The network was unavailable, so the post wasn't deleted. Try again in a "
 "moment."
@@ -4643,7 +4657,7 @@ msgstr ""
 "A rede estava indisponível, então a publicação não foi excluída. Tente "
 "novamente em instantes."
 
-#: apps/social_accounts/error_messages.py:100
+#: apps/social_accounts/error_messages.py:105
 msgid ""
 "The network's request limit was reached, so the post wasn't deleted. Try "
 "again later."
@@ -4651,7 +4665,7 @@ msgstr ""
 "O limite de requisições da rede foi atingido, então a publicação não foi "
 "excluída. Tente novamente mais tarde."
 
-#: apps/social_accounts/error_messages.py:102
+#: apps/social_accounts/error_messages.py:107
 msgid ""
 "The network refused to delete this post. It may already be gone, or be one "
 "it doesn't let apps delete, such as a post used in an ad. Untick the option "
@@ -4662,7 +4676,7 @@ msgstr ""
 "publicação usada em anúncio. Desmarque a opção para removê-la só do Connekt "
 "Flow."
 
-#: apps/social_accounts/error_messages.py:105
+#: apps/social_accounts/error_messages.py:110
 msgid "The post couldn't be deleted from the network. Try again."
 msgstr "Não foi possível excluir a publicação da rede. Tente novamente."
 
@@ -4938,12 +4952,6 @@ msgstr "WhatsApp %(number)s conectado. As novas mensagens chegam no inbox."
 #: apps/social_accounts/views.py:926
 msgid "Instance URL is required."
 msgstr "A URL da instância é obrigatória."
-
-#: apps/social_accounts/views.py:935
-msgid "Invalid instance URL. Private or reserved addresses are not allowed."
-msgstr ""
-"URL de instância inválida. Endereços privados ou reservados não são "
-"permitidos."
 
 #: apps/social_accounts/views.py:968
 #, python-format
@@ -5289,95 +5297,95 @@ msgid ""
 "Deliver a publishable format for an account connected to this workspace."
 msgstr "Entregue um formato publicável para uma conta conectada a esta marca."
 
-#: apps/workspaces/views.py:118
+#: apps/workspaces/views.py:122
 msgid "Cannot archive the last workspace in the organization."
 msgstr "Não é possível arquivar a última marca da organização."
 
-#: apps/workspaces/views.py:122
+#: apps/workspaces/views.py:126
 #, python-format
 msgid "Workspace \"%(name)s\" has been archived."
 msgstr "Marca \"%(name)s\" arquivada."
 
-#: apps/workspaces/views.py:128
+#: apps/workspaces/views.py:132
 #, python-format
 msgid "Workspace \"%(name)s\" has been restored."
 msgstr "Marca \"%(name)s\" restaurada."
 
-#: apps/workspaces/views.py:139
+#: apps/workspaces/views.py:143
 msgid "Cannot delete the last workspace in the organization."
 msgstr "Não é possível excluir a última marca da organização."
 
-#: apps/workspaces/views.py:144
+#: apps/workspaces/views.py:149
 #, python-format
 msgid "Workspace \"%(name)s\" has been permanently deleted."
 msgstr "Marca \"%(name)s\" excluída permanentemente."
 
-#: apps/workspaces/views.py:151
+#: apps/workspaces/views.py:156
 msgid "Invalid timezone."
 msgstr "Fuso horário inválido."
 
-#: apps/workspaces/views.py:155
+#: apps/workspaces/views.py:160
 msgid "Timezone updated."
 msgstr "Fuso horário atualizado."
 
-#: apps/workspaces/views.py:166
+#: apps/workspaces/views.py:171
 msgid "Invalid segment."
 msgstr "Segmento inválido."
 
-#: apps/workspaces/views.py:168
+#: apps/workspaces/views.py:173
 msgid "Segments updated."
 msgstr "Segmentos atualizados."
 
-#: apps/workspaces/views.py:187
+#: apps/workspaces/views.py:195
 msgid "Logo must be a JPEG, PNG, WebP, or GIF image."
 msgstr "O logo deve ser uma imagem JPEG, PNG, WebP ou GIF."
 
-#: apps/workspaces/views.py:193
+#: apps/workspaces/views.py:201
 msgid "Logo must be under 2 MB."
 msgstr "O logo deve ter menos de 2 MB."
 
-#: apps/workspaces/views.py:202
+#: apps/workspaces/views.py:211
 msgid "Workspace settings updated."
 msgstr "Configurações da marca atualizadas."
 
-#: apps/workspaces/views.py:253
+#: apps/workspaces/views.py:262
 msgid "Invalid approval workflow mode."
 msgstr "Modo de fluxo de aprovação inválido."
 
-#: apps/workspaces/views.py:258
+#: apps/workspaces/views.py:267
 msgid "Approval workflow updated."
 msgstr "Fluxo de aprovação atualizado."
 
-#: apps/workspaces/views.py:304
+#: apps/workspaces/views.py:313
 msgid "Invitation sent."
 msgstr "Convite enviado."
 
-#: apps/workspaces/views.py:313
+#: apps/workspaces/views.py:322
 msgid "Removed from the brand."
 msgstr "Removido da marca."
 
-#: apps/workspaces/views.py:316
+#: apps/workspaces/views.py:325
 msgid "Team updated."
 msgstr "Equipe atualizada."
 
-#: apps/workspaces/views.py:496
+#: apps/workspaces/views.py:505
 #, python-format
 msgid "Enter a goal between 1 and %(max)s posts."
 msgstr "Informe uma meta entre 1 e %(max)s posts."
 
-#: apps/workspaces/views.py:502
+#: apps/workspaces/views.py:511
 msgid "Monthly goal saved."
 msgstr "Meta do mês salva."
 
-#: apps/workspaces/views.py:502
+#: apps/workspaces/views.py:511
 msgid "Monthly goal removed."
 msgstr "Meta do mês removida."
 
-#: config/settings/base.py:243
+#: config/settings/base.py:246
 msgid "Português (Brasil)"
 msgstr "Português (Brasil)"
 
-#: config/settings/base.py:244
+#: config/settings/base.py:247
 msgid "English (US)"
 msgstr "Inglês (EUA)"
 
@@ -5655,7 +5663,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/calendar/partials/_delete_post_modal.html:56
 #: templates/calendar/partials/event_form.html:127
 #: templates/calendar/partials/publish_approvals.html:87
-#: templates/calendar/queues.html:64 templates/calendar/staff_dates.html:66
+#: templates/calendar/queues.html:65 templates/calendar/staff_dates.html:66
 #: templates/client_portal/_client_card.html:109
 #: templates/client_portal/admin/partials/invite_client_modal.html:50
 #: templates/components/_confirm_dialog.html:36
@@ -5707,8 +5715,8 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/tasks/partials/_new_item_modal.html:155
 #: templates/tasks/partials/_task_modal.html:180
 #: templates/workspaces/partials/_dashboard_goal.html:34
-#: templates/workspaces/settings.html:170
-#: templates/workspaces/settings.html:227
+#: templates/workspaces/settings.html:179
+#: templates/workspaces/settings.html:236
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -6007,8 +6015,8 @@ msgstr "Usado em contratos e cobranças. Preencha completo ou deixe em branco."
 #: templates/accounts/settings.html:96
 #: templates/calendar/partials/event_form.html:130
 #: templates/workspaces/approvals_settings.html:72
-#: templates/workspaces/settings.html:25 templates/workspaces/settings.html:48
-#: templates/workspaces/settings.html:74
+#: templates/workspaces/settings.html:26 templates/workspaces/settings.html:55
+#: templates/workspaces/settings.html:81
 msgid "Save Changes"
 msgstr "Salvar alterações"
 
@@ -7435,7 +7443,7 @@ msgstr "etapas"
 #: templates/composer/create_landing.html:635
 #: templates/composer/create_landing.html:747
 #: templates/composer/partials/_crop_editor.html:22
-#: templates/composer/partials/_ideas_hero.html:139
+#: templates/composer/partials/_ideas_hero.html:140
 #: templates/composer/partials/_media_thumb_actions.html:26
 #: templates/composer/partials/_tag_groups.html:144
 #: templates/composer/partials/_tag_manager.html:60
@@ -7454,7 +7462,7 @@ msgstr "etapas"
 #: templates/tasks/partials/_request_arts_host.html:17
 #: templates/tasks/partials/_task_modal.html:20
 #: templates/tasks/partials/_task_modal.html:278
-#: templates/workspaces/settings.html:157
+#: templates/workspaces/settings.html:166
 msgid "Close"
 msgstr "Fechar"
 
@@ -7604,11 +7612,11 @@ msgstr ""
 msgid "That template is empty."
 msgstr "Esse modelo está vazio."
 
-#: templates/automations/flow_builder.html:2118
+#: templates/automations/flow_builder.html:2124
 msgid "The upload failed."
 msgstr "O envio falhou."
 
-#: templates/automations/flow_builder.html:2127
+#: templates/automations/flow_builder.html:2133
 msgid "The upload failed. Check your connection and try again."
 msgstr ""
 "O envio falhou. Verifique sua conexão e tente novamente.Não foi possível "
@@ -8112,7 +8120,7 @@ msgstr "Todas as contas do Instagram e do Facebook"
 #: templates/automations/partials/_rule_row.html:43
 #: templates/calendar/partials/_list_table.html:24
 #: templates/calendar/partials/month_grid.html:35
-#: templates/calendar/queues.html:100 templates/composer/categories.html:65
+#: templates/calendar/queues.html:102 templates/composer/categories.html:65
 #, python-format
 msgid "%(counter)s post"
 msgid_plural "%(counter)s posts"
@@ -8383,7 +8391,7 @@ msgstr "Criar ideia"
 #: templates/funnels/partials/_opportunity_details.html:57
 #: templates/inbox/partials/_message_details.html:83
 #: templates/media_library/_asset_detail_panel.html:159
-#: templates/organizations/cross_calendar.html:206
+#: templates/organizations/cross_calendar.html:210
 #: templates/tasks/partials/_task_summary.html:41
 msgid "Tags"
 msgstr "Tags"
@@ -8400,7 +8408,7 @@ msgid "No tags yet. Type to create one."
 msgstr "Nenhuma etiqueta ainda. Digite para criar uma."
 
 #: templates/base.html:577 templates/base.html:709 templates/base.html:1506
-#: templates/base.html:1562 templates/calendar/queues.html:63
+#: templates/base.html:1562 templates/calendar/queues.html:64
 #: templates/composer/compose.html:1679 templates/composer/compose.html:1687
 #: templates/composer/compose.html:1755
 #: templates/composer/create_landing.html:4
@@ -8897,7 +8905,7 @@ msgstr ""
 #: templates/billing/staff_console.html:236
 #: templates/members/accept_invite.html:107
 #: templates/members/partials/member_row.html:135
-#: templates/organizations/cross_calendar.html:222
+#: templates/organizations/cross_calendar.html:226
 #: templates/organizations/workspaces.html:48 templates/workspaces/list.html:3
 #: templates/workspaces/list.html:13
 msgid "Workspaces"
@@ -10100,7 +10108,7 @@ msgid "Publication"
 msgstr "Publicação"
 
 #: templates/calendar/partials/_list_table.html:12
-#: templates/calendar/queues.html:43 templates/contacts/form.html:89
+#: templates/calendar/queues.html:44 templates/contacts/form.html:89
 #: templates/inbox/partials/_entry_facts.html:8
 msgid "Channel"
 msgstr "Canal"
@@ -10270,7 +10278,7 @@ msgstr "Imagem para o painel da data (opcional, JPEG, PNG ou WebP de até 2 MB)"
 #: templates/calendar/partials/month_grid.html:27
 #: templates/calendar/partials/week_grid.html:30
 #: templates/composer/compose.html:418
-#: templates/organizations/cross_calendar.html:281
+#: templates/organizations/cross_calendar.html:285
 #: templates/organizations/partials/day_grid.html:19
 #: templates/organizations/partials/week_grid.html:28
 msgid "Create post"
@@ -10527,19 +10535,19 @@ msgstr "Nenhuma conta conectada para configurar horários de publicação."
 msgid "No slot"
 msgstr "Sem horário"
 
-#: templates/calendar/queue_detail.html:110
+#: templates/calendar/queue_detail.html:111
 msgid "Remove this post from the queue? Its slot will free up."
 msgstr "Remover esta publicação da fila? O horário dela fica livre."
 
-#: templates/calendar/queue_detail.html:113
+#: templates/calendar/queue_detail.html:114
 msgid "Remove from queue"
 msgstr "Remover da fila"
 
-#: templates/calendar/queue_detail.html:122
+#: templates/calendar/queue_detail.html:124
 msgid "Queue is empty"
 msgstr "A fila está vazia"
 
-#: templates/calendar/queue_detail.html:123
+#: templates/calendar/queue_detail.html:125
 msgid "Add posts to this queue from the composer using \"Add to Queue\"."
 msgstr ""
 "Adicione publicações a esta fila pelo editor, usando \"Adicionar à fila\"."
@@ -10561,43 +10569,43 @@ msgstr "Agende publicações automaticamente em horários, por categoria e canal
 msgid "Back to Calendar"
 msgstr "Voltar para o calendário"
 
-#: templates/calendar/queues.html:26
+#: templates/calendar/queues.html:27
 msgid "Create Queue"
 msgstr "Criar fila"
 
-#: templates/calendar/queues.html:37
+#: templates/calendar/queues.html:38
 msgid "Queue Name"
 msgstr "Nome da fila"
 
-#: templates/calendar/queues.html:38
+#: templates/calendar/queues.html:39
 msgid "e.g., Educational - MWF 9am"
 msgstr "ex.: Educativo - seg/qua/sex 9h"
 
-#: templates/calendar/queues.html:45
+#: templates/calendar/queues.html:46
 msgid "Select channel..."
 msgstr "Selecione o canal..."
 
-#: templates/calendar/queues.html:52
+#: templates/calendar/queues.html:53
 msgid "Category (optional)"
 msgstr "Categoria (opcional)"
 
-#: templates/calendar/queues.html:54
+#: templates/calendar/queues.html:55
 msgid "Any category"
 msgstr "Qualquer categoria"
 
-#: templates/calendar/queues.html:103
+#: templates/calendar/queues.html:105
 msgid "View"
 msgstr "Ver"
 
-#: templates/calendar/queues.html:107
+#: templates/calendar/queues.html:110
 msgid "Delete this queue?"
 msgstr "Excluir esta fila?"
 
-#: templates/calendar/queues.html:121
+#: templates/calendar/queues.html:125
 msgid "No queues yet"
 msgstr "Nenhuma fila ainda"
 
-#: templates/calendar/queues.html:122
+#: templates/calendar/queues.html:126
 msgid "Create a queue to auto-schedule posts into time slots."
 msgstr "Crie uma fila para agendar publicações automaticamente em horários."
 
@@ -11843,7 +11851,7 @@ msgstr "Buscar fotos gratuitas em alta resolução…"
 
 #: templates/composer/compose.html:2198
 #: templates/composer/staff_idea_templates.html:51
-#: templates/radar/instagram.html:95 templates/radar/shopee.html:136
+#: templates/radar/instagram.html:95 templates/radar/shopee.html:138
 msgid "Search"
 msgstr "Buscar"
 
@@ -12573,7 +12581,9 @@ msgstr "Ofertas que pagam para você postar"
 msgid ""
 "Pick Shopee products by niche and commission, save your favourites and turn "
 "the best ones into posts."
-msgstr "Escolha produtos da Shopee por nicho e comissão, salve os favoritos e transforme os melhores em posts."
+msgstr ""
+"Escolha produtos da Shopee por nicho e comissão, salve os favoritos e "
+"transforme os melhores em posts."
 
 #: templates/composer/partials/_ideas_hero.html:88
 msgid "See what works for others"
@@ -12583,7 +12593,9 @@ msgstr "Veja o que funciona para os outros"
 msgid ""
 "Follow other business profiles and the posts under a hashtag to find ideas "
 "for your own content."
-msgstr "Acompanhe outros perfis comerciais e os posts de uma hashtag para encontrar ideias para o seu conteúdo."
+msgstr ""
+"Acompanhe outros perfis comerciais e os posts de uma hashtag para encontrar "
+"ideias para o seu conteúdo."
 
 #: templates/composer/partials/_ideas_hero.html:91
 msgid "Be ready for every special date"
@@ -12819,7 +12831,7 @@ msgstr "Nenhum segmento disponível ainda."
 #: templates/composer/partials/template_gallery.html:214
 #: templates/contacts/list.html:93
 #: templates/contacts/partials/_results.html:139
-#: templates/notifications/history.html:87 templates/radar/shopee.html:132
+#: templates/notifications/history.html:87 templates/radar/shopee.html:134
 msgid "Clear filters"
 msgstr "Limpar filtros"
 
@@ -13905,7 +13917,7 @@ msgid "Contact"
 msgstr "Contato"
 
 #: templates/contacts/partials/_results.html:85
-#: templates/organizations/cross_calendar.html:194
+#: templates/organizations/cross_calendar.html:198
 #: templates/partials/_channel_picker.html:20
 msgid "Channels"
 msgstr "Canais"
@@ -13970,7 +13982,7 @@ msgstr "Listas"
 
 #
 #: templates/contacts/partials/_tabs.html:11
-#: templates/workspaces/settings.html:63
+#: templates/workspaces/settings.html:70
 msgid "Segments"
 msgstr "Segmentos"
 
@@ -14690,7 +14702,7 @@ msgstr ""
 #: templates/intelligence/_benchmark_video_result.html:50
 #: templates/intelligence/_benchmark_video_result.html:181
 #: templates/intelligence/_panel_research_content_gaps.html:19
-#: templates/radar/shopee.html:80
+#: templates/radar/shopee.html:82
 msgid "Niche"
 msgstr "Nicho"
 
@@ -16738,7 +16750,7 @@ msgid "End time"
 msgstr "Horário de término"
 
 #: templates/notifications/preferences.html:112
-#: templates/workspaces/settings.html:33
+#: templates/workspaces/settings.html:40
 msgid "Timezone"
 msgstr "Fuso horário"
 
@@ -17152,26 +17164,26 @@ msgstr ""
 msgid "Week"
 msgstr "Semana"
 
-#: templates/organizations/cross_calendar.html:222
+#: templates/organizations/cross_calendar.html:226
 #, python-format
 msgid "Workspaces (%(counter)s)"
 msgstr "Marcas (%(counter)s)"
 
-#: templates/organizations/cross_calendar.html:234
+#: templates/organizations/cross_calendar.html:238
 msgid "All Workspaces"
 msgstr "Todas as marcas"
 
-#: templates/organizations/cross_calendar.html:254
+#: templates/organizations/cross_calendar.html:258
 msgid "Workspaces:"
 msgstr "Marcas:"
 
-#: templates/organizations/cross_calendar.html:308
+#: templates/organizations/cross_calendar.html:312
 #, python-format
 msgid "+%(n)s more"
 msgstr "+%(n)s mais"
 
 #: templates/organizations/partials/_deletion_contents.html:4
-#: templates/workspaces/settings.html:217
+#: templates/workspaces/settings.html:226
 msgid "All of the following will be permanently removed:"
 msgstr "Tudo o que segue será removido permanentemente:"
 
@@ -17180,7 +17192,7 @@ msgid "All workspaces and their settings"
 msgstr "Todas as marcas e suas configurações"
 
 #: templates/organizations/partials/_deletion_contents.html:7
-#: templates/workspaces/settings.html:219
+#: templates/workspaces/settings.html:228
 msgid "All scheduled and published posts"
 msgstr "Todas as publicações agendadas e publicadas"
 
@@ -17189,7 +17201,7 @@ msgid "Connected social accounts and credentials"
 msgstr "Contas sociais conectadas e credenciais"
 
 #: templates/organizations/partials/_deletion_contents.html:9
-#: templates/workspaces/settings.html:221
+#: templates/workspaces/settings.html:230
 msgid "Media assets and files"
 msgstr "Arquivos e itens de mídia"
 
@@ -17232,7 +17244,7 @@ msgid "Close this account and remove everything in it."
 msgstr "Encerre esta conta e remova tudo o que há nela."
 
 #: templates/organizations/settings.html:17
-#: templates/workspaces/settings.html:125
+#: templates/workspaces/settings.html:134
 msgid "Danger zone"
 msgstr "Zona de risco"
 
@@ -17757,53 +17769,53 @@ msgstr ""
 "Isso remove o App ID e o Secret do Connekt Flow. Os favoritos e as tarefas e "
 "publicações criadas a partir de ofertas continuam."
 
-#: templates/radar/shopee.html:53
+#: templates/radar/shopee.html:54
 msgid "Commissions and orders"
 msgstr "Comissões e pedidos"
 
-#: templates/radar/shopee.html:62
+#: templates/radar/shopee.html:64
 msgid "Offers"
 msgstr "Ofertas"
 
-#: templates/radar/shopee.html:81
+#: templates/radar/shopee.html:83
 msgid "All niches"
 msgstr "Todos os nichos"
 
-#: templates/radar/shopee.html:89
+#: templates/radar/shopee.html:91
 msgid "Search offers on Shopee"
 msgstr "Buscar ofertas na Shopee"
 
-#: templates/radar/shopee.html:93 templates/radar/shopee.html:102
+#: templates/radar/shopee.html:95 templates/radar/shopee.html:104
 msgid "Advanced filters"
 msgstr "Filtros avançados"
 
-#: templates/radar/shopee.html:106
+#: templates/radar/shopee.html:108
 msgid "Min. price (R$)"
 msgstr "Preço mín. (R$)"
 
-#: templates/radar/shopee.html:110
+#: templates/radar/shopee.html:112
 msgid "Max. price (R$)"
 msgstr "Preço máx. (R$)"
 
-#: templates/radar/shopee.html:114
+#: templates/radar/shopee.html:116
 #, python-format
 msgid "Min. commission (%%)"
 msgstr "Comissão mín. (%%)"
 
-#: templates/radar/shopee.html:118
+#: templates/radar/shopee.html:120
 #, python-format
 msgid "Min. discount (%%)"
 msgstr "Desconto mín. (%%)"
 
-#: templates/radar/shopee.html:122
+#: templates/radar/shopee.html:124
 msgid "Min. rating"
 msgstr "Avaliação mín."
 
-#: templates/radar/shopee.html:126
+#: templates/radar/shopee.html:128
 msgid "Min. sold"
 msgstr "Vendidos mín."
 
-#: templates/radar/shopee.html:131
+#: templates/radar/shopee.html:133
 msgid "Applied to the offers already loaded."
 msgstr "Aplicados às ofertas já carregadas."
 
@@ -19306,24 +19318,24 @@ msgstr "Nome, logo e ciclo de vida desta marca."
 msgid "Identity"
 msgstr "Identidade"
 
-#: templates/workspaces/settings.html:21
+#: templates/workspaces/settings.html:22 templates/workspaces/settings.html:31
 msgid "Workspace Name"
 msgstr "Nome da marca"
 
-#: templates/workspaces/settings.html:34
+#: templates/workspaces/settings.html:41
 msgid "The calendar and the times of the posts of this brand follow it."
 msgstr ""
 "O calendário e os horários das publicações desta marca seguem este fuso."
 
-#: templates/workspaces/settings.html:37
+#: templates/workspaces/settings.html:44
 msgid "Brazil"
 msgstr "Brasil"
 
-#: templates/workspaces/settings.html:42
+#: templates/workspaces/settings.html:49
 msgid "All Timezones"
 msgstr "Todos os fusos horários"
 
-#: templates/workspaces/settings.html:64
+#: templates/workspaces/settings.html:71
 msgid ""
 "The segments this brand works in. They bring the special dates and the "
 "market hashtags of each one to the create page and the calendar."
@@ -19331,36 +19343,36 @@ msgstr ""
 "Os segmentos em que esta marca atua. Eles trazem as datas comemorativas e as "
 "hashtags de mercado de cada um para a tela Criar e para o calendário."
 
-#: templates/workspaces/settings.html:92
+#: templates/workspaces/settings.html:100
 msgid "Workspace logo"
 msgstr "Logo da marca"
 
-#: templates/workspaces/settings.html:96
+#: templates/workspaces/settings.html:104
 msgid "Remove logo"
 msgstr "Remover logo"
 
-#: templates/workspaces/settings.html:107
+#: templates/workspaces/settings.html:115
 msgid "Logo"
 msgstr "Logo"
 
-#: templates/workspaces/settings.html:108
+#: templates/workspaces/settings.html:116
 msgid "JPEG, PNG, WebP, or GIF. Max 2 MB."
 msgstr "JPEG, PNG, WebP ou GIF. No máximo 2 MB."
 
-#: templates/workspaces/settings.html:114
+#: templates/workspaces/settings.html:122
 msgid "Upload Logo"
 msgstr "Enviar logo"
 
-#: templates/workspaces/settings.html:131
+#: templates/workspaces/settings.html:140
 msgid "Restore this workspace"
 msgstr "Restaurar esta marca"
 
-#: templates/workspaces/settings.html:131
-#: templates/workspaces/settings.html:164
+#: templates/workspaces/settings.html:140
+#: templates/workspaces/settings.html:173
 msgid "Archive this workspace"
 msgstr "Arquivar esta marca"
 
-#: templates/workspaces/settings.html:135
+#: templates/workspaces/settings.html:144
 msgid ""
 "This workspace is currently archived. Restoring it will make it visible in "
 "the sidebar and accessible to all members again."
@@ -19368,7 +19380,7 @@ msgstr ""
 "Esta marca está arquivada. Restaurá-la a torna visível na barra lateral e "
 "acessível a todos os membros novamente."
 
-#: templates/workspaces/settings.html:137
+#: templates/workspaces/settings.html:146
 msgid ""
 "Archiving hides this workspace from the sidebar and prevents new posts. All "
 "existing data is preserved and the workspace can be restored at any time."
@@ -19377,7 +19389,7 @@ msgstr ""
 "Todos os dados são preservados e a marca pode ser restaurada a qualquer "
 "momento."
 
-#: templates/workspaces/settings.html:139
+#: templates/workspaces/settings.html:148
 msgid ""
 "You cannot archive the last active workspace in the organization. Create "
 "another workspace first."
@@ -19385,15 +19397,15 @@ msgstr ""
 "Não é possível arquivar a última marca ativa da organização. Crie outra "
 "antes."
 
-#: templates/workspaces/settings.html:148
+#: templates/workspaces/settings.html:157
 msgid "Restore Workspace"
 msgstr "Restaurar marca"
 
-#: templates/workspaces/settings.html:151
+#: templates/workspaces/settings.html:160
 msgid "Archive Workspace"
 msgstr "Arquivar marca"
 
-#: templates/workspaces/settings.html:167
+#: templates/workspaces/settings.html:176
 #, python-format
 msgid ""
 "Are you sure you want to archive <strong>%(ws)s</strong>? The workspace will "
@@ -19404,16 +19416,16 @@ msgstr ""
 "oculta na barra lateral e não será possível criar novas publicações. Todos "
 "os dados existentes serão preservados."
 
-#: templates/workspaces/settings.html:174
+#: templates/workspaces/settings.html:183
 msgid "Yes, archive this workspace"
 msgstr "Sim, arquivar esta marca"
 
-#: templates/workspaces/settings.html:186
-#: templates/workspaces/settings.html:212
+#: templates/workspaces/settings.html:195
+#: templates/workspaces/settings.html:221
 msgid "Delete this workspace"
 msgstr "Excluir esta marca"
 
-#: templates/workspaces/settings.html:189
+#: templates/workspaces/settings.html:198
 msgid ""
 "Permanently delete this workspace and all of its data. This includes all "
 "posts, connected social accounts, media assets, and workspace memberships. "
@@ -19423,18 +19435,18 @@ msgstr ""
 "as publicações, contas sociais conectadas, arquivos de mídia e participações "
 "na marca. Esta ação não pode ser desfeita."
 
-#: templates/workspaces/settings.html:191
+#: templates/workspaces/settings.html:200
 msgid ""
 "You cannot delete the last active workspace in the organization. Create "
 "another workspace first."
 msgstr ""
 "Não é possível excluir a última marca ativa da organização. Crie outra antes."
 
-#: templates/workspaces/settings.html:197
+#: templates/workspaces/settings.html:206
 msgid "Delete Workspace"
 msgstr "Excluir marca"
 
-#: templates/workspaces/settings.html:215
+#: templates/workspaces/settings.html:224
 #, python-format
 msgid ""
 "Are you sure you want to permanently delete <strong>%(ws)s</strong>? This "
@@ -19443,15 +19455,15 @@ msgstr ""
 "Tem certeza de que deseja excluir permanentemente <strong>%(ws)s</strong>? "
 "Esta ação não pode ser desfeita."
 
-#: templates/workspaces/settings.html:220
+#: templates/workspaces/settings.html:229
 msgid "Connected social accounts"
 msgstr "Contas sociais conectadas"
 
-#: templates/workspaces/settings.html:222
+#: templates/workspaces/settings.html:231
 msgid "Workspace memberships"
 msgstr "Participações na marca"
 
-#: templates/workspaces/settings.html:231
+#: templates/workspaces/settings.html:240
 msgid "Yes, delete this workspace"
 msgstr "Sim, excluir esta marca"
 

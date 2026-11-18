@@ -117,11 +117,23 @@ def _process_meta_events(payload: dict, platforms: list[str], valid_secrets: set
                 )
                 continue
 
+            # One delivery carries events of several accounts and organizations:
+            # an event that cannot be filed is logged and the rest still are.
             for change in entry.get("changes", []):
-                _handle_facebook_change(account, change)
+                try:
+                    _handle_facebook_change(account, change)
+                except Exception:
+                    logger.exception("Could not file a Meta %r change for account %s", change.get("field"), account.id)
 
             for messaging in entry.get("messaging", []):
-                _handle_facebook_messaging(account, messaging)
+                try:
+                    _handle_facebook_messaging(account, messaging)
+                except Exception:
+                    logger.exception(
+                        "Could not file a Meta message %r for account %s",
+                        (messaging.get("message") or {}).get("mid"),
+                        account.id,
+                    )
 
 
 # --- Webhook entry points ---
@@ -467,15 +479,17 @@ def _handle_facebook_messaging(account, messaging: dict):
     if not sender_id:
         return
     if message_data.get("is_deleted"):
-        existing = (
-            InboxMessage.objects.select_for_update()
-            .filter(social_account=account, platform_message_id=str(mid), message_type="dm")
-            .first()
-        )
-        if existing:
-            existing.body = ""
-            existing.extra = {**existing.extra, "is_deleted": True, "attachments": []}
-            existing.save(update_fields=["body", "extra"])
+        # The row lock needs a transaction, and a webhook request has none of its own.
+        with transaction.atomic():
+            existing = (
+                InboxMessage.objects.select_for_update()
+                .filter(social_account=account, platform_message_id=str(mid), message_type="dm")
+                .first()
+            )
+            if existing:
+                existing.body = ""
+                existing.extra = {**existing.extra, "is_deleted": True, "attachments": []}
+                existing.save(update_fields=["body", "extra"])
         return
     text = message_data.get("text") or ""
     stamp = message_timestamp(messaging.get("timestamp"))
@@ -519,16 +533,18 @@ def _create_if_new(
 
     from .tasks import _related_post_key
 
-    defaults = {
-        "workspace": account.workspace,
-        "message_type": message_type,
-        "sender_name": sender_name,
-        "sender_handle": sender_id,  # Platform user ID as fallback handle
-        "body": body,
-        "sentiment": analyze_sentiment(body),
-        "extra": extra,
-        "received_at": received_at or timezone.now(),
-    }
+    defaults = InboxMessage.fit_platform_fields(
+        {
+            "workspace": account.workspace,
+            "message_type": message_type,
+            "sender_name": sender_name,
+            "sender_handle": sender_id,  # Platform user ID as fallback handle
+            "body": body,
+            "sentiment": analyze_sentiment(body),
+            "extra": extra,
+            "received_at": received_at or timezone.now(),
+        }
+    )
 
     # Link back to the post being commented on, matching what the poll does.
     post_key = _related_post_key(extra)

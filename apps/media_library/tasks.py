@@ -265,3 +265,17 @@ def run_orphaned_media_sweep():
     # min_age_days falls through to services.ORPHANED_MEDIA_MIN_AGE_DAYS (the
     # single source), matching the management command's default.
     sweep_orphaned_media(log=logger.info)
+
+
+@background(schedule=0)
+def remove_stored_files(names):
+    """Delete from storage the files of a workspace or organization that was deleted.
+
+    Raises when any file could not be deleted so the task is retried and the
+    failure stays on its row; deleting an already-deleted file is a no-op.
+    """
+    from .services import delete_stored_files
+
+    result = delete_stored_files(names)
+    if result["errors"]:
+        raise RuntimeError(f"{result['errors']} of {len(names)} stored files could not be deleted")

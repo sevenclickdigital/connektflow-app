@@ -128,6 +128,23 @@ class InboxMessage(models.Model):
             ),
         ]
 
+    @classmethod
+    def fit_platform_fields(cls, fields: dict) -> dict:
+        """``fields`` with the strings a platform authored cut to their columns.
+
+        The sender's name and handle are whatever the platform sends; one longer
+        than its column would fail the insert and, in a poll, every message
+        listed after it. An avatar URL that does not fit is dropped: a cut URL
+        loads nothing. ``platform_message_id`` is left alone, it is the identity.
+        """
+        fitted = dict(fields)
+        for name in ("sender_name", "sender_handle", "sender_avatar_url"):
+            value = fitted.get(name)
+            max_length = getattr(cls._meta.get_field(name), "max_length", None)
+            if max_length and isinstance(value, str) and len(value) > max_length:
+                fitted[name] = "" if name == "sender_avatar_url" else value[:max_length]
+        return fitted
+
     def __str__(self):
         return f"{self.get_message_type_display()} from {self.sender_name}"
 

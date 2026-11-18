@@ -82,6 +82,13 @@ def _get_workspace(request, workspace_id):
     return workspace
 
 
+def _can_change_post(request, post) -> bool:
+    """Whether the caller may change ``post``'s schedule: its author, or a member with ``edit_others_posts``."""
+    membership = request.workspace_membership
+    perms = membership.effective_permissions if membership else {}
+    return post.author_id == request.user.id or bool(perms.get("edit_others_posts", False))
+
+
 def _parse_date(date_str, default=None):
     """Parse a YYYY-MM-DD date string."""
     if date_str:
@@ -752,9 +759,16 @@ def calendar_view(request, workspace_id):
         .exists()
     )
     default_mode = "calendar" if has_connected_accounts else "list"
+    # These three reach inline JavaScript in calendar.html, so only known values pass.
     mode = request.GET.get("mode", default_mode)
+    if mode not in {"list", "calendar", "board"}:
+        mode = default_mode
     active_tab = request.GET.get("tab", "queue")
+    if active_tab not in _TAB_TEMPLATES:
+        active_tab = "queue"
     view_type = request.GET.get("view", "month")
+    if view_type not in {"month", "week", "day", "list"}:
+        view_type = "month"
     target_date = _parse_date(request.GET.get("date"))
 
     # Connected accounts for calendar filter UI
@@ -1924,6 +1938,7 @@ def queue_list(request, workspace_id):
 
 @login_required
 @require_POST
+@require_permission("manage_social_accounts")
 def queue_create(request, workspace_id):
     """Create a new queue."""
     workspace = _get_workspace(request, workspace_id)
@@ -1963,11 +1978,13 @@ def queue_detail(request, workspace_id, queue_id):
     queue = get_object_or_404(Queue, id=queue_id, workspace=workspace)
     # Slot datetime is the source of truth for order now (positions can be sparse
     # after gap-fills); show entries chronologically, unslotted ones last.
-    entries = (
+    entries = list(
         queue.entries.select_related("post__author")
         .prefetch_related("post__platform_posts__social_account")
         .order_by(F("assigned_slot_datetime").asc(nulls_last=True), "position")
     )
+    for entry in entries:
+        entry.can_change = _can_change_post(request, entry.post)
 
     return render(
         request,
@@ -1976,12 +1993,15 @@ def queue_detail(request, workspace_id, queue_id):
             "workspace": workspace,
             "queue": queue,
             "entries": entries,
+            # A reorder swaps the times of every entry, so it takes rights over all of them.
+            "can_reorder": all(entry.can_change for entry in entries),
         },
     )
 
 
 @login_required
 @require_POST
+@require_permission("manage_social_accounts")
 def queue_delete(request, workspace_id, queue_id):
     """Delete a queue."""
     workspace = _get_workspace(request, workspace_id)
@@ -2002,6 +2022,12 @@ def queue_reorder(request, workspace_id, queue_id):
 
     entry_ids_str = request.POST.get("entry_ids", "")
     entry_ids = [s.strip() for s in entry_ids_str.split(",") if s.strip()]
+
+    # A reorder hands each named entry another entry's time, so the caller needs
+    # rights over every post it names.
+    named = queue.entries.filter(id__in=entry_ids).select_related("post")
+    if not all(_can_change_post(request, entry.post) for entry in named):
+        return JsonResponse({"error": "Permission denied."}, status=403)
 
     from .services import reorder_queue
 
@@ -2027,6 +2053,9 @@ def queue_entry_remove(request, workspace_id, queue_id, entry_id):
         .first()
     )
     if entry is not None:
+        if not _can_change_post(request, entry.post):
+            return JsonResponse({"error": "Permission denied."}, status=403)
+
         from .services import remove_from_queue
 
         remove_from_queue(entry)
@@ -2047,6 +2076,8 @@ def queue_entry_reslot(request, workspace_id, queue_id, entry_id):
         queue_id=queue_id,
         queue__workspace=workspace,
     )
+    if not _can_change_post(request, entry.post):
+        return JsonResponse({"error": "Permission denied."}, status=403)
 
     from .services import QueueFullError, reslot_to_next_available
 

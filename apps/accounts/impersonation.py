@@ -39,14 +39,15 @@ not survive the switch.
 
 Why the operator's id and not a full second session: the id is the
 minimum that can restore the operator, and it is re-fetched from the
-database on every request, so an operator who is deactivated or demoted
-mid-takeover loses the privilege immediately instead of carrying a
-snapshot of it around.
+database on every request (``ImpersonationGuardMiddleware`` calls
+:func:`end_if_operator_revoked`), so an operator who is deactivated or
+demoted mid-takeover loses the customer's session on their next request
+instead of carrying a snapshot of the privilege around.
 """
 
 from __future__ import annotations
 
-from django.contrib.auth import get_user_model, login
+from django.contrib.auth import get_user_model, login, logout
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 
@@ -83,8 +84,7 @@ def real_user(request):
 
     Returns None when there is no authenticated user at all, and falls
     back to ``request.user`` if the stored operator id no longer resolves
-    (deleted account), which leaves the session as a plain customer
-    session with no privilege attached.
+    to an active operator, which attaches no privilege to the session.
     """
     user = getattr(request, "user", None)
     if user is None or not user.is_authenticated:
@@ -92,8 +92,34 @@ def real_user(request):
     if not is_impersonating(request):
         return user
 
-    operator = get_user_model().objects.filter(pk=request.session[IMPERSONATOR_SESSION_KEY], is_active=True).first()
-    return operator or user
+    return _active_operator(request.session[IMPERSONATOR_SESSION_KEY]) or user
+
+
+def _active_operator(operator_id):
+    """The account behind a takeover, or None once it stopped being an active operator."""
+    return get_user_model().objects.filter(pk=operator_id, is_active=True, is_staff=True).first()
+
+
+def end_if_operator_revoked(request):
+    """End a takeover whose operator is no longer an active staff account.
+
+    A takeover is delegated operator authority, so it lasts only while
+    that authority does. Closes the audit row and logs the session out;
+    the request then continues as an anonymous one. Returns True when it
+    ended the session.
+    """
+    if not is_impersonating(request):
+        return False
+    if _active_operator(request.session[IMPERSONATOR_SESSION_KEY]) is not None:
+        return False
+    _close_record(request.session.get(RECORD_SESSION_KEY))
+    logout(request)
+    return True
+
+
+def _close_record(record_id):
+    if record_id:
+        ImpersonationSession.objects.filter(pk=record_id, ended_at__isnull=True).update(ended_at=timezone.now())
 
 
 def is_operator(request):
@@ -175,16 +201,14 @@ def stop(request):
     # or the response is lost, an audit row saying the takeover ended is
     # the safe side of the error: the alternative is a row that stays
     # open forever and makes every later report ambiguous.
-    if record_id:
-        ImpersonationSession.objects.filter(pk=record_id, ended_at__isnull=True).update(ended_at=timezone.now())
+    _close_record(record_id)
 
-    operator = get_user_model().objects.filter(pk=operator_id, is_active=True).first()
+    operator = _active_operator(operator_id)
     if operator is None:
-        # The operator's account is gone or disabled while they were
-        # inside. Restoring it is not an option, and leaving the session
-        # as the customer would be worse, so end the session entirely.
-        from django.contrib.auth import logout
-
+        # The operator's account is gone, disabled or demoted while they
+        # were inside. Restoring it is not an option, and leaving the
+        # session as the customer would be worse, so end the session
+        # entirely.
         logout(request)
         return None
 

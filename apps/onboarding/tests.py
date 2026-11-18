@@ -226,3 +226,97 @@ class TestConnectionLinkPageTokens:
             assert account.facebook_user_token_expires_at <= timezone.now() + timezone.timedelta(seconds=expiry_seconds)
             assert (account.token_expires_at is None) == promoted
             assert account.connection_status == "connected"
+
+
+@pytest.mark.django_db
+class TestConnectionLinkMastodonInstance:
+    """The public Mastodon form makes the server call the host it is given."""
+
+    @pytest.mark.parametrize("instance_url", ["http://127.0.0.1:8080", "http://169.254.169.254", "https://10.0.0.5"])
+    def test_a_private_address_is_refused_before_any_request(self, client, connection_link, instance_url):
+        from apps.social_accounts.models import MastodonAppRegistration
+
+        url = reverse("onboarding:connection_mastodon", kwargs={"token": connection_link.token})
+        with patch("apps.onboarding.views._get_provider_for_platform") as get_provider:
+            response = client.post(url, {"instance_url": instance_url})
+
+        assert response.status_code == 302
+        assert response.url == reverse("onboarding:connection_page", kwargs={"token": connection_link.token})
+        get_provider.assert_not_called()
+        assert not MastodonAppRegistration.objects.exists()
+        assert client.session["connection_link_error"]
+
+    def test_a_public_instance_still_starts_the_authorization(self, client, connection_link):
+        mock_provider = MagicMock()
+        mock_provider.register_app.return_value = {"client_id": "cid", "client_secret": "secret"}
+        mock_provider.get_auth_url.return_value = "https://mastodon.example/oauth/authorize?client_id=cid"
+
+        url = reverse("onboarding:connection_mastodon", kwargs={"token": connection_link.token})
+        with (
+            patch("apps.onboarding.views.is_safe_url", return_value=True),
+            patch("apps.onboarding.views._get_provider_for_platform", return_value=mock_provider),
+        ):
+            response = client.post(url, {"instance_url": "https://mastodon.example"})
+
+        assert response.status_code == 302
+        assert response.url == "https://mastodon.example/oauth/authorize?client_id=cid"
+        mock_provider.register_app.assert_called_once()
+
+
+@pytest.mark.django_db
+class TestConnectionLinkDone:
+    """Pressing "Done" is public: it tells the owners and managers, once, while the link is alive."""
+
+    @pytest.fixture
+    def manager(self, workspace):
+        from apps.accounts.models import User
+        from apps.members.models import WorkspaceMembership
+
+        manager = User.objects.create_user(
+            email="manager@example.com", password="testpass123", tos_accepted_at=timezone.now()
+        )
+        WorkspaceMembership.objects.create(
+            user=manager, workspace=workspace, workspace_role=WorkspaceMembership.WorkspaceRole.MANAGER
+        )
+        return manager
+
+    def _notifications(self, user):
+        from apps.notifications.models import Notification
+
+        return Notification.objects.filter(user=user).count()
+
+    def _done(self, client, link):
+        return client.post(reverse("onboarding:connection_done", kwargs={"token": link.token}))
+
+    def test_a_revoked_link_notifies_nobody(self, client, connection_link, manager):
+        connection_link.revoked_at = timezone.now()
+        connection_link.save(update_fields=["revoked_at"])
+
+        assert self._done(client, connection_link).status_code == 400
+        assert self._notifications(manager) == 0
+
+    def test_an_expired_link_notifies_nobody(self, client, connection_link, manager):
+        connection_link.expires_at = timezone.now() - timezone.timedelta(minutes=1)
+        connection_link.save(update_fields=["expires_at"])
+
+        assert self._done(client, connection_link).status_code == 400
+        assert self._notifications(manager) == 0
+
+    def test_an_active_link_notifies_once_however_often_it_is_posted(self, client, connection_link, manager):
+        responses = [self._done(client, connection_link) for _ in range(3)]
+
+        assert [r.status_code for r in responses] == [200, 200, 200]
+        assert self._notifications(manager) == 1
+
+    def test_a_newly_connected_account_is_announced_again(self, client, workspace, connection_link, manager):
+        from apps.onboarding.models import ConnectionLinkUsage
+        from apps.social_accounts.models import SocialAccount
+
+        self._done(client, connection_link)
+        account = SocialAccount.objects.create(
+            workspace=workspace, platform="bluesky", account_platform_id="did:1", account_name="Client"
+        )
+        ConnectionLinkUsage.objects.create(connection_link=connection_link, social_account=account)
+        self._done(client, connection_link)
+
+        assert self._notifications(manager) == 2

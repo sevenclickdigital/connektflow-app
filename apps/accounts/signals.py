@@ -1,4 +1,4 @@
-from allauth.account.signals import user_signed_up
+from allauth.account.signals import password_changed, password_reset, password_set, user_signed_up
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -167,6 +167,22 @@ def create_organization_on_signup(sender, request, user, **kwargs):
     if not kwargs.get("sociallogin"):
         user.tos_accepted_at = timezone.now()
         user.save(update_fields=["tos_accepted_at"])
+
+
+@receiver(password_changed)
+@receiver(password_reset)
+@receiver(password_set)
+def revoke_oauth_tokens_on_new_password(sender, request, user, **kwargs):
+    """A new password ends the access every OAuth (MCP) client had.
+
+    Changing or resetting the password is how an owner takes the account
+    back, and the grants were made from sessions that the new password
+    ends too. API keys are not touched: they are listed and revoked on
+    the organization's API keys page.
+    """
+    from apps.oauth_server.services import revoke_user_tokens
+
+    revoke_user_tokens(user)
 
 
 @receiver(post_save, sender="accounts.User")
