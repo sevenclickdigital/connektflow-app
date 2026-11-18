@@ -70,16 +70,6 @@ def sidebar_context(request):
 
         sidebar_pending_approvals = pending_approval_count(workspace.id)
 
-    # Idea columns and tags for the quick-create modal in the sidebar
-    sidebar_idea_columns = []
-    sidebar_idea_tags = []
-    if workspace:
-        from apps.composer.models import IdeaGroup, Tag
-
-        groups = IdeaGroup.objects.for_workspace(workspace.id).order_by("position", "created_at")
-        sidebar_idea_columns = [{"id": str(g.id), "label": g.name} for g in groups] if groups.exists() else []
-        sidebar_idea_tags = list(Tag.objects.for_workspace(workspace.id).values_list("name", flat=True))
-
     # The Ads entry only exists once Meta Ads is connected with an ad account:
     # the whole section reads that account.
     sidebar_has_ads = False
@@ -111,8 +101,6 @@ def sidebar_context(request):
         "sidebar_unread_inbox_count": sidebar_unread_inbox_count,
         "sidebar_has_ads": sidebar_has_ads,
         "sidebar_pending_approvals": sidebar_pending_approvals,
-        "sidebar_idea_columns": sidebar_idea_columns,
-        "sidebar_idea_tags": sidebar_idea_tags,
         "analytics_enabled_platforms": analytics_enabled_platforms,
         "show_review_banner": show_review_banner,
     }

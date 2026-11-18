@@ -34,18 +34,19 @@ class Column:
     label: str
     statuses: tuple[str, ...]
     accepts_drop: bool
+    # One of the shared .kanban-tone-* colours (styles.css), as on the task board.
     tone: str
 
 
 COLUMNS: tuple[Column, ...] = (
-    Column("draft", gettext_lazy("Draft"), (S.DRAFT,), True, "stone"),
+    Column("draft", gettext_lazy("Draft"), (S.DRAFT,), True, "brand"),
     Column(
-        "review", gettext_lazy("In approval"), (S.PENDING_REVIEW, S.PENDING_CLIENT, S.CHANGES_REQUESTED), True, "amber"
+        "review", gettext_lazy("In approval"), (S.PENDING_REVIEW, S.PENDING_CLIENT, S.CHANGES_REQUESTED), True, "warning"
     ),
-    Column("approved", gettext_lazy("Approved"), (S.APPROVED, S.ON_HOLD), True, "teal"),
-    Column("scheduled", gettext_lazy("Scheduled"), (S.SCHEDULED, S.PUBLISHING), True, "blue"),
-    Column("published", gettext_lazy("Published"), (S.PUBLISHED,), False, "green"),
-    Column("problem", gettext_lazy("Failed or rejected"), (S.FAILED, S.REJECTED), False, "red"),
+    Column("approved", gettext_lazy("Approved"), (S.APPROVED, S.ON_HOLD), True, "info"),
+    Column("scheduled", gettext_lazy("Scheduled"), (S.SCHEDULED, S.PUBLISHING), True, "brand"),
+    Column("published", gettext_lazy("Published"), (S.PUBLISHED,), False, "success"),
+    Column("problem", gettext_lazy("Failed or rejected"), (S.FAILED, S.REJECTED), False, "error"),
 )
 _BY_KEY = {c.key: c for c in COLUMNS}
 

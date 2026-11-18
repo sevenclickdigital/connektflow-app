@@ -170,6 +170,7 @@
 {% block content %}
 {{ idea_icons|json_script:"idea-icons-data" }}
 <div x-data="kanbanBoard()" class="-m-6 flex-grow flex flex-col"
+     @open-new-idea.window="openNewIdea()"
      @tag-deleted.window="forgetTag($event.detail.name, $event.detail.used)"
      @open-reference-picker.window="referencePickerFor = $event.detail.for; showMediaPicker = true"
      @media-picked.camel.window="addPickedMedia($event.detail.assets)">
@@ -1378,6 +1379,26 @@ function kanbanBoard() {
 
         init() {
             this._refreshColumnMeta();
+            // The sidebar's "New > Idea" lands here with ?new=1: open the window and
+            // drop the flag, so a reload does not open it again.
+            var url = new URL(window.location.href);
+            if (url.searchParams.get('new') === '1') {
+                url.searchParams.delete('new');
+                window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+                this.openNewIdea();
+            }
+        },
+
+        // An empty idea window in the first column (the sidebar's "New > Idea").
+        openNewIdea() {
+            if (this.showCreateModal) return;
+            this.createGroupId = this._defaultGroupId;
+            this.createSelectedGroup = this._defaultGroupId;
+            this.showCreateModal = true;
+            this.$nextTick(function () {
+                var input = document.getElementById('create_idea_title');
+                if (input) input.focus();
+            });
         },
 
         _getCsrfToken() {

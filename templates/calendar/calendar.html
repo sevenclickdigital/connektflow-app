@@ -485,51 +485,26 @@
     /* Play slideUp only on HTMX-swapped tab content, not initial server render */
     .tab-slide-in { animation: slideUp 200ms cubic-bezier(0.16,1,0.3,1) both; }
 
-    /* Board mode (_board_columns.html): one column per workflow stage, tinted by its tone. */
-    .sb-board { display: flex; gap: 14px; overflow-x: auto; padding: 2px 0 16px; align-items: flex-start; flex: 1 1 auto; }
-    .sb-column {
-        --sb-tint: var(--surface-2); --sb-ink: var(--text-primary);
-        flex: 1 0 250px; max-width: 320px; background: color-mix(in srgb, var(--sb-tint) 45%, white); border: 1px solid var(--border);
-        border-radius: 16px; display: flex; flex-direction: column; max-height: calc(100vh - 260px);
-        transition: box-shadow .12s ease, opacity .12s ease;
-    }
-    .sb-tone-amber { --sb-tint: #FEF3C7; --sb-ink: #B45309; }
-    .sb-tone-teal  { --sb-tint: #CCFBF1; --sb-ink: #0F766E; }
-    .sb-tone-blue  { --sb-tint: var(--brand-100); --sb-ink: var(--brand-800); }
-    .sb-tone-green { --sb-tint: #DCFCE7; --sb-ink: #15803D; }
-    .sb-tone-red   { --sb-tint: #FEE2E2; --sb-ink: #B91C1C; }
+    /* Board mode (_board_columns.html): the task board's columns (.kanban-* in styles.css),
+       side by side and scrolling sideways when they don't fit; below, only what a post card adds. */
+    .sb-board { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 4px; align-items: stretch; min-height: 420px; flex: 1 1 auto; }
+    .sb-column { transition: box-shadow .12s ease, opacity .12s ease; }
     .sb-column.is-over { box-shadow: 0 0 0 2px var(--primary) inset; }
     .sb-board.is-dragging .sb-column.is-locked { opacity: .45; }
-    .sb-column-head {
-        display: flex; align-items: center; gap: 8px; padding: 12px 14px;
-        background: var(--sb-tint); border-radius: 15px 15px 0 0; color: var(--sb-ink);
-    }
-    .sb-column-icon svg { width: 18px; height: 18px; }
-    .sb-column-head h2 { font-size: 14px; font-weight: 700; color: inherit; }
-    .sb-count { margin-left: auto; min-width: 24px; height: 22px; padding: 0 7px; border-radius: 9999px; background: white; color: var(--sb-ink); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
-    .sb-cards { overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; min-height: 48px; }
-    .sb-card { position: relative; display: flex; flex-direction: column; gap: 6px; background: white; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; cursor: pointer; user-select: none; }
-    .sb-card:hover { border-color: var(--primary-ring); box-shadow: var(--shadow-md); }
-    .sb-card.is-dragging { opacity: .4; }
-    .sb-card-menu { position: absolute; top: 8px; right: 8px; }
-    .sb-card > .sb-title:first-of-type { padding-right: 28px; }
+    .sb-card { position: relative; cursor: pointer; user-select: none; }
+    .sb-card.is-dragging { opacity: .5; transform: rotate(2deg); }
     .sb-card.is-failed { border-color: #FECACA; }
-    .sb-thumb { position: relative; width: 120px; height: 68px; border-radius: 8px; overflow: hidden; background: var(--surface-2); }
-    .sb-title { font-size: 13.5px; font-weight: 700; color: var(--text-primary); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .sb-caption { font-size: 12px; color: var(--text-secondary); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .sb-card-menu { position: absolute; top: 8px; right: 8px; }
+    .sb-thumb { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; margin-bottom: 8px; border-radius: 8px; overflow: hidden; background: var(--surface-2); }
+    .sb-title { padding-right: 24px; font-size: 14px; font-weight: 600; color: var(--neutral-950); line-height: 1.375; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+    .sb-caption { margin-top: 4px; font-size: 12px; color: var(--neutral-600); line-height: 1.375; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .sb-retry {
-        display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 2px; padding: 7px 10px;
+        display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; padding: 7px 10px;
         border: 1px solid #FCA5A5; border-radius: 9999px; color: #B91C1C; background: white; font-size: 12.5px; font-weight: 600; cursor: pointer;
     }
     .sb-retry:hover { background: #FEF2F2; }
-    .sb-more { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 4px; font-size: 12px; font-weight: 600; color: var(--sb-ink); background: none; border: 0; cursor: pointer; }
-    .sb-column-action {
-        display: block; margin: 0 10px 10px; padding: 8px 10px; border-radius: 9999px; text-align: center;
-        border: 1px solid color-mix(in srgb, var(--sb-ink) 35%, white); color: var(--sb-ink); background: white;
-        font-size: 12.5px; font-weight: 600; text-decoration: none;
-    }
-    .sb-column-action:hover { background: var(--sb-tint); }
-    .sb-empty { font-size: 11.5px; color: var(--text-tertiary); text-align: center; padding: 10px 0; }
+    .sb-more { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 4px; font-size: 12px; font-weight: 600; color: var(--kanban-tone-ink); background: none; border: 0; cursor: pointer; }
+    .sb-empty { font-size: 12px; color: var(--text-tertiary); text-align: center; padding: 10px 0; }
 </style>
 {% endblock %}
 
@@ -986,9 +961,10 @@ function calendarApp() {
             this.showEventForm = true;
         },
 
+        // The idea hub, with its new idea window open.
         addIdea() {
             this.addMenu.open = false;
-            window.dispatchEvent(new CustomEvent('open-create-idea'));
+            window.location.href = '{% url "composer:create_landing" workspace_id=workspace.id %}?new=1';
         },
 
         // The task board, with its new task window open for a task due on the day.
