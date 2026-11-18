@@ -50,21 +50,22 @@ def _series(rows, dates: list[date]) -> dict[str, list[float]]:
     return series
 
 
-def build_report(connection: AdsConnection, *, days: int, metric: str | None = None) -> dict:
-    """Everything the Meta Ads report shows for the last ``days`` days.
+def build_report(connection: AdsConnection, *, days: int, end: date | None = None, metric: str | None = None) -> dict:
+    """Everything the Meta Ads report shows for the ``days`` days ending on ``end``
+    (today when ``None``), compared with the ``days`` before them.
 
     Raises :class:`services.AdsError` when Meta refuses.
     """
-    today = timezone.localdate()
-    dates = [today - timedelta(days=2 * days - 1 - i) for i in range(2 * days)]
-    rows = services.account_insights(connection, since=dates[0].isoformat(), until=today.isoformat(), daily=True)
+    end = end or timezone.localdate()
+    dates = [end - timedelta(days=2 * days - 1 - i) for i in range(2 * days)]
+    rows = services.account_insights(connection, since=dates[0].isoformat(), until=end.isoformat(), daily=True)
     series = _series(rows, dates)
 
     def derived(key: str) -> DerivedMetric:
         return derive(series[key], days, _kind(METRICS[key][1], connection))
 
     metric = metric if metric in METRICS else PRIMARY_METRIC
-    campaigns = services.list_campaigns(connection, days=days)
+    campaigns = services.list_campaigns(connection, days=days, end=end)
     spent = [c for c in campaigns if c.insights.spend or c.insights.impressions]
     spent.sort(key=lambda c: c.insights.spend, reverse=True)
     return {

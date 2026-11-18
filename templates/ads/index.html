@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load common_extras i18n %}
 {% block title %}{% translate "Ads" %} - Connekt Flow{% endblock %}
 {% block page_header %}
 <div class="page-header">
@@ -10,7 +10,7 @@
     {% if connection.ad_account_id %}
     <div class="flex items-center gap-2 flex-wrap">
         {% include "composer/partials/_ideas_hero_toggle.html" with tab="ads" %}
-        {% include "ads/partials/_range_picker.html" %}
+        {% period_picker period range_choices %}
         {% if can_manage %}
         <a href="{% url 'ads:settings' workspace_id=workspace_id %}" class="btn-outline">{% translate "Settings" %}</a>
         <a href="{% url 'ads:campaign_new' workspace_id=workspace_id %}" class="btn-brand">
@@ -62,7 +62,7 @@
     The numbers come from Meta on every visit (nothing is stored), which takes a
     few seconds: the page shows at once and they load into this placeholder.
     {% endcomment %}
-    <div hx-get="{% url 'ads:overview' workspace_id=workspace_id %}?range={{ days }}" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#lazy-load-status">
+    <div hx-get="{% url 'ads:overview' workspace_id=workspace_id %}?{{ period.query }}" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#lazy-load-status">
         {% translate "Fetching the numbers from Meta…" as loading_label %}{% include "components/_skeleton.html" with label=loading_label %}
     </div>
 {% endif %}

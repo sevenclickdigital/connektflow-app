@@ -348,6 +348,11 @@ class TestTrends:
         assert date.fromisoformat(since) - date.fromisoformat(before_until) == timedelta(days=1)
         assert date.fromisoformat(before_until) - date.fromisoformat(before_since) == timedelta(days=6)
 
+    def test_picked_dates_ask_meta_for_those_days_and_the_ones_before(self):
+        end = date(2026, 10, 15)
+        assert services.date_window(15, end) == ("2026-10-01", "2026-10-15")
+        assert services.previous_window(15, end) == ("2026-09-16", "2026-09-30")
+
     def test_a_sales_campaign_pays_back_only_when_roas_reaches_one(self):
         campaign = services._campaign_from_row({"id": "1", "objective": "OUTCOME_SALES"}, "BRL")
         campaign.insights = _row(roas=Decimal("0.9"))

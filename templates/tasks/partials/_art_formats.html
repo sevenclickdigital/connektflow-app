@@ -2,15 +2,16 @@
 {% comment %}
 The art request's channels and formats. On the left the workspace's networks,
 one row each (connected ones first, the account in the row's tooltip; then the
-others): the row shows that network's formats, its box ticks or unticks all
-of them (half ticked when only some are). On the right the shown network's
+others): the row shows that network's formats. On the right the shown network's
 formats as cards in one row, scrolled sideways with the arrows, each with its
-glyph, size and proportion. They post as "formats".
+glyph, size and proportion, and under them "Select all", which ticks or unticks
+every format of the shown network (half ticked when only some are). They post
+as "formats".
 
 Runs inside an Alpine component that spread artPicker() (static/js/task-window.js):
 ``tab`` is the network shown, ``counts`` / ``totals`` the ticked and offered
 formats per network (the header reads the shown one's: "2 of 5"),
-``toggleNetwork(key)`` ticks a whole network.
+``toggleNetwork(key)`` ticks a whole network (the "Select all" box).
 Used by the art request form and by the task board's new task window.
 Expects: groups (tasks.views._art_catalogue), selected (format keys ticked); optional
 locked (format keys ticked and fixed: a task's arts already asked for, which don't post again).
@@ -31,11 +32,6 @@ locked (format keys ticked and fixed: a task's arts already asked for, which don
                 </span>
                 <span class="min-w-0 text-left text-sm truncate {% if group.accounts %}font-semibold text-neutral-950{% else %}text-neutral-700{% endif %}">{{ group.network.label }}</span>
             </button>
-            <input type="checkbox" class="bb-checkbox flex-shrink-0"
-                   :checked="counts['{{ group.network.key }}'] === totals['{{ group.network.key }}']"
-                   x-effect="$el.indeterminate = counts['{{ group.network.key }}'] > 0 && counts['{{ group.network.key }}'] < totals['{{ group.network.key }}']"
-                   @change.stop="toggleNetwork('{{ group.network.key }}')"
-                   aria-label="{% blocktranslate with network=group.network.label %}All formats of {{ network }}{% endblocktranslate %}">
         </div>
         {% endfor %}
     </div>
@@ -77,5 +73,12 @@ locked (format keys ticked and fixed: a task's arts already asked for, which don
         </div>
         {% endfor %}
         </div>
+        <label class="mt-3 inline-flex items-center gap-2 text-sm font-medium text-neutral-700 cursor-pointer select-none">
+            <input type="checkbox" class="bb-checkbox flex-shrink-0"
+                   :checked="totals[tab] > 0 && counts[tab] === totals[tab]"
+                   x-effect="$el.indeterminate = counts[tab] > 0 && counts[tab] < totals[tab]"
+                   @change="toggleNetwork(tab)">
+            {% translate "Select all" %}
+        </label>
     </div>
 </div>

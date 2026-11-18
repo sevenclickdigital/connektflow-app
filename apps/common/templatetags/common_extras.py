@@ -1,4 +1,5 @@
 import json
+from urllib.parse import urlencode
 
 from django import template
 from django.utils.html import escape
@@ -102,4 +103,43 @@ def ui_select(
         "onchange": onchange,
         "placeholder": placeholder or _("Select"),
         "icon": icon,
+    }
+
+
+@register.inclusion_tag("components/_period_picker.html", takes_context=True)
+def period_picker(context, period, choices, *, short=False, all_label="", hx_target="", hx_partial=""):
+    """The period pills ("7 days · 30 days · 90 days") with a "Custom" one that
+    opens a start-and-end calendar (``apps.common.periods``).
+
+    Every link and the calendar's form keep the page's other query parameters
+    (account, filters, sorting), dropping only the period's own, ``partial`` and
+    ``page``.
+
+    Params:
+      period      the :class:`~apps.common.periods.Period` the page is showing.
+      choices     the preset lengths, in days.
+      short       "30D" instead of "30 days", for a tight header.
+      all_label   adds an "All time" pill (``?{name}=all``) with this text.
+      hx_target / hx_partial
+                  swap only this element (``outerHTML``) with ``partial=<hx_partial>``
+                  instead of loading the page again.
+    """
+    request = context.get("request")
+    dropped = {*period.keys, "partial", "page"}
+    keep = [(key, value) for key, value in request.GET.lists() if key not in dropped] if request else []
+    pairs = [(key, value) for key, values in keep for value in values]
+    keep_query = urlencode(pairs)
+    return {
+        "period": period,
+        "choices": choices,
+        "short": short,
+        "all_label": all_label,
+        "hx_target": hx_target,
+        "hx_partial": hx_partial,
+        "path": request.path if request else "",
+        "keep_pairs": pairs,
+        "keep": f"{keep_query}&" if keep_query else "",
+        "preset_key": period.keys[0],
+        "start_key": period.keys[1],
+        "end_key": period.keys[2],
     }

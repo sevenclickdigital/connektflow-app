@@ -418,3 +418,39 @@ def test_upcoming_dates_say_whether_the_day_already_has_its_post(brand, instagra
     entries = dashboard.upcoming_dates_with_posts(brand, date(2026, 11, 17), TZ)
 
     assert [(e["name"], e["has_post"]) for e in entries] == [("A", True), ("B", False)]
+
+
+# --- period -------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_a_custom_period_counts_only_the_posts_of_those_days(instagram):
+    end = timezone.now().date() - timedelta(days=20)
+    inside = datetime.combine(end - timedelta(days=2), datetime.min.time(), tzinfo=TZ).replace(hour=12)
+    _rated_post(instagram, published_at=inside, fmt="reel", likes=10)
+    _rated_post(instagram, published_at=inside + timedelta(days=10), likes=2)  # after the end
+
+    with translation.override("en"):
+        result = post_performance(instagram, 7, TZ, end)
+
+    assert [(row["label"], row["posts"]) for row in result["formats"]] == [("Reels", 1)]
+
+
+@pytest.mark.django_db
+def test_the_dashboard_keeps_the_picked_dates_on_its_links(client, brand, instagram):
+    AnalyticsPlatformConfig.objects.update_or_create(platform="instagram", defaults={"is_enabled": True})
+    _member(client, brand, ROLE.VIEWER)
+    end = timezone.localdate(timezone=TZ) - timedelta(days=3)
+    start = end - timedelta(days=9)
+
+    page = client.get(_url(brand), {"start": start.isoformat(), "end": end.isoformat()})
+    networks = client.get(
+        _url(brand), {"start": start.isoformat(), "end": end.isoformat(), "partial": "networks"}, HTTP_HX_REQUEST="true"
+    )
+
+    period = page.context["period"]
+    assert (period.custom, period.days, period.end) == (True, 10, end)
+    body = page.content.decode()
+    assert f"start={start.isoformat()}&amp;end={end.isoformat()}" in body
+    assert "range=30" in body  # the presets are still offered
+    assert networks.status_code == 200

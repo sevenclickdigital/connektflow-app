@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load common_extras i18n %}
 {% block title %}{% if campaign %}{{ campaign.name }}{% else %}{% translate "Campaign" %}{% endif %} - Connekt Flow{% endblock %}
 {% block page_header %}
 <div class="page-header" x-data="{ editing: false }">
@@ -14,7 +14,7 @@
     </div>
     {% if campaign %}
     <div class="flex items-center gap-2 flex-wrap">
-        {% include "ads/partials/_range_picker.html" %}
+        {% period_picker period range_choices %}
         {% if can_manage %}
         <button type="button" class="btn-outline" @click="editing = true">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
@@ -35,7 +35,7 @@
 The numbers come from Meta on every visit (nothing is stored), which takes a
 few seconds: the page shows at once and they load into this placeholder.
 {% endcomment %}
-<div hx-get="{% url 'ads:campaign_body' workspace_id=workspace_id campaign_id=campaign.id %}?range={{ days }}" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#lazy-load-status">
+<div hx-get="{% url 'ads:campaign_body' workspace_id=workspace_id campaign_id=campaign.id %}?{{ period.query }}" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#lazy-load-status">
     {% translate "Fetching the numbers from Meta…" as loading_label %}{% include "components/_skeleton.html" with label=loading_label %}
 </div>
 {% endif %}

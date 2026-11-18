@@ -43,7 +43,7 @@ The report of the Meta Ads account, loaded after the page shows
     <div class="a-card">
         <div style="padding: 16px 20px; border-bottom: 1px solid var(--neutral-100); display: flex; align-items: center; justify-content: space-between; gap: 12px;">
             <h3 style="font-size: 0.9375rem; font-weight: 600; color: var(--text-primary);">{% translate "Campaigns that spent most" %}</h3>
-            <a href="{% url 'ads:index' workspace_id=workspace.id %}?range={{ days }}" class="btn-link text-sm">{% translate "All campaigns" %}</a>
+            <a href="{% url 'ads:index' workspace_id=workspace.id %}?{{ period.query }}" class="btn-link text-sm">{% translate "All campaigns" %}</a>
         </div>
         <div style="overflow-x: auto;">
         <table class="a-table">
@@ -61,7 +61,7 @@ The report of the Meta Ads account, loaded after the page shows
                 {% for campaign in top_campaigns %}
                 <tr>
                     <td class="first">
-                        <a href="{% url 'ads:campaign_detail' workspace_id=workspace.id campaign_id=campaign.id %}?range={{ days }}" style="display: block; font-weight: 600; color: inherit;">{{ campaign.name }}</a>
+                        <a href="{% url 'ads:campaign_detail' workspace_id=workspace.id campaign_id=campaign.id %}?{{ period.query }}" style="display: block; font-weight: 600; color: inherit;">{{ campaign.name }}</a>
                         <span class="pill pill-{{ campaign.status_tone }}" style="margin-top: 4px;"><i></i>{{ campaign.status_label }}</span>
                     </td>
                     <td class="sort-col">{{ campaign.insights.spend|ads_money:currency }}</td>

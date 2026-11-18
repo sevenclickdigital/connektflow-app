@@ -17,8 +17,11 @@ REPORT_DAYS = (7, 30, 90)
 PACIFIC = ZoneInfo("America/Los_Angeles")
 
 
-def reporting_window(days, *, now=None):
-    end = (now or timezone.now()).astimezone(PACIFIC).date() - timedelta(days=1)
+def reporting_window(days, *, now=None, end=None):
+    """The ``days`` days YouTube reports, ending on its latest complete day
+    (yesterday in Pacific time) or on ``end`` when that is earlier."""
+    latest = (now or timezone.now()).astimezone(PACIFIC).date() - timedelta(days=1)
+    end = min(end, latest) if end else latest
     return end - timedelta(days=days - 1), end
 
 
@@ -85,8 +88,15 @@ def sync_channel_reports(account, provider, access_token, *, force=False):
         AccountInsightsSnapshot.objects.filter(social_account=current, date__lt=start).delete()
 
 
-def account_bundle(account, days):
-    start, end = reporting_window(days)
+def account_bundle(account, days, end=None):
+    """The channel's daily series over ``2 * days`` days and, for the preset
+    windows :func:`sync_channel_reports` stores, YouTube's own period totals.
+
+    A custom window (``end`` given) has no stored period report: its numbers
+    are derived from the daily series instead, like any other platform's.
+    """
+    custom = end is not None
+    start, end = reporting_window(days, end=end)
     previous_start, previous_end = start - timedelta(days=days), start - timedelta(days=1)
     window = [previous_start + timedelta(days=i) for i in range(days * 2)]
     rows = AccountInsightsSnapshot.objects.filter(
@@ -108,6 +118,20 @@ def account_bundle(account, days):
     stamps.extend(r.captured_at for r in reports.values())
     current = reports.get((start, end))
     previous = reports.get((previous_start, previous_end))
+    reporting_period = {
+        "start": start,
+        "end": end,
+        "timezone": "America/Los_Angeles",
+        "latest_reported_day": max((d for _, d in values if start <= d <= end), default=None),
+    }
+    if custom:
+        return {
+            "series_map": {m: [values.get((m, d), 0.0) for d in window] for m in PLATFORM_METRICS["youtube"]},
+            "present_map": {m: [(m, d) in values for d in window] for m in PLATFORM_METRICS["youtube"]},
+            "estimated_metrics": set(),
+            "max_captured_at": max(stamps, default=None),
+            "reporting_period": reporting_period,
+        }
     return {
         "series_map": {m: [values.get((m, d)) for d in window] for m in PLATFORM_METRICS["youtube"]},
         "present_map": {m: [(m, d) in values for d in window] for m in PLATFORM_METRICS["youtube"]},
@@ -115,12 +139,7 @@ def account_bundle(account, days):
         "max_captured_at": max(stamps, default=None),
         "native_current": current.metrics if current else {},
         "native_previous": previous.metrics if previous else {},
-        "reporting_period": {
-            "start": start,
-            "end": end,
-            "timezone": "America/Los_Angeles",
-            "latest_reported_day": max((d for _, d in values if start <= d <= end), default=None),
-        },
+        "reporting_period": reporting_period,
     }
 
 

@@ -215,3 +215,18 @@ def test_date_is_shown_in_the_workspace_zone(workspace, connection):
     table = reports._table([_conversion("A", purchased)], status="all", page=1, tz=SAO_PAULO)
 
     assert table["rows"][0]["date"].startswith("11/09/2026")
+
+
+def test_a_custom_period_counts_only_the_orders_of_its_days(connection):
+    end = _today_at(12, days_ago=10).date()
+    conversions = [
+        _conversion("in", _today_at(10, days_ago=12)),
+        _conversion("after", _today_at(10, days_ago=3)),
+        _conversion("before", _today_at(10, days_ago=20)),
+    ]
+    with patch(CONVERSIONS, return_value=ConversionReport(conversions)):
+        report = reports.build_report(connection, days=5, end=end, tz=SAO_PAULO)
+
+    assert _card(report, "orders").value == 1
+    assert report["table"]["total"] == 1
+    assert report["chart"]["labels"][-1] == end.isoformat()

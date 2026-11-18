@@ -2415,8 +2415,6 @@
 {% endblock %}
 
 {% block extra_js %}
-{% comment %}Portuguese month and weekday names for the schedule calendar (same flatpickr version as base.html).{% endcomment %}
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/pt.js"></script>
 <script nonce="{{ request.csp_nonce }}">
   // Reviewer approve / request-changes return 204 + toast + approvalAction. Let the
   // toast show, then reload so the status banner and history reflect the new state.

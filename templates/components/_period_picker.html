@@ -1,0 +1,52 @@
+{% load i18n %}{% comment %}
+The period pills with "Custom", which opens a calendar to pick a start and an end
+date. Rendered by the `period_picker` tag (apps/common/templatetags/common_extras.py),
+which reads the period and keeps the page's other query parameters; the period
+itself is apps.common.periods.Period. Script: periodPicker() in
+static/js/period-picker.js, on flatpickr's range calendar.
+{% endcomment %}
+<div class="relative inline-flex" x-data="periodPicker()"
+     data-start="{% if period.custom %}{{ period.start|date:'Y-m-d' }}{% endif %}"
+     data-end="{% if period.custom %}{{ period.end|date:'Y-m-d' }}{% endif %}"
+     data-max="{{ period.today|date:'Y-m-d' }}"
+     data-min="{% if period.min_date %}{{ period.min_date|date:'Y-m-d' }}{% endif %}"
+     @click.outside="open = false" @keydown.escape.window="open = false">
+    <div class="a-pill-group" role="group" aria-label="{% translate 'Period' %}">
+        {% for n in choices %}
+        <a href="?{{ keep }}{{ preset_key }}={{ n }}"
+           {% if hx_target %}hx-get="?{{ keep }}{{ preset_key }}={{ n }}&partial={{ hx_partial }}" hx-target="{{ hx_target }}" hx-swap="outerHTML"{% endif %}
+           class="{% if not period.custom and not period.everything and n == period.days %}active{% endif %}">{% if short %}{{ n }}D{% else %}{% blocktranslate %}{{ n }} days{% endblocktranslate %}{% endif %}</a>
+        {% endfor %}
+        {% if all_label %}
+        <a href="?{{ keep }}{{ preset_key }}=all"
+           {% if hx_target %}hx-get="?{{ keep }}{{ preset_key }}=all&partial={{ hx_partial }}" hx-target="{{ hx_target }}" hx-swap="outerHTML"{% endif %}
+           class="{% if period.everything %}active{% endif %}">{{ all_label }}</a>
+        {% endif %}
+        <button type="button" @click="toggle()" :aria-expanded="open" aria-haspopup="dialog"
+                class="inline-flex items-center gap-1.5 {% if period.custom %}active{% endif %}">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            {% if period.custom %}{{ period.label }}{% else %}{% translate "Custom" %}{% endif %}
+        </button>
+    </div>
+    <form method="get" action="" x-show="open" x-cloak x-transition.opacity.duration.150ms
+          {% if hx_target %}hx-get="{{ path }}" hx-target="{{ hx_target }}" hx-swap="outerHTML"{% endif %}
+          role="dialog" aria-label="{% translate 'Custom period' %}"
+          class="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 p-3 flex flex-col gap-3">
+        {% for key, value in keep_pairs %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+        {% if hx_target %}<input type="hidden" name="partial" value="{{ hx_partial }}">{% endif %}
+        <input type="hidden" name="{{ start_key }}" :value="start">
+        <input type="hidden" name="{{ end_key }}" :value="end">
+        <input type="text" x-ref="calendar" class="hidden" tabindex="-1" aria-hidden="true">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 pt-3">
+            <p class="text-xs text-neutral-600">
+                <span x-show="!start">{% translate "Click the first day, then the last." %}</span>
+                <span x-show="start && !end">{% translate "Now click the last day." %}</span>
+                <span x-show="start && end" class="font-semibold text-neutral-950" x-text="shown(start) + ' – ' + shown(end)"></span>
+            </p>
+            <div class="flex items-center gap-2 ml-auto">
+                <button type="button" class="btn-ghost text-sm" @click="open = false">{% translate "Cancel" %}</button>
+                <button type="submit" class="btn-brand text-sm" :disabled="!(start && end)" @click="open = false">{% translate "Apply" %}</button>
+            </div>
+        </div>
+    </form>
+</div>

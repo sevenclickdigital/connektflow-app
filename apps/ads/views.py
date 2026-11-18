@@ -16,11 +16,13 @@ from django.core import signing
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from django_ratelimit.decorators import ratelimit
 
 from apps.common.htmx import lazy_body_urls, wants_lazy_body
+from apps.common.periods import Period, parse_period
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
 from apps.social_accounts.views import _sign_state, _unsign_state, finish_in_popup
@@ -37,12 +39,10 @@ STATE_PLATFORM = "meta_ads"
 IMAGE_PICKER_LIMIT = 48
 
 
-def _days(request) -> int:
-    try:
-        days = int(request.GET.get("range", services.DEFAULT_RANGE))
-    except (TypeError, ValueError):
-        return services.DEFAULT_RANGE
-    return days if days in services.RANGE_CHOICES else services.DEFAULT_RANGE
+def _period(request) -> Period:
+    return parse_period(
+        request.GET, choices=services.RANGE_CHOICES, default=services.DEFAULT_RANGE, today=timezone.localdate()
+    )
 
 
 def _can_manage(request) -> bool:
@@ -78,7 +78,7 @@ def index(request, workspace_id):
         "workspace_id": workspace_id,
         "connection": connection,
         "can_manage": _can_manage(request),
-        "days": _days(request),
+        "period": _period(request),
         "range_choices": services.RANGE_CHOICES,
     }
     if connection is None and context["can_manage"]:
@@ -106,16 +106,16 @@ def overview(request, workspace_id):
     # The index already shows the sign-in error box; a failure caused by the
     # same expired token should not repeat it.
     already_failing = connection.status == AdsConnection.Status.ERROR
-    days = _days(request)
+    period = _period(request)
     context = {
         "workspace_id": workspace_id,
         "connection": connection,
-        "days": days,
+        "period": period,
         "error": "",
     }
     try:
-        context["overview"] = services.account_overview(connection, days=days)
-        context["campaigns"] = services.list_campaigns(connection, days=days)
+        context["overview"] = services.account_overview(connection, days=period.days, end=period.end_param)
+        context["campaigns"] = services.list_campaigns(connection, days=period.days, end=period.end_param)
     except services.AdsError as exc:
         context["error"] = "" if already_failing else str(exc)
     return render(request, "ads/partials/_overview.html", context)
@@ -317,12 +317,11 @@ def campaign_detail(request, workspace_id, campaign_id):
     connection, elsewhere = _ready_connection(request, workspace_id)
     if elsewhere:
         return elsewhere
-    days = _days(request)
     context = {
         "workspace_id": workspace_id,
         "connection": connection,
         "can_manage": _can_manage(request),
-        "days": days,
+        "period": _period(request),
         "range_choices": services.RANGE_CHOICES,
         "error": "",
     }
@@ -348,10 +347,10 @@ def campaign_body(request, workspace_id, campaign_id):
     connection, elsewhere = _ready_connection(request, workspace_id)
     if elsewhere:
         return elsewhere
-    days = _days(request)
-    context = {"workspace_id": workspace_id, "connection": connection, "days": days, "error": ""}
+    period = _period(request)
+    context = {"workspace_id": workspace_id, "connection": connection, "period": period, "error": ""}
     try:
-        context.update(services.campaign_detail(connection, campaign_id, days=days))
+        context.update(services.campaign_detail(connection, campaign_id, days=period.days, end=period.end_param))
     except services.AdsError as exc:
         context["error"] = str(exc)
     return render(request, "ads/partials/_campaign_body.html", context)

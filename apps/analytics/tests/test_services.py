@@ -399,3 +399,29 @@ def test_sparkline_draws_unreported_days_as_a_gap():
     # Two separate runs of line, not one line dipping to zero.
     assert svg.count("M") == 4  # two line subpaths + two fill subpaths
     assert sparkline([None, None]) == ""
+
+
+@pytest.mark.django_db
+def test_a_custom_period_reads_the_days_up_to_its_end(facebook_account):
+    """The cards and chart of picked dates read those days, compared with as
+    many days just before them, not the last days up to today."""
+    from apps.analytics.models import AccountInsightsSnapshot
+    from apps.analytics.services import hero_chart_data
+
+    end = timezone.now().date() - timedelta(days=30)
+    for day, value in (
+        (end, 7),
+        (end - timedelta(days=6), 3),
+        (end - timedelta(days=8), 5),
+        (end + timedelta(days=1), 99),
+    ):
+        AccountInsightsSnapshot.objects.create(
+            social_account=facebook_account, metric_key="views", date=day, value=value
+        )
+
+    chart = hero_chart_data(facebook_account, 7, metric="views", end=end)
+
+    assert chart["labels"][0] == (end - timedelta(days=6)).isoformat()
+    assert chart["labels"][-1] == end.isoformat()
+    assert chart["derived"].value == 10
+    assert chart["derived"].delta == 100.0

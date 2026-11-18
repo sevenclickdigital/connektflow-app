@@ -1209,3 +1209,38 @@ input.idea-title-input::placeholder {
 .composer-tool { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: var(--radius-md); border: none; background: transparent; color: var(--text-tertiary); cursor: pointer; transition: all var(--dur-fast) ease; }
 .composer-tool:hover, .composer-tool.is-active { background: var(--brand-50); color: var(--brand-800); }
 }
+
+/* The range calendar of the period picker (components/_period_picker.html):
+   the two ends in the primary colour, the days between them on its soft tint,
+   joined into one band. Outside the components layer and under
+   .flatpickr-calendar on purpose: flatpickr's own stylesheet is unlayered and
+   loads after this one, so a layered or equally specific rule loses to it. */
+.flatpickr-calendar .flatpickr-day.selected.startRange,
+.flatpickr-calendar .flatpickr-day.selected.endRange,
+.flatpickr-calendar .flatpickr-day.startRange,
+.flatpickr-calendar .flatpickr-day.endRange,
+.flatpickr-calendar .flatpickr-day.startRange:hover,
+.flatpickr-calendar .flatpickr-day.endRange:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--text-inverse);
+  box-shadow: none;
+}
+.flatpickr-calendar .flatpickr-day.inRange,
+.flatpickr-calendar .flatpickr-day.inRange:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary-soft);
+  box-shadow: -5px 0 0 var(--primary-soft), 5px 0 0 var(--primary-soft);
+  border-radius: 0;
+  color: var(--text-primary);
+}
+.flatpickr-calendar .flatpickr-day.selected.startRange + .endRange:not(:nth-child(7n + 1)),
+.flatpickr-calendar .flatpickr-day.startRange.startRange + .endRange:not(:nth-child(7n + 1)),
+.flatpickr-calendar .flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n + 1)) {
+  box-shadow: -10px 0 0 var(--primary);
+}
+/* An inline calendar sits inside a panel that already draws the card. */
+.flatpickr-calendar.inline {
+  border: none;
+  box-shadow: none;
+}

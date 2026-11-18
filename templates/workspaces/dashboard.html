@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static i18n analytics_extras %}
+{% load static i18n analytics_extras common_extras %}
 
 {% block title %}{% translate "Dashboard" context "menu" %} - {{ workspace.name }} - Connekt Flow{% endblock %}
 
@@ -29,11 +29,7 @@
     <div class="flex flex-wrap items-center justify-end gap-2">
         {% include "composer/partials/_ideas_hero_toggle.html" with tab="dashboard" %}
         {% if can_view_analytics %}
-        <div class="a-pill-group" role="group" aria-label="{% translate 'Period' %}">
-            {% for n in range_choices %}
-            <a href="?range={{ n }}{% if active_account %}&account={{ active_account.id }}{% endif %}" class="{% if n == days %}active{% endif %}">{% blocktranslate %}{{ n }} days{% endblocktranslate %}</a>
-            {% endfor %}
-        </div>
+        {% period_picker period range_choices %}
         {% endif %}
     </div>
 </div>
@@ -90,7 +86,7 @@ plus failed posts and accounts that lost their connection.
             <h2 class="text-base font-semibold text-neutral-950">{% translate "Results" %}</h2>
             <div class="flex flex-wrap gap-1.5" role="group" aria-label="{% translate 'Network' %}">
                 {% for account in rated_accounts %}
-                <a href="?range={{ days }}&account={{ account.id }}" title="{{ account.account_name }}"
+                <a href="?{{ period.query }}&account={{ account.id }}" title="{{ account.account_name }}"
                    class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors {% if account.id == active_account.id %}border-brand-700 bg-brand-700 text-white{% else %}border-neutral-300 bg-white text-neutral-700 hover:border-brand-300 hover:text-brand-700{% endif %}"
                    {% if account.id == active_account.id %}aria-current="true"{% endif %}>
                     <span class="w-4 h-4 rounded-full bg-white flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}</span>
@@ -129,7 +125,7 @@ plus failed posts and accounts that lost their connection.
 Each card recomputes its account's analytics: the dashboard shows at once and
 the cards load into this placeholder.
 {% endcomment %}
-<div hx-get="?range={{ days }}{% if active_account %}&account={{ active_account.id }}{% endif %}&partial=networks" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#dashboard-networks-status" class="mb-5">
+<div hx-get="?{{ period.query }}{% if active_account %}&account={{ active_account.id }}{% endif %}&partial=networks" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#dashboard-networks-status" class="mb-5">
     {% translate "Calculating each network's numbers…" as loading_label %}{% include "components/_skeleton.html" with variant="tiles" label=loading_label status_id="dashboard-networks-status" %}
 </div>
 {% endif %}
@@ -206,12 +202,12 @@ its post is already approved, scheduled or out, or offering to plan one.
     <section class="lg:col-span-2 bg-white border border-neutral-300 rounded-xl p-5 min-w-0">
         <div class="flex items-center justify-between gap-3 mb-4">
             <h2 class="text-base font-semibold text-neutral-950">{% blocktranslate with name=active_account.account_name %}Best posts · {{ name }}{% endblocktranslate %}</h2>
-            <a href="{% url 'analytics:account' workspace_id=workspace.id account_id=active_account.id %}?range={{ days }}" class="text-sm font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap">{% translate "See reports" %} →</a>
+            <a href="{% url 'analytics:account' workspace_id=workspace.id account_id=active_account.id %}?{{ period.query }}" class="text-sm font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap">{% translate "See reports" %} →</a>
         </div>
         {% if top_posts %}
         <div class="grid gap-3 grid-cols-2 md:grid-cols-4">
             {% for row in top_posts %}
-            <a href="{% url 'analytics:account' workspace_id=workspace.id account_id=active_account.id %}?range={{ days }}" class="block rounded-xl border border-neutral-300 overflow-hidden hover:border-brand-300 transition-colors">
+            <a href="{% url 'analytics:account' workspace_id=workspace.id account_id=active_account.id %}?{{ period.query }}" class="block rounded-xl border border-neutral-300 overflow-hidden hover:border-brand-300 transition-colors">
                 <div class="relative aspect-square bg-brand-50">
                     {% if row.media_preview.kind == "image" %}
                     <img src="{{ row.media_preview.url }}" alt="" class="w-full h-full object-cover" loading="lazy">
@@ -228,7 +224,7 @@ its post is already approved, scheduled or out, or offering to plan one.
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-sm text-neutral-600 py-6 text-center">{% blocktranslate %}No posts published on this network in the last {{ days }} days.{% endblocktranslate %}</p>
+        <p class="text-sm text-neutral-600 py-6 text-center">{% if period.custom %}{% blocktranslate with dates=period.label %}No posts published on this network in the period {{ dates }}.{% endblocktranslate %}{% else %}{% blocktranslate %}No posts published on this network in the last {{ days }} days.{% endblocktranslate %}{% endif %}</p>
         {% endif %}
     </section>
 
@@ -256,7 +252,7 @@ its post is already approved, scheduled or out, or offering to plan one.
             <p class="text-xs text-neutral-500 mt-2">{% translate "Average engagement rate per post (engagements ÷ views or reach), calculated by Connekt Flow from the network's numbers." %}</p>
         </div>
         {% else %}
-        <p class="text-sm text-neutral-600">{% blocktranslate %}No published post with results in the last {{ days }} days yet.{% endblocktranslate %}</p>
+        <p class="text-sm text-neutral-600">{% if period.custom %}{% blocktranslate with dates=period.label %}No published post with results in the period {{ dates }}.{% endblocktranslate %}{% else %}{% blocktranslate %}No published post with results in the last {{ days }} days yet.{% endblocktranslate %}{% endif %}</p>
         {% endif %}
     </section>
 </div>

@@ -4,12 +4,12 @@
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--neutral-100);">
         <span style="font-size: 0.8125rem; color: var(--text-secondary);">
             <strong class="a-mono" style="color: var(--text-primary);">{{ table.total }}</strong> {% blocktranslate count counter=table.total %}order{% plural %}orders{% endblocktranslate %} ·
-            {% blocktranslate %}last {{ days }} days{% endblocktranslate %}
+            {{ period.label }}
         </span>
         <div class="a-pill-group">
             {% for key, label in table.statuses %}
-            <a href="?range={{ days }}&status={{ key }}"
-               hx-get="?range={{ days }}&status={{ key }}&partial=table"
+            <a href="?{{ period.query }}&status={{ key }}"
+               hx-get="?{{ period.query }}&status={{ key }}&partial=table"
                hx-target="#shopee-orders-table"
                hx-swap="outerHTML"
                class="{% if table.status == key %}active{% endif %}">{{ label }}</a>
@@ -63,8 +63,8 @@
         </span>
         <div style="display: flex; align-items: center; gap: 8px;">
             {% if table.page > 1 %}
-            <a href="?range={{ days }}&status={{ table.status }}&page={{ table.page|add:-1 }}"
-               hx-get="?range={{ days }}&status={{ table.status }}&page={{ table.page|add:-1 }}&partial=table"
+            <a href="?{{ period.query }}&status={{ table.status }}&page={{ table.page|add:-1 }}"
+               hx-get="?{{ period.query }}&status={{ table.status }}&page={{ table.page|add:-1 }}&partial=table"
                hx-target="#shopee-orders-table" hx-swap="outerHTML" aria-label="{% translate 'Previous page' %}"
                style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-md); border: 1px solid var(--border); background: #fff; color: var(--text-secondary); text-decoration: none;">‹</a>
             {% else %}
@@ -72,8 +72,8 @@
             {% endif %}
             <span class="a-mono" style="font-size: 0.75rem; color: var(--text-secondary); min-width: 84px; text-align: center;">{% blocktranslate with page=table.page total_pages=table.total_pages %}Page {{ page }} of {{ total_pages }}{% endblocktranslate %}</span>
             {% if table.page < table.total_pages %}
-            <a href="?range={{ days }}&status={{ table.status }}&page={{ table.page|add:1 }}"
-               hx-get="?range={{ days }}&status={{ table.status }}&page={{ table.page|add:1 }}&partial=table"
+            <a href="?{{ period.query }}&status={{ table.status }}&page={{ table.page|add:1 }}"
+               hx-get="?{{ period.query }}&status={{ table.status }}&page={{ table.page|add:1 }}&partial=table"
                hx-target="#shopee-orders-table" hx-swap="outerHTML" aria-label="{% translate 'Next page' %}"
                style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-md); border: 1px solid var(--border); background: #fff; color: var(--text-secondary); text-decoration: none;">›</a>
             {% else %}

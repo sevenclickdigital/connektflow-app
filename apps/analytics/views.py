@@ -11,17 +11,21 @@ from __future__ import annotations
 import json
 import logging
 import zoneinfo
+from datetime import date as dt_date
+from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.ads import reports as ads_reports
 from apps.ads import services as ads_services
 from apps.ads.models import AdsConnection
 from apps.common.htmx import lazy_body_urls
+from apps.common.periods import Period, parse_period
 from apps.composer.models import PlatformPost
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
@@ -31,6 +35,7 @@ from apps.radar.services import describe_error
 from apps.social_accounts.models import AnalyticsPlatformConfig, SocialAccount
 from apps.workspaces.models import Workspace
 from providers.exceptions import ProviderError
+from providers.shopee_affiliate import REPORT_MAX_DAYS as SHOPEE_MAX_DAYS
 
 from . import history_import, services
 from .metrics import PLATFORM_COLOR, PLATFORM_PRIMARY
@@ -72,23 +77,38 @@ def _ads_connection(workspace) -> AdsConnection | None:
     return connection if connection is not None and connection.ad_account_id else None
 
 
-def _parse_range(value: str | None) -> int:
-    try:
-        n = int(value or DEFAULT_RANGE)
-    except (TypeError, ValueError):
-        return DEFAULT_RANGE
-    return n if n in RANGE_CHOICES else DEFAULT_RANGE
+def _period(request, *, today: dt_date | None = None, min_date: dt_date | None = None) -> Period:
+    """The page's period: ``?range=7|30|90`` or a custom ``?start=&end=``."""
+    return parse_period(
+        request.GET,
+        choices=RANGE_CHOICES,
+        default=DEFAULT_RANGE,
+        today=today or timezone.now().date(),
+        min_date=min_date,
+    )
 
 
-def _parse_days_filter(value: str | None) -> int | None:
-    """Parse the All-posts table's date filter: 7|30|90 or "all"."""
-    if value is None or value in ("", "all"):
-        return None
-    try:
-        n = int(value)
-    except (TypeError, ValueError):
-        return None
-    return n if n in RANGE_CHOICES else None
+def _table_period(request, fallback: Period) -> Period:
+    """The All-posts table's own period (``table_range=7|30|90|all`` or
+    ``table_start``/``table_end``), ``fallback`` until it is changed."""
+    return parse_period(
+        request.GET,
+        choices=RANGE_CHOICES,
+        default=DEFAULT_RANGE,
+        today=fallback.today,
+        prefix="table_",
+        allow_all=True,
+        fallback=fallback,
+    )
+
+
+def _posts_table(account, table_period: Period, **kwargs) -> dict:
+    return services.all_posts_for(
+        account,
+        days_filter=None if table_period.everything else table_period.days,
+        end=table_period.end_param,
+        **kwargs,
+    )
 
 
 def _parse_page(value: str | None) -> int:
@@ -144,7 +164,8 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
             "analytics:account", workspace_id=workspace.id, account_id=services.preferred_account(accounts).id
         )
 
-    days = _parse_range(request.GET.get("range"))
+    period = _period(request)
+    days, end = period.days, period.end_param
     primary_color = "var(--primary)"  # locked in chat — design's locked accent
 
     has_any_post = PlatformPost.objects.filter(
@@ -156,9 +177,9 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
     from .models import AccountInsightsSnapshot
 
     has_snapshots = AccountInsightsSnapshot.objects.filter(social_account=account).exists()
-    youtube_bundle = services.account_analytics_bundle(account, days) if account.platform == "youtube" else None
+    youtube_bundle = services.account_analytics_bundle(account, days, end) if account.platform == "youtube" else None
     if youtube_bundle is not None:
-        has_snapshots = has_snapshots or bool(youtube_bundle["native_current"])
+        has_snapshots = has_snapshots or bool(youtube_bundle.get("native_current"))
     is_fresh = not has_any_post and not has_snapshots
     # Every gate comes from the one shared predicate, which also reports which
     # of them fired — only the admin-disabled one has a fix to offer (enable,
@@ -173,6 +194,7 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
         "source_accounts": _source_accounts(workspace),
         "ads_connection": _ads_connection(workspace),
         "days": days,
+        "period": period,
         "range_choices": RANGE_CHOICES,
         "primary_color": primary_color,
         "platform_color": PLATFORM_COLOR.get(account.platform, "var(--primary)"),
@@ -191,9 +213,11 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
     }
 
     if analytics_unavailable:
-        table = services.all_posts_for(
+        everything = Period(days=DEFAULT_RANGE, end=period.today, today=period.today, everything=True)
+        context["table_period"] = table_period = _table_period(request, everything)
+        table = _posts_table(
             account,
-            days_filter=_parse_days_filter(request.GET.get("table_range")),
+            table_period,
             sort_key="date",
             sort_dir=request.GET.get("dir", "desc"),
             type_filter=request.GET.get("type", "all"),
@@ -217,8 +241,8 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
     # Compute the bundle once and thread it into every consumer — the
     # post-level fallback inside the bundle is the dominant cost, and calling
     # these helpers without ``bundle`` re-runs it 3-4 times per render.
-    bundle = youtube_bundle if youtube_bundle is not None else services.account_analytics_bundle(account, days)
-    follower_g = services.follower_growth(account, days, bundle=bundle)
+    bundle = youtube_bundle if youtube_bundle is not None else services.account_analytics_bundle(account, days, end)
+    follower_g = services.follower_growth(account, days, bundle=bundle, end=end)
     hero_cards = services.hero_cards(account, days, bundle=bundle)
     engagement = services.engagement_card(account, days, bundle=bundle)
     chart = services.hero_chart_data(
@@ -226,16 +250,18 @@ def analytics_account(request: HttpRequest, workspace_id, account_id) -> HttpRes
         days,
         metric=request.GET.get("chart_metric"),
         bundle=bundle,
+        end=end,
     )
     wants_table = bool(request.headers.get("HX-Request")) and request.GET.get("partial") == "table"
     # The table of every post is the slowest part: the page shows without it
     # and the table loads after (``partial=table``, the same request its
     # sorting and filters make).
     posts_table = None
+    context["table_period"] = table_period = _table_period(request, period)
     if wants_table:
-        posts_table = services.all_posts_for(
+        posts_table = _posts_table(
             account,
-            days_filter=_parse_days_filter(request.GET.get("table_range", str(days))),
+            table_period,
             sort_key=request.GET.get("sort") or PLATFORM_PRIMARY.get(account.platform),
             sort_dir=request.GET.get("dir", "desc"),
             type_filter=request.GET.get("type", "all"),
@@ -286,7 +312,11 @@ def shopee_report(request: HttpRequest, workspace_id, connection_id) -> HttpResp
     if connection is None:
         raise Http404("No such Shopee Affiliates connection.")
     enabled = AnalyticsPlatformConfig.enabled_platforms()
-    days = _parse_range(request.GET.get("range"))
+    tz = zoneinfo.ZoneInfo(workspace.effective_timezone or "UTC")
+    today = timezone.now().astimezone(tz).date()
+    # Shopee only answers for its last REPORT_MAX_DAYS days.
+    period = _period(request, today=today, min_date=today - timedelta(days=SHOPEE_MAX_DAYS - 1))
+    days = period.days
 
     context: dict = {
         "workspace": workspace,
@@ -295,6 +325,7 @@ def shopee_report(request: HttpRequest, workspace_id, connection_id) -> HttpResp
         "ads_connection": _ads_connection(workspace),
         "active_source": connection,
         "days": days,
+        "period": period,
         "range_choices": RANGE_CHOICES,
         "primary_color": "var(--primary)",
         **lazy_body_urls(request),
@@ -306,7 +337,8 @@ def shopee_report(request: HttpRequest, workspace_id, connection_id) -> HttpResp
         report = radar_reports.build_report(
             connection,
             days=days,
-            tz=zoneinfo.ZoneInfo(workspace.effective_timezone or "UTC"),
+            end=period.end_param,
+            tz=tz,
             metric=request.GET.get("chart_metric"),
             status=request.GET.get("status", "all"),
             page=_parse_page(request.GET.get("page")),
@@ -342,7 +374,8 @@ def meta_ads_report(request: HttpRequest, workspace_id) -> HttpResponse:
     if connection is None:
         raise Http404("No Meta Ads connection.")
     enabled = AnalyticsPlatformConfig.enabled_platforms()
-    days = _parse_range(request.GET.get("range"))
+    period = _period(request, today=timezone.localdate())
+    days = period.days
     context: dict = {
         "workspace": workspace,
         "accounts": services.analytics_accounts(workspace, enabled) if enabled else [],
@@ -350,6 +383,7 @@ def meta_ads_report(request: HttpRequest, workspace_id) -> HttpResponse:
         "ads_connection": connection,
         "active_ads": connection,
         "days": days,
+        "period": period,
         "range_choices": RANGE_CHOICES,
         "primary_color": "var(--primary)",
         **lazy_body_urls(request),
@@ -358,7 +392,9 @@ def meta_ads_report(request: HttpRequest, workspace_id) -> HttpResponse:
     if not request.headers.get("HX-Request") or not request.GET.get("partial"):
         return render(request, "analytics/meta_ads.html", context)
     try:
-        report = ads_reports.build_report(connection, days=days, metric=request.GET.get("chart_metric"))
+        report = ads_reports.build_report(
+            connection, days=days, end=period.end_param, metric=request.GET.get("chart_metric")
+        )
     except ads_services.AdsError as exc:
         context["report_error"] = str(exc)
         return render(request, "analytics/_meta_ads_body.html", context)

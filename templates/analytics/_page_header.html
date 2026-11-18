@@ -1,4 +1,4 @@
-{% load analytics_extras humanize i18n %}
+{% load analytics_extras common_extras humanize i18n %}
 <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 22px;">
     {# Title #}
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
@@ -139,12 +139,8 @@
         </div>
 
         {% if not is_fresh or active_account.platform == "youtube" %}
-        {# Range toggle #}
-        <div class="a-pill-group">
-            {% for n in range_choices %}
-                <a href="?range={{ n }}" class="{% if n == days %}active{% endif %}">{{ n }}D</a>
-            {% endfor %}
-        </div>
+        {# Period: 7, 30 or 90 days, or custom dates #}
+        {% period_picker period range_choices short=True %}
         {% endif %}
     </div>
 </div>

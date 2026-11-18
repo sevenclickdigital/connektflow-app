@@ -201,23 +201,25 @@ def build_report(
     *,
     days: int,
     tz: tzinfo,
+    end: date | None = None,
     metric: str | None = None,
     status: str = "all",
     page: int = 1,
 ) -> dict:
-    """Everything the Shopee analytics page shows for the last ``days`` days.
+    """Everything the Shopee analytics page shows for the last ``days`` days, or
+    the ``days`` ending on ``end``.
 
     Raises :class:`~providers.exceptions.ProviderError` when Shopee fails.
     """
     report = load_conversions(connection)
     today = timezone.now().astimezone(tz).date()
-    window = _window(days, today)
+    window = _window(days, end or today)
     # The previous period is only comparable if Shopee still reports all of it.
     comparable = window.dates[0] > today - timedelta(days=REPORT_MAX_DAYS)
     series = _series(report.conversions, window, tz)
 
-    current_start = window.current[0]
-    in_range = [c for c in report.conversions if c.purchased_at.astimezone(tz).date() >= current_start]
+    current_start, current_end = window.current[0], window.current[-1]
+    in_range = [c for c in report.conversions if current_start <= c.purchased_at.astimezone(tz).date() <= current_end]
 
     metric = metric if metric in METRICS else PRIMARY_METRIC
     label, kind = METRICS[metric]

@@ -455,15 +455,16 @@ def _campaign_from_row(row: dict, currency: str) -> Campaign:
     )
 
 
-def date_window(days: int) -> tuple[str, str]:
-    today = timezone.localdate()
-    return (today - timedelta(days=days - 1)).isoformat(), today.isoformat()
+def date_window(days: int, end: date | None = None) -> tuple[str, str]:
+    """The ``days`` days ending on ``end`` (today when ``None``), as Meta's since/until."""
+    end = end or timezone.localdate()
+    return (end - timedelta(days=days - 1)).isoformat(), end.isoformat()
 
 
-def previous_window(days: int) -> tuple[str, str]:
+def previous_window(days: int, end: date | None = None) -> tuple[str, str]:
     """The ``days`` days just before :func:`date_window`, what its numbers are compared with."""
-    today = timezone.localdate()
-    return (today - timedelta(days=2 * days - 1)).isoformat(), (today - timedelta(days=days)).isoformat()
+    end = end or timezone.localdate()
+    return (end - timedelta(days=2 * days - 1)).isoformat(), (end - timedelta(days=days)).isoformat()
 
 
 def _per_campaign(connection: AdsConnection, since: str, until: str) -> dict[str, meta_ads.Insights]:
@@ -478,13 +479,13 @@ def _per_campaign(connection: AdsConnection, since: str, until: str) -> dict[str
     return {row.campaign_id: row for row in rows}
 
 
-def list_campaigns(connection: AdsConnection, *, days: int = DEFAULT_RANGE) -> list[Campaign]:
+def list_campaigns(connection: AdsConnection, *, days: int = DEFAULT_RANGE, end: date | None = None) -> list[Campaign]:
     """The ad account's campaigns (archived ones last), each with its numbers for the window
     and for the window before it."""
     rows = _call(connection, meta_ads.MetaAdsClient.campaigns, connection.ad_account_id)
     campaigns = [_campaign_from_row(row, connection.currency) for row in rows]
-    current = _per_campaign(connection, *date_window(days))
-    previous = _per_campaign(connection, *previous_window(days))
+    current = _per_campaign(connection, *date_window(days, end))
+    previous = _per_campaign(connection, *previous_window(days, end))
     for campaign in campaigns:
         campaign.insights = current.get(campaign.id, meta_ads.Insights())
         campaign.previous = previous.get(campaign.id, meta_ads.Insights())
@@ -549,7 +550,9 @@ def campaign_ad_sets(connection: AdsConnection, campaign: Campaign) -> list[AdSe
     return ad_sets
 
 
-def campaign_detail(connection: AdsConnection, campaign_id: str, *, days: int = DEFAULT_RANGE) -> dict:
+def campaign_detail(
+    connection: AdsConnection, campaign_id: str, *, days: int = DEFAULT_RANGE, end: date | None = None
+) -> dict:
     """A campaign's numbers, where they come from and its ads. Its ad sets are read
     apart (:func:`campaign_ad_sets`), only when the edit dialog opens."""
     campaign, _row = get_campaign(connection, campaign_id)
@@ -568,9 +571,9 @@ def campaign_detail(connection: AdsConnection, campaign_id: str, *, days: int = 
                 "preview_url": _https_url(row.get("preview_shareable_link")),
             }
         )
-    since, until = date_window(days)
+    since, until = date_window(days, end)
     totals = _first(_call(connection, meta_ads.MetaAdsClient.insights, campaign.id, since=since, until=until))
-    before_since, before_until = previous_window(days)
+    before_since, before_until = previous_window(days, end)
     before = _first(
         _call(connection, meta_ads.MetaAdsClient.insights, campaign.id, since=before_since, until=before_until)
     )
@@ -582,7 +585,7 @@ def campaign_detail(connection: AdsConnection, campaign_id: str, *, days: int = 
         "totals": totals,
         "changes": compare_all(totals, before),
         "series": daily_series(daily, since, until),
-        "breakdowns": campaign_breakdowns(connection, campaign, ads, days=days),
+        "breakdowns": campaign_breakdowns(connection, campaign, ads, days=days, end=end),
     }
 
 
@@ -674,14 +677,16 @@ def _rank(rows: list[BreakdownRow], key: str, total_spend: Decimal) -> list[Brea
     return sorted(rows, key=lambda r: r.insights.spend, reverse=True)
 
 
-def campaign_breakdowns(connection: AdsConnection, campaign: Campaign, ads: list[dict], *, days: int) -> dict:
+def campaign_breakdowns(
+    connection: AdsConnection, campaign: Campaign, ads: list[dict], *, days: int, end: date | None = None
+) -> dict:
     """Which ads, audiences (age and gender) and placements bring a campaign's results.
 
     Meta Ads has no keywords: what an advertiser compares instead is the
     creative, who saw it and where. Each list is ranked by the metric the
     campaign is judged by (``Campaign.key_metric``).
     """
-    since, until = date_window(days)
+    since, until = date_window(days, end)
 
     def rows(**kwargs) -> list[meta_ads.Insights]:
         return _call(connection, meta_ads.MetaAdsClient.insights, campaign.id, since=since, until=until, **kwargs)
@@ -912,12 +917,12 @@ def account_insights(connection: AdsConnection, *, since: str, until: str, daily
     )
 
 
-def account_overview(connection: AdsConnection, *, days: int = DEFAULT_RANGE) -> dict:
+def account_overview(connection: AdsConnection, *, days: int = DEFAULT_RANGE, end: date | None = None) -> dict:
     """The ad account's totals and daily series for the window, and how each total
     moved against the window before it."""
-    since, until = date_window(days)
+    since, until = date_window(days, end)
     totals = _first(account_insights(connection, since=since, until=until))
-    before_since, before_until = previous_window(days)
+    before_since, before_until = previous_window(days, end)
     before = _first(account_insights(connection, since=before_since, until=before_until))
     daily = account_insights(connection, since=since, until=until, daily=True)
     return {"totals": totals, "changes": compare_all(totals, before), "series": daily_series(daily, since, until)}

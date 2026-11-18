@@ -30,7 +30,7 @@ swapped into the index page in place of its placeholder.
             {% for campaign in campaigns %}
             <tr class="border-b border-neutral-300 last:border-0 hover:bg-neutral-50">
                 <td class="px-3 py-3 whitespace-nowrap">
-                    <a href="{% url 'ads:campaign_detail' workspace_id=workspace_id campaign_id=campaign.id %}?range={{ days }}" title="{{ campaign.name }}" class="font-semibold text-neutral-950 hover:text-brand-700">{{ campaign.name|truncatechars:30 }}</a>
+                    <a href="{% url 'ads:campaign_detail' workspace_id=workspace_id campaign_id=campaign.id %}?{{ period.query }}" title="{{ campaign.name }}" class="font-semibold text-neutral-950 hover:text-brand-700">{{ campaign.name|truncatechars:30 }}</a>
                     <p class="text-xs text-neutral-600">{{ campaign.objective_label }}</p>
                 </td>
                 <td class="px-3 py-3"><span class="pill pill-{{ campaign.status_tone }}"><i></i>{{ campaign.status_label }}</span></td>
@@ -75,7 +75,7 @@ swapped into the index page in place of its placeholder.
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
                         </button>
                         <span x-show="menu" x-cloak :style="`top: ${top}px; right: ${right}px`" class="fixed z-50 w-60 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 text-left">
-                            <a href="{% url 'ads:campaign_detail' workspace_id=workspace_id campaign_id=campaign.id %}?range={{ days }}" class="block px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50">{% translate "See campaign details" %}</a>
+                            <a href="{% url 'ads:campaign_detail' workspace_id=workspace_id campaign_id=campaign.id %}?{{ period.query }}" class="block px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50">{% translate "See campaign details" %}</a>
                             <a href="https://adsmanager.facebook.com/adsmanager/manage/campaigns?act={{ connection.ad_account_id|cut:'act_'|urlencode }}&amp;selected_campaign_ids={{ campaign.id|urlencode }}" target="_blank" rel="noopener noreferrer" class="block px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50">{% translate "Open in Meta Ads Manager" %}</a>
                         </span>
                     </span>

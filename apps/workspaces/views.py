@@ -16,6 +16,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from apps.analytics.metrics import PLATFORM_PRIMARY
 from apps.billing import services
 from apps.common.htmx import toast_response
+from apps.common.periods import parse_period
 from apps.media_library.services import schedule_stored_file_removal, tenant_stored_files
 from apps.members.decorators import require_workspace_role
 from apps.members.models import OrgMembership, WorkspaceMembership
@@ -377,7 +378,7 @@ def workspace_dashboard(request, workspace_id):
     """The brand's overview: what needs attention, results per network, the
     month's post goal and what has been working.
 
-    ``?range=7|30|90`` sets the period of every number, ``?account=<id>`` the
+    ``?range=7|30|90`` or a custom ``?start=&end=`` sets the period of every number, ``?account=<id>`` the
     network the results chart, top posts and "what works" read from. Both are
     plain links; the chart's metric chips swap only the chart
     (``?partial=chart``), the goal card re-fetches itself
@@ -402,12 +403,8 @@ def workspace_dashboard(request, workspace_id):
     if request.htmx and request.GET.get("partial") == "goal":
         return render(request, "workspaces/partials/_dashboard_goal.html", context)
 
-    try:
-        days = int(request.GET.get("range") or DASHBOARD_DEFAULT_RANGE)
-    except ValueError:
-        days = DASHBOARD_DEFAULT_RANGE
-    if days not in DASHBOARD_RANGES:
-        days = DASHBOARD_DEFAULT_RANGE
+    period = parse_period(request.GET, choices=DASHBOARD_RANGES, default=DASHBOARD_DEFAULT_RANGE, today=today)
+    days, end = period.days, period.end_param
 
     enabled = AnalyticsPlatformConfig.enabled_platforms() if perms.get("view_analytics") else []
     accounts = analytics.analytics_accounts(workspace, enabled) if enabled else []
@@ -427,6 +424,7 @@ def workspace_dashboard(request, workspace_id):
     context.update(
         {
             "days": days,
+            "period": period,
             "range_choices": DASHBOARD_RANGES,
             "accounts": accounts,
             "rated_accounts": rated,
@@ -447,11 +445,13 @@ def workspace_dashboard(request, workspace_id):
     )
     if request.htmx and request.GET.get("partial") == "networks":
         # Each card recomputes its account's analytics: loaded after the page.
-        context["network_cards"] = [dashboard.network_card(account, days) for account in accounts]
+        context["network_cards"] = [dashboard.network_card(account, days, end) for account in accounts]
         return render(request, "workspaces/partials/_dashboard_networks.html", context)
     if selected is not None:
-        bundle = analytics.account_analytics_bundle(selected, days)
-        chart = analytics.hero_chart_data(selected, days, metric=request.GET.get("chart_metric"), bundle=bundle)
+        bundle = analytics.account_analytics_bundle(selected, days, end)
+        chart = analytics.hero_chart_data(
+            selected, days, metric=request.GET.get("chart_metric"), bundle=bundle, end=end
+        )
         primary = PLATFORM_PRIMARY.get(selected.platform, "")
         context.update(
             {
@@ -468,10 +468,12 @@ def workspace_dashboard(request, workspace_id):
             return render(request, "analytics/_hero_chart.html", context)
         context.update(
             {
-                "top_posts": analytics.all_posts_for(selected, days_filter=days, sort_key=None, page_size=4)["rows"],
+                "top_posts": analytics.all_posts_for(selected, days_filter=days, end=end, sort_key=None, page_size=4)[
+                    "rows"
+                ],
                 "primary_metric": primary,
                 "primary_label": next((c["label"] for c in chart["chips"] if c["key"] == primary), ""),
-                "performance": analytics.post_performance(selected, days, tz),
+                "performance": analytics.post_performance(selected, days, tz, end),
             }
         )
     return render(request, "workspaces/dashboard.html", context)

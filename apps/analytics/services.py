@@ -278,8 +278,9 @@ def _post_summed_series_for_metric(
     return dict(out), max_captured, observed
 
 
-def account_analytics_bundle(account: SocialAccount, days: int) -> dict[str, Any]:
-    """Single-pass snapshot fetch for one account over a ``2 * days`` window.
+def account_analytics_bundle(account: SocialAccount, days: int, end: dt_date | None = None) -> dict[str, Any]:
+    """Single-pass snapshot fetch for one account over a ``2 * days`` window
+    ending on ``end`` (today when ``None``).
 
     Returns a dict with:
       - ``series_map``: ``{metric_key: 2*days-long series}``, zero-filled.
@@ -298,8 +299,8 @@ def account_analytics_bundle(account: SocialAccount, days: int) -> dict[str, Any
     if account.platform == "youtube":
         from .youtube_reports import account_bundle
 
-        return account_bundle(account, days)
-    end = timezone.now().date()
+        return account_bundle(account, days, end=end)
+    end = end or timezone.now().date()
     start = end - timedelta(days=2 * days - 1)
     platform_metrics = PLATFORM_METRICS.get(account.platform, [])
 
@@ -398,6 +399,7 @@ def hero_cards(
     days: int,
     *,
     bundle: dict[str, Any] | None = None,
+    end: dt_date | None = None,
 ) -> list[dict[str, Any]]:
     """List of {metric, label, derived} for the hero KPI cards.
 
@@ -405,7 +407,7 @@ def hero_cards(
     :func:`account_analytics_bundle` result.
     """
     if bundle is None:
-        bundle = account_analytics_bundle(account, days)
+        bundle = account_analytics_bundle(account, days, end)
     return [
         {"metric": m, "label": _label(m), "derived": _derive_metric(bundle, m, days)}
         for m in hero_card_metrics(account.platform)
@@ -417,6 +419,7 @@ def engagement_card(
     days: int,
     *,
     bundle: dict[str, Any] | None = None,
+    end: dt_date | None = None,
 ) -> dict[str, Any] | None:
     """Engagement-rate card payload, or ``None`` if the platform lacks a denom.
 
@@ -436,7 +439,7 @@ def engagement_card(
     if not has_engagement_card(account.platform):
         return None
     if bundle is None:
-        bundle = account_analytics_bundle(account, days)
+        bundle = account_analytics_bundle(account, days, end)
     rate = engagement_rate(
         bundle["series_map"],
         days,
@@ -503,8 +506,10 @@ def hero_chart_data(
     metric: str | None = None,
     *,
     bundle: dict[str, Any] | None = None,
+    end: dt_date | None = None,
 ) -> dict[str, Any]:
-    """Payload for the hero area chart: selected metric, date labels, values.
+    """Payload for the hero area chart: selected metric, date labels, values,
+    over the ``days`` days ending on ``end`` (today when ``None``).
 
     Pass ``bundle`` to reuse an already-fetched
     :func:`account_analytics_bundle` result — it already holds every
@@ -512,13 +517,13 @@ def hero_chart_data(
     """
     chips = hero_chart_metrics(account)
     selected = metric if metric in chips else (PLATFORM_PRIMARY.get(account.platform) or (chips[0] if chips else ""))
-    end = timezone.now().date()
     if account.platform == "youtube":
         from .youtube_reports import reporting_window
 
-        _, end = reporting_window(days)
+        _, end = reporting_window(days, end=end)
     if bundle is None:
-        bundle = account_analytics_bundle(account, days)
+        bundle = account_analytics_bundle(account, days, end)
+    end = end or timezone.now().date()
     derived = _derive_metric(bundle, selected, days)
     # Date labels for the X axis (current window only).
     labels = [(end - timedelta(days=days - 1 - i)).isoformat() for i in range(days)]
@@ -536,6 +541,7 @@ def follower_growth(
     days: int,
     *,
     bundle: dict[str, Any] | None = None,
+    end: dt_date | None = None,
 ) -> DerivedMetric | None:
     """Account-level follower growth (new followers/subscribers) for the header.
 
@@ -544,7 +550,7 @@ def follower_growth(
     schema) should use :func:`follower_growth_metric` instead so they
     don't have to re-derive the key from ``PLATFORM_METRICS``.
     """
-    pair = follower_growth_metric(account, days, bundle=bundle)
+    pair = follower_growth_metric(account, days, bundle=bundle, end=end)
     return pair[1] if pair else None
 
 
@@ -553,6 +559,7 @@ def follower_growth_metric(
     days: int,
     *,
     bundle: dict[str, Any] | None = None,
+    end: dt_date | None = None,
 ) -> tuple[str, DerivedMetric] | None:
     """Same as :func:`follower_growth` but also returns the metric key.
 
@@ -578,7 +585,7 @@ def follower_growth_metric(
     if not growth_metric:
         return None
     if growth_metric == "followers":
-        end = timezone.now().date()
+        end = end or timezone.now().date()
         current_start = end - timedelta(days=days - 1)
         previous_start = end - timedelta(days=(2 * days) - 1)
         rows = list(
@@ -623,15 +630,24 @@ def follower_growth_metric(
             estimated=True,
         )
     if bundle is None:
-        bundle = account_analytics_bundle(account, days)
+        bundle = account_analytics_bundle(account, days, end)
     metric = _derive_metric(bundle, growth_metric, days)
     return (growth_metric, metric) if metric.available else None
+
+
+def _published_within(days: int, end: dt_date | None) -> dict[str, Any]:
+    """Filter for posts published in the last ``days`` days, or, with ``end``,
+    on the ``days`` calendar days ending on that date."""
+    if end is None:
+        return {"published_at__gte": timezone.now() - timedelta(days=days)}
+    return {"published_at__date__range": (end - timedelta(days=days - 1), end)}
 
 
 def all_posts_for(
     account: SocialAccount,
     *,
     days_filter: int | None,
+    end: dt_date | None = None,
     sort_key: str | None,
     sort_dir: str = "desc",
     type_filter: str = "all",
@@ -640,8 +656,9 @@ def all_posts_for(
 ) -> dict[str, Any]:
     """Page of posts + per-post stats, sortable + filterable.
 
-    ``days_filter=None`` means "all time". ``sort_key=None`` falls back to the
-    platform's primary metric.
+    ``days_filter=None`` means "all time"; with ``end``, the ``days_filter`` days
+    ending on that date instead of the last ones. ``sort_key=None`` falls back
+    to the platform's primary metric.
     """
     qs = (
         PlatformPost.objects.filter(
@@ -654,8 +671,7 @@ def all_posts_for(
         .order_by("-published_at")
     )
     if days_filter is not None:
-        cutoff = timezone.now() - timedelta(days=days_filter)
-        qs = qs.filter(published_at__gte=cutoff)
+        qs = qs.filter(**_published_within(days_filter, end))
 
     posts: list[PlatformPost] = list(qs)
     metrics = post_metrics_for(account.platform)
@@ -689,9 +705,9 @@ def all_posts_for(
     total = len(rows)
     total_pages = max(1, (total + page_size - 1) // page_size)
     safe_page = max(1, min(page, total_pages))
-    start = (safe_page - 1) * page_size
-    end = start + page_size
-    page_rows = rows[start:end]
+    first = (safe_page - 1) * page_size
+    stop = first + page_size
+    page_rows = rows[first:stop]
 
     return {
         "metrics": metrics,
@@ -702,8 +718,8 @@ def all_posts_for(
         "total": total,
         "page": safe_page,
         "total_pages": total_pages,
-        "page_from": 0 if total == 0 else start + 1,
-        "page_to": min(end, total),
+        "page_from": 0 if total == 0 else first + 1,
+        "page_to": min(stop, total),
         "sort_key": effective_sort,
         "sort_dir": sort_dir,
         # The direction to send when re-clicking the currently-sorted column.
@@ -791,9 +807,10 @@ def _format_label(post: PlatformPost) -> str:
     return gettext("Text")
 
 
-def post_performance(account: SocialAccount, days: int, tz) -> dict[str, Any]:
+def post_performance(account: SocialAccount, days: int, tz, end: dt_date | None = None) -> dict[str, Any]:
     """Which formats and which posting times engaged best on ``account`` over
-    the last ``days`` days, for the dashboard's "what works best" card.
+    the last ``days`` days (or the ``days`` ending on ``end``), for the
+    dashboard's "what works best" card.
 
     Returns ``{"formats": [...], "best_day": str | None, "best_hours":
     (start, end) | None, "rated_posts": int}``. Each format row is
@@ -807,12 +824,11 @@ def post_performance(account: SocialAccount, days: int, tz) -> dict[str, Any]:
     """
     from django.utils.dates import WEEKDAYS
 
-    cutoff = timezone.now() - timedelta(days=days)
     posts = list(
         PlatformPost.objects.filter(
             social_account=account,
             status=PlatformPost.Status.PUBLISHED,
-            published_at__gte=cutoff,
+            **_published_within(days, end),
         )
         .exclude(format=PlatformPost.Format.PROFILE_PHOTO)
         .select_related("post")

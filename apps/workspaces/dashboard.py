@@ -105,15 +105,16 @@ def month_goal_progress(workspace, today: date, tz) -> dict[str, Any]:
     }
 
 
-def network_card(account: SocialAccount, days: int) -> dict[str, Any]:
+def network_card(account: SocialAccount, days: int, end: date | None = None) -> dict[str, Any]:
     """One account's headline numbers for the "By network" row: followers, the
     platform's primary metric and the engagement rate, each with its change
-    against the previous period when the platform gives one."""
+    against the previous period when the platform gives one. The period is the
+    ``days`` days ending on ``end`` (today when ``None``)."""
     # Set by analytics.services.analytics_accounts, which the accounts come from.
     if getattr(account, "analytics_verdict", None) is not None:
         return {"account": account, "available": False, "reason": getattr(account, "analytics_unavailable_reason", "")}
-    bundle = analytics.account_analytics_bundle(account, days)
-    chart = analytics.hero_chart_data(account, days, bundle=bundle)
+    bundle = analytics.account_analytics_bundle(account, days, end)
+    chart = analytics.hero_chart_data(account, days, bundle=bundle, end=end)
     engagement = analytics.engagement_card(account, days, bundle=bundle)
     return {
         "account": account,
