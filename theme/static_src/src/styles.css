@@ -1218,12 +1218,13 @@ button.chat-reaction { cursor: pointer; }
 button.chat-reaction:hover { background: var(--brand-50); }
 /* The message a reply quotes, on top of the reply and of the reply box. */
 .chat-quote { margin-bottom: 4px; padding: 4px 8px; border-left: 3px solid var(--brand-500); border-radius: 6px; background: rgba(15, 23, 42, 0.05); }
-/* Bubble menu (react, quote, copy): the toggle shows on hover or focus, and always where there is no hover. */
+/* Bubble menu (react, quote, copy): the toggle shows on hover or focus, and always where there is no hover.
+   The menu itself is placed against the window by inboxMessageMenu, clear of the chat area's clipping. */
 .chat-menu-toggle { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; color: var(--text-tertiary); opacity: 0; cursor: pointer; transition: opacity var(--dur-fast) ease, background var(--dur-fast) ease; }
 .group:hover .chat-menu-toggle, .chat-menu-toggle:focus-visible, .chat-menu-toggle[aria-expanded="true"] { opacity: 1; }
 .chat-menu-toggle:hover { background: var(--brand-50); color: var(--text-primary); }
 @media (hover: none) { .chat-menu-toggle { opacity: 1; } }
-.chat-menu { position: absolute; top: 100%; left: 0; z-index: 40; min-width: 220px; margin-top: 4px; padding: 6px; background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+.chat-menu { position: fixed; z-index: 40; width: 236px; padding: 6px; background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
 .chat-menu-emoji { width: 32px; height: 32px; border-radius: 999px; font-size: 18px; line-height: 1; cursor: pointer; transition: background var(--dur-fast) ease; }
 .chat-menu-emoji:hover { background: var(--brand-50); }
 .chat-menu-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border-radius: 6px; font-size: 13px; color: var(--text-primary); text-align: left; cursor: pointer; transition: background var(--dur-fast) ease; }

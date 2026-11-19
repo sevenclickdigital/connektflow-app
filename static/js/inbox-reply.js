@@ -96,10 +96,29 @@ window.inboxReply = function (options) {
  * The menu on a chat bubble (templates/inbox/partials/_chat_incoming.html).
  * The buttons carry the message in data-* attributes: its text never goes
  * into an Alpine expression.
+ *
+ * The chat scrolls inside its own area, which clips anything past its edges
+ * and can be only a few lines tall, so the menu is placed against the window
+ * instead (`place`): below its button, or above when the room below is short,
+ * and never past the right edge. Scrolling, the chat or the page, closes it.
  */
 window.inboxMessageMenu = function () {
   return {
     open: false,
+    place: {},
+
+    toggle(button) {
+      this.open = !this.open;
+      if (!this.open) return;
+      const box = button.getBoundingClientRect();
+      const above = window.innerHeight - box.bottom < 170;
+      this.place = {
+        left: Math.max(8, Math.min(box.left, window.innerWidth - 244)) + 'px',
+        top: above ? 'auto' : (box.bottom + 4) + 'px',
+        bottom: above ? (window.innerHeight - box.top + 4) + 'px' : 'auto',
+      };
+      window.addEventListener('scroll', () => { this.open = false; }, { once: true, capture: true });
+    },
 
     quote(el) {
       this.$dispatch('inbox-quote', { id: el.dataset.id, name: el.dataset.name, text: el.dataset.text });
