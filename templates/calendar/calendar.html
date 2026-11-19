@@ -11,7 +11,8 @@
     </div>
     <div class="flex flex-wrap items-center justify-end gap-2">
     {% include "composer/partials/_ideas_hero_toggle.html" with tab="calendar" %}
-    <!-- List / Calendar / Board toggle -->
+    {# List / Calendar / Board only switch views of the calendar, which is not shown without a channel. #}
+    {% if has_connected_accounts %}
     <div class="a-pill-group" x-data="{ activeMode: '{{ mode|default:'calendar'|escapejs }}' }">
             <button class="{% if mode == 'list' %}active{% endif %}" :class="{ active: activeMode === 'list' }"
                     @click="activeMode = 'list'"
@@ -41,6 +42,7 @@
                 {% translate "Board" %}
             </button>
     </div>
+    {% endif %}
     </div>
 </div>
 {% endblock %}
@@ -510,6 +512,16 @@
 
 {% block content %}
 {% include "composer/partials/_ideas_hero.html" with tab="calendar" %}
+{% if not has_connected_accounts %}
+{# Nothing can be published without a channel: the calendar gives way to the invitation to connect one; the side panel stays. #}
+{% url 'social_accounts:connect' workspace_id=workspace.id as connect_url %}
+<div class="cal-layout">
+    <div class="flex-1 min-w-0">
+        {% include "social_accounts/partials/_first_network_card.html" with connect_url=connect_url %}
+    </div>
+    {% include "calendar/partials/_side_panel.html" %}
+</div>
+{% else %}
 <div id="publish-body" class="flex-1 flex flex-col min-h-0">
     {% if mode == 'list' %}
         {% include "calendar/partials/publish_list_shell.html" %}
@@ -568,6 +580,7 @@ ticked (see the `sel` Alpine store).{% endcomment %}
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

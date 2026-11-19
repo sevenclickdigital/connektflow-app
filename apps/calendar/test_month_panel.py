@@ -225,3 +225,20 @@ def test_the_post_card_shows_the_format_and_its_proportion(workspace, client_in,
     body = client_in.get(url).content.decode()
 
     assert f"{pp.get_format_display()} ({ratio})" in body
+
+
+def test_without_a_channel_the_calendar_gives_way_to_the_invitation_and_keeps_the_side_panel(workspace, client_in):
+    connect = reverse("social_accounts:connect", kwargs={"workspace_id": workspace.id})
+    page = reverse("calendar:calendar", kwargs={"workspace_id": workspace.id})
+
+    for mode in ("calendar", "list", "board"):
+        body = client_in.get(page, {"mode": mode}).content.decode()
+        assert connect in body
+        assert 'id="cal-side-panel"' in body
+        assert 'id="publish-body"' not in body
+
+    _account(workspace, "instagram")
+    body = client_in.get(page).content.decode()
+
+    assert 'id="publish-body"' in body and 'id="calendar-content"' in body
+    assert connect not in body

@@ -116,7 +116,16 @@ def test_the_workspace_can_hide_the_special_dates(workspace, owner_client):
 
 def test_the_workspace_can_hide_its_own_events_from_the_calendar(workspace, owner_client):
     from apps.calendar.services import custom_events_enabled
+    from apps.social_accounts.models import SocialAccount
 
+    # The grid is only built for a workspace with a connected channel.
+    SocialAccount.objects.create(
+        workspace=workspace,
+        platform="instagram",
+        account_platform_id="ig",
+        account_name="ig",
+        connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+    )
     _event(workspace, date(2026, 11, 20), title="Campaign start")
     url = reverse("calendar:calendar", kwargs={"workspace_id": workspace.id})
     month = {"mode": "calendar", "view": "month", "date": "2026-11-01"}

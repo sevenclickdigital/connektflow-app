@@ -736,7 +736,9 @@ def calendar_view(request, workspace_id):
         )
         .exists()
     )
-    default_mode = "calendar" if has_connected_accounts else "list"
+    # Without a connected channel calendar.html shows the invitation to connect
+    # one instead of any mode (see below).
+    default_mode = "calendar"
     # These three reach inline JavaScript in calendar.html, so only known values pass.
     mode = request.GET.get("mode", default_mode)
     if mode not in {"list", "calendar", "board"}:
@@ -793,6 +795,7 @@ def calendar_view(request, workspace_id):
     context = {
         "workspace": workspace,
         "mode": mode,
+        "has_connected_accounts": has_connected_accounts,
         "active_tab": active_tab,
         "view_type": view_type,
         "target_date": target_date,
@@ -812,6 +815,12 @@ def calendar_view(request, workspace_id):
         **_month_period(target_date),
         **publish_ctx,
     }
+
+    # Without a channel the page is the hero, the invitation to connect one and
+    # the side panel (calendar.html): none of the grids or tabs is built.
+    if not has_connected_accounts and not getattr(request, "htmx", False):
+        _list_side_panel_data(request, workspace, context)
+        return render(request, "calendar/calendar.html", context)
 
     # For list mode: fetch the active tab's data so the shell can render the
     # initial tab inline server-side (avoids a JS-triggered HTMX waterfall and

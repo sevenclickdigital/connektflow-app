@@ -16,7 +16,7 @@ Como pedir uma pose nova do Moti para um card ou tela, e as poses já pensadas p
 | 8 | Moti no celular | `moti-celular` | Pronta, sem tela |
 | 9 | Moti no notebook | `moti-notebook` | Pronta, sem tela (original em `poses/Robô Moti Digitando no Laptop.png`) |
 | 10 | Inbox | `moti-inbox` | Em uso (banner da Inbox) |
-| 11 | Automação | `moti-automacao` | Aguardando imagem (o banner usa `moti-computador` até lá) |
+| 11 | Automação | `moti-automacao` | Em uso (banner de Automação) |
 | 12 | Contatos | `moti-contatos` | Em uso (banner de Contatos) |
 | 13 | Relatórios | `moti-relatorios` | Em uso (banner de Relatórios) |
 | 14 | Contas sociais | `moti-contas` | Em uso (banner de Contas sociais) |
@@ -26,6 +26,7 @@ Como pedir uma pose nova do Moti para um card ou tela, e as poses já pensadas p
 | 18 | Pesquisa no Instagram | `moti-pesquisa` | Em uso (banner da Pesquisa no Instagram) |
 | 19 | Entrada, ao lado do cartão | `moti-boas-vindas` | Trocada pela pose 20 (original em `poses/Mascote robô futurista acenando alegremente.png`, sem WebP) |
 | 20 | Entrada, debruçado no cartão | `moti-debrucado` | Em uso (login, cadastro e passos de boas-vindas) |
+| 21 | Calendário sem canais | `moti-acenando` | Em uso (aviso "Boas-vindas" do calendário sem canais conectados; original em `poses/4c2d8f0d-cbaf-4201-bc99-2d7f540179d9.png`) |
 
 ## 1. Regras para toda pose
 
@@ -261,7 +262,7 @@ lilás e branco, sem textos e sem logotipos de redes sociais
 
 ### Pose 11 — Automação — "Deixe as respostas saírem sozinhas"
 
-- **Arquivo:** `moti-automacao` (para o banner de Automação, que hoje usa `moti-computador`, a mesma pose do canto do menu lateral)
+- **Arquivo:** `moti-automacao` (em uso no banner de Automação; original em `poses/Robô MOTI e Fluxo de Automação Neon.png`). A imagem final segue outra ideia que o pedido abaixo: de pé, olhando para a esquerda, ele toca um painel com um fluxo de automação (início, mensagem, espera, ação e fim).
 - **Pose:** Moti de corpo inteiro, de pé, virado três quartos para a esquerda e olhando para o título do banner, como um maestro. O braço da frente se estende para a esquerda com a mão aberta, palma para cima, e dela saem voando sozinhos três balões de resposta, um atrás do outro, cada vez menores, em direção ao texto. A outra mão fica na cintura. A capa balança de leve para trás.
 - **Expressão:** tranquilo e confiante, olhos lilases em meia-lua, o "pode deixar que sai sozinho".
 - **Detalhes:** os três balões são iguais, lisos, sem textos: dois brancos com contorno lilás e o da frente roxo. Dois tracinhos de brilho perto da mão. Nada mais em volta.

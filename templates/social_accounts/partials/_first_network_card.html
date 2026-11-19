@@ -1,0 +1,19 @@
+{% load i18n static %}
+{% comment %}
+The invitation to connect the brand's first network, with Moti plugging in a
+cable. Shown while the workspace has no connected channel: on the Social
+accounts page and, instead of the whole calendar, on the Publish page.
+Expects: connect_url (where the button leads) and, optionally, connect_click
+(an Alpine handler, a constant string from the including template).
+{% endcomment %}
+<div class="a-card py-8 px-6 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8 text-center sm:text-left">
+    <img src="{% static 'img/moti/moti-conectar.webp' %}" alt="{% translate 'Moti, the Connekt Flow robot, plugging in a cable' %}" class="h-36 sm:h-40 flex-shrink-0">
+    <div class="max-w-sm">
+        <h3 class="text-base font-semibold text-neutral-950 mb-2">{% translate "Let's plug in your first network" %}</h3>
+        <p class="text-sm text-neutral-600 mb-6">{% translate "Connect the networks your brand uses. From then on you publish, answer messages and follow the results all from here." %}</p>
+        <a href="{{ connect_url }}" class="btn-brand"{% if connect_click %} @click="{{ connect_click }}"{% endif %}>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            {% translate "Connect Your First Account" %}
+        </a>
+    </div>
+</div>

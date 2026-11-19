@@ -1,0 +1,24 @@
+{% load i18n static %}
+{% comment %}
+Moti waving and presenting, with his open hand, the balloon that invites the
+user to connect a channel. Shown while the workspace has no connected
+channel: over the blurred calendar (publish_calendar_shell.html) and in the
+list tabs (_no_channels_empty_state.html). The balloon is centred on Moti so
+its tail points at that hand.
+Expects: workspace (with workspace.id).
+{% endcomment %}
+<div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-0">
+    <img src="{% static 'img/moti/moti-acenando.webp' %}"
+         alt="{% translate 'Moti, the Connekt Flow robot, waving' %}"
+         class="h-40 sm:h-52 flex-shrink-0 drop-shadow-xl">
+    <div class="relative bg-white border border-neutral-300 rounded-2xl shadow-xl px-6 py-5 max-w-sm text-center sm:text-left sm:-mt-6 sm:-ml-2">
+        <span class="hidden sm:block absolute -left-[7px] top-1/2 -mt-1.5 w-3 h-3 bg-white border-l border-b border-neutral-300 rotate-45" aria-hidden="true"></span>
+        <h3 class="text-base font-semibold text-neutral-900 mb-1">{% translate "Welcome" %} &#x1F44B;</h3>
+        <p class="text-sm text-neutral-600 mb-4">{% translate "Connect a channel to start scheduling your posts and managing your comments." %}</p>
+        <a href="{% url 'social_accounts:connect' workspace_id=workspace.id %}"
+           class="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-brand-800 bg-brand-50 border border-brand-200 rounded-full hover:bg-brand-100 hover:border-brand-300 active:bg-brand-100 transition-all duration-150">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            {% translate "Connect a Channel" %}
+        </a>
+    </div>
+</div>

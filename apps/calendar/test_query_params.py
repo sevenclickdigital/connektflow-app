@@ -16,6 +16,7 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
+from apps.social_accounts.models import SocialAccount
 from apps.workspaces.models import Workspace
 
 BREAKOUT = "'+alert(document.domain)+'"
@@ -53,6 +54,14 @@ class CalendarQueryParamTests(TestCase):
         self.workspace = Workspace.objects.create(organization=self.org, name="WS")
         OrgMembership.objects.create(user=self.user, organization=self.org, org_role="owner")
         WorkspaceMembership.objects.create(user=self.user, workspace=self.workspace, workspace_role="owner")
+        # A connected channel, so the page draws the calendar and its mode toggle.
+        SocialAccount.objects.create(
+            workspace=self.workspace,
+            platform="instagram",
+            account_platform_id="ig-1",
+            account_name="ig",
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
         self.client.force_login(self.user)
         self.workspace_calendar = reverse("calendar:calendar", kwargs={"workspace_id": self.workspace.id})
         self.org_calendar = reverse("organizations:cross_workspace_calendar")
@@ -61,11 +70,11 @@ class CalendarQueryParamTests(TestCase):
         response = self.client.get(self.workspace_calendar, {"mode": BREAKOUT, "view": BREAKOUT, "tab": BREAKOUT})
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["mode"], "list")
+        self.assertEqual(response.context["mode"], "calendar")
         self.assertEqual(response.context["view_type"], "month")
         self.assertEqual(response.context["active_tab"], "queue")
         expressions = _expressions(response)
-        self.assertIn("{ activeMode: 'list' }", expressions)
+        self.assertIn("{ activeMode: 'calendar' }", expressions)
         self.assertFalse([value for value in expressions if "alert" in value and "document.domain" in value])
 
     def test_the_known_modes_and_views_still_work(self):
