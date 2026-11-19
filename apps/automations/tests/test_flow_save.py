@@ -25,6 +25,14 @@ from apps.workspaces.models import Workspace
 MARKUP = '"></path><g x-init="alert(document.domain)"></g><path d="'
 
 
+TWO_OPENING_MESSAGES = [
+    {"id": "t", "type": "trigger_comment", "data": {}},
+    {"id": "a", "type": "send_card", "data": {"text": "Here is the link"}},
+    {"id": "b", "type": "send_dm", "data": {"text": "Anything else?"}},
+]
+CHAIN = [{"from": "t", "to": "a"}, {"from": "a", "to": "b"}]
+
+
 class SavedPositionsTests(TestCase):
     def setUp(self):
         self.editor = User.objects.create_user(
@@ -58,6 +66,24 @@ class SavedPositionsTests(TestCase):
         )
         graph = {"nodes": nodes, "edges": [{"from": "a", "to": "b"}]}
         return self.client.post(url, {"graph": json.dumps(graph)})
+
+    def test_a_flow_with_two_opening_private_messages_is_saved_but_not_switched_on(self):
+        url = reverse(
+            "automations:flow_save",
+            kwargs={"workspace_id": self.workspace.id, "platform_post_id": self.platform_post.id},
+        )
+        graph = json.dumps({"nodes": TWO_OPENING_MESSAGES, "edges": CHAIN})
+
+        refused = self.client.post(url, {"graph": graph, "activate": "1"})
+        saved = self.client.post(url, {"graph": graph})
+
+        self.assertEqual(refused.status_code, 400)
+        self.assertIn("antes de a pessoa responder", refused.json()["error"])
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.json()["warnings"][0], refused.json()["error"])
+        self.assertNotEqual(
+            PostAutomation.objects.get(platform_post=self.platform_post).status, PostAutomation.Status.ACTIVE
+        )
 
     def test_a_position_that_is_not_a_number_is_stored_as_zero(self):
         response = self._save(
@@ -99,3 +125,39 @@ class NumericPositionsTests(SimpleTestCase):
         self.assertEqual(nodes[0], {"id": "a", "x": 0, "y": 0})
         self.assertEqual(nodes[1], {"id": "b", "x": 0, "y": 0})
         self.assertEqual(nodes[2], "not a node")
+
+
+class OpeningPrivateMessagesTests(TestCase):
+    def test_a_chain_of_messages_counts_each_one(self):
+        self.assertEqual(flow.opening_private_messages({"nodes": TWO_OPENING_MESSAGES, "edges": CHAIN}), 2)
+
+    def test_a_reply_button_ends_the_opening(self):
+        nodes = [dict(node) for node in TWO_OPENING_MESSAGES]
+        nodes[1]["data"] = {"text": "Want it?", "buttons": [{"type": "reply", "title": "Yes"}]}
+        edges = [{"from": "t", "to": "a"}, {"from": "a", "to": "b", "branch": "0"}]
+
+        self.assertEqual(flow.opening_private_messages({"nodes": nodes, "edges": edges}), 1)
+        self.assertEqual(flow.activation_error({"nodes": nodes, "edges": edges}), "")
+
+    def test_only_one_side_of_a_condition_is_counted(self):
+        nodes = [
+            {"id": "t", "type": "trigger_comment", "data": {}},
+            {"id": "c", "type": "condition", "data": {}},
+            {"id": "a", "type": "send_dm", "data": {"text": "Yes"}},
+            {"id": "b", "type": "send_dm", "data": {"text": "No"}},
+        ]
+        edges = [
+            {"from": "t", "to": "c"},
+            {"from": "c", "to": "a", "branch": "true"},
+            {"from": "c", "to": "b", "branch": "false"},
+        ]
+
+        self.assertEqual(flow.opening_private_messages({"nodes": nodes, "edges": edges}), 1)
+
+    def test_two_messages_the_engine_picks_between_stay_allowed(self):
+        nodes = TWO_OPENING_MESSAGES[:1] + [
+            {"id": "a", "type": "send_dm", "data": {"text": "One"}},
+            {"id": "b", "type": "send_dm", "data": {"text": "Other"}},
+        ]
+
+        self.assertEqual(flow.activation_error({"nodes": nodes, "edges": CHAIN}), "")

@@ -457,6 +457,12 @@ def flow_save(request, workspace_id, platform_post_id):
             status=400,
         )
 
+    if wants_active and compiled.activation_error:
+        return JsonResponse(
+            {"ok": False, "error": compiled.activation_error, "warnings": compiled.warnings},
+            status=400,
+        )
+
     with transaction.atomic():
         automation = (
             PostAutomation.objects.select_for_update()
@@ -668,6 +674,9 @@ def flow_toggle(request, workspace_id, platform_post_id):
                 {"ok": False, "error": "This flow has nothing to send, so it was left off."},
                 status=400,
             )
+        blocked = flow_compiler.activation_error(automation.graph)
+        if blocked:
+            return JsonResponse({"ok": False, "error": blocked}, status=400)
         services.arm_for_platform_post(platform_post)
         automation.refresh_from_db()
         if not automation.is_armed:

@@ -428,7 +428,8 @@ def _send_node(node: dict, run: FlowRun, context: dict) -> bool:
     the account and has no PSID/IGSID to address. Every later message in the
     same run addresses the person directly, using the id their tap revealed.
     Sending the second message as another private reply would be refused —
-    Meta allows one per comment.
+    Meta allows one per comment — so until the person has answered, a further
+    message in the same wake is not attempted and its branch ends.
     """
     from apps.publisher.engine import _resolve_publish_credentials
     from providers import get_provider
@@ -450,10 +451,15 @@ def _send_node(node: dict, run: FlowRun, context: dict) -> bool:
     if image_url:
         extra["image_url"] = image_url
 
+    private_reply = False
     if run.recipient_id:
         extra["sender_id"] = run.recipient_id
     elif run.comment_id:
+        if context.get("private_reply_sent"):
+            logger.info("Flow run %s already used the comment's one private reply; node %s waits.", run.pk, node["id"])
+            return False
         extra["private_reply_to_comment_id"] = run.comment_id
+        private_reply = True
     else:
         logger.warning("Flow run %s has nobody to address; stopping.", run.pk)
         return False
@@ -468,6 +474,8 @@ def _send_node(node: dict, run: FlowRun, context: dict) -> bool:
         # answering. Same reasoning as ``actions._dispatch_private_reply``.
         human_agent=False,
     )
+    if private_reply:
+        context["private_reply_sent"] = True
     return True
 
 

@@ -43,6 +43,8 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
+from django.utils.translation import gettext as _
+
 __all__ = [
     "EXECUTABLE_NODE_TYPES",
     "CompiledFlow",
@@ -50,6 +52,7 @@ __all__ = [
     "default_graph",
     "instantiate_graph",
     "numeric_positions",
+    "opening_private_messages",
     "rule_can_act",
     "unsupported_nodes",
 ]
@@ -97,6 +100,8 @@ class CompiledFlow:
     private_reply_texts: list[str] = field(default_factory=list)
     top_level_only: bool = False
     warnings: list[str] = field(default_factory=list)
+    #: Why this flow may be saved but not switched on. Empty when it may run.
+    activation_error: str = ""
 
     @property
     def can_act(self) -> bool:
@@ -460,7 +465,79 @@ def compile_graph(graph: Any) -> CompiledFlow:
         private_count=len(private_texts),
         blank_nodes=blank_nodes,
     )
+    compiled.activation_error = activation_error(graph)
+    if compiled.activation_error:
+        compiled.warnings.insert(0, compiled.activation_error)
     return compiled
+
+
+def _waits_for_a_tap(node: dict[str, Any]) -> bool:
+    """Whether this message carries a reply button, which parks the run on it."""
+    data = node.get("data")
+    buttons = data.get("buttons") if isinstance(data, dict) else None
+    if not isinstance(buttons, list):
+        return False
+    return any(
+        isinstance(button, dict)
+        and button.get("type") == "reply"
+        and isinstance(button.get("title"), str)
+        and button["title"].strip()
+        for button in buttons
+    )
+
+
+def opening_private_messages(graph: Any) -> int:
+    """How many private messages this drawing sends before the person has answered.
+
+    Meta accepts a single private reply per comment; anything further is only
+    deliverable once the person writes back or taps a button. The walk mirrors
+    the graph executor's first wake: every unlabelled edge is followed, a
+    message with a reply button ends its branch, and a condition contributes
+    its heavier side because only one of them runs.
+    """
+    from apps.automations.actions import _first_step_id
+    from apps.automations.engine import _DM_NODE_TYPES, _next_node_ids, _nodes_by_id
+
+    nodes = _nodes_by_id(graph)
+
+    def walk(node_ids: list[str], seen: set[str]) -> int:
+        total = 0
+        for node_id in node_ids:
+            node = nodes.get(node_id)
+            if node is None or node_id in seen:
+                continue
+            seen.add(node_id)
+            node_type = node["type"]
+            if node_type == "condition":
+                total += max(
+                    walk(_next_node_ids(graph, node_id, branch=branch), set(seen)) for branch in ("true", "false")
+                )
+                continue
+            if node_type in _DM_NODE_TYPES:
+                if _node_text(node) or _has_buttons(node) or _has_image(node):
+                    total += 1
+                if _waits_for_a_tap(node):
+                    continue
+            total += walk(_next_node_ids(graph, node_id), seen)
+        return total
+
+    start = _first_step_id(graph) if isinstance(graph, dict) else ""
+    return walk([start], set()) if start else 0
+
+
+def activation_error(graph: Any) -> str:
+    """The reason this drawing must stay off, or ``""`` when it may run.
+
+    Only asked of drawings the graph executor walks: the two-channel path sends
+    one private reply however many message steps were drawn.
+    """
+    if not _is_sequential(_nodes(graph), graph) or opening_private_messages(graph) <= 1:
+        return ""
+    return _(
+        "This flow sends more than one private message before the person answers, and Instagram and "
+        "Facebook only deliver the first. Put everything in one message, or add a reply button to the "
+        "first message and connect the next ones to it."
+    )
 
 
 def _is_sequential(nodes: list[dict[str, Any]], graph: Any = None) -> bool:

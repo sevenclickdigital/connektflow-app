@@ -667,6 +667,22 @@ def test_the_walk_continues_past_the_public_reply(account, rule):
     assert [call["text"] for call in sent] == ["Here it is"]
 
 
+def test_the_walk_sends_one_private_message_until_the_person_answers(account, rule):
+    """Meta takes one private reply per comment; a second one is not attempted."""
+    graph = {
+        "nodes": [
+            {"id": "trigger", "type": "trigger_comment", "data": {}},
+            {"id": "first", "type": "send_card", "data": {"text": "Here is the link"}},
+            {"id": "second", "type": "send_dm", "data": {"text": "Anything else?"}},
+        ],
+        "edges": [{"from": "trigger", "to": "first"}, {"from": "first", "to": "second"}],
+    }
+
+    _run, sent = _walk(account, rule, graph)
+
+    assert [call["text"] for call in sent] == ["Here is the link"]
+
+
 def _attach_flow(rule, account, graph):
     from apps.automations.models import PostAutomation
     from apps.composer.models import PlatformPost, Post
