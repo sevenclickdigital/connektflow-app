@@ -226,6 +226,11 @@ class InboxReply(models.Model):
     )
     platform_reply_id = models.CharField(max_length=255, blank=True, default="")
     send_error = models.TextField(blank=True, default="")
+    # What a chat reply carries besides its text: ``quote`` (the customer's
+    # message it answers: ``message_id``, ``platform_id``, ``sender_name``,
+    # ``text``, kept as a snapshot so the bubble needs no lookup) and
+    # ``customer_reaction`` (the emoji the customer put on it).
+    extra = models.JSONField(default=dict, blank=True, db_default=models.Value({}, models.JSONField()))
     # ``sent_at`` is null until the reply is actually delivered to the platform;
     # a row now exists in ``draft``/``failed`` states before any send happens.
     sent_at = models.DateTimeField(null=True, blank=True)

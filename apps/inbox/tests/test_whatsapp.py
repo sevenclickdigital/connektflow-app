@@ -169,7 +169,7 @@ class TestReplyWindow:
         self._message(wa_account, 1)
         assert reply_eligibility(old)["can_send"] is True
 
-    def test_the_reply_goes_to_the_customer_number_quoting_their_message(self, wa_account):
+    def test_the_reply_goes_to_the_customer_number_as_a_plain_message(self, wa_account):
         message = self._message(wa_account, 1)
         response = MagicMock(status_code=200)
         response.json.return_value = {"messages": [{"id": "wamid.out"}]}
@@ -181,7 +181,7 @@ class TestReplyWindow:
         assert (method, url.rsplit("/", 2)[-2:]) == ("POST", ["1001", "messages"])
         assert payload["to"] == "5511988887777"
         assert payload["text"]["body"] == "Temos sim!"
-        assert payload["context"] == {"message_id": message.platform_message_id}
+        assert "context" not in payload
 
 
 class TestProviderErrors:
@@ -373,3 +373,178 @@ class TestLiveInbox:
         incoming = [item["obj"].body for item in response.context["chat"] if item["kind"] == "in"]
         assert incoming == ["earlier-from-rita", "current-from-rita"]
         assert b"from-someone-else" not in response.content
+
+
+@pytest.mark.django_db
+class TestMessageActions:
+    """Quote, react and reactions received, on the bubbles of a WhatsApp chat."""
+
+    @pytest.fixture
+    def member_client(self, client, user, workspace):
+        OrgMembership.objects.create(
+            user=user, organization=workspace.organization, org_role=OrgMembership.OrgRole.OWNER
+        )
+        WorkspaceMembership.objects.create(
+            user=user, workspace=workspace, workspace_role=WorkspaceMembership.WorkspaceRole.OWNER
+        )
+        client.force_login(user)
+        return client
+
+    def _message(self, account, wamid, *, sender="5511988887777", body="Tem estoque?", minutes_ago=5):
+        return InboxMessage.objects.create(
+            workspace=account.workspace,
+            social_account=account,
+            platform_message_id=wamid,
+            message_type="dm",
+            sender_name="Rita",
+            sender_handle=sender,
+            body=body,
+            extra={"sender_id": sender},
+            received_at=timezone.now() - timedelta(minutes=minutes_ago),
+        )
+
+    def _sent(self, wamid="wamid.out"):
+        response = MagicMock(status_code=200)
+        response.json.return_value = {"messages": [{"id": wamid}]}
+        return patch.object(WhatsAppProvider, "_request", return_value=response)
+
+    def _url(self, name, message):
+        return reverse(f"inbox:{name}", kwargs={"workspace_id": message.workspace_id, "message_id": message.id})
+
+    def test_each_customer_bubble_offers_the_menu_and_shows_reactions(self, member_client, wa_account):
+        message = self._message(wa_account, "wamid.in")
+        message.extra = {**message.extra, "team_reaction": "🙏"}
+        message.save(update_fields=["extra"])
+        InboxReply.objects.create(
+            inbox_message=message,
+            body="Temos!",
+            status=InboxReply.Status.SENT,
+            sent_at=timezone.now(),
+            extra={"customer_reaction": "❤️", "quote": {"sender_name": "Rita", "text": "Tem estoque?"}},
+        )
+
+        body = member_client.get(self._url("message_detail", message)).content.decode()
+
+        assert 'x-data="inboxMessageMenu()"' in body
+        assert self._url("react_message", message) in body
+        assert f'id="reaction-{message.id}"' in body and "🙏" in body
+        assert "❤️" in body and "chat-quote" in body
+
+    def test_a_reply_quotes_the_message_the_person_picked(self, member_client, wa_account):
+        first = self._message(wa_account, "wamid.first", body="Qual o prazo?", minutes_ago=10)
+        latest = self._message(wa_account, "wamid.latest")
+
+        with self._sent() as request:
+            response = member_client.post(self._url("send_reply", latest), {"body": "Dois dias", "quote": first.id})
+
+        assert response.status_code == 200
+        assert request.call_args.kwargs["json"]["context"] == {"message_id": "wamid.first"}
+        reply = InboxReply.objects.get()
+        assert reply.inbox_message == latest
+        assert reply.extra["quote"] == {
+            "message_id": str(first.id),
+            "platform_id": "wamid.first",
+            "sender_name": "Rita",
+            "text": "Qual o prazo?",
+        }
+        assert b"Qual o prazo?" in response.content
+
+    @pytest.mark.parametrize("quote", ["not-a-uuid", "other-person", "other-workspace"])
+    def test_a_message_from_outside_the_conversation_cannot_be_quoted(
+        self, member_client, wa_account, organization, quote
+    ):
+        from apps.workspaces.models import Workspace
+
+        latest = self._message(wa_account, "wamid.latest")
+        if quote == "other-person":
+            quote = self._message(wa_account, "wamid.other", sender="5511900000000").id
+        elif quote == "other-workspace":
+            elsewhere = SocialAccount.objects.create(
+                workspace=Workspace.objects.create(name="Other", organization=organization),
+                platform="whatsapp",
+                account_platform_id="3003",
+                webhook_target_id="4004",
+                account_name="Outra",
+                oauth_access_token="t",
+            )
+            quote = self._message(elsewhere, "wamid.elsewhere").id
+
+        with self._sent() as request:
+            response = member_client.post(self._url("send_reply", latest), {"body": "Oi", "quote": quote})
+
+        assert response.status_code == 400
+        request.assert_not_called()
+        assert not InboxReply.objects.exists()
+
+    def test_a_reaction_is_sent_and_shown_on_the_message(self, member_client, wa_account):
+        message = self._message(wa_account, "wamid.in")
+
+        with self._sent() as request:
+            response = member_client.post(self._url("react_message", message), {"emoji": "👍"})
+
+        payload = request.call_args.kwargs["json"]
+        assert (payload["type"], payload["to"]) == ("reaction", "5511988887777")
+        assert payload["reaction"] == {"message_id": "wamid.in", "emoji": "👍"}
+        message.refresh_from_db()
+        assert message.extra["team_reaction"] == "👍"
+        assert "👍" in response.content.decode()
+
+        with self._sent():
+            member_client.post(self._url("react_message", message), {"emoji": ""})
+        message.refresh_from_db()
+        assert "team_reaction" not in message.extra
+
+    def test_a_reaction_the_platform_refuses_is_not_recorded(self, member_client, wa_account):
+        message = self._message(wa_account, "wamid.in")
+
+        with patch.object(WhatsAppProvider, "_request", side_effect=MessagingError("Outside the window")):
+            response = member_client.post(self._url("react_message", message), {"emoji": "👍"})
+
+        assert response.status_code == 204
+        assert json.loads(response["HX-Trigger"])["showToast"]["tone"] == "error"
+        message.refresh_from_db()
+        assert "team_reaction" not in message.extra
+
+    def test_only_the_offered_reactions_and_only_in_the_reply_window(self, member_client, wa_account):
+        message = self._message(wa_account, "wamid.in")
+        expired = self._message(wa_account, "wamid.old", sender="5511900000000", minutes_ago=60 * 30)
+
+        with self._sent() as request:
+            member_client.post(self._url("react_message", message), {"emoji": "<script>"})
+            member_client.post(self._url("react_message", expired), {"emoji": "👍"})
+
+        request.assert_not_called()
+
+    def test_a_message_of_another_workspace_cannot_be_reacted_to(self, member_client, wa_account, organization):
+        from apps.workspaces.models import Workspace
+
+        elsewhere = SocialAccount.objects.create(
+            workspace=Workspace.objects.create(name="Other", organization=organization),
+            platform="whatsapp",
+            account_platform_id="3003",
+            webhook_target_id="4004",
+            account_name="Outra",
+            oauth_access_token="t",
+        )
+        foreign = self._message(elsewhere, "wamid.elsewhere")
+        url = reverse("inbox:react_message", kwargs={"workspace_id": wa_account.workspace_id, "message_id": foreign.id})
+
+        with self._sent() as request:
+            assert member_client.post(url, {"emoji": "👍"}).status_code == 404
+        request.assert_not_called()
+
+    def test_the_customer_reaction_lands_on_our_reply_and_can_be_taken_off(self, client, wa_account):
+        message = self._message(wa_account, "wamid.in")
+        reply = InboxReply.objects.create(
+            inbox_message=message, body="Temos!", status=InboxReply.Status.SENT, platform_reply_id="wamid.out"
+        )
+        reaction = {"from": "5511988887777", "id": "wamid.r1", "timestamp": "1", "type": "reaction"}
+
+        _post(client, _payload(messages=[{**reaction, "reaction": {"message_id": "wamid.out", "emoji": "❤️"}}]))
+        reply.refresh_from_db()
+        assert reply.extra["customer_reaction"] == "❤️"
+        assert InboxMessage.objects.count() == 1
+
+        _post(client, _payload(messages=[{**reaction, "id": "wamid.r2", "reaction": {"message_id": "wamid.out"}}]))
+        reply.refresh_from_db()
+        assert "customer_reaction" not in reply.extra

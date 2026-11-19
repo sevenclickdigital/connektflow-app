@@ -244,10 +244,14 @@ class WhatsAppProvider(SocialProvider):
         *,
         human_agent: bool = False,
     ) -> ReplyResult:
-        """Send a text message to the customer, quoting the message answered.
+        """Send a text message to the customer as the next message in the chat.
 
         WhatsApp addresses the customer's number (``wa_id``), carried in
-        ``extra["recipient_id"]``. ``human_agent`` has no WhatsApp equivalent:
+        ``extra["recipient_id"]``. ``message_id`` is not sent: with it WhatsApp
+        shows the answer as a quote of that message, and the inbox answers the
+        conversation, so every reply would quote the same line. A reply quotes
+        only the message the person picked, ``extra["quote_message_id"]``.
+        ``human_agent`` has no WhatsApp equivalent:
         outside the 24-hour window only templates are delivered, which
         ``reply_policy`` checks before this is called.
         """
@@ -266,8 +270,9 @@ class WhatsAppProvider(SocialProvider):
             "type": "text",
             "text": {"body": text, "preview_url": True},
         }
-        if message_id:
-            payload["context"] = {"message_id": message_id}
+        quoted = str((extra or {}).get("quote_message_id") or "")
+        if quoted:
+            payload["context"] = {"message_id": quoted}
         data = self._request(
             "POST",
             f"{BASE_URL}/{self.phone_number_id}/messages",
@@ -280,6 +285,31 @@ class WhatsAppProvider(SocialProvider):
                 _("Delivery could not be confirmed. Check the conversation before retrying."), platform="whatsapp"
             )
         return ReplyResult(platform_message_id=str(sent_id), extra=data)
+
+    def react_to_message(self, access_token: str, message_id: str, emoji: str, recipient: str) -> None:
+        """Put ``emoji`` on a customer's message, or take the reaction off with ``""``.
+
+        A reaction is a message like any other to WhatsApp: it goes to the
+        customer's number and only inside the 24-hour window.
+        """
+        if not recipient or not message_id:
+            raise MessagingError(_("The original message is missing the customer's number."), platform="whatsapp")
+        data = self._request(
+            "POST",
+            f"{BASE_URL}/{self.phone_number_id}/messages",
+            access_token=access_token,
+            json={
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": recipient,
+                "type": "reaction",
+                "reaction": {"message_id": message_id, "emoji": emoji},
+            },
+        ).json()
+        if not ((data.get("messages") or [{}])[0] or {}).get("id"):
+            raise MessagingError(
+                _("Delivery could not be confirmed. Check the conversation before retrying."), platform="whatsapp"
+            )
 
     def download_media(self, access_token: str, media_id: str, *, max_bytes: int) -> tuple[bytes, str]:
         """Return (content, mime type) of a media file a customer sent.

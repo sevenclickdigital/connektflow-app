@@ -2,7 +2,8 @@
 <!-- Reply composer: component in static/js/inbox-reply.js -->
 <div class="border-t border-neutral-100 px-4 sm:px-5 pt-2 pb-4 flex-shrink-0"
      x-data="inboxReply({ limit: {{ reply_limit|default:0 }}, canSend: {% if reply_eligibility.can_send %}true{% else %}false{% endif %}, firstName: '{{ sender_first_name|escapejs }}' })"
-     @keydown.escape="showEmoji = false; savedOpen = false">
+     @keydown.escape="showEmoji = false; savedOpen = false"
+     @inbox-quote.window="setQuote($event.detail)">
 
     <!-- Pending draft replies (agent-created or saved for later) -->
     {% if draft_replies %}
@@ -71,10 +72,22 @@
         <form hx-post="{% url 'inbox:send_reply' workspace_id=workspace.id message_id=message.id %}"
               hx-target="#inbox-thread"
               hx-swap="beforeend"
-              @htmx:after-request="if (!$event.detail.xhr.getResponseHeader('HX-Reply-Failed')) { replyText = ''; reset($refs.reply); }">
+              @htmx:after-request="if (!$event.detail.xhr.getResponseHeader('HX-Reply-Failed')) { replyText = ''; quote = null; reset($refs.reply); }">
             {% csrf_token %}
+            {% comment %}The customer's message this reply quotes, picked on its bubble (inbox-quote event).{% endcomment %}
+            <input type="hidden" name="quote" :value="quote ? quote.id : ''">
             <div class="bg-white border border-neutral-300 rounded-lg focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100 transition-all"
                  :class="over && '!border-[var(--error-500)]'">
+                <div x-show="quote" x-cloak class="chat-quote flex items-start gap-2 mx-2 mt-2">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[11px] font-semibold text-brand-700 truncate" x-text="quote && quote.name"></p>
+                        <p class="text-[12px] text-neutral-600 truncate" x-text="quote && quote.text"></p>
+                    </div>
+                    <button type="button" @click="quote = null" class="composer-tool flex-shrink-0"
+                            title="{% translate 'Reply without quoting' %}" aria-label="{% translate 'Reply without quoting' %}">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
                 <textarea name="body"
                           x-ref="reply"
                           x-model="replyText"

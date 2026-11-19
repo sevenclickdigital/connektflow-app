@@ -2,10 +2,13 @@
 {% comment %}
 A customer's message in the chat, WhatsApp-style: a white bubble on the left,
 the time inside it at the bottom right. Context: ``item`` from views._chat
-(obj, time, attachments, show_name), ``message`` (the open entry).
+(obj, time, attachments, show_name), ``message`` (the open entry). With
+``message_actions`` the bubble gets a menu (react, quote, copy) and shows the
+team's reaction; ``reaction_emoji`` lists the reactions on offer.
 {% endcomment %}
 {% with msg=item.obj %}
-<div class="flex justify-start">
+<div class="group flex justify-start items-start gap-1">
+    <div class="flex flex-col items-start min-w-0">
     <div class="chat-bubble chat-bubble-in {% if item.tail %}has-tail{% endif %}">
         {% if item.show_name %}<p class="text-[12px] font-semibold text-brand-700 mb-0.5">{{ msg.sender_name }}</p>{% endif %}
         {% if msg.body %}<span class="whitespace-pre-wrap break-words">{{ msg.body }}</span>{% elif not item.attachments %}<span class="italic text-neutral-500">{% translate "Message without text" %}</span>{% endif %}
@@ -31,5 +34,40 @@ the time inside it at the bottom right. Context: ``item`` from views._chat
         {% endfor %}
         <span class="chat-meta">{{ item.time }}</span>
     </div>
+    {% if message_actions %}{% include "inbox/partials/_message_reaction.html" %}{% endif %}
+    </div>
+    {% if message_actions %}
+    <div class="relative flex-shrink-0" x-data="inboxMessageMenu()" @keydown.escape="open = false">
+        <button type="button" @click="open = !open" :aria-expanded="open" class="chat-menu-toggle"
+                title="{% translate 'Message options' %}" aria-label="{% translate 'Message options' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div x-show="open" x-cloak x-transition @click.outside="open = false" class="chat-menu" role="menu">
+            <div class="flex items-center gap-0.5 px-1.5 pb-1.5 mb-1 border-b border-neutral-100">
+                {% for emoji in reaction_emoji %}
+                <button type="button" class="chat-menu-emoji" role="menuitem"
+                        hx-post="{% url 'inbox:react_message' workspace_id=workspace.id message_id=msg.id %}"
+                        hx-vals='{"emoji": "{{ emoji }}"}'
+                        hx-target="#reaction-{{ msg.id }}" hx-swap="outerHTML"
+                        @click="open = false"
+                        aria-label="{% blocktranslate %}React with {{ emoji }}{% endblocktranslate %}">{{ emoji }}</button>
+                {% endfor %}
+            </div>
+            <button type="button" class="chat-menu-item" role="menuitem" @click="quote($el)"
+                    data-id="{{ msg.id }}" data-name="{{ msg.sender_name }}"
+                    data-text="{% if msg.body %}{{ msg.body|truncatechars:280 }}{% else %}{% translate 'Attachment' %}{% endif %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>
+                {% translate "Reply" context "message action" %}
+            </button>
+            {% if msg.body %}
+            <button type="button" class="chat-menu-item" role="menuitem" @click="copy($el)"
+                    data-text="{{ msg.body }}" data-done="{% translate 'Message copied' %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                {% translate "Copy text" %}
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endwith %}

@@ -105,6 +105,9 @@ def _detail_context(workspace, message, *, actor=None):
         "reply_limit": REPLY_LIMITS.get((message.message_type == "dm", message.social_account.platform)),
         "sender_first_name": (message.sender_name or "").split(" ")[0].lstrip("@+"),
         "reply_eligibility": inbox_services.reply_eligibility(message, origin="web_inbox", actor=actor),
+        # Quote, react and copy on each bubble, where the platform has them.
+        "message_actions": inbox_services.supports_message_actions(message),
+        "reaction_emoji": inbox_services.REACTION_EMOJI,
     }
 
 
@@ -513,11 +516,17 @@ def send_reply(request, workspace_id, message_id):
 
     body = form.cleaned_data["body"]
     account = message.social_account
+    try:
+        quote = inbox_services.quote_for(message, request.POST.get("quote", "").strip())
+    except ValueError as exc:
+        return HttpResponse(str(exc), status=400)
 
     # A reply is only recorded if the platform accepted it. Recording it
     # regardless would show the team a sent reply the customer never got.
     try:
-        reply = inbox_services.send_reply(message=message, body=body, author=request.user, origin="web_inbox")
+        reply = inbox_services.send_reply(
+            message=message, body=body, author=request.user, origin="web_inbox", quote=quote
+        )
     except Exception as exc:
         logger.warning(
             "Reply failed: message_id=%s platform=%s error_type=%s", message.id, account.platform, type(exc).__name__
@@ -547,6 +556,37 @@ def send_reply(request, workspace_id, message_id):
 
 
 @login_required
+@require_permission("reply_from_inbox")
+@require_POST
+def react_message(request, workspace_id, message_id):
+    """Put an emoji on a customer's chat message, or take it off (empty ``emoji``).
+
+    Answers with the message's reaction badge; a refusal keeps the badge as it
+    was and says why in a toast.
+    """
+    from apps.common.htmx import toast_response
+
+    workspace = _get_workspace(request, workspace_id)
+    message = get_object_or_404(
+        InboxMessage.objects.select_related("social_account", "workspace"), id=message_id, workspace=workspace
+    )
+    try:
+        inbox_services.react_to_message(
+            message=message, emoji=request.POST.get("emoji", "").strip(), actor=request.user, origin="web_inbox"
+        )
+    except Exception as exc:
+        logger.warning(
+            "Reaction failed: message_id=%s platform=%s error_type=%s",
+            message.id,
+            message.social_account.platform,
+            type(exc).__name__,
+        )
+        reason = str(exc) if isinstance(exc, ValueError) else inbox_services.reply_failure_reason(exc)
+        return toast_response(tone="error", title=str(_("The reaction was not sent")), body=reason)
+    return render(request, "inbox/partials/_message_reaction.html", {"msg": message, "workspace": workspace})
+
+
+@login_required
 @require_permission("use_inbox")
 @require_POST
 def save_reply_draft(request, workspace_id, message_id):
@@ -563,6 +603,7 @@ def save_reply_draft(request, workspace_id, message_id):
             message=message,
             body=form.cleaned_data["body"],
             author=request.user,
+            quote=inbox_services.quote_for(message, request.POST.get("quote", "").strip()),
         )
     except ValueError as exc:
         return HttpResponse(str(exc), status=400)

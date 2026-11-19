@@ -707,8 +707,12 @@ def _upsert_whatsapp_message(account, message: dict, names: dict[str, str]):
 
     message_id = str(message.get("id") or "")
     sender_id = str(message.get("from") or "")
-    # Reactions are a tap on an existing message, not something to answer.
-    if not message_id or not sender_id or message.get("type") == "reaction":
+    if message.get("type") == "reaction":
+        # A tap on an existing message, not something to answer: it is shown
+        # on the reply it was put on instead of opening a conversation entry.
+        _apply_whatsapp_reaction(account, message)
+        return
+    if not message_id or not sender_id:
         return
     try:
         stamp = datetime.fromtimestamp(int(message.get("timestamp")), UTC)
@@ -736,6 +740,30 @@ def _upsert_whatsapp_message(account, message: dict, names: dict[str, str]):
         extra=extra,
         received_at=stamp,
     )
+
+
+def _apply_whatsapp_reaction(account, message: dict):
+    """Record the emoji a customer put on one of our replies, or its removal.
+
+    WhatsApp sends the reaction with the id of the message it sits on; taking
+    it off arrives as the same event without an emoji. A reaction to the
+    customer's own message has no reply to sit on and is ignored.
+    """
+    from .models import InboxReply
+
+    reaction = message.get("reaction") or {}
+    target = str(reaction.get("message_id") or "")
+    if not target:
+        return
+    emoji = str(reaction.get("emoji") or "")[:32]
+    for reply in InboxReply.objects.filter(platform_reply_id=target, inbox_message__social_account=account):
+        extra = dict(reply.extra or {})
+        if emoji:
+            extra["customer_reaction"] = emoji
+        else:
+            extra.pop("customer_reaction", None)
+        reply.extra = extra
+        reply.save(update_fields=["extra", "updated_at"])
 
 
 def _apply_whatsapp_status(account, status: dict):

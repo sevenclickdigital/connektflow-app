@@ -17,6 +17,7 @@ import logging
 
 from django.db import transaction
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from providers import get_provider
 from providers.exceptions import MessagingError
@@ -38,8 +39,47 @@ _COMMENT_LIKE_TYPES = {
 _SENDABLE_STATUSES = {InboxReply.Status.DRAFT, InboxReply.Status.FAILED}
 
 
+# The reactions the chat offers, the same first row WhatsApp shows.
+REACTION_EMOJI = ("👍", "❤️", "😂", "😮", "😢", "🙏")
+
+# How much of a quoted message a reply keeps to show above its own text.
+QUOTE_SNIPPET_LENGTH = 280
+
+
 class ReplyStateError(ValueError):
     """Raised when an operation is not valid for a reply's current status."""
+
+
+def supports_message_actions(message: InboxMessage) -> bool:
+    """Whether a chat message can be quoted and reacted to: WhatsApp chats only."""
+    return message.message_type == InboxMessage.MessageType.DM and message.social_account.platform == "whatsapp"
+
+
+def quote_for(message: InboxMessage, quoted_id) -> dict | None:
+    """The snapshot a reply to ``message``'s conversation keeps of the message it quotes.
+
+    ``quoted_id`` comes from the browser, so it only counts when it names a
+    message of this same conversation. Returns None when nothing is quoted;
+    raises ValueError when the id is not one this reply may quote.
+    """
+    from django.core.exceptions import ValidationError
+
+    if not quoted_id:
+        return None
+    if not supports_message_actions(message):
+        raise ValueError(_("This conversation cannot quote a message."))
+    try:
+        quoted = thread_messages(message).filter(pk=quoted_id).first()
+    except (ValueError, ValidationError):
+        quoted = None
+    if quoted is None or not quoted.platform_message_id:
+        raise ValueError(_("The quoted message is not part of this conversation."))
+    return {
+        "message_id": str(quoted.pk),
+        "platform_id": quoted.platform_message_id,
+        "sender_name": quoted.sender_name,
+        "text": (quoted.body or "")[:QUOTE_SNIPPET_LENGTH],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -69,11 +109,15 @@ def reply_failure_reason(exc: Exception) -> str:
     return "the platform rejected it. Try again, or reconnect the account if this keeps happening."
 
 
-def _dispatch_to_platform(message: InboxMessage, body: str, *, origin=PROGRAMMATIC, actor=None) -> str:
+def _dispatch_to_platform(
+    message: InboxMessage, body: str, *, origin=PROGRAMMATIC, actor=None, quote_platform_id: str = ""
+) -> str:
     """Post ``body`` back to the platform and return the platform's reply ID.
 
-    Raises if the platform refuses it, so the caller can avoid recording a
-    reply as delivered when it never was.
+    ``quote_platform_id`` is the platform id of the customer's message the
+    reply quotes, when the person picked one. Raises if the platform refuses
+    the reply, so the caller can avoid recording it as delivered when it never
+    was.
     """
     from apps.publisher.engine import _resolve_publish_credentials
 
@@ -87,6 +131,8 @@ def _dispatch_to_platform(message: InboxMessage, body: str, *, origin=PROGRAMMAT
     recipient = recipient_id(message)
     if recipient:
         extra.setdefault("recipient_id", recipient)
+    if quote_platform_id:
+        extra["quote_message_id"] = quote_platform_id
 
     if message.message_type == InboxMessage.MessageType.MENTION:
         # A mention sits on media another account owns, which the platforms
@@ -138,8 +184,12 @@ def _apply_post_send_side_effects(message: InboxMessage) -> None:
 # ---------------------------------------------------------------------------
 
 
-def create_reply_draft(*, message: InboxMessage, body: str, author=None) -> InboxReply:
-    """Create a ``draft`` reply against ``message``. Not sent anywhere."""
+def create_reply_draft(*, message: InboxMessage, body: str, author=None, quote: dict | None = None) -> InboxReply:
+    """Create a ``draft`` reply against ``message``. Not sent anywhere.
+
+    ``quote`` is the snapshot from ``quote_for`` when the reply quotes one of
+    the customer's messages.
+    """
     body = (body or "").strip()
     if not body:
         raise ValueError("Reply body cannot be empty.")
@@ -148,6 +198,7 @@ def create_reply_draft(*, message: InboxMessage, body: str, author=None) -> Inbo
         author=author,
         body=body,
         status=InboxReply.Status.DRAFT,
+        extra={"quote": quote} if quote else {},
     )
 
 
@@ -204,7 +255,13 @@ def send_reply_now(reply: InboxReply, *, actor=None, origin=PROGRAMMATIC) -> Inb
             reply.author = actor
 
         try:
-            platform_reply_id = _dispatch_to_platform(message, reply.body, origin=origin, actor=actor)
+            platform_reply_id = _dispatch_to_platform(
+                message,
+                reply.body,
+                origin=origin,
+                actor=actor,
+                quote_platform_id=((reply.extra or {}).get("quote") or {}).get("platform_id", ""),
+            )
         except Exception as exc:
             if isinstance(exc, NotImplementedError) and not (
                 message.message_type == "dm" and message.social_account.platform in META_DM_PLATFORMS
@@ -244,20 +301,54 @@ def send_reply_now(reply: InboxReply, *, actor=None, origin=PROGRAMMATIC) -> Inb
     return reply
 
 
-def send_reply(*, message: InboxMessage, body: str, author=None, origin=PROGRAMMATIC) -> InboxReply:
+def send_reply(
+    *, message: InboxMessage, body: str, author=None, origin=PROGRAMMATIC, quote: dict | None = None
+) -> InboxReply:
     """Create a reply and send it in one step (the classic composer flow).
 
     Refused Meta DM replies are retained as failed drafts for human review.
     Other providers retain their existing failed-row cleanup behavior.
     """
     with transaction.atomic():
-        reply = create_reply_draft(message=message, body=body, author=author)
+        reply = create_reply_draft(message=message, body=body, author=author, quote=quote)
     try:
         return send_reply_now(reply, actor=author, origin=origin)
     except Exception:
         if not (message.message_type == "dm" and message.social_account.platform in META_DM_PLATFORMS):
             InboxReply.objects.filter(pk=reply.pk, status=InboxReply.Status.FAILED).delete()
         raise
+
+
+def react_to_message(*, message: InboxMessage, emoji: str, actor=None, origin=PROGRAMMATIC) -> InboxMessage:
+    """Put ``emoji`` on a customer's chat message, or take the reaction off with ``""``.
+
+    The reaction is recorded on the message (``extra["team_reaction"]``) only
+    after the platform accepted it. It is a message to the platform, so it
+    follows the conversation's reply window, judged by its latest message.
+    """
+    from apps.publisher.engine import _resolve_publish_credentials
+
+    if not supports_message_actions(message):
+        raise MessagingError(_("Reactions are only available in WhatsApp conversations."))
+    if emoji and emoji not in REACTION_EMOJI:
+        raise ValueError(_("That reaction is not available."))
+    account = message.social_account
+    credentials = _resolve_publish_credentials(account)
+    latest = thread_messages(message).order_by("-received_at").first() or message
+    policy = reply_eligibility(latest, origin=origin, actor=actor, credentials=credentials)
+    if not policy["can_send"]:
+        raise MessagingError(policy["reason"], platform=account.platform)
+    get_provider(account.platform, credentials).react_to_message(
+        account.oauth_access_token, message.platform_message_id, emoji, recipient_id(message)
+    )
+    extra = dict(message.extra or {})
+    if emoji:
+        extra["team_reaction"] = emoji
+    else:
+        extra.pop("team_reaction", None)
+    message.extra = extra
+    message.save(update_fields=["extra"])
+    return message
 
 
 def fill_instagram_mention(message_id) -> bool:

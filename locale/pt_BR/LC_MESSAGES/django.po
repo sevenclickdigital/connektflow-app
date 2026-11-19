@@ -23339,6 +23339,60 @@ msgid "Send invitation"
 msgstr "Enviar convite"
 
 #, python-format
+#: apps/inbox/services.py
+msgid "This conversation cannot quote a message."
+msgstr "Esta conversa não permite citar uma mensagem."
+
+#: apps/inbox/services.py
+msgid "The quoted message is not part of this conversation."
+msgstr "A mensagem citada não faz parte desta conversa."
+
+#: apps/inbox/services.py
+msgid "Reactions are only available in WhatsApp conversations."
+msgstr "As reações só estão disponíveis em conversas do WhatsApp."
+
+#: apps/inbox/services.py
+msgid "That reaction is not available."
+msgstr "Essa reação não está disponível."
+
+#: apps/inbox/views.py
+msgid "The reaction was not sent"
+msgstr "A reação não foi enviada"
+
+#: templates/inbox/partials/_message_reaction.html
+msgid "Remove the reaction"
+msgstr "Remover a reação"
+
+#: templates/inbox/partials/_chat_incoming.html
+msgid "Message options"
+msgstr "Opções da mensagem"
+
+#: templates/inbox/partials/_chat_incoming.html
+#, python-format
+msgid "React with %(emoji)s"
+msgstr "Reagir com %(emoji)s"
+
+#: templates/inbox/partials/_chat_incoming.html
+msgctxt "message action"
+msgid "Reply"
+msgstr "Responder"
+
+#: templates/inbox/partials/_chat_incoming.html
+msgid "Message copied"
+msgstr "Mensagem copiada"
+
+#: templates/inbox/partials/_chat_incoming.html
+msgid "Copy text"
+msgstr "Copiar texto"
+
+#: templates/inbox/partials/_reply_item.html
+msgid "Reaction from the customer"
+msgstr "Reação do cliente"
+
+#: templates/inbox/partials/_reply_composer.html
+msgid "Reply without quoting"
+msgstr "Responder sem citar"
+
 #~ msgid "%(users)s user"
 #~ msgid_plural "%(users)s users"
 #~ msgstr[0] "%(users)s usuário"
@@ -24188,9 +24242,6 @@ msgstr "Enviar convite"
 #~ msgid "“%(title)s” is on the task board with its draft post."
 #~ msgstr ""
 #~ "“%(title)s” está no quadro de tarefas, com o rascunho da publicação."
-
-#~ msgid "Copy text"
-#~ msgstr "Copiar texto"
 
 #, python-format
 #~ msgid "In %(column)s"

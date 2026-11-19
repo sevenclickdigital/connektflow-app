@@ -8,6 +8,11 @@
  *
  * options: { limit, canSend, firstName }. `limit` is the platform's maximum
  * reply length in characters (0 when unknown).
+ *
+ * `quote` is the customer's message the reply quotes ({ id, name, text }),
+ * picked on its bubble: the bubble's menu (inboxMessageMenu, below) announces
+ * it with an `inbox-quote` window event, since the two live in different
+ * Alpine scopes.
  */
 window.inboxReply = function (options) {
   return {
@@ -20,6 +25,13 @@ window.inboxReply = function (options) {
     firstName: options.firstName || '',
     savedOpen: false,
     savedQuery: '',
+    quote: null,
+
+    setQuote(detail) {
+      this.mode = 'reply';
+      this.quote = detail;
+      this.$nextTick(() => { if (this.$refs.reply) this.$refs.reply.focus(); });
+    },
 
     get count() { return [...this.replyText].length; },
     get over() { return this.limit > 0 && this.count > this.limit; },
@@ -76,6 +88,29 @@ window.inboxReply = function (options) {
 
     reset(el) {
       el.style.height = '';
+    },
+  };
+};
+
+/**
+ * The menu on a chat bubble (templates/inbox/partials/_chat_incoming.html).
+ * The buttons carry the message in data-* attributes: its text never goes
+ * into an Alpine expression.
+ */
+window.inboxMessageMenu = function () {
+  return {
+    open: false,
+
+    quote(el) {
+      this.$dispatch('inbox-quote', { id: el.dataset.id, name: el.dataset.name, text: el.dataset.text });
+      this.open = false;
+    },
+
+    copy(el) {
+      this.open = false;
+      navigator.clipboard.writeText(el.dataset.text).then(() => {
+        document.body.dispatchEvent(new CustomEvent('showToast', { detail: { tone: 'success', title: el.dataset.done } }));
+      });
     },
   };
 };

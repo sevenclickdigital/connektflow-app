@@ -3,14 +3,23 @@
 A reply the team sent, WhatsApp-style: a brand bubble on the right with who
 sent it on top (a team can have several people answering) and the time and
 delivered ticks at the bottom right. Context: ``reply``, ``time`` (HH:MM in
-the workspace's clock), ``tail`` (first bubble of a run).
+the workspace's clock), ``tail`` (first bubble of a run). A reply that quotes a
+customer's message shows it on top (``reply.extra.quote``), and the emoji the
+customer put on the reply sits under the bubble (``reply.extra.customer_reaction``).
 {% endcomment %}
-<div class="flex justify-end">
+<div class="flex flex-col items-end">
     <div class="chat-bubble chat-bubble-out {% if tail %}has-tail{% endif %}">
-        <p class="text-[12px] font-semibold text-brand-800 mb-0.5">{{ reply.author.get_short_name|default:reply.author.email }}</p>
+        <p class="text-[12px] font-semibold text-brand-800 mb-0.5">{% firstof reply.author.get_short_name reply.author.email %}</p>
+        {% if reply.extra.quote %}
+        <div class="chat-quote">
+            <p class="text-[11px] font-semibold text-brand-700 truncate">{{ reply.extra.quote.sender_name }}</p>
+            <p class="text-[12px] text-neutral-600 line-clamp-2 break-words">{% if reply.extra.quote.text %}{{ reply.extra.quote.text }}{% else %}{% translate "Attachment" %}{% endif %}</p>
+        </div>
+        {% endif %}
         <span class="whitespace-pre-wrap break-words">{{ reply.body }}</span>
         <span class="chat-meta">{{ time }}
             <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="{% translate 'Sent' %}"><path d="M1.5 13l4 4L15 7.5"/><path d="M9 16l1 1L20.5 7.5"/></svg>
         </span>
     </div>
+    {% if reply.extra.customer_reaction %}<span class="chat-reaction" title="{% translate 'Reaction from the customer' %}">{{ reply.extra.customer_reaction }}</span>{% endif %}
 </div>

@@ -1,0 +1,12 @@
+{% load i18n %}
+{% comment %}
+The emoji the team put on a customer's chat message, under its bubble. Always
+rendered, hidden while empty, because the reaction buttons swap this element.
+Clicking it takes the reaction off. Context: ``msg`` (InboxMessage), ``workspace``.
+{% endcomment %}
+<button type="button" id="reaction-{{ msg.id }}"
+        class="chat-reaction {% if not msg.extra.team_reaction %}hidden{% endif %}"
+        hx-post="{% url 'inbox:react_message' workspace_id=workspace.id message_id=msg.id %}"
+        hx-vals='{"emoji": ""}'
+        hx-target="this" hx-swap="outerHTML"
+        title="{% translate 'Remove the reaction' %}" aria-label="{% translate 'Remove the reaction' %}">{{ msg.extra.team_reaction }}</button>

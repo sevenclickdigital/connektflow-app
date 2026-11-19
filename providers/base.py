@@ -480,6 +480,10 @@ class SocialProvider(HttpProvider):
         """
         raise NotImplementedError(f"{self.platform_name} does not support message replies")
 
+    def react_to_message(self, access_token: str, message_id: str, emoji: str, recipient: str) -> None:
+        """Put ``emoji`` on a message of the conversation with ``recipient``; ``""`` takes it off."""
+        raise NotImplementedError(f"{self.platform_name} does not support message reactions")
+
     def fetch_user_profile(self, access_token: str, user_id: str) -> dict:
         """What the platform will tell us about one person, or ``{}``.
 

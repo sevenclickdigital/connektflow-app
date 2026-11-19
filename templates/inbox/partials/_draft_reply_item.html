@@ -7,9 +7,15 @@
         {% else %}
         <span class="badge-pill" style="background: var(--surface-2); color: var(--text-secondary);">{% translate "Draft" %}</span>
         {% endif %}
-        <span class="text-[11px] text-neutral-600">{{ draft.author.get_short_name|default:draft.author.email|default:"—" }}</span>
+        <span class="text-[11px] text-neutral-600">{% firstof draft.author.get_short_name draft.author.email "—" %}</span>
         <span class="text-[11px] text-neutral-500 ml-auto">{% blocktranslate with time=draft.created_at|timesince %}{{ time }} ago{% endblocktranslate %}</span>
     </div>
+    {% if draft.extra.quote %}
+    <div class="chat-quote">
+        <p class="text-[11px] font-semibold text-brand-700 truncate">{{ draft.extra.quote.sender_name }}</p>
+        <p class="text-[12px] text-neutral-600 line-clamp-2 break-words">{% if draft.extra.quote.text %}{{ draft.extra.quote.text }}{% else %}{% translate "Attachment" %}{% endif %}</p>
+    </div>
+    {% endif %}
     <p class="text-[13px] text-neutral-800 leading-relaxed whitespace-pre-wrap">{{ draft.body }}</p>
     {% if draft.status == 'failed' and draft.send_error %}
     <p class="text-[11px] text-red-700 mt-1">{% blocktranslate with error=draft.send_error %}Last attempt failed: {{ error }}{% endblocktranslate %}</p>

@@ -1212,6 +1212,22 @@ input.idea-title-input::placeholder {
 .chat-bubble.has-tail.chat-bubble-in::before { left: -7px; border-width: 0 8px 9px 0; border-color: transparent var(--surface-0) transparent transparent; }
 .chat-bubble.has-tail.chat-bubble-out::before { right: -7px; border-width: 0 0 9px 8px; border-color: transparent transparent transparent var(--brand-100); }
 .chat-bubble.has-tail.chat-bubble-note::before { right: -7px; border-width: 0 0 9px 8px; border-color: transparent transparent transparent var(--warning-50); }
+/* Under a bubble: the emoji someone put on that message. */
+.chat-reaction { position: relative; z-index: 1; margin: -6px 8px 2px; padding: 1px 6px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-0); font-size: 13px; line-height: 1.4; box-shadow: 0 1px 1px rgba(15, 23, 42, 0.08); }
+button.chat-reaction { cursor: pointer; }
+button.chat-reaction:hover { background: var(--brand-50); }
+/* The message a reply quotes, on top of the reply and of the reply box. */
+.chat-quote { margin-bottom: 4px; padding: 4px 8px; border-left: 3px solid var(--brand-500); border-radius: 6px; background: rgba(15, 23, 42, 0.05); }
+/* Bubble menu (react, quote, copy): the toggle shows on hover or focus, and always where there is no hover. */
+.chat-menu-toggle { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; color: var(--text-tertiary); opacity: 0; cursor: pointer; transition: opacity var(--dur-fast) ease, background var(--dur-fast) ease; }
+.group:hover .chat-menu-toggle, .chat-menu-toggle:focus-visible, .chat-menu-toggle[aria-expanded="true"] { opacity: 1; }
+.chat-menu-toggle:hover { background: var(--brand-50); color: var(--text-primary); }
+@media (hover: none) { .chat-menu-toggle { opacity: 1; } }
+.chat-menu { position: absolute; top: 100%; left: 0; z-index: 40; min-width: 220px; margin-top: 4px; padding: 6px; background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+.chat-menu-emoji { width: 32px; height: 32px; border-radius: 999px; font-size: 18px; line-height: 1; cursor: pointer; transition: background var(--dur-fast) ease; }
+.chat-menu-emoji:hover { background: var(--brand-50); }
+.chat-menu-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border-radius: 6px; font-size: 13px; color: var(--text-primary); text-align: left; cursor: pointer; transition: background var(--dur-fast) ease; }
+.chat-menu-item:hover { background: var(--brand-50); }
 /* The time floats into the last line when it fits, like WhatsApp's. */
 .chat-meta { float: right; display: inline-flex; align-items: center; gap: 2px; margin: 8px 0 -6px 12px; font-size: 11px; line-height: 1; color: var(--text-tertiary); }
 
