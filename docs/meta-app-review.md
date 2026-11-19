@@ -26,7 +26,7 @@ Os blocos "Texto para enviar" estão em inglês porque os revisores da Meta leem
 1. **Nenhuma chamada de teste está registrada.** A Meta mantém o botão "Solicitar acesso avançado" desabilitado até registrar uma chamada de API bem-sucedida por permissão, feita nos 30 dias anteriores ao envio. Todas as permissões mostram 0 de 1. Executar cada roteiro da seção 5 com uma conta que tenha papel no app faz essas chamadas; a Meta leva até 2 dias para contá-las.
 2. **`whatsapp_business_management` mostra erro no teste de API**, em vez de "não iniciado". Abra a permissão no painel para ler o motivo antes de gravar.
 3. **O Marketing API Access Tier exige 500 chamadas à API de Marketing nos últimos 15 dias, com menos de 15% de erro**, e não uma chamada. Veja a seção 5.5.
-4. **A exclusão de dados do usuário não está configurada no app.** Em Configurações do app → Básico → Exclusão de dados do usuário, escolha *URL de retorno de chamada de exclusão de dados* e informe `https://app.connektflow.com.br/data-deletion/`.
+4. **Exclusão de dados do usuário: configurada.** Em Configurações do app → Básico está a *URL de callback para exclusão de dados* `https://app.connektflow.com.br/data-deletion/` (conferido no painel em 19/11/2026). A consulta pela ferramenta de desenvolvedor da Meta continua devolvendo esse campo vazio; vale o painel.
 5. **O e-mail de contato `contato@connektflow.com.br` não está verificado.** As notificações da análise vão para ele.
 6. **`instagram_manage_contents` está no rascunho, mas desligada em produção** (`PLATFORM_INSTAGRAM_FACEBOOK_DELETE_SCOPE_ENABLED=false`). Ou ligue, reconecte a conta do Instagram e grave a exclusão, ou remova a permissão do rascunho. Como está, o diálogo de login da gravação não vai mostrá-la e a Meta rejeita.
 7. **Três recursos que o código usa não estão no rascunho**: Instagram Public Content Access, Page Public Metadata Access e Human Agent. Veja a seção 6.
@@ -668,7 +668,7 @@ Gravação: a gravação de `pages_messaging`, parando no cabeçalho da conversa
 
 ## 7. Ordem do trabalho
 
-1. Resolver a seção 2: URL de exclusão de dados, e-mail de contato, a decisão sobre `instagram_manage_contents`, os itens não usados do rascunho, os recursos.
+1. Resolver a seção 2: e-mail de contato, a decisão sobre `instagram_manage_contents`, os itens não usados do rascunho, os recursos.
 2. Conectar todas as contas com um login que tenha papel no app e executar cada roteiro uma vez, sem gravar. Isso faz as chamadas de teste.
 3. Usar as telas de Anúncios todos os dias até atingir a contagem de chamadas da API de Marketing.
 4. Esperar 2 dias e conferir no painel que cada permissão mostra a sua chamada de teste.
