@@ -216,7 +216,7 @@ class TestCustomersScreenIdentifiesTheAccount:
     """
 
     def _entries(self, response):
-        return [entry for row in response.context["rows"] for entry in row["members"]]
+        return [entry for row in response.context["rows"] for entry in row["people"]]
 
     def test_lists_every_member_of_an_account(self, client, operator, org, workspace):
         first = User.objects.create_user(email="one@example.com", password="x", tos_accepted_at=timezone.now())
@@ -227,7 +227,7 @@ class TestCustomersScreenIdentifiesTheAccount:
         client.force_login(operator)
 
         entries = self._entries(client.get(reverse("billing_staff:staff_console")))
-        emails = {entry["membership"].user.email for entry in entries}
+        emails = {entry["user"].email for entry in entries}
 
         assert "one@example.com" in emails
         assert "two@example.com" in emails
@@ -244,22 +244,19 @@ class TestCustomersScreenIdentifiesTheAccount:
 
         response = client.get(reverse("billing_staff:staff_console"))
         row = next(r for r in response.context["rows"] if r["organization"].pk == org.pk)
-        entry = next(e for e in row["members"] if e["membership"].user_id == other.pk)
+        entry = next(e for e in row["people"] if e["user"].pk == other.pk)
 
-        assert entry["membership"].user.email == "ops2@example.com"
+        assert entry["user"].email == "ops2@example.com"
         assert entry["may_impersonate"] is False
-        # No button anywhere on the card, so the heading must be gone too.
-        assert row["has_impersonable_members"] is False
 
     def test_a_customer_is_listed_and_offered(self, client, operator, customer, org):
         client.force_login(operator)
 
         response = client.get(reverse("billing_staff:staff_console"))
         row = next(r for r in response.context["rows"] if r["organization"].pk == org.pk)
-        entry = next(e for e in row["members"] if e["membership"].user_id == customer.pk)
+        entry = next(e for e in row["people"] if e["user"].pk == customer.pk)
 
         assert entry["may_impersonate"] is True
-        assert row["has_impersonable_members"] is True
 
     def test_the_operator_is_not_offered_their_own_account(self, client, operator, org, db):
         """``may_impersonate`` refuses self-takeover; the flag has to say so
@@ -270,7 +267,7 @@ class TestCustomersScreenIdentifiesTheAccount:
 
         response = client.get(reverse("billing_staff:staff_console"))
         row = next(r for r in response.context["rows"] if r["organization"].pk == org.pk)
-        entry = next(e for e in row["members"] if e["membership"].user_id == operator.pk)
+        entry = next(e for e in row["people"] if e["user"].pk == operator.pk)
 
         assert entry["may_impersonate"] is False
 
@@ -284,8 +281,50 @@ class TestCustomersScreenIdentifiesTheAccount:
         row = next(r for r in response.context["rows"] if r["organization"].pk == org.pk)
 
         assert response.status_code == 200
-        assert row["members"] == []
-        assert row["has_impersonable_members"] is False
+        assert row["people"] == []
+        assert row["owner"] is None
+        assert row["is_team_account"] is False
+
+    def test_each_brand_lists_the_users_linked_to_it(self, client, operator, org, workspace):
+        """A user linked to two brands shows under both; a member linked to
+        none is still listed, in the account's no-brand group."""
+        second = Workspace.objects.create(organization=org, name="Second brand")
+        both = User.objects.create_user(email="both@example.com", password="x", tos_accepted_at=timezone.now())
+        loose = User.objects.create_user(email="loose@example.com", password="x", tos_accepted_at=timezone.now())
+        for user in (both, loose):
+            OrgMembership.objects.filter(user=user).delete()
+            OrgMembership.objects.create(user=user, organization=org, org_role=OrgMembership.OrgRole.MEMBER)
+        WorkspaceMembership.objects.create(
+            user=both, workspace=workspace, workspace_role=WorkspaceMembership.WorkspaceRole.EDITOR
+        )
+        WorkspaceMembership.objects.create(
+            user=both, workspace=second, workspace_role=WorkspaceMembership.WorkspaceRole.CLIENT
+        )
+        client.force_login(operator)
+
+        response = client.get(reverse("billing_staff:staff_console"))
+        row = next(r for r in response.context["rows"] if r["organization"].pk == org.pk)
+        roles = {
+            ws["workspace"].name: {entry["user"].email: entry["role"] for entry in ws["users"]}
+            for ws in row["workspaces"]
+        }
+        person = next(entry for entry in row["people"] if entry["user"] == both)
+
+        assert roles[workspace.name]["both@example.com"] == "editor"
+        assert roles["Second brand"]["both@example.com"] == "client"
+        assert sorted(person["brands"]) == sorted([(workspace.name, "editor"), ("Second brand", "client")])
+        assert [entry["user"].email for entry in row["without_brand"]] == ["loose@example.com"]
+
+    def test_an_account_owned_by_staff_is_marked_as_the_team(self, client, operator, org):
+        OrgMembership.objects.filter(organization=org).delete()
+        OrgMembership.objects.filter(user=operator).delete()
+        OrgMembership.objects.create(user=operator, organization=org, org_role=OrgMembership.OrgRole.OWNER)
+        client.force_login(operator)
+
+        response = client.get(reverse("billing_staff:staff_console"))
+        row = next(r for r in response.context["rows"] if r["organization"].pk == org.pk)
+
+        assert row["is_team_account"] is True
 
 
 # ---------------------------------------------------------------------------

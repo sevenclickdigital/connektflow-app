@@ -1,40 +1,24 @@
 {% extends "layouts/admin_shell.html" %}
 {% load i18n billing_extras %}
 {% comment %}
-Customers: one table row per account, with every action behind a modal.
+Customers: every account, its brands and the people in each brand.
 
-A table, not the cards this used to be. Each account was a card tall
-enough to hold two always-open forms, so two accounts filled the screen
-and fifty were unreadable — the complaint that produced this shape. The
-question the page answers is comparative ("who pays, who is exempt, who
-is filling the disk"), and comparing means reading down a column.
+Each account is a group of rows (one <tbody>): the account's line (the
+organization, its owner's e-mail, status, brands, disk, monthly charge;
+"Team" when the owner is staff), and, unfolded with the count on the left,
+each brand with its own status, disk and charge. Each brand unfolds in turn,
+by its own count, into the users linked to it and their role there; a user
+linked to several brands appears under each. Organization members linked to no brand sit in a "No brand"
+group. Every line has a "…" menu: the account's (its details, exemption and
+its owner's actions), a brand's (exempt or charge it) or a person's.
 
-One row per ORGANIZATION, not per workspace: the account is what gets
-charged, comped, edited and signed in as. A workspace-grained table
-would repeat the same account on consecutive lines and leave the
-operator unsure which row a button belonged to. Per-workspace detail
-(status, disk, the per-workspace comp toggle) lives in the row's modal,
-which is where it is unambiguous.
+Menus are teleported to <body> and placed under their button, so the
+table's horizontal scroll does not clip them; their position is bound as an
+object so it merges with x-show's display instead of replacing it. Every
+action is a POST with a CSRF token. ``may_impersonate`` and
+``may_deactivate`` come from the view by the rules the POSTs enforce.
 
-The modal is opened on demand and holds all five actions, so nothing on
-this page can be fired by accident while scrolling, and the forms are
-only in the DOM when the operator asked for them. Alpine, matching the
-rest of the project's modals.
-
-Every action is a POST with a CSRF token. There is not one GET link
-among them: a GET reset would let an embedded image mail a customer a
-reset link, and a GET deactivation would let any page an operator visits
-switch a customer off.
-
-Extends layouts/admin_shell.html, which is base.html with the
-administrative navigation in place of the product's — the same
-arrangement layouts/settings.html uses. Extending base.html directly
-would bring Publish, Create Idea and the connected-channels list along,
-all pointing at a workspace an operator account does not have.
-
-Access is ``is_staff`` (see apps/billing/views._is_billing_staff), so
-nothing here is reachable by a customer, and nothing at all by an
-impersonated session.
+Access is ``is_staff`` (apps/billing/views._is_billing_staff).
 {% endcomment %}
 
 {% block title %}{% translate "Customers" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
@@ -51,200 +35,318 @@ impersonated session.
 {% endblock %}
 
 {% block content %}
-<section class="rounded-xl border border-neutral-300 bg-white overflow-hidden">
-  {% comment %}
-  Horizontal scroll rather than hiding columns below a breakpoint: every
-  column here is part of the comparison, and a disk figure that silently
-  disappears on a laptop is worse than one the operator has to scroll
-  to. The account column is the one that stays wide, because it is what
-  identifies the row being scrolled.
-  {% endcomment %}
+<section class="rounded-xl border border-neutral-300 bg-white" x-data="{ q: '', onlyCustomers: false }">
+  <div class="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-neutral-100">
+    <div class="relative flex-1 min-w-[14rem] max-w-md">
+      <svg class="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="search" x-model="q" placeholder="{% translate 'Search by account, brand, name or e-mail' %}"
+             aria-label="{% translate 'Search by account, brand, name or e-mail' %}" class="form-input-styled w-full pl-9 py-2 text-sm">
+    </div>
+    <label class="inline-flex items-center gap-2 text-sm text-neutral-700 cursor-pointer select-none">
+      <input type="checkbox" x-model="onlyCustomers" class="w-4 h-4 rounded accent-[var(--primary)]">
+      {% translate "Only customers" %}
+    </label>
+  </div>
+
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
-        <tr class="border-b border-neutral-100 bg-neutral-50">
-          <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Account" %}</th>
-          <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Workspaces" %}</th>
-          <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Status" %}</th>
-          <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Disk" %}</th>
-          <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Monthly" %}</th>
-          <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
-            <span class="sr-only">{% translate "Actions" %}</span>
-          </th>
+        <tr class="border-b border-neutral-100 bg-neutral-50 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+          <th class="pl-4 pr-1 py-3 w-14"><span class="sr-only">{% translate "Brands" %}</span></th>
+          <th class="px-3 py-3 text-left">{% translate "Name" %}</th>
+          <th class="px-3 py-3 text-left">{% translate "E-mail" %}</th>
+          <th class="px-3 py-3 text-left">{% translate "Role" %}</th>
+          <th class="px-3 py-3 text-left">{% translate "Status" %}</th>
+          <th class="px-3 py-3 text-right">{% translate "Brands" %}</th>
+          <th class="px-3 py-3 text-left">{% translate "Disk" %}</th>
+          <th class="px-3 py-3 text-right">{% translate "Monthly" %}</th>
+          <th class="px-4 py-3"><span class="sr-only">{% translate "Actions" %}</span></th>
         </tr>
       </thead>
-      <tbody>
-        {% for row in rows %}
-        {% comment %}
-        One Alpine scope per row, holding only "is this row's modal
-        open" and which panel it shows. Per row rather than one scope
-        for the page so a row's forms are isolated and the markup stays
-        readable down the file.
-        {% endcomment %}
-        <tr x-data="{ open: false, panel: 'courtesy' }"
-            class="{% if not forloop.last %}border-b border-neutral-100{% endif %} align-top">
+      {% for row in rows %}
+      <tbody class="border-b border-neutral-200 last:border-b-0"
+             data-search="{{ row.organization.name|lower }}{% for ws in row.workspaces %} {{ ws.workspace.name|lower }}{% endfor %}{% for p in row.people %} {{ p.user.name|lower }} {{ p.user.email|lower }}{% endfor %}"
+             {% if row.is_team_account %}data-team{% endif %}
+             x-show="(!onlyCustomers || !$el.hasAttribute('data-team')) && (!q || $el.dataset.search.includes(q.trim().toLowerCase()))"
+             x-data="{
+               expanded: false, openBrands: [], open: false, panel: 'edit', person: '',
+               toggleBrand(key) { this.openBrands = this.openBrands.includes(key) ? this.openBrands.filter(k => k !== key) : [...this.openBrands, key]; },
+               menuFor: '', menuX: 0, menuY: 0, menuUp: false,
+               toggleMenu(key, event) {
+                 if (this.menuFor === key) { this.menuFor = ''; return; }
+                 const box = event.currentTarget.getBoundingClientRect();
+                 this.menuUp = box.bottom + 320 > window.innerHeight;
+                 this.menuX = box.right; this.menuY = this.menuUp ? box.top - 6 : box.bottom + 6;
+                 this.$nextTick(() => { this.menuFor = key; });
+               },
+               openModal(panel, person = '') { this.menuFor = ''; this.panel = panel; this.person = person; this.open = true; }
+             }"
+             @click.window="menuFor = ''" @keydown.escape.window="menuFor = ''" @scroll.window.capture="menuFor = ''" @resize.window="menuFor = ''">
 
-          {# ── Account: the org name, and the e-mail that actually identifies it ── #}
-          {% comment %}
-          The owner's e-mail under the name, because an organization name
-          is not an identity — the real accounts in this install are
-          called "My Organization" and "Seven Click", which name a
-          product default and a company, not a customer. Every other
-          member is listed inside the modal.
-          {% endcomment %}
-          <td class="px-4 py-3 min-w-[14rem]">
-            <div class="font-medium text-neutral-950">{{ row.organization.name }}</div>
-            {% if row.owner %}
-            <div class="text-xs text-neutral-600 break-all">{{ row.owner.membership.user.email }}</div>
-            {% if not row.owner.membership.user.is_active %}
-            <div class="text-[11px] font-medium text-red-600 mt-0.5">{% translate "Sign-in disabled" %}</div>
-            {% endif %}
-            {% else %}
-            <div class="text-xs text-neutral-500">{% translate "No members" %}</div>
+        {# ── The account ── #}
+        <tr class="align-middle">
+          <td class="pl-4 pr-1 py-3">
+            {% if row.workspaces or row.without_brand %}
+            <button type="button" @click="expanded = !expanded" :aria-expanded="expanded ? 'true' : 'false'"
+                    aria-label="{% translate 'Show or hide the brands and their users' %}"
+                    class="inline-flex items-center gap-1 rounded-full border border-neutral-300 px-2 py-0.5 text-xs text-neutral-700 hover:bg-neutral-50 cursor-pointer tabular-nums">
+              <span x-text="expanded ? '−' : '+'">+</span>{{ row.workspace_count }}
+            </button>
             {% endif %}
           </td>
-
-          <td class="px-4 py-3 text-right tabular-nums text-neutral-800">{{ row.workspace_count }}</td>
-
-          {# ── Status: the most urgent state among the account's workspaces ── #}
-          <td class="px-4 py-3">
-            {% if row.status %}
-            <span class="inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-full
-                         {% if row.status == 'active' %}bg-green-50 text-green-700
-                         {% elif row.status == 'courtesy' %}bg-indigo-50 text-indigo-700
-                         {% elif row.status == 'past_due' %}bg-amber-50 text-amber-700
-                         {% elif row.status == 'canceled' %}bg-neutral-100 text-neutral-700
-                         {% else %}bg-blue-50 text-blue-700{% endif %}">
-              {% if row.status == 'active' %}{% translate "Active" %}
-              {% elif row.status == 'courtesy' %}{% translate "Exempt" %}
-              {% elif row.status == 'past_due' %}{% translate "Past due" %}
-              {% elif row.status == 'canceled' %}{% translate "Canceled" %}
-              {% else %}{% translate "Pending" %}{% endif %}
-            </span>
-            {% if row.profile.courtesy_expires_on %}
-            {# The deadline belongs next to the exemption it limits — an #}
-            {# operator reading "Exempt" needs to know for how long. #}
-            <div class="text-[11px] text-neutral-600 mt-1 whitespace-nowrap">
-              {% blocktranslate with date=row.profile.courtesy_expires_on|date:"SHORT_DATE_FORMAT" %}until {{ date }}{% endblocktranslate %}
+          <td class="px-3 py-3 min-w-[12rem]">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="font-semibold text-neutral-950">{{ row.organization.name }}</span>
+              {% if row.is_team_account %}<span class="pill pill-brand">{% translate "Team" %}</span>{% endif %}
             </div>
-            {% endif %}
-            {% else %}
-            <span class="text-xs text-neutral-500">—</span>
-            {% endif %}
           </td>
-
-          {# ── Disk: the signal that predicts a support ticket ── #}
-          <td class="px-4 py-3 min-w-[9rem]">
+          <td class="px-3 py-3 text-neutral-700 whitespace-nowrap">
+            {% if row.owner %}{{ row.owner.user.email }}{% else %}<span class="text-neutral-500">{% translate "No members" %}</span>{% endif %}
+          </td>
+          <td class="px-3 py-3"></td>
+          <td class="px-3 py-3">
+            {% if row.status == 'active' %}<span class="pill pill-success">{% translate "Active" %}</span>{% elif row.status == 'courtesy' %}<span class="pill pill-info">{% translate "Exempt" %}</span>{% elif row.status == 'past_due' %}<span class="pill pill-warning">{% translate "Past due" %}</span>{% elif row.status == 'canceled' %}<span class="pill pill-neutral">{% translate "Canceled" %}</span>{% elif row.status %}<span class="pill pill-neutral">{% translate "No plan" %}</span>{% endif %}
+            {% if row.profile.courtesy_expires_on %}<div class="text-[11px] text-neutral-600 mt-1">{% blocktranslate with date=row.profile.courtesy_expires_on|date:"SHORT_DATE_FORMAT" %}until {{ date }}{% endblocktranslate %}</div>{% endif %}
+          </td>
+          <td class="px-3 py-3 text-right tabular-nums text-neutral-800">{{ row.workspace_count }}</td>
+          <td class="px-3 py-3 min-w-[8rem]">
             {% if row.storage_limit_bytes %}
             <div class="flex items-baseline justify-between gap-2 text-[11px] mb-1 whitespace-nowrap">
-              <span class="text-neutral-600">
-                {% blocktranslate with used=row.storage_used_bytes|gb limit=row.storage_limit_bytes|gb %}{{ used }} / {{ limit }} GB{% endblocktranslate %}
-              </span>
-              <span class="tabular-nums font-semibold
-                           {% if row.storage_percent >= 100 %}text-red-600{% elif row.storage_percent >= 90 %}text-amber-600{% else %}text-neutral-500{% endif %}">
-                {{ row.storage_percent|meter_percent }}%
-              </span>
+              <span class="text-neutral-600">{% blocktranslate with used=row.storage_used_bytes|gb limit=row.storage_limit_bytes|gb %}{{ used }} / {{ limit }} GB{% endblocktranslate %}</span>
+              <span class="tabular-nums font-semibold {% if row.storage_percent >= 100 %}text-red-600{% elif row.storage_percent >= 90 %}text-amber-600{% else %}text-neutral-500{% endif %}">{{ row.storage_percent|meter_percent }}%</span>
             </div>
             <div class="h-1.5 w-full rounded-full bg-neutral-100 overflow-hidden">
-              <div class="h-full rounded-full
-                          {% if row.storage_percent >= 100 %}bg-red-500{% elif row.storage_percent >= 90 %}bg-amber-500{% else %}bg-neutral-400{% endif %}"
-                   style="width: {{ row.storage_percent|meter_percent }}%"></div>
+              <div class="h-full rounded-full {% if row.storage_percent >= 100 %}bg-red-500{% elif row.storage_percent >= 90 %}bg-amber-500{% else %}bg-neutral-400{% endif %}" style="width: {{ row.storage_percent|meter_percent }}%"></div>
             </div>
-            {% else %}
-            <span class="text-xs text-neutral-500">—</span>
-            {% endif %}
+            {% else %}<span class="text-xs text-neutral-500">—</span>{% endif %}
           </td>
-
-          <td class="px-4 py-3 text-right tabular-nums font-medium text-neutral-950 whitespace-nowrap">
-            R$ {{ row.monthly_total_cents|brl }}
-          </td>
-
+          <td class="px-3 py-3 text-right tabular-nums font-medium text-neutral-950 whitespace-nowrap">R$ {{ row.monthly_total_cents|brl }}</td>
           <td class="px-4 py-3 text-right">
-            <button type="button" @click="open = true; panel = 'courtesy'"
-                    class="px-3 py-1.5 text-xs font-semibold text-neutral-800 bg-white border border-neutral-400 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer whitespace-nowrap">
-              {% translate "Manage" %}
+            <button type="button" data-menu-button @click="toggleMenu('account', $event)"
+                    :aria-expanded="menuFor === 'account' ? 'true' : 'false'" aria-label="{% translate 'Actions' %}"
+                    class="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50 cursor-pointer">
+              <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
             </button>
-          </td>
-
-          {% comment %}
-          ─── The actions modal ───────────────────────────────────────
-
-          Inside the row so each row owns its own forms and ids, and
-          rendered in a cell with no padding so the fixed overlay is not
-          offset by the table's layout.
-
-          ``x-cloak`` keeps it invisible before Alpine boots (the rule is
-          in the admin shell's <style>), and Escape closes it — a modal
-          with no keyboard exit over a page full of destructive buttons
-          would be worse than no modal.
-          {% endcomment %}
-          <td class="p-0">
             <template x-teleport="body">
-              <div x-show="open" x-cloak
-                   @keydown.escape.window="open = false"
-                   class="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto">
-                <div x-show="open" x-transition.opacity @click="open = false"
-                     class="fixed inset-0 bg-black/40"></div>
+              <div x-show="menuFor === 'account'" x-cloak role="menu"
+                   :style="{ top: menuY + 'px', left: menuX + 'px' }" :class="menuUp && '-translate-y-full'"
+                   class="fixed -translate-x-full z-50 w-64 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-lg text-left">
+                <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100" @click="openModal('edit')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>{% translate "Account details" %}</button>
+                <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100" @click="openModal('courtesy')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M17 6l3 3M15 8l2 2"/></svg>{% translate "Manage exemption" %}</button>
+                {% if row.owner %}{% with p=row.owner %}
+                <div class="my-1 border-t border-neutral-100"></div>
+                <p class="px-2.5 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{% translate "Account owner" %}</p>
+                <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100" @click="openModal('person', '{{ p.user.id }}')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>{% translate "Owner details" %}</button>
+                {% if p.may_impersonate %}
+                <form method="post" action="{% url 'accounts:start_impersonation' user_id=p.user.id %}">{% csrf_token %}
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>{% translate "Sign in as" %}</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{% url 'billing_staff:send_password_reset' target_user_id=p.user.id %}">{% csrf_token %}
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>{% translate "Send password reset" %}</button>
+                </form>
+                {% if p.may_deactivate %}
+                <form method="post" action="{% url 'billing_staff:set_user_active' target_user_id=p.user.id %}">{% csrf_token %}
+                  {% if p.user.is_active %}
+                  <input type="hidden" name="action" value="deactivate">
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>{% translate "Disable sign-in" %}</button>
+                  {% else %}
+                  <input type="hidden" name="action" value="activate">
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>{% translate "Restore sign-in" %}</button>
+                  {% endif %}
+                </form>
+                <div class="my-1 border-t border-neutral-100"></div>
+                <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-red-700 hover:bg-red-50" @click="openModal('delete', '{{ p.user.id }}')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>{% translate "Delete user" %}</button>
+                {% endif %}
+                {% endwith %}{% endif %}
+              </div>
+            </template>
+          </td>
+        </tr>
 
-                <div x-show="open" x-transition
-                     role="dialog" aria-modal="true"
-                     class="relative w-full max-w-lg my-8 bg-white rounded-xl shadow-xl ring-1 ring-neutral-300 text-left">
+        {# ── Each brand, then the users linked to it ── #}
+        {% for ws in row.workspaces %}
+        <tr class="align-middle bg-neutral-50/70 border-t border-neutral-100" x-show="expanded" x-cloak>
+          <td></td>
+          <td class="pl-7 pr-3 py-2.5" colspan="3">
+            <div class="flex items-center gap-2">
+              {% if ws.users %}<button type="button" @click="toggleBrand('{{ ws.workspace.id }}')" :aria-expanded="openBrands.includes('{{ ws.workspace.id }}') ? 'true' : 'false'"
+                      aria-label="{% translate 'Show or hide the users' %}"
+                      class="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-white px-2 py-0.5 text-xs text-neutral-700 hover:bg-neutral-50 cursor-pointer tabular-nums">
+                <span x-text="openBrands.includes('{{ ws.workspace.id }}') ? '−' : '+'">+</span>{{ ws.users|length }}
+              </button>{% else %}<span class="inline-block w-[2.6rem]"></span>{% endif %}
+              <svg class="w-4 h-4 text-neutral-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1"/></svg>
+              <span class="font-medium text-neutral-900">{{ ws.workspace.name }}</span>
+              {% if ws.workspace.is_archived %}<span class="pill pill-neutral">{% translate "Archived" %}</span>{% endif %}
+            </div>
+          </td>
+          <td class="px-3 py-2.5">{% if ws.subscription.status == 'active' %}<span class="pill pill-success">{% translate "Active" %}</span>{% elif ws.subscription.status == 'courtesy' %}<span class="pill pill-info">{% translate "Exempt" %}</span>{% elif ws.subscription.status == 'past_due' %}<span class="pill pill-warning">{% translate "Past due" %}</span>{% elif ws.subscription.status == 'canceled' %}<span class="pill pill-neutral">{% translate "Canceled" %}</span>{% elif ws.subscription.status %}<span class="pill pill-neutral">{% translate "No plan" %}</span>{% endif %}</td>
+          <td></td>
+          <td class="px-3 py-2.5 min-w-[8rem]">
+            {% if ws.storage.limit_bytes %}
+            <div class="flex items-baseline justify-between gap-2 text-[11px] mb-1 whitespace-nowrap">
+              <span class="text-neutral-600">{% blocktranslate with used=ws.storage.used_bytes|gb limit=ws.storage.limit_bytes|gb %}{{ used }} / {{ limit }} GB{% endblocktranslate %}</span>
+              <span class="tabular-nums font-semibold {% if ws.storage.percent_used >= 100 %}text-red-600{% elif ws.storage.percent_used >= 90 %}text-amber-600{% else %}text-neutral-500{% endif %}">{{ ws.storage.percent_used|meter_percent }}%</span>
+            </div>
+            <div class="h-1.5 w-full rounded-full bg-neutral-100 overflow-hidden">
+              <div class="h-full rounded-full {% if ws.storage.percent_used >= 100 %}bg-red-500{% elif ws.storage.percent_used >= 90 %}bg-amber-500{% else %}bg-neutral-400{% endif %}" style="width: {{ ws.storage.percent_used|meter_percent }}%"></div>
+            </div>
+            {% else %}<span class="text-xs text-neutral-500">—</span>{% endif %}
+          </td>
+          <td class="px-3 py-2.5 text-right tabular-nums text-neutral-800 whitespace-nowrap">R$ {{ ws.monthly_total_cents|brl }}</td>
+          <td class="px-4 py-2.5 text-right">
+            <button type="button" data-menu-button @click="toggleMenu('ws-{{ ws.workspace.id }}', $event)"
+                    :aria-expanded="menuFor === 'ws-{{ ws.workspace.id }}' ? 'true' : 'false'" aria-label="{% translate 'Actions' %}"
+                    class="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50 cursor-pointer">
+              <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+            </button>
+            <template x-teleport="body">
+              <div x-show="menuFor === 'ws-{{ ws.workspace.id }}'" x-cloak role="menu"
+                   :style="{ top: menuY + 'px', left: menuX + 'px' }" :class="menuUp && '-translate-y-full'"
+                   class="fixed -translate-x-full z-50 w-64 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-lg text-left">
+                <form method="post" action="{% url 'billing_staff:toggle_courtesy' target_workspace_id=ws.workspace.id %}">{% csrf_token %}
+                  {% if ws.subscription.is_courtesy %}
+                  <input type="hidden" name="action" value="revoke">
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>{% translate "Charge this brand" %}</button>
+                  {% else %}
+                  <input type="hidden" name="action" value="grant">
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>{% translate "Exempt from charges" %}</button>
+                  {% endif %}
+                </form>
+              </div>
+            </template>
+          </td>
+        </tr>
+        {% for p in ws.users %}
+        <tr class="align-middle bg-white" x-show="expanded && openBrands.includes('{{ ws.workspace.id }}')" x-cloak>
+          <td></td>
+          <td class="pl-14 pr-3 py-2 whitespace-nowrap">{% if p.user.name %}<span class="text-neutral-800">{{ p.user.name }}</span>{% else %}<span class="text-neutral-400">—</span>{% endif %}</td>
+          <td class="px-3 py-2 text-neutral-700 whitespace-nowrap">{{ p.user.email }}</td>
+          <td class="px-3 py-2"><span class="pill pill-success">{% if p.role == "owner" %}{% translate "Owner" %}{% elif p.role == "manager" %}{% translate "Manager" %}{% elif p.role == "editor" %}{% translate "Editor" %}{% elif p.role == "contributor" %}{% translate "Contributor" %}{% elif p.role == "client" %}{% translate "Client" %}{% elif p.role == "viewer" %}{% translate "Viewer" %}{% elif p.role == "admin" %}{% translate "Admin" %}{% else %}{% translate "Member" %}{% endif %}</span></td>
+          <td class="px-3 py-2">{% if not p.user.is_active %}<span class="pill pill-error">{% translate "Sign-in disabled" %}</span>{% endif %}</td>
+          <td colspan="3"></td>
+          <td class="px-4 py-2 text-right">
+            <button type="button" data-menu-button @click="toggleMenu('u-{{ ws.workspace.id }}-{{ p.user.id }}', $event)"
+                    :aria-expanded="menuFor === 'u-{{ ws.workspace.id }}-{{ p.user.id }}' ? 'true' : 'false'" aria-label="{% translate 'Actions' %}"
+                    class="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50 cursor-pointer">
+              <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+            </button>
+            <template x-teleport="body">
+              <div x-show="menuFor === 'u-{{ ws.workspace.id }}-{{ p.user.id }}'" x-cloak role="menu"
+                   :style="{ top: menuY + 'px', left: menuX + 'px' }" :class="menuUp && '-translate-y-full'"
+                   class="fixed -translate-x-full z-50 w-64 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-lg text-left">
+                <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100" @click="openModal('person', '{{ p.user.id }}')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>{% translate "Member details" %}</button>
+                {% if p.may_impersonate %}
+                <form method="post" action="{% url 'accounts:start_impersonation' user_id=p.user.id %}">{% csrf_token %}
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>{% translate "Sign in as" %}</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{% url 'billing_staff:send_password_reset' target_user_id=p.user.id %}">{% csrf_token %}
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>{% translate "Send password reset" %}</button>
+                </form>
+                {% if p.may_deactivate %}
+                <form method="post" action="{% url 'billing_staff:set_user_active' target_user_id=p.user.id %}">{% csrf_token %}
+                  {% if p.user.is_active %}
+                  <input type="hidden" name="action" value="deactivate">
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>{% translate "Disable sign-in" %}</button>
+                  {% else %}
+                  <input type="hidden" name="action" value="activate">
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>{% translate "Restore sign-in" %}</button>
+                  {% endif %}
+                </form>
+                <div class="my-1 border-t border-neutral-100"></div>
+                <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-red-700 hover:bg-red-50" @click="openModal('delete', '{{ p.user.id }}')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>{% translate "Delete user" %}</button>
+                {% endif %}
+              </div>
+            </template>
+          </td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
 
-                  <div class="flex items-start justify-between gap-4 px-5 py-4 border-b border-neutral-100">
-                    <div class="min-w-0">
-                      <h2 class="text-base font-semibold text-neutral-950 truncate">{{ row.organization.name }}</h2>
-                      {% if row.owner %}
-                      <p class="text-xs text-neutral-600 break-all">{{ row.owner.membership.user.email }}</p>
-                      {% endif %}
-                    </div>
-                    <button type="button" @click="open = false"
-                            aria-label="{% translate 'Close' %}"
-                            class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors cursor-pointer">
-                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                  </div>
+        {% if row.without_brand %}
+        <tr class="align-middle bg-neutral-50/70 border-t border-neutral-100" x-show="expanded" x-cloak>
+          <td></td>
+          <td class="pl-7 pr-3 py-2.5" colspan="8">
+            <div class="flex items-center gap-2">
+              <button type="button" @click="toggleBrand('none')" :aria-expanded="openBrands.includes('none') ? 'true' : 'false'"
+                      aria-label="{% translate 'Show or hide the users' %}"
+                      class="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-white px-2 py-0.5 text-xs text-neutral-700 hover:bg-neutral-50 cursor-pointer tabular-nums">
+                <span x-text="openBrands.includes('none') ? '−' : '+'">+</span>{{ row.without_brand|length }}
+              </button>
+              <span class="text-xs font-semibold uppercase tracking-wide text-neutral-500">{% translate "In the account, with no brand" %}</span>
+            </div>
+          </td>
+        </tr>
+        {% for p in row.without_brand %}
+        <tr class="align-middle bg-white" x-show="expanded && openBrands.includes('none')" x-cloak>
+          <td></td>
+          <td class="pl-14 pr-3 py-2 whitespace-nowrap">{% if p.user.name %}<span class="text-neutral-800">{{ p.user.name }}</span>{% else %}<span class="text-neutral-400">—</span>{% endif %}</td>
+          <td class="px-3 py-2 text-neutral-700 whitespace-nowrap">{{ p.user.email }}</td>
+          <td class="px-3 py-2"><span class="pill pill-success">{% if p.role == "owner" %}{% translate "Owner" %}{% elif p.role == "manager" %}{% translate "Manager" %}{% elif p.role == "editor" %}{% translate "Editor" %}{% elif p.role == "contributor" %}{% translate "Contributor" %}{% elif p.role == "client" %}{% translate "Client" %}{% elif p.role == "viewer" %}{% translate "Viewer" %}{% elif p.role == "admin" %}{% translate "Admin" %}{% else %}{% translate "Member" %}{% endif %}</span></td>
+          <td class="px-3 py-2">{% if not p.user.is_active %}<span class="pill pill-error">{% translate "Sign-in disabled" %}</span>{% endif %}</td>
+          <td colspan="3"></td>
+          <td class="px-4 py-2 text-right">
+            <button type="button" data-menu-button @click="toggleMenu('u-none-{{ p.user.id }}', $event)"
+                    :aria-expanded="menuFor === 'u-none-{{ p.user.id }}' ? 'true' : 'false'" aria-label="{% translate 'Actions' %}"
+                    class="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50 cursor-pointer">
+              <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+            </button>
+            <template x-teleport="body">
+              <div x-show="menuFor === 'u-none-{{ p.user.id }}'" x-cloak role="menu"
+                   :style="{ top: menuY + 'px', left: menuX + 'px' }" :class="menuUp && '-translate-y-full'"
+                   class="fixed -translate-x-full z-50 w-64 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-lg text-left">
+                <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100" @click="openModal('person', '{{ p.user.id }}')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>{% translate "Member details" %}</button>
+                {% if p.may_impersonate %}
+                <form method="post" action="{% url 'accounts:start_impersonation' user_id=p.user.id %}">{% csrf_token %}
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>{% translate "Sign in as" %}</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{% url 'billing_staff:send_password_reset' target_user_id=p.user.id %}">{% csrf_token %}
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>{% translate "Send password reset" %}</button>
+                </form>
+                {% if p.may_deactivate %}
+                <form method="post" action="{% url 'billing_staff:set_user_active' target_user_id=p.user.id %}">{% csrf_token %}
+                  {% if p.user.is_active %}
+                  <input type="hidden" name="action" value="deactivate">
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>{% translate "Disable sign-in" %}</button>
+                  {% else %}
+                  <input type="hidden" name="action" value="activate">
+                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>{% translate "Restore sign-in" %}</button>
+                  {% endif %}
+                </form>
+                <div class="my-1 border-t border-neutral-100"></div>
+                <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-red-700 hover:bg-red-50" @click="openModal('delete', '{{ p.user.id }}')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>{% translate "Delete user" %}</button>
+                {% endif %}
+              </div>
+            </template>
+          </td>
+        </tr>
+        {% endfor %}
+        {% endif %}
 
-                  {% comment %}
-                  Tabs, not five stacked forms. Stacking is what made the
-                  cards unreadable in the first place, and only one of
-                  these is ever the reason the modal was opened.
-                  {% endcomment %}
-                  <div class="flex gap-1 px-5 pt-3 border-b border-neutral-100 overflow-x-auto">
-                    <button type="button" @click="panel = 'courtesy'"
-                            :class="panel === 'courtesy' ? 'border-brand-700 text-neutral-950' : 'border-transparent text-neutral-600 hover:text-neutral-800'"
-                            class="px-2.5 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap">
-                      {% translate "Release access" %}
-                    </button>
-                    <button type="button" @click="panel = 'edit'"
-                            :class="panel === 'edit' ? 'border-brand-700 text-neutral-950' : 'border-transparent text-neutral-600 hover:text-neutral-800'"
-                            class="px-2.5 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap">
-                      {% translate "Edit account" %}
-                    </button>
-                    <button type="button" @click="panel = 'people'"
-                            :class="panel === 'people' ? 'border-brand-700 text-neutral-950' : 'border-transparent text-neutral-600 hover:text-neutral-800'"
-                            class="px-2.5 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap">
-                      {% translate "People and access" %}
-                    </button>
-                    <button type="button" @click="panel = 'workspaces'"
-                            :class="panel === 'workspaces' ? 'border-brand-700 text-neutral-950' : 'border-transparent text-neutral-600 hover:text-neutral-800'"
-                            class="px-2.5 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap">
-                      {% translate "Workspaces" %}
-                    </button>
-                  </div>
+        {% comment %}
+        The account's modal: its details or its exemption, as tabs; or one
+        person's details; or the deletion of one person, which asks for the
+        e-mail typed back.
+        {% endcomment %}
+        <tr class="hidden"><td>
+        <template x-teleport="body">
+          <div x-show="open" x-cloak @keydown.escape.window="open = false" class="modal-overlay">
+            <div class="modal-panel is-lg !p-0" @click.outside="open = false" role="dialog" aria-modal="true" aria-labelledby="account-{{ row.organization.id }}">
+              <button type="button" class="modal-close" @click="open = false" aria-label="{% translate 'Close' %}">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+              <div class="px-5 pt-4 pb-3 pr-12 border-b border-neutral-100">
+                <h2 id="account-{{ row.organization.id }}" class="modal-title truncate">{{ row.organization.name }}</h2>
+                {% if row.owner %}<p class="text-xs text-neutral-600 break-all">{{ row.owner.user.email }}</p>{% endif %}
+              </div>
+              <div class="flex gap-1 px-5 pt-2 border-b border-neutral-100" x-show="panel === 'edit' || panel === 'courtesy'">
+                <button type="button" @click="panel = 'edit'" :class="panel === 'edit' ? 'border-brand-700 text-neutral-950' : 'border-transparent text-neutral-600 hover:text-neutral-800'" class="px-2.5 py-2 text-xs font-semibold border-b-2 cursor-pointer whitespace-nowrap">{% translate "Edit account" %}</button>
+                <button type="button" @click="panel = 'courtesy'" :class="panel === 'courtesy' ? 'border-brand-700 text-neutral-950' : 'border-transparent text-neutral-600 hover:text-neutral-800'" class="px-2.5 py-2 text-xs font-semibold border-b-2 cursor-pointer whitespace-nowrap">{% translate "Exemption" %}</button>
+              </div>
 
-                  {# ── a) Courtesy with a deadline ── #}
-                  {% comment %}
-                  The one new concept on this screen: an exemption that
-                  ends by itself. Three inputs because all three are
-                  needed for the decision to survive the week it was made
-                  in — how many workspaces, until when, and why.
-
-                  The help text states the consequence of the date
-                  plainly, because "the account is billed again
-                  automatically" is the part an operator must not be
-                  surprised by.
-                  {% endcomment %}
-                  <div x-show="panel === 'courtesy'" class="px-5 py-4 space-y-4">
+<div x-show="panel === 'courtesy'" x-cloak class="px-5 py-4 space-y-4">
                     <form method="post" action="{% url 'billing_staff:grant_courtesy' org_id=row.organization.id %}"
                           class="space-y-3">
                       {% csrf_token %}
@@ -314,9 +416,7 @@ impersonated session.
                     </p>
                     {% endif %}
                   </div>
-
-                  {# ── c) Edit the account ── #}
-                  <div x-show="panel === 'edit'" x-cloak class="px-5 py-4">
+<div x-show="panel === 'edit'" x-cloak class="px-5 py-4">
                     <form method="post" action="{% url 'billing_staff:edit_account' org_id=row.organization.id %}"
                           class="space-y-3">
                       {% csrf_token %}
@@ -332,13 +432,13 @@ impersonated session.
                       {# The owner's own fields travel with the org name in #}
                       {# one submit: support is correcting one mistake, not #}
                       {# filling two forms. #}
-                      <input type="hidden" name="user_id" value="{{ row.owner.membership.user.id }}">
+                      <input type="hidden" name="user_id" value="{{ row.owner.user.id }}">
                       <div>
                         <label for="username-{{ row.organization.id }}" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">
                           {% translate "Owner's name" %}
                         </label>
                         <input type="text" id="username-{{ row.organization.id }}" name="name" maxlength="255"
-                               value="{{ row.owner.membership.user.name }}"
+                               value="{{ row.owner.user.name }}"
                                class="form-input-styled w-full">
                       </div>
                       <div>
@@ -346,7 +446,7 @@ impersonated session.
                           {% translate "Owner's e-mail" %}
                         </label>
                         <input type="email" id="useremail-{{ row.organization.id }}" name="email" required
-                               value="{{ row.owner.membership.user.email }}"
+                               value="{{ row.owner.user.email }}"
                                class="form-input-styled w-full">
                         <p class="text-[11px] text-neutral-600 mt-1">
                           {% translate "This is the address they sign in with. If another account already uses it, nothing is changed." %}
@@ -360,183 +460,42 @@ impersonated session.
                       </button>
                     </form>
                   </div>
-
-                  {# ── b) password reset, d) deactivate, e) impersonate ── #}
-                  {% comment %}
-                  The three per-person actions share a panel because they
-                  are all answers to "what do I do about this human", and
-                  because listing each member once with its buttons beats
-                  three lists of the same people.
-
-                  ``may_impersonate`` and ``may_deactivate`` are decided
-                  in the view by the same rules the POSTs enforce, so no
-                  button shown here can 403 — and an operator's account
-                  appears with its e-mail and no buttons rather than
-                  silently vanishing from the list.
-                  {% endcomment %}
-                  <div x-show="panel === 'people'" x-cloak class="px-5 py-4">
-                    {% if row.members %}
-                    <ul class="divide-y divide-neutral-100">
-                      {% for entry in row.members %}
-                      <li class="py-3 first:pt-0 last:pb-0">
-                        <div class="flex items-baseline gap-2 flex-wrap">
-                          <span class="text-sm font-medium text-neutral-900 break-all">{{ entry.membership.user.email }}</span>
-                          <span class="text-[11px] text-neutral-500">{{ entry.membership.get_org_role_display }}</span>
-                          {% if not entry.membership.user.is_active %}
-                          <span class="text-[11px] font-medium text-red-600">{% translate "Sign-in disabled" %}</span>
-                          {% endif %}
-                          {% if not entry.may_impersonate and not entry.may_deactivate %}
-                          {# Says why there are no buttons beside this one, #}
-                          {# rather than leaving a gap to guess at. #}
-                          <span class="text-[10px] uppercase tracking-wide text-neutral-500">{% translate "operator account" %}</span>
-                          {% endif %}
-                        </div>
-                        <div class="flex flex-wrap gap-2 mt-2">
-                          <form method="post" action="{% url 'billing_staff:send_password_reset' target_user_id=entry.membership.user.id %}">
-                            {% csrf_token %}
-                            <button type="submit"
-                                    class="px-2.5 py-1.5 text-xs font-medium text-neutral-800 bg-white border border-neutral-400 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer">
-                              {% translate "Send password reset" %}
-                            </button>
-                          </form>
-
-                          {% if entry.may_deactivate %}
-                          <form method="post" action="{% url 'billing_staff:set_user_active' target_user_id=entry.membership.user.id %}">
-                            {% csrf_token %}
-                            {% if entry.membership.user.is_active %}
-                            {# Action named in the POST, so a double submit is #}
-                            {# idempotent instead of toggling back. #}
-                            <input type="hidden" name="action" value="deactivate">
-                            <button type="submit"
-                                    class="px-2.5 py-1.5 text-xs font-medium text-red-700 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors cursor-pointer">
-                              {% translate "Disable sign-in" %}
-                            </button>
-                            {% else %}
-                            <input type="hidden" name="action" value="activate">
-                            <button type="submit"
-                                    class="px-2.5 py-1.5 text-xs font-medium text-green-700 bg-white border border-green-200 rounded-lg hover:bg-green-50 transition-colors cursor-pointer">
-                              {% translate "Restore sign-in" %}
-                            </button>
-                            {% endif %}
-                          </form>
-
-                          {% comment %}
-                          Delete for good: the user and the organizations only they own
-                          (billing.views.staff_delete_user). The email must be typed back.
-                          {% endcomment %}
-                          <form method="post" action="{% url 'billing_staff:delete_user' target_user_id=entry.membership.user.id %}"
-                                x-data="{ open: false }" class="flex flex-wrap items-center gap-2"
-                                data-confirm="{% translate 'Delete this account for good?' %}" data-confirm-tone="danger"
-                                data-confirm-label="{% translate 'Delete account' %}"
-                                data-confirm-body="{% translate 'The user and the organizations only they own are erased with their brands, posts and media; their subscriptions are cancelled at the payment provider. This cannot be undone.' %}">
-                            {% csrf_token %}
-                            <button type="button" x-show="!open" @click="open = true; $nextTick(() => $refs.email.focus())"
-                                    class="px-2.5 py-1.5 text-xs font-medium text-red-700 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors cursor-pointer">
-                              {% translate "Delete account" %}
-                            </button>
-                            <template x-if="open">
-                              <div class="flex flex-wrap items-center gap-2">
-                                <input type="email" name="confirm_email" x-ref="email" required autocomplete="off"
-                                       placeholder="{{ entry.membership.user.email }}"
-                                       aria-label="{% translate 'Type the email to confirm' %}"
-                                       class="form-input-styled text-xs py-1.5 w-56">
-                                <button type="submit" class="px-2.5 py-1.5 text-xs font-medium text-white bg-red-600 border border-red-600 rounded-lg hover:bg-red-700 transition-colors cursor-pointer">
-                                  {% translate "Delete for good" %}
-                                </button>
-                                <button type="button" @click="open = false" class="text-xs font-medium text-neutral-600 hover:text-neutral-800 cursor-pointer">{% translate "Cancel" %}</button>
-                              </div>
-                            </template>
-                          </form>
-                          {% endif %}
-
-                          {% comment %}
-                          POST, never a link: a GET would let any page an
-                          operator visits hand them someone else's
-                          session by embedding the URL.
-                          {% endcomment %}
-                          {% if entry.may_impersonate %}
-                          <form method="post" action="{% url 'accounts:start_impersonation' user_id=entry.membership.user.id %}">
-                            {% csrf_token %}
-                            <button type="submit"
-                                    class="px-2.5 py-1.5 text-xs font-medium text-neutral-800 bg-white border border-neutral-400 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer">
-                              {% translate "Sign in as, for support" %}
-                            </button>
-                          </form>
-                          {% endif %}
-                        </div>
-                        <p class="text-[11px] text-neutral-500 mt-1.5">
-                          {% translate "The reset is e-mailed to them; nobody here sees or sets their password." %}
-                        </p>
-                      </li>
-                      {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p class="text-sm text-neutral-500">{% translate "This account has no members." %}</p>
-                    {% endif %}
-                  </div>
-
-                  {# ── Per-workspace detail, with the single-workspace comp toggle ── #}
-                  {% comment %}
-                  What the cards used to show on the page itself. Kept
-                  because the account-level exemption is a budget and an
-                  operator still sometimes needs to pick which workspace
-                  it applies to — the toggle sits next to the row it acts
-                  on, so there is never a doubt which workspace a button
-                  will exempt.
-                  {% endcomment %}
-                  <div x-show="panel === 'workspaces'" x-cloak class="px-5 py-4">
-                    {% if row.workspaces %}
-                    <ul class="divide-y divide-neutral-100">
-                      {% for ws in row.workspaces %}
-                      <li class="py-3 first:pt-0 last:pb-0 flex flex-wrap items-center gap-3">
-                        <div class="flex-1 min-w-[9rem]">
-                          <div class="text-sm font-medium text-neutral-950">{{ ws.workspace.name }}</div>
-                          <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span class="text-[11px] text-neutral-600">{{ ws.subscription.get_status_display }}</span>
-                            <span class="text-[11px] text-neutral-500">
-                              {% blocktranslate with used=ws.storage.used_bytes|gb limit=ws.storage.limit_bytes|gb %}{{ used }} / {{ limit }} GB{% endblocktranslate %}
-                            </span>
-                            {% if ws.workspace.is_archived %}
-                            <span class="text-[11px] text-neutral-500">{% translate "Archived" %}</span>
-                            {% endif %}
-                          </div>
-                        </div>
-                        <div class="text-sm tabular-nums text-neutral-800 whitespace-nowrap">R$ {{ ws.monthly_total_cents|brl }}</div>
-                        <form method="post" action="{% url 'billing_staff:toggle_courtesy' target_workspace_id=ws.workspace.id %}">
-                          {% csrf_token %}
-                          {% if ws.subscription.is_courtesy %}
-                          <input type="hidden" name="action" value="revoke">
-                          <button type="submit"
-                                  class="px-2.5 py-1.5 text-xs font-semibold text-neutral-700 bg-white border border-neutral-400 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer whitespace-nowrap">
-                            {% translate "Charge this workspace" %}
-                          </button>
-                          {% else %}
-                          <input type="hidden" name="action" value="grant">
-                          <button type="submit"
-                                  class="px-2.5 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors cursor-pointer whitespace-nowrap">
-                            {% translate "Exempt from charges" %}
-                          </button>
-                          {% endif %}
-                        </form>
-                      </li>
-                      {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p class="text-sm text-neutral-500">{% translate "This account has no workspaces." %}</p>
-                    {% endif %}
-                  </div>
-
-                </div>
+              {% for p in row.people %}
+              <div x-show="panel === 'person' && person === '{{ p.user.id }}'" x-cloak class="px-5 py-4">
+                <dl class="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
+                  <dt class="text-neutral-500">{% translate "Name" %}</dt><dd class="text-neutral-950">{{ p.user.name|default:"—" }}</dd>
+                  <dt class="text-neutral-500">{% translate "E-mail" %}</dt><dd class="text-neutral-950 break-all">{{ p.user.email }}</dd>
+                  <dt class="text-neutral-500">{% translate "In the account" %}</dt><dd class="text-neutral-950">{% if p.org_role %}{% if p.org_role == "owner" %}{% translate "Owner" %}{% elif p.org_role == "manager" %}{% translate "Manager" %}{% elif p.org_role == "editor" %}{% translate "Editor" %}{% elif p.org_role == "contributor" %}{% translate "Contributor" %}{% elif p.org_role == "client" %}{% translate "Client" %}{% elif p.org_role == "viewer" %}{% translate "Viewer" %}{% elif p.org_role == "admin" %}{% translate "Admin" %}{% else %}{% translate "Member" %}{% endif %}{% else %}—{% endif %}</dd>
+                  <dt class="text-neutral-500">{% translate "Brands" %}</dt>
+                  <dd class="text-neutral-950">{% for name, role in p.brands %}<div>{{ name }} · <span class="text-neutral-600">{% if role == "owner" %}{% translate "Owner" %}{% elif role == "manager" %}{% translate "Manager" %}{% elif role == "editor" %}{% translate "Editor" %}{% elif role == "contributor" %}{% translate "Contributor" %}{% elif role == "client" %}{% translate "Client" %}{% else %}{% translate "Viewer" %}{% endif %}</span></div>{% empty %}—{% endfor %}</dd>
+                  <dt class="text-neutral-500">{% translate "Sign-in" %}</dt><dd class="text-neutral-950">{% if p.user.is_active %}{% translate "Allowed" %}{% else %}{% translate "Sign-in disabled" %}{% endif %}</dd>
+                  <dt class="text-neutral-500">{% translate "Last sign-in" %}</dt><dd class="text-neutral-950">{% if p.user.last_login %}{{ p.user.last_login|date:"SHORT_DATETIME_FORMAT" }}{% else %}{% translate "Never" %}{% endif %}</dd>
+                </dl>
               </div>
-            </template>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="6" class="px-4 py-6 text-sm text-neutral-600">{% translate "No accounts yet." %}</td>
-        </tr>
-        {% endfor %}
+              {% if p.may_deactivate %}
+              <div x-show="panel === 'delete' && person === '{{ p.user.id }}'" x-cloak class="px-5 py-4">
+                <p class="text-sm font-semibold text-neutral-950">{% blocktranslate with email=p.user.email %}Delete {{ email }} for good?{% endblocktranslate %}</p>
+                <p class="text-xs text-neutral-600 mt-1">{% translate "The user and the organizations only they own are erased with their brands, posts and media; their subscriptions are cancelled at the payment provider. This cannot be undone." %}</p>
+                <form method="post" action="{% url 'billing_staff:delete_user' target_user_id=p.user.id %}" class="mt-4 space-y-3">
+                  {% csrf_token %}
+                  <label class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500" for="confirm-{{ row.organization.id }}-{{ p.user.id }}">{% translate "Type the email to confirm" %}</label>
+                  <input type="email" id="confirm-{{ row.organization.id }}-{{ p.user.id }}" name="confirm_email" required autocomplete="off" placeholder="{{ p.user.email }}" class="form-input-styled w-full text-sm">
+                  <div class="flex justify-end gap-2">
+                    <button type="button" @click="open = false" class="btn-ghost text-xs">{% translate "Cancel" %}</button>
+                    <button type="submit" class="px-3 py-2 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 cursor-pointer">{% translate "Delete for good" %}</button>
+                  </div>
+                </form>
+              </div>
+              {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        </template>
+        </td></tr>
       </tbody>
+      {% empty %}
+      <tbody><tr><td colspan="9" class="px-4 py-6 text-sm text-neutral-600">{% translate "No accounts yet." %}</td></tr></tbody>
+      {% endfor %}
     </table>
   </div>
 </section>

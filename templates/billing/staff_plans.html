@@ -314,63 +314,6 @@ a plan ends up at 10 MB.
     </form>
   </section>
 
-  {# ── Who changed a price, and what it was before ── #}
-  {% comment %}
-  A price change is a business decision, so the trail is part of the
-  screen rather than something only the database knows. Shown here and
-  not only as "last changed by" beside each field because the question
-  six months from now is "when did the per-GB price become this, and
-  what was it before" — which needs the previous value, and that lives
-  only in ProductPriceChange.
-
-  A missing previous value means there was no row before: the figure came
-  from the installation's setting until this edit. Rendered as such
-  rather than as the setting's number, which nobody had chosen.
-  {% endcomment %}
-  {% if price_changes %}
-  <section class="rounded-xl border border-neutral-300 bg-white overflow-hidden">
-    <div class="px-5 py-4 border-b border-neutral-100">
-      <h2 class="text-base font-semibold text-neutral-950">{% translate "Price history" %}</h2>
-      <p class="text-xs text-neutral-600 mt-0.5">
-        {% translate "The most recent changes to the list above. Nothing here changed anyone's existing bill." %}
-      </p>
-    </div>
-    <ul class="divide-y divide-neutral-100">
-      {% for change in price_changes %}
-      <li class="px-5 py-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div class="min-w-0">
-          <p class="text-sm text-neutral-950">{{ change.get_key_display }}</p>
-          <p class="text-xs text-neutral-600 tabular-nums">
-            {# ``is_first_setting`` rather than testing previous_value #}
-            {# here: templates have no None literal, and truthiness would #}
-            {# read a stored 0 — a real previous price — as "there was #}
-            {# none". See the model property. #}
-            {% if change.is_first_setting %}
-            {% blocktranslate with value=change.new_value %}Set to {{ value }}, from the installation's own value.{% endblocktranslate %}
-            {% else %}
-            {% blocktranslate with old=change.previous_value value=change.new_value %}{{ old }} to {{ value }}{% endblocktranslate %}
-            {% endif %}
-          </p>
-        </div>
-        <div class="text-xs text-neutral-600 whitespace-nowrap">
-          {% if change.changed_by_email %}
-          {% blocktranslate with who=change.changed_by_email when=change.created_at|date:"SHORT_DATETIME_FORMAT" %}{{ who }} on {{ when }}{% endblocktranslate %}
-          {% else %}
-          {{ change.created_at|date:"SHORT_DATETIME_FORMAT" }}
-          {% endif %}
-        </div>
-      </li>
-      {% endfor %}
-    </ul>
-  </section>
-  {% endif %}
-
-  {% comment %}
-  The per-state counts used to sit here. They moved to Subscriptions,
-  where each contract is already listed — this screen answers what the
-  product charges, not who is in which state.
-  {% endcomment %}
-
 </div>
 {% endblock %}
 

@@ -38,7 +38,6 @@ from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
 from apps.workspaces.models import Workspace
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -149,9 +148,7 @@ class TestTimedCourtesy:
 
         # Refused before anything is written, so there is no profile at all
         # rather than one carrying a half-applied grant.
-        assert not OrganizationBillingProfile.objects.filter(
-            organization=org, courtesy_workspace_quota__gt=0
-        ).exists()
+        assert not OrganizationBillingProfile.objects.filter(organization=org, courtesy_workspace_quota__gt=0).exists()
         assert not WorkspaceSubscription.objects.filter(
             workspace=workspace, status=WorkspaceSubscription.Status.COURTESY
         ).exists()
@@ -177,9 +174,7 @@ class TestTimedCourtesy:
             {"courtesy_workspace_quota": "-3"},
         )
 
-        assert not OrganizationBillingProfile.objects.filter(
-            organization=org, courtesy_workspace_quota__gt=0
-        ).exists()
+        assert not OrganizationBillingProfile.objects.filter(organization=org, courtesy_workspace_quota__gt=0).exists()
 
     def test_the_quota_caps_how_many_workspaces_are_exempted(self, client, operator, org, workspace):
         """Two workspaces, one free slot: the account pays for the other."""
@@ -251,7 +246,7 @@ class TestCourtesyExpiry:
         assert WorkspaceSubscription.objects.get(workspace=workspace).status == WorkspaceSubscription.Status.PENDING
 
     def test_the_last_day_is_still_free(self, org, workspace):
-        """"Free until the 30th" means free all through the 30th. Expiring
+        """ "Free until the 30th" means free all through the 30th. Expiring
         on the morning of the date an operator typed would cut a day."""
         self._grant(org, days=0)
 
@@ -334,9 +329,7 @@ class TestPasswordReset:
         mail.outbox.clear()
         client.force_login(operator)
 
-        response = client.post(
-            reverse("billing_staff:send_password_reset", kwargs={"target_user_id": customer.pk})
-        )
+        response = client.post(reverse("billing_staff:send_password_reset", kwargs={"target_user_id": customer.pk}))
 
         assert response.status_code == 302
         assert len(mail.outbox) == 1
@@ -369,9 +362,7 @@ class TestPasswordReset:
         mail.outbox.clear()
         client.force_login(operator)
 
-        response = client.post(
-            reverse("billing_staff:send_password_reset", kwargs={"target_user_id": customer.pk})
-        )
+        response = client.post(reverse("billing_staff:send_password_reset", kwargs={"target_user_id": customer.pk}))
 
         assert response.status_code == 302
         customer.refresh_from_db()
@@ -385,9 +376,7 @@ class TestPasswordReset:
 
         client.force_login(operator)
 
-        response = client.post(
-            reverse("billing_staff:send_password_reset", kwargs={"target_user_id": uuid.uuid4()})
-        )
+        response = client.post(reverse("billing_staff:send_password_reset", kwargs={"target_user_id": uuid.uuid4()}))
 
         assert response.status_code == 404
 
@@ -407,9 +396,7 @@ class TestEditAccount:
     def test_renames_the_organization_and_the_owner(self, client, operator, org, customer):
         client.force_login(operator)
 
-        response = self._post(
-            client, org, user_id=str(customer.pk), name="New Name", email="new@example.com"
-        )
+        response = self._post(client, org, user_id=str(customer.pk), name="New Name", email="new@example.com")
 
         assert response.status_code == 302
         org.refresh_from_db()
@@ -469,14 +456,10 @@ class TestEditAccount:
         org.refresh_from_db()
         assert org.name == "Acme"
 
-    def test_a_user_from_another_account_cannot_be_edited_through_this_org(
-        self, client, operator, org, customer, db
-    ):
+    def test_a_user_from_another_account_cannot_be_edited_through_this_org(self, client, operator, org, customer, db):
         """The org in the URL is what the operator chose; a user id pointing
         elsewhere is a stale page or a tampered form."""
-        stranger = User.objects.create_user(
-            email="stranger@example.com", password="x", tos_accepted_at=timezone.now()
-        )
+        stranger = User.objects.create_user(email="stranger@example.com", password="x", tos_accepted_at=timezone.now())
         client.force_login(operator)
 
         response = self._post(client, org, user_id=str(stranger.pk), email="hijacked@example.com")
@@ -514,9 +497,7 @@ class TestDeactivation:
             reverse("billing_staff:set_user_active", kwargs={"target_user_id": user.pk}), {"action": action}
         )
 
-    def test_deactivating_blocks_sign_in_and_deletes_nothing(
-        self, client, operator, customer, org, workspace
-    ):
+    def test_deactivating_blocks_sign_in_and_deletes_nothing(self, client, operator, customer, org, workspace):
         client.force_login(operator)
 
         response = self._post(client, customer, "deactivate")
@@ -568,9 +549,7 @@ class TestDeactivation:
         other_operator.refresh_from_db()
         assert other_operator.is_active is True
 
-    def test_an_operator_cannot_reactivate_another_operator_either(
-        self, client, operator, other_operator
-    ):
+    def test_an_operator_cannot_reactivate_another_operator_either(self, client, operator, other_operator):
         other_operator.is_active = False
         other_operator.save(update_fields=["is_active"])
         client.force_login(operator)
@@ -589,9 +568,7 @@ class TestDeactivation:
         customer.refresh_from_db()
         assert customer.is_active is True
 
-    def test_the_page_offers_no_button_the_endpoint_would_refuse(
-        self, client, operator, other_operator, org, customer
-    ):
+    def test_the_page_offers_no_button_the_endpoint_would_refuse(self, client, operator, other_operator, org, customer):
         """The page and the POST read the same rule, so a drawn button can
         never 403 and a refused target is never offered one."""
         OrgMembership.objects.filter(user=other_operator).delete()
@@ -599,14 +576,12 @@ class TestDeactivation:
         client.force_login(operator)
 
         row = _row(_console(client), org)
-        by_user = {entry["membership"].user_id: entry for entry in row["members"]}
+        by_user = {entry["user"].pk: entry for entry in row["people"]}
 
         assert by_user[customer.pk]["may_deactivate"] is True
         assert by_user[other_operator.pk]["may_deactivate"] is False
 
-    def test_an_inactive_customer_may_still_be_reactivated_from_the_page(
-        self, client, operator, org, customer
-    ):
+    def test_an_inactive_customer_may_still_be_reactivated_from_the_page(self, client, operator, org, customer):
         """``may_impersonate`` refuses an inactive target; the deactivation
         flag must not, or a disabled account could never be restored."""
         customer.is_active = False
@@ -614,7 +589,7 @@ class TestDeactivation:
         client.force_login(operator)
 
         row = _row(_console(client), org)
-        entry = next(e for e in row["members"] if e["membership"].user_id == customer.pk)
+        entry = next(e for e in row["people"] if e["user"].pk == customer.pk)
 
         assert entry["may_impersonate"] is False
         assert entry["may_deactivate"] is True
@@ -631,7 +606,7 @@ class TestImpersonationFromTheModal:
         client.force_login(operator)
 
         row = _row(_console(client), org)
-        entry = next(e for e in row["members"] if e["membership"].user_id == customer.pk)
+        entry = next(e for e in row["people"] if e["user"].pk == customer.pk)
 
         assert entry["may_impersonate"] is True
 
@@ -643,17 +618,15 @@ class TestImpersonationFromTheModal:
         client.force_login(operator)
 
         row = _row(_console(client), org)
-        entry = next(e for e in row["members"] if e["membership"].user_id == other_operator.pk)
+        entry = next(e for e in row["people"] if e["user"].pk == other_operator.pk)
 
-        assert entry["membership"].user.email == "ops2@example.com"
+        assert entry["user"].email == "ops2@example.com"
         assert entry["may_impersonate"] is False
 
     def test_the_endpoint_still_refuses_an_operator_target(self, client, operator, other_operator):
         client.force_login(operator)
 
-        response = client.post(
-            reverse("accounts:start_impersonation", kwargs={"user_id": other_operator.pk})
-        )
+        response = client.post(reverse("accounts:start_impersonation", kwargs={"user_id": other_operator.pk}))
 
         assert response.status_code == 403
 
@@ -721,7 +694,7 @@ class TestCustomersTable:
 
         row = _row(_console(client), org)
 
-        assert row["owner"]["membership"].user_id == customer.pk
+        assert row["owner"]["user"].pk == customer.pk
 
     def test_a_row_with_no_members_still_renders(self, client, operator, org):
         OrgMembership.objects.filter(organization=org).delete()
@@ -773,9 +746,7 @@ class TestOnlyAnOperatorMayAct:
         customer.refresh_from_db()
         assert org.name == "Acme"
         assert customer.is_active is True
-        assert not OrganizationBillingProfile.objects.filter(
-            organization=org, courtesy_workspace_quota__gt=0
-        ).exists()
+        assert not OrganizationBillingProfile.objects.filter(organization=org, courtesy_workspace_quota__gt=0).exists()
 
     def test_an_anonymous_visitor_is_sent_to_login(self, client, org, customer):
         for url, data in _new_routes(org, customer):
@@ -787,9 +758,10 @@ class TestOnlyAnOperatorMayAct:
         """``is_operator`` is False during a takeover: a comp granted from
         inside a customer's session would be recorded as the customer."""
         client.force_login(operator)
-        assert client.post(
-            reverse("accounts:start_impersonation", kwargs={"user_id": customer.pk})
-        ).status_code in (302, 303)
+        assert client.post(reverse("accounts:start_impersonation", kwargs={"user_id": customer.pk})).status_code in (
+            302,
+            303,
+        )
 
         for url, data in _new_routes(org, customer):
             assert client.post(url, data).status_code == 403, url

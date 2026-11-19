@@ -1243,44 +1243,35 @@ def _staff_required(view_func):
 @_staff_required
 @require_GET
 def staff_console(request):
-    """Customers: one table row per account, actions behind a per-row modal.
+    """Customers: every account, its brands and the people in each brand.
 
-    A table, not the cards this used to be. The question is comparative —
-    "who pays, who is exempt, who is filling the disk" — and a card tall
-    enough to hold two always-open forms meant two accounts filled the
-    screen. At fifty the page was unusable, which is the complaint that
-    produced this shape.
+    One group of rows per **organization** (the account is what gets
+    charged, exempted and edited): the account's line with its owner's
+    e-mail, status, brands, disk and monthly charge; unfolded, each brand
+    with its own status, disk and charge, and under it the users linked to
+    that brand with their role there. A user linked to several brands shows
+    under each of them. Members of the organization linked to no brand are
+    listed in a group of their own so nobody drops off the screen.
 
-    One row per **organization**, not per workspace: the account is what
-    gets charged, comped, edited and signed in as, so a workspace-grained
-    table would repeat the same account on every line and leave the
-    operator unsure which row an action applies to. Per-workspace detail
-    (status, disk, the comp toggle) is still there, inside the row's
-    modal.
-
-    Columns, and why those: account (org name plus the owner's e-mail,
-    because "My Organization" identifies nobody and the e-mail is what the
-    product owner recognises), workspace count, status, disk, monthly
-    charge, actions. Each one answers part of the comparative question;
-    anything that did not was moved into the modal.
-
-    Keeps the ``/billing/staff/`` path and the ``staff_console`` name it
-    had as the single console: it is the link in the account menu, the
-    redirect target for an operator with no workspace, and what the
-    existing tests reverse.
-
-    Every member is listed with their e-mail, and ``may_impersonate``
-    decides per member whether a takeover *button* appears — an operator
-    must never be offered one that would 403, notably not another
-    operator's account. Computed here rather than in the template so the
-    rule stays the service's and the page cannot drift from it.
+    ``people`` is each account's distinct users, for the per-person details
+    and deletion panels. ``may_impersonate`` and ``may_deactivate`` are
+    decided here by the same rules the POSTs enforce, so the page never
+    offers an action that would answer 403 — notably not on another
+    operator's account.
     """
     organizations = (
         Organization.objects.all()
         .prefetch_related(
             Prefetch(
                 "workspaces",
-                queryset=Workspace.objects.select_related("billing_subscription").order_by("name"),
+                queryset=Workspace.objects.select_related("billing_subscription")
+                .prefetch_related(
+                    Prefetch(
+                        "memberships",
+                        queryset=WorkspaceMembership.objects.select_related("user").order_by("user__email"),
+                    )
+                )
+                .order_by("name"),
             ),
             Prefetch(
                 "memberships",
@@ -1291,40 +1282,55 @@ def staff_console(request):
     )
 
     operator = impersonation.real_user(request)
+    flags: dict = {}
+
+    def person(user, role, org_role=""):
+        if user.pk not in flags:
+            flags[user.pk] = (impersonation.may_impersonate(operator, user), _may_deactivate(operator, user))
+        may_impersonate, may_deactivate = flags[user.pk]
+        return {
+            "user": user,
+            "role": role,
+            "org_role": org_role,
+            "may_impersonate": may_impersonate,
+            "may_deactivate": may_deactivate,
+        }
 
     rows = []
     for organization in organizations:
         profile = services.ensure_billing_profile(organization)
+        org_roles = {m.user_id: m.org_role for m in organization.memberships.all()}
+        people: dict = {}
         workspace_rows = []
         for workspace in organization.workspaces.all():
+            users = []
+            for membership in workspace.memberships.all():
+                entry = person(membership.user, membership.workspace_role, org_roles.get(membership.user_id, ""))
+                users.append(entry)
+                people.setdefault(membership.user_id, {**entry, "brands": []})["brands"].append(
+                    (workspace.name, membership.workspace_role)
+                )
             workspace_rows.append(
                 {
                     "workspace": workspace,
                     "subscription": services.ensure_subscription(workspace),
                     "storage": storage_status(workspace),
                     "monthly_total_cents": services.workspace_monthly_total_cents(workspace),
+                    "users": users,
                 }
             )
-        # Every member, each carrying whether a takeover is allowed and
-        # whether this operator may deactivate them. The e-mail identifies
-        # the customer and is always shown; the flags only gate buttons,
-        # so an organization whose only member is another operator still
-        # names a human.
-        members = [
-            {
-                "membership": membership,
-                "may_impersonate": impersonation.may_impersonate(operator, membership.user),
-                "may_deactivate": _may_deactivate(operator, membership.user),
-            }
-            for membership in organization.memberships.all()
+        without_brand = [
+            person(m.user, m.org_role, m.org_role) for m in organization.memberships.all() if m.user_id not in people
         ]
-        # The owner is the account's face in the table. Falls back to the
-        # first member so a row whose owner left still names somebody
-        # rather than showing an org name and a blank.
-        owner = next(
-            (entry for entry in members if entry["membership"].org_role == OrgMembership.OrgRole.OWNER),
-            members[0] if members else None,
+        for entry in without_brand:
+            people[entry["user"].pk] = {**entry, "brands": []}
+        for user_id, entry in people.items():
+            entry["org_role"] = org_roles.get(user_id, "")
+        owner_membership = next(
+            (m for m in organization.memberships.all() if m.org_role == OrgMembership.OrgRole.OWNER),
+            next(iter(organization.memberships.all()), None),
         )
+        owner = people.get(owner_membership.user_id) if owner_membership else None
         rows.append(
             {
                 "organization": organization,
@@ -1333,18 +1339,14 @@ def staff_console(request):
                 "workspace_count": len(workspace_rows),
                 "monthly_total_cents": sum(w["monthly_total_cents"] for w in workspace_rows),
                 "courtesy_exceeded": services.courtesy_quota_exceeded(organization),
-                "members": members,
                 "owner": owner,
-                # Account-level rollups, so the table cell is a lookup
-                # rather than a template loop with arithmetic in it.
+                "people": list(people.values()),
+                "without_brand": without_brand,
+                "is_team_account": bool(owner and owner["user"].is_staff),
                 "status": _account_status(workspace_rows),
                 "storage_used_bytes": sum(w["storage"].used_bytes for w in workspace_rows),
                 "storage_limit_bytes": sum(w["storage"].limit_bytes for w in workspace_rows),
                 "storage_percent": _storage_percent(workspace_rows),
-                # Precomputed so the template does not need a filter to
-                # decide whether the takeover block has anything in it —
-                # an empty heading over no buttons is worse than nothing.
-                "has_impersonable_members": any(entry["may_impersonate"] for entry in members),
             }
         )
 

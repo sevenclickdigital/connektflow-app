@@ -165,9 +165,9 @@ class TestNoStaffOnStaff:
 
         response = client.get(STAFF_CONSOLE)
 
-        rows = [entry for row in response.context["rows"] for entry in row["members"]]
-        offered = {e["membership"].user_id for e in rows if e["may_impersonate"]}
-        listed = {e["membership"].user_id for e in rows}
+        rows = [entry for row in response.context["rows"] for entry in row["people"]]
+        offered = {e["user"].pk for e in rows if e["may_impersonate"]}
+        listed = {e["user"].pk for e in rows}
 
         assert other_operator.pk not in offered
         assert other_operator.pk in listed
@@ -177,8 +177,8 @@ class TestNoStaffOnStaff:
 
         response = client.get(STAFF_CONSOLE)
 
-        rows = [entry for row in response.context["rows"] for entry in row["members"]]
-        offered = {e["membership"].user_id for e in rows if e["may_impersonate"]}
+        rows = [entry for row in response.context["rows"] for entry in row["people"]]
+        offered = {e["user"].pk for e in rows if e["may_impersonate"]}
         assert customer.pk in offered
 
 
