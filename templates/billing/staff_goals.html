@@ -1,0 +1,356 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+Goal calculator: a month-by-month projection of customers, revenue and
+profit from a handful of assumptions. Nothing is saved — the whole
+calculation runs in the Alpine component below, and the view only seeds
+the price and the current paying customers.
+
+Two charts rather than one with two y-axes: customers and money are on
+different scales, and a dual-axis chart lets the reader compare lines that
+are not comparable. Revenue and profit share the money chart because they
+share its unit.
+
+Every label the script draws comes from the ``goal-labels`` json_script,
+so the script holds no user-visible text.
+{% endcomment %}
+
+{% block title %}{% translate "Goal calculator" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% translate "Goal calculator" %}</h1>
+    <p class="page-description">{% translate "Simulate how many customers and how much revenue the business reaches month by month. Nothing here is saved." %}</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% get_current_language as LANGUAGE_CODE %}
+{{ seed|json_script:"goal-seed" }}
+{{ labels|json_script:"goal-labels" }}
+
+<div x-data="goalCalculator('{{ LANGUAGE_CODE|escapejs }}')" x-effect="draw()" class="space-y-6">
+
+  {# ── Assumptions ── #}
+  <section class="a-card p-5">
+    <h2 class="text-base font-semibold text-neutral-950">{% translate "Assumptions" %}</h2>
+    <p class="text-xs text-neutral-600 mt-0.5">{% translate "Price and current customers start from today's figures: the list price per workspace and the paying subscriptions. Change anything to see the projection move." %}</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+      <label class="block">
+        <span class="block text-sm font-medium text-neutral-950">{% translate "Price per customer (R$ / month)" %}</span>
+        <input type="number" min="0" step="0.01" x-model.number="price" class="form-input-styled mt-1 w-full">
+      </label>
+      <label class="block">
+        <span class="block text-sm font-medium text-neutral-950">{% translate "Customers today" %}</span>
+        <input type="number" min="0" step="1" x-model.number="clients" class="form-input-styled mt-1 w-full">
+      </label>
+      <label class="block">
+        <span class="block text-sm font-medium text-neutral-950">{% translate "Months to project" %}</span>
+        <input type="number" min="1" max="120" step="1" x-model.number="months" class="form-input-styled mt-1 w-full">
+      </label>
+      <label class="block">
+        <span class="block text-sm font-medium text-neutral-950">{% translate "New customers per month" %}</span>
+        <input type="number" min="0" step="1" x-model.number="newPerMonth" class="form-input-styled mt-1 w-full">
+      </label>
+      <label class="block">
+        <span class="block text-sm font-medium text-neutral-950">{% translate "Customers lost per month" %}</span>
+        <input type="number" min="0" step="1" x-model.number="lostPerMonth" class="form-input-styled mt-1 w-full">
+      </label>
+      <label class="block">
+        <span class="block text-sm font-medium text-neutral-950">{% translate "Growth of new customers (% per month)" %}</span>
+        <input type="number" min="-100" step="0.1" x-model.number="growth" class="form-input-styled mt-1 w-full">
+        <span class="block text-xs text-neutral-600 mt-1">{% translate "How much the number of new customers grows each month. 0 keeps it constant." %}</span>
+      </label>
+      <label class="block">
+        <span class="block text-sm font-medium text-neutral-950">{% translate "Fixed costs (R$ / month)" %}</span>
+        <input type="number" min="0" step="0.01" x-model.number="fixedCost" class="form-input-styled mt-1 w-full">
+      </label>
+      <label class="block">
+        <span class="block text-sm font-medium text-neutral-950">{% translate "Cost per customer (R$ / month)" %}</span>
+        <input type="number" min="0" step="0.01" x-model.number="costPerClient" class="form-input-styled mt-1 w-full">
+        <span class="block text-xs text-neutral-600 mt-1">{% translate "Server, storage, payment fees and support for each customer." %}</span>
+      </label>
+      <label class="block">
+        <span class="block text-sm font-medium text-neutral-950">{% translate "Monthly revenue goal (R$)" %}</span>
+        <input type="number" min="0" step="0.01" x-model.number="goal" class="form-input-styled mt-1 w-full">
+      </label>
+    </div>
+  </section>
+
+  {# ── Results ── #}
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="a-card p-4">
+      <p class="text-xs text-neutral-600">{% translate "Customers at the end" %}</p>
+      <p class="text-2xl font-semibold text-neutral-950 mt-1" x-text="num(last.clients)"></p>
+      <p class="text-xs text-neutral-600 mt-1" x-text="last.label"></p>
+    </div>
+    <div class="a-card p-4">
+      <p class="text-xs text-neutral-600">{% translate "Monthly revenue at the end" %}</p>
+      <p class="text-2xl font-semibold text-neutral-950 mt-1" x-text="money(last.revenue)"></p>
+      <p class="text-xs text-neutral-600 mt-1">{% translate "Per year at this pace:" %} <span x-text="money(last.revenue * 12)"></span></p>
+    </div>
+    <div class="a-card p-4">
+      <p class="text-xs text-neutral-600">{% translate "Monthly profit at the end" %}</p>
+      <p class="text-2xl font-semibold mt-1" :class="last.profit < 0 ? 'text-red-700' : 'text-neutral-950'" x-text="money(last.profit)"></p>
+      <p class="text-xs text-neutral-600 mt-1">{% translate "Margin:" %} <span x-text="last.revenue > 0 ? pct(last.profit / last.revenue) : '—'"></span></p>
+    </div>
+    <div class="a-card p-4">
+      <p class="text-xs text-neutral-600">{% translate "Revenue in the whole period" %}</p>
+      <p class="text-2xl font-semibold text-neutral-950 mt-1" x-text="money(totals.revenue)"></p>
+      <p class="text-xs text-neutral-600 mt-1">{% translate "Profit in the period:" %} <span x-text="money(totals.profit)"></span></p>
+    </div>
+  </section>
+
+  {# ── How to reach the goal ── #}
+  <section class="a-card p-5">
+    <h2 class="text-base font-semibold text-neutral-950">{% translate "How to reach the goal" %}</h2>
+    <ul class="mt-3 space-y-2 text-sm text-neutral-950">
+      <li x-show="goal > 0 && goalMonth">
+        {% translate "At this pace the goal is reached in" %} <strong x-text="goalMonth && goalMonth.label"></strong>
+        (<span x-text="goalMonth && num(goalMonth.index)"></span> {% translate "months" %}).
+      </li>
+      <li x-show="goal > 0 && !goalMonth">
+        {% translate "At this pace the goal is not reached within the period." %}
+      </li>
+      <li x-show="goal > 0 && price > 0">
+        {% translate "Customers needed for the goal:" %} <strong x-text="num(goalClients)"></strong>.
+        {% translate "To get there by the end of the period you need" %}
+        <strong x-text="num(neededNewPerMonth)"></strong> {% translate "new customers per month, keeping the losses you entered." %}
+      </li>
+      <li x-show="price <= costPerClient">
+        {% translate "The price does not cover the cost per customer: every new customer increases the loss." %}
+      </li>
+      <li x-show="price > costPerClient">
+        {% translate "Break-even needs" %} <strong x-text="num(breakEvenClients)"></strong> {% translate "customers" %}<span x-show="breakEvenMonth">, {% translate "reached in" %} <strong x-text="breakEvenMonth && breakEvenMonth.label"></strong></span><span x-show="!breakEvenMonth">, {% translate "not reached within the period" %}</span>.
+      </li>
+    </ul>
+  </section>
+
+  {# ── Charts ── #}
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="a-card p-5">
+      <h2 class="text-base font-semibold text-neutral-950">{% translate "Customers" %}</h2>
+      <div class="relative h-64 mt-3"><canvas x-ref="clientsChart"></canvas></div>
+    </div>
+    <div class="a-card p-5">
+      <h2 class="text-base font-semibold text-neutral-950">{% translate "Monthly revenue and profit" %}</h2>
+      <div class="relative h-64 mt-3"><canvas x-ref="moneyChart"></canvas></div>
+    </div>
+  </section>
+
+  {# ── Month by month ── #}
+  <section class="a-card overflow-hidden">
+    <div class="px-5 py-4 border-b border-neutral-100">
+      <h2 class="text-base font-semibold text-neutral-950">{% translate "Month by month" %}</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-neutral-600 text-left">
+          <tr>
+            <th class="px-5 py-2 font-medium">{% translate "Month" %}</th>
+            <th class="px-5 py-2 font-medium text-right">{% translate "New" %}</th>
+            <th class="px-5 py-2 font-medium text-right">{% translate "Lost" %}</th>
+            <th class="px-5 py-2 font-medium text-right">{% translate "Customers" %}</th>
+            <th class="px-5 py-2 font-medium text-right">{% translate "Revenue" %}</th>
+            <th class="px-5 py-2 font-medium text-right">{% translate "Costs" %}</th>
+            <th class="px-5 py-2 font-medium text-right">{% translate "Profit" %}</th>
+            <th class="px-5 py-2 font-medium text-right">{% translate "Accumulated profit" %}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-neutral-100">
+          <template x-for="row in rows" :key="row.index">
+            <tr :class="goalMonth && goalMonth.index === row.index ? 'bg-brand-50' : ''">
+              <td class="px-5 py-2 text-neutral-950 whitespace-nowrap" x-text="row.label"></td>
+              <td class="px-5 py-2 text-right tabular-nums" x-text="num(row.added)"></td>
+              <td class="px-5 py-2 text-right tabular-nums" x-text="num(row.lost)"></td>
+              <td class="px-5 py-2 text-right tabular-nums font-medium" x-text="num(row.clients)"></td>
+              <td class="px-5 py-2 text-right tabular-nums" x-text="money(row.revenue)"></td>
+              <td class="px-5 py-2 text-right tabular-nums" x-text="money(row.costs)"></td>
+              <td class="px-5 py-2 text-right tabular-nums" :class="row.profit < 0 ? 'text-red-700' : ''" x-text="money(row.profit)"></td>
+              <td class="px-5 py-2 text-right tabular-nums" :class="row.cumulativeProfit < 0 ? 'text-red-700' : ''" x-text="money(row.cumulativeProfit)"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% comment %}
+Registered on alpine:init because Alpine loads with ``defer``; carries the
+CSP nonce because inline scripts run only with it.
+
+The Chart instances live in the closure, not on the component: Alpine
+wraps component properties in reactive proxies, and Chart.js walking a
+proxied chart recurses until the tab freezes.
+{% endcomment %}
+<script nonce="{{ request.csp_nonce }}">
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('goalCalculator', (locale) => {
+      const seed = JSON.parse(document.getElementById('goal-seed').textContent);
+      const labels = JSON.parse(document.getElementById('goal-labels').textContent);
+      const moneyFmt = new Intl.NumberFormat(locale, { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+      const numFmt = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
+      const pctFmt = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 });
+      const monthFmt = new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' });
+      const nonNegative = (v) => (Number.isFinite(v) && v > 0 ? v : 0);
+      const charts = { clients: null, money: null };
+
+      return {
+        price: seed.price,
+        clients: seed.clients,
+        months: 24,
+        newPerMonth: 10,
+        lostPerMonth: 2,
+        growth: 0,
+        fixedCost: 0,
+        costPerClient: 0,
+        goal: 0,
+
+        get horizon() {
+          return Math.min(120, Math.max(1, Math.round(this.months) || 1));
+        },
+
+        get rows() {
+          const price = nonNegative(this.price);
+          const fixed = nonNegative(this.fixedCost);
+          const perClient = nonNegative(this.costPerClient);
+          const lostPlan = Math.round(nonNegative(this.lostPerMonth));
+          const growth = Number.isFinite(this.growth) ? Math.max(-100, this.growth) / 100 : 0;
+          const today = new Date();
+          let clients = Math.round(nonNegative(this.clients));
+          let cumulativeProfit = 0;
+          const rows = [];
+          for (let i = 1; i <= this.horizon; i++) {
+            const added = Math.round(nonNegative(this.newPerMonth) * Math.pow(1 + growth, i - 1));
+            // Losses cannot exceed the customers there are to lose.
+            const lost = Math.min(lostPlan, clients + added);
+            clients = clients + added - lost;
+            const revenue = clients * price;
+            const costs = fixed + clients * perClient;
+            const profit = revenue - costs;
+            cumulativeProfit += profit;
+            const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+            rows.push({ index: i, label: monthFmt.format(date), added, lost, clients, revenue, costs, profit, cumulativeProfit });
+          }
+          return rows;
+        },
+
+        get last() {
+          const rows = this.rows;
+          return rows[rows.length - 1];
+        },
+
+        get totals() {
+          return this.rows.reduce((acc, r) => ({ revenue: acc.revenue + r.revenue, profit: acc.profit + r.profit }), { revenue: 0, profit: 0 });
+        },
+
+        get goalMonth() {
+          const goal = nonNegative(this.goal);
+          if (!goal) return null;
+          return this.rows.find((r) => r.revenue >= goal) || null;
+        },
+
+        get goalClients() {
+          const price = nonNegative(this.price);
+          return price ? Math.ceil(nonNegative(this.goal) / price) : 0;
+        },
+
+        // Constant new customers per month that, with the losses entered,
+        // reach the goal's customer count by the last month.
+        get neededNewPerMonth() {
+          const gap = this.goalClients - Math.round(nonNegative(this.clients));
+          return Math.max(0, Math.ceil(gap / this.horizon + Math.round(nonNegative(this.lostPerMonth))));
+        },
+
+        get breakEvenClients() {
+          const margin = nonNegative(this.price) - nonNegative(this.costPerClient);
+          return margin > 0 ? Math.ceil(nonNegative(this.fixedCost) / margin) : 0;
+        },
+
+        get breakEvenMonth() {
+          return this.rows.find((r) => r.profit >= 0 && r.clients > 0) || null;
+        },
+
+        money(v) { return moneyFmt.format(v || 0); },
+        num(v) { return numFmt.format(v || 0); },
+        pct(v) { return pctFmt.format(v || 0); },
+
+        draw() {
+          const rows = this.rows;
+          const goal = nonNegative(this.goal);
+          if (typeof Chart === 'undefined') return;
+          const axisLabels = rows.map((r) => r.label);
+          const common = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+              x: { grid: { display: false }, ticks: { maxTicksLimit: 8, color: '#64748B' } },
+              y: { grid: { color: '#F1F5F9' }, ticks: { color: '#64748B' } },
+            },
+          };
+          const line = (label, data, color, extra) => Object.assign({
+            label, data, borderColor: color, backgroundColor: color,
+            borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.25,
+          }, extra || {});
+
+          const clientsData = {
+            labels: axisLabels,
+            datasets: [line(labels.clients, rows.map((r) => r.clients), '#7C3AED')],
+          };
+          const moneyData = {
+            labels: axisLabels,
+            datasets: [
+              line(labels.revenue, rows.map((r) => r.revenue), '#7C3AED'),
+              line(labels.profit, rows.map((r) => r.profit), '#eb6834'),
+            ],
+          };
+          if (goal) {
+            moneyData.datasets.push(line(labels.goal, rows.map(() => goal), '#94A3B8', { borderDash: [6, 4], pointHoverRadius: 0 }));
+          }
+
+          if (charts.clients) {
+            charts.clients.data = clientsData;
+            charts.clients.update();
+          } else {
+            charts.clients = new Chart(this.$refs.clientsChart, {
+              type: 'line',
+              data: clientsData,
+              options: Object.assign({}, common, {
+                plugins: {
+                  legend: { display: false },
+                  tooltip: { callbacks: { label: (c) => labels.clients + ': ' + numFmt.format(c.parsed.y) } },
+                },
+              }),
+            });
+          }
+
+          if (charts.money) {
+            charts.money.data = moneyData;
+            charts.money.update();
+          } else {
+            const moneyOptions = Object.assign({}, common, {
+              plugins: {
+                legend: { display: true, position: 'bottom', labels: { boxWidth: 12, boxHeight: 2, color: '#475569' } },
+                tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + moneyFmt.format(c.parsed.y) } },
+              },
+            });
+            moneyOptions.scales = {
+              x: common.scales.x,
+              y: { grid: { color: '#F1F5F9' }, ticks: { color: '#64748B', callback: (v) => moneyFmt.format(v) } },
+            };
+            charts.money = new Chart(this.$refs.moneyChart, { type: 'line', data: moneyData, options: moneyOptions });
+          }
+        },
+      };
+    });
+  });
+</script>
+{% endblock %}

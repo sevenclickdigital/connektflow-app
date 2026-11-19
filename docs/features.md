@@ -364,6 +364,7 @@ People and companies the workspace talks to (sidebar: Engajar → Contatos, for 
   - Plans and prices: editable at runtime, stored in `ProductPrice` with a history in `ProductPriceChange`, and override the env defaults. Besides the three prices, a second form (`staff_update_rules`, `services.parse_billing_rules`) sets the yearly discount, the free trial in days, up to three volume-discount tiers and the subscription lock, as more `ProductPrice` keys; until saved there they come from `BILLING_ANNUAL_DISCOUNT_PERCENT`, `BILLING_TRIAL_DAYS`, `BILLING_VOLUME_DISCOUNTS` and `BILLING_REQUIRE_SUBSCRIPTION`.
   - Coupons: create discount codes and switch them off, with how many accounts used each.
   - Subscription list with counts, and the impersonation log.
+  - Goal calculator (`billing_staff:goals`, `staff_goals`, `templates/billing/staff_goals.html`): a month-by-month projection of customers, revenue and profit from price per customer, customers today, new and lost customers per month, the monthly growth of new customers, fixed costs, cost per customer and a monthly revenue goal, over 1–120 months (24 by default). It shows the end figures, the month the goal and break-even are reached, the new customers per month the goal needs, a customers chart, a revenue-and-profit chart and the table. Computed in the browser and never saved; the view only seeds the list price and the `active` subscriptions.
 
 ---
 

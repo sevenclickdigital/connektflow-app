@@ -39,6 +39,7 @@ urlpatterns = [
     path("plans/prices/", views.staff_update_prices, name="update_prices"),
     path("plans/rules/", views.staff_update_rules, name="update_rules"),
     path("subscriptions/", views.staff_subscriptions, name="subscriptions"),
+    path("goals/", views.staff_goals, name="goals"),
     path("coupons/", views.staff_coupons, name="coupons"),
     path("coupons/new/", views.staff_create_coupon, name="create_coupon"),
     path("coupons/<uuid:coupon_id>/toggle/", views.staff_toggle_coupon, name="toggle_coupon"),

@@ -1873,6 +1873,38 @@ def staff_subscriptions(request):
 
 @_staff_required
 @require_GET
+def staff_goals(request):
+    """Goal and profit calculator: a projection the operator plays with.
+
+    Nothing is stored and nothing is read back: every figure is computed in
+    the browser from the inputs on screen. The view only seeds those inputs
+    with today's numbers — the list price per workspace and the paying
+    workspaces (``active`` subscriptions; courtesies bring no revenue) — so
+    the projection starts from where the business actually is.
+    """
+    active = WorkspaceSubscription.objects.filter(status=WorkspaceSubscription.Status.ACTIVE)
+    return render(
+        request,
+        "billing/staff_goals.html",
+        {
+            "seed": {
+                "price": services.workspace_price_cents() / 100,
+                "clients": active.count(),
+            },
+            # The chart series names, handed to the script via json_script.
+            "labels": {
+                "clients": _("Customers"),
+                "revenue": _("Monthly revenue"),
+                "profit": _("Monthly profit"),
+                "goal": _("Goal"),
+            },
+            "admin_active": "goals",
+        },
+    )
+
+
+@_staff_required
+@require_GET
 def staff_impersonation_log(request):
     """Who was inside a customer's account, and when.
 
