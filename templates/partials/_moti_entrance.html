@@ -1,0 +1,21 @@
+{% load static %}
+{% comment %}
+Moti leaning over the card of the entrance screens (log in, sign up and the
+welcome steps). Include it right before the card: this block reserves the
+room above the card and the image is drawn over the card's top edge. With
+``logo=True`` the wordmark sits in that room, on the left, beside Moti (the
+welcome steps, which have no heading of their own above the card).
+
+The image's body is cut straight at 96% of its height and the resting
+hand hangs below that line, so translate-y by the remaining 4% puts the
+cut exactly on the card's border and the fingers over it. Moti is
+decorative, hence aria-hidden and the empty alt. Pose 20 in
+branding/mascote/briefing-poses.md.
+{% endcomment %}
+<div class="relative h-[80px] lg:h-[110px] select-none">
+    {% if logo %}
+    <img src="{% static 'img/connektflow-wordmark-dark.svg' %}" alt="Connekt Flow" class="absolute left-0 bottom-6 lg:bottom-8 h-7 w-auto">
+    {% endif %}
+    <img src="{% static 'img/moti/moti-debrucado.webp' %}" alt="" aria-hidden="true" width="374" height="320" draggable="false"
+         class="absolute bottom-0 right-3 z-10 h-[104px] lg:h-[140px] w-auto translate-y-[4%] pointer-events-none">
+</div>

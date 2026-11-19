@@ -24,6 +24,8 @@ Como pedir uma pose nova do Moti para um card ou tela, e as poses já pensadas p
 | 16 | Radar | `moti-radar` | Em uso (banner do Radar) |
 | 17 | Shopee Afiliados | `moti-shopee` | Em uso (banner de Shopee Afiliados) |
 | 18 | Pesquisa no Instagram | `moti-pesquisa` | Em uso (banner da Pesquisa no Instagram) |
+| 19 | Entrada, ao lado do cartão | `moti-boas-vindas` | Trocada pela pose 20 (original em `poses/Mascote robô futurista acenando alegremente.png`, sem WebP) |
+| 20 | Entrada, debruçado no cartão | `moti-debrucado` | Em uso (login, cadastro e passos de boas-vindas) |
 
 ## 1. Regras para toda pose
 
@@ -260,30 +262,35 @@ lilás e branco, sem textos e sem logotipos de redes sociais
 ### Pose 11 — Automação — "Deixe as respostas saírem sozinhas"
 
 - **Arquivo:** `moti-automacao` (para o banner de Automação, que hoje usa `moti-computador`, a mesma pose do canto do menu lateral)
-- **Pose:** Moti de corpo inteiro, encostado de lado num botão redondo grande com um raio roxo, como quem acabou de apertá-lo, de braços cruzados e à vontade. Do botão sai, para a esquerda, uma fila de três balões de resposta, um atrás do outro, indo embora sozinhos.
-- **Expressão:** tranquilo e satisfeito, o "pode deixar que sai sozinho".
-- **Detalhes:** dois tracinhos de brilho em volta do raio. Nada mais em volta.
-- **Leitura a 150 px:** o botão com o raio ocupa cerca de um terço da altura do Moti; os balões são simples e iguais, para lerem como uma fila.
+- **Pose:** Moti de corpo inteiro, de pé, virado três quartos para a esquerda e olhando para o título do banner, como um maestro. O braço da frente se estende para a esquerda com a mão aberta, palma para cima, e dela saem voando sozinhos três balões de resposta, um atrás do outro, cada vez menores, em direção ao texto. A outra mão fica na cintura. A capa balança de leve para trás.
+- **Expressão:** tranquilo e confiante, olhos lilases em meia-lua, o "pode deixar que sai sozinho".
+- **Detalhes:** os três balões são iguais, lisos, sem textos: dois brancos com contorno lilás e o da frente roxo. Dois tracinhos de brilho perto da mão. Nada mais em volta.
+- **Leitura a 150 px:** o braço estendido e os balões formam uma linha que vai do Moti até o texto; os balões têm cada um cerca do tamanho da mão dele.
 
 Pedido pronto para colar no gerador de imagens:
 
 ```
 Pose do Moti para: banner de Automação, "Deixe as respostas saírem sozinhas"
 Arquivo: moti-automacao
-Pose: corpo inteiro, encostado de lado num botão redondo grande com um raio roxo,
-de braços cruzados e à vontade; do botão sai para a esquerda uma fila de três
-balões de resposta, um atrás do outro, indo embora sozinhos
-Expressão: tranquilo e satisfeito, "pode deixar que sai sozinho"
-Detalhes: dois tracinhos de brilho em volta do raio
-Direção: olhando para a esquerda
+Pose: corpo inteiro, de pé, virado três quartos para a esquerda, como um maestro;
+o braço da frente se estende para a esquerda com a mão aberta, palma para cima, e
+dela saem voando sozinhos três balões de resposta, um atrás do outro, cada vez
+menores, indo para a esquerda; a outra mão na cintura; a capa balança de leve
+para trás
+Expressão: tranquilo e confiante, olhos lilases em meia-lua, "pode deixar que
+sai sozinho"
+Detalhes: balões iguais e lisos, sem textos — dois brancos com contorno lilás e o
+da frente roxo; dois tracinhos de brilho perto da mão; nada mais em volta
+Direção: olhando e apontando para a esquerda
 Enquadramento: corpo inteiro
 Formato: PNG com fundo transparente de verdade (sem quadriculado desenhado),
 sem sombra no chão
 Estilo: o mesmo das poses atuais (moti_pose_joinha_corpo_inteiro,
 moti_trabalhando_no_computador) — 3D branco e roxo, viseira escura com olhos
-lilases, capa roxa; botão, raio e balões em roxo,
-lilás e branco, sem textos
+lilases, capa roxa; balões e brilhos só em roxo, lilás e branco
 ```
+
+Variação, se for preciso mostrar a palavra-chave: o mesmo Moti de pé, olhando para a esquerda, com uma engrenagem roxa grande ao lado; um balão de comentário com um `#` entra na engrenagem pela direita e dois balões de resposta saem pela esquerda, em direção ao texto. Explica melhor o funcionamento, mas tem mais elementos e lê pior pequeno.
 
 ### Pose 12 — Contatos — "Conheça quem fala com a sua marca"
 
@@ -479,6 +486,68 @@ moti_trabalhando_no_computador) — 3D branco e roxo, viseira escura com olhos
 lilases, capa roxa; cartões, prancheta, "#" e
 lâmpada em roxo, lilás e branco, sem logotipos (nem o do Instagram) e sem textos
 ```
+
+### Pose 19 — Entrada — "Que bom ter você aqui"
+
+- **Arquivo:** `moti-boas-vindas` (em uso ao lado do cartão do login, do cadastro e dos passos de boas-vindas, por `templates/partials/_moti_entrance.html`; original em `poses/Mascote robô futurista acenando alegremente.png`). Na imagem final ele acena e indica a direita, então fica à esquerda do cartão, apontando para o formulário.
+- **Onde aparece:** ao lado do cartão do formulário, só em telas largas; no celular o cartão fica sozinho. Ali ele aparece maior que nos banners, com cerca de 260 px de altura, então a versão WebP precisa de cerca de 520 px de altura.
+- **Pose:** Moti de corpo inteiro, de pé e de frente, acenando com a mão direita bem alta, palma aberta. A mão esquerda, aberta e virada para cima, indica a esquerda, onde fica o formulário, como quem diz "pode entrar". A capa balança de leve para trás.
+- **Expressão:** acolhedor e alegre, olhos lilases em arco, o "que bom ter você aqui".
+- **Detalhes:** dois tracinhos de brilho perto da mão que acena. Nada mais em volta: a tela já tem o formulário, e o Moti não pode competir com ele.
+- **Leitura a 150 px:** o aceno precisa se ler sozinho, com o braço bem afastado do corpo e a palma de frente; sem objetos na mão.
+
+Pedido pronto para colar no gerador de imagens:
+
+```
+Pose do Moti para: telas de login, cadastro e boas-vindas, "Que bom ter você aqui"
+Arquivo: moti-boas-vindas
+Pose: corpo inteiro, de pé e de frente; acena com a mão direita bem alta, palma
+aberta e de frente; a mão esquerda, aberta e virada para cima, indica a esquerda
+como quem diz "pode entrar"; a capa balança de leve para trás
+Expressão: acolhedor e alegre, olhos lilases em arco
+Detalhes: dois tracinhos de brilho perto da mão que acena; nada mais em volta
+Direção: olhando e indicando para a esquerda
+Enquadramento: corpo inteiro
+Formato: PNG transparente, sem sombra no chão, cerca de 520 px de altura na versão WebP
+Estilo: o mesmo das poses atuais (moti_pose_joinha_corpo_inteiro,
+moti_trabalhando_no_computador) — 3D branco e roxo, viseira escura com olhos
+lilases, capa roxa; brilhos só em roxo e lilás
+```
+
+### Pose 20 — Entrada, debruçado no cartão — "Que bom ter você aqui"
+
+- **Arquivo:** `moti-debrucado` (em uso no login, no cadastro e nos passos de boas-vindas, por `templates/partials/_moti_entrance.html`; original em `poses/Robô Futurista com Emblema Roxo Plano.png`). No login e nos passos de boas-vindas o logo fica à esquerda dele, no mesmo espaço acima do cartão.
+- **Onde aparece:** em cima do cartão do formulário, com os antebraços apoiados na borda de cima, como quem se debruça num balcão. A imagem é colada no código de forma que a linha dos antebraços fique exatamente sobre a borda do cartão. Funciona também no celular, porque não ocupa espaço dos lados: no computador com cerca de 150 px de altura, no celular com cerca de 110 px.
+- **Pose:** Moti da cintura para cima, de frente, inclinado para a frente. Os dois antebraços estão deitados na horizontal, paralelos à base da imagem, apoiados numa superfície que não aparece (a borda do cartão). Uma das mãos sai do apoio e acena, palma aberta, na altura do rosto; a outra fica apoiada, com os dedos um pouco dobrados por cima da borda. A capa aparece só nos ombros.
+- **Expressão:** acolhedor e curioso, olhos lilases em arco, o "oi, vamos entrar?".
+- **Detalhes:** dois tracinhos de brilho perto da mão que acena. Nada mais em volta.
+- **Corte, o mais importante:** a imagem termina num corte reto e horizontal logo abaixo dos antebraços. Nada do corpo abaixo dessa linha: nem barriga, nem pernas, nem sombra. É esse corte que faz parecer que ele está atrás do cartão. Sem a superfície desenhada; o cartão do site faz esse papel.
+- **Leitura a 110 px:** o rosto e a mão que acena são o que importa; os antebraços precisam ser largos e retos para a borda se ler como apoio.
+
+Pedido pronto para colar no gerador de imagens:
+
+```
+Pose do Moti para: telas de login, cadastro e boas-vindas, debruçado em cima do
+cartão do formulário, "Que bom ter você aqui"
+Arquivo: moti-debrucado
+Pose: da cintura para cima, de frente, inclinado para a frente como quem se
+debruça num balcão; os dois antebraços deitados na horizontal, paralelos à base
+da imagem, apoiados numa superfície invisível; uma mão sai do apoio e acena na
+altura do rosto, palma aberta; a outra fica apoiada, com os dedos um pouco
+dobrados por cima da borda; a capa aparece só nos ombros
+Expressão: acolhedor e curioso, olhos lilases em arco, "oi, vamos entrar?"
+Detalhes: dois tracinhos de brilho perto da mão que acena; nada mais em volta
+Corte: a imagem termina num corte reto e horizontal logo abaixo dos antebraços;
+nada do corpo abaixo dessa linha e nenhuma superfície desenhada
+Direção: de frente, olhando para quem está na tela
+Enquadramento: cintura para cima, cortado reto embaixo
+Formato: PNG transparente, sem sombra, cerca de 400 px de largura na versão WebP
+Estilo: o mesmo das poses atuais (moti_pose_joinha_corpo_inteiro,
+moti_trabalhando_no_computador) — 3D branco e roxo, viseira escura com olhos
+lilases, capa roxa; brilhos só em roxo e lilás
+```
+
+Variação, se a debruçada não ficar boa: **escorado** — corpo inteiro, de lado, encostado de costas na lateral esquerda do cartão, braços cruzados, uma perna cruzada na frente da outra, cabeça virada para quem está na tela com um meio sorriso. Mesmo estilo e formato; corte reto do lado direito, onde ele encosta no cartão. Só aparece em telas largas, como a pose 19.
 
 ## 5. Moti com as redes (série `redes/`)
 

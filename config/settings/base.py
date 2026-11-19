@@ -143,7 +143,6 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.notifications.context_processors.unread_notification_count",
                 "apps.common.context_processors.sidebar_context",
-                "apps.onboarding.context_processors.onboarding_checklist",
                 "apps.intelligence.context_processors.intelligence_flag",
                 # Supplies ``billing_storage`` only when the current
                 # workspace is at or over the 90% disk warning, so the

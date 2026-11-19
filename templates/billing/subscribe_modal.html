@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% load i18n billing_extras %}
+{% load static i18n billing_extras %}
 {% comment %}
-The contracting modal, shown right after a workspace is created.
+The contracting page, shown right after a workspace is created.
 
-A real page styled as a modal rather than markup injected into every
-layout: it is arrived at by redirect from workspace creation, it survives
-a reload after a failed gateway call, and it can be linked to from the
-billing page. The dim backdrop and the single centred card give it the
-"you have one decision to make" feel of a modal without depending on a
-parent page having opened it.
+A real page rather than markup injected into every layout: it is arrived
+at by redirect from workspace creation, it survives a reload after a
+failed gateway call, and it can be linked to from the billing page. It
+replaces base.html's app_shell, like the sign-up page: no sidebar, only
+the logo and the card, so the welcome steps and the plan are the one thing
+on screen.
 
 Two states. Before contracting it asks for the decision (and, the first
 time, the payer's CPF or CNPJ). After it, while the payment is not
@@ -22,18 +22,17 @@ apps.billing.middleware), so the ways out are another brand or signing out.
 
 {% block title %}{% translate "Contract workspace" %} - {{ workspace.name }} - Connekt Flow{% endblock %}
 
-{% block page_header %}{% endblock %}
-
-{% block content %}
-{% comment %}
-Drawn as a window over the calendar: the blurred grid behind is decoration
-(the real calendar of an unpaid brand is not rendered), dimmed so the card
-reads as the one thing to do.
-{% endcomment %}
-<div class="relative flex-1 flex items-center justify-center py-6 px-3 rounded-xl overflow-hidden min-h-[calc(100vh-7rem)]">
-  {% include "calendar/partials/_blurred_calendar.html" %}
-  <div class="absolute inset-0 bg-neutral-950/30" aria-hidden="true"></div>
-  <div class="relative w-full max-w-md">
+{% block app_shell %}
+<main class="auth-bg min-h-screen flex items-center justify-center py-10 px-4" style="font-family: var(--font-body);">
+  <div class="w-full max-w-md">
+    {# Moti leans over the card only on the welcome steps and their plan step, not over an ended trial or an unpaid invoice. #}
+    {% if welcome or trial_available %}
+    {% include "partials/_moti_entrance.html" with logo=True %}
+    {% else %}
+    <div class="flex justify-center mb-6">
+      <img src="{% static 'img/connektflow-wordmark-dark.svg' %}" alt="Connekt Flow" class="h-8 w-auto">
+    </div>
+    {% endif %}
 {% if welcome %}
     {% comment %}
     A new account, in steps: first the organization (its name and whose
@@ -61,12 +60,12 @@ reads as the one thing to do.
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-1">
           <div>
             <label for="welcome_tax_id" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "CPF or CNPJ" %}</label>
-            <input type="text" id="welcome_tax_id" name="tax_id" required inputmode="numeric" autocomplete="off" maxlength="18"
+            <input type="text" id="welcome_tax_id" name="tax_id" data-mask="tax-id" required inputmode="numeric" autocomplete="off" maxlength="18"
                    placeholder="000.000.000-00" class="form-input-styled w-full tabular-nums">
           </div>
           <div>
             <label for="welcome_phone" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Phone with area code" %}</label>
-            <input type="tel" id="welcome_phone" name="phone" required autocomplete="tel" maxlength="20"
+            <input type="tel" id="welcome_phone" name="phone" data-mask="phone" required autocomplete="tel" maxlength="20"
                    placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums">
           </div>
         </div>
@@ -286,10 +285,10 @@ reads as the one thing to do.
             {% translate "No card and no charge. Tell us who you are and start now; when the trial ends, you decide whether to contract." %}
           </p>
           <label for="trial_tax_id" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "CPF or CNPJ" %}</label>
-          <input type="text" id="trial_tax_id" name="tax_id" required inputmode="numeric" autocomplete="off" maxlength="18"
+          <input type="text" id="trial_tax_id" name="tax_id" data-mask="tax-id" required inputmode="numeric" autocomplete="off" maxlength="18"
                  placeholder="000.000.000-00" class="form-input-styled w-full tabular-nums mb-3">
           <label for="trial_phone" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Phone with area code" %}</label>
-          <input type="tel" id="trial_phone" name="phone" required autocomplete="tel" maxlength="20"
+          <input type="tel" id="trial_phone" name="phone" data-mask="phone" required autocomplete="tel" maxlength="20"
                  placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums mb-4">
           <button type="submit" class="btn-soft w-full justify-center py-2.5">
             {% translate "Start free trial" %}
@@ -331,13 +330,13 @@ reads as the one thing to do.
 
     </div>
 
-    <p class="text-center text-xs text-white mt-4">
-      <a href="{% url 'billing:workspace_billing' workspace_id=workspace.id %}" class="underline underline-offset-2 hover:no-underline">
+    <p class="text-center text-xs text-neutral-600 mt-4">
+      <a href="{% url 'billing:workspace_billing' workspace_id=workspace.id %}" class="underline underline-offset-2 hover:no-underline hover:text-neutral-800">
         {% translate "See billing details" %}
       </a>
     </p>
 {% endif %}
 
   </div>
-</div>
+</main>
 {% endblock %}

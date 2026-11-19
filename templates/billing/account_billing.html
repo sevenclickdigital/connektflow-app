@@ -209,7 +209,7 @@ take for each other.
             </div>
             <div>
                 <label for="payer_tax_id" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "CPF or CNPJ" %}</label>
-                <input type="text" id="payer_tax_id" name="tax_id" inputmode="numeric" autocomplete="off" maxlength="18"
+                <input type="text" id="payer_tax_id" name="tax_id" data-mask="tax-id" inputmode="numeric" autocomplete="off" maxlength="18"
                        placeholder="{% if payer.tax_id_ending %}{% blocktranslate with digits=payer.tax_id_ending %}ending in {{ digits }}{% endblocktranslate %}{% else %}000.000.000-00{% endif %}"
                        class="form-input-styled w-full tabular-nums">
                 {% if payer.tax_id_ending %}
@@ -218,7 +218,7 @@ take for each other.
             </div>
             <div>
                 <label for="payer_phone" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Phone with area code" %}</label>
-                <input type="tel" id="payer_phone" name="phone" autocomplete="tel" maxlength="20" value="{{ payer.phone }}" placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums">
+                <input type="tel" id="payer_phone" name="phone" data-mask="phone" autocomplete="tel" maxlength="20" value="{{ payer.phone }}" placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums">
             </div>
             <div>
                 <label for="payer_email" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Billing email" %}</label>

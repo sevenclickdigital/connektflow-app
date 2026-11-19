@@ -55,7 +55,7 @@ docker-compose.dokploy.yml                         # production
 | `media_library` | Assets, folders, versions, direct-to-S3 uploads, thumbnails, quotas |
 | `approvals` | Approval workflow, post comments, reminders |
 | `client_portal` | Magic-link portal for client reviewers |
-| `onboarding` | Client connection links, onboarding checklist |
+| `onboarding` | Client connection links, onboarding checklist (not shown on any screen) |
 | `inbox` | Unified inbox (comments, mentions, DMs), polling sync, inbound webhooks |
 | `automations` | Comment-triggered auto-replies and flows (DM, buttons) |
 | `contacts` | Contacts (manual, CSV, created from inbox senders), channels, engagement, filters |
@@ -90,7 +90,7 @@ Server-rendered HTML. The only build step is Tailwind. In development it runs as
 - Alpine.js handles client-side UI: dropdowns, modals, drag and drop, character counters. CSP allows `'unsafe-eval'` because the standard Alpine build needs it (`base.py`).
 - HTMX and Alpine are vendored (`static/js/htmx.min.js`, `static/js/alpine.min.js`), as is Cropper.js under `static/js/vendor/`. Static files are served by WhiteNoise (`CompressedManifestStaticFilesStorage` in production).
 - Confirmations use one dialog, `templates/components/_confirm_dialog.html` (included by `base.html`): it handles every `hx-confirm` through htmx's `htmx:confirm` event and every form with `data-confirm`, so no page opens the browser's `confirm()`.
-- Context processors in `base.py` add sidebar data, the onboarding checklist, the unread-notification count, the Intelligence flag, a storage-quota banner and an impersonation banner to every page.
+- Context processors in `base.py` add sidebar data, the unread-notification count, the Intelligence flag, a storage-quota banner and an impersonation banner to every page.
 
 ---
 

@@ -214,6 +214,56 @@
     </script>
 
     {% comment %}
+    Brazilian document and phone masks for any field marked
+    data-mask="tax-id" (000.000.000-00, or 00.000.000/0000-00 past eleven
+    digits) or data-mask="phone" ((11) 99999-9999). One delegated listener,
+    so fields that arrive in an HTMX swap are masked too. A convenience only:
+    the server keeps the digits and validates them
+    (apps.billing.services.valid_tax_id / valid_phone). The caret stays after
+    the same digit it was after, so a digit fixed in the middle does not
+    throw it to the end.
+    {% endcomment %}
+    <script nonce="{{ request.csp_nonce }}">
+        (function () {
+            function maskTaxId(d) {
+                d = d.slice(0, 14);
+                if (d.length <= 11) {
+                    return d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+                            .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
+                }
+                return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})$/, '$1.$2.$3/$4-$5');
+            }
+            function maskPhone(d) {
+                if (d.length > 11 && d.startsWith('55')) d = d.slice(2);
+                d = d.slice(0, 11);
+                if (!d) return '';
+                if (d.length <= 2) return '(' + d;
+                var rest = d.slice(2), split = d.length === 11 ? 5 : 4;
+                return '(' + d.slice(0, 2) + ') ' + (rest.length > split ? rest.slice(0, split) + '-' + rest.slice(split) : rest);
+            }
+            var masks = { 'tax-id': maskTaxId, 'phone': maskPhone };
+            function apply(el, keepCaret) {
+                var mask = masks[el.dataset.mask];
+                if (!mask) return;
+                var before = el.value.slice(0, el.selectionStart || 0).replace(/\D/g, '').length;
+                var masked = mask(el.value.replace(/\D/g, ''));
+                if (masked === el.value) return;
+                el.value = masked;
+                if (!keepCaret) return;
+                var pos = 0, seen = 0;
+                while (pos < masked.length && seen < before) { if (/\d/.test(masked[pos])) seen++; pos++; }
+                el.setSelectionRange(pos, pos);
+            }
+            document.addEventListener('input', function (e) {
+                if (e.target.matches && e.target.matches('input[data-mask]')) apply(e.target, document.activeElement === e.target);
+            });
+            function maskAll(root) { root.querySelectorAll('input[data-mask]').forEach(function (el) { apply(el, false); }); }
+            document.addEventListener('DOMContentLoaded', function () { maskAll(document); });
+            document.body.addEventListener('htmx:afterSwap', function (e) { maskAll(e.target); });
+        })();
+    </script>
+
+    {% comment %}
       Global htmx error surface. htmx does not swap non-2xx responses, so a
       server's error text would otherwise be silently dropped (only a console
       error remains). This listener reads that text (XSS-safe via DOMParser)
@@ -275,6 +325,13 @@
         });
     </script>
     {% if user.is_authenticated %}
+    {% comment %}
+    app_shell is the signed-in frame: sidebar, mobile top bar and the page
+    column. A page that is the one thing to do right now
+    (billing/subscribe_modal.html: the welcome steps and the plan) replaces it
+    with its own focused layout; the toasts and messages below stay.
+    {% endcomment %}
+    {% block app_shell %}
     <div class="flex h-screen overflow-hidden"
          style="background: var(--surface-page);"
          x-data="{ sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true', mobileMenuOpen: false }"
@@ -758,8 +815,7 @@
         </div>
     </div>
 
-    <!-- Onboarding checklist popup (fixed bottom-right) -->
-    {% include "onboarding/partials/_checklist.html" %}
+    {% endblock app_shell %}
 
     {% comment %}
     Floating toasts for the whole app: the host listens for `showToast`
@@ -1098,12 +1154,12 @@
                                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-1">
                                     <div>
                                       <label for="new_org_tax_id" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "CPF or CNPJ" %}</label>
-                                      <input type="text" id="new_org_tax_id" name="tax_id" required inputmode="numeric" autocomplete="off" maxlength="18"
+                                      <input type="text" id="new_org_tax_id" name="tax_id" data-mask="tax-id" required inputmode="numeric" autocomplete="off" maxlength="18"
                  placeholder="000.000.000-00" class="form-input-styled w-full tabular-nums">
                                     </div>
                                     <div>
                                       <label for="new_org_phone" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Phone with area code" %}</label>
-                                      <input type="tel" id="new_org_phone" name="phone" required autocomplete="tel" maxlength="20"
+                                      <input type="tel" id="new_org_phone" name="phone" data-mask="phone" required autocomplete="tel" maxlength="20"
                  placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums">
                                     </div>
                                   </div>
