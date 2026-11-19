@@ -44,7 +44,7 @@ like the contracting page: the logo and the card, nothing else.
       <div id="plan-options" x-ref="options"
            x-init="$watch('brands', () => $nextTick(() => htmx.trigger($refs.options, 'quote')))"
            hx-get="{% url 'billing:checkout_quote' workspace_id=workspace.id %}"
-           hx-trigger="quote delay:200ms, change from:input[name=cycle]"
+           hx-trigger="quote delay:200ms, change from:input[name=cycle], change from:#coupon"
            hx-include="#plan-options" hx-target="#checkout-quote" hx-swap="innerHTML">
         <section class="px-6 sm:px-7 pt-6 pb-5">
           <label for="brands" class="block text-sm text-neutral-700">
@@ -90,6 +90,23 @@ like the contracting page: the logo and the card, nothing else.
         </section>
         {% else %}
         <input type="hidden" name="cycle" value="{{ cycle }}">
+        {% endif %}
+
+        {% if not plan %}
+        {% comment %}
+        A coupon from the staff Coupons screen. Checked and priced by the
+        server with the rest of the quote; Enter applies it rather than
+        submitting the payment.
+        {% endcomment %}
+        <section class="px-6 sm:px-7 pb-5">
+          <label for="coupon" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Discount coupon" %}</label>
+          <div class="flex gap-2">
+            <input type="text" id="coupon" name="coupon" value="{{ coupon_code }}" maxlength="32" autocomplete="off"
+                   @keydown.enter.prevent="htmx.trigger($refs.options, 'quote')"
+                   class="form-input-styled flex-1 uppercase tracking-wide" placeholder="{% translate 'Code' %}">
+            <button type="button" class="btn-soft px-4" @click="htmx.trigger($refs.options, 'quote')">{% translate "Apply" %}</button>
+          </div>
+        </section>
         {% endif %}
       </div>
 

@@ -20,10 +20,13 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db import models, transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.utils.translation import gettext_lazy as _
 
 from apps.billing.models import (
     BillingEvent,
+    Coupon,
+    CouponRedemption,
     OrganizationBillingProfile,
     OrganizationPlan,
     ProductPrice,
@@ -656,7 +659,7 @@ def quote_workspace(workspace, cycle=WorkspaceSubscription.Cycle.MONTHLY):
 PLAN_MAX_BRANDS = 50
 
 
-def quote_plan(brands, cycle=WorkspaceSubscription.Cycle.MONTHLY):
+def quote_plan(brands, cycle=WorkspaceSubscription.Cycle.MONTHLY, coupon=None):
     """What ``brands`` brands bought together on ``cycle`` cost at today's list.
 
     The checkout's one price rule, shown and charged alike. Each brand is
@@ -664,6 +667,10 @@ def quote_plan(brands, cycle=WorkspaceSubscription.Cycle.MONTHLY):
     position's tier, as on the public site), the yearly discount goes on top
     of the sum, and ``monthly_cents`` is rounded to a whole cent before the
     yearly charge is taken as twelve of it.
+
+    A ``coupon`` for every charge comes off the monthly figure, so the yearly
+    charge stays twelve of it; one for the first charge only leaves the
+    recurring figures alone and lowers ``first_charge_cents``.
     """
     list_cents = workspace_price_cents()
     yearly = cycle == WorkspaceSubscription.Cycle.YEARLY
@@ -673,18 +680,141 @@ def quote_plan(brands, cycle=WorkspaceSubscription.Cycle.MONTHLY):
     )
     monthly_cents = int((volume_sum * (100 - annual_percent) / 100).quantize(Decimal(1), rounding=ROUND_HALF_UP))
     volume_cents = int(volume_sum.quantize(Decimal(1), rounding=ROUND_HALF_UP))
+    plain_monthly_cents = monthly_cents
+    if coupon is not None and coupon.duration == Coupon.Duration.FOREVER:
+        monthly_cents = _coupon_price(monthly_cents, coupon)
+    charge_cents = monthly_cents * 12 if yearly else monthly_cents
+    first_charge_cents = charge_cents
+    if coupon is not None and coupon.duration == Coupon.Duration.FIRST:
+        first_charge_cents = _coupon_price(charge_cents, coupon)
+    plain_charge_cents = plain_monthly_cents * 12 if yearly else plain_monthly_cents
     return {
         "brands": brands,
         "cycle": WorkspaceSubscription.Cycle.YEARLY if yearly else WorkspaceSubscription.Cycle.MONTHLY,
         "list_cents": list_cents,
         "annual_percent": annual_percent,
         "monthly_cents": monthly_cents,
-        "charge_cents": monthly_cents * 12 if yearly else monthly_cents,
+        "charge_cents": charge_cents,
+        # What the card is charged today.
+        "first_charge_cents": first_charge_cents,
+        "coupon": coupon,
+        # What the coupon takes off today's charge.
+        "coupon_saving_cents": plain_charge_cents - first_charge_cents,
         # What the volume tiers take off the list price, per month.
         "volume_saving_cents": list_cents * brands - volume_cents,
         # Against paying the same brands month by month for a year.
-        "yearly_saving_cents": (volume_cents - monthly_cents) * 12 if yearly else 0,
+        "yearly_saving_cents": (volume_cents - plain_monthly_cents) * 12 if yearly else 0,
     }
+
+
+# ---------------------------------------------------------------------------
+# Coupons
+# ---------------------------------------------------------------------------
+
+#: Asaas refuses a charge under R$ 5,00, so no coupon takes a charge below it.
+COUPON_MIN_CHARGE_CENTS = 500
+COUPON_MAX_PERCENT = 100
+_COUPON_CODE = re.compile(r"^[A-Z0-9_-]{3,32}$")
+
+
+class CouponError(ValueError):
+    """A coupon that cannot be used. The message is for the customer or the operator."""
+
+
+def _coupon_price(cents, coupon):
+    """``cents`` with ``coupon`` taken off, never below what Asaas will charge."""
+    if coupon.kind == Coupon.Kind.PERCENT:
+        off = int((Decimal(cents) * coupon.value / 100).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+    else:
+        off = coupon.value
+    return max(cents - off, min(cents, COUPON_MIN_CHARGE_CENTS))
+
+
+def find_coupon(code, organization):
+    """The usable coupon for ``code``, None when nothing was typed.
+
+    Raises ``CouponError`` saying why a typed code cannot be used: unknown
+    or switched off, past its date, used up, or already used by this
+    organization.
+    """
+    code = (code or "").strip().upper()
+    if not code:
+        return None
+    coupon = Coupon.objects.filter(code=code, is_active=True).first()
+    if coupon is None:
+        raise CouponError(_("This coupon does not exist or is no longer valid."))
+    if coupon.valid_until is not None and coupon.valid_until < timezone.localdate():
+        raise CouponError(_("This coupon has expired."))
+    if coupon.max_redemptions is not None and coupon.redemptions.count() >= coupon.max_redemptions:
+        raise CouponError(_("This coupon has run out."))
+    if coupon.redemptions.filter(organization=organization).exists():
+        raise CouponError(_("Your account has already used this coupon."))
+    return coupon
+
+
+def redeem_coupon(coupon, organization, *, discount_cents):
+    """Record that ``organization`` paid with ``coupon``. Once per organization."""
+    redemption, _created = CouponRedemption.objects.get_or_create(
+        coupon=coupon, organization=organization, defaults={"discount_cents": discount_cents}
+    )
+    return redemption
+
+
+def create_coupon(data, *, created_by=None):
+    """A coupon from the staff form's fields. Raises ``CouponError`` with what to fix.
+
+    ``value`` is a whole percent for a percentage coupon and an amount in
+    reais (``10,00``) for a fixed one; the amount comes off each month for
+    a coupon on every charge, or once off the first charge.
+    """
+    code = (data.get("code") or "").strip().upper()
+    if not _COUPON_CODE.match(code):
+        raise CouponError(_("The code takes 3 to 32 letters, digits, hyphens or underscores."))
+    if Coupon.objects.filter(code=code).exists():
+        raise CouponError(_("There is already a coupon with this code."))
+    kind = data.get("kind")
+    if kind not in Coupon.Kind.values:
+        raise CouponError(_("Choose a percentage or a fixed amount."))
+    duration = data.get("duration")
+    if duration not in Coupon.Duration.values:
+        raise CouponError(_("Choose whether the coupon applies to the first charge or to every charge."))
+    raw_value = (data.get("value") or "").strip()
+    try:
+        if kind == Coupon.Kind.PERCENT:
+            value = _whole_number(raw_value, maximum=COUPON_MAX_PERCENT, message=_("Enter a percentage from 1 to 100."))
+        else:
+            value = _parse_currency_to_cents(raw_value, _COUPON_AMOUNT_MESSAGES)
+        max_redemptions = _whole_number(
+            data.get("max_redemptions"), maximum=1_000_000, message=_("The limit of uses must be a whole number.")
+        )
+    except PriceValidationError as exc:
+        raise CouponError(str(exc)) from None
+    if not value:
+        raise CouponError(_("The discount must be more than zero."))
+    valid_until = None
+    if data.get("valid_until"):
+        valid_until = parse_date(data["valid_until"])
+        if valid_until is None:
+            raise CouponError(_("Enter the last valid day as a date."))
+    return Coupon.objects.create(
+        code=code,
+        kind=kind,
+        value=value,
+        duration=duration,
+        valid_until=valid_until,
+        max_redemptions=max_redemptions or None,
+        note=(data.get("note") or "").strip()[:255],
+        created_by=created_by,
+    )
+
+
+_COUPON_AMOUNT_MESSAGES = {
+    "required": _("Enter the discount amount, in reais."),
+    "not_a_number": _("The discount is not a valid amount. Enter it as 10,00."),
+    "negative": _("The discount cannot be negative."),
+    "too_precise": _("The discount cannot have fractions of a cent. Use at most two decimals."),
+    "too_large": _("That discount is too high to be intentional. Check the amount."),
+}
 
 
 def plan_for(organization):

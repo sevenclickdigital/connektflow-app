@@ -45,7 +45,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
-from django.db.models import Prefetch, Q, Sum
+from django.db.models import Count, Prefetch, Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -61,7 +61,7 @@ from apps.accounts.impersonation import client_ip
 from apps.accounts.models import ImpersonationSession, User
 from apps.billing import contracting, services
 from apps.billing.gateways.asaas import AsaasAPIError, AsaasError, AsaasNotConfigured
-from apps.billing.models import BillingEvent, ProductPrice, WorkspaceAddon, WorkspaceSubscription
+from apps.billing.models import BillingEvent, Coupon, ProductPrice, WorkspaceAddon, WorkspaceSubscription
 from apps.billing.storage_usage import storage_status
 from apps.billing.webhooks import PAID_EVENTS, UNPAID_EVENTS
 from apps.members.decorators import require_org_role
@@ -676,6 +676,14 @@ def _uncovered_workspaces(organization):
     )
 
 
+def _checkout_coupon(code, organization):
+    """``(coupon, error)`` for the code typed at checkout; both None when nothing was typed."""
+    try:
+        return services.find_coupon(code, organization), None
+    except services.CouponError as exc:
+        return None, str(exc)
+
+
 def _parse_card(post):
     """The card and the address the gateway asks for, from the checkout form.
 
@@ -710,9 +718,9 @@ def _parse_card(post):
     return card, {"postalCode": postal_code, "addressNumber": address_number, "name": holder_name}, None
 
 
-def _checkout_url(workspace, brands=None, cycle=None):
+def _checkout_url(workspace, brands=None, cycle=None, coupon=""):
     url = reverse("billing:checkout", kwargs={"workspace_id": workspace.id})
-    params = {key: value for key, value in (("brands", brands), ("cycle", cycle)) if value}
+    params = {key: value for key, value in (("brands", brands), ("cycle", cycle), ("coupon", coupon)) if value}
     return f"{url}?{urlencode(params)}" if params else url
 
 
@@ -740,6 +748,8 @@ def checkout(request, workspace_id):
     default = max(minimum, 1 if upgrading else _uncovered_workspaces(organization))
     brands = _parse_brands(request.GET.get("brands"), minimum=minimum) or min(default, services.PLAN_MAX_BRANDS)
     cycle = plan.billing_cycle if upgrading else _parse_cycle(request.GET.get("cycle"))
+    coupon_code = "" if upgrading else request.GET.get("coupon", "").strip().upper()[:32]
+    coupon, coupon_error = _checkout_coupon(coupon_code, organization)
     profile = services.ensure_billing_profile(organization)
     context = {
         "workspace": workspace,
@@ -751,7 +761,9 @@ def checkout(request, workspace_id):
         "cycle": cycle,
         "annual_percent": services.annual_discount_percent(),
         "volume_tiers": services.volume_discounts(),
-        "quote": services.quote_plan(brands, cycle),
+        "quote": services.quote_plan(brands, cycle, coupon),
+        "coupon_code": coupon_code,
+        "coupon_error": coupon_error,
         "needs_tax_id": not profile.tax_id,
         "needs_phone": not profile.phone,
         "gateway_configured": _gateway_configured(),
@@ -768,9 +780,13 @@ def checkout_quote(request, workspace_id):
     upgrading = bool(plan and plan.is_active)
     brands = _parse_brands(request.GET.get("brands"), minimum=plan.brands + 1 if upgrading else 1)
     cycle = plan.billing_cycle if upgrading else _parse_cycle(request.GET.get("cycle"))
+    coupon, coupon_error = (
+        (None, None) if upgrading else _checkout_coupon(request.GET.get("coupon"), workspace.organization)
+    )
     context = {
-        "quote": services.quote_plan(brands, cycle) if brands else None,
+        "quote": services.quote_plan(brands, cycle, coupon) if brands else None,
         "plan": plan if upgrading else None,
+        "coupon_error": coupon_error,
     }
     return render(request, "billing/_checkout_quote.html", context)
 
@@ -785,7 +801,8 @@ def checkout_pay(request, workspace_id):
     organization = workspace.organization
     brands = _parse_brands(request.POST.get("brands"))
     cycle = _parse_cycle(request.POST.get("cycle"))
-    back = _checkout_url(workspace, brands, cycle)
+    coupon_code = request.POST.get("coupon", "").strip().upper()[:32]
+    back = _checkout_url(workspace, brands, cycle, coupon_code)
 
     if getattr(request, "limited", False):
         # Against card testing: a handful of tries an hour is plenty for a real customer.
@@ -798,6 +815,10 @@ def checkout_pay(request, workspace_id):
     if plan and plan.is_active:
         # Already paid for: brands are added to it, never bought twice.
         return redirect("billing:checkout", workspace_id=workspace.id)
+    coupon, coupon_error = _checkout_coupon(coupon_code, organization)
+    if coupon_error:
+        messages.error(request, coupon_error)
+        return redirect(_checkout_url(workspace, brands, cycle))
 
     profile = services.ensure_billing_profile(organization)
     tax_id = profile.tax_id or services.valid_tax_id(request.POST.get("tax_id"))
@@ -823,6 +844,7 @@ def checkout_pay(request, workspace_id):
             holder=holder,
             remote_ip=client_ip(request) or "",
             email=email,
+            coupon=coupon,
         )
     except contracting.CardRefusedError as exc:
         messages.error(request, str(exc))
@@ -1305,6 +1327,52 @@ _PRICE_FIELDS = (
     ("base_storage_gb", ProductPrice.Key.BASE_STORAGE_BYTES),
     ("storage_price_per_gb_brl", ProductPrice.Key.STORAGE_PRICE_PER_GB_CENTS),
 )
+
+
+@_staff_required
+@require_GET
+def staff_coupons(request):
+    """The coupons customers type at checkout: create one, see how much each was used, switch one off."""
+    coupons = Coupon.objects.annotate(used=Count("redemptions")).select_related("created_by")
+    return render(
+        request,
+        "billing/staff_coupons.html",
+        {
+            "coupons": coupons,
+            "kinds": Coupon.Kind.choices,
+            "durations": Coupon.Duration.choices,
+            "admin_active": "coupons",
+        },
+    )
+
+
+@_staff_required
+@require_POST
+def staff_create_coupon(request):
+    try:
+        coupon = services.create_coupon(request.POST, created_by=request.user)
+    except services.CouponError as exc:
+        messages.error(request, str(exc))
+        return redirect("billing_staff:coupons")
+    logger.info("Operator %s created coupon %s", request.user.email, coupon.code)
+    messages.success(request, _("Coupon %(code)s created.") % {"code": coupon.code})
+    return redirect("billing_staff:coupons")
+
+
+@_staff_required
+@require_POST
+def staff_toggle_coupon(request, coupon_id):
+    """Switch a coupon off or back on. Plans already paid with it keep their price."""
+    coupon = get_object_or_404(Coupon, pk=coupon_id)
+    coupon.is_active = not coupon.is_active
+    coupon.save(update_fields=["is_active"])
+    if coupon.is_active:
+        messages.success(request, _("Coupon %(code)s is on again.") % {"code": coupon.code})
+    else:
+        messages.info(
+            request, _("Coupon %(code)s is off. It can no longer be used at checkout.") % {"code": coupon.code}
+        )
+    return redirect("billing_staff:coupons")
 
 
 @_staff_required

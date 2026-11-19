@@ -3,7 +3,9 @@
 The price of the brands and cycle chosen on the checkout page, computed by
 apps.billing.services.quote_plan and swapped in on every change, so what
 the customer reads is what the server charges. With ``plan`` (adding
-brands to an active plan) it shows the plan's new value instead.
+brands to an active plan) it shows the plan's new value instead. A coupon
+typed on the page is checked here too (``coupon_error`` when it cannot be
+used).
 {% endcomment %}
 {% if quote %}
 <div class="text-center">
@@ -23,6 +25,17 @@ brands to an active plan) it shows the plan's new value instead.
     <span class="pill pill-success">{% blocktranslate with saving=quote.volume_saving_cents|brl %}R$ {{ saving }} off a month for volume{% endblocktranslate %}</span>
     {% endif %}
   </div>
+  {% if quote.coupon %}
+  <p class="text-sm font-semibold text-green-700 mt-3">
+    {% if quote.coupon.duration == "forever" %}
+    {% blocktranslate with code=quote.coupon.code %}Coupon {{ code }} applied to every charge.{% endblocktranslate %}
+    {% else %}
+    {% blocktranslate with code=quote.coupon.code first=quote.first_charge_cents|brl %}Coupon {{ code }}: R$ {{ first }} today, then the price above.{% endblocktranslate %}
+    {% endif %}
+  </p>
+  {% elif coupon_error %}
+  <p class="text-sm text-red-700 mt-3" role="alert">{{ coupon_error }}</p>
+  {% endif %}
   <p class="text-xs text-neutral-600 mt-2">
     {% if plan %}
     {% blocktranslate count brands=quote.brands %}New value for {{ brands }} brand, from the next charge to the card on the plan.{% plural %}New value for {{ brands }} brands, from the next charge to the card on the plan.{% endblocktranslate %}

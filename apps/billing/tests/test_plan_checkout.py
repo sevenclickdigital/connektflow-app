@@ -91,6 +91,10 @@ class StubAsaas:
         self.canceled.append(subscription_id)
         return {"deleted": True}
 
+    def update_payment_value(self, payment_id, value_cents):
+        self.first_values = [*getattr(self, "first_values", []), (payment_id, value_cents)]
+        return {}
+
     def update_subscription_value(self, subscription_id, value_cents):
         self.values.append((subscription_id, value_cents))
         return {}

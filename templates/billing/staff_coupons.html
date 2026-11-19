@@ -1,0 +1,122 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n billing_extras %}
+{% comment %}
+Discount coupons (apps.billing.views.staff_coupons). The operator creates a
+code here and hands it to a customer, who types it at checkout
+(services.find_coupon, quote_plan). A percentage or a fixed amount, on the
+first charge only or on every charge; a fixed amount on every charge comes
+off each month. Switching a coupon off stops new uses; plans already paid
+with it keep their price.
+{% endcomment %}
+
+{% block title %}{% translate "Coupons" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <h1 class="page-title">{% translate "Coupons" %}</h1>
+  <p class="page-description">{% translate "Discount codes to hand to customers. They are typed at checkout and each account can use a coupon once." %}</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <section class="rounded-xl border border-neutral-300 bg-white overflow-hidden" x-data="{ kind: 'percent' }">
+    <div class="px-5 py-4 border-b border-neutral-100">
+      <h2 class="text-base font-semibold text-neutral-950">{% translate "New coupon" %}</h2>
+    </div>
+    <form method="post" action="{% url 'billing_staff:create_coupon' %}" class="px-5 py-5 grid grid-cols-1 sm:grid-cols-6 gap-4">
+      {% csrf_token %}
+      <div class="sm:col-span-2">
+        <label for="code" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Code" %}</label>
+        <input type="text" id="code" name="code" required maxlength="32" pattern="[A-Za-z0-9_\-]{3,32}" placeholder="{% translate 'e.g. WELCOME20' %}"
+               class="form-input-styled w-full uppercase tracking-wide">
+      </div>
+      <div class="sm:col-span-2">
+        <label for="kind" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Discount" %}</label>
+        <select id="kind" name="kind" x-model="kind" class="form-input-styled w-full">
+          {% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="sm:col-span-2">
+        <label for="value" class="block text-xs font-semibold text-neutral-700 mb-1">
+          <span x-show="kind === 'percent'">{% translate "Percentage" %}</span>
+          <span x-show="kind === 'amount'" x-cloak>{% translate "Amount in R$" %}</span>
+        </label>
+        <input type="text" id="value" name="value" required inputmode="decimal" class="form-input-styled w-full tabular-nums"
+               :placeholder="kind === 'percent' ? '20' : '10,00'">
+      </div>
+      <div class="sm:col-span-2">
+        <label for="duration" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Applies to" %}</label>
+        <select id="duration" name="duration" class="form-input-styled w-full">
+          {% for value, label in durations %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="sm:col-span-2">
+        <label for="valid_until" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Valid until (optional)" %}</label>
+        <input type="date" id="valid_until" name="valid_until" class="form-input-styled w-full">
+      </div>
+      <div class="sm:col-span-2">
+        <label for="max_redemptions" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Limit of accounts (optional)" %}</label>
+        <input type="number" id="max_redemptions" name="max_redemptions" min="1" step="1" class="form-input-styled w-full tabular-nums">
+      </div>
+      <div class="sm:col-span-4">
+        <label for="note" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Note (only the team sees it)" %}</label>
+        <input type="text" id="note" name="note" maxlength="255" class="form-input-styled w-full">
+      </div>
+      <div class="sm:col-span-2 flex items-end">
+        <button type="submit" class="btn-brand w-full py-2.5 text-sm font-semibold">{% translate "Create coupon" %}</button>
+      </div>
+      <p class="sm:col-span-6 text-xs text-neutral-600">
+        {% translate "A fixed amount on every charge comes off each month (twelve times on a yearly plan); on the first charge it comes off once. No charge goes below R$ 5,00, the least Asaas charges." %}
+      </p>
+    </form>
+  </section>
+
+  <section class="rounded-xl border border-neutral-300 bg-white overflow-hidden">
+    {% if coupons %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-neutral-100 bg-neutral-50">
+            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Code" %}</th>
+            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Discount" %}</th>
+            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Applies to" %}</th>
+            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Valid until" %}</th>
+            <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Used" %}</th>
+            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Status" %}</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-neutral-100">
+          {% for coupon in coupons %}
+          <tr>
+            <td class="px-4 py-3">
+              <span class="font-semibold text-neutral-950 tracking-wide">{{ coupon.code }}</span>
+              {% if coupon.note %}<p class="text-xs text-neutral-500 mt-0.5">{{ coupon.note }}</p>{% endif %}
+            </td>
+            <td class="px-4 py-3 tabular-nums">{% if coupon.kind == "percent" %}{{ coupon.value }}%{% else %}R$ {{ coupon.value|brl }}{% endif %}</td>
+            <td class="px-4 py-3 text-neutral-700">{{ coupon.get_duration_display }}</td>
+            <td class="px-4 py-3 text-neutral-700">{% if coupon.valid_until %}{{ coupon.valid_until|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+            <td class="px-4 py-3 text-right tabular-nums">{{ coupon.used }}{% if coupon.max_redemptions %} / {{ coupon.max_redemptions }}{% endif %}</td>
+            <td class="px-4 py-3">
+              {% if coupon.is_active %}<span class="pill pill-success"><i></i>{% translate "On" %}</span>{% else %}<span class="pill pill-neutral">{% translate "Off" %}</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <form method="post" action="{% url 'billing_staff:toggle_coupon' coupon_id=coupon.id %}">
+                {% csrf_token %}
+                <button type="submit" class="text-xs font-semibold text-brand-700 hover:underline cursor-pointer">
+                  {% if coupon.is_active %}{% translate "Switch off" %}{% else %}{% translate "Switch on" %}{% endif %}
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-center text-neutral-600">{% translate "No coupon yet. Create the first one above." %}</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

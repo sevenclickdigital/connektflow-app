@@ -661,6 +661,9 @@ class OrganizationPlan(models.Model):
     gateway_subscription_id = models.CharField(max_length=255, blank=True, default="", db_index=True)
     # Shown on the billing page ("Mastercard ending in 8829"). The card
     # itself stays at the gateway, which keeps only a token on its side.
+    # The coupon paid with, kept so a resize prices its "every charge"
+    # discount again.
+    coupon = models.ForeignKey("billing.Coupon", on_delete=models.SET_NULL, null=True, blank=True, related_name="plans")
     card_brand = models.CharField(max_length=32, blank=True, default="")
     card_last4 = models.CharField(max_length=4, blank=True, default="")
 
@@ -687,6 +690,78 @@ class OrganizationPlan(models.Model):
     @property
     def is_active(self):
         return self.status == WorkspaceSubscription.Status.ACTIVE
+
+
+# ---------------------------------------------------------------------------
+# Coupon, a discount the operator hands to a customer
+# ---------------------------------------------------------------------------
+
+
+class Coupon(models.Model):
+    """A discount code created on the staff Coupons screen and typed at checkout.
+
+    ``kind`` says how ``value`` reads: whole percent off, or cents off each
+    charge. ``duration`` says which charges it touches: only the first, or
+    every one for as long as the plan lasts. Usable while ``is_active``,
+    until ``valid_until`` (inclusive) and up to ``max_redemptions``
+    organizations, each organization once (``CouponRedemption``).
+    """
+
+    class Kind(models.TextChoices):
+        PERCENT = "percent", _("Percentage")
+        AMOUNT = "amount", _("Fixed amount")
+
+    class Duration(models.TextChoices):
+        FIRST = "first", _("First charge only")
+        FOREVER = "forever", _("Every charge")
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # Stored upper case; typed in any case at checkout.
+    code = models.CharField(max_length=32, unique=True)
+    kind = models.CharField(max_length=8, choices=Kind.choices, default=Kind.PERCENT)
+    value = models.PositiveIntegerField()
+    duration = models.CharField(max_length=8, choices=Duration.choices, default=Duration.FIRST)
+    valid_until = models.DateField(null=True, blank=True)
+    # NULL = no limit.
+    max_redemptions = models.PositiveIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    note = models.CharField(max_length=255, blank=True, default="")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_coupons",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "billing_coupon"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.code
+
+
+class CouponRedemption(models.Model):
+    """An organization's use of a coupon, written when its checkout is paid."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, related_name="redemptions")
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="coupon_redemptions",
+    )
+    # What the coupon took off the first charge, in cents.
+    discount_cents = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "billing_coupon_redemption"
+        constraints = [
+            models.UniqueConstraint(fields=["coupon", "organization"], name="billing_coupon_once_per_org"),
+        ]
 
 
 # ---------------------------------------------------------------------------

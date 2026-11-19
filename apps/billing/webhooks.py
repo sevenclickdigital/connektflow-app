@@ -241,6 +241,9 @@ def _apply_to_plan(plan, target, payload):
         plan.canceled_at = timezone.now()
         fields.append("canceled_at")
     plan.save(update_fields=fields)
+    if target == WorkspaceSubscription.Status.ACTIVE and plan.coupon_id:
+        # A plan paid after an issuer challenge or a lost answer: its coupon is used now.
+        services.redeem_coupon(plan.coupon, plan.organization, discount_cents=0)
     services.sync_plan_coverage(plan)
 
 

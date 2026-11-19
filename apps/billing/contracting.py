@@ -414,8 +414,8 @@ def _first_unpaid(client, subscription_id):
     return unpaid[0] if unpaid else None
 
 
-def _activate_plan(plan, *, card=None):
-    """Mark a paid plan active and open the workspaces it covers."""
+def _activate_plan(plan, *, card=None, coupon_saving_cents=0):
+    """Mark a paid plan active, record its coupon as used, and open the workspaces it covers."""
     plan.status = WorkspaceSubscription.Status.ACTIVE
     plan.canceled_at = None
     fields = ["status", "canceled_at", "updated_at"]
@@ -424,6 +424,8 @@ def _activate_plan(plan, *, card=None):
         plan.card_last4 = str(card.get("creditCardNumber") or "")[-4:]
         fields += ["card_brand", "card_last4"]
     plan.save(update_fields=fields)
+    if plan.coupon_id:
+        services.redeem_coupon(plan.coupon, plan.organization, discount_cents=coupon_saving_cents)
     services.sync_plan_coverage(plan)
     return plan
 
@@ -449,14 +451,17 @@ def _settle_earlier_attempt(plan, client):
     return False
 
 
-def purchase_plan(organization, *, brands, cycle, card, holder, remote_ip, email="", client=None):
+def purchase_plan(organization, *, brands, cycle, card, holder, remote_ip, email="", coupon=None, client=None):
     """Buy ``brands`` brands for the organization and pay the first charge by card.
 
     ``card`` and ``holder`` go to the gateway as they are (see
     ``AsaasClient.pay_with_card``) and are kept nowhere here. In order:
     the customer, a subscription priced by ``services.quote_plan``, the
     card charge of its first payment on the spot, then the card's token on
-    the subscription so every later cycle is charged to it.
+    the subscription so every later cycle is charged to it. A ``coupon``
+    (already checked by ``services.find_coupon``) prices the subscription
+    or, for the first charge only, that charge, and is recorded as used
+    once the card is charged.
 
     Returns the active ``OrganizationPlan``. Raises ``CardRefusedError``
     when the card is declined (the subscription is cancelled, nothing is
@@ -473,7 +478,7 @@ def purchase_plan(organization, *, brands, cycle, card, holder, remote_ip, email
     if _settle_earlier_attempt(plan, client):
         return plan
 
-    quote = services.quote_plan(brands, cycle)
+    quote = services.quote_plan(brands, cycle, coupon)
     profile = ensure_customer(organization, client=client, email=email)
     remote = client.create_subscription(
         customer_id=profile.gateway_customer_id,
@@ -495,11 +500,14 @@ def purchase_plan(organization, *, brands, cycle, card, holder, remote_ip, email
     plan.gateway_customer_id = profile.gateway_customer_id
     plan.gateway_subscription_id = subscription_id
     plan.status = WorkspaceSubscription.Status.PENDING
+    plan.coupon = coupon
     plan.save()
 
     payment = _first_unpaid(client, subscription_id)
     if payment is None:
         raise AsaasError("Asaas created the subscription without a first charge.")
+    if quote["first_charge_cents"] != quote["charge_cents"]:
+        client.update_payment_value(payment["id"], quote["first_charge_cents"])
 
     try:
         paid = client.pay_with_card(payment["id"], card=card, holder=holder, remote_ip=remote_ip)
@@ -529,7 +537,7 @@ def purchase_plan(organization, *, brands, cycle, card, holder, remote_ip, email
             # Paid all the same; only the renewals would come as invoices.
             logger.exception("Could not keep the card on plan %s's subscription", plan.pk)
     logger.info("Organization %s bought a plan of %s brands", organization.pk, brands)
-    return _activate_plan(plan, card=card_info)
+    return _activate_plan(plan, card=card_info, coupon_saving_cents=quote["coupon_saving_cents"])
 
 
 def change_plan_brands(plan, brands, *, client=None):
@@ -539,7 +547,8 @@ def change_plan_brands(plan, brands, *, client=None):
     workspaces covered follow at once.
     """
     client = client or AsaasClient()
-    quote = services.quote_plan(brands, plan.billing_cycle)
+    # A coupon on every charge keeps applying to the new value.
+    quote = services.quote_plan(brands, plan.billing_cycle, plan.coupon)
     client.update_subscription_value(plan.gateway_subscription_id, quote["charge_cents"])
     plan.brands = brands
     plan.price_cents = quote["monthly_cents"]
