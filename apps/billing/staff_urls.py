@@ -37,6 +37,7 @@ urlpatterns = [
     # ``require_GET`` — so a crawler or a prefetch cannot reach the write
     # at all.
     path("plans/prices/", views.staff_update_prices, name="update_prices"),
+    path("plans/rules/", views.staff_update_rules, name="update_rules"),
     path("subscriptions/", views.staff_subscriptions, name="subscriptions"),
     path("impersonations/", views.staff_impersonation_log, name="impersonation_log"),
     path("courtesy/<uuid:target_workspace_id>/", views.staff_toggle_courtesy, name="toggle_courtesy"),

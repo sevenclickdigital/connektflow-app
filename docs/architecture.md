@@ -218,10 +218,12 @@ Other inbound webhooks: `/webhooks/resend/` (Svix-signed bounces/suppressions â†
 
 - Models: `WorkspaceSubscription` (`pending|active|past_due|canceled|courtesy`. Only `active` and `courtesy` grant access), `WorkspaceAddon`, `BillingEvent` (append-only, keyed by gateway event id), `OrganizationBillingProfile` (comped workspaces) and `ProductPrice` / `ProductPriceChange`. Each subscription keeps a snapshot of the price it was sold at.
 - Gateway: `apps/billing/gateways/asaas.py` is the only module that knows Asaas's wire format. It is configured by `ASAAS_API_KEY`, `ASAAS_API_BASE` (defaults to the **sandbox**), `ASAAS_WEBHOOK_TOKEN` and `ASAAS_TIMEOUT_SECONDS`. If the key or token is missing, the integration does nothing.
+- `ASAAS_API_KEY` is written in the env file without its leading `$` (`aact_...`): Docker Compose and django-environ read `$name` as another variable, so the key would arrive empty. `config/settings/base.py` reads it from `os.environ` and puts the `$` back (`_asaas_api_key`).
+- Customer group: every customer created or updated here is sent with `groupName` = `ASAAS_CUSTOMER_GROUP` (default "Connekt Flow"), so this product's payers are grouped apart from the other tools billing through the same Asaas account. `manage.py asaas_group_customers` puts the customers created before into it.
 - Webhook: `/webhooks/asaas/` authenticates with the `asaas-access-token` header. Asaas does not sign the body.
 - Storage enforcement: `apps/billing/storage_usage.py` (`BILLING_STORAGE_QUOTA_ENABLED`) is separate from the older per-org cap in `apps/media_library/quotas.py` (`STORAGE_QUOTA_*`).
 - UI: `/workspace/<id>/billing/` for customers and `/billing/staff/` for operators.
-- Access: `SubscriptionGateMiddleware` (`apps/billing/middleware.py`, after `RBACMiddleware`) redirects any URL carrying a `workspace_id` to the contracting page when `BILLING_REQUIRE_SUBSCRIPTION` is on and the workspace is not `active` or `courtesy`. HTMX requests get `204` + `HX-Redirect`. The `billing` URL namespace is exempt.
+- Access: `SubscriptionGateMiddleware` (`apps/billing/middleware.py`, after `RBACMiddleware`) redirects any URL carrying a `workspace_id` to the contracting page when `services.subscription_required()` is on (set on Plans and prices, else `BILLING_REQUIRE_SUBSCRIPTION`) and the workspace is not `active` or `courtesy`. HTMX requests get `204` + `HX-Redirect`. The `billing` URL namespace is exempt.
 
 ---
 
@@ -335,7 +337,7 @@ To restore: load the dump into an empty database, restore the media volume, and 
 - **Platform apps:** `PLATFORM_FACEBOOK_*`, `PLATFORM_INSTAGRAM_*`, `PLATFORM_THREADS_*`, `PLATFORM_LINKEDIN_{PERSONAL,COMPANY}_*`, `PLATFORM_TIKTOK_*`, `PLATFORM_GOOGLE_*`, `PLATFORM_PINTEREST_*`, `YOUTUBE_COMPLIANCE_ENFORCEMENT`, `UNSPLASH_ACCESS_KEY`
 - **Publisher:** `PUBLISHER_*` timeouts and concurrency
 - **Webhooks:** `FACEBOOK_WEBHOOK_VERIFY_TOKEN`, `INSTAGRAM_LOGIN_WEBHOOK_VERIFY_TOKEN`, `YOUTUBE_WEBHOOK_SECRET`
-- **Billing:** `BILLING_WORKSPACE_PRICE_CENTS`, `BILLING_ANNUAL_DISCOUNT_PERCENT`, `BILLING_VOLUME_DISCOUNTS`, `BILLING_TRIAL_DAYS`, `BILLING_REQUIRE_SUBSCRIPTION`, `ASAAS_API_KEY`, `ASAAS_API_BASE`, `ASAAS_WEBHOOK_TOKEN`
+- **Billing:** `BILLING_WORKSPACE_PRICE_CENTS`, `BILLING_ANNUAL_DISCOUNT_PERCENT`, `BILLING_VOLUME_DISCOUNTS`, `BILLING_TRIAL_DAYS`, `BILLING_REQUIRE_SUBSCRIPTION` (starting values only: Plans and prices overrides each once saved), `ASAAS_API_KEY`, `ASAAS_API_BASE`, `ASAAS_WEBHOOK_TOKEN`
 - **Optional:** `INTELLIGENCE_*` / `STUDIO_*`, `MCP_PUBLIC_BASE_URL`, `MCP_OAUTH_ISSUER_URL`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`
 
 These are read in `config/settings/base.py` but missing from `.env.example`: `SENTRY_DSN`, `REDIS_URL`, `BB_TRUSTED_PROXIES`, `RESEND_WEBHOOK_SECRET`, `EMAIL_SENDING_ENABLED`, `EMAIL_*_LIMIT`, `INVITE_*`, `ASAAS_TIMEOUT_SECONDS`, `BILLING_WORKSPACE_BASE_STORAGE_BYTES`, `BILLING_STORAGE_*`, `STORAGE_QUOTA_ENABLED`, `MAX_ACCOUNTS_PER_PLATFORM`, `INBOX_YOUTUBE_MIN_POLL_SECONDS`, `INBOX_DEEP_SWEEP_SECONDS`, `PUBLISHER_FIRST_COMMENT_*`.

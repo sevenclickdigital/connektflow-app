@@ -646,6 +646,19 @@ class ProductPrice(models.Model):
         WORKSPACE_PRICE_CENTS = "workspace_price_cents", _("Price per workspace (cents)")
         BASE_STORAGE_BYTES = "base_storage_bytes", _("Disk included (bytes)")
         STORAGE_PRICE_PER_GB_CENTS = "storage_price_per_gb_cents", _("Price per extra GB (cents)")
+        # The billing rules, editable on the same screen and recorded in the
+        # same trail. Whole numbers too: a percentage, a number of days, a
+        # 0/1 switch, and up to three volume-discount tiers as "from which
+        # paid workspace" plus "percent" pairs (0 and 0 = an unused tier).
+        ANNUAL_DISCOUNT_PERCENT = "annual_discount_percent", _("Yearly plan discount (%)")
+        TRIAL_DAYS = "trial_days", _("Free trial (days)")
+        REQUIRE_SUBSCRIPTION = "require_subscription", _("Subscription required (1 = yes)")
+        VOLUME_1_FROM = "volume_1_from", _("Volume discount 1: from paid workspace")
+        VOLUME_1_PERCENT = "volume_1_percent", _("Volume discount 1 (%)")
+        VOLUME_2_FROM = "volume_2_from", _("Volume discount 2: from paid workspace")
+        VOLUME_2_PERCENT = "volume_2_percent", _("Volume discount 2 (%)")
+        VOLUME_3_FROM = "volume_3_from", _("Volume discount 3: from paid workspace")
+        VOLUME_3_PERCENT = "volume_3_percent", _("Volume discount 3 (%)")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     key = models.CharField(max_length=64, choices=Key.choices, unique=True)

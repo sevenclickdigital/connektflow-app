@@ -1,7 +1,8 @@
 """Keeps an unpaid workspace on its contracting screen.
 
-Off unless ``BILLING_REQUIRE_SUBSCRIPTION`` is set: turning it on locks
-every workspace that is neither paid nor comped, so a deployment flips it
+Off unless "Subscription required" is on (the plan screen, else
+``BILLING_REQUIRE_SUBSCRIPTION``; ``services.subscription_required``): turning
+it on locks every workspace that is neither paid nor comped, so it is flipped
 only after the workspaces that predate billing have been dealt with.
 
 Runs after ``RBACMiddleware``, which is what resolves ``request.workspace``
@@ -13,7 +14,6 @@ brand or leave.
 
 from __future__ import annotations
 
-from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -33,13 +33,14 @@ class SubscriptionGateMiddleware:
         return self.get_response(request)
 
     def process_view(self, request, view_func, view_args, view_kwargs):
-        if not settings.BILLING_REQUIRE_SUBSCRIPTION:
-            return None
         if "workspace_id" not in view_kwargs:
             return None
         # None for an anonymous visitor: the view's own login check answers.
         workspace = getattr(request, "workspace", None)
         if workspace is None:
+            return None
+        # Read after the cheap checks: it is the plan screen's setting (cached), not a constant.
+        if not services.subscription_required():
             return None
         if request.resolver_match.namespace in OPEN_NAMESPACES:
             return None

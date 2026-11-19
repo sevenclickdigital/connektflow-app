@@ -206,7 +206,7 @@ class AsaasClient:
 
     # -- customers --------------------------------------------------------
 
-    def create_customer(self, *, name, external_reference, email="", cpf_cnpj="", mobile_phone=""):
+    def create_customer(self, *, name, external_reference, email="", cpf_cnpj="", mobile_phone="", group_name=""):
         """Create a customer (the payer) and return Asaas's object.
 
         ``external_reference`` carries our Organization id, which is what
@@ -221,9 +221,11 @@ class AsaasClient:
             payload["cpfCnpj"] = cpf_cnpj
         if mobile_phone:
             payload["mobilePhone"] = mobile_phone
+        if group_name:
+            payload["groupName"] = group_name
         return self._request("POST", "/customers", json=payload)
 
-    def update_customer(self, customer_id, *, name="", email="", cpf_cnpj="", mobile_phone=""):
+    def update_customer(self, customer_id, *, name="", email="", cpf_cnpj="", mobile_phone="", group_name=""):
         """Change the payer's data on an existing customer.
 
         Only what is given is sent: Asaas leaves the other fields as they
@@ -238,6 +240,8 @@ class AsaasClient:
             payload["cpfCnpj"] = cpf_cnpj
         if mobile_phone:
             payload["mobilePhone"] = mobile_phone
+        if group_name:
+            payload["groupName"] = group_name
         return self._request("PUT", f"/customers/{customer_id}", json=payload)
 
     def get_customer(self, customer_id):

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -865,7 +866,24 @@ BILLING_STORAGE_USAGE_CACHE_SECONDS = env.int("BILLING_STORAGE_USAGE_CACHE_SECON
 # the token is missing rather than trusting an anonymous POST — so an
 # unconfigured deployment is inert instead of half-working.
 
-ASAAS_API_KEY = env("ASAAS_API_KEY", default="")
+
+def _asaas_api_key(raw):
+    """The Asaas key with its leading ``$`` (every key is ``$aact_...``).
+
+    Written in the env file WITHOUT the ``$``: Docker Compose (and so Dokploy)
+    and django-environ both read ``$name`` as a reference to another variable,
+    so a key pasted as Asaas shows it arrives empty and the gateway looks
+    unconfigured. The ``$`` is put back here; a key that does arrive with it,
+    or with an escaping backslash, is accepted too.
+    """
+    key = (raw or "").strip().lstrip("\\")
+    if key.startswith("aact_"):
+        key = "$" + key
+    return key
+
+
+# Read from os.environ, not through env(): env() would resolve a leading "$".
+ASAAS_API_KEY = _asaas_api_key(os.environ.get("ASAAS_API_KEY", ""))
 
 # Sandbox by default. Production must be opted into explicitly, so a
 # deployment that forgets this variable bills play money instead of
@@ -877,6 +895,11 @@ ASAAS_API_BASE = env("ASAAS_API_BASE", default="https://api-sandbox.asaas.com/v3
 # Asaas's own docs warn against reusing the API key here, so this is a
 # separate secret.
 ASAAS_WEBHOOK_TOKEN = env("ASAAS_WEBHOOK_TOKEN", default="")
+
+# The Asaas customer group every customer created here joins, so this
+# product's payers are told apart from those of the other tools billing
+# through the same Asaas account. Empty = no group.
+ASAAS_CUSTOMER_GROUP = env("ASAAS_CUSTOMER_GROUP", default="Connekt Flow").strip()
 
 # Seconds to wait on an Asaas HTTP call. Short enough that a gateway stall
 # doesn't hold a web worker through a user's checkout click.

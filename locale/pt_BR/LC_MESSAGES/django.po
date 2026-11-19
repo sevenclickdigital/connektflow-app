@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 01:24+0000\n"
+"POT-Creation-Date: 2026-11-19 01:57+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -1096,6 +1096,42 @@ msgstr "Disco incluído (bytes)"
 msgid "Price per extra GB (cents)"
 msgstr "Preço por GB extra (centavos)"
 
+#: apps/billing/models.py:653
+msgid "Yearly plan discount (%)"
+msgstr "Desconto do plano anual (%)"
+
+#: apps/billing/models.py:654
+msgid "Free trial (days)"
+msgstr "Teste grátis (dias)"
+
+#: apps/billing/models.py:655
+msgid "Subscription required (1 = yes)"
+msgstr "Assinatura obrigatória (1 = sim)"
+
+#: apps/billing/models.py:656
+msgid "Volume discount 1: from paid workspace"
+msgstr "Desconto por volume 1: a partir da marca paga"
+
+#: apps/billing/models.py:657
+msgid "Volume discount 1 (%)"
+msgstr "Desconto por volume 1 (%)"
+
+#: apps/billing/models.py:658
+msgid "Volume discount 2: from paid workspace"
+msgstr "Desconto por volume 2: a partir da marca paga"
+
+#: apps/billing/models.py:659
+msgid "Volume discount 2 (%)"
+msgstr "Desconto por volume 2 (%)"
+
+#: apps/billing/models.py:660
+msgid "Volume discount 3: from paid workspace"
+msgstr "Desconto por volume 3: a partir da marca paga"
+
+#: apps/billing/models.py:661
+msgid "Volume discount 3 (%)"
+msgstr "Desconto por volume 3 (%)"
+
 #: apps/billing/services.py:187
 msgid "Enter the price per workspace, in reais."
 msgstr "Informe o preço por marca, em reais."
@@ -1171,11 +1207,36 @@ msgid ""
 msgstr ""
 "Esse preço por GB extra é alto demais para ser intencional. Confira o valor."
 
-#: apps/billing/services.py:681
+#: apps/billing/services.py:519
+msgid "The yearly discount must be a whole percentage from 0 to 90."
+msgstr "O desconto anual precisa ser uma porcentagem inteira de 0 a 90."
+
+#: apps/billing/services.py:524
+msgid "The free trial must be a whole number of days from 0 to 365."
+msgstr "O teste grátis precisa ser um número inteiro de dias, de 0 a 365."
+
+#: apps/billing/services.py:533 apps/billing/services.py:543
+msgid "A volume discount starts at a whole number of paid brands, from 2."
+msgstr "Um desconto por volume começa num número inteiro de marcas pagas, a partir de 2."
+
+#: apps/billing/services.py:538
+msgid "A volume discount must be a whole percentage from 1 to 90."
+msgstr "Um desconto por volume precisa ser uma porcentagem inteira de 1 a 90."
+
+#: apps/billing/services.py:541
+msgid ""
+"Fill in both the brand and the percentage of a volume discount, or neither."
+msgstr "Preencha a marca e a porcentagem de um desconto por volume, ou nenhuma das duas."
+
+#: apps/billing/services.py:545
+msgid "Two volume discounts cannot start at the same brand."
+msgstr "Dois descontos por volume não podem começar na mesma marca."
+
+#: apps/billing/services.py:814
 msgid "This account has already used its free trial."
 msgstr "Esta conta já usou o teste grátis."
 
-#: apps/billing/services.py:685
+#: apps/billing/services.py:818
 msgid ""
 "A free trial has already been used with this document, phone or email. "
 "Contract the plan to start, or get in touch with us."
@@ -1297,11 +1358,21 @@ msgstr ""
 "%(gb)s GB contratados. O espaço é liberado assim que o pagamento for "
 "confirmado."
 
-#: apps/billing/views.py:1110
+#: apps/billing/views.py:1089
+msgid "The rules were already those values, so nothing changed."
+msgstr "As regras já eram esses valores, então nada foi alterado."
+
+#: apps/billing/views.py:1093
+msgid ""
+"Rules updated. Discounts and the free trial apply to what is contracted from "
+"now on."
+msgstr "Regras atualizadas. Os descontos e o teste grátis valem para o que for contratado de agora em diante."
+
+#: apps/billing/views.py:1138
 msgid "The prices were already those values, so nothing changed."
 msgstr "Os preços já eram esses valores, então nada foi alterado."
 
-#: apps/billing/views.py:1125
+#: apps/billing/views.py:1153
 msgid ""
 "Prices updated. Only subscriptions and add-ons contracted from now on use "
 "the new values — nobody who already bought is re-priced."
@@ -1309,19 +1380,19 @@ msgstr ""
 "Preços atualizados. Somente assinaturas e adicionais contratados de agora em "
 "diante usam os novos valores — ninguém que já comprou é reprecificado."
 
-#: apps/billing/views.py:1412
+#: apps/billing/views.py:1440
 #, python-format
 msgid "Workspace \"%(name)s\" is now exempt and will not be charged."
 msgstr "A marca \"%(name)s\" agora é isenta e não será cobrada."
 
-#: apps/billing/views.py:1417
+#: apps/billing/views.py:1445
 #, python-format
 msgid ""
 "Account \"%(org)s\" now has more exempt workspaces than its limit allows."
 msgstr ""
 "A conta \"%(org)s\" agora tem mais marcas isentas do que o limite permite."
 
-#: apps/billing/views.py:1424
+#: apps/billing/views.py:1452
 #, python-format
 msgid ""
 "Workspace \"%(name)s\" will be charged again. It needs a subscription to "
@@ -1330,18 +1401,18 @@ msgstr ""
 "A marca \"%(name)s\" voltará a ser cobrada. Agora é necessária uma "
 "assinatura para mantê-la ativa."
 
-#: apps/billing/views.py:1428 apps/billing/views.py:1772
+#: apps/billing/views.py:1456 apps/billing/views.py:1805
 #: apps/workspaces/views.py:329
 msgid "Unknown action."
 msgstr "Ação desconhecida."
 
-#: apps/billing/views.py:1452 apps/billing/views.py:1515
+#: apps/billing/views.py:1480 apps/billing/views.py:1543
 msgid ""
 "The number of exempt workspaces must be zero or a positive whole number."
 msgstr ""
 "O número de marcas isentas deve ser zero ou um número inteiro positivo."
 
-#: apps/billing/views.py:1463
+#: apps/billing/views.py:1491
 #, python-format
 msgid ""
 "Account \"%(org)s\" may now have up to %(quota)s workspace(s) exempt from "
@@ -1350,7 +1421,7 @@ msgstr ""
 "A conta \"%(org)s\" agora pode ter até %(quota)s marca(s) isenta(s) de "
 "cobrança."
 
-#: apps/billing/views.py:1469
+#: apps/billing/views.py:1497
 msgid ""
 "Workspaces already exempt above the new limit were kept — nobody starts "
 "being charged retroactively."
@@ -1358,17 +1429,17 @@ msgstr ""
 "As marcas já isentas acima do novo limite foram mantidas — ninguém passa a "
 "ser cobrado retroativamente."
 
-#: apps/billing/views.py:1523
+#: apps/billing/views.py:1551
 msgid "Enter the end date as a valid date, or leave it empty for no end date."
 msgstr ""
 "Informe a data de término em um formato válido, ou deixe em branco para não "
 "ter data de término."
 
-#: apps/billing/views.py:1529
+#: apps/billing/views.py:1557
 msgid "The end date is in the past. Choose today or a later date."
 msgstr "A data de término está no passado. Escolha hoje ou uma data posterior."
 
-#: apps/billing/views.py:1543
+#: apps/billing/views.py:1571
 #, python-format
 msgid ""
 "Account \"%(org)s\" has %(quota)s workspace(s) exempt from charges, with no "
@@ -1377,7 +1448,7 @@ msgstr ""
 "A conta \"%(org)s\" tem %(quota)s marca(s) isenta(s) de cobrança, sem data "
 "de término."
 
-#: apps/billing/views.py:1550
+#: apps/billing/views.py:1578
 #, python-format
 msgid ""
 "Account \"%(org)s\" has %(quota)s workspace(s) exempt from charges until "
@@ -1386,7 +1457,7 @@ msgstr ""
 "A conta \"%(org)s\" tem %(quota)s marca(s) isenta(s) de cobrança até "
 "%(date)s; depois dessa data ela volta a ser cobrada automaticamente."
 
-#: apps/billing/views.py:1572
+#: apps/billing/views.py:1600
 #, python-format
 msgid ""
 "Account \"%(org)s\" is billed again. Each workspace needs a subscription to "
@@ -1395,29 +1466,29 @@ msgstr ""
 "A conta \"%(org)s\" voltou a ser cobrada. Cada marca precisa de uma "
 "assinatura para continuar ativa."
 
-#: apps/billing/views.py:1595
+#: apps/billing/views.py:1623
 msgid "The account needs a name."
 msgstr "A conta precisa de um nome."
 
-#: apps/billing/views.py:1614
+#: apps/billing/views.py:1642
 msgid "The account owner needs an e-mail address."
 msgstr "O responsável pela conta precisa de um e-mail."
 
-#: apps/billing/views.py:1619
+#: apps/billing/views.py:1647
 msgid "That is not a valid e-mail address."
 msgstr "Esse e-mail não é válido."
 
-#: apps/billing/views.py:1625
+#: apps/billing/views.py:1653
 #, python-format
 msgid "Another account already uses %(email)s. Nothing was changed."
 msgstr "Outra conta já usa %(email)s. Nada foi alterado."
 
-#: apps/billing/views.py:1636
+#: apps/billing/views.py:1664
 #, python-format
 msgid "Account \"%(org)s\" updated."
 msgstr "Conta \"%(org)s\" atualizada."
 
-#: apps/billing/views.py:1679
+#: apps/billing/views.py:1707
 #, python-format
 msgid ""
 "A password reset e-mail was sent to %(email)s. Only they can set the new "
@@ -1426,11 +1497,11 @@ msgstr ""
 "Um e-mail de redefinição de senha foi enviado para %(email)s. Só a própria "
 "pessoa pode definir a nova senha."
 
-#: apps/billing/views.py:1706
+#: apps/billing/views.py:1734
 msgid "Type the account's email exactly to delete it."
 msgstr "Digite o e-mail da conta exatamente como está para excluí-la."
 
-#: apps/billing/views.py:1716
+#: apps/billing/views.py:1747
 #, python-format
 msgid ""
 "%(email)s was not deleted: the payment provider did not cancel the "
@@ -1439,17 +1510,17 @@ msgstr ""
 "%(email)s não foi excluída: o provedor de pagamento não cancelou as "
 "assinaturas. Tente de novo em instantes."
 
-#: apps/billing/views.py:1725
+#: apps/billing/views.py:1757
 #, python-format
 msgid "%(email)s was deleted, with %(organizations)s."
 msgstr "%(email)s foi excluída, junto com %(organizations)s."
 
-#: apps/billing/views.py:1728
+#: apps/billing/views.py:1761
 #, python-format
 msgid "%(email)s was deleted."
 msgstr "%(email)s foi excluída."
 
-#: apps/billing/views.py:1763
+#: apps/billing/views.py:1796
 #, python-format
 msgid ""
 "%(email)s can no longer sign in. Nothing was deleted — reactivate to restore "
@@ -1458,7 +1529,7 @@ msgstr ""
 "%(email)s não consegue mais entrar. Nada foi excluído — reative para "
 "restaurar o acesso."
 
-#: apps/billing/views.py:1770
+#: apps/billing/views.py:1803
 #, python-format
 msgid "%(email)s can sign in again."
 msgstr "%(email)s pode entrar novamente."
@@ -3362,7 +3433,7 @@ msgstr "Venda"
 msgid "Offer"
 msgstr "Oferta"
 
-#: apps/composer/idea_icons.py:37
+#: apps/composer/idea_icons.py:37 templates/billing/staff_plans.html:291
 msgid "Discount"
 msgstr "Desconto"
 
@@ -11583,11 +11654,77 @@ msgstr "Provedor não configurado"
 msgid "These last two are set on the installation, not on this screen."
 msgstr "Estes dois últimos são definidos na instalação, não nesta tela."
 
-#: templates/billing/staff_plans.html:254
+#: templates/billing/staff_plans.html:246
+msgid "Discounts and free trial"
+msgstr "Descontos e teste grátis"
+
+#: templates/billing/staff_plans.html:248
+msgid ""
+"Read when a brand is contracted, like the prices. Nobody who already bought "
+"is re-priced."
+msgstr "Lidos quando uma marca é contratada, como os preços. Ninguém que já comprou é reprecificado."
+
+#: templates/billing/staff_plans.html:249
+msgid ""
+"Nobody has set these yet — they are the values this installation was "
+"deployed with."
+msgstr "Ninguém definiu isso ainda — são os valores com que esta instalação foi publicada."
+
+#: templates/billing/staff_plans.html:258
+msgid "Yearly plan discount"
+msgstr "Desconto do plano anual"
+
+#: templates/billing/staff_plans.html:259
+msgid ""
+"Off the monthly price for whoever pays a year at once. 0 hides the yearly "
+"plan."
+msgstr "Sobre o preço mensal, para quem paga o ano de uma vez. Com 0, o plano anual não aparece."
+
+#: templates/billing/staff_plans.html:270
+msgid "Free trial"
+msgstr "Teste grátis"
+
+#: templates/billing/staff_plans.html:271
+msgid "One per account and per CPF/CNPJ. 0 offers no trial."
+msgstr "Um por conta e por CPF/CNPJ. Com 0, não há teste grátis."
+
+#: templates/billing/staff_plans.html:276
+msgid "days"
+msgstr "dias"
+
+#: templates/billing/staff_plans.html:282
+msgid "Volume discounts"
+msgstr "Descontos por volume"
+
+#: templates/billing/staff_plans.html:283
+msgid ""
+"Cheaper brands for accounts with many paid ones: from the brand you set on, "
+"each new one gets the discount. Leave a line empty to not use it."
+msgstr "Marcas mais baratas para contas com muitas marcas pagas: a partir da marca indicada, cada nova marca recebe o desconto. Deixe uma linha vazia para não usá-la."
+
+#: templates/billing/staff_plans.html:288
+msgid "From brand"
+msgstr "A partir da marca"
+
+#: templates/billing/staff_plans.html:302
+msgid "Subscription required"
+msgstr "Assinatura obrigatória"
+
+#: templates/billing/staff_plans.html:303
+msgid ""
+"A brand that is neither paid nor exempt opens only its contracting page. "
+"Exempt or contract the brands that already exist before turning this on."
+msgstr "Uma marca que não está paga nem isenta abre só a página de contratação. Isente ou contrate as marcas que já existem antes de ligar isto."
+
+#: templates/billing/staff_plans.html:315
+msgid "Save rules"
+msgstr "Salvar regras"
+
+#: templates/billing/staff_plans.html:338
 msgid "Price history"
 msgstr "Histórico de preços"
 
-#: templates/billing/staff_plans.html:256
+#: templates/billing/staff_plans.html:340
 msgid ""
 "The most recent changes to the list above. Nothing here changed anyone's "
 "existing bill."
@@ -11595,17 +11732,17 @@ msgstr ""
 "As alterações mais recentes na lista acima. Nada aqui alterou a fatura de "
 "quem já é cliente."
 
-#: templates/billing/staff_plans.html:270
+#: templates/billing/staff_plans.html:354
 #, python-format
 msgid "Set to %(value)s, from the installation's own value."
 msgstr "Definido em %(value)s, antes vindo do valor da própria instalação."
 
-#: templates/billing/staff_plans.html:272
+#: templates/billing/staff_plans.html:356
 #, python-format
 msgid "%(old)s to %(value)s"
 msgstr "de %(old)s para %(value)s"
 
-#: templates/billing/staff_plans.html:278
+#: templates/billing/staff_plans.html:362
 #, python-format
 msgid "%(who)s on %(when)s"
 msgstr "%(who)s em %(when)s"

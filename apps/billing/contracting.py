@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import logging
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -94,6 +95,7 @@ def ensure_customer(organization, *, client=None, email="", cpf_cnpj=""):
             email=organization.billing_email or email,
             cpf_cnpj=cpf_cnpj,
             mobile_phone=profile.phone,
+            group_name=settings.ASAAS_CUSTOMER_GROUP,
         )
 
     customer_id = existing.get("id") or ""
@@ -127,6 +129,7 @@ def update_payer(organization, *, name, tax_id, phone, email, client=None):
             email=email,
             cpf_cnpj=tax_id,
             mobile_phone=phone,
+            group_name=settings.ASAAS_CUSTOMER_GROUP,
         )
 
     with transaction.atomic():

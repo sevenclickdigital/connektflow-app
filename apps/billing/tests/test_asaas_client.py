@@ -171,6 +171,16 @@ class CustomerTests(SimpleTestCase):
         self.assertNotIn("email", kwargs["json"])
         self.assertNotIn("cpfCnpj", kwargs["json"])
 
+    def test_the_customer_group_is_sent_on_create_and_update(self):
+        with mock.patch("httpx.request", return_value=_response(json_body={"id": "cus_1"})) as request:
+            AsaasClient().create_customer(name="Acme", external_reference="org-uuid", group_name="Connekt Flow")
+            self.assertEqual(request.call_args.kwargs["json"]["groupName"], "Connekt Flow")
+            AsaasClient().update_customer("cus_1", group_name="Connekt Flow")
+            self.assertEqual(request.call_args.args[:2], ("PUT", f"{API_BASE}/customers/cus_1"))
+            self.assertEqual(request.call_args.kwargs["json"], {"groupName": "Connekt Flow"})
+            AsaasClient().create_customer(name="Acme", external_reference="org-uuid")
+            self.assertNotIn("groupName", request.call_args.kwargs["json"])
+
     def test_find_customer_by_reference_filters_and_unwraps_the_list(self):
         body = {"object": "list", "hasMore": False, "totalCount": 1, "data": [{"id": "cus_9"}]}
         with mock.patch("httpx.request", return_value=_response(json_body=body)) as request:
@@ -254,3 +264,16 @@ class MoneyConversionTests(SimpleTestCase):
 
     def test_conversion_returns_decimal_not_float(self):
         self.assertIsInstance(cents_to_value(5000), Decimal)
+
+
+class ApiKeySettingTests(SimpleTestCase):
+    """Asaas keys start with "$", which env files and django-environ read as a
+    variable reference; the setting accepts the key without it."""
+
+    def test_the_dollar_is_put_back_and_never_doubled(self):
+        from config.settings.base import _asaas_api_key
+
+        assert _asaas_api_key("aact_hmlg_abc") == "$aact_hmlg_abc"
+        assert _asaas_api_key("$aact_hmlg_abc") == "$aact_hmlg_abc"
+        assert _asaas_api_key("\\$aact_prod_abc ") == "$aact_prod_abc"
+        assert _asaas_api_key("") == ""

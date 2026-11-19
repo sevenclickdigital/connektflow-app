@@ -265,7 +265,7 @@ def _billing_context(request, workspace):
         # invoice to open rather than a contract to sign.
         "awaiting_payment": bool(subscription.gateway_subscription_id)
         and subscription.status in (WorkspaceSubscription.Status.PENDING, WorkspaceSubscription.Status.PAST_DUE),
-        "subscription_required": settings.BILLING_REQUIRE_SUBSCRIPTION,
+        "subscription_required": services.subscription_required(),
         "trial_available": services.trial_available(workspace, request.user),
         "trial_days": services.trial_days(),
         "payer_known": services.payer_identity_known(workspace.organization),
@@ -1039,6 +1039,7 @@ def staff_plans(request):
                     prices[ProductPrice.Key.STORAGE_PRICE_PER_GB_CENTS]["value"],
                 ),
             },
+            "rules": services.billing_rules(),
             "price_changes": services.recent_price_changes(),
             "storage_quota_enabled": getattr(settings, "BILLING_STORAGE_QUOTA_ENABLED", False),
             # Expected states, not an incident — see the module docstring.
@@ -1064,6 +1065,33 @@ _PRICE_FIELDS = (
     ("base_storage_gb", ProductPrice.Key.BASE_STORAGE_BYTES),
     ("storage_price_per_gb_brl", ProductPrice.Key.STORAGE_PRICE_PER_GB_CENTS),
 )
+
+
+@_staff_required
+@require_POST
+def staff_update_rules(request):
+    """Save the billing rules: yearly discount, free trial, volume discounts and the subscription lock.
+
+    All or nothing like the prices: every field is validated first
+    (``services.parse_billing_rules``) and written only if all pass, each into
+    the same ProductPrice row and trail. A change applies to what is
+    contracted from then on; turning the lock on takes effect on the next
+    page a customer opens.
+    """
+    try:
+        values = services.parse_billing_rules(request.POST)
+    except services.PriceValidationError as exc:
+        messages.error(request, str(exc))
+        return redirect("billing_staff:plans")
+
+    changed = [key for key, value in values.items() if services.set_price(key, value, changed_by=request.user)[1]]
+    if not changed:
+        messages.info(request, _("The rules were already those values, so nothing changed."))
+        return redirect("billing_staff:plans")
+
+    logger.warning("Operator %s changed billing rules: %s", request.user.email, ", ".join(str(key) for key in changed))
+    messages.success(request, _("Rules updated. Discounts and the free trial apply to what is contracted from now on."))
+    return redirect("billing_staff:plans")
 
 
 @_staff_required

@@ -122,7 +122,7 @@ def invalidate_price_cache(key=None):
     worth more than a saved one on a figure that changes a few times a
     year.
     """
-    keys = [key] if key is not None else list(_PRICE_FALLBACK_SETTINGS)
+    keys = [key] if key is not None else list(ProductPrice.Key.values)
     cache.delete_many([_price_cache_key(k) for k in keys])
 
 
@@ -394,7 +394,7 @@ def set_price(key, value, *, changed_by=None):
     reason this function exists at all rather than an UPDATE across the
     sold rows.
     """
-    if key not in _PRICE_FALLBACK_SETTINGS:
+    if key not in ProductPrice.Key.values:
         raise PriceValidationError("Unknown price key.")
     value = int(value)
 
@@ -435,6 +435,130 @@ def recent_price_changes(limit=20):
 
 
 # ---------------------------------------------------------------------------
+# Billing rules — discounts, trial and the subscription lock
+# ---------------------------------------------------------------------------
+#
+# Edited on the plan screen like the prices and stored the same way: one
+# ProductPrice row per figure, the change recorded in ProductPriceChange, no
+# row meaning "nobody set it" and falling back to the BILLING_* setting. Like
+# a price, a change applies to what is contracted from then on.
+
+VOLUME_TIER_KEYS = (
+    (ProductPrice.Key.VOLUME_1_FROM, ProductPrice.Key.VOLUME_1_PERCENT),
+    (ProductPrice.Key.VOLUME_2_FROM, ProductPrice.Key.VOLUME_2_PERCENT),
+    (ProductPrice.Key.VOLUME_3_FROM, ProductPrice.Key.VOLUME_3_PERCENT),
+)
+
+#: Upper bounds of the whole-number rules, the same guard the deployment
+#: settings apply (config/settings/base.py) plus a year for the trial.
+RULE_MAX_PERCENT = 90
+RULE_MAX_TRIAL_DAYS = 365
+RULE_MAX_VOLUME_FROM = 1000
+
+
+def _rule_default(key):
+    """The deployment setting behind ``key``, in the stored unit."""
+    if key == ProductPrice.Key.ANNUAL_DISCOUNT_PERCENT:
+        return int(settings.BILLING_ANNUAL_DISCOUNT_PERCENT)
+    if key == ProductPrice.Key.TRIAL_DAYS:
+        return int(settings.BILLING_TRIAL_DAYS)
+    if key == ProductPrice.Key.REQUIRE_SUBSCRIPTION:
+        return int(bool(settings.BILLING_REQUIRE_SUBSCRIPTION))
+    tiers = list(settings.BILLING_VOLUME_DISCOUNTS)
+    for index, (from_key, percent_key) in enumerate(VOLUME_TIER_KEYS):
+        if key in (from_key, percent_key):
+            if index >= len(tiers):
+                return 0
+            return int(tiers[index][0] if key == from_key else tiers[index][1])
+    raise KeyError(key)
+
+
+def _resolved_rule(key):
+    value = _configured_price(key)
+    return _rule_default(key) if value is None else value
+
+
+def billing_rules():
+    """The rules as the plan screen's form shows them, with whether each was set there."""
+    tiers = volume_discounts()
+    volume = [
+        {
+            "index": index + 1,
+            "from": tiers[index][0] if index < len(tiers) else "",
+            "percent": tiers[index][1] if index < len(tiers) else "",
+        }
+        for index in range(len(VOLUME_TIER_KEYS))
+    ]
+    keys = [
+        ProductPrice.Key.ANNUAL_DISCOUNT_PERCENT,
+        ProductPrice.Key.TRIAL_DAYS,
+        ProductPrice.Key.REQUIRE_SUBSCRIPTION,
+    ]
+    keys += [key for pair in VOLUME_TIER_KEYS for key in pair]
+    return {
+        "annual_discount_percent": annual_discount_percent(),
+        "trial_days": trial_days(),
+        "subscription_required": subscription_required(),
+        "volume": volume,
+        "is_configured": ProductPrice.objects.filter(key__in=keys).exists(),
+    }
+
+
+def _whole_number(raw, *, maximum, message):
+    text = "" if raw is None else str(raw).strip()
+    if not text:
+        return 0
+    if not text.isdigit() or int(text) > maximum:
+        raise PriceValidationError(message)
+    return int(text)
+
+
+def parse_billing_rules(data):
+    """``{key: value}`` for every rule from the plan screen's form, or PriceValidationError.
+
+    Empty numbers mean 0. A volume tier is either empty (both 0) or a
+    paid-workspace position from 2 with a percentage from 1 to 90, and two
+    tiers cannot start at the same position.
+    """
+    values = {
+        ProductPrice.Key.ANNUAL_DISCOUNT_PERCENT: _whole_number(
+            data.get("annual_discount_percent"),
+            maximum=RULE_MAX_PERCENT,
+            message=_("The yearly discount must be a whole percentage from 0 to 90."),
+        ),
+        ProductPrice.Key.TRIAL_DAYS: _whole_number(
+            data.get("trial_days"),
+            maximum=RULE_MAX_TRIAL_DAYS,
+            message=_("The free trial must be a whole number of days from 0 to 365."),
+        ),
+        ProductPrice.Key.REQUIRE_SUBSCRIPTION: 1 if data.get("subscription_required") == "on" else 0,
+    }
+    starts = set()
+    for index, (from_key, percent_key) in enumerate(VOLUME_TIER_KEYS, start=1):
+        minimum = _whole_number(
+            data.get(f"volume_{index}_from"),
+            maximum=RULE_MAX_VOLUME_FROM,
+            message=_("A volume discount starts at a whole number of paid brands, from 2."),
+        )
+        percent = _whole_number(
+            data.get(f"volume_{index}_percent"),
+            maximum=RULE_MAX_PERCENT,
+            message=_("A volume discount must be a whole percentage from 1 to 90."),
+        )
+        if bool(minimum) != bool(percent):
+            raise PriceValidationError(_("Fill in both the brand and the percentage of a volume discount, or neither."))
+        if minimum and minimum < 2:
+            raise PriceValidationError(_("A volume discount starts at a whole number of paid brands, from 2."))
+        if minimum and minimum in starts:
+            raise PriceValidationError(_("Two volume discounts cannot start at the same brand."))
+        if minimum:
+            starts.add(minimum)
+        values[from_key] = minimum
+        values[percent_key] = percent
+    return values
+
+
+# ---------------------------------------------------------------------------
 # Quotes — what contracting a workspace costs right now
 # ---------------------------------------------------------------------------
 
@@ -450,13 +574,27 @@ _PAYING_STATUSES = (
 
 def annual_discount_percent():
     """Discount of the yearly plan, in whole percent. 0 = not offered."""
-    return int(settings.BILLING_ANNUAL_DISCOUNT_PERCENT)
+    return _resolved_rule(ProductPrice.Key.ANNUAL_DISCOUNT_PERCENT)
+
+
+def volume_discounts():
+    """The volume-discount tiers as ``[(from_position, percent), ...]``, ascending.
+
+    The operator's tiers once the rules form has been saved (it writes all
+    three), else ``BILLING_VOLUME_DISCOUNTS``. A tier saved as 0 and 0 is unused.
+    """
+    stored = [
+        (_configured_price(from_key), _configured_price(percent_key)) for from_key, percent_key in VOLUME_TIER_KEYS
+    ]
+    if all(minimum is None and percent is None for minimum, percent in stored):
+        return list(settings.BILLING_VOLUME_DISCOUNTS)
+    return sorted((minimum, percent) for minimum, percent in stored if minimum and percent)
 
 
 def volume_discount_percent(position):
     """Discount of an organization's ``position``-th paid workspace."""
     percent = 0
-    for minimum, tier_percent in settings.BILLING_VOLUME_DISCOUNTS:
+    for minimum, tier_percent in volume_discounts():
         if position >= minimum:
             percent = tier_percent
     return percent
@@ -560,7 +698,12 @@ class TrialRefusedError(ValueError):
 
 def trial_days():
     """Length of the free trial in days. 0 = no trial is offered."""
-    return int(settings.BILLING_TRIAL_DAYS)
+    return _resolved_rule(ProductPrice.Key.TRIAL_DAYS)
+
+
+def subscription_required():
+    """Whether a workspace that is neither paid nor comped opens only its contracting page."""
+    return bool(_resolved_rule(ProductPrice.Key.REQUIRE_SUBSCRIPTION))
 
 
 def trial_available(workspace, user=None):
