@@ -57,9 +57,20 @@ class SourceCard:
     upcoming: bool = False
 
 
+def all_sources() -> list[OpportunitySource]:
+    """Every source, built and announced, in the order the grids show them."""
+    return [*SOURCES.values(), *UPCOMING]
+
+
 def source_cards(workspace_id) -> list[SourceCard]:
+    """The workspace's source cards. A source the operator hid (the administrative
+    area's Platforms screen, ``PlatformVisibility``) is left out unless this
+    workspace already linked it, so an existing connection stays reachable."""
+    from apps.social_accounts.models import PlatformVisibility
+
+    hidden = PlatformVisibility.hidden_keys()
     connections = {c.source: c for c in OpportunityConnection.objects.for_workspace(workspace_id)}
-    return [
+    cards = [
         SourceCard(
             source=source,
             connection=connections.get(key),
@@ -68,3 +79,4 @@ def source_cards(workspace_id) -> list[SourceCard]:
         )
         for key, source in SOURCES.items()
     ] + [SourceCard(source=source, connection=None, connect_url="", open_url="", upcoming=True) for source in UPCOMING]
+    return [card for card in cards if card.connection or card.source.key not in hidden]

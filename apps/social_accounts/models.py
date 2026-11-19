@@ -796,7 +796,12 @@ class MastodonAppRegistration(models.Model):
 
 
 class PlatformVisibility(models.Model):
-    """Site-wide toggle controlling which platforms appear on the connect page."""
+    """Site-wide toggle controlling which platforms appear on the connect page.
+
+    Besides the social platforms, ``platform`` also holds the keys of the
+    opportunity sources (``apps.radar.sources``: Shopee Affiliates and the
+    announced ones), so one switch list in the administrative area covers both.
+    """
 
     platform = models.CharField(
         max_length=30,
@@ -819,9 +824,18 @@ class PlatformVisibility(models.Model):
         return f"{self.get_platform_display()} ({'visible' if self.is_visible else 'hidden'})"
 
     @classmethod
+    def hidden_keys(cls) -> set[str]:
+        return set(cls.objects.filter(is_visible=False).values_list("platform", flat=True))
+
+    @classmethod
     def set_visible(cls, platform: str, visible: bool) -> "PlatformVisibility":
-        """Show or hide ``platform`` on every connect surface. Raises ValueError for an unknown platform."""
-        if platform not in PlatformCredential.Platform.values:
+        """Show or hide a platform or an opportunity source on every connect surface.
+
+        Raises ValueError for a key that is neither.
+        """
+        from apps.radar.sources import all_sources
+
+        if platform not in PlatformCredential.Platform.values and platform not in {s.key for s in all_sources()}:
             raise ValueError(f"Unknown platform: {platform!r}")
         row, _created = cls.objects.update_or_create(platform=platform, defaults={"is_visible": visible})
         return row
@@ -836,7 +850,7 @@ class PlatformVisibility(models.Model):
         fallen behind by two platforms). Platforms without a row default to
         visible, matching ``is_visible``.
         """
-        hidden = set(cls.objects.filter(is_visible=False).values_list("platform", flat=True))
+        hidden = cls.hidden_keys()
         return [(value, label) for value, label in PlatformCredential.Platform.choices if value not in hidden]
 
     # Platforms that connect the same network through another route; one of

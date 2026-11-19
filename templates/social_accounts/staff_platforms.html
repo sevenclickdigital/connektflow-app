@@ -1,13 +1,14 @@
 {% extends "layouts/admin_shell.html" %}
 {% load i18n %}
 {% comment %}
-Networks customers may connect: one switch per platform over PlatformVisibility
+Networks and opportunity sources customers may connect: one switch each over PlatformVisibility
 (apps.social_accounts.staff_views). Turning one off hides it from the connect
 page, the sidebar's connect shortcuts and the composer's "Connect channel" card
 for every brand; accounts already connected keep working. Each switch posts on
 its own and answers with a toast. "Credentials ready" says whether the
 platform's app is configured, so a network is turned on only once it can
-connect. The platform value in hx-vals comes from the model's choices.
+connect. The value in hx-vals comes from the platform choices or the
+opportunity sources registry, never from the request.
 {% endcomment %}
 
 {% block title %}{% translate "Platforms" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
@@ -15,11 +16,12 @@ connect. The platform value in hx-vals comes from the model's choices.
 {% block page_header %}
 <div class="page-header">
   <h1 class="page-title">{% translate "Platforms" %}</h1>
-  <p class="page-description">{% translate "Choose which networks customers can connect. A hidden network leaves the connect page for every brand; accounts already connected keep working." %}</p>
+  <p class="page-description">{% translate "Choose which networks and opportunity sources customers can connect. A hidden one leaves the connect page for every brand; what was already connected keeps working." %}</p>
 </div>
 {% endblock %}
 
 {% block content %}
+<h2 class="section-title mb-3">{% translate "Social networks" %}</h2>
 <section class="a-card divide-y divide-neutral-300">
   {% for platform in platforms %}
   <div class="flex items-center gap-4 px-5 py-4">
@@ -42,6 +44,32 @@ connect. The platform value in hx-vals comes from the model's choices.
              hx-post="{% url 'social_accounts_staff:platform_toggle' %}" hx-trigger="change" hx-swap="none"
              hx-vals='{"platform": "{{ platform.value }}"}'
              aria-label="{% blocktranslate with name=platform.label %}Show {{ name }} to customers{% endblocktranslate %}">
+      <span class="bb-toggle-track"></span>
+    </label>
+  </div>
+  {% endfor %}
+</section>
+
+{% comment %}
+Opportunity sources (apps.radar.sources). A hidden one leaves the Platforms page
+and the Radar only for brands that have not linked it yet.
+{% endcomment %}
+<h2 class="section-title mt-8 mb-3">{% translate "Business & opportunities" %}</h2>
+<section class="a-card divide-y divide-neutral-300">
+  {% for source in sources %}
+  <div class="flex items-center gap-4 px-5 py-4">
+    <div class="flex-1 min-w-0">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-sm font-semibold text-neutral-950">{{ source.label }}</span>
+        {% if source.upcoming %}<span class="pill pill-neutral">{% translate "Soon" context "menu" %}</span>{% endif %}
+      </div>
+      <p class="text-xs text-neutral-600 mt-0.5 truncate">{{ source.description }}</p>
+    </div>
+    <label class="bb-toggle" title="{% translate 'Shown to customers' %}">
+      <input type="checkbox" name="visible"{% if source.visible %} checked{% endif %}
+             hx-post="{% url 'social_accounts_staff:platform_toggle' %}" hx-trigger="change" hx-swap="none"
+             hx-vals='{"platform": "{{ source.value }}"}'
+             aria-label="{% blocktranslate with name=source.label %}Show {{ name }} to customers{% endblocktranslate %}">
       <span class="bb-toggle-track"></span>
     </label>
   </div>

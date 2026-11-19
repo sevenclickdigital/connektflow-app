@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 00:41+0000\n"
+"POT-Creation-Date: 2026-11-19 00:48+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -3238,7 +3238,8 @@ msgstr "Texto do modelo"
 msgid "Category"
 msgstr "Categoria"
 
-#: apps/composer/forms.py:255 templates/social_accounts/staff_platforms.html:40
+#: apps/composer/forms.py:255 templates/social_accounts/staff_platforms.html:42
+#: templates/social_accounts/staff_platforms.html:68
 msgid "Shown to customers"
 msgstr "Visível para os clientes"
 
@@ -5531,6 +5532,7 @@ msgid "Shopee sent an image the media library does not accept."
 msgstr "A Shopee enviou uma imagem que a galeria não aceita."
 
 #: apps/social_accounts/catalog.py:13
+#: templates/social_accounts/staff_platforms.html:24
 msgid "Social networks"
 msgstr "Redes sociais"
 
@@ -6059,16 +6061,16 @@ msgstr ""
 "O acesso foi removido no Threads. Reconecte a conta para continuar "
 "publicando."
 
-#: apps/social_accounts/staff_views.py:54
+#: apps/social_accounts/staff_views.py:67
 msgid "Unknown platform."
 msgstr "Plataforma desconhecida."
 
-#: apps/social_accounts/staff_views.py:57
+#: apps/social_accounts/staff_views.py:71
 #, python-format
 msgid "%(platform)s is shown to customers."
 msgstr "%(platform)s está visível para os clientes."
 
-#: apps/social_accounts/staff_views.py:58
+#: apps/social_accounts/staff_views.py:72
 #, python-format
 msgid "%(platform)s is hidden from customers."
 msgstr "%(platform)s está oculto para os clientes."
@@ -9381,7 +9383,7 @@ msgstr "Nenhum histórico de versões disponível"
 #: templates/layouts/admin_shell.html:38 templates/layouts/settings.html:73
 #: templates/onboarding/staff_help_videos.html:11
 #: templates/radar/staff_market_hashtags.html:12
-#: templates/social_accounts/staff_platforms.html:13
+#: templates/social_accounts/staff_platforms.html:14
 msgid "Administration"
 msgstr "Administração"
 
@@ -12657,8 +12659,8 @@ msgstr "Legenda"
 
 #: templates/calendar/partials/list_view.html:15
 #: templates/layouts/admin_shell.html:100
-#: templates/social_accounts/staff_platforms.html:13
-#: templates/social_accounts/staff_platforms.html:17
+#: templates/social_accounts/staff_platforms.html:14
+#: templates/social_accounts/staff_platforms.html:18
 msgid "Platforms"
 msgstr "Plataformas"
 
@@ -20184,6 +20186,7 @@ msgid "Checking with Shopee…"
 msgstr "Verificando com a Shopee…"
 
 #: templates/radar/partials/_source_card.html:25
+#: templates/social_accounts/staff_platforms.html:64
 msgctxt "menu"
 msgid "Soon"
 msgstr "Em breve"
@@ -20653,6 +20656,7 @@ msgid "Not Configured"
 msgstr "Não configurada"
 
 #: templates/social_accounts/list.html:170
+#: templates/social_accounts/staff_platforms.html:57
 msgid "Business & opportunities"
 msgstr "Negócios e oportunidades"
 
@@ -20945,24 +20949,26 @@ msgstr "Remover horário"
 msgid "Add time slot"
 msgstr "Adicionar horário"
 
-#: templates/social_accounts/staff_platforms.html:18
+#: templates/social_accounts/staff_platforms.html:19
 msgid ""
-"Choose which networks customers can connect. A hidden network leaves the "
-"connect page for every brand; accounts already connected keep working."
+"Choose which networks and opportunity sources customers can connect. A "
+"hidden one leaves the connect page for every brand; what was already "
+"connected keeps working."
 msgstr ""
-"Escolha quais redes os clientes podem conectar. Uma rede oculta sai da "
-"página de conexão de todas as marcas; as contas já conectadas continuam "
-"funcionando."
+"Escolha quais redes e fontes de oportunidades os clientes podem conectar. "
+"O que estiver oculto sai da página de conexão de todas as marcas; o que já "
+"estava conectado continua funcionando."
 
-#: templates/social_accounts/staff_platforms.html:33
+#: templates/social_accounts/staff_platforms.html:35
 msgid "Credentials ready"
 msgstr "Credenciais prontas"
 
-#: templates/social_accounts/staff_platforms.html:35
+#: templates/social_accounts/staff_platforms.html:37
 msgid "No credentials"
 msgstr "Sem credenciais"
 
-#: templates/social_accounts/staff_platforms.html:44
+#: templates/social_accounts/staff_platforms.html:46
+#: templates/social_accounts/staff_platforms.html:72
 #, python-format
 msgid "Show %(name)s to customers"
 msgstr "Mostrar %(name)s para os clientes"
