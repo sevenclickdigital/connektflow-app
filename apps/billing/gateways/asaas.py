@@ -323,6 +323,59 @@ class AsaasClient:
         body = self._request("GET", f"/subscriptions/{subscription_id}/payments")
         return body.get("data") or []
 
+    def update_subscription_value(self, subscription_id, value_cents):
+        """Change what a subscription charges each cycle.
+
+        ``updatePendingPayments`` carries the new value onto the charge
+        already generated and still unpaid, so the next card charge is the
+        new figure too.
+        """
+        return self._request(
+            "PUT",
+            f"/subscriptions/{subscription_id}",
+            json={"value": str(cents_to_value(value_cents)), "updatePendingPayments": True},
+        )
+
+    def set_subscription_card(self, subscription_id, *, card_token, remote_ip):
+        """Charge a subscription's future cycles to a tokenized card.
+
+        No charge happens now. Asaas switches the subscription to
+        ``CREDIT_CARD`` and moves its pending charges to that card.
+        """
+        return self._request(
+            "PUT",
+            f"/subscriptions/{subscription_id}/creditCard",
+            json={"creditCardToken": card_token, "remoteIp": remote_ip},
+        )
+
+    # -- payments ---------------------------------------------------------
+
+    def update_payment_value(self, payment_id, value_cents):
+        """Change the value of one unpaid charge (a first-charge coupon)."""
+        return self._request("PUT", f"/payments/{payment_id}", json={"value": str(cents_to_value(value_cents))})
+
+    def pay_with_card(self, payment_id, *, card, holder, remote_ip):
+        """Pay one charge with a card, on the spot.
+
+        ``card`` holds ``holderName``, ``number``, ``expiryMonth``,
+        ``expiryYear`` and ``ccv``; ``holder`` holds ``name``, ``email``,
+        ``cpfCnpj``, ``postalCode``, ``addressNumber`` and ``phone``, as
+        Asaas names them. ``remote_ip`` is the payer's, never the server's.
+
+        Not idempotent: after a transport error the charge may or may not
+        have gone through, so the caller must not simply call again. A
+        refused card is a 400 whose ``errors`` say why. The answer carries
+        ``status`` (``CONFIRMED`` when paid) and ``creditCard`` with the
+        ``creditCardToken`` that later charges use; when the issuer asks
+        for authentication, ``threeDSecureChallengeUrl`` is where the payer
+        completes it.
+        """
+        return self._request(
+            "POST",
+            f"/payments/{payment_id}/payWithCreditCard",
+            json={"creditCard": card, "creditCardHolderInfo": holder, "remoteIp": remote_ip},
+        )
+
     def cancel_subscription(self, subscription_id):
         """Stop a subscription's future charges.
 

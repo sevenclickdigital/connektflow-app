@@ -19,6 +19,10 @@ Four roles:
 - ``OrganizationBillingProfile`` (one per Organization): account-level
   billing settings the admin controls, notably how many of the org's
   workspaces are comped.
+- ``OrganizationPlan`` (at most one per Organization): a number of brands
+  bought together on one gateway subscription, paid by card. It covers that
+  many of the organization's workspaces by pointing their
+  ``WorkspaceSubscription`` at it, so access checks keep reading one row.
 
 Two unit conventions, held everywhere in this app: money is always an
 integer number of cents, disk is always an integer number of bytes.
@@ -134,6 +138,16 @@ class WorkspaceSubscription(models.Model):
     trial_ends_at = models.DateTimeField(null=True, blank=True)
 
     canceled_at = models.DateTimeField(null=True, blank=True)
+    # The organization plan covering this workspace, if any. While set, the
+    # row's status follows the plan's and the workspace has no gateway
+    # subscription of its own.
+    plan = models.ForeignKey(
+        "billing.OrganizationPlan",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="covered_subscriptions",
+    )
     # Why a workspace was comped. Free text and admin-facing only; the
     # billing logic cares about status alone.
     courtesy_note = models.CharField(max_length=255, blank=True, default="")
@@ -599,6 +613,80 @@ class OrganizationBillingProfile(models.Model):
         if self.courtesy_expires_on is None:
             return None
         return (self.courtesy_expires_on - timezone.localdate()).days
+
+
+# ---------------------------------------------------------------------------
+# OrganizationPlan, brands bought together
+# ---------------------------------------------------------------------------
+
+
+class OrganizationPlan(models.Model):
+    """A number of brands an organization pays for on one gateway subscription.
+
+    Bought on the checkout page with a card: the first charge is paid on the
+    spot and the card stays on the subscription, so every later cycle is
+    charged without the customer coming back. ``brands`` workspaces of the
+    organization are covered; each covered ``WorkspaceSubscription`` points
+    here through ``plan`` and mirrors this row's status
+    (``services.sync_plan_coverage``), so the access checks, the lock and
+    the billing pages keep reading the workspace row alone.
+
+    ``price_cents`` is the monthly equivalent of what is charged each cycle,
+    discounts included, fixed at purchase like a workspace's price. Status
+    uses the workspace subscription's values; ``courtesy`` never applies.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.OneToOneField(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="billing_plan",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=WorkspaceSubscription.Status.choices,
+        default=WorkspaceSubscription.Status.PENDING,
+        db_index=True,
+    )
+    brands = models.PositiveIntegerField(default=1)
+    billing_cycle = models.CharField(
+        max_length=8,
+        choices=WorkspaceSubscription.Cycle.choices,
+        default=WorkspaceSubscription.Cycle.MONTHLY,
+    )
+    price_cents = models.PositiveIntegerField(default=0)
+
+    gateway = models.CharField(max_length=32, blank=True, default="")
+    gateway_customer_id = models.CharField(max_length=255, blank=True, default="")
+    gateway_subscription_id = models.CharField(max_length=255, blank=True, default="", db_index=True)
+    # Shown on the billing page ("Mastercard ending in 8829"). The card
+    # itself stays at the gateway, which keeps only a token on its side.
+    card_brand = models.CharField(max_length=32, blank=True, default="")
+    card_last4 = models.CharField(max_length=4, blank=True, default="")
+
+    current_period_end = models.DateTimeField(null=True, blank=True)
+    canceled_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "billing_organization_plan"
+
+    def __str__(self):
+        return f"OrganizationPlan({self.organization_id}, {self.brands}, {self.status})"
+
+    @property
+    def is_yearly(self):
+        return self.billing_cycle == WorkspaceSubscription.Cycle.YEARLY
+
+    @property
+    def charge_cents(self):
+        """What the gateway charges each cycle."""
+        return self.price_cents * 12 if self.is_yearly else self.price_cents
+
+    @property
+    def is_active(self):
+        return self.status == WorkspaceSubscription.Status.ACTIVE
 
 
 # ---------------------------------------------------------------------------

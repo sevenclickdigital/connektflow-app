@@ -42,7 +42,7 @@ from django_ratelimit.decorators import ratelimit
 
 from apps.billing import services
 from apps.billing.gateways.asaas import GATEWAY
-from apps.billing.models import BillingEvent, WorkspaceAddon, WorkspaceSubscription
+from apps.billing.models import BillingEvent, OrganizationPlan, WorkspaceAddon, WorkspaceSubscription
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +166,12 @@ def _apply(event, event_type, payload):
         _finish(event, BillingEvent.Status.IGNORED)
         return
 
+    plan = OrganizationPlan.objects.filter(gateway_subscription_id=subscription_id).first()
+    if plan is not None:
+        _apply_to_plan(plan, target, payload)
+        _finish(event, BillingEvent.Status.PROCESSED)
+        return
+
     sub = WorkspaceSubscription.objects.filter(
         gateway_subscription_id=subscription_id,
     ).first()
@@ -217,6 +223,25 @@ def _apply_to_subscription(sub, target, payload):
         fields.append("canceled_at")
 
     sub.save(update_fields=fields)
+
+
+def _apply_to_plan(plan, target, payload):
+    """Move an organization plan to ``target``; the workspaces it covers follow."""
+    fields = ["status", "updated_at"]
+    plan.status = target
+    if target == WorkspaceSubscription.Status.ACTIVE:
+        period_end = _due_date(payload)
+        if period_end is not None:
+            plan.current_period_end = period_end
+            fields.append("current_period_end")
+        if plan.canceled_at is not None:
+            plan.canceled_at = None
+            fields.append("canceled_at")
+    elif target == WorkspaceSubscription.Status.CANCELED:
+        plan.canceled_at = timezone.now()
+        fields.append("canceled_at")
+    plan.save(update_fields=fields)
+    services.sync_plan_coverage(plan)
 
 
 def _apply_to_addon(addon, target, payload):

@@ -21,6 +21,10 @@ urlpatterns = [
     path("subscribe/confirm/", views.subscribe_confirm, name="subscribe_confirm"),
     path("trial/", views.start_trial, name="start_trial"),
     path("pay/", views.pay_invoice, name="pay_invoice"),
+    path("checkout/", views.checkout, name="checkout"),
+    path("checkout/quote/", views.checkout_quote, name="checkout_quote"),
+    path("checkout/pay/", views.checkout_pay, name="checkout_pay"),
+    path("checkout/add-brands/", views.checkout_add_brands, name="checkout_add_brands"),
     path("storage/quote/", views.storage_quote, name="storage_quote"),
     path("storage/", views.contract_storage, name="contract_storage"),
 ]

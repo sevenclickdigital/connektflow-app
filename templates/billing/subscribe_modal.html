@@ -242,19 +242,15 @@ apps.billing.middleware), so the ways out are another brand or signing out.
       </p>
       {% endif %}
       {% elif can_manage_billing %}
-      <form method="post" action="{% url 'billing:subscribe_confirm' workspace_id=workspace.id %}" class="mt-5">
-        {% csrf_token %}
-        {% if needs_tax_id %}
-        <div class="mb-4">{% include "billing/_tax_id_field.html" %}</div>
-        {% endif %}
-        <input type="hidden" name="cycle" :value="cycle">
-        <button type="submit" class="btn-brand w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold">
-          <span x-show="cycle === 'monthly'">{% blocktranslate with price=quotes.monthly.monthly_cents|brl %}Contract for R$ {{ price }}/month{% endblocktranslate %}</span>
-          {% if quotes.yearly %}
-          <span x-show="cycle === 'yearly'" x-cloak>{% blocktranslate with price=quotes.yearly.charge_cents|brl %}Contract for R$ {{ price }}/year{% endblocktranslate %}</span>
-          {% endif %}
-        </button>
-      </form>
+      {% comment %}
+      Contracting is the checkout (billing:checkout): how many brands, the
+      cycle chosen here, and the card, charged now and on every renewal.
+      {% endcomment %}
+      <a href="{% url 'billing:checkout' workspace_id=workspace.id %}"
+         :href="'{% url 'billing:checkout' workspace_id=workspace.id %}?cycle=' + cycle"
+         class="btn-brand w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold mt-5">
+        {% translate "Contract with card" %}
+      </a>
 
       {% if trial_available %}
       {% comment %}

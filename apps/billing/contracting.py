@@ -42,7 +42,7 @@ from django.utils.translation import gettext_lazy as _
 from apps.billing import services
 from apps.billing.gateways import asaas as asaas_gateway
 from apps.billing.gateways.asaas import GATEWAY, AsaasClient, AsaasError
-from apps.billing.models import WorkspaceAddon, WorkspaceSubscription
+from apps.billing.models import OrganizationPlan, WorkspaceAddon, WorkspaceSubscription
 
 logger = logging.getLogger(__name__)
 
@@ -341,7 +341,7 @@ def cancel_workspace_subscription(workspace, *, client=None):
 def cancel_organization_subscriptions(organization, *, client=None):
     """Stop every gateway charge of ``organization`` before it is deleted.
 
-    Its workspaces' subscriptions and add-ons are cancelled at Asaas; the rows
+    Its workspaces' subscriptions, add-ons and plan are cancelled at Asaas; the rows
     themselves go with the organization's cascade. Called by
     ``Organization.hard_delete``, so no deletion path leaves a customer being
     charged for an account that no longer exists. A gateway 404 counts as done,
@@ -356,6 +356,9 @@ def cancel_organization_subscriptions(organization, *, client=None):
         *WorkspaceAddon.objects.filter(workspace__organization=organization)
         .exclude(gateway_subscription_id="")
         .values_list("gateway_subscription_id", flat=True),
+        *OrganizationPlan.objects.filter(organization=organization)
+        .exclude(gateway_subscription_id="")
+        .values_list("gateway_subscription_id", flat=True),
     ]
     if not gateway_ids:
         return 0
@@ -368,3 +371,178 @@ def cancel_organization_subscriptions(organization, *, client=None):
                 raise
     logger.info("Cancelled %d gateway subscriptions of organization %s", len(gateway_ids), organization.pk)
     return len(gateway_ids)
+
+
+# ---------------------------------------------------------------------------
+# Organization plan — brands bought together, paid by card
+# ---------------------------------------------------------------------------
+
+#: Asaas statuses of a charge that has been paid.
+PAID_PAYMENT_STATUSES = frozenset({"CONFIRMED", "RECEIVED"})
+
+
+class CardRefusedError(Exception):
+    """The card was not charged. The message is for the customer."""
+
+
+class CardChallengeRequiredError(Exception):
+    """The issuer wants the payer to authenticate before the charge.
+
+    ``url`` is the issuer's page; the plan activates when the gateway
+    confirms the payment afterwards (the webhook).
+    """
+
+    def __init__(self, url):
+        super().__init__(url)
+        self.url = url
+
+
+def _plan_description(organization, brands):
+    # Translated: it reaches the customer on the Asaas charge and its emails.
+    return str(
+        _("Connekt Flow — %(brands)s brands of %(name)s") % {"brands": brands, "name": organization.name}
+        if brands != 1
+        else _("Connekt Flow — 1 brand of %(name)s") % {"name": organization.name}
+    )
+
+
+def _first_unpaid(client, subscription_id):
+    unpaid = [
+        p for p in client.list_subscription_payments(subscription_id) if p.get("status") in UNPAID_PAYMENT_STATUSES
+    ]
+    unpaid.sort(key=lambda payment: payment.get("dueDate") or "")
+    return unpaid[0] if unpaid else None
+
+
+def _activate_plan(plan, *, card=None):
+    """Mark a paid plan active and open the workspaces it covers."""
+    plan.status = WorkspaceSubscription.Status.ACTIVE
+    plan.canceled_at = None
+    fields = ["status", "canceled_at", "updated_at"]
+    if card:
+        plan.card_brand = str(card.get("creditCardBrand") or "")[:32]
+        plan.card_last4 = str(card.get("creditCardNumber") or "")[-4:]
+        fields += ["card_brand", "card_last4"]
+    plan.save(update_fields=fields)
+    services.sync_plan_coverage(plan)
+    return plan
+
+
+def _settle_earlier_attempt(plan, client):
+    """Deal with the gateway subscription a previous checkout left behind.
+
+    A checkout whose card charge never answered (a timeout) leaves the plan
+    pending with its subscription at Asaas. If that charge went through
+    after all, the plan is activated now instead of charging the card a
+    second time; otherwise the subscription is cancelled so the new
+    checkout starts clean. Returns True when the plan turned out paid.
+    """
+    if not plan.gateway_subscription_id:
+        return False
+    payments = client.list_subscription_payments(plan.gateway_subscription_id)
+    if any(payment.get("status") in PAID_PAYMENT_STATUSES for payment in payments):
+        _activate_plan(plan)
+        return True
+    client.cancel_subscription(plan.gateway_subscription_id)
+    plan.gateway_subscription_id = ""
+    plan.save(update_fields=["gateway_subscription_id", "updated_at"])
+    return False
+
+
+def purchase_plan(organization, *, brands, cycle, card, holder, remote_ip, email="", client=None):
+    """Buy ``brands`` brands for the organization and pay the first charge by card.
+
+    ``card`` and ``holder`` go to the gateway as they are (see
+    ``AsaasClient.pay_with_card``) and are kept nowhere here. In order:
+    the customer, a subscription priced by ``services.quote_plan``, the
+    card charge of its first payment on the spot, then the card's token on
+    the subscription so every later cycle is charged to it.
+
+    Returns the active ``OrganizationPlan``. Raises ``CardRefusedError``
+    when the card is declined (the subscription is cancelled, nothing is
+    owed), ``CardChallengeRequiredError`` when the issuer wants the payer
+    to authenticate, and ``AsaasError`` for anything else. After a
+    transport error on the charge itself the plan stays pending with its
+    subscription: the webhook activates it if the charge did go through,
+    and the next checkout checks before charging again.
+    """
+    client = client or AsaasClient()
+    plan, _created = OrganizationPlan.objects.get_or_create(organization=organization)
+    if plan.is_active:
+        return plan
+    if _settle_earlier_attempt(plan, client):
+        return plan
+
+    quote = services.quote_plan(brands, cycle)
+    profile = ensure_customer(organization, client=client, email=email)
+    remote = client.create_subscription(
+        customer_id=profile.gateway_customer_id,
+        value_cents=quote["charge_cents"],
+        cycle=asaas_gateway.CYCLE_YEARLY
+        if quote["cycle"] == WorkspaceSubscription.Cycle.YEARLY
+        else asaas_gateway.CYCLE_MONTHLY,
+        external_reference=f"plan:{plan.pk}",
+        description=_plan_description(organization, brands),
+    )
+    subscription_id = remote.get("id") or ""
+    if not subscription_id:
+        raise AsaasError("Asaas returned a subscription without an id.")
+
+    plan.brands = brands
+    plan.billing_cycle = quote["cycle"]
+    plan.price_cents = quote["monthly_cents"]
+    plan.gateway = GATEWAY
+    plan.gateway_customer_id = profile.gateway_customer_id
+    plan.gateway_subscription_id = subscription_id
+    plan.status = WorkspaceSubscription.Status.PENDING
+    plan.save()
+
+    payment = _first_unpaid(client, subscription_id)
+    if payment is None:
+        raise AsaasError("Asaas created the subscription without a first charge.")
+
+    try:
+        paid = client.pay_with_card(payment["id"], card=card, holder=holder, remote_ip=remote_ip)
+    except asaas_gateway.AsaasAPIError as exc:
+        if exc.status_code != 400:
+            raise
+        # Declined or refused data: nothing was charged. The subscription
+        # goes, so no invoice for it reaches the customer.
+        client.cancel_subscription(subscription_id)
+        plan.gateway_subscription_id = ""
+        plan.save(update_fields=["gateway_subscription_id", "updated_at"])
+        descriptions = [str(e.get("description") or "") for e in exc.errors if isinstance(e, dict)]
+        raise CardRefusedError(" ".join(d for d in descriptions if d) or _("The card was declined.")) from exc
+
+    challenge = paid.get("threeDSecureChallengeUrl") or ""
+    if paid.get("status") not in PAID_PAYMENT_STATUSES:
+        if isinstance(challenge, str) and challenge.startswith("https://"):
+            raise CardChallengeRequiredError(challenge)
+        raise CardRefusedError(_("The card was not charged. Try again or use another card."))
+
+    card_info = paid.get("creditCard") or {}
+    token = card_info.get("creditCardToken") or ""
+    if token:
+        try:
+            client.set_subscription_card(subscription_id, card_token=token, remote_ip=remote_ip)
+        except AsaasError:
+            # Paid all the same; only the renewals would come as invoices.
+            logger.exception("Could not keep the card on plan %s's subscription", plan.pk)
+    logger.info("Organization %s bought a plan of %s brands", organization.pk, brands)
+    return _activate_plan(plan, card=card_info)
+
+
+def change_plan_brands(plan, brands, *, client=None):
+    """Change how many brands an active plan covers, and what it charges.
+
+    The new value applies from the next charge (no pro rata) and the
+    workspaces covered follow at once.
+    """
+    client = client or AsaasClient()
+    quote = services.quote_plan(brands, plan.billing_cycle)
+    client.update_subscription_value(plan.gateway_subscription_id, quote["charge_cents"])
+    plan.brands = brands
+    plan.price_cents = quote["monthly_cents"]
+    plan.save(update_fields=["brands", "price_cents", "updated_at"])
+    services.sync_plan_coverage(plan)
+    return plan

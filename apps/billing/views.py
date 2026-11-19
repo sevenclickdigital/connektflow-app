@@ -36,6 +36,8 @@ from __future__ import annotations
 
 import functools
 import logging
+import re
+from urllib.parse import urlencode
 
 from allauth.account.forms import ResetPasswordForm
 from django.conf import settings
@@ -52,8 +54,10 @@ from django.utils.dateparse import parse_date
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
+from django_ratelimit.decorators import ratelimit
 
 from apps.accounts import impersonation
+from apps.accounts.impersonation import client_ip
 from apps.accounts.models import ImpersonationSession, User
 from apps.billing import contracting, services
 from apps.billing.gateways.asaas import AsaasAPIError, AsaasError, AsaasNotConfigured
@@ -508,6 +512,12 @@ def subscribe_modal(request, workspace_id):
         if services.ensure_subscription(workspace).is_settled:
             response["HX-Redirect"] = reverse("calendar:calendar", kwargs={"workspace_id": workspace.id})
         return response
+    plan = services.plan_for(workspace.organization)
+    if services.plan_has_room(plan):
+        # The organization's plan has a brand left: this workspace takes it.
+        services.sync_plan_coverage(plan)
+        if services.is_workspace_active(workspace.pk):
+            return redirect("calendar:calendar", workspace_id=workspace.id)
     context = _billing_context(request, workspace)
     # A new account names its organization and brand before seeing the plan.
     context["welcome"] = needs_welcome(request, workspace)
@@ -633,6 +643,236 @@ def pay_invoice(request, workspace_id):
         )
         return redirect("billing:workspace_billing", workspace_id=workspace.id)
     return redirect(url)
+
+
+# ---------------------------------------------------------------------------
+# Checkout — brands bought together, paid by card
+# ---------------------------------------------------------------------------
+
+#: The slider's range on the checkout page; more brands are typed in.
+CHECKOUT_SLIDER_MAX = 20
+
+
+def _parse_brands(raw, *, minimum=1):
+    try:
+        brands = int(str(raw).strip())
+    except (TypeError, ValueError):
+        return None
+    return brands if minimum <= brands <= services.PLAN_MAX_BRANDS else None
+
+
+def _parse_cycle(raw):
+    if raw == WorkspaceSubscription.Cycle.YEARLY and services.annual_discount_percent() > 0:
+        return WorkspaceSubscription.Cycle.YEARLY
+    return WorkspaceSubscription.Cycle.MONTHLY
+
+
+def _uncovered_workspaces(organization):
+    """How many of the organization's workspaces are not paid or comped yet."""
+    return (
+        WorkspaceSubscription.objects.filter(workspace__organization=organization)
+        .exclude(status__in=WorkspaceSubscription.ACTIVE_STATUSES)
+        .count()
+    )
+
+
+def _parse_card(post):
+    """The card and the address the gateway asks for, from the checkout form.
+
+    Returns ``(card, address, error)``. Shape only; the gateway decides
+    whether the card is good. The values are passed on and kept nowhere.
+    """
+    number = re.sub(r"\D", "", post.get("card_number", ""))
+    expiry = re.sub(r"\D", "", post.get("card_expiry", ""))
+    ccv = re.sub(r"\D", "", post.get("card_ccv", ""))
+    holder_name = " ".join(post.get("card_holder", "").split())[:100]
+    postal_code = re.sub(r"\D", "", post.get("postal_code", ""))
+    address_number = post.get("address_number", "").strip()[:10]
+    if not 13 <= len(number) <= 19:
+        return None, None, _("Enter the card number.")
+    if len(expiry) == 4:
+        expiry = expiry[:2] + "20" + expiry[2:]
+    if len(expiry) != 6 or not 1 <= int(expiry[:2]) <= 12:
+        return None, None, _("Enter the card's expiry as MM/YY.")
+    if not 3 <= len(ccv) <= 4:
+        return None, None, _("Enter the card's security code.")
+    if not holder_name:
+        return None, None, _("Enter the name printed on the card.")
+    if len(postal_code) != 8 or not address_number:
+        return None, None, _("Enter the CEP and the number of the card's billing address.")
+    card = {
+        "holderName": holder_name,
+        "number": number,
+        "expiryMonth": expiry[:2],
+        "expiryYear": expiry[2:],
+        "ccv": ccv,
+    }
+    return card, {"postalCode": postal_code, "addressNumber": address_number, "name": holder_name}, None
+
+
+def _checkout_url(workspace, brands=None, cycle=None):
+    url = reverse("billing:checkout", kwargs={"workspace_id": workspace.id})
+    params = {key: value for key, value in (("brands", brands), ("cycle", cycle)) if value}
+    return f"{url}?{urlencode(params)}" if params else url
+
+
+@login_required
+@require_GET
+def checkout(request, workspace_id):
+    """Buy brands for the organization, or add brands to its plan.
+
+    Without an active plan: how many brands, monthly or yearly, and the
+    card, charged on the spot. With one: how many brands to add, charged to
+    the card already on the plan from the next charge. A workspace the plan
+    has room for is covered here and sent on to its calendar.
+    """
+    workspace = _get_workspace(request, workspace_id)
+    _require_manage_billing(request, workspace)
+    organization = workspace.organization
+    plan = services.plan_for(organization)
+    if not services.is_workspace_active(workspace.pk) and services.plan_has_room(plan):
+        services.sync_plan_coverage(plan)
+        if services.is_workspace_active(workspace.pk):
+            return redirect("calendar:calendar", workspace_id=workspace.id)
+
+    upgrading = bool(plan and plan.is_active)
+    minimum = plan.brands + 1 if upgrading else 1
+    default = max(minimum, 1 if upgrading else _uncovered_workspaces(organization))
+    brands = _parse_brands(request.GET.get("brands"), minimum=minimum) or min(default, services.PLAN_MAX_BRANDS)
+    cycle = plan.billing_cycle if upgrading else _parse_cycle(request.GET.get("cycle"))
+    profile = services.ensure_billing_profile(organization)
+    context = {
+        "workspace": workspace,
+        "plan": plan if upgrading else None,
+        "brands": brands,
+        "min_brands": minimum,
+        "max_brands": services.PLAN_MAX_BRANDS,
+        "slider_max": max(CHECKOUT_SLIDER_MAX, minimum + 5),
+        "cycle": cycle,
+        "annual_percent": services.annual_discount_percent(),
+        "volume_tiers": services.volume_discounts(),
+        "quote": services.quote_plan(brands, cycle),
+        "needs_tax_id": not profile.tax_id,
+        "needs_phone": not profile.phone,
+        "gateway_configured": _gateway_configured(),
+    }
+    return render(request, "billing/checkout.html", context)
+
+
+@login_required
+@require_GET
+def checkout_quote(request, workspace_id):
+    """HTMX fragment: the price of the brands and cycle selected, priced by the server."""
+    workspace = _get_workspace(request, workspace_id)
+    plan = services.plan_for(workspace.organization)
+    upgrading = bool(plan and plan.is_active)
+    brands = _parse_brands(request.GET.get("brands"), minimum=plan.brands + 1 if upgrading else 1)
+    cycle = plan.billing_cycle if upgrading else _parse_cycle(request.GET.get("cycle"))
+    context = {
+        "quote": services.quote_plan(brands, cycle) if brands else None,
+        "plan": plan if upgrading else None,
+    }
+    return render(request, "billing/_checkout_quote.html", context)
+
+
+@login_required
+@require_POST
+@ratelimit(key="user", rate="8/h", method="POST", block=False)
+def checkout_pay(request, workspace_id):
+    """Buy the brands and pay the first charge with the card sent."""
+    workspace = _get_workspace(request, workspace_id)
+    _require_manage_billing(request, workspace)
+    organization = workspace.organization
+    brands = _parse_brands(request.POST.get("brands"))
+    cycle = _parse_cycle(request.POST.get("cycle"))
+    back = _checkout_url(workspace, brands, cycle)
+
+    if getattr(request, "limited", False):
+        # Against card testing: a handful of tries an hour is plenty for a real customer.
+        messages.error(request, _("Too many payment attempts. Please wait a while before trying again."))
+        return redirect(back)
+    if brands is None:
+        messages.error(request, _("Choose between 1 and %(max)s brands.") % {"max": services.PLAN_MAX_BRANDS})
+        return redirect(back)
+    plan = services.plan_for(organization)
+    if plan and plan.is_active:
+        # Already paid for: brands are added to it, never bought twice.
+        return redirect("billing:checkout", workspace_id=workspace.id)
+
+    profile = services.ensure_billing_profile(organization)
+    tax_id = profile.tax_id or services.valid_tax_id(request.POST.get("tax_id"))
+    phone = profile.phone or services.valid_phone(request.POST.get("phone"))
+    if not tax_id or not phone:
+        messages.error(request, _("Enter a valid CPF or CNPJ and a phone with area code."))
+        return redirect(back)
+    card, address, error = _parse_card(request.POST)
+    if error:
+        messages.error(request, error)
+        return redirect(back)
+    if (tax_id, phone) != (profile.tax_id, profile.phone):
+        services.set_payer_identity(organization, tax_id=tax_id, phone=phone)
+
+    email = organization.billing_email or request.user.email
+    holder = {**address, "email": email, "cpfCnpj": tax_id, "phone": phone}
+    try:
+        contracting.purchase_plan(
+            organization,
+            brands=brands,
+            cycle=cycle,
+            card=card,
+            holder=holder,
+            remote_ip=client_ip(request) or "",
+            email=email,
+        )
+    except contracting.CardRefusedError as exc:
+        messages.error(request, str(exc))
+        return redirect(back)
+    except contracting.CardChallengeRequiredError as exc:
+        # The issuer's own authentication page; the webhook activates the
+        # plan once the payment is confirmed there.
+        return redirect(exc.url)
+    except AsaasNotConfigured:
+        messages.info(request, _("Payments are not connected on this installation yet. Nothing was charged."))
+        return redirect(back)
+    except AsaasError as exc:
+        logger.exception("Checkout failed for organization %s", organization.pk)
+        messages.error(
+            request,
+            _gateway_refusal(exc)
+            or _(
+                "We could not confirm the payment with the provider. If the card was charged, "
+                "your brands open in a few minutes; otherwise, try again."
+            ),
+        )
+        return redirect(back)
+
+    messages.success(request, _("Payment confirmed. Your brands are active."))
+    return redirect("calendar:calendar", workspace_id=workspace.id)
+
+
+@login_required
+@require_POST
+def checkout_add_brands(request, workspace_id):
+    """Raise the number of brands of the organization's active plan."""
+    workspace = _get_workspace(request, workspace_id)
+    _require_manage_billing(request, workspace)
+    plan = services.plan_for(workspace.organization)
+    if not (plan and plan.is_active):
+        return redirect("billing:checkout", workspace_id=workspace.id)
+    brands = _parse_brands(request.POST.get("brands"), minimum=plan.brands + 1)
+    if brands is None:
+        messages.error(request, _("Choose more brands than the plan has today."))
+        return redirect("billing:checkout", workspace_id=workspace.id)
+    try:
+        contracting.change_plan_brands(plan, brands)
+    except AsaasError as exc:
+        logger.exception("Could not add brands to plan %s", plan.pk)
+        messages.error(
+            request, _gateway_refusal(exc) or _("We could not reach the payment provider. Please try again.")
+        )
+        return redirect(_checkout_url(workspace, brands))
+    messages.success(request, _("Brands added to your plan. The new value applies from the next charge."))
+    return redirect("calendar:calendar", workspace_id=workspace.id)
 
 
 @login_required

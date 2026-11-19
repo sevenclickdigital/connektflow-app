@@ -25,6 +25,7 @@ from django.utils.translation import gettext_lazy as _
 from apps.billing.models import (
     BillingEvent,
     OrganizationBillingProfile,
+    OrganizationPlan,
     ProductPrice,
     ProductPriceChange,
     WorkspaceAddon,
@@ -645,6 +646,112 @@ def quote_workspace(workspace, cycle=WorkspaceSubscription.Cycle.MONTHLY):
         )
         * 12,
     }
+
+
+# ---------------------------------------------------------------------------
+# Organization plan — brands bought together
+# ---------------------------------------------------------------------------
+
+#: The most brands one checkout sells. Past it the operator talks to the customer.
+PLAN_MAX_BRANDS = 50
+
+
+def quote_plan(brands, cycle=WorkspaceSubscription.Cycle.MONTHLY):
+    """What ``brands`` brands bought together on ``cycle`` cost at today's list.
+
+    The checkout's one price rule, shown and charged alike. Each brand is
+    priced at its position's volume discount (the 5th brand at the 5th
+    position's tier, as on the public site), the yearly discount goes on top
+    of the sum, and ``monthly_cents`` is rounded to a whole cent before the
+    yearly charge is taken as twelve of it.
+    """
+    list_cents = workspace_price_cents()
+    yearly = cycle == WorkspaceSubscription.Cycle.YEARLY
+    annual_percent = annual_discount_percent() if yearly else 0
+    volume_sum = sum(
+        Decimal(list_cents) * (100 - volume_discount_percent(position)) / 100 for position in range(1, brands + 1)
+    )
+    monthly_cents = int((volume_sum * (100 - annual_percent) / 100).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+    volume_cents = int(volume_sum.quantize(Decimal(1), rounding=ROUND_HALF_UP))
+    return {
+        "brands": brands,
+        "cycle": WorkspaceSubscription.Cycle.YEARLY if yearly else WorkspaceSubscription.Cycle.MONTHLY,
+        "list_cents": list_cents,
+        "annual_percent": annual_percent,
+        "monthly_cents": monthly_cents,
+        "charge_cents": monthly_cents * 12 if yearly else monthly_cents,
+        # What the volume tiers take off the list price, per month.
+        "volume_saving_cents": list_cents * brands - volume_cents,
+        # Against paying the same brands month by month for a year.
+        "yearly_saving_cents": (volume_cents - monthly_cents) * 12 if yearly else 0,
+    }
+
+
+def plan_for(organization):
+    """The organization's plan, or None."""
+    return OrganizationPlan.objects.filter(organization=organization).first()
+
+
+def _plan_eligible_rows(plan):
+    """The organization's workspace rows a plan may cover, oldest workspace first.
+
+    Comped workspaces cost nothing and workspaces paying on a subscription
+    of their own are already paid for; neither takes one of the plan's brands.
+    """
+    from apps.workspaces.models import Workspace
+
+    for workspace in Workspace.objects.filter(organization_id=plan.organization_id).order_by("created_at"):
+        ensure_subscription(workspace)
+    return list(
+        WorkspaceSubscription.objects.filter(workspace__organization_id=plan.organization_id)
+        .exclude(status=WorkspaceSubscription.Status.COURTESY)
+        .filter(models.Q(gateway_subscription_id="") | models.Q(plan=plan))
+        .select_related("workspace")
+        .order_by("workspace__created_at")
+    )
+
+
+def sync_plan_coverage(plan):
+    """Make the organization's workspace rows agree with its plan.
+
+    An active plan covers its first ``brands`` eligible workspaces: their
+    rows point at the plan and read ``active``, with the plan's period end.
+    Rows the plan no longer covers (fewer brands bought) go back to
+    ``pending``. A plan that is not active passes its status (past due,
+    canceled) on to the rows it covers, which keep the link so a recovered
+    payment reopens them. Returns the covered rows.
+    """
+    status = WorkspaceSubscription.Status
+    with transaction.atomic():
+        if not plan.is_active:
+            covered = list(WorkspaceSubscription.objects.filter(plan=plan))
+            target = plan.status if plan.status in (status.PAST_DUE, status.CANCELED) else status.PENDING
+            for row in covered:
+                row.status = target
+                row.save(update_fields=["status", "updated_at"])
+            return covered
+
+        rows = _plan_eligible_rows(plan)
+        covered, uncovered = rows[: plan.brands], rows[plan.brands :]
+        for row in covered:
+            row.plan = plan
+            row.status = status.ACTIVE
+            row.current_period_end = plan.current_period_end
+            row.canceled_at = None
+            row.save(update_fields=["plan", "status", "current_period_end", "canceled_at", "updated_at"])
+        for row in uncovered:
+            if row.plan_id == plan.pk:
+                row.plan = None
+                row.status = status.PENDING
+                row.save(update_fields=["plan", "status", "updated_at"])
+        return covered
+
+
+def plan_has_room(plan):
+    """Whether an active plan has a brand left for another workspace."""
+    if plan is None or not plan.is_active:
+        return False
+    return WorkspaceSubscription.objects.filter(plan=plan).count() < plan.brands
 
 
 # ---------------------------------------------------------------------------

@@ -172,7 +172,7 @@ def start(request, target):
         impersonated=target,
         impersonator_email=operator.email,
         impersonated_email=target.email,
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
 
     # login() flushes and cycles the session, so the two keys have to be
@@ -220,7 +220,12 @@ def stop(request):
     return operator
 
 
-def _client_ip(request):
+def client_ip(request):
+    """The visitor's IP: the first X-Forwarded-For hop behind the proxy, else the socket peer.
+
+    For records and for the payment gateway's antifraud, not for limits:
+    the header is whatever the client sent (see apps.api.limits._client_ip).
+    """
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
     if forwarded:
         return forwarded.split(",")[0].strip() or None

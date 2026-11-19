@@ -216,7 +216,9 @@
     {% comment %}
     Brazilian document and phone masks for any field marked
     data-mask="tax-id" (000.000.000-00, or 00.000.000/0000-00 past eleven
-    digits) or data-mask="phone" ((11) 99999-9999). One delegated listener,
+    digits), data-mask="phone" ((11) 99999-9999), and on the card form
+    data-mask="card" (0000 0000 0000 0000), "expiry" (MM/AA) and "cep"
+    (00000-000). One delegated listener,
     so fields that arrive in an HTMX swap are masked too. A convenience only:
     the server keeps the digits and validates them
     (apps.billing.services.valid_tax_id / valid_phone). The caret stays after
@@ -241,7 +243,10 @@
                 var rest = d.slice(2), split = d.length === 11 ? 5 : 4;
                 return '(' + d.slice(0, 2) + ') ' + (rest.length > split ? rest.slice(0, split) + '-' + rest.slice(split) : rest);
             }
-            var masks = { 'tax-id': maskTaxId, 'phone': maskPhone };
+            function maskCard(d) { return d.slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 '); }
+            function maskExpiry(d) { d = d.slice(0, 6); return d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d; }
+            function maskCep(d) { d = d.slice(0, 8); return d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d; }
+            var masks = { 'tax-id': maskTaxId, 'phone': maskPhone, 'card': maskCard, 'expiry': maskExpiry, 'cep': maskCep };
             function apply(el, keepCaret) {
                 var mask = masks[el.dataset.mask];
                 if (!mask) return;
