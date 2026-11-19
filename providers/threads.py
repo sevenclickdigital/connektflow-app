@@ -39,15 +39,21 @@ REPLY_FIELDS = (
 )
 
 
-def _reply_timestamp(value) -> datetime | None:
+def reply_timestamp(value) -> datetime | None:
+    """A Threads timestamp (``2024-08-07T10:33:16+0000``) in UTC, or None."""
     try:
         return datetime.strptime(str(value), "%Y-%m-%dT%H:%M:%S%z").astimezone(UTC)
     except ValueError:
         return None
 
 
-def _inbox_reply(item: dict, post_id: str, post_permalink: str, stamp: datetime | None) -> InboxMessage | None:
-    """One entry of a post's conversation as an inbox comment, or None for the account's own."""
+def inbox_reply(item: dict, post_id: str, post_permalink: str, stamp: datetime | None) -> InboxMessage | None:
+    """One reply as an inbox comment, or None for the account's own.
+
+    ``item`` is an entry of a post's conversation or the value of a ``replies``
+    webhook: both carry the same reply object, so a reply the webhook delivered
+    and the poll reads again is stored once, with the same fields.
+    """
     reply_id = str(item.get("id") or "")
     if not reply_id or item.get("is_reply_owned_by_me") or stamp is None:
         return None
@@ -584,10 +590,10 @@ class ThreadsProvider(SocialProvider):
                 "GET", f"{API_BASE}/{post_id}/conversation", access_token=access_token, params=params
             ).json()
             for item in body.get("data", []):
-                stamp = _reply_timestamp(item.get("timestamp"))
+                stamp = reply_timestamp(item.get("timestamp"))
                 if floor and stamp and stamp < floor:
                     return replies
-                reply = _inbox_reply(item, post_id, post_permalink, stamp)
+                reply = inbox_reply(item, post_id, post_permalink, stamp)
                 if reply:
                     replies.append(reply)
             after = ((body.get("paging") or {}).get("cursors") or {}).get("after")

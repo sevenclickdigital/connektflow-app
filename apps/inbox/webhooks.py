@@ -1,4 +1,4 @@
-"""Inbound webhook receivers for Facebook/Instagram, WhatsApp and YouTube."""
+"""Inbound webhook receivers for Facebook/Instagram, WhatsApp, Threads and YouTube."""
 
 import hashlib
 import hmac
@@ -785,6 +785,104 @@ def _apply_whatsapp_status(account, status: dict):
         platform_reply_id=str(status["id"]),
         inbox_message__social_account=account,
     ).update(status=InboxReply.Status.FAILED, send_error=reason[:1000])
+
+
+# --- Threads ---
+
+
+@csrf_exempt
+@ratelimit(key="ip", rate="300/m", block=True)
+@require_http_methods(["GET", "POST"])
+def threads_webhook(request):
+    """Threads webhook endpoint (field ``replies``).
+
+    Same handshake and ``X-Hub-Signature-256`` scheme as the other Meta
+    endpoints, signed with the Threads app secret. It makes a reply show in the
+    inbox at once; the poll (``ThreadsProvider.get_messages``) stays, because
+    Meta delivers these only to apps whose Threads permissions have advanced
+    access and never for a private profile's posts.
+    """
+    if request.method == "GET":
+        return _meta_verify(request, settings.THREADS_WEBHOOK_VERIFY_TOKEN)
+
+    signature = request.headers.get("X-Hub-Signature-256", "")
+    valid_secrets = {
+        secret for secret in resolve_app_secrets("threads") if _verify_meta_signature(request.body, signature, secret)
+    }
+    if not valid_secrets:
+        logger.warning("Threads webhook: signature did not match any configured app secret.")
+        return HttpResponseForbidden("Invalid signature.")
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError:
+        logger.warning("Invalid JSON in Threads webhook payload.")
+        return HttpResponse("Bad request", status=400)
+
+    _process_threads_event(payload, valid_secrets)
+    return HttpResponse("OK", status=200)
+
+
+def _process_threads_event(payload: dict, valid_secrets: set[str]):
+    """File a reply someone left on a connected profile's post.
+
+    A Threads delivery is one event, not a batch. The reply names the post it
+    hangs off and that post's owner (``root_post``); it is filed only under the
+    connected profile that owns the post, and only when the org owning that
+    account signed the delivery — the same binding as ``_process_meta_events``.
+    """
+    from django.db.models import Q
+
+    from providers.threads import inbox_reply, reply_timestamp
+
+    if not isinstance(payload, dict):
+        return
+    values = payload.get("values") or {}
+    if values.get("field") != "replies":
+        return
+    value = values.get("value") or {}
+    root = value.get("root_post") or {}
+    post_id = str(root.get("id") or "")
+    owner_id = str(root.get("owner_id") or "")
+    owner_username = str(root.get("username") or "")
+    if not post_id or not (owner_id or owner_username):
+        return
+    if owner_username and value.get("username") == owner_username:
+        # The profile answering on its own post, from here or from the app.
+        return
+
+    owner = Q()
+    if owner_id:
+        owner |= Q(account_platform_id=owner_id)
+    if owner_username:
+        owner |= Q(account_handle__iexact=owner_username) | Q(account_handle__iexact=f"@{owner_username}")
+    accounts = list(
+        SocialAccount.objects.filter(
+            owner, platform="threads", connection_status=SocialAccount.ConnectionStatus.CONNECTED
+        ).select_related("workspace__organization")
+    )
+    if not accounts:
+        logger.warning("Threads webhook: no connected profile owns post %s (owner %s).", post_id, owner_id)
+        return
+    reply = inbox_reply(value, post_id, "", reply_timestamp(value.get("timestamp")))
+    if reply is None:
+        return
+    for account in accounts:
+        if resolve_app_secret("threads", account.workspace.organization_id) not in valid_secrets:
+            logger.warning("Threads webhook: signature not valid for account %s's org app.", account.id)
+            continue
+        try:
+            _create_if_new(
+                account=account,
+                platform_message_id=reply.platform_message_id,
+                message_type=InboxMessage.MessageType.COMMENT,
+                sender_name=reply.sender_name,
+                sender_id=reply.sender_id,
+                body=reply.text,
+                extra=reply.extra,
+                received_at=reply.timestamp,
+            )
+        except Exception:
+            logger.exception("Could not file a Threads reply for account %s", account.id)
 
 
 # --- YouTube PubSubHubbub ---

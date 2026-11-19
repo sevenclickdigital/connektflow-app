@@ -18,7 +18,7 @@ Os blocos "Texto para enviar" estão em inglês porque os revisores da Meta leem
 | Verificação da empresa | Aprovada |
 | Política de privacidade / termos | `https://connektflow.com.br/privacidade/`, `https://connektflow.com.br/termos/` |
 | Conformidade | Sem violações nem ações obrigatórias em aberto |
-| Webhooks | Página: `feed`, `mention`, `messages`. Instagram: `comments`, `mentions`, `messages`. Conta do WhatsApp Business: `messages`, `account_update`. Todos batem com o código |
+| Webhooks | Página: `feed`, `mention`, `messages`. Instagram: `comments`, `mentions`, `messages`. Conta do WhatsApp Business: `messages`, `account_update`. Todos batem com o código. Falta assinar o do Threads (`replies`), descrito em `threads_read_replies` |
 | URIs de redirecionamento OAuth | Callbacks do Facebook, Instagram e Meta Ads registrados. O do Threads fica no painel do caso de uso do Threads e não pôde ser lido daqui |
 
 ## 2. Corrigir antes de enviar
@@ -490,7 +490,7 @@ replies or change reply controls.
 
 #### `threads_read_replies`
 
-- **Para que serve:** trazer para a Caixa de entrada as respostas que outras pessoas deixam nos posts do perfil: `GET /me/threads` (posts recentes) e `GET /{post}/conversation` (respostas de cada um), a cada 5 minutos.
+- **Para que serve:** trazer para a Caixa de entrada as respostas que outras pessoas deixam nos posts do perfil. Chegam na hora pelo webhook `replies` do Threads (`/webhooks/threads/`), que a Meta só entrega depois que as permissões do Threads tiverem acesso avançado; até lá, e como reserva, pela leitura a cada 5 minutos: `GET /me/threads` (posts recentes) e `GET /{post}/conversation` (respostas de cada um).
 - **Texto para enviar:**
 
 ```
@@ -507,7 +507,7 @@ other people's posts.
   2. Com outra conta, responda a um post do perfil no threads.com.
   3. Barra lateral → **Inbox** → filtro **Threads**. Espere a resposta aparecer (até 5 minutos) e abra a entrada, mostrando o post e a resposta.
   4. Responda pela caixa de resposta (isso também demonstra `threads_manage_replies`) e mostre a resposta publicada no threads.com.
-- **Antes de gravar:** adicione `threads_read_replies` ao caso de uso *Acessar a API do Threads* no painel e ao rascunho da análise. O login do Threads pede essa permissão; enquanto ela não estiver no caso de uso, o Threads recusa a conexão. Perfis conectados antes precisam reconectar.
+- **Antes de gravar:** adicione `threads_read_replies` ao caso de uso *Acessar a API do Threads* no painel e ao rascunho da análise. No mesmo caso de uso, em Configurações, adicione o subcaso *Receber notificações em tempo real com os Webhooks do Threads*, com a URL `https://app.connektflow.com.br/webhooks/threads/`, o token de verificação e o campo `replies`. Na gravação a resposta ainda chega pela leitura a cada 5 minutos, porque o webhook só é entregue depois da aprovação. O login do Threads pede essa permissão; enquanto ela não estiver no caso de uso, o Threads recusa a conexão. Perfis conectados antes precisam reconectar.
 
 ### 5.4 WhatsApp
 

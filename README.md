@@ -415,6 +415,7 @@ Facebook and Instagram share the same Meta app credentials. Threads runs on the 
    **Use case: "Access the Threads API"** (Threads)
    - This use case auto-includes `threads_basic`
    - Add these optional permissions: `threads_content_publish`, `threads_manage_insights`, `threads_manage_replies`, `threads_read_replies` (the sign-in asks for all of them, so one missing here makes Threads refuse the connection)
+   - For replies to reach the inbox at once: under the use case's **Settings**, add the sub-use case **Get real-time notifications with Threads Webhooks**, set the callback URL to `https://your-domain.com/webhooks/threads/` with the verify token in `THREADS_WEBHOOK_VERIFY_TOKEN` (it defaults to `FACEBOOK_WEBHOOK_VERIFY_TOKEN`), and subscribe to the **`replies`** field of the *moderate* topic. Meta delivers these only once the Threads permissions have advanced access (App Review) and never for a private profile; until then, and as a fallback, replies arrive by the 5-minute poll.
 
 4. Under **Facebook Login → Settings → Valid OAuth Redirect URIs**, add the following redirect URIs:
    ```
