@@ -11,6 +11,7 @@ from django.db.models import Count, Q
 from django.shortcuts import redirect, render
 from django.utils import timezone as django_tz
 from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.accounts.models import User
@@ -22,6 +23,7 @@ from apps.common.validators import clean_display_name
 from apps.composer.models import PlatformPost, Post, Tag
 from apps.members.decorators import require_org_role
 from apps.members.models import OrgMembership, WorkspaceMembership
+from apps.organizations.forms import AboutBusinessForm
 from apps.organizations.models import Organization
 from apps.social_accounts.models import SocialAccount
 from apps.workspaces.models import Workspace
@@ -104,6 +106,79 @@ def welcome_view(request):
         workspace.save(update_fields=["name"])
         billing_services.set_payer_identity(organization, tax_id=tax_id, phone=phone)
     return redirect("billing:subscribe_modal", workspace_id=workspace.id)
+
+
+def needs_about(request, workspace):
+    """Whether the new account's owner is still to be asked about their business.
+
+    Asked once, before the welcome step: answering or skipping both close it.
+    """
+    return workspace.organization.about_answered_at is None and needs_welcome(request, workspace)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def about_view(request):
+    """Ask a new account what it does, how big it is, how it found us and what it wants.
+
+    Shown once, right after sign-up and before the plan. Every answer is
+    optional and "Skip" closes the step as well; the answers show on the
+    administrative Customers screen.
+    """
+    workspace = Workspace.objects.filter(
+        id=request.GET.get("workspace") or request.POST.get("workspace") or None,
+        memberships__user=request.user,
+    ).first()
+    if workspace is None or not needs_about(request, workspace):
+        return redirect("dashboard")
+
+    organization = workspace.organization
+    form = AboutBusinessForm(instance=organization)
+    if request.method == "POST":
+        if request.POST.get("action") != "skip":
+            form = AboutBusinessForm(request.POST, instance=organization)
+            if not form.is_valid():
+                return _render_about(request, form, workspace)
+            form.save(commit=False)
+        organization.about_answered_at = django_tz.now()
+        organization.save(
+            update_fields=["business_activity", "team_size", "referral_source", "goals", "about_answered_at"]
+        )
+        return redirect("billing:checkout", workspace_id=workspace.id)
+    return _render_about(request, form, workspace)
+
+
+#: What each activity card says under its name.
+ACTIVITY_DESCRIPTIONS = {
+    Organization.Activity.FREELANCER: gettext_lazy(
+        "I work on projects on my own, without a company or agency between me and the client."
+    ),
+    Organization.Activity.ENTREPRENEUR: gettext_lazy(
+        "I have my own business, already running or getting off the ground."
+    ),
+    Organization.Activity.AGENCY: gettext_lazy("I own or work at an agency that looks after other brands."),
+    Organization.Activity.MARKETING_ANALYST: gettext_lazy(
+        "I am on a company's marketing team and look after its social media."
+    ),
+}
+
+
+def _render_about(request, form, workspace):
+    return render(
+        request,
+        "organizations/about.html",
+        {
+            "form": form,
+            "workspace": workspace,
+            "activities": [
+                (value, label, ACTIVITY_DESCRIPTIONS[value]) for value, label in Organization.Activity.choices
+            ],
+            "team_sizes": Organization.TeamSize.choices,
+            "sources": Organization.Source.choices,
+            "goal_choices": Organization.Goal.choices,
+            "selected_goals": form["goals"].value() or [],
+        },
+    )
 
 
 #: How many organizations one person may own. Far above any real need (a

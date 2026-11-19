@@ -2,12 +2,40 @@ import uuid
 
 from django.conf import settings
 from django.db import models, transaction
+from django.utils.translation import gettext_lazy as _
 
 
 class Organization(models.Model):
     #: The name every organization is created with at sign-up, until its
     #: owner gives it a real one on the welcome step.
     DEFAULT_NAME = "My Organization"
+
+    # The "about your business" step a new account is shown before its plan
+    # (organizations.views.about_view). Every answer is optional.
+    class Activity(models.TextChoices):
+        FREELANCER = "freelancer", _("Freelancer")
+        ENTREPRENEUR = "entrepreneur", _("Entrepreneur")
+        AGENCY = "agency", _("Agency")
+        MARKETING_ANALYST = "marketing_analyst", _("Marketing analyst")
+
+    class TeamSize(models.TextChoices):
+        SOLO = "solo", _("Just me")
+        SMALL = "2_5", _("2 to 5 people")
+        MEDIUM = "6_20", _("6 to 20 people")
+        LARGE = "21_plus", _("More than 20 people")
+
+    class Source(models.TextChoices):
+        INSTAGRAM = "instagram", _("Instagram")
+        GOOGLE = "google", _("Google search")
+        REFERRAL = "referral", _("A friend or colleague")
+        YOUTUBE = "youtube", _("YouTube")
+        OTHER = "other", _("Somewhere else")
+
+    class Goal(models.TextChoices):
+        SCHEDULE = "schedule", _("Plan and schedule posts")
+        INBOX = "inbox", _("Answer messages and WhatsApp in one place")
+        REPORTS = "reports", _("Reports for clients")
+        AUTOMATIONS = "automations", _("Automate replies to comments")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
@@ -21,6 +49,14 @@ class Organization(models.Model):
     # invoices can be routed to a finance address rather than whoever
     # happened to click Subscribe.
     billing_email = models.EmailField(blank=True, default="")
+
+    business_activity = models.CharField(max_length=32, choices=Activity.choices, blank=True, default="", db_default="")
+    team_size = models.CharField(max_length=16, choices=TeamSize.choices, blank=True, default="", db_default="")
+    referral_source = models.CharField(max_length=16, choices=Source.choices, blank=True, default="", db_default="")
+    #: Values of ``Goal``; several may be picked.
+    goals = models.JSONField(default=list, blank=True, db_default=models.Value([], output_field=models.JSONField()))
+    #: When the owner answered or skipped the step; it is not shown again after.
+    about_answered_at = models.DateTimeField(blank=True, null=True)
 
     # Deletion workflow
     deletion_requested_at = models.DateTimeField(blank=True, null=True)
@@ -60,6 +96,12 @@ class Organization(models.Model):
             return False
         sub = getattr(self, "intelligence_subscription", None)
         return bool(sub and sub.status == "active")
+
+    @property
+    def goal_labels(self):
+        """The goals picked on the "about your business" step, as their labels."""
+        labels = dict(self.Goal.choices)
+        return [labels[goal] for goal in self.goals if goal in labels]
 
     @property
     def is_unnamed(self):

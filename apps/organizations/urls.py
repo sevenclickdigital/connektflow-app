@@ -10,5 +10,6 @@ urlpatterns = [
     path("rename/", views.rename_view, name="rename"),
     path("create/", views.create_view, name="create"),
     path("welcome/", views.welcome_view, name="welcome"),
+    path("about/", views.about_view, name="about"),
     path("calendar/", views.cross_workspace_calendar, name="cross_workspace_calendar"),
 ]

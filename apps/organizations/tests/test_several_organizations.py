@@ -184,6 +184,7 @@ def test_a_new_account_names_its_brand_and_organization_on_the_checkout(client, 
     settings.BILLING_TRIAL_DAYS = 7
     _user, workspace = _signed_up(client)
     checkout = reverse("billing:checkout", kwargs={"workspace_id": workspace.id})
+    client.post(reverse("organizations:about"), {"workspace": str(workspace.id), "action": "skip"})
 
     landing = client.get(reverse("dashboard"), follow=True)
     assert landing.redirect_chain[-1][0] == checkout

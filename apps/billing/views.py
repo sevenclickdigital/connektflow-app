@@ -68,6 +68,7 @@ from apps.common.validators import clean_display_name
 from apps.members.decorators import require_org_role
 from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
+from apps.organizations.views import needs_about
 from apps.social_accounts.models import PlatformVisibility
 from apps.workspaces.models import Workspace
 
@@ -775,11 +776,14 @@ def checkout(request, workspace_id):
     keeps the total. Then the payment beside the order summary. Without an
     active plan the card is charged now and kept for every renewal; with
     one, the brands ticked are added to it and charged to the card on file
-    from the next charge. Also the first screen of a new account, which
-    names its brand on its row and can start the free trial instead.
+    from the next charge. Also where a new account starts, once asked about
+    its business: it names its brand on its row and can start the free
+    trial instead.
     """
     workspace = _get_workspace(request, workspace_id)
     _require_manage_billing(request, workspace)
+    if needs_about(request, workspace):
+        return redirect(f"{reverse('organizations:about')}?workspace={workspace.id}")
     organization = workspace.organization
     plan = services.plan_for(organization)
     if not services.is_workspace_active(workspace.pk) and services.plan_has_room(plan):

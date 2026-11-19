@@ -65,7 +65,7 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
       </thead>
       {% for row in rows %}
       <tbody class="border-b border-neutral-200 last:border-b-0"
-             data-search="{{ row.organization.name|lower }}{% for ws in row.workspaces %} {{ ws.workspace.name|lower }}{% endfor %}{% for p in row.people %} {{ p.user.name|lower }} {{ p.user.email|lower }}{% endfor %}"
+             data-search="{{ row.organization.name|lower }}{% for ws in row.workspaces %} {{ ws.workspace.name|lower }}{% endfor %}{% for p in row.people %} {{ p.user.name|lower }} {{ p.user.email|lower }}{% endfor %} {{ row.organization.get_business_activity_display|lower }}"
              {% if row.is_team_account %}data-team{% endif %}
              x-show="(!onlyCustomers || !$el.hasAttribute('data-team')) && (!q || $el.dataset.search.includes(q.trim().toLowerCase()))"
              x-data="{
@@ -98,6 +98,7 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
             <div class="flex flex-wrap items-center gap-1.5">
               <span class="font-semibold text-neutral-950">{{ row.organization.name }}</span>
               {% if row.is_team_account %}<span class="pill pill-brand">{% translate "Team" %}</span>{% endif %}
+              {% if row.organization.business_activity %}<span class="pill pill-neutral">{{ row.organization.get_business_activity_display }}</span>{% endif %}
             </div>
           </td>
           <td class="px-3 py-3 text-neutral-700 whitespace-nowrap">
@@ -417,6 +418,17 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
                     {% endif %}
                   </div>
 <div x-show="panel === 'edit'" x-cloak class="px-5 py-4">
+                    <dl class="mb-4 rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                      <dt class="col-span-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">{% translate "About the business" %}</dt>
+                      {% if row.organization.about_answered_at %}
+                      <dt class="text-neutral-600">{% translate "Activity" %}</dt><dd class="text-neutral-900">{{ row.organization.get_business_activity_display|default:"—" }}</dd>
+                      <dt class="text-neutral-600">{% translate "Team size" %}</dt><dd class="text-neutral-900">{{ row.organization.get_team_size_display|default:"—" }}</dd>
+                      <dt class="text-neutral-600">{% translate "Found us through" %}</dt><dd class="text-neutral-900">{{ row.organization.get_referral_source_display|default:"—" }}</dd>
+                      <dt class="text-neutral-600">{% translate "Goals" %}</dt><dd class="text-neutral-900">{{ row.organization.goal_labels|join:", "|default:"—" }}</dd>
+                      {% else %}
+                      <dd class="col-span-2 text-neutral-600">{% translate "Not answered." %}</dd>
+                      {% endif %}
+                    </dl>
                     <form method="post" action="{% url 'billing_staff:edit_account' org_id=row.organization.id %}"
                           class="space-y-3">
                       {% csrf_token %}
