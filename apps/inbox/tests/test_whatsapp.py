@@ -212,7 +212,10 @@ class TestConnect:
         assert b"data-whatsapp-signup" in response.content
         assert b'"config_id": "cfg"' in response.content
         assert SECRET.encode() not in response.content
-        assert "https://connect.facebook.net" in response["Content-Security-Policy-Report-Only"]
+        policy = response["Content-Security-Policy-Report-Only"]
+        directives = {d.split()[0]: d for d in policy.split(";") if d.strip()}
+        assert "https://connect.facebook.net" in directives["script-src"]
+        assert "https://connect.facebook.net" in directives["connect-src"]
 
     def test_the_popup_asks_for_the_current_signup_version_without_business_app_numbers(
         self, manager_client, workspace

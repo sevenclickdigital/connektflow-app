@@ -202,10 +202,12 @@ def _resolve_mastodon_extra_creds(session_data):
 
 
 # The Social Accounts page loads Meta's JS SDK for WhatsApp Embedded Signup.
+# The SDK also fetches the app's configuration from connect.facebook.net, so
+# that host is a connect source as well as a script source.
 _META_SDK_CSP = {
     "SCRIPT_SRC": "https://connect.facebook.net",
     "FRAME_SRC": "https://www.facebook.com https://web.facebook.com https://staticxx.facebook.com",
-    "CONNECT_SRC": "https://www.facebook.com https://graph.facebook.com",
+    "CONNECT_SRC": "https://connect.facebook.net https://www.facebook.com https://graph.facebook.com",
 }
 
 
