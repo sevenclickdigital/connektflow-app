@@ -72,12 +72,19 @@ def _get_visible_platform_choices():
 
 
 def _get_configured_platforms(org_id):
-    """Return set of platform names that have credentials configured."""
+    """Return set of platform names that have credentials configured.
+
+    With ``org_id=None`` only the site-wide sources count (the environment and
+    the platforms that need no app credentials): what the administrative area
+    shows, outside any organization.
+    """
     from providers import PROVIDER_REGISTRY
     from providers.types import AuthType
 
-    configured = set(
-        PlatformCredential.objects.for_org(org_id).filter(is_configured=True).values_list("platform", flat=True)
+    configured = (
+        set(PlatformCredential.objects.for_org(org_id).filter(is_configured=True).values_list("platform", flat=True))
+        if org_id
+        else set()
     )
     env_creds = getattr(settings, "PLATFORM_CREDENTIALS_FROM_ENV", {})
     for platform, creds in env_creds.items():

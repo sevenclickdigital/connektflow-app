@@ -195,8 +195,7 @@ class TestBatchSelection:
             "platform": "facebook",
             "user_tokens": {"access_token": "user-token", "refresh_token": None},
             "pages": [
-                {"id": page_id, "name": f"Page {page_id}", "access_token": f"token-{page_id}"}
-                for page_id in page_ids
+                {"id": page_id, "name": f"Page {page_id}", "access_token": f"token-{page_id}"} for page_id in page_ids
             ],
         }
         session.save()
@@ -230,9 +229,7 @@ class TestBatchSelection:
         assert SocialAccount.objects.filter(workspace=workspace, account_platform_id="p2").exists()
         assert not SocialAccount.objects.filter(workspace=workspace, account_platform_id="p3").exists()
 
-    def test_a_batch_at_the_cap_still_refreshes_the_accounts_it_already_has(
-        self, authenticated_client, workspace
-    ):
+    def test_a_batch_at_the_cap_still_refreshes_the_accounts_it_already_has(self, authenticated_client, workspace):
         """Re-ticking connected rows is the picker's own reconnect path."""
         for page_id in ("p1", "p2", "p3"):
             _existing(workspace, "facebook", page_id)

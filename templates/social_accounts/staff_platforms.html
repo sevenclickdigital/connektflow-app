@@ -1,0 +1,50 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+Networks customers may connect: one switch per platform over PlatformVisibility
+(apps.social_accounts.staff_views). Turning one off hides it from the connect
+page, the sidebar's connect shortcuts and the composer's "Connect channel" card
+for every brand; accounts already connected keep working. Each switch posts on
+its own and answers with a toast. "Credentials ready" says whether the
+platform's app is configured, so a network is turned on only once it can
+connect. The platform value in hx-vals comes from the model's choices.
+{% endcomment %}
+
+{% block title %}{% translate "Platforms" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <h1 class="page-title">{% translate "Platforms" %}</h1>
+  <p class="page-description">{% translate "Choose which networks customers can connect. A hidden network leaves the connect page for every brand; accounts already connected keep working." %}</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="a-card divide-y divide-neutral-300">
+  {% for platform in platforms %}
+  <div class="flex items-center gap-4 px-5 py-4">
+    <span class="w-9 h-9 rounded-lg bg-neutral-50 border border-neutral-300 flex items-center justify-center flex-shrink-0">
+      {% include "partials/_platform_icon.html" with platform=platform.value size="md" %}
+    </span>
+    <div class="flex-1 min-w-0">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-sm font-semibold text-neutral-950">{{ platform.label }}</span>
+        {% if platform.configured %}
+        <span class="pill pill-success"><i></i>{% translate "Credentials ready" %}</span>
+        {% else %}
+        <span class="pill pill-neutral">{% translate "No credentials" %}</span>
+        {% endif %}
+      </div>
+      {% if platform.description %}<p class="text-xs text-neutral-600 mt-0.5 truncate">{{ platform.description }}</p>{% endif %}
+    </div>
+    <label class="bb-toggle" title="{% translate 'Shown to customers' %}">
+      <input type="checkbox" name="visible"{% if platform.visible %} checked{% endif %}
+             hx-post="{% url 'social_accounts_staff:platform_toggle' %}" hx-trigger="change" hx-swap="none"
+             hx-vals='{"platform": "{{ platform.value }}"}'
+             aria-label="{% blocktranslate with name=platform.label %}Show {{ name }} to customers{% endblocktranslate %}">
+      <span class="bb-toggle-track"></span>
+    </label>
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

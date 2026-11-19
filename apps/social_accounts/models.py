@@ -819,6 +819,14 @@ class PlatformVisibility(models.Model):
         return f"{self.get_platform_display()} ({'visible' if self.is_visible else 'hidden'})"
 
     @classmethod
+    def set_visible(cls, platform: str, visible: bool) -> "PlatformVisibility":
+        """Show or hide ``platform`` on every connect surface. Raises ValueError for an unknown platform."""
+        if platform not in PlatformCredential.Platform.values:
+            raise ValueError(f"Unknown platform: {platform!r}")
+        row, _created = cls.objects.update_or_create(platform=platform, defaults={"is_visible": visible})
+        return row
+
+    @classmethod
     def visible_choices(cls) -> list[tuple[str, str]]:
         """``Platform.choices`` minus the platforms an admin has hidden.
 
