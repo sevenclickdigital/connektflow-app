@@ -63,6 +63,11 @@ def send_error_message(code) -> str:
         return _("WhatsApp could not deliver this message to the customer's number.")
     if code == 131030:
         return _("This number is not in the test recipient list of the WhatsApp app.")
+    if code == 131037:
+        return _(
+            "WhatsApp has not approved this number's display name and sends nothing until it does. "
+            "Check the name in WhatsApp Manager: it may be under review or declined."
+        )
     if code == 133010:
         return _("The WhatsApp number is not registered on the Cloud API. Reconnect it.")
     if code in (131051, 131052, 131053):

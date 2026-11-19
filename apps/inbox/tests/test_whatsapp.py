@@ -191,6 +191,12 @@ class TestProviderErrors:
         assert isinstance(error, MessagingError)
         assert "24" in str(error)
 
+    def test_a_display_name_awaiting_approval_is_named_as_the_cause(self):
+        response = httpx.Response(400, json={"error": {"code": 131037, "message": "needs display name approval"}})
+        error = WhatsAppProvider({})._error_for_response(response)
+        assert isinstance(error, MessagingError)
+        assert "Gerenciador do WhatsApp" in str(error)
+
 
 @pytest.mark.django_db
 class TestConnect:
