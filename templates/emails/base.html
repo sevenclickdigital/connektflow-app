@@ -88,13 +88,6 @@
               {% for line in company_address_lines %}<br>{{ line }}{% endfor %}
             </p>
             {% endif %}
-            {% if company_phone %}
-            <p style="margin:0 0 10px;">
-              <strong style="color:#334155;">{% translate "WhatsApp and phone" %}</strong><br>
-              <a href="https://wa.me/{{ company_phone_digits }}" target="_blank" rel="noopener" style="color:#7C3AED;text-decoration:underline;">{{ company_phone }}</a>
-            </p>
-            {% endif %}
-            <p style="margin:0;color:#94A3B8;">&copy; {{ current_year }} {{ company_name }}</p>
           </td>
         </tr>
       </table>

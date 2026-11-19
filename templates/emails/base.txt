@@ -16,9 +16,4 @@ CNPJ {{ company_document }}{% endif %}{% if company_service_area %}
 {% if company_address_lines %}
 {% translate "Address" %}{% for line in company_address_lines %}
 {{ line }}{% endfor %}
-{% endif %}{% if company_phone %}
-{% translate "WhatsApp and phone" %}
-{{ company_phone }}
-{% endif %}
-© {{ current_year }} {{ company_name }}
-{% endautoescape %}
+{% endif %}{% endautoescape %}
