@@ -157,7 +157,11 @@ class InboxMessage(models.Model):
         from providers.meta_messaging import normalize_attachments
 
         extra = self.extra or {}
-        return normalize_attachments(extra.get("attachments", (extra.get("message") or {}).get("attachments", [])))
+        # A Messenger webhook nests the attachments in its ``message`` object;
+        # a Facebook comment webhook stores the comment's text under that key.
+        nested = extra.get("message")
+        nested_attachments = nested.get("attachments", []) if isinstance(nested, dict) else []
+        return normalize_attachments(extra.get("attachments", nested_attachments))
 
     # The kind of post a comment hangs off, as inbox_services.post_preview
     # names it from the post's format or the platform's product type.

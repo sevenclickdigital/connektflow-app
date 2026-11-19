@@ -97,7 +97,10 @@ def reply_eligibility(message, *, origin=PROGRAMMATIC, actor=None, credentials=N
     stamps = []
     for candidate in candidates:
         extra = candidate["extra"] or {}
-        raw = extra.get("message") or {}
+        raw = extra.get("message")
+        if not isinstance(raw, dict):
+            # A comment webhook keeps the comment's text under ``message``.
+            raw = {}
         if extra.get("is_echo") or raw.get("is_echo") or extra.get("is_deleted") or raw.get("is_deleted"):
             continue
         stamp = verified_timestamp(extra, candidate["received_at"])

@@ -1075,3 +1075,13 @@ def test_a_sender_name_longer_than_its_column_is_cut_not_refused(ig_account):
     assert message is not None
     assert message.sender_name == "n" * 255
     assert message.sender_handle == "i" * 255
+
+
+def test_a_facebook_comment_has_no_attachments_to_read_from_its_text():
+    """The comment webhook stores the comment's text under ``message``, where a
+    Messenger webhook nests its attachments."""
+    from apps.inbox.models import InboxMessage
+
+    comment = InboxMessage(extra={"item": "comment", "message": "Top 👏👏", "post_id": "1_2"})
+
+    assert comment.attachments == []
