@@ -16,7 +16,7 @@ Social media management platform: compose, schedule, approve, publish, inbox, an
 - `docs/features.md`: what each feature does and where it lives in the code.
 - `docs/style-guide.html`: design tokens and the component classes that already exist.
 - `docs/brand-and-layout.md`: the rename to Connekt Flow and the new layout — naming rules, which `brightbean` identifiers must stay, colour class names, what is migrated and what is next.
-- `docs/meta-analytics-manual-tests.md`, `docs/youtube-compliance-rollout.md`: operational checklists.
+- `docs/meta-analytics-manual-tests.md`, `docs/youtube-compliance-rollout.md`, `docs/meta-app-review.md`: operational checklists.
 
 When the code and a doc disagree, the code is right — fix the doc in the same change.
 
