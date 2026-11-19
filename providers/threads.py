@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
 
 from .base import SocialProvider
-from .exceptions import OAuthError, PublishError
+from .exceptions import OAuthError, ProviderError, PublishError
 from .types import (
     AccountProfile,
     AuthType,
     CommentResult,
+    InboxMessage,
     MediaType,
     OAuthTokens,
     PostMetrics,
@@ -19,9 +21,64 @@ from .types import (
     PublishContent,
     PublishResult,
     RateLimitConfig,
+    ReplyResult,
 )
 
 logger = logging.getLogger(__name__)
+
+# How many of the account's latest posts a poll reads the replies of.
+REPLY_POSTS_PER_POLL = 15
+# Pages of 50 replies read per post in one poll, newest first.
+REPLY_PAGES_PER_POST = 4
+# Read a little behind the last reply stored, so one that the platform listed
+# late is not skipped; the inbox drops what it already has.
+REPLY_POLL_OVERLAP = timedelta(minutes=10)
+REPLY_FIELDS = (
+    "id,text,username,timestamp,permalink,media_type,media_url,thumbnail_url,"
+    "root_post,replied_to,is_reply_owned_by_me,profile_picture_url"
+)
+
+
+def _reply_timestamp(value) -> datetime | None:
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%dT%H:%M:%S%z").astimezone(UTC)
+    except ValueError:
+        return None
+
+
+def _inbox_reply(item: dict, post_id: str, post_permalink: str, stamp: datetime | None) -> InboxMessage | None:
+    """One entry of a post's conversation as an inbox comment, or None for the account's own."""
+    reply_id = str(item.get("id") or "")
+    if not reply_id or item.get("is_reply_owned_by_me") or stamp is None:
+        return None
+    username = str(item.get("username") or "")
+    parent_id = str((item.get("replied_to") or {}).get("id") or "")
+    attachments = []
+    media_url = item.get("media_url") or item.get("thumbnail_url")
+    if media_url and item.get("media_type") in ("IMAGE", "VIDEO"):
+        attachments.append({"type": item["media_type"].lower(), "url": media_url})
+    return InboxMessage(
+        platform_message_id=reply_id,
+        sender_id=username,
+        # Threads names the author only when the profile is public.
+        sender_name=username or "Threads user",
+        text=str(item.get("text") or ""),
+        timestamp=stamp,
+        message_type="comment",
+        extra={
+            "comment_id": reply_id,
+            "post_id": post_id,
+            "stored_post_id": post_id,
+            # Empty for a reply to the post itself, the reply it answers otherwise.
+            "parent_id": parent_id if parent_id != post_id else "",
+            "post_permalink_url": post_permalink,
+            "permalink": str(item.get("permalink") or ""),
+            "sender_handle": username,
+            "sender_avatar_url": str(item.get("profile_picture_url") or ""),
+            "attachments": attachments,
+        },
+    )
+
 
 AUTH_URL = "https://www.threads.com/oauth/authorize"
 TOKEN_URL = "https://graph.threads.net/oauth/access_token"
@@ -86,6 +143,7 @@ class ThreadsProvider(SocialProvider):
             "threads_content_publish",
             "threads_manage_insights",
             "threads_manage_replies",
+            "threads_read_replies",
         ]
 
     @property
@@ -469,6 +527,94 @@ class ThreadsProvider(SocialProvider):
             platform_comment_id=reply_id,
             extra=publish_resp.json(),
         )
+
+    # ------------------------------------------------------------------
+    # Inbox (replies other people leave on the account's posts)
+    # ------------------------------------------------------------------
+
+    def get_messages(self, access_token: str, since: datetime | None = None) -> list[InboxMessage]:
+        """Replies to the account's recent posts, as inbox comments.
+
+        Threads has no feed of "replies to me", so this reads the account's
+        latest posts (``threads_basic``) and each one's conversation
+        (``threads_read_replies``), newest reply first, stopping at ``since``.
+        A reply to a post older than the latest ``REPLY_POSTS_PER_POLL`` is not
+        seen: that bounds a poll to one request for the posts plus one per post.
+        The account's own replies are left out. A post that cannot be read is
+        skipped; when none can, the refusal is raised.
+        """
+        floor = since - REPLY_POLL_OVERLAP if since else None
+        posts = (
+            self._request(
+                "GET",
+                f"{API_BASE}/me/threads",
+                access_token=access_token,
+                params={"fields": "id,permalink,media_type", "limit": REPLY_POSTS_PER_POLL},
+            )
+            .json()
+            .get("data", [])
+        )
+        messages: list[InboxMessage] = []
+        read = 0
+        refused: ProviderError | None = None
+        for post in posts:
+            post_id = str(post.get("id") or "")
+            if not post_id or post.get("media_type") == "REPOST_FACADE":
+                continue
+            try:
+                messages.extend(self._post_replies(access_token, post_id, str(post.get("permalink") or ""), floor))
+                read += 1
+            except ProviderError as exc:
+                # One post Threads will not open (removed, restricted) must not
+                # hide the replies under the others.
+                logger.warning("Threads replies of post %s could not be read: %s", post_id, exc)
+                refused = exc
+        if refused is not None and not read:
+            # Every post was refused: that is the permission or the token, and
+            # the caller has to know.
+            raise refused
+        return messages
+
+    def _post_replies(self, access_token: str, post_id: str, post_permalink: str, floor) -> list[InboxMessage]:
+        """Every reply under one post that is newer than ``floor``, at any depth."""
+        replies: list[InboxMessage] = []
+        params = {"fields": REPLY_FIELDS, "reverse": "true", "limit": 50}
+        for _page in range(REPLY_PAGES_PER_POST):
+            body = self._request(
+                "GET", f"{API_BASE}/{post_id}/conversation", access_token=access_token, params=params
+            ).json()
+            for item in body.get("data", []):
+                stamp = _reply_timestamp(item.get("timestamp"))
+                if floor and stamp and stamp < floor:
+                    return replies
+                reply = _inbox_reply(item, post_id, post_permalink, stamp)
+                if reply:
+                    replies.append(reply)
+            after = ((body.get("paging") or {}).get("cursors") or {}).get("after")
+            if not after or not body.get("data"):
+                break
+            params = {**params, "after": after}
+        return replies
+
+    def reply_to_comment(self, access_token: str, comment_id: str, text: str, extra: dict | None = None) -> ReplyResult:
+        """Answer a reply with a reply of the account's own, under it."""
+        result = self.publish_comment(access_token, comment_id, text)
+        return ReplyResult(platform_message_id=result.platform_comment_id, extra=result.extra)
+
+    def get_post_preview(self, access_token: str, post_id: str) -> dict | None:
+        post = self._request(
+            "GET",
+            f"{API_BASE}/{post_id}",
+            access_token=access_token,
+            params={"fields": "id,text,permalink,media_type,media_url,thumbnail_url"},
+        ).json()
+        image = post.get("thumbnail_url") or (post.get("media_url") if post.get("media_type") == "IMAGE" else "")
+        return {
+            "caption": post.get("text") or "",
+            "image_url": image or "",
+            "url": post.get("permalink") or "",
+            "product_type": "",
+        }
 
     # ------------------------------------------------------------------
     # Analytics

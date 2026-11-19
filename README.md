@@ -414,7 +414,7 @@ Facebook and Instagram share the same Meta app credentials. Threads runs on the 
 
    **Use case: "Access the Threads API"** (Threads)
    - This use case auto-includes `threads_basic`
-   - Add these optional permissions: `threads_content_publish`, `threads_manage_insights`, `threads_manage_replies`
+   - Add these optional permissions: `threads_content_publish`, `threads_manage_insights`, `threads_manage_replies`, `threads_read_replies` (the sign-in asks for all of them, so one missing here makes Threads refuse the connection)
 
 4. Under **Facebook Login → Settings → Valid OAuth Redirect URIs**, add the following redirect URIs:
    ```

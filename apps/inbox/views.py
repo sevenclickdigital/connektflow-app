@@ -205,6 +205,7 @@ REPLY_LIMITS = {
     (False, "instagram"): 2200,
     (False, "instagram_login"): 2200,
     (False, "youtube"): 10000,
+    (False, "threads"): 500,
 }
 
 # The entry types with a button of their own on the inbox page, in its order;

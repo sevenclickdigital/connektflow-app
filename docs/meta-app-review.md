@@ -470,14 +470,16 @@ their other social profiles.
 
 #### `threads_manage_replies`
 
-- **Para que serve:** o primeiro comentário do composer, publicado como resposta ao próprio post do usuário: `POST /{user}/threads` com `reply_to_id` e depois `POST /{user}/threads_publish`.
+- **Para que serve:** publicar respostas em nome do usuário: o primeiro comentário do composer, como resposta ao próprio post, e a resposta dada pela Caixa de entrada a quem respondeu um post. Nos dois casos, `POST /{user}/threads` com `reply_to_id` e depois `POST /{user}/threads_publish`.
 - **Texto para enviar:**
 
 ```
-When publishing to Threads, a Connekt Flow user can write a first comment that
-is posted as a reply to their own new post, for example to add a link or extra
-context. We only create replies to the user's own posts, on the user's behalf.
-We do not hide replies or change reply controls.
+Connekt Flow publishes replies on the user's behalf in two places. When
+publishing to Threads, the user can write a first comment that is posted as a
+reply to their own new post, for example to add a link or extra context. And in
+the unified inbox, the user can answer a reply that someone left on one of
+their posts; the answer is published as a reply under it. We do not hide
+replies or change reply controls.
 ```
 
 - **Gravação:**
@@ -485,6 +487,27 @@ We do not hide replies or change reply controls.
   2. Barra lateral → **Add new** → **New post**. Selecione o perfil do Threads e digite o texto.
   3. Preencha **First Comment** (Primeiro comentário) e clique em **Publish now**.
   4. Abra o post no threads.com e mostre a resposta abaixo dele.
+
+#### `threads_read_replies`
+
+- **Para que serve:** trazer para a Caixa de entrada as respostas que outras pessoas deixam nos posts do perfil: `GET /me/threads` (posts recentes) e `GET /{post}/conversation` (respostas de cada um), a cada 5 minutos.
+- **Texto para enviar:**
+
+```
+Connekt Flow brings the replies that other people leave on a connected Threads
+profile's posts into its unified inbox, next to the comments and messages from
+the user's other channels, so the team can read and answer them in one place.
+We read the replies under the user's own recent posts only, and show the
+author's username, the reply text and its time. We do not read replies on
+other people's posts.
+```
+
+- **Gravação:**
+  1. Conecte o perfil do Threads, mostrando `threads_read_replies` na tela de permissões.
+  2. Com outra conta, responda a um post do perfil no threads.com.
+  3. Barra lateral → **Inbox** → filtro **Threads**. Espere a resposta aparecer (até 5 minutos) e abra a entrada, mostrando o post e a resposta.
+  4. Responda pela caixa de resposta (isso também demonstra `threads_manage_replies`) e mostre a resposta publicada no threads.com.
+- **Antes de gravar:** adicione `threads_read_replies` ao caso de uso *Acessar a API do Threads* no painel e ao rascunho da análise. O login do Threads pede essa permissão; enquanto ela não estiver no caso de uso, o Threads recusa a conexão. Perfis conectados antes precisam reconectar.
 
 ### 5.4 WhatsApp
 
