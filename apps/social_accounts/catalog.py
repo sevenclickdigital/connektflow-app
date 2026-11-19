@@ -39,6 +39,27 @@ _PLATFORMS = {
 }
 
 
+# The order of the "connect other platforms" grid, the Meta networks first; any
+# platform not listed follows in the order of ``PlatformCredential.Platform``.
+_CONNECT_ORDER = (
+    "facebook",
+    "instagram",
+    "instagram_login",
+    "threads",
+    "whatsapp",
+    "youtube",
+    "google_business",
+)
+
+
+def connect_order(platform: str) -> int:
+    """Position of ``platform`` in the connect grid (unlisted ones share the last place)."""
+    try:
+        return _CONNECT_ORDER.index(platform)
+    except ValueError:
+        return len(_CONNECT_ORDER)
+
+
 def platform_description(platform: str) -> str:
     return _PLATFORMS.get(platform, ("", "other"))[0]
 

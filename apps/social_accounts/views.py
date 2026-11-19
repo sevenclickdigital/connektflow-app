@@ -30,7 +30,7 @@ from apps.members.decorators import require_permission
 from apps.radar.sources import source_cards
 from providers.exceptions import ProviderError, QuotaExceededError
 
-from .catalog import CATEGORIES, connect_flow, connect_guide, platform_category, platform_description
+from .catalog import CATEGORIES, connect_flow, connect_guide, connect_order, platform_category, platform_description
 from .error_messages import quota_connect_error
 from .models import MESSAGING_ONLY_PLATFORMS, MastodonAppRegistration, PlatformVisibility, SocialAccount
 from .oauth_aliases import from_url_slug, redirect_uri_from_request, to_url_slug
@@ -238,8 +238,8 @@ def _overview_context(request, workspace_id):
         for value, label in _get_visible_platform_choices()
         if len(accounts_by_platform.get(value, [])) < settings.MAX_ACCOUNTS_PER_PLATFORM
     ]
-    # Ones the user can connect right now first; unconfigured ones trail.
-    available_platforms.sort(key=lambda platform: not platform["configured"])
+    # Ones the user can connect right now first, in the catalogue's order; unconfigured ones trail.
+    available_platforms.sort(key=lambda platform: (not platform["configured"], connect_order(platform["value"])))
     problem_count = sum(1 for a in accounts if a.health == "error")
     meta_ads = _meta_ads_card(request, workspace_id)
     connected_count = len(accounts) - problem_count

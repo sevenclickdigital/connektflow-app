@@ -128,7 +128,6 @@ data-category and data-name on each card: the whole page is already here.
             {% endfor %}
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {% if not meta_ads.connection %}{% include "social_accounts/partials/_meta_ads_card.html" %}{% endif %}
             {% for platform in available_platforms %}
             <div class="a-card {% if platform.configured %}a-card-hover{% endif %} p-4 flex items-center gap-3"
                  data-state="available" data-category="{{ platform.category }}" data-name="{{ platform.label|lower }}"
@@ -153,6 +152,8 @@ data-category and data-name on each card: the whole page is already here.
                 {% endif %}
             </div>
             {% endfor %}
+            {# Meta Ads after the networks, which catalog.connect_order puts in their display order. #}
+            {% if not meta_ads.connection %}{% include "social_accounts/partials/_meta_ads_card.html" %}{% endif %}
         </div>
         {% for platform in available_platforms %}
         {% if platform.configured and platform.guide %}{% include "social_accounts/partials/_connect_guide.html" with platform=platform workspace_id=workspace_id %}{% endif %}
