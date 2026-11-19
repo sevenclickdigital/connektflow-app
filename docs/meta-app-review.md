@@ -28,7 +28,7 @@ Os blocos "Texto para enviar" estão em inglês porque os revisores da Meta leem
 3. **O Marketing API Access Tier exige 500 chamadas à API de Marketing nos últimos 15 dias, com menos de 15% de erro**, e não uma chamada. Veja a seção 5.5.
 4. **Exclusão de dados do usuário: configurada.** Em Configurações do app → Básico está a *URL de callback para exclusão de dados* `https://app.connektflow.com.br/data-deletion/` (conferido no painel em 19/11/2026). A consulta pela ferramenta de desenvolvedor da Meta continua devolvendo esse campo vazio; vale o painel.
 5. **O e-mail de contato `contato@connektflow.com.br` não está verificado.** As notificações da análise vão para ele.
-6. **`instagram_manage_contents` está no rascunho, mas desligada em produção** (`PLATFORM_INSTAGRAM_FACEBOOK_DELETE_SCOPE_ENABLED=false`). Ou ligue, reconecte a conta do Instagram e grave a exclusão, ou remova a permissão do rascunho. Como está, o diálogo de login da gravação não vai mostrá-la e a Meta rejeita.
+6. **`instagram_manage_contents` fica fora deste envio** (decidido em 19/11/2026). A exclusão de posts no Instagram continua desligada em produção (`PLATFORM_INSTAGRAM_FACEBOOK_DELETE_SCOPE_ENABLED=false`). Falta remover a permissão do rascunho no painel: Casos de uso → *Gerenciar mensagens e conteúdo no Instagram* → Permissões e recursos → remover `instagram_manage_contents`. Enquanto ela estiver no rascunho sem gravação, a Meta rejeita.
 7. **Três recursos que o código usa não estão no rascunho**: Instagram Public Content Access, Page Public Metadata Access e Human Agent. Veja a seção 6.
 8. **Exigências de gravação da Meta que o app não cobre hoje.** Cada uma está detalhada na sua seção:
    - `pages_manage_posts`: a Meta pede criar, editar e excluir. O app não edita um post que já está no Facebook.
@@ -392,6 +392,8 @@ conversations or send promotional messages.
 
 #### `instagram_manage_contents`
 
+> **Fora deste envio.** Não gravar nem enviar o texto abaixo: a permissão sai do rascunho (item 6 da seção 2). O roteiro fica guardado para quando a exclusão de posts no Instagram for ligada.
+
 - **Para que serve:** `DELETE /{media}` quando o usuário exclui um post publicado e mantém marcada a opção de excluir também do Instagram.
 - **Texto para enviar:**
 
@@ -668,7 +670,7 @@ Gravação: a gravação de `pages_messaging`, parando no cabeçalho da conversa
 
 ## 7. Ordem do trabalho
 
-1. Resolver a seção 2: e-mail de contato, a decisão sobre `instagram_manage_contents`, os itens não usados do rascunho, os recursos.
+1. Resolver a seção 2: e-mail de contato, remover `instagram_manage_contents` do rascunho, os itens não usados do rascunho, os recursos.
 2. Conectar todas as contas com um login que tenha papel no app e executar cada roteiro uma vez, sem gravar. Isso faz as chamadas de teste.
 3. Usar as telas de Anúncios todos os dias até atingir a contagem de chamadas da API de Marketing.
 4. Esperar 2 dias e conferir no painel que cada permissão mostra a sua chamada de teste.
