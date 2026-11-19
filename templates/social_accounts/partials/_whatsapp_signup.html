@@ -5,6 +5,8 @@ the authorization code, and a ``WA_EMBEDDED_SIGNUP`` window message carries the
 WhatsApp Business Account and phone number picked. Once both are in, the hidden
 form posts them to ``connect_whatsapp``, which verifies the ids against the
 token before connecting anything.
+If the code arrives and the account does not, the form is posted a few seconds
+later with what there is, so the server tells the person and logs what was missing.
 The flow version is ``signup_version`` (providers.whatsapp.EMBEDDED_SIGNUP_VERSION).
 From v5 the session object names the account in ``messaging_account_ids`` (the
 former ``waba_id``), and onboarding a WhatsApp Business app number is on by
@@ -26,6 +28,7 @@ Context: ``whatsapp_signup`` (app_id, config_id, version, signup_version, messag
     let code = '';
     let session = {};
     let submitted = false;
+    let incompleteTimer = null;
 
     function toast(tone, body) {
         document.body.dispatchEvent(new CustomEvent('showToast', { detail: { tone: tone, title: body } }));
@@ -35,14 +38,25 @@ Context: ``whatsapp_signup`` (app_id, config_id, version, signup_version, messag
         return (session.messaging_account_ids || [])[0] || session.waba_id || '';
     }
 
-    function submitIfReady() {
-        if (submitted || !code || !accountId()) return;
-        if (!session.phone_number_id) { toast('warn', cfg.messages.no_number); return; }
+    function send() {
         submitted = true;
         form.elements.code.value = code;
         form.elements.waba_id.value = accountId();
-        form.elements.phone_number_id.value = session.phone_number_id;
+        form.elements.phone_number_id.value = session.phone_number_id || '';
         form.submit();
+    }
+
+    function submitIfReady() {
+        if (submitted || !code || !accountId()) return;
+        if (!session.phone_number_id) { submitted = true; toast('warn', cfg.messages.no_number); return; }
+        send();
+    }
+
+    // Meta confirmed the authorization but the account it names never
+    // arrived: post what there is, so the server answers the person and
+    // records what was missing instead of the page staying as it was.
+    function submitIncomplete() {
+        if (!submitted && code) send();
     }
 
     window.addEventListener('message', function (event) {
@@ -89,10 +103,12 @@ Context: ``whatsapp_signup`` (app_id, config_id, version, signup_version, messag
         code = '';
         session = {};
         submitted = false;
+        window.clearTimeout(incompleteTimer);
         FB.login(function (response) {
             if (response && response.authResponse && response.authResponse.code) {
                 code = response.authResponse.code;
                 submitIfReady();
+                incompleteTimer = window.setTimeout(submitIncomplete, 5000);
             } else {
                 toast('info', cfg.messages.cancelled);
             }

@@ -898,6 +898,13 @@ def connect_whatsapp(request, workspace_id):
     back = redirect("social_accounts:list", workspace_id=workspace_id)
 
     if not code or not waba_id.isdigit() or not phone_number_id.isdigit():
+        logger.warning(
+            "WhatsApp signup for workspace %s came back incomplete: code=%s waba_id=%r phone_number_id=%r",
+            workspace_id,
+            bool(code),
+            waba_id[:32],
+            phone_number_id[:32],
+        )
         messages.error(request, _("WhatsApp did not finish the connection. Try again."))
         return back
     if PlatformCredential.Platform.WHATSAPP not in _get_configured_platforms(request.org.id):
@@ -912,7 +919,16 @@ def connect_whatsapp(request, workspace_id):
     )
     try:
         tokens = provider.exchange_code(code)
-        if phone_number_id not in provider.waba_phone_number_ids(tokens.access_token, waba_id):
+        reachable_numbers = provider.waba_phone_number_ids(tokens.access_token, waba_id)
+        if phone_number_id not in reachable_numbers:
+            logger.warning(
+                "WhatsApp signup for workspace %s: number %s is not among the %d numbers of account %s (%s)",
+                workspace_id,
+                phone_number_id,
+                len(reachable_numbers),
+                waba_id,
+                ", ".join(sorted(reachable_numbers)),
+            )
             messages.error(request, _("That phone number does not belong to the WhatsApp account you authorized."))
             return back
         provider.ensure_registered(tokens.access_token)
@@ -927,9 +943,11 @@ def connect_whatsapp(request, workspace_id):
             authorizing_user=request.user,
         )
     except AccountLimitReached as exc:
+        logger.warning("WhatsApp connection for workspace %s stopped by the account limit: %s", workspace_id, exc)
         messages.error(request, str(exc))
         return back
     except MessagingError as exc:
+        logger.warning("WhatsApp connection refused for workspace %s", workspace_id, exc_info=True)
         messages.error(request, str(exc))
         return back
     except ProviderError:

@@ -240,6 +240,22 @@ class TestConnect:
         register.assert_not_called()
         assert not SocialAccount.objects.filter(platform="whatsapp").exists()
 
+    def test_a_connection_that_does_not_happen_says_why_in_the_log(self, manager_client, workspace, caplog):
+        with caplog.at_level("WARNING", logger="apps.social_accounts.views"):
+            self._connect(manager_client, workspace, waba_id="")
+            with (
+                patch.object(
+                    WhatsAppProvider, "exchange_code", return_value=MagicMock(access_token="t", expires_in=None)
+                ),
+                patch.object(WhatsAppProvider, "waba_phone_number_ids", return_value={"5555"}),
+            ):
+                self._connect(manager_client, workspace)
+
+        incomplete, mismatch = (record.getMessage() for record in caplog.records)
+        assert "came back incomplete" in incomplete and "waba_id=''" in incomplete
+        assert "number 1001 is not among the 1 numbers of account 2002 (5555)" in mismatch
+        assert not SocialAccount.objects.filter(platform="whatsapp").exists()
+
     def test_connecting_creates_a_chat_only_account(self, manager_client, workspace):
         from providers.types import AccountProfile
 
