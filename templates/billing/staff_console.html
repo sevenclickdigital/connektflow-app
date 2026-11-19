@@ -419,6 +419,34 @@ impersonated session.
                             </button>
                             {% endif %}
                           </form>
+
+                          {% comment %}
+                          Delete for good: the user and the organizations only they own
+                          (billing.views.staff_delete_user). The email must be typed back.
+                          {% endcomment %}
+                          <form method="post" action="{% url 'billing_staff:delete_user' target_user_id=entry.membership.user.id %}"
+                                x-data="{ open: false }" class="flex flex-wrap items-center gap-2"
+                                data-confirm="{% translate 'Delete this account for good?' %}" data-confirm-tone="danger"
+                                data-confirm-label="{% translate 'Delete account' %}"
+                                data-confirm-body="{% translate 'The user and the organizations only they own are erased with their brands, posts and media; their subscriptions are cancelled at the payment provider. This cannot be undone.' %}">
+                            {% csrf_token %}
+                            <button type="button" x-show="!open" @click="open = true; $nextTick(() => $refs.email.focus())"
+                                    class="px-2.5 py-1.5 text-xs font-medium text-red-700 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors cursor-pointer">
+                              {% translate "Delete account" %}
+                            </button>
+                            <template x-if="open">
+                              <div class="flex flex-wrap items-center gap-2">
+                                <input type="email" name="confirm_email" x-ref="email" required autocomplete="off"
+                                       placeholder="{{ entry.membership.user.email }}"
+                                       aria-label="{% translate 'Type the email to confirm' %}"
+                                       class="form-input-styled text-xs py-1.5 w-56">
+                                <button type="submit" class="px-2.5 py-1.5 text-xs font-medium text-white bg-red-600 border border-red-600 rounded-lg hover:bg-red-700 transition-colors cursor-pointer">
+                                  {% translate "Delete for good" %}
+                                </button>
+                                <button type="button" @click="open = false" class="text-xs font-medium text-neutral-600 hover:text-neutral-800 cursor-pointer">{% translate "Cancel" %}</button>
+                              </div>
+                            </template>
+                          </form>
                           {% endif %}
 
                           {% comment %}

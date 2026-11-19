@@ -66,7 +66,7 @@ class Organization(models.Model):
         """True while the organization still has the name it was created with."""
         return self.name == self.DEFAULT_NAME
 
-    def hard_delete(self, requesting_user=None):
+    def hard_delete(self, requesting_user=None, *, departing_user=None):
         """Hard-delete this org and settle every member's account.
 
         - `requesting_user` (optional): the user who triggered the immediate-
@@ -77,20 +77,34 @@ class Organization(models.Model):
           the scheduled-grace-period path and the management-command sweeper
           — those don't carry request context and we don't want to silently
           delete accounts from a background job.
+        - `departing_user` (optional): a member who is being deleted right
+          after (``apps.accounts.deletion.delete_account``); they leave with the
+          cascade and get no new organization.
         - Every other member gets a freshly provisioned default "My
           Organization" + "My brand" so they land on a working dashboard
           instead of limbo on next login.
         - Any user's `last_workspace_id` that points at a workspace in this
           org is nulled first (defensive; provision-for-member would reset it
           anyway, but the delete_user path wouldn't).
+        - Its workspaces' Asaas subscriptions are cancelled before anything is
+          deleted (``contracting.cancel_organization_subscriptions``). If the
+          gateway refuses, this raises and nothing is deleted: keeping the
+          account beats charging for one that is gone.
         """
         from apps.accounts.models import User
         from apps.accounts.signals import provision_organization_and_workspace
+        from apps.billing.contracting import cancel_organization_subscriptions
         from apps.media_library.services import schedule_stored_file_removal, tenant_stored_files
         from apps.members.models import OrgMembership
         from apps.workspaces.models import Workspace
 
-        member_ids = list(OrgMembership.objects.filter(organization=self).values_list("user_id", flat=True))
+        cancel_organization_subscriptions(self)
+
+        member_ids = list(
+            OrgMembership.objects.filter(organization=self)
+            .exclude(user_id=departing_user.pk if departing_user else None)
+            .values_list("user_id", flat=True)
+        )
         ws_ids = list(Workspace.objects.filter(organization=self).values_list("id", flat=True))
 
         if ws_ids:

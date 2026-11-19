@@ -1684,6 +1684,58 @@ def staff_send_password_reset(request, target_user_id):
 
 @_staff_required
 @require_POST
+def staff_delete_user(request, target_user_id):
+    """Delete a customer's account for good, with the organizations only they own.
+
+    For test accounts and customers who asked to be erased; "Disable sign-in"
+    is the reversible action. Same refusals as deactivation (``_may_deactivate``:
+    never the operator's own account nor another operator's), and the email
+    must be typed back, so a slip of the mouse cannot erase a customer.
+    ``apps.accounts.deletion.delete_account`` cancels the organizations' Asaas
+    subscriptions before deleting them; a gateway error keeps the account and
+    is shown.
+    """
+    from apps.accounts.deletion import delete_account
+
+    target = get_object_or_404(User, pk=target_user_id)
+    operator = impersonation.real_user(request)
+    if not _may_deactivate(operator, target):
+        raise PermissionDenied("You may not delete this account.")
+
+    if request.POST.get("confirm_email", "").strip().lower() != target.email.lower():
+        messages.error(request, _("Type the account's email exactly to delete it."))
+        return redirect("billing_staff:staff_console")
+
+    email = target.email
+    try:
+        organizations = delete_account(target)
+    except AsaasError:
+        logger.exception(
+            "Operator %s could not delete %s: Asaas refused to cancel a subscription", operator.email, email
+        )
+        messages.error(
+            request,
+            _(
+                "%(email)s was not deleted: the payment provider did not cancel the subscriptions. Try again in a moment."
+            )
+            % {"email": email},
+        )
+        return redirect("billing_staff:staff_console")
+
+    logger.warning("Operator %s deleted %s and organizations %s", operator.email, email, organizations)
+    if organizations:
+        messages.success(
+            request,
+            _("%(email)s was deleted, with %(organizations)s.")
+            % {"email": email, "organizations": ", ".join(organizations)},
+        )
+    else:
+        messages.success(request, _("%(email)s was deleted.") % {"email": email})
+    return redirect("billing_staff:staff_console")
+
+
+@_staff_required
+@require_POST
 def staff_set_user_active(request, target_user_id):
     """Switch a customer's sign-in on or off. Deletes nothing.
 

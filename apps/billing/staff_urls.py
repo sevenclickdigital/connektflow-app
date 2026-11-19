@@ -54,4 +54,5 @@ urlpatterns = [
     path("accounts/<uuid:org_id>/edit/", views.staff_edit_account, name="edit_account"),
     path("users/<uuid:target_user_id>/reset-password/", views.staff_send_password_reset, name="send_password_reset"),
     path("users/<uuid:target_user_id>/active/", views.staff_set_user_active, name="set_user_active"),
+    path("users/<uuid:target_user_id>/delete/", views.staff_delete_user, name="delete_user"),
 ]

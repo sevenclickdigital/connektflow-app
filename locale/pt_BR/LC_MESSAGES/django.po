@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 00:48+0000\n"
+"POT-Creation-Date: 2026-11-19 01:24+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -466,7 +466,7 @@ msgstr "Pagamento pendente"
 msgid "Rejected"
 msgstr "Recusado"
 
-#: apps/ads/services.py:79 templates/billing/staff_console.html:481
+#: apps/ads/services.py:79 templates/billing/staff_console.html:510
 #: templates/organizations/partials/workspace_card.html:22
 msgid "Archived"
 msgstr "Arquivadas"
@@ -1330,7 +1330,7 @@ msgstr ""
 "A marca \"%(name)s\" voltará a ser cobrada. Agora é necessária uma "
 "assinatura para mantê-la ativa."
 
-#: apps/billing/views.py:1428 apps/billing/views.py:1725
+#: apps/billing/views.py:1428 apps/billing/views.py:1772
 #: apps/workspaces/views.py:329
 msgid "Unknown action."
 msgstr "Ação desconhecida."
@@ -1426,7 +1426,30 @@ msgstr ""
 "Um e-mail de redefinição de senha foi enviado para %(email)s. Só a própria "
 "pessoa pode definir a nova senha."
 
+#: apps/billing/views.py:1706
+msgid "Type the account's email exactly to delete it."
+msgstr "Digite o e-mail da conta exatamente como está para excluí-la."
+
 #: apps/billing/views.py:1716
+#, python-format
+msgid ""
+"%(email)s was not deleted: the payment provider did not cancel the "
+"subscriptions. Try again in a moment."
+msgstr ""
+"%(email)s não foi excluída: o provedor de pagamento não cancelou as "
+"assinaturas. Tente de novo em instantes."
+
+#: apps/billing/views.py:1725
+#, python-format
+msgid "%(email)s was deleted, with %(organizations)s."
+msgstr "%(email)s foi excluída, junto com %(organizations)s."
+
+#: apps/billing/views.py:1728
+#, python-format
+msgid "%(email)s was deleted."
+msgstr "%(email)s foi excluída."
+
+#: apps/billing/views.py:1763
 #, python-format
 msgid ""
 "%(email)s can no longer sign in. Nothing was deleted — reactivate to restore "
@@ -1435,7 +1458,7 @@ msgstr ""
 "%(email)s não consegue mais entrar. Nada foi excluído — reative para "
 "restaurar o acesso."
 
-#: apps/billing/views.py:1723
+#: apps/billing/views.py:1770
 #, python-format
 msgid "%(email)s can sign in again."
 msgstr "%(email)s pode entrar novamente."
@@ -3443,11 +3466,11 @@ msgstr "A fazer"
 msgid "In Progress"
 msgstr "Em andamento"
 
-#: apps/composer/models.py:213 apps/social_accounts/catalog.py:102
-#: apps/social_accounts/catalog.py:113 apps/social_accounts/catalog.py:129
-#: apps/social_accounts/catalog.py:140 apps/social_accounts/catalog.py:178
-#: apps/social_accounts/catalog.py:186 apps/social_accounts/catalog.py:194
-#: apps/social_accounts/catalog.py:202
+#: apps/composer/models.py:213 apps/social_accounts/catalog.py:123
+#: apps/social_accounts/catalog.py:134 apps/social_accounts/catalog.py:150
+#: apps/social_accounts/catalog.py:161 apps/social_accounts/catalog.py:199
+#: apps/social_accounts/catalog.py:207 apps/social_accounts/catalog.py:215
+#: apps/social_accounts/catalog.py:223
 #: apps/tasks/migrations/0008_ready_to_publish_column.py:11
 #: templates/composer/partials/media_picker.html:253
 #: templates/media_library/library_index.html:285
@@ -5630,11 +5653,11 @@ msgstr "Publicações locais"
 msgid "Official API · chats in the inbox"
 msgstr "API oficial · conversas no inbox"
 
-#: apps/social_accounts/catalog.py:55
+#: apps/social_accounts/catalog.py:76
 msgid "Allow the access we ask for"
 msgstr "Autorize o acesso solicitado"
 
-#: apps/social_accounts/catalog.py:56
+#: apps/social_accounts/catalog.py:77
 msgid ""
 "Keep every permission ticked: each one powers a feature, and leaving one out "
 "breaks it later."
@@ -5642,12 +5665,12 @@ msgstr ""
 "Mantenha todas as permissões marcadas: cada uma libera um recurso, e deixar "
 "alguma de fora faz esse recurso falhar depois."
 
-#: apps/social_accounts/catalog.py:62 apps/social_accounts/catalog.py:79
-#: apps/social_accounts/catalog.py:213
+#: apps/social_accounts/catalog.py:83 apps/social_accounts/catalog.py:100
+#: apps/social_accounts/catalog.py:234
 msgid "Sign in with Facebook"
 msgstr "Entre com o Facebook"
 
-#: apps/social_accounts/catalog.py:63
+#: apps/social_accounts/catalog.py:84
 msgid ""
 "Use the Facebook profile that manages the Page, with full control or "
 "permission to create content."
@@ -5655,7 +5678,7 @@ msgstr ""
 "Use o perfil do Facebook que administra a Página, com controle total ou "
 "permissão para criar conteúdo."
 
-#: apps/social_accounts/catalog.py:67
+#: apps/social_accounts/catalog.py:88
 msgid ""
 "When Facebook asks, select the Pages you want to use and keep every "
 "permission ticked."
@@ -5663,11 +5686,11 @@ msgstr ""
 "Quando o Facebook perguntar, selecione as Páginas que quer usar e mantenha "
 "todas as permissões marcadas."
 
-#: apps/social_accounts/catalog.py:70
+#: apps/social_accounts/catalog.py:91
 msgid "Choose the Pages to connect"
 msgstr "Escolha as Páginas para conectar"
 
-#: apps/social_accounts/catalog.py:71
+#: apps/social_accounts/catalog.py:92
 msgid ""
 "We list the Pages that login reaches, and you pick which ones enter this "
 "brand."
@@ -5675,7 +5698,7 @@ msgstr ""
 "Mostramos as Páginas que esse login alcança, e você escolhe quais entram "
 "nesta marca."
 
-#: apps/social_accounts/catalog.py:74
+#: apps/social_accounts/catalog.py:95
 msgid ""
 "Only Pages can be connected. Facebook does not let apps publish to a "
 "personal profile."
@@ -5683,7 +5706,7 @@ msgstr ""
 "Só é possível conectar Páginas. O Facebook não permite que aplicativos "
 "publiquem em perfis pessoais."
 
-#: apps/social_accounts/catalog.py:81
+#: apps/social_accounts/catalog.py:102
 msgid ""
 "Instagram connects through the Facebook profile that manages the Page linked "
 "to the Instagram account."
@@ -5691,7 +5714,7 @@ msgstr ""
 "O Instagram é conectado pelo perfil do Facebook que administra a Página "
 "vinculada à conta do Instagram."
 
-#: apps/social_accounts/catalog.py:86
+#: apps/social_accounts/catalog.py:107
 msgid ""
 "Select both the Instagram account and its Facebook Page, and keep every "
 "permission ticked."
@@ -5699,17 +5722,17 @@ msgstr ""
 "Selecione a conta do Instagram e também a Página do Facebook vinculada a "
 "ela, e mantenha todas as permissões marcadas."
 
-#: apps/social_accounts/catalog.py:89
+#: apps/social_accounts/catalog.py:110
 msgid "Choose the Instagram accounts"
 msgstr "Escolha as contas do Instagram"
 
-#: apps/social_accounts/catalog.py:90
+#: apps/social_accounts/catalog.py:111
 msgid ""
 "We list the accounts that login reaches, and you pick which ones to connect."
 msgstr ""
 "Mostramos as contas que esse login alcança, e você escolhe quais conectar."
 
-#: apps/social_accounts/catalog.py:94
+#: apps/social_accounts/catalog.py:115
 msgid ""
 "The Instagram account has to be professional (Business or Creator) and "
 "linked to a Facebook Page. Personal accounts cannot be connected: switch the "
@@ -5719,16 +5742,16 @@ msgstr ""
 "conteúdo) e estar vinculada a uma Página do Facebook. Contas pessoais não "
 "podem ser conectadas: mude o tipo de conta no aplicativo do Instagram antes."
 
-#: apps/social_accounts/catalog.py:100
+#: apps/social_accounts/catalog.py:121
 msgid "Sign in with Instagram"
 msgstr "Entre com o Instagram"
 
-#: apps/social_accounts/catalog.py:100
+#: apps/social_accounts/catalog.py:121
 msgid "Use the Instagram account itself. No Facebook Page is needed."
 msgstr ""
 "Use a própria conta do Instagram. Não é preciso ter Página do Facebook."
 
-#: apps/social_accounts/catalog.py:102
+#: apps/social_accounts/catalog.py:123
 msgid ""
 "The account appears here, ready to publish and to receive comments and "
 "messages."
@@ -5736,7 +5759,7 @@ msgstr ""
 "A conta aparece aqui, pronta para publicar e para receber comentários e "
 "mensagens."
 
-#: apps/social_accounts/catalog.py:105
+#: apps/social_accounts/catalog.py:126
 msgid ""
 "The account has to be professional (Business or Creator). Personal accounts "
 "cannot be connected: switch the account type in the Instagram app first."
@@ -5745,23 +5768,23 @@ msgstr ""
 "pessoais não podem ser conectadas: mude o tipo de conta no aplicativo do "
 "Instagram antes."
 
-#: apps/social_accounts/catalog.py:111
+#: apps/social_accounts/catalog.py:132
 msgid "Sign in with Threads"
 msgstr "Entre com o Threads"
 
-#: apps/social_accounts/catalog.py:111
+#: apps/social_accounts/catalog.py:132
 msgid "Use the Instagram login of the Threads profile you want to connect."
 msgstr "Use o login do Instagram do perfil do Threads que você quer conectar."
 
-#: apps/social_accounts/catalog.py:113
+#: apps/social_accounts/catalog.py:134
 msgid "The profile appears here, ready to publish and to receive replies."
 msgstr "O perfil aparece aqui, pronto para publicar e para receber respostas."
 
-#: apps/social_accounts/catalog.py:120
+#: apps/social_accounts/catalog.py:141
 msgid "Sign in with your Meta account"
 msgstr "Entre com sua conta da Meta"
 
-#: apps/social_accounts/catalog.py:121
+#: apps/social_accounts/catalog.py:142
 msgid ""
 "Use the Facebook profile that administers the company's business portfolio "
 "on Meta."
@@ -5769,11 +5792,11 @@ msgstr ""
 "Use o perfil do Facebook que administra o portfólio empresarial da empresa "
 "na Meta."
 
-#: apps/social_accounts/catalog.py:124
+#: apps/social_accounts/catalog.py:145
 msgid "Choose the WhatsApp account and the number"
 msgstr "Escolha a conta do WhatsApp e o número"
 
-#: apps/social_accounts/catalog.py:126
+#: apps/social_accounts/catalog.py:147
 msgid ""
 "Pick or create the WhatsApp Business account and the phone number. Meta "
 "confirms the number by SMS or call."
@@ -5781,12 +5804,12 @@ msgstr ""
 "Escolha ou crie a conta do WhatsApp Business e o número de telefone. A Meta "
 "confirma o número por SMS ou ligação."
 
-#: apps/social_accounts/catalog.py:129
+#: apps/social_accounts/catalog.py:150
 msgid "Messages sent to that number start arriving in the inbox."
 msgstr ""
 "As mensagens enviadas para esse número passam a chegar na caixa de entrada."
 
-#: apps/social_accounts/catalog.py:132
+#: apps/social_accounts/catalog.py:153
 msgid ""
 "A number already in use in the WhatsApp or WhatsApp Business app cannot be "
 "connected yet. Use a number that is not registered in the app."
@@ -5795,35 +5818,35 @@ msgstr ""
 "ainda não pode ser conectado. Use um número que não esteja registrado no "
 "aplicativo."
 
-#: apps/social_accounts/catalog.py:138 apps/social_accounts/catalog.py:146
+#: apps/social_accounts/catalog.py:159 apps/social_accounts/catalog.py:167
 msgid "Sign in with LinkedIn"
 msgstr "Entre com o LinkedIn"
 
-#: apps/social_accounts/catalog.py:138
+#: apps/social_accounts/catalog.py:159
 msgid "Use the LinkedIn account of the profile you want to publish to."
 msgstr "Use a conta do LinkedIn do perfil em que você quer publicar."
 
-#: apps/social_accounts/catalog.py:140
+#: apps/social_accounts/catalog.py:161
 msgid "Your profile appears here, ready to publish."
 msgstr "Seu perfil aparece aqui, pronto para publicar."
 
-#: apps/social_accounts/catalog.py:146
+#: apps/social_accounts/catalog.py:167
 msgid "Use a LinkedIn account that is a super admin of the company page."
 msgstr ""
 "Use uma conta do LinkedIn que seja superadministradora da página da empresa."
 
-#: apps/social_accounts/catalog.py:149
+#: apps/social_accounts/catalog.py:170
 msgid "Choose the pages to connect"
 msgstr "Escolha as páginas para conectar"
 
-#: apps/social_accounts/catalog.py:150
+#: apps/social_accounts/catalog.py:171
 msgid ""
 "We list the company pages you administer, and you pick which ones to connect."
 msgstr ""
 "Mostramos as páginas de empresa que você administra, e você escolhe quais "
 "conectar."
 
-#: apps/social_accounts/catalog.py:153
+#: apps/social_accounts/catalog.py:174
 msgid ""
 "Other roles on the page, such as content admin or analyst, are not enough to "
 "connect it."
@@ -5831,44 +5854,44 @@ msgstr ""
 "Outras funções na página, como administrador de conteúdo ou analista, não "
 "bastam para conectá-la."
 
-#: apps/social_accounts/catalog.py:158 apps/social_accounts/catalog.py:171
+#: apps/social_accounts/catalog.py:179 apps/social_accounts/catalog.py:192
 msgid "Sign in with Google"
 msgstr "Entre com o Google"
 
-#: apps/social_accounts/catalog.py:159
+#: apps/social_accounts/catalog.py:180
 msgid ""
 "Use the Google account that is owner or manager of the Business Profile."
 msgstr ""
 "Use a conta do Google que é proprietária ou administradora do Perfil da "
 "Empresa."
 
-#: apps/social_accounts/catalog.py:163
+#: apps/social_accounts/catalog.py:184
 msgid "Choose the locations"
 msgstr "Escolha os locais"
 
-#: apps/social_accounts/catalog.py:164
+#: apps/social_accounts/catalog.py:185
 msgid ""
 "We list the locations that account manages, and you pick which ones to "
 "connect."
 msgstr ""
 "Mostramos os locais que essa conta administra, e você escolhe quais conectar."
 
-#: apps/social_accounts/catalog.py:167
+#: apps/social_accounts/catalog.py:188
 msgid ""
 "The Business Profile has to be verified by Google before it accepts posts."
 msgstr ""
 "O Perfil da Empresa precisa estar verificado pelo Google para aceitar "
 "publicações."
 
-#: apps/social_accounts/catalog.py:171
+#: apps/social_accounts/catalog.py:192
 msgid "Use the Google account that owns or manages the channel."
 msgstr "Use a conta do Google que é dona do canal ou o administra."
 
-#: apps/social_accounts/catalog.py:173
+#: apps/social_accounts/catalog.py:194
 msgid "Choose the channel"
 msgstr "Escolha o canal"
 
-#: apps/social_accounts/catalog.py:175
+#: apps/social_accounts/catalog.py:196
 msgid ""
 "If the account has more than one channel, Google asks which one. Then keep "
 "every permission ticked."
@@ -5876,56 +5899,56 @@ msgstr ""
 "Se a conta tiver mais de um canal, o Google pergunta qual. Depois, mantenha "
 "todas as permissões marcadas."
 
-#: apps/social_accounts/catalog.py:178
+#: apps/social_accounts/catalog.py:199
 msgid "The channel appears here, ready to receive videos and Shorts."
 msgstr "O canal aparece aqui, pronto para receber vídeos e Shorts."
 
-#: apps/social_accounts/catalog.py:184
+#: apps/social_accounts/catalog.py:205
 msgid "Sign in with TikTok"
 msgstr "Entre com o TikTok"
 
-#: apps/social_accounts/catalog.py:184
+#: apps/social_accounts/catalog.py:205
 msgid "Use the TikTok account you want to publish to."
 msgstr "Use a conta do TikTok em que você quer publicar."
 
-#: apps/social_accounts/catalog.py:185
+#: apps/social_accounts/catalog.py:206
 msgid "Leave every option switched on in the TikTok window."
 msgstr "Deixe todas as opções ativadas na janela do TikTok."
 
-#: apps/social_accounts/catalog.py:186
+#: apps/social_accounts/catalog.py:207
 msgid "The account appears here, ready to receive videos."
 msgstr "A conta aparece aqui, pronta para receber vídeos."
 
-#: apps/social_accounts/catalog.py:192
+#: apps/social_accounts/catalog.py:213
 msgid "Sign in with Pinterest"
 msgstr "Entre com o Pinterest"
 
-#: apps/social_accounts/catalog.py:192
+#: apps/social_accounts/catalog.py:213
 msgid "Use the Pinterest account that owns the boards you want to publish to."
 msgstr "Use a conta do Pinterest dona das pastas em que você quer publicar."
 
-#: apps/social_accounts/catalog.py:194
+#: apps/social_accounts/catalog.py:215
 msgid ""
 "The account appears here, and you choose the board when creating each Pin."
 msgstr "A conta aparece aqui, e você escolhe a pasta ao criar cada Pin."
 
-#: apps/social_accounts/catalog.py:200
+#: apps/social_accounts/catalog.py:221
 msgid "Sign in with X"
 msgstr "Entre com o X"
 
-#: apps/social_accounts/catalog.py:200
+#: apps/social_accounts/catalog.py:221
 msgid "Use the X account you want to publish to."
 msgstr "Use a conta do X em que você quer publicar."
 
-#: apps/social_accounts/catalog.py:201
+#: apps/social_accounts/catalog.py:222
 msgid "Authorize the app in the X window."
 msgstr "Autorize o aplicativo na janela do X."
 
-#: apps/social_accounts/catalog.py:202
+#: apps/social_accounts/catalog.py:223
 msgid "The account appears here, ready to publish."
 msgstr "A conta aparece aqui, pronta para publicar."
 
-#: apps/social_accounts/catalog.py:215
+#: apps/social_accounts/catalog.py:236
 msgid ""
 "Use the Facebook profile that has access to the ad account in Meta Business "
 "Suite, as admin or advertiser."
@@ -5933,7 +5956,7 @@ msgstr ""
 "Use o perfil do Facebook que tem acesso à conta de anúncios no Meta Business "
 "Suite, como administrador ou anunciante."
 
-#: apps/social_accounts/catalog.py:222
+#: apps/social_accounts/catalog.py:243
 msgid ""
 "When Meta asks, select the ad account, its Pixel and the Facebook Page, and "
 "keep every permission ticked."
@@ -5941,11 +5964,11 @@ msgstr ""
 "Quando a Meta pedir, selecione a conta de anúncios, o Pixel dela e a Página "
 "do Facebook, e mantenha todas as permissões marcadas."
 
-#: apps/social_accounts/catalog.py:226
+#: apps/social_accounts/catalog.py:247
 msgid "Choose the ad account, the Pixel and the Page"
 msgstr "Escolha a conta de anúncios, o Pixel e a Página"
 
-#: apps/social_accounts/catalog.py:228
+#: apps/social_accounts/catalog.py:249
 msgid ""
 "Back here, pick the ad account the campaigns run in, the Pixel that measures "
 "your site and the Page the ads are published as."
@@ -5954,7 +5977,7 @@ msgstr ""
 "Pixel que mede o seu site e a Página em nome da qual os anúncios são "
 "publicados."
 
-#: apps/social_accounts/catalog.py:234
+#: apps/social_accounts/catalog.py:255
 msgid ""
 "The ad account has to be active and have a payment method in Meta. Sales and "
 "lead campaigns also need the Pixel installed on your site, and every ad "
@@ -7459,6 +7482,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/automations/flow_new.html:158 templates/automations/form.html:392
 #: templates/base.html:1131 templates/base.html:1188
 #: templates/billing/account_billing.html:231
+#: templates/billing/staff_console.html:454
 #: templates/calendar/calendar.html:576
 #: templates/calendar/partials/_delete_post_modal.html:56
 #: templates/calendar/partials/event_form.html:127
@@ -11196,7 +11220,7 @@ msgid "until %(date)s"
 msgstr "até %(date)s"
 
 #: templates/billing/staff_console.html:144
-#: templates/billing/staff_console.html:478
+#: templates/billing/staff_console.html:507
 #, python-format
 msgid "%(used)s / %(limit)s GB"
 msgstr "%(used)s / %(limit)s GB"
@@ -11298,34 +11322,61 @@ msgstr "Desativar acesso"
 msgid "Restore sign-in"
 msgstr "Reativar acesso"
 
-#: templates/billing/staff_console.html:442
+#: templates/billing/staff_console.html:437
+msgid "Delete this account for good?"
+msgstr "Excluir esta conta de vez?"
+
+#: templates/billing/staff_console.html:438
+#: templates/billing/staff_console.html:443
+msgid "Delete account"
+msgstr "Excluir conta"
+
+#: templates/billing/staff_console.html:439
+msgid ""
+"The user and the organizations only they own are erased with their brands, "
+"posts and media; their subscriptions are cancelled at the payment provider. "
+"This cannot be undone."
+msgstr ""
+"O usuário e as organizações das quais ele é o único dono são apagados, com "
+"as marcas, publicações e mídias; as assinaturas são canceladas no provedor "
+"de pagamento. Isso não pode ser desfeito."
+
+#: templates/billing/staff_console.html:449
+msgid "Type the email to confirm"
+msgstr "Digite o e-mail para confirmar"
+
+#: templates/billing/staff_console.html:452
+msgid "Delete for good"
+msgstr "Excluir de vez"
+
+#: templates/billing/staff_console.html:471
 msgid "Sign in as, for support"
 msgstr "Entrar como, para dar suporte"
 
-#: templates/billing/staff_console.html:448
+#: templates/billing/staff_console.html:477
 msgid "The reset is e-mailed to them; nobody here sees or sets their password."
 msgstr ""
 "A redefinição vai por e-mail para a pessoa; ninguém aqui vê nem define a "
 "senha dela."
 
-#: templates/billing/staff_console.html:454
+#: templates/billing/staff_console.html:483
 msgid "This account has no members."
 msgstr "Esta conta não tem membros."
 
-#: templates/billing/staff_console.html:492
+#: templates/billing/staff_console.html:521
 msgid "Charge this workspace"
 msgstr "Voltar a cobrar esta marca"
 
-#: templates/billing/staff_console.html:498
+#: templates/billing/staff_console.html:527
 #: templates/billing/staff_subscriptions.html:60
 msgid "Exempt from charges"
 msgstr "Isentar de cobrança"
 
-#: templates/billing/staff_console.html:506
+#: templates/billing/staff_console.html:535
 msgid "This account has no workspaces."
 msgstr "Esta conta não tem marcas."
 
-#: templates/billing/staff_console.html:517
+#: templates/billing/staff_console.html:546
 msgid "No accounts yet."
 msgstr "Nenhuma conta ainda."
 
@@ -13571,9 +13622,9 @@ msgstr "O que você quer compartilhar?"
 #: templates/composer/partials/_tag_groups.html:200
 #: templates/composer/partials/template_gallery.html:214
 #: templates/funnels/partials/_pick_conversation.html:21
-#: templates/social_accounts/list.html:142
-#: templates/social_accounts/list.html:144
-#: templates/social_accounts/list.html:149
+#: templates/social_accounts/list.html:141
+#: templates/social_accounts/list.html:143
+#: templates/social_accounts/list.html:148
 #: templates/social_accounts/partials/_posting_slots_grid.html:116
 #: templates/tasks/partials/_column.html:78
 #: templates/tasks/partials/_new_item_modal.html:171
@@ -19350,9 +19401,9 @@ msgstr "Business e Creator"
 #: templates/radar/partials/_shopee_connect_form.html:43
 #: templates/radar/partials/_source_card.html:80
 #: templates/radar/partials/_source_card.html:87
-#: templates/social_accounts/list.html:142
-#: templates/social_accounts/list.html:144
-#: templates/social_accounts/list.html:149
+#: templates/social_accounts/list.html:141
+#: templates/social_accounts/list.html:143
+#: templates/social_accounts/list.html:148
 #: templates/social_accounts/partials/_meta_ads_card.html:30
 msgid "Connect"
 msgstr "Conectar"
@@ -20641,17 +20692,17 @@ msgstr "Contas de anúncio"
 msgid "Connect other platforms"
 msgstr "Conectar outras plataformas"
 
-#: templates/social_accounts/list.html:152
+#: templates/social_accounts/list.html:151
 #: templates/social_accounts/partials/_meta_ads_card.html:32
 msgid "Platform credentials not configured. Contact your administrator."
 msgstr "Credenciais da plataforma não configuradas. Fale com o administrador."
 
-#: templates/social_accounts/list.html:152
+#: templates/social_accounts/list.html:151
 #: templates/social_accounts/partials/_meta_ads_card.html:32
 msgid "Not Configured"
 msgstr "Não configurada"
 
-#: templates/social_accounts/list.html:170
+#: templates/social_accounts/list.html:171
 #: templates/social_accounts/staff_platforms.html:57
 msgid "Business & opportunities"
 msgstr "Negócios e oportunidades"
@@ -20951,8 +21002,8 @@ msgid ""
 "hidden one leaves the connect page for every brand; what was already "
 "connected keeps working."
 msgstr ""
-"Escolha quais redes e fontes de oportunidades os clientes podem conectar. "
-"O que estiver oculto sai da página de conexão de todas as marcas; o que já "
+"Escolha quais redes e fontes de oportunidades os clientes podem conectar. O "
+"que estiver oculto sai da página de conexão de todas as marcas; o que já "
 "estava conectado continua funcionando."
 
 #: templates/social_accounts/staff_platforms.html:35
@@ -22360,9 +22411,6 @@ msgstr "Enviar convite"
 #~ msgstr ""
 #~ "Ao excluir sua conta, você perde o acesso aos serviços do Connekt Flow e "
 #~ "excluímos seus dados pessoais permanentemente."
-
-#~ msgid "Delete Account"
-#~ msgstr "Excluir conta"
 
 #~ msgid ""
 #~ "Are you sure you want to delete your account? This action is permanent "

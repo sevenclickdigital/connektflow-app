@@ -333,3 +333,35 @@ def cancel_workspace_subscription(workspace, *, client=None):
     sub.canceled_at = sub.canceled_at or timezone.now()
     sub.save(update_fields=["status", "canceled_at", "updated_at"])
     return sub
+
+
+def cancel_organization_subscriptions(organization, *, client=None):
+    """Stop every gateway charge of ``organization`` before it is deleted.
+
+    Its workspaces' subscriptions and add-ons are cancelled at Asaas; the rows
+    themselves go with the organization's cascade. Called by
+    ``Organization.hard_delete``, so no deletion path leaves a customer being
+    charged for an account that no longer exists. A gateway 404 counts as done,
+    as in ``cancel_workspace_subscription``; any other error is raised, and the
+    caller must not delete the organization, since its charges would carry on.
+    Returns how many subscriptions were cancelled.
+    """
+    gateway_ids = [
+        *WorkspaceSubscription.objects.filter(workspace__organization=organization)
+        .exclude(gateway_subscription_id="")
+        .values_list("gateway_subscription_id", flat=True),
+        *WorkspaceAddon.objects.filter(workspace__organization=organization)
+        .exclude(gateway_subscription_id="")
+        .values_list("gateway_subscription_id", flat=True),
+    ]
+    if not gateway_ids:
+        return 0
+    client = client or AsaasClient()
+    for subscription_id in gateway_ids:
+        try:
+            client.cancel_subscription(subscription_id)
+        except asaas_gateway.AsaasAPIError as exc:
+            if exc.status_code != 404:
+                raise
+    logger.info("Cancelled %d gateway subscriptions of organization %s", len(gateway_ids), organization.pk)
+    return len(gateway_ids)
