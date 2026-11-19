@@ -1,40 +1,16 @@
 {% extends "base.html" %}
-{% load static i18n allauth account socialaccount %}
+{% load i18n allauth account socialaccount %}
 
 {% block title %}{% translate "Sign up" %} · Connekt Flow{% endblock %}
 
 {% block auth_content %}
-<style>
-  .auth-card .btn-brand {
-    background-color: #7c3aed;
-    box-shadow: 0 4px 14px rgba(147, 162, 64, 0.28);
-  }
-  .auth-card .btn-brand:hover {
-    background-color: #849139;
-    box-shadow: 0 6px 20px rgba(147, 162, 64, 0.35);
-  }
-  .auth-card .btn-brand:focus {
-    box-shadow: 0 0 0 3px rgba(147, 162, 64, 0.35);
-  }
-</style>
-<div class="w-full max-w-md px-4">
-    <!-- Logo & Header -->
-    <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-12 h-12 mb-4">
-            <img src="{% static 'img/connektflow-symbol.svg' %}" alt="{% translate 'Connekt Flow logo' %}" class="w-12 h-12 object-contain">
-        </div>
-        <span class="block text-[11px] font-semibold uppercase tracking-widest mb-2" style="color: #7c3aed;">Connekt Flow</span>
-        <h1 class="text-2xl font-bold tracking-tight" style="color: var(--text-primary);">
+<div class="w-full max-w-lg px-4">
+    {# The wordmark beside Moti, who leans over the card; the heading opens the card, as on log in. #}
+    {% include "partials/_moti_entrance.html" with logo=True %}
+    <div class="auth-card" style="max-width: none;">
+        <h1 class="text-2xl font-bold tracking-tight mb-6" style="color: var(--text-primary);">
             {% translate "Create your account" %}
         </h1>
-        <p class="text-sm mt-1" style="color: var(--text-secondary);">
-            {% translate "Sign up for Connekt Flow | Schedule posts and run approvals across 10+ platforms." %}
-        </p>
-    </div>
-
-    <!-- Card -->
-    {% include "partials/_moti_entrance.html" %}
-    <div class="auth-card">
         {% if messages %}
         <div class="mb-5 space-y-2">
             {% for message in messages %}

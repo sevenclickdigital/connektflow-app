@@ -17,12 +17,12 @@
     {% endcomment %}
     <style>
         :root {
-            /* Brand olive is hardcoded on purpose: this page is self-contained and
-               can't extend the app shell (which needs workspace context the OAuth
-               view doesn't supply), so it can't read the app's brand token. Mirrors
-               login.html's inline override — keep in sync if the brand palette changes. */
+            /* The brand colours are hardcoded on purpose: this page is self-contained
+               and can't extend the app shell (which needs workspace context the OAuth
+               view doesn't supply), so it can't read the tokens. Mirrors brand-700 /
+               brand-800 in theme/static_src/src/styles.css — keep in sync. */
             --bb-primary: #7c3aed;
-            --bb-primary-hover: #849139;
+            --bb-primary-hover: #6d28d9;
             --bb-text: #1f2421;
             --bb-text-muted: #6b7280;
             --bb-border: #e5e7eb;

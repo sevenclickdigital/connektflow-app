@@ -4,19 +4,6 @@
 {% block title %}{% translate "Log in" %} · Connekt Flow{% endblock %}
 
 {% block auth_content %}
-<style>
-  .auth-card .btn-brand {
-    background-color: #7c3aed;
-    box-shadow: 0 4px 14px rgba(147, 162, 64, 0.28);
-  }
-  .auth-card .btn-brand:hover {
-    background-color: #849139;
-    box-shadow: 0 6px 20px rgba(147, 162, 64, 0.35);
-  }
-  .auth-card .btn-brand:focus {
-    box-shadow: 0 0 0 3px rgba(147, 162, 64, 0.35);
-  }
-</style>
 <div class="w-full max-w-lg px-4">
     {# The wordmark beside Moti, who leans over the card; the heading opens the card, as on the welcome steps. #}
     {% include "partials/_moti_entrance.html" with logo=True %}
