@@ -99,9 +99,12 @@ class TestWebhook:
         assert message.sender_name == "Rita"
         assert message.sender_handle == "5511988887777"
 
-    def test_a_number_under_another_business_account_is_ignored(self, client, wa_account):
-        _post(client, _payload(waba="9999", messages=[_text()]))
+    def test_a_number_under_another_business_account_is_ignored(self, client, wa_account, caplog):
+        with caplog.at_level("WARNING", logger="apps.inbox.webhooks"):
+            _post(client, _payload(waba="9999", messages=[_text()]))
+
         assert not InboxMessage.objects.exists()
+        assert "no connected account for number 1001 of business account 9999" in caplog.text
 
     def test_media_keeps_its_caption_and_media_id(self, client, wa_account):
         image = {

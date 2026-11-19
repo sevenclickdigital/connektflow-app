@@ -635,12 +635,22 @@ def _process_whatsapp_events(payload: dict, valid_secrets: set[str]):
             phone_number_id = str((value.get("metadata") or {}).get("phone_number_id") or "")
             if not waba_id or not phone_number_id:
                 continue
-            accounts = SocialAccount.objects.filter(
-                platform="whatsapp",
-                account_platform_id=phone_number_id,
-                webhook_target_id=waba_id,
-                connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-            ).select_related("workspace__organization")
+            accounts = list(
+                SocialAccount.objects.filter(
+                    platform="whatsapp",
+                    account_platform_id=phone_number_id,
+                    webhook_target_id=waba_id,
+                    connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+                ).select_related("workspace__organization")
+            )
+            if not accounts:
+                # Meta delivered and signed it, so the subscription works; what
+                # is missing is the connected number it should be filed under.
+                logger.warning(
+                    "WhatsApp webhook: no connected account for number %s of business account %s.",
+                    phone_number_id,
+                    waba_id,
+                )
             for account in accounts:
                 if resolve_app_secret("whatsapp", account.workspace.organization_id) not in valid_secrets:
                     logger.warning("WhatsApp webhook: signature not valid for account %s's org app.", account.id)
