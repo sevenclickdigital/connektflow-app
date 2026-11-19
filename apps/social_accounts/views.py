@@ -211,6 +211,26 @@ _META_SDK_CSP = {
 }
 
 
+def _hosts_meta_sdk(view):
+    """Let a page run Meta's JS SDK and hear back from the popup it opens.
+
+    Embedded Signup answers through ``window.opener``: the authorization code
+    and the chosen WhatsApp account are sent from Meta's popup to the page that
+    opened it. The site-wide ``Cross-Origin-Opener-Policy: same-origin`` cuts
+    that link, so the popup finishes and the page never hears of it. These
+    pages keep the link to the popups they open themselves and nothing else.
+    """
+
+    @csp_update(**_META_SDK_CSP)
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        response = view(request, *args, **kwargs)
+        response["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+        return response
+
+    return wrapped
+
+
 def _overview_context(request, workspace_id):
     """Everything the Social Accounts page shows: the workspace's accounts,
     the platforms it can still connect, and the opportunity sources."""
@@ -324,7 +344,7 @@ def _whatsapp_signup_config(org_id, available_platforms):
     }
 
 
-@csp_update(**_META_SDK_CSP)
+@_hosts_meta_sdk
 @login_required
 @require_permission("manage_social_accounts")
 def account_list(request, workspace_id):
@@ -370,7 +390,7 @@ def finish_in_popup(view):
     return wrapped
 
 
-@csp_update(**_META_SDK_CSP)
+@_hosts_meta_sdk
 @login_required
 @require_permission("manage_social_accounts")
 @ratelimit(key="user", rate="20/m", method="POST", block=True)

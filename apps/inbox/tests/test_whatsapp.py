@@ -217,6 +217,11 @@ class TestConnect:
         assert "https://connect.facebook.net" in directives["script-src"]
         assert "https://connect.facebook.net" in directives["connect-src"]
 
+    def test_the_page_keeps_the_link_to_the_popup_meta_answers_through(self, manager_client, workspace):
+        response = manager_client.get(reverse("social_accounts:list", kwargs={"workspace_id": workspace.id}))
+
+        assert response["Cross-Origin-Opener-Policy"] == "same-origin-allow-popups"
+
     def test_the_popup_asks_for_the_current_signup_version_without_business_app_numbers(
         self, manager_client, workspace
     ):
