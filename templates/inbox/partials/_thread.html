@@ -1,0 +1,24 @@
+{% load i18n %}
+{% comment %}
+The open conversation's bubbles. It redraws itself: every few seconds it asks
+inbox:message_thread for the conversation with the token it was drawn with
+(``thread_version``) and is replaced only when something changed, so a new
+message, a colleague's reply or the customer's reaction shows without a reload
+and without touching the reply box. Replies and notes are appended here by
+their forms. Context: ``chat`` (views._chat), ``message``, ``workspace``,
+``thread_version``, ``message_actions``, ``reaction_emoji``.
+{% endcomment %}
+<div id="inbox-thread" class="space-y-1.5" aria-label="{% translate 'Conversation' %}"
+     hx-get="{% url 'inbox:message_thread' workspace_id=workspace.id message_id=message.id %}?v={{ thread_version }}"
+     hx-trigger="every 4s [!document.hidden]" hx-swap="outerHTML">
+{% for item in chat %}
+{% if item.day %}<div class="chat-day"><span>{{ item.day }}</span></div>{% endif %}
+{% if item.kind == "in" %}
+{% include "inbox/partials/_chat_incoming.html" %}
+{% elif item.kind == "out" %}
+{% include "inbox/partials/_reply_item.html" with reply=item.obj time=item.time tail=item.tail %}
+{% else %}
+{% include "inbox/partials/_note_item.html" with note=item.obj time=item.time tail=item.tail %}
+{% endif %}
+{% endfor %}
+</div>

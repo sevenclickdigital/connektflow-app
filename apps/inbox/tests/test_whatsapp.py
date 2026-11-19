@@ -430,6 +430,46 @@ class TestMessageActions:
         assert f'id="reaction-{message.id}"' in body and "🙏" in body
         assert "❤️" in body and "chat-quote" in body
 
+    def test_the_open_conversation_draws_what_arrived_and_nothing_otherwise(self, member_client, wa_account):
+        opened = self._message(wa_account, "wamid.open", body="Primeira", minutes_ago=10)
+        panel = member_client.get(self._url("message_detail", opened)).content.decode()
+        poll = panel.split('hx-get="', 1)[1].split('"', 1)[0].replace("&amp;", "&")
+        assert poll.startswith(self._url("message_thread", opened))
+
+        assert member_client.get(poll).status_code == 204
+
+        later = self._message(wa_account, "wamid.later", body="Chegou depois", minutes_ago=1)
+        self._message(wa_account, "wamid.other", sender="5511900000000", body="De outra pessoa", minutes_ago=1)
+        InboxReply.objects.create(
+            inbox_message=later, body="Resposta de um colega", status=InboxReply.Status.SENT, sent_at=timezone.now()
+        )
+        drawn = member_client.get(poll)
+
+        body = drawn.content.decode()
+        assert drawn.status_code == 200
+        assert "Primeira" in body and "Chegou depois" in body and "Resposta de um colega" in body
+        assert "De outra pessoa" not in body
+        again = body.split('hx-get="', 1)[1].split('"', 1)[0].replace("&amp;", "&")
+        assert member_client.get(again).status_code == 204
+
+    def test_a_conversation_of_another_workspace_cannot_be_polled(self, member_client, wa_account, organization):
+        from apps.workspaces.models import Workspace
+
+        elsewhere = SocialAccount.objects.create(
+            workspace=Workspace.objects.create(name="Other", organization=organization),
+            platform="whatsapp",
+            account_platform_id="3003",
+            webhook_target_id="4004",
+            account_name="Outra",
+            oauth_access_token="t",
+        )
+        foreign = self._message(elsewhere, "wamid.elsewhere")
+        url = reverse(
+            "inbox:message_thread", kwargs={"workspace_id": wa_account.workspace_id, "message_id": foreign.id}
+        )
+
+        assert member_client.get(url).status_code == 404
+
     def test_a_reply_quotes_the_message_the_person_picked(self, member_client, wa_account):
         first = self._message(wa_account, "wamid.first", body="Qual o prazo?", minutes_ago=10)
         latest = self._message(wa_account, "wamid.latest")

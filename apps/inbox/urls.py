@@ -16,6 +16,7 @@ urlpatterns = [
     # Reply to message
     path("<uuid:message_id>/reply/", views.send_reply, name="send_reply"),
     path("<uuid:message_id>/react/", views.react_message, name="react_message"),
+    path("<uuid:message_id>/thread/", views.message_thread, name="message_thread"),
     # Draft replies
     path("<uuid:message_id>/reply/draft/", views.save_reply_draft, name="save_reply_draft"),
     path("replies/<uuid:reply_id>/send/", views.send_reply_draft, name="send_reply_draft"),

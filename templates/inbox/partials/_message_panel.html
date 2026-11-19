@@ -108,18 +108,7 @@ status, sentiment and assignment actions; also the body of message_detail.html.
         </a>
         {% endif %}
 
-        <div id="inbox-thread" class="space-y-1.5" aria-label="{% translate 'Conversation' %}">
-            {% for item in chat %}
-            {% if item.day %}<div class="chat-day"><span>{{ item.day }}</span></div>{% endif %}
-            {% if item.kind == "in" %}
-            {% include "inbox/partials/_chat_incoming.html" %}
-            {% elif item.kind == "out" %}
-            {% include "inbox/partials/_reply_item.html" with reply=item.obj time=item.time tail=item.tail %}
-            {% else %}
-            {% include "inbox/partials/_note_item.html" with note=item.obj time=item.time tail=item.tail %}
-            {% endif %}
-            {% endfor %}
-        </div>
+        {% include "inbox/partials/_thread.html" %}
     </div>
 
     <!-- Reply composer (pinned to bottom) -->

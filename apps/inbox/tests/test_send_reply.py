@@ -172,7 +172,7 @@ def test_an_expired_connection_gets_a_reconnect_hint(client, fb_account, org_own
             {"body": "hi"},
         )
 
-    assert "Reconnect the account" in response.content.decode()
+    assert "Reconecte a conta" in response.content.decode()
 
 
 def test_recent_dm_replies_without_the_human_agent_tag(fb_account):

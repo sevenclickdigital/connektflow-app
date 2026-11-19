@@ -101,12 +101,28 @@ def reply_failure_reason(exc: Exception) -> str:
     if isinstance(exc, MessagingError):
         return str(exc)
     if isinstance(exc, httpx.TransportError):
-        return "Delivery could not be confirmed. Check the conversation before retrying."
+        return _("Delivery could not be confirmed. Check the conversation before retrying.")
     if isinstance(exc, RateLimitError):
-        return "the account has hit its rate limit. Wait a few minutes and try again."
+        return _("the account has hit its rate limit. Wait a few minutes and try again.")
     if isinstance(exc, TokenExpiredError | OAuthError):
-        return "the connection has expired. Reconnect the account in Workspace Settings."
-    return "the platform rejected it. Try again, or reconnect the account if this keeps happening."
+        return _("the connection has expired. Reconnect the account in Workspace Settings.")
+    return _("the platform rejected it. Try again, or reconnect the account if this keeps happening.")
+
+
+def provider_error_detail(exc: Exception) -> str:
+    """What the platform answered, for the log: HTTP status, error code and message.
+
+    ``reply_failure_reason`` gives the person a stable sentence; this is the
+    other half, the platform's own words, without which a refusal cannot be
+    diagnosed afterwards. Platform error bodies carry no credentials.
+    """
+    raw = getattr(exc, "raw_response", None)
+    error = raw.get("error") if isinstance(raw, dict) else None
+    if isinstance(error, dict):
+        text = f"code={error.get('code')} subcode={error.get('error_subcode')} message={error.get('message')}"
+    else:
+        text = str(exc)
+    return f"status={getattr(exc, 'status_code', None)} {text}"[:500]
 
 
 def _dispatch_to_platform(
@@ -273,10 +289,11 @@ def send_reply_now(reply: InboxReply, *, actor=None, origin=PROGRAMMATIC) -> Inb
                         "This connection cannot send DMs. Reconnect the account or check its configuration."
                     )
                 logger.warning(
-                    "Inbox reply failed: reply_id=%s platform=%s error_type=%s",
+                    "Inbox reply failed: reply_id=%s platform=%s error_type=%s %s",
                     reply.id,
                     message.social_account.platform,
                     type(exc).__name__,
+                    provider_error_detail(exc),
                 )
                 reply.status = InboxReply.Status.FAILED
                 reply.send_error = reply_failure_reason(exc)
@@ -455,6 +472,24 @@ def thread_key(message: InboxMessage) -> tuple:
     if message.message_type == InboxMessage.MessageType.COMMENT:
         post = str(extra.get("stored_post_id") or extra.get("post_id") or "")
     return (message.social_account_id, message.message_type, message.sender_handle or message.sender_name, post)
+
+
+def thread_version(message: InboxMessage) -> str:
+    """A token that moves when ``message``'s conversation gains a message or a reply of it changes.
+
+    The open conversation polls it (through ``inbox:message_thread``) to draw
+    what arrived since: a new message from the customer, a reply a colleague
+    sent, the emoji the customer put on a reply.
+    """
+    from django.db.models import Count, Max
+
+    messages = thread_messages(message)
+    received = messages.aggregate(n=Count("pk"), at=Max("created_at"))
+    replied = InboxReply.objects.filter(inbox_message__in=messages.values("pk")).aggregate(
+        n=Count("pk"), at=Max("updated_at")
+    )
+    stamps = (int(side["at"].timestamp() * 1000) if side["at"] else 0 for side in (received, replied))
+    return "-".join(str(part) for part in (received["n"], replied["n"], *stamps))
 
 
 def thread_messages(message: InboxMessage):

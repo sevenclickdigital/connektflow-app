@@ -75,15 +75,7 @@ def _detail_context(workspace, message, *, actor=None):
     team_members = WorkspaceMembership.objects.filter(
         workspace=workspace,
     ).select_related("user")
-    replies = list(message.replies.select_related("author"))
-    notes = list(message.internal_notes.select_related("author"))
-    # Sent replies sit in the chronological thread; drafts (and failed
-    # sends awaiting a retry) are pending work, surfaced by the composer.
-    sent_replies = [r for r in replies if r.status == InboxReply.Status.SENT]
-    draft_replies = [r for r in replies if r.status != InboxReply.Status.SENT]
-    child_messages = list(InboxMessage.objects.filter(parent_message=message).select_related("social_account"))
-    history, newer = _conversation(message)
-    chat = _chat(workspace, message, history, sent_replies, notes, child_messages)
+    chat, draft_replies, newer = _thread(workspace, message)
     post = inbox_services.post_preview(message)
     if post and not post.get("error"):
         post["origin_label"] = dict(InboxMessage.ORIGIN_CHOICES).get(post.get("product_type"), "")
@@ -105,10 +97,37 @@ def _detail_context(workspace, message, *, actor=None):
         "reply_limit": REPLY_LIMITS.get((message.message_type == "dm", message.social_account.platform)),
         "sender_first_name": (message.sender_name or "").split(" ")[0].lstrip("@+"),
         "reply_eligibility": inbox_services.reply_eligibility(message, origin="web_inbox", actor=actor),
+        **_bubble_context(message),
+    }
+
+
+def _bubble_context(message):
+    """What the chat bubbles need besides ``chat``: the menu on each one and the poll's token."""
+    return {
         # Quote, react and copy on each bubble, where the platform has them.
         "message_actions": inbox_services.supports_message_actions(message),
         "reaction_emoji": inbox_services.REACTION_EMOJI,
+        "thread_version": inbox_services.thread_version(message),
     }
+
+
+def _thread(workspace, message, *, include_later=False):
+    """The open entry's conversation: (chat, draft_replies, newer).
+
+    ``include_later`` adds what the person wrote after the open entry, which is
+    how the open conversation grows while it is on screen; on first opening
+    those stay behind the "wrote again" link (``newer``).
+    """
+    replies = list(message.replies.select_related("author"))
+    notes = list(message.internal_notes.select_related("author"))
+    # Sent replies sit in the chronological thread; drafts (and failed
+    # sends awaiting a retry) are pending work, surfaced by the composer.
+    sent_replies = [r for r in replies if r.status == InboxReply.Status.SENT]
+    draft_replies = [r for r in replies if r.status != InboxReply.Status.SENT]
+    child_messages = list(InboxMessage.objects.filter(parent_message=message).select_related("social_account"))
+    history, newer, later = _conversation(message, include_later=include_later)
+    chat = _chat(workspace, message, history, sent_replies, notes, child_messages, later)
+    return chat, draft_replies, newer
 
 
 def _workspace_tz(workspace):
@@ -120,12 +139,13 @@ def _workspace_tz(workspace):
         return zoneinfo.ZoneInfo("UTC")
 
 
-def _chat(workspace, message, history, sent_replies, notes, child_messages):
+def _chat(workspace, message, history, sent_replies, notes, child_messages, later=()):
     """The conversation as a chat, oldest first: one item per bubble.
 
     Each item is ``{"kind": "in" | "out" | "note", "obj", "time", "day", "tail"}``:
-    the customer's messages (the earlier ones, the open one and the platform's
-    replies under it), the team's sent replies and the internal notes. ``time``
+    the customer's messages (the earlier ones, the open one, the platform's
+    replies under it and, when given, the ``later`` ones), the team's sent
+    replies and the internal notes. ``time``
     is the workspace's clock; ``day`` is set on the first bubble of each day,
     for the separator. Incoming messages carry their ``attachments``, and
     ``show_name`` when someone other than the conversation's person wrote them.
@@ -135,7 +155,7 @@ def _chat(workspace, message, history, sent_replies, notes, child_messages):
 
     tz = _workspace_tz(workspace)
     items = []
-    for incoming in [*history, message, *child_messages]:
+    for incoming in [*history, message, *child_messages, *later]:
         items.append(
             {
                 "kind": "in",
@@ -145,9 +165,9 @@ def _chat(workspace, message, history, sent_replies, notes, child_messages):
                 "show_name": incoming.parent_message_id is not None and incoming.sender_name != message.sender_name,
             }
         )
-    for earlier in history:
+    for other in [*history, *later]:
         items.extend(
-            {"kind": "out", "obj": reply, "at": reply.sent_at or reply.created_at} for reply in earlier.sent_replies
+            {"kind": "out", "obj": reply, "at": reply.sent_at or reply.created_at} for reply in other.sent_replies
         )
     items.extend({"kind": "out", "obj": reply, "at": reply.sent_at or reply.created_at} for reply in sent_replies)
     items.extend({"kind": "note", "obj": note, "at": note.created_at} for note in notes)
@@ -199,34 +219,42 @@ TYPE_BUTTONS = (
 CONVERSATION_HISTORY = 30
 
 
-def _conversation(message):
-    """Earlier messages of the conversation ``message`` belongs to.
+def _conversation(message, *, include_later=False):
+    """The other messages of the conversation ``message`` belongs to.
 
     The inbox lists a conversation once (inbox_services.thread_key: one person,
     channel and kind — and post, for comments), so the panel shows its messages
-    together. Returns (history, newer): up to ``CONVERSATION_HISTORY`` earlier
-    inbound messages, oldest first, each with its sent replies prefetched, and
-    the newest later message, if any, so the panel can point to it.
+    together. Returns (history, newer, later): up to ``CONVERSATION_HISTORY``
+    earlier inbound messages, oldest first; the newest later message, if any,
+    so the panel can point to it; and, with ``include_later``, up to
+    ``CONVERSATION_HISTORY`` later ones, oldest first. History and later
+    messages have their sent replies prefetched.
     """
     from django.db.models import Prefetch
 
+    with_sent_replies = Prefetch(
+        "replies",
+        queryset=InboxReply.objects.filter(status=InboxReply.Status.SENT).select_related("author").order_by("sent_at"),
+        to_attr="sent_replies",
+    )
     same_person = inbox_services.thread_messages(message).exclude(pk=message.pk)
     history = list(
         same_person.filter(received_at__lte=message.received_at)
-        .prefetch_related(
-            Prefetch(
-                "replies",
-                queryset=InboxReply.objects.filter(status=InboxReply.Status.SENT)
-                .select_related("author")
-                .order_by("sent_at"),
-                to_attr="sent_replies",
-            )
-        )
+        .prefetch_related(with_sent_replies)
         .order_by("-received_at")[:CONVERSATION_HISTORY]
     )
     history.reverse()
-    newer = same_person.filter(received_at__gt=message.received_at).order_by("-received_at").first()
-    return history, newer
+    after = same_person.filter(received_at__gt=message.received_at)
+    newer = after.order_by("-received_at").first()
+    later = []
+    if include_later and newer is not None:
+        later = list(
+            after.select_related("social_account")
+            .prefetch_related(with_sent_replies)
+            .order_by("-received_at")[:CONVERSATION_HISTORY]
+        )
+        later.reverse()
+    return history, newer, later
 
 
 def _attachments(workspace, message):
@@ -529,7 +557,11 @@ def send_reply(request, workspace_id, message_id):
         )
     except Exception as exc:
         logger.warning(
-            "Reply failed: message_id=%s platform=%s error_type=%s", message.id, account.platform, type(exc).__name__
+            "Reply failed: message_id=%s platform=%s error_type=%s %s",
+            message.id,
+            account.platform,
+            type(exc).__name__,
+            inbox_services.provider_error_detail(exc),
         )
         response = render(
             request,
@@ -556,6 +588,30 @@ def send_reply(request, workspace_id, message_id):
 
 
 @login_required
+@require_permission("use_inbox")
+@require_GET
+def message_thread(request, workspace_id, message_id):
+    """The open conversation's bubbles, when they changed since the token in ``v``.
+
+    The panel polls this every few seconds and gets 204 while nothing moved.
+    What the person wrote after the open entry is included, so the chat grows
+    on screen without redrawing the panel around it, and the reply being typed
+    stays where it is.
+    """
+    workspace = _get_workspace(request, workspace_id)
+    message = get_object_or_404(
+        InboxMessage.objects.select_related("social_account"), id=message_id, workspace=workspace
+    )
+    context = _bubble_context(message)
+    if request.GET.get("v") == context["thread_version"]:
+        return HttpResponse(status=204)
+    chat, _drafts, _newer = _thread(workspace, message, include_later=True)
+    return render(
+        request, "inbox/partials/_thread.html", {**context, "chat": chat, "workspace": workspace, "message": message}
+    )
+
+
+@login_required
 @require_permission("reply_from_inbox")
 @require_POST
 def react_message(request, workspace_id, message_id):
@@ -576,10 +632,11 @@ def react_message(request, workspace_id, message_id):
         )
     except Exception as exc:
         logger.warning(
-            "Reaction failed: message_id=%s platform=%s error_type=%s",
+            "Reaction failed: message_id=%s platform=%s error_type=%s %s",
             message.id,
             message.social_account.platform,
             type(exc).__name__,
+            inbox_services.provider_error_detail(exc),
         )
         reason = str(exc) if isinstance(exc, ValueError) else inbox_services.reply_failure_reason(exc)
         return toast_response(tone="error", title=str(_("The reaction was not sent")), body=reason)
