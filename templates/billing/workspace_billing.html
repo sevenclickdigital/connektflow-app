@@ -21,6 +21,9 @@ there, and the overview links each brand to this page.
     <h1 class="page-title">{% translate "Billing" %} · {{ workspace.name }}</h1>
     <p class="page-description">{% blocktranslate with name=workspace.name %}Subscription and storage for {{ name }}.{% endblocktranslate %}</p>
   </div>
+  {% if can_manage_billing %}
+  <a href="{% url 'billing:checkout' workspace_id=workspace.id %}" class="btn-brand px-4 py-2 text-sm font-semibold">{% translate "Manage plan" %}</a>
+  {% endif %}
 </div>
 {% endblock %}
 

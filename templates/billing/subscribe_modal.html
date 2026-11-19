@@ -1,23 +1,13 @@
 {% extends "base.html" %}
 {% load static i18n billing_extras %}
 {% comment %}
-The contracting page, shown right after a workspace is created.
-
-A real page rather than markup injected into every layout: it is arrived
-at by redirect from workspace creation, it survives a reload after a
-failed gateway call, and it can be linked to from the billing page. It
-replaces base.html's app_shell, like the sign-up page: no sidebar, only
-the logo and the card, so the welcome steps and the plan are the one thing
-on screen.
-
-Two states. Before contracting it asks for the decision (and, the first
-time, the payer's CPF or CNPJ). After it, while the payment is not
-confirmed, it offers the invoice and asks the server every few seconds
-whether the workspace is active yet, leaving for the calendar when it is.
-
-The "later" link exists only while ``BILLING_REQUIRE_SUBSCRIPTION`` is off:
-with it on, every page of an unpaid workspace leads back here (see
-apps.billing.middleware), so the ways out are another brand or signing out.
+What remains of the old contracting page. Contracting is the checkout
+(billing/checkout.html), where views.subscribe_modal sends whoever can pay.
+This page is shown only for a brand contracted on its own subscription
+whose invoice is open (it offers the invoice and asks the server every few
+seconds whether the payment arrived, leaving for the calendar when it has)
+and to members who cannot pay, who are told to ask an admin. Replaces
+base.html's app_shell: the logo and the card, nothing else.
 {% endcomment %}
 
 {% block title %}{% translate "Contract workspace" %} - {{ workspace.name }} - Connekt Flow{% endblock %}
@@ -25,75 +15,14 @@ apps.billing.middleware), so the ways out are another brand or signing out.
 {% block app_shell %}
 <main class="auth-bg min-h-screen flex items-center justify-center py-10 px-4" style="font-family: var(--font-body);">
   <div class="w-full max-w-md">
-    {# Moti leans over the card only on the welcome steps and their plan step, not over an ended trial or an unpaid invoice. #}
-    {% if welcome or trial_available %}
+    {# Moti leans over the card only while the free trial is on offer, not over an ended trial or an unpaid invoice. #}
+    {% if trial_available %}
     {% include "partials/_moti_entrance.html" with logo=True %}
     {% else %}
     <div class="flex justify-center mb-6">
       <img src="{% static 'img/connektflow-wordmark-dark.svg' %}" alt="Connekt Flow" class="h-8 w-auto">
     </div>
     {% endif %}
-{% if welcome %}
-    {% comment %}
-    A new account, in steps: first the organization (its name and whose
-    document and phone its invoices carry), then its first brand, then the
-    plan below. Both were created with placeholder names at sign-up. One
-    form, sent at the end of the second step; the steps only split what is
-    asked into two screens.
-    {% endcomment %}
-    <form method="post" action="{% url 'organizations:welcome' %}"
-          class="rounded-2xl border border-neutral-300 bg-white shadow-xl p-6 sm:p-7"
-          x-data="{ step: 1, next() { const fields = [...$refs.organization.querySelectorAll('input')]; if (fields.every(f => f.reportValidity())) { this.step = 2; $nextTick(() => $refs.brand.focus()); } } }"
-          @submit="if (step === 1) { $event.preventDefault(); next(); }">
-      {% csrf_token %}
-      <input type="hidden" name="workspace" value="{{ workspace.id }}">
-
-      <div x-ref="organization" x-show="step === 1">
-        <p class="text-xs font-semibold uppercase tracking-wide text-brand-700 mb-2">{% translate "Step 1 of 3 · Organization" %}</p>
-        <h1 class="text-lg font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Welcome! Start with your organization" %}</h1>
-        <p class="text-sm text-neutral-600 mt-1.5 mb-5">{% translate "The organization is your company or agency. It holds your brands, your team and the billing data, and appears on invitations and invoices." %}</p>
-
-        <label for="welcome_org" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Name of your organization" %}</label>
-        <input type="text" id="welcome_org" name="organization_name" required maxlength="100" autofocus
-               placeholder="{% translate 'e.g. Sol Agency' %}" class="form-input-styled w-full mb-4">
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-1">
-          <div>
-            <label for="welcome_tax_id" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "CPF or CNPJ" %}</label>
-            <input type="text" id="welcome_tax_id" name="tax_id" data-mask="tax-id" required inputmode="numeric" autocomplete="off" maxlength="18"
-                   placeholder="000.000.000-00" class="form-input-styled w-full tabular-nums">
-          </div>
-          <div>
-            <label for="welcome_phone" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Phone with area code" %}</label>
-            <input type="tel" id="welcome_phone" name="phone" data-mask="phone" required autocomplete="tel" maxlength="20"
-                   placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums">
-          </div>
-        </div>
-        <p class="text-xs text-neutral-600 mb-6">{% translate "Of the organization. They go on its invoices and are what the free trial asks for." %}</p>
-
-        <button type="button" @click="next()" class="btn-brand w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold">{% translate "Continue" %}</button>
-      </div>
-
-      <div x-show="step === 2" x-cloak>
-        <p class="text-xs font-semibold uppercase tracking-wide text-brand-700 mb-2">{% translate "Step 2 of 3 · Brand" %}</p>
-        <h1 class="text-lg font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Now your first brand" %}</h1>
-        <p class="text-sm text-neutral-600 mt-1.5 mb-5">{% translate "A brand is one business whose social networks you manage: your own or a client's. Each brand has its own accounts, calendar and inbox. You can add more later." %}</p>
-
-        <label for="welcome_brand" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Name of your first brand" %}</label>
-        <input type="text" id="welcome_brand" name="brand_name" required maxlength="100" value="{{ workspace.name }}" x-ref="brand"
-               class="form-input-styled w-full mb-6">
-
-        <div class="flex items-center gap-2">
-          <button type="button" @click="step = 1" class="btn-soft px-4 py-2.5 text-sm font-semibold">{% translate "Back" %}</button>
-          <button type="submit" class="btn-brand flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold">{% translate "Continue to the plan" %}</button>
-        </div>
-      </div>
-
-      <div class="mt-4 text-center">
-        <a href="{% url 'accounts:logout' %}" class="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">{% translate "Log out" %}</a>
-      </div>
-    </form>
-{% else %}
 
     <div class="rounded-2xl border border-neutral-300 bg-white shadow-xl p-6 sm:p-7" x-data="{ cycle: 'monthly' }">
 
@@ -331,7 +260,6 @@ apps.billing.middleware), so the ways out are another brand or signing out.
         {% translate "See billing details" %}
       </a>
     </p>
-{% endif %}
 
   </div>
 </main>

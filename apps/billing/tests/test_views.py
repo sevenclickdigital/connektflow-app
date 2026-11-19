@@ -317,16 +317,15 @@ class TestWorkspaceBillingAccess:
         response = client.get(reverse("billing:subscribe_modal", kwargs={"workspace_id": workspace.id}))
         assert response.status_code == 302
 
-    def test_the_contracting_page_shows_only_its_card(self, owner, workspace):
+    def test_contracting_is_the_checkout_without_the_app_menu(self, owner, workspace):
         """No sidebar: it leads to pages an unpaid brand cannot use yet, and
-        the welcome steps are the one thing to do."""
+        choosing the plan is the one thing to do."""
         client = _client_for(owner)
-        response = client.get(reverse("billing:subscribe_modal", kwargs={"workspace_id": workspace.id}))
+        response = client.get(reverse("billing:subscribe_modal", kwargs={"workspace_id": workspace.id}), follow=True)
 
         html = response.content.decode()
-        assert response.status_code == 200
-        assert "<aside" not in html
-        assert reverse("billing:workspace_billing", kwargs={"workspace_id": workspace.id}) in html
+        assert response.redirect_chain[-1][0] == reverse("billing:checkout", kwargs={"workspace_id": workspace.id})
+        assert "mobileMenuOpen" not in html
 
 
 @pytest.mark.django_db

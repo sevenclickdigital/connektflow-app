@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% comment %}
+After the checkout (apps.billing.views.checkout_welcome): the payment went
+through, or the free trial started (``trial``). Says that everything is
+open and lays out where to start, in order: connect the networks, create in
+the idea hub, then automate the posts. Each step links into the brand.
+Replaces base.html's app_shell like the checkout.
+{% endcomment %}
+
+{% block title %}{% if trial %}{% translate "Your free trial has started" %}{% else %}{% translate "Payment confirmed" %}{% endif %} - Connekt Flow{% endblock %}
+
+{% block app_shell %}
+<div class="min-h-screen auth-bg" style="font-family: var(--font-body);">
+  <header class="bg-white/70 backdrop-blur border-b border-neutral-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center">
+      <img src="{% static 'img/connektflow-wordmark-dark.svg' %}" alt="Connekt Flow" class="h-7 w-auto">
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+    <section class="rounded-3xl bg-white border border-neutral-300 shadow-xl overflow-hidden">
+      <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] items-center gap-6 px-6 sm:px-10 py-6 bg-brand-50">
+        <div>
+          <span class="pill pill-success"><i></i>{% if trial %}{% translate "Free trial on" %}{% else %}{% translate "Payment confirmed" %}{% endif %}</span>
+          <h1 class="mt-3 text-2xl sm:text-3xl font-bold text-neutral-950" style="letter-spacing: -0.02em;">
+            {% if trial %}{% translate "Your free trial has started. Everything is open!" %}{% else %}{% translate "All set! You now have full access." %}{% endif %}
+          </h1>
+          <p class="text-neutral-700 mt-2">
+            {% if trial and subscription.trial_ends_at %}
+            {% blocktranslate with date=subscription.trial_ends_at|date:"d/m/Y" %}Use every feature until {{ date }}. Here is the best way to start:{% endblocktranslate %}
+            {% else %}
+            {% translate "Every feature of Connekt Flow is yours. Here is the best way to start:" %}
+            {% endif %}
+          </p>
+        </div>
+        <img src="{% static 'img/moti/moti-joinha.webp' %}" alt="" aria-hidden="true" class="hidden md:block h-40 w-auto justify-self-end select-none" draggable="false">
+      </div>
+
+      <ol class="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 sm:p-8">
+        <li class="rounded-2xl border border-neutral-300 p-5 flex flex-col">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-brand-700 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">1</span>
+            <h2 class="font-semibold text-neutral-950">{% translate "Connect your accounts" %}</h2>
+          </div>
+          <img src="{% static 'img/moti/moti-conectar.webp' %}" alt="" aria-hidden="true" class="h-28 w-auto mx-auto my-4 select-none" draggable="false">
+          <p class="text-sm text-neutral-600 flex-1">{% translate "Link the brand's Instagram, Facebook, WhatsApp and other networks. It is what lets you publish, reply and see the results." %}</p>
+          <a href="{% url 'social_accounts:list' workspace_id=workspace.id %}" class="btn-brand w-full mt-4 py-2.5 text-sm font-semibold">{% translate "Connect accounts" %}</a>
+        </li>
+        <li class="rounded-2xl border border-neutral-300 p-5 flex flex-col">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-brand-700 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">2</span>
+            <h2 class="font-semibold text-neutral-950">{% translate "Create in the idea hub" %}</h2>
+          </div>
+          <img src="{% static 'img/moti/moti-ideia.webp' %}" alt="" aria-hidden="true" class="h-28 w-auto mx-auto my-4 select-none" draggable="false">
+          <p class="text-sm text-neutral-600 flex-1">{% translate "Start from an idea or a ready model, turn it into a post and schedule it on the calendar." %}</p>
+          <a href="{% url 'composer:create_landing' workspace_id=workspace.id %}" class="btn-soft w-full justify-center mt-4 py-2.5 text-sm font-semibold">{% translate "Open the idea hub" %}</a>
+        </li>
+        <li class="rounded-2xl border border-neutral-300 p-5 flex flex-col">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-brand-700 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">3</span>
+            <h2 class="font-semibold text-neutral-950">{% translate "Automate your posts" %}</h2>
+          </div>
+          <img src="{% static 'img/moti/moti-automacao.webp' %}" alt="" aria-hidden="true" class="h-28 w-auto mx-auto my-4 select-none" draggable="false">
+          <p class="text-sm text-neutral-600 flex-1">{% translate "With the posts made, create automations on them: reply to comments and send a direct message to whoever writes a keyword." %}</p>
+          <a href="{% url 'automations:list' workspace_id=workspace.id %}" class="btn-soft w-full justify-center mt-4 py-2.5 text-sm font-semibold">{% translate "See automations" %}</a>
+        </li>
+      </ol>
+
+      <div class="px-6 sm:px-8 pb-8 text-center">
+        <a href="{% url 'calendar:calendar' workspace_id=workspace.id %}" class="text-sm font-semibold text-brand-700 hover:underline">{% translate "Go to the calendar" %}</a>
+      </div>
+    </section>
+  </main>
+</div>
+{% endblock %}

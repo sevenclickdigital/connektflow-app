@@ -1,197 +1,628 @@
 {% extends "base.html" %}
 {% load static i18n billing_extras %}
 {% comment %}
-The checkout (apps.billing.views.checkout): how many brands, monthly or
-yearly, and the card. The first charge is paid on the spot and the card
-stays on the subscription for every later one, so the customer never comes
-back to pay an invoice. With an active plan (``plan``) it only adds brands,
-charged to the card already on the plan.
+The organization's plan (apps.billing.views.checkout), and the first screen
+of a new account. Wide, in two steps on one page:
 
-The price below the choices is the server's (_checkout_quote.html, fetched
-on every change of #plan-options). The card fields post to the gateway
-through checkout_pay and are kept nowhere. Replaces base.html's app_shell
-like the contracting page: the logo and the card, nothing else.
+1. The brands. Every brand of the organization is a row with a tick (paid,
+   comped and own-subscription brands are locked), new brands are added as
+   rows with "Add brands", and each row's name can be edited in place (the
+   brand a new account was created with gets its name here). The cycle sits
+   beside the steps; the bar fixed at the foot keeps the total and leads on.
+2. The payment: how to pay (card, or Pix once Asaas enables Pix Automático)
+   beside the order summary. With an active plan there is no card: the
+   brands are added and charged to the card on file from the next charge.
+
+Prices come from the server: #quote-source asks billing:checkout_quote with
+every [data-quote] field each time the choice changes, and the answer fills
+the bar and, out of band, the summary totals. The form posts through HTMX
+(checkout_pay, or start_trial from the trial dialog) so what was typed stays
+when the server refuses; the refusal lands in the data-inline-error box of
+the part that posted. Card fields are passed to Asaas and kept nowhere.
 {% endcomment %}
 
-{% block title %}{% if plan %}{% translate "Add brands" %}{% else %}{% translate "Checkout" %}{% endif %} - Connekt Flow{% endblock %}
+{% block title %}{% if plan %}{% translate "Manage your plan" %}{% else %}{% translate "Build your plan" %}{% endif %} - Connekt Flow{% endblock %}
 
 {% block app_shell %}
-<main class="auth-bg min-h-screen flex items-center justify-center py-10 px-4" style="font-family: var(--font-body);">
-  <div class="w-full max-w-lg">
-    <div class="flex justify-center mb-6">
-      <img src="{% static 'img/connektflow-wordmark-dark.svg' %}" alt="Connekt Flow" class="h-8 w-auto">
-    </div>
-
-    {% if messages %}
-    <div class="mb-4 space-y-2">
-      {% for message in messages %}
-      <div class="{% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">{{ message }}</div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    <form method="post"
-          action="{% if plan %}{% url 'billing:checkout_add_brands' workspace_id=workspace.id %}{% else %}{% url 'billing:checkout_pay' workspace_id=workspace.id %}{% endif %}"
-          class="rounded-2xl border border-neutral-300 bg-white shadow-xl overflow-hidden"
-          x-data="{ brands: {{ brands }}, sending: false }" @submit="sending = true">
-      {% csrf_token %}
-
-      {% comment %}
-      The quote is asked for once Alpine has written the new count into the
-      number field (the "quote" event from $watch below), not on the raw
-      input event, which fires before the field holds the new value.
-      {% endcomment %}
-      <div id="plan-options" x-ref="options"
-           x-init="$watch('brands', () => $nextTick(() => htmx.trigger($refs.options, 'quote')))"
-           hx-get="{% url 'billing:checkout_quote' workspace_id=workspace.id %}"
-           hx-trigger="quote delay:200ms, change from:input[name=cycle], change from:#coupon"
-           hx-include="#plan-options" hx-target="#checkout-quote" hx-swap="innerHTML">
-        <section class="px-6 sm:px-7 pt-6 pb-5">
-          <label for="brands" class="block text-sm text-neutral-700">
-            {% if plan %}
-            {% blocktranslate count brands=plan.brands %}Your plan has {{ brands }} brand. How many do you want?{% plural %}Your plan has {{ brands }} brands. How many do you want?{% endblocktranslate %}
-            {% else %}
-            {% translate "How many brands do you manage?" %}
-            {% endif %}
-          </label>
-          <div class="flex items-baseline justify-between gap-3 mt-1">
-            <p class="text-3xl font-bold text-neutral-950" style="letter-spacing: -0.02em;">
-              <span x-text="brands">{{ brands }}</span>
-              <span x-show="brands == 1">{% translate "brand" %}</span>
-              <span x-show="brands != 1" x-cloak>{% translate "brands" %}</span>
-            </p>
-            <input type="number" id="brands" name="brands" x-model.number="brands" min="{{ min_brands }}" max="{{ max_brands }}" required
-                   aria-label="{% translate 'Number of brands' %}" class="form-input-styled w-20 text-center tabular-nums">
-          </div>
-          <input type="range" x-model.number="brands" min="{{ min_brands }}" max="{{ slider_max }}" step="1"
-                 aria-label="{% translate 'Number of brands' %}" class="w-full mt-4 accent-[var(--primary)] cursor-pointer">
-          {% if volume_tiers and not plan %}
-          <p class="text-xs text-neutral-600 mt-3">
-            {% for minimum, percent in volume_tiers %}
-            {% blocktranslate %}From the {{ minimum }}th brand on, {{ percent }}% off each new brand.{% endblocktranslate %}
-            {% endfor %}
-          </p>
-          {% endif %}
-        </section>
-
-        {% if annual_percent and not plan %}
-        <section class="px-6 sm:px-7 pb-5" x-data="{ cycle: '{% if cycle == "yearly" %}yearly{% else %}monthly{% endif %}' }">
-          <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="{% translate 'Billing cycle' %}">
-            <label :class="cycle === 'monthly' ? 'border-brand-700 bg-brand-50 text-brand-900' : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'"
-                   class="px-3 py-2.5 text-sm font-semibold rounded-full border transition-colors cursor-pointer text-center">
-              <input type="radio" name="cycle" value="monthly" x-model="cycle" class="sr-only">{% translate "Monthly" %}
-            </label>
-            <label :class="cycle === 'yearly' ? 'border-brand-700 bg-brand-50 text-brand-900' : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'"
-                   class="px-3 py-2.5 text-sm font-semibold rounded-full border transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5">
-              <input type="radio" name="cycle" value="yearly" x-model="cycle" class="sr-only">{% translate "Yearly" %}
-              <span class="pill pill-success">-{{ annual_percent }}%</span>
-            </label>
-          </div>
-        </section>
-        {% else %}
-        <input type="hidden" name="cycle" value="{{ cycle }}">
+{% translate "My brand" as new_brand_label %}
+{% translate "brand" as brand_word %}{% translate "brands" as brands_word %}
+<div class="min-h-screen" style="background: var(--surface-page); font-family: var(--font-body);">
+  <header class="bg-white border-b border-neutral-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <img src="{% static 'img/connektflow-wordmark-dark.svg' %}" alt="Connekt Flow" class="h-7 w-auto">
+      <div class="flex items-center gap-4 text-sm">
+        {% if not subscription_required or plan %}
+        <a href="{% url 'calendar:calendar' workspace_id=workspace.id %}" class="hidden sm:inline text-neutral-600 hover:text-neutral-950">{% translate "Back to the workspace" %}</a>
         {% endif %}
+        <a href="{% url 'accounts:logout' %}" class="text-neutral-500 hover:text-neutral-800">{% translate "Log out" %}</a>
+      </div>
+    </div>
+  </header>
 
-        {% if not plan %}
-        {% comment %}
-        A coupon from the staff Coupons screen. Checked and priced by the
-        server with the rest of the quote; Enter applies it rather than
-        submitting the payment.
-        {% endcomment %}
-        <section class="px-6 sm:px-7 pb-5">
-          <label for="coupon" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Discount coupon" %}</label>
-          <div class="flex gap-2">
-            <input type="text" id="coupon" name="coupon" value="{{ coupon_code }}" maxlength="32" autocomplete="off"
-                   @keydown.enter.prevent="htmx.trigger($refs.options, 'quote')"
-                   class="form-input-styled flex-1 uppercase tracking-wide" placeholder="{% translate 'Code' %}">
-            <button type="button" class="btn-soft px-4" @click="htmx.trigger($refs.options, 'quote')">{% translate "Apply" %}</button>
-          </div>
-        </section>
+  <form id="checkout-form" method="post" action="{% url 'billing:checkout_pay' workspace_id=workspace.id %}"
+        hx-post="{% url 'billing:checkout_pay' workspace_id=workspace.id %}" hx-swap="none"
+        data-inline-error="#checkout-error"
+        data-new-label="{{ new_brand_label }}" data-brand-word="{{ brand_word }}" data-brands-word="{{ brands_word }}"
+        x-data="{
+          step: 1,
+          method: 'card',
+          cycle: '{% if cycle == "yearly" %}yearly{% else %}monthly{% endif %}',
+          newBrands: [],
+          adding: false,
+          addCount: 1,
+          trialOpen: false,
+          featuresOpen: false,
+          sending: false,
+          picked: 0,
+          init() { this.$nextTick(() => this.count()); },
+          count() { this.picked = this.$root.querySelectorAll('input[name=workspaces]:checked').length + this.newBrands.length; },
+          quote() { this.$nextTick(() => { this.count(); htmx.trigger('#quote-source', 'quote'); }); },
+          addBrands(n) { const base = this.$root.querySelectorAll('[data-brand-row]').length + this.newBrands.length; for (let i = 1; i <= n; i++) { this.newBrands.push({ id: Date.now() + i, name: this.$root.dataset.newLabel + ' ' + (base + i) }); } this.adding = false; this.addCount = 1; this.quote(); },
+          next() { this.step = 2; window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        }"
+        @htmx:before-request="if ($event.detail.elt !== $refs.quoteSource) sending = true"
+        @htmx:after-request="sending = false">
+    {% csrf_token %}
+    <div id="quote-source" x-ref="quoteSource" class="hidden"
+         hx-get="{% url 'billing:checkout_quote' workspace_id=workspace.id %}"
+         hx-trigger="quote delay:150ms" hx-include="[data-quote]" hx-target="#quote-bar" hx-swap="innerHTML"></div>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-44">
+      {% if messages %}
+      <div class="mb-5 space-y-2">
+        {% for message in messages %}
+        <div class="{% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <h1 class="text-2xl sm:text-3xl font-bold text-neutral-950" style="letter-spacing: -0.02em;">
+        {% if plan %}{% translate "Manage your plan" %}{% elif trial_expired %}{% translate "Your free trial has ended" %}{% else %}{% translate "Build your plan" %}{% endif %}
+      </h1>
+      <p class="text-sm text-neutral-600 mt-1">
+        {% if plan %}
+        {% translate "Tick or add the brands to put on the plan. They are charged to the card on file from the next charge." %}
+        {% elif trial_expired %}
+        {% translate "Everything you did is kept. Choose the brands and carry on from where you stopped." %}
+        {% else %}
+        {% translate "Choose the brands you manage and how you want to pay. Every feature is included in each one." %}
+        {% endif %}
+      </p>
+
+      {# What every brand gets. #}
+      <section class="mt-6 rounded-2xl overflow-hidden border border-neutral-300 bg-white" x-show="step === 1">
+        <div class="px-5 py-3 flex items-center gap-3 text-white bg-brand-700">
+          <img src="{% static 'img/connektflow-symbol.svg' %}" alt="" class="h-6 w-6 brightness-0 invert">
+          <span class="font-semibold">{% translate "Connekt Flow · everything included" %}</span>
+        </div>
+        <ul class="hidden sm:grid px-5 py-4 grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2.5 text-sm text-neutral-700">
+          {% translate "Scheduling and content calendar" as f1 %}{% translate "Approvals with your team and clients" as f2 %}{% translate "Unified inbox for comments and messages" as f3 %}
+          {% translate "Automations by keyword" as f4 %}{% translate "Reports and analytics" as f5 %}{% translate "Unlimited team members and clients" as f6 %}
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{{ f1 }}</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{{ f2 }}</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{{ f3 }}</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{{ f4 }}</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{{ f5 }}</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{{ f6 }}</li>
+        </ul>
+        <div class="px-5 pb-4 sm:pt-0 pt-4">
+          <button type="button" class="btn-soft text-sm px-3 py-1.5 inline-flex items-center gap-1.5" @click="featuresOpen = true" aria-haspopup="dialog">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-8 8"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>
+            {% translate "See all features" %}
+          </button>
+        </div>
+      </section>
+
+      {# The two steps, and the cycle. #}
+      <div class="mt-7 flex flex-wrap items-center justify-between gap-4">
+        <ol class="flex items-center gap-3 text-sm">
+          <li>
+            <button type="button" @click="step = 1" class="flex items-center gap-2 cursor-pointer">
+              <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" :class="step === 1 ? 'bg-brand-700 text-white' : 'bg-brand-100 text-brand-800'">1</span>
+              <span :class="step === 1 ? 'font-semibold text-neutral-950' : 'text-neutral-600'">{% translate "Plan" %}</span>
+            </button>
+          </li>
+          <li class="w-10 h-px bg-neutral-300" aria-hidden="true"></li>
+          <li class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" :class="step === 2 ? 'bg-brand-700 text-white' : 'bg-neutral-200 text-neutral-600'">2</span>
+            <span :class="step === 2 ? 'font-semibold text-neutral-950' : 'text-neutral-600'">{% translate "Payment" %}</span>
+          </li>
+        </ol>
+        {% if annual_percent and not plan %}
+        <div class="inline-flex rounded-xl bg-neutral-100 p-1" role="radiogroup" aria-label="{% translate 'Billing cycle' %}" x-show="step === 1">
+          <label class="px-4 py-1.5 text-sm rounded-lg cursor-pointer transition-colors" :class="cycle === 'monthly' ? 'bg-white shadow-sm font-semibold text-neutral-950' : 'text-neutral-600'">
+            <input type="radio" name="cycle" value="monthly" x-model="cycle" @change="quote()" data-quote class="sr-only">{% translate "Monthly" %}
+          </label>
+          <label class="px-4 py-1.5 text-sm rounded-lg cursor-pointer transition-colors inline-flex items-center gap-1.5" :class="cycle === 'yearly' ? 'bg-white shadow-sm font-semibold text-neutral-950' : 'text-neutral-600'">
+            <input type="radio" name="cycle" value="yearly" x-model="cycle" @change="quote()" data-quote class="sr-only">{% translate "Yearly" %}
+            <span class="pill pill-success">-{{ annual_percent }}%</span>
+          </label>
+        </div>
+        {% else %}
+        <input type="hidden" name="cycle" value="{{ cycle }}" data-quote>
         {% endif %}
       </div>
 
-      <section id="checkout-quote" class="px-6 sm:px-7 py-5 border-t border-neutral-200" aria-live="polite">
-        {% include "billing/_checkout_quote.html" %}
+      {# ① The brands. #}
+      <section class="mt-4 rounded-2xl border border-neutral-300 bg-white overflow-hidden" x-show="step === 1">
+        <div class="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_120px_180px] items-center bg-neutral-50 border-b border-neutral-200">
+          <div class="px-4 sm:px-5 py-3 flex items-center justify-between gap-3">
+            <span class="text-base font-semibold text-neutral-950">{% translate "Brands" %}: <span x-text="{{ rows|length }} + newBrands.length">{{ rows|length }}</span></span>
+            <button type="button" class="btn-soft text-sm px-3 py-1.5 inline-flex items-center gap-1.5" @click="adding = true">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              {% translate "Add brands" %}
+            </button>
+          </div>
+          <div class="hidden sm:block px-3 py-3 text-center text-sm font-semibold text-neutral-700 border-l border-neutral-200">{% translate "Include" %}</div>
+          <div class="hidden sm:block px-3 py-3 text-center border-l border-neutral-200">
+            <p class="text-sm font-semibold text-neutral-700">{% translate "Price" %}</p>
+            <p class="text-xs text-neutral-500">{% translate "per brand" %}</p>
+          </div>
+        </div>
+
+        <ul class="divide-y divide-neutral-200">
+          {% for row in rows %}
+          <li data-brand-row class="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_120px_180px] items-center"
+              x-data="{ on: {{ row.checked|yesno:'true,false' }} }" :class="on ? 'bg-brand-50/50' : ''">
+            <div class="px-4 sm:px-5 py-4 flex items-center gap-3 min-w-0">
+              <span class="w-11 h-11 rounded-full bg-neutral-200 text-neutral-700 font-semibold text-sm flex items-center justify-center flex-shrink-0">{{ row.workspace.name|slice:":2"|upper }}</span>
+              <div class="min-w-0 flex-1">
+                {% if row.renamable %}
+                <input type="text" name="name_{{ row.workspace.pk }}" value="{{ row.workspace.name }}" maxlength="100"
+                       aria-label="{% translate 'Brand name' %}"
+                       class="w-full max-w-xs font-semibold text-neutral-950 bg-transparent border border-transparent hover:border-neutral-300 focus:border-brand-500 focus:bg-white rounded-md px-1.5 py-0.5 -ml-1.5 outline-none">
+                {% else %}
+                <p class="font-semibold text-neutral-950 truncate">{{ row.workspace.name }}</p>
+                {% endif %}
+                <p class="mt-0.5">
+                  {% if row.state == "plan" %}<span class="pill pill-success"><i></i>{% translate "Active on the plan" %}</span>
+                  {% elif row.state == "courtesy" %}<span class="pill pill-neutral">{% translate "Courtesy" %}</span>
+                  {% elif row.state == "own" %}<span class="pill pill-neutral">{% translate "Own subscription" %}</span>
+                  {% elif row.state == "trial" %}<span class="pill pill-info">{% blocktranslate with date=row.subscription.trial_ends_at|date:"d/m/Y" %}Trial until {{ date }}{% endblocktranslate %}</span>
+                  {% elif row.subscription.trial_expired %}<span class="pill pill-error">{% translate "Trial ended" %}</span>
+                  {% else %}<span class="pill pill-error">{% translate "Inactive" %}</span>{% endif %}
+                </p>
+              </div>
+            </div>
+            <div class="px-4 sm:px-3 py-4 flex justify-center sm:border-l border-neutral-200 self-stretch items-center">
+              {% if row.selectable %}
+              <input type="checkbox" name="workspaces" value="{{ row.workspace.pk }}" data-quote x-model="on" @change="quote()"
+                     aria-label="{% blocktranslate with name=row.workspace.name %}Include {{ name }}{% endblocktranslate %}"
+                     class="w-5 h-5 rounded accent-[var(--primary)] cursor-pointer">
+              {% else %}
+              <svg class="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{% translate 'Locked' %}"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              {% endif %}
+            </div>
+            <div class="hidden sm:flex px-3 py-4 border-l border-neutral-200 self-stretch items-center justify-center text-center">
+              {% if row.state == "plan" %}
+              <span class="text-sm text-neutral-600">{% translate "Paid" %}</span>
+              {% elif row.selectable %}
+              <span class="tabular-nums" :class="on ? 'text-neutral-950' : 'text-neutral-400'">
+                R$ <strong class="text-lg" x-text="cycle === 'yearly' ? '{{ unit.yearly|brl }}' : '{{ unit.monthly|brl }}'">{{ unit.monthly|brl }}</strong><span class="text-sm">{% translate "/month" %}</span>
+              </span>
+              {% else %}
+              <span class="text-sm text-neutral-400">—</span>
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+
+          <template x-for="(brand, index) in newBrands" :key="brand.id">
+            <li class="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_120px_180px] items-center bg-brand-50/50">
+              <div class="px-4 sm:px-5 py-4 flex items-center gap-3 min-w-0">
+                <span class="w-11 h-11 rounded-full bg-brand-100 text-brand-800 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </span>
+                <div class="min-w-0 flex-1">
+                  <input type="text" name="new_brand" x-model="brand.name" data-quote maxlength="100"
+                         aria-label="{% translate 'Brand name' %}"
+                         class="w-full max-w-xs font-semibold text-neutral-950 bg-white border border-neutral-300 focus:border-brand-500 rounded-md px-1.5 py-0.5 outline-none">
+                  <p class="mt-0.5"><span class="pill pill-info">{% translate "New · created on payment" %}</span></p>
+                </div>
+                <button type="button" @click="newBrands.splice(index, 1); quote()" class="p-2 text-neutral-400 hover:text-red-600 cursor-pointer" aria-label="{% translate 'Remove' %}">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              </div>
+              <div class="px-4 sm:px-3 py-4 flex justify-center sm:border-l border-neutral-200 self-stretch items-center">
+                <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="hidden sm:flex px-3 py-4 border-l border-neutral-200 self-stretch items-center justify-center tabular-nums text-neutral-950">
+                R$&nbsp;<strong class="text-lg" x-text="cycle === 'yearly' ? '{{ unit.yearly|brl }}' : '{{ unit.monthly|brl }}'">{{ unit.monthly|brl }}</strong><span class="text-sm">{% translate "/month" %}</span>
+              </div>
+            </li>
+          </template>
+        </ul>
+        {% if volume_tiers or annual_percent %}
+        <p class="px-5 py-3 border-t border-neutral-200 text-xs text-neutral-600 bg-neutral-50">
+          {% for minimum, percent in volume_tiers %}{% blocktranslate %}From the {{ minimum }}th brand on, {{ percent }}% off each new brand.{% endblocktranslate %} {% endfor %}
+          {% if annual_percent %}{% translate "On the yearly plan the 12 months are charged at once, on the card." %}{% endif %}
+        </p>
+        {% endif %}
       </section>
 
-      <section class="px-6 sm:px-7 py-6 border-t border-neutral-200 bg-neutral-50">
-        {% if plan %}
-        <p class="text-sm text-neutral-700">
-          {% if plan.card_last4 %}
-          {% blocktranslate with brand=plan.card_brand|title last4=plan.card_last4 %}Charged to the {{ brand }} card ending in {{ last4 }}, from the next charge.{% endblocktranslate %}
+      {# ② The payment. #}
+      <section class="mt-4 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-start" x-show="step === 2" x-cloak>
+        <div class="rounded-2xl border border-neutral-300 bg-white p-5 sm:p-6">
+          <button type="button" @click="step = 1" class="text-sm text-brand-700 font-semibold inline-flex items-center gap-1 mb-4 cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            {% translate "Back to the brands" %}
+          </button>
+
+          {% if plan %}
+          <h2 class="text-lg font-semibold text-neutral-950">{% translate "Payment" %}</h2>
+          <p class="text-sm text-neutral-700 mt-2">
+            {% if plan.card_last4 %}{% blocktranslate with brand=plan.card_brand|title last4=plan.card_last4 %}Charged to the {{ brand }} card ending in {{ last4 }}, from the next charge.{% endblocktranslate %}
+            {% else %}{% translate "Charged to the card on the plan, from the next charge." %}{% endif %}
+          </p>
           {% else %}
-          {% translate "Charged to the card on the plan, from the next charge." %}
-          {% endif %}
-        </p>
-        <button type="submit" :disabled="sending" class="btn-brand w-full mt-4 py-3 text-sm font-semibold">
-          {% translate "Add brands to the plan" %}
-        </button>
-        {% else %}
-        <h2 class="text-sm font-semibold text-neutral-950 mb-3">{% translate "Credit card" %}</h2>
-        {% if not gateway_configured %}
-        <p class="alert-info mb-4">{% translate "Payments are not connected on this installation yet. Nothing will be charged." %}</p>
-        {% endif %}
-        <div class="grid grid-cols-6 gap-3">
-          <div class="col-span-6">
-            <label for="card_number" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Card number" %}</label>
-            <input type="text" id="card_number" name="card_number" data-mask="card" required inputmode="numeric" autocomplete="cc-number"
-                   maxlength="23" placeholder="0000 0000 0000 0000" class="form-input-styled w-full tabular-nums">
+          <h2 class="text-lg font-semibold text-neutral-950 mb-3">{% translate "Billing details" %}</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+            {% if ask_organization_name %}
+            <div class="sm:col-span-2">
+              <label for="organization_name" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Company or agency name" %}</label>
+              <input type="text" id="organization_name" name="organization_name" maxlength="100" :disabled="trialOpen"
+                     placeholder="{% translate 'e.g. Sol Agency' %}" class="form-input-styled w-full">
+              <p class="text-xs text-neutral-500 mt-1">{% translate "It goes on invoices and invitations. Left empty, it takes the name of your first brand; you can change it later." %}</p>
+            </div>
+            {% endif %}
+            <div>
+              <label for="tax_id" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "CPF or CNPJ" %}</label>
+              <input type="text" id="tax_id" name="tax_id" value="{{ payer_tax_id }}" data-mask="tax-id" inputmode="numeric" autocomplete="off" maxlength="18" placeholder="000.000.000-00"
+                     :required="step === 2" :disabled="trialOpen" class="form-input-styled w-full tabular-nums">
+            </div>
+            <div>
+              <label for="phone" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Phone with area code" %}</label>
+              <input type="tel" id="phone" name="phone" value="{{ payer_phone }}" data-mask="phone" autocomplete="tel" maxlength="20" placeholder="(11) 99999-9999"
+                     :required="step === 2" :disabled="trialOpen" class="form-input-styled w-full tabular-nums">
+            </div>
           </div>
-          <div class="col-span-6">
-            <label for="card_holder" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Name printed on the card" %}</label>
-            <input type="text" id="card_holder" name="card_holder" required autocomplete="cc-name" maxlength="100" class="form-input-styled w-full">
+
+          <h2 class="text-lg font-semibold text-neutral-950 mb-3">{% translate "How do you want to pay?" %}</h2>
+          <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="{% translate 'Payment method' %}">
+            <label class="rounded-xl border-2 px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors" :class="method === 'card' ? 'border-brand-700 bg-brand-50' : 'border-neutral-300 hover:bg-neutral-50'">
+              <input type="radio" name="method" value="card" x-model="method" class="sr-only">
+              <svg class="w-6 h-6 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              <span>
+                <span class="block text-sm font-semibold text-neutral-950">{% translate "Credit card" %}</span>
+                <span class="block text-xs text-neutral-600">{% translate "Renews by itself" %}</span>
+              </span>
+            </label>
+            <label class="rounded-xl border-2 px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors" :class="method === 'pix' ? 'border-brand-700 bg-brand-50' : 'border-neutral-300 hover:bg-neutral-50'">
+              <input type="radio" name="method" value="pix" x-model="method" class="sr-only">
+              <svg class="w-6 h-6 text-brand-700 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2.5l4.5 4.5-4.5 4.5L7.5 7z"/><path d="M12 12.5l4.5 4.5-4.5 4.5-4.5-4.5z"/><path d="M2.5 12L7 7.5 11.5 12 7 16.5z"/><path d="M12.5 12L17 7.5l4.5 4.5-4.5 4.5z"/></svg>
+              <span>
+                <span class="block text-sm font-semibold text-neutral-950">Pix</span>
+                <span class="block text-xs text-neutral-600">{% translate "Pix Automático · soon" %}</span>
+              </span>
+            </label>
           </div>
-          <div class="col-span-3">
-            <label for="card_expiry" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Expiry" %}</label>
-            <input type="text" id="card_expiry" name="card_expiry" data-mask="expiry" required inputmode="numeric" autocomplete="cc-exp"
-                   maxlength="7" placeholder="{% translate 'MM/YY' %}" class="form-input-styled w-full tabular-nums">
+
+          {% comment %}
+          The card form beside a live preview of the card: it fills in as the
+          customer types and turns to its back while the security code has the
+          focus. The brand is guessed from the first digits only to show its
+          name; Asaas decides the real brand when it charges.
+          {% endcomment %}
+          <div class="mt-5" x-show="method === 'card'"
+               x-data="{
+                 digits: '', holder: '', expiry: '', back: false, numberDone: false,
+                 get brand() {
+                   const d = this.digits;
+                   if (/^(4011|4312|4389|4514|4576|5041|5066|5067|509|6277|6362|6363|650|6516|6550)/.test(d)) return 'elo';
+                   if (/^(606282|3841)/.test(d)) return 'hipercard';
+                   if (/^3[47]/.test(d)) return 'amex';
+                   if (/^(5[0-5]|2[2-7])/.test(d)) return 'mastercard';
+                   if (/^4/.test(d)) return 'visa';
+                   return '';
+                 },
+                 get shownNumber() { const d = this.digits.padEnd(16, '•').slice(0, 19); return d.replace(/(.{4})(?=.)/g, '$1 '); },
+                 get shownExpiry() { const d = this.expiry.replace(/\D/g, ''); return d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2, 4) : d; },
+                 get numberError() {
+                   const d = this.digits;
+                   if (!this.numberDone || !d) return '';
+                   if (d.length < 13) return 'short';
+                   let sum = 0;
+                   for (let i = 0; i < d.length; i++) { let x = +d[d.length - 1 - i]; if (i % 2) { x *= 2; if (x > 9) x -= 9; } sum += x; }
+                   return sum % 10 ? 'invalid' : '';
+                 },
+                 get expiryError() {
+                   const d = this.expiry.replace(/\D/g, '');
+                   if (d.length < 4) return '';
+                   const month = +d.slice(0, 2), year = 2000 + +d.slice(2, 4), now = new Date();
+                   if (month < 1 || month > 12) return 'format';
+                   if (year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1)) return 'past';
+                   return '';
+                 }
+               }">
+            {% if not gateway_configured %}
+            <p class="alert-info mb-4">{% translate "Payments are not connected on this installation yet. Nothing will be charged." %}</p>
+            {% endif %}
+            <div class="grid grid-cols-1 sm:grid-cols-[1fr_15rem] gap-6 items-start">
+              <div class="grid grid-cols-6 gap-3 order-2 sm:order-1">
+                <div class="col-span-6">
+                  <label for="card_number" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Card number" %}</label>
+                  <div class="relative">
+                    <svg class="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                    <input type="text" id="card_number" x-ref="number" name="card_number" data-mask="card" :required="step === 2 && method === 'card'" inputmode="numeric" autocomplete="cc-number"
+                           @input="digits = $el.value.replace(/\D/g, '').slice(0, 19)" @blur="numberDone = true"
+                           data-short="{% translate 'Enter the card number.' %}" data-invalid="{% translate 'This card number is not valid. Check the digits.' %}"
+                           x-effect="$el.setCustomValidity(numberError ? $el.dataset[numberError] : '')"
+                           :class="numberError && 'is-error'" :aria-invalid="numberError ? 'true' : 'false'" aria-describedby="card_number_error"
+                           maxlength="23" placeholder="0000 0000 0000 0000" class="form-input-styled w-full tabular-nums tracking-wide pl-10 pr-16">
+                    <span class="absolute right-2.5 top-1/2 -translate-y-1/2 flex" aria-live="polite">{% include "billing/_card_brand.html" with size="h-6" %}</span>
+                  </div>
+                  <p id="card_number_error" class="text-xs text-red-700 mt-1" x-show="numberError" x-cloak x-text="numberError && $refs.number.dataset[numberError]" role="alert"></p>
+                </div>
+                <div class="col-span-6">
+                  <label for="card_holder" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Name printed on the card" %}</label>
+                  <div class="relative">
+                    <svg class="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                    <input type="text" id="card_holder" name="card_holder" :required="step === 2 && method === 'card'" autocomplete="cc-name" maxlength="100"
+                           @input="holder = $el.value" class="form-input-styled w-full uppercase pl-10">
+                  </div>
+                </div>
+                <div class="col-span-3">
+                  <label for="card_expiry" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Expiry" %}</label>
+                  <div class="relative">
+                    <svg class="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+                    <input type="text" id="card_expiry" x-ref="expiry" name="card_expiry" data-mask="expiry" :required="step === 2 && method === 'card'" inputmode="numeric" autocomplete="cc-exp"
+                           @input="expiry = $el.value"
+                           data-format="{% translate "Enter the card's expiry as MM/YY." %}" data-past="{% translate 'This card has expired.' %}"
+                           x-effect="$el.setCustomValidity(expiryError ? $el.dataset[expiryError] : '')"
+                           :class="expiryError && 'is-error'" :aria-invalid="expiryError ? 'true' : 'false'" aria-describedby="card_expiry_error"
+                           maxlength="7" placeholder="{% translate 'MM/YY' %}" class="form-input-styled w-full tabular-nums pl-10">
+                  </div>
+                  <p id="card_expiry_error" class="text-xs text-red-700 mt-1" x-show="expiryError" x-cloak x-text="expiryError && $refs.expiry.dataset[expiryError]" role="alert"></p>
+                </div>
+                <div class="col-span-3">
+                  <label for="card_ccv" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Security code" %}</label>
+                  <div class="relative">
+                    <svg class="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                    <input type="text" id="card_ccv" name="card_ccv" :required="step === 2 && method === 'card'" inputmode="numeric" autocomplete="cc-csc" maxlength="4"
+                           @focus="back = true" @blur="back = false"
+                           placeholder="CVV" class="form-input-styled w-full tabular-nums pl-10">
+                  </div>
+                </div>
+                <div class="col-span-4">
+                  <label for="postal_code" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "CEP of the card's address" %}</label>
+                  <div class="relative">
+                    <svg class="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+                    <input type="text" id="postal_code" name="postal_code" data-mask="cep" :required="step === 2 && method === 'card'" inputmode="numeric" autocomplete="postal-code"
+                           maxlength="9" placeholder="00000-000" class="form-input-styled w-full tabular-nums pl-10">
+                  </div>
+                </div>
+                <div class="col-span-2">
+                  <label for="address_number" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Number" %}</label>
+                  <input type="text" id="address_number" name="address_number" :required="step === 2 && method === 'card'" maxlength="10" class="form-input-styled w-full">
+                </div>
+              </div>
+
+              <div class="order-1 sm:order-2 hidden sm:block [perspective:1000px]" aria-hidden="true">
+                <div class="relative aspect-[1.586] w-full transition-transform duration-500 ease-out motion-reduce:transition-none [transform-style:preserve-3d]"
+                     :class="back && '[transform:rotateY(180deg)]'">
+                  <div class="absolute inset-0 rounded-2xl p-4 flex flex-col justify-between text-white shadow-lg bg-gradient-to-br from-brand-600 to-brand-900 [backface-visibility:hidden]">
+                    <div class="flex items-start justify-between">
+                      <span class="w-9 h-7 rounded-md bg-white/30 ring-1 ring-white/50"></span>
+                      {% include "billing/_card_brand.html" with size="h-7" %}
+                    </div>
+                    <p class="font-mono text-[15px] tracking-widest tabular-nums" x-text="shownNumber">•••• •••• •••• ••••</p>
+                    <div class="flex items-end justify-between gap-3 text-[11px] uppercase">
+                      <span class="truncate font-medium tracking-wide" x-text="holder || $el.dataset.empty" data-empty="{% translate 'Name printed on the card' %}">{% translate "Name printed on the card" %}</span>
+                      <span class="font-mono tabular-nums flex-shrink-0" x-text="shownExpiry || $el.dataset.empty" data-empty="{% translate 'MM/YY' %}">{% translate "MM/YY" %}</span>
+                    </div>
+                  </div>
+                  <div class="absolute inset-0 rounded-2xl overflow-hidden text-white shadow-lg bg-gradient-to-br from-brand-700 to-brand-900 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                    <div class="mt-5 h-9 bg-neutral-900/80"></div>
+                    <div class="mx-4 mt-4 flex items-center justify-end rounded bg-white/90 px-3 h-8">
+                      <span class="font-mono text-sm text-neutral-800 tracking-widest">CVV</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="col-span-3">
-            <label for="card_ccv" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Security code" %}</label>
-            <input type="text" id="card_ccv" name="card_ccv" required inputmode="numeric" autocomplete="cc-csc" maxlength="4"
-                   placeholder="CVV" class="form-input-styled w-full tabular-nums">
-          </div>
-          <div class="col-span-4">
-            <label for="postal_code" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "CEP of the card's address" %}</label>
-            <input type="text" id="postal_code" name="postal_code" data-mask="cep" required inputmode="numeric" autocomplete="postal-code"
-                   maxlength="9" placeholder="00000-000" class="form-input-styled w-full tabular-nums">
-          </div>
-          <div class="col-span-2">
-            <label for="address_number" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Number" %}</label>
-            <input type="text" id="address_number" name="address_number" required maxlength="10" class="form-input-styled w-full">
-          </div>
-          {% if needs_tax_id %}
-          <div class="col-span-6 sm:col-span-3">
-            <label for="tax_id" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "CPF or CNPJ" %}</label>
-            <input type="text" id="tax_id" name="tax_id" data-mask="tax-id" required inputmode="numeric" autocomplete="off" maxlength="18"
-                   placeholder="000.000.000-00" class="form-input-styled w-full tabular-nums">
-          </div>
-          {% endif %}
-          {% if needs_phone %}
-          <div class="col-span-6 sm:col-span-3">
-            <label for="phone" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Phone with area code" %}</label>
-            <input type="tel" id="phone" name="phone" data-mask="phone" required autocomplete="tel" maxlength="20"
-                   placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums">
+
+          {% comment %}
+          Pix Automático: the first payment and the authorization of the next
+          ones in one QR code, scanned in the bank's app. Shown as coming:
+          Asaas has not enabled it on the account yet.
+          {% endcomment %}
+          <div class="mt-5 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-5 flex items-start gap-4" x-show="method === 'pix'" x-cloak>
+            <div class="w-24 h-24 rounded-lg bg-white border border-neutral-200 flex items-center justify-center flex-shrink-0 text-neutral-300">
+              <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 19h2M19 14h2"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-neutral-950">{% translate "Pix Automático is coming" %}</p>
+              <p class="text-sm text-neutral-600 mt-1">{% translate "You will scan one QR code in your bank's app: it pays the first charge and authorizes the next ones, with nothing to do every month. For now, pay by card." %}</p>
+            </div>
           </div>
           {% endif %}
         </div>
-        <button type="submit" :disabled="sending" class="btn-brand w-full mt-5 py-3 text-sm font-semibold">
-          <span x-show="!sending">{% translate "Pay and activate" %}</span>
-          <span x-show="sending" x-cloak>{% translate "Confirming the payment…" %}</span>
-        </button>
-        <p class="flex items-start justify-center gap-1.5 text-xs text-neutral-500 mt-3 text-center">
-          <svg class="w-3.5 h-3.5 flex-shrink-0 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          {% translate "Processed by Asaas. The card is charged now and on every renewal; Connekt Flow does not keep its details. Cancel whenever you want." %}
-        </p>
-        {% endif %}
-      </section>
-    </form>
 
-    <div class="mt-4 text-center">
-      <a href="{% url 'billing:subscribe_modal' workspace_id=workspace.id %}" class="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">
-        {% translate "Back" %}
-      </a>
+        {# The order summary. Its figures (#summary-totals) come with every quote. #}
+        <aside class="rounded-2xl border border-neutral-300 bg-white p-5 sm:p-6 lg:sticky lg:top-6">
+          <h2 class="text-lg font-semibold text-neutral-950">{% translate "Order summary" %}</h2>
+          <div id="summary-totals" class="mt-4">
+            {% include "billing/_checkout_summary.html" %}
+          </div>
+          {% if not plan %}
+          <div class="mt-4">
+            <label for="coupon" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Discount coupon" %}</label>
+            <div class="flex gap-2">
+              <input type="text" id="coupon" name="coupon" maxlength="32" autocomplete="off" data-quote
+                     @keydown.enter.prevent="quote()" class="form-input-styled flex-1 uppercase tracking-wide" placeholder="{% translate 'Code' %}">
+              <button type="button" class="btn-soft px-4" @click="quote()">{% translate "Apply" %}</button>
+            </div>
+          </div>
+          {% endif %}
+          <p id="checkout-error" class="text-sm text-red-700 mt-4 empty:hidden" role="alert"></p>
+          <button type="submit" class="btn-brand w-full mt-4 py-3 text-sm font-semibold"
+                  :disabled="sending || picked === 0{% if not plan %} || method !== 'card'{% endif %}">
+            <span x-show="!sending">{% if plan %}{% translate "Add to the plan" %}{% else %}{% translate "Pay and activate" %}{% endif %}</span>
+            <span x-show="sending" x-cloak>{% translate "Confirming…" %}</span>
+          </button>
+          <p class="flex items-start gap-1.5 text-xs text-neutral-500 mt-3">
+            <svg class="w-3.5 h-3.5 flex-shrink-0 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            {% translate "Secure payment processed by Asaas. Connekt Flow does not keep the card's details. Cancel whenever you want." %}
+          </p>
+        </aside>
+      </section>
+    </main>
+
+    {# The bar at the foot of step 1: what is chosen, the total, and on. #}
+    <div class="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-neutral-200 shadow-[0_-6px_24px_rgba(17,24,39,0.06)]" x-show="step === 1">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center gap-x-6 gap-y-2">
+        <div id="quote-bar" class="flex-1 min-w-0" aria-live="polite">
+          {% include "billing/_checkout_quote.html" %}
+        </div>
+        <div class="flex items-center justify-between sm:justify-end gap-4">
+          {% if trial_available %}
+          <button type="button" class="text-sm font-semibold text-brand-700 hover:underline cursor-pointer" @click="trialOpen = true">
+            {% blocktranslate count days=trial_days %}Try {{ days }} day free{% plural %}Try {{ days }} days free{% endblocktranslate %}
+          </button>
+          {% elif not subscription_required and not plan %}
+          <a href="{% url 'calendar:calendar' workspace_id=workspace.id %}" class="text-sm text-neutral-500 hover:text-neutral-700">{% translate "Decide later" %}</a>
+          {% endif %}
+          <button type="button" class="btn-brand px-6 py-2.5 text-sm font-semibold inline-flex items-center gap-2" :disabled="picked === 0" @click="next()">
+            {% translate "Continue" %}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
-</main>
+
+    {% comment %}
+    "See all features": everything a brand gets, laid out by theme, in a
+    dialog. Only what the product does (docs/features.md); the networks are
+    the ones an admin left visible (views._included_networks).
+    {% endcomment %}
+    <div class="modal-overlay" x-show="featuresOpen" x-cloak x-transition.opacity @keydown.escape.window="featuresOpen = false">
+    <section class="modal-panel !max-w-4xl !p-0 !overflow-hidden flex flex-col" @click.outside="featuresOpen = false" role="dialog" aria-modal="true" aria-labelledby="features-title">
+      <button type="button" class="modal-close" @click="featuresOpen = false" aria-label="{% translate 'Close' %}">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <h2 id="features-title" class="modal-title pl-5 sm:pl-6 pr-12 py-4 border-b border-neutral-200">{% translate "What each brand includes" %}</h2>
+      <div class="divide-y divide-neutral-200 overflow-y-auto">
+      {% if networks %}
+      <div class="grid grid-cols-1 md:grid-cols-[14rem_1fr] gap-3 md:gap-6 px-5 sm:px-6 py-5">
+        <h3 class="text-sm font-semibold text-neutral-950">{% translate "Official integrations" %}</h3>
+        <ul class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm text-neutral-700">
+          {% for key, name in networks %}
+          <li class="flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center flex-shrink-0">{% include "partials/_platform_icon.html" with platform=key size="sm" %}</span>
+            <span class="min-w-0 leading-tight">{{ name }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      <div class="grid grid-cols-1 md:grid-cols-[14rem_1fr] gap-3 md:gap-6 px-5 sm:px-6 py-5">
+        <h3 class="text-sm font-semibold text-neutral-950">{% translate "Scheduling, management and approval" %}</h3>
+        <ul class="space-y-2 text-sm text-neutral-700">
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Schedule posts to several networks and accounts at once" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Content calendar to plan the month" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Idea hub with ready models to create the posts" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Approval by the team and by the client, in the client portal" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Tasks and the creation workflow of each post" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Media library shared by the team" %}</span></li>
+        </ul>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-[14rem_1fr] gap-3 md:gap-6 px-5 sm:px-6 py-5">
+        <h3 class="text-sm font-semibold text-neutral-950">{% translate "Inbox and relationship" %}</h3>
+        <ul class="space-y-2 text-sm text-neutral-700">
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Comments and direct messages of every network in one inbox, WhatsApp included" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Sales funnel with the conversations as opportunities" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Saved replies, assignment to the team and internal notes" %}</span></li>
+        </ul>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-[14rem_1fr] gap-3 md:gap-6 px-5 sm:px-6 py-5">
+        <h3 class="text-sm font-semibold text-neutral-950">{% translate "Automations" %}</h3>
+        <ul class="space-y-2 text-sm text-neutral-700">
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Automatic reply and direct message to whoever comments a keyword" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Visual flow builder with buttons, cards and conditions" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "An automation for each post, switched on when it is published" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Ready flow templates to start from" %}</span></li>
+        </ul>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-[14rem_1fr] gap-3 md:gap-6 px-5 sm:px-6 py-5">
+        <h3 class="text-sm font-semibold text-neutral-950">{% translate "Reports and ads" %}</h3>
+        <ul class="space-y-2 text-sm text-neutral-700">
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Results of each account and each post, in the period you choose" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Meta Ads: create campaigns and follow spend, results and ROAS" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Watch competitors' Instagram profiles" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Shopee Affiliates offers and commissions" %}</span></li>
+        </ul>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-[14rem_1fr] gap-3 md:gap-6 px-5 sm:px-6 py-5">
+        <h3 class="text-sm font-semibold text-neutral-950">{% translate "Other features" %}</h3>
+        <ul class="space-y-2 text-sm text-neutral-700">
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "Unlimited team members and clients" %}</span></li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-brand-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>{% translate "API and MCP to connect AI agents" %}</span></li>
+        </ul>
+      </div>
+      </div>
+    </section>
+    </div>
+
+    {# "Add brands": how many rows to add. #}
+    <div class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-neutral-950/40" x-show="adding" x-cloak x-transition.opacity @keydown.escape.window="adding = false">
+      <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl" @click.outside="adding = false" role="dialog" aria-modal="true" aria-labelledby="add-title">
+        <h2 id="add-title" class="text-lg font-semibold text-neutral-950">{% translate "How many brands do you want to add?" %}</h2>
+        <p class="text-sm text-neutral-600 mt-1">{% translate "You name them now or after paying." %}</p>
+        <div class="mt-5 flex items-center justify-center gap-4">
+          <button type="button" class="w-10 h-10 rounded-full border border-neutral-300 text-xl text-neutral-700 cursor-pointer" @click="addCount = Math.max(1, addCount - 1)" aria-label="{% translate 'Fewer' %}">−</button>
+          <span class="w-20 rounded-xl border border-neutral-300 py-3">
+            <span class="block text-3xl font-bold text-neutral-950 tabular-nums" x-text="addCount">1</span>
+            <span class="block text-xs text-neutral-500" x-text="addCount === 1 ? $root.dataset.brandWord : $root.dataset.brandsWord"></span>
+          </span>
+          <button type="button" class="w-10 h-10 rounded-full border border-brand-500 text-xl text-brand-700 cursor-pointer" @click="addCount = Math.min({{ max_brands }}, addCount + 1)" aria-label="{% translate 'More' %}">+</button>
+        </div>
+        <div class="mt-4 flex justify-center gap-2">
+          {% for choice in add_choices %}
+          <button type="button" class="w-9 h-9 rounded-full text-sm font-semibold cursor-pointer" :class="addCount === {{ choice }} ? 'bg-brand-700 text-white' : 'border border-neutral-300 text-neutral-700'" @click="addCount = {{ choice }}">{{ choice }}</button>
+          {% endfor %}
+        </div>
+        <button type="button" class="btn-brand w-full mt-6 py-2.5 text-sm font-semibold" @click="addBrands(addCount)">{% translate "Add" %}</button>
+      </div>
+    </div>
+
+    {% if trial_available %}
+    {# The free trial: no card, only who is taking it. #}
+    <div class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-neutral-950/40" x-show="trialOpen" x-cloak x-transition.opacity @keydown.escape.window="trialOpen = false">
+      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" @click.outside="trialOpen = false" role="dialog" aria-modal="true" aria-labelledby="trial-title"
+           data-inline-error="#trial-error">
+        <h2 id="trial-title" class="text-lg font-semibold text-neutral-950">
+          {% blocktranslate count days=trial_days %}Try {{ days }} day free{% plural %}Try {{ days }} days free{% endblocktranslate %}
+        </h2>
+        <p class="text-sm text-neutral-600 mt-1">{% blocktranslate with name=workspace.name %}No card and no charge. The trial opens {{ name }}; when it ends, you choose your plan here.{% endblocktranslate %}</p>
+        {% if needs_tax_id or needs_phone %}
+        <div class="mt-4 space-y-3">
+          {% if needs_tax_id %}
+          <div>
+            <label for="trial_tax_id" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "CPF or CNPJ" %}</label>
+            <input type="text" id="trial_tax_id" name="tax_id" data-mask="tax-id" inputmode="numeric" autocomplete="off" maxlength="18" placeholder="000.000.000-00" class="form-input-styled w-full tabular-nums" :disabled="!trialOpen">
+          </div>
+          {% endif %}
+          {% if needs_phone %}
+          <div>
+            <label for="trial_phone" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Phone with area code" %}</label>
+            <input type="tel" id="trial_phone" name="phone" data-mask="phone" autocomplete="tel" maxlength="20" placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums" :disabled="!trialOpen">
+          </div>
+          {% endif %}
+          <p class="text-xs text-neutral-500">{% translate "One free trial per account, document, phone and email." %}</p>
+        </div>
+        {% endif %}
+        <p id="trial-error" class="text-sm text-red-700 mt-3 empty:hidden" role="alert"></p>
+        <div class="mt-5 flex gap-3">
+          <button type="button" class="btn-soft flex-1 justify-center py-2.5" @click="trialOpen = false">{% translate "Cancel" %}</button>
+          <button type="button" class="btn-brand flex-1 py-2.5 text-sm font-semibold"
+                  hx-post="{% url 'billing:start_trial' workspace_id=workspace.id %}" hx-include="#checkout-form" hx-swap="none">
+            {% translate "Start free trial" %}
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </form>
+</div>
 {% endblock %}

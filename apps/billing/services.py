@@ -700,8 +700,11 @@ def quote_plan(brands, cycle=WorkspaceSubscription.Cycle.MONTHLY, coupon=None):
         "coupon": coupon,
         # What the coupon takes off today's charge.
         "coupon_saving_cents": plain_charge_cents - first_charge_cents,
-        # What the volume tiers take off the list price, per month.
+        # The list price of each charge, before any discount.
+        "list_charge_cents": list_cents * brands * (12 if yearly else 1),
+        # What the volume tiers take off the list price, per month and per charge.
         "volume_saving_cents": list_cents * brands - volume_cents,
+        "volume_charge_saving_cents": (list_cents * brands - volume_cents) * (12 if yearly else 1),
         # Against paying the same brands month by month for a year.
         "yearly_saving_cents": (volume_cents - plain_monthly_cents) * 12 if yearly else 0,
     }
@@ -830,10 +833,12 @@ def _plan_eligible_rows(plan):
     """
     from apps.workspaces.models import Workspace
 
-    for workspace in Workspace.objects.filter(organization_id=plan.organization_id).order_by("created_at"):
+    for workspace in Workspace.objects.filter(organization_id=plan.organization_id, is_archived=False):
         ensure_subscription(workspace)
     return list(
-        WorkspaceSubscription.objects.filter(workspace__organization_id=plan.organization_id)
+        WorkspaceSubscription.objects.filter(
+            workspace__organization_id=plan.organization_id, workspace__is_archived=False
+        )
         .exclude(status=WorkspaceSubscription.Status.COURTESY)
         .filter(models.Q(gateway_subscription_id="") | models.Q(plan=plan))
         .select_related("workspace")
@@ -841,15 +846,17 @@ def _plan_eligible_rows(plan):
     )
 
 
-def sync_plan_coverage(plan):
+def sync_plan_coverage(plan, workspaces=()):
     """Make the organization's workspace rows agree with its plan.
 
-    An active plan covers its first ``brands`` eligible workspaces: their
-    rows point at the plan and read ``active``, with the plan's period end.
-    Rows the plan no longer covers (fewer brands bought) go back to
-    ``pending``. A plan that is not active passes its status (past due,
-    canceled) on to the rows it covers, which keep the link so a recovered
-    payment reopens them. Returns the covered rows.
+    An active plan covers ``brands`` eligible workspaces: the ones it
+    already covers, then ``workspaces`` (the brands ticked at checkout),
+    then the oldest of the rest while brands are left (a brand created
+    later takes a free one). Covered rows point at the plan and read
+    ``active``, with the plan's period end; rows it no longer covers (fewer
+    brands) go back to ``pending``. A plan that is not active passes its
+    status (past due, canceled) on to the rows it covers, which keep the
+    link so a recovered payment reopens them. Returns the covered rows.
     """
     status = WorkspaceSubscription.Status
     with transaction.atomic():
@@ -861,7 +868,11 @@ def sync_plan_coverage(plan):
                 row.save(update_fields=["status", "updated_at"])
             return covered
 
-        rows = _plan_eligible_rows(plan)
+        chosen = {getattr(workspace, "pk", workspace) for workspace in workspaces}
+        rows = sorted(
+            _plan_eligible_rows(plan),
+            key=lambda row: (row.plan_id != plan.pk, row.workspace_id not in chosen, row.workspace.created_at),
+        )
         covered, uncovered = rows[: plan.brands], rows[plan.brands :]
         for row in covered:
             row.plan = plan

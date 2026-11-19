@@ -180,34 +180,32 @@ def test_the_billing_page_shows_the_brands_of_the_organization_in_use_only(clien
 
 
 @pytest.mark.django_db
-def test_a_new_account_names_its_organization_and_brand_before_the_plan(client):
+def test_a_new_account_names_its_brand_and_organization_on_the_checkout(client, settings):
+    settings.BILLING_TRIAL_DAYS = 7
     _user, workspace = _signed_up(client)
-    plan = reverse("billing:subscribe_modal", kwargs={"workspace_id": workspace.id})
+    checkout = reverse("billing:checkout", kwargs={"workspace_id": workspace.id})
 
     landing = client.get(reverse("dashboard"), follow=True)
-    assert landing.redirect_chain[-1][0] == plan
-    assert landing.context["welcome"] is True
+    assert landing.redirect_chain[-1][0] == checkout
+    assert landing.context["ask_organization_name"] is True
 
     response = client.post(
-        reverse("organizations:welcome"),
+        reverse("billing:start_trial", kwargs={"workspace_id": workspace.id}),
         {
-            "workspace": str(workspace.id),
+            f"name_{workspace.id}": "Padaria Sol",
             "organization_name": "Agência Sol",
-            "brand_name": "Padaria Sol",
             "tax_id": "529.982.247-25",
             "phone": "(11) 98888-7777",
         },
     )
 
-    assert response.headers["Location"] == plan
+    assert response.headers["Location"].startswith(
+        reverse("billing:checkout_welcome", kwargs={"workspace_id": workspace.id})
+    )
     workspace.refresh_from_db()
     assert (workspace.organization.name, workspace.name) == ("Agência Sol", "Padaria Sol")
     profile = billing.ensure_billing_profile(workspace.organization)
     assert (profile.tax_id, profile.phone) == ("52998224725", "11988887777")
-    context = client.get(plan).context
-    assert context["welcome"] is False
-    # Nothing left to ask before the trial.
-    assert context["payer_known"] is True
 
 
 @pytest.mark.django_db

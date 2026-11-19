@@ -62,7 +62,7 @@ class TestGate:
     def test_a_new_account_lands_on_the_plan(self, required):
         client, workspace = _signed_up()
         response = client.get(reverse("dashboard"), follow=True)
-        assert response.redirect_chain[-1][0] == _url("billing:subscribe_modal", workspace)
+        assert response.redirect_chain[-1][0] == _url("billing:checkout", workspace)
         assert response.status_code == 200
 
     def test_an_unpaid_workspace_is_not_opened(self, required):
@@ -95,7 +95,8 @@ class TestGate:
 
     def test_billing_pages_stay_open_to_a_locked_workspace(self, required):
         client, workspace = _signed_up()
-        assert client.get(_url("billing:subscribe_modal", workspace)).status_code == 200
+        assert client.get(_url("billing:subscribe_modal", workspace), follow=True).status_code == 200
+        assert client.get(_url("billing:checkout", workspace)).status_code == 200
         assert client.get(_url("billing:workspace_billing", workspace)).status_code == 200
 
     def test_nothing_is_locked_while_the_switch_is_off(self, settings):
@@ -272,7 +273,7 @@ class TestFreeTrial:
         client, workspace = _signed_up()
         response = self._start(client, workspace)
 
-        assert response.headers["Location"] == _url("calendar:calendar", workspace)
+        assert response.headers["Location"] == _url("billing:checkout_welcome", workspace) + "?trial=1"
         assert client.get(_url("calendar:calendar", workspace)).status_code == 200
         sub = WorkspaceSubscription.objects.get(workspace=workspace)
         remaining = sub.trial_ends_at - timezone.now()
@@ -288,7 +289,7 @@ class TestFreeTrial:
         response = client.get(_url("calendar:calendar", workspace))
 
         assert response.headers["Location"] == _url("billing:subscribe_modal", workspace)
-        assert client.get(_url("billing:subscribe_modal", workspace)).status_code == 200
+        assert client.get(_url("billing:checkout", workspace)).context["trial_expired"] is True
 
     def test_it_is_not_given_without_document_and_phone(self):
         client, workspace = _signed_up()
@@ -329,7 +330,7 @@ class TestFreeTrial:
         client, workspace = _signed_up()
         self._start(client, workspace)
 
-        assert client.get(_url("billing:subscribe_modal", workspace)).status_code == 200
+        assert client.get(_url("billing:checkout", workspace)).status_code == 200
         client.post(_url("billing:subscribe_confirm", workspace))
 
         assert gateway.customers[0]["cpfCnpj"] == "52998224725"

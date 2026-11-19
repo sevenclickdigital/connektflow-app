@@ -414,8 +414,11 @@ def _first_unpaid(client, subscription_id):
     return unpaid[0] if unpaid else None
 
 
-def _activate_plan(plan, *, card=None, coupon_saving_cents=0):
-    """Mark a paid plan active, record its coupon as used, and open the workspaces it covers."""
+def _activate_plan(plan, *, card=None, coupon_saving_cents=0, workspaces=()):
+    """Mark a paid plan active, record its coupon as used, and open the workspaces it covers.
+
+    ``workspaces`` are the brands chosen at checkout, covered before any other.
+    """
     plan.status = WorkspaceSubscription.Status.ACTIVE
     plan.canceled_at = None
     fields = ["status", "canceled_at", "updated_at"]
@@ -426,7 +429,7 @@ def _activate_plan(plan, *, card=None, coupon_saving_cents=0):
     plan.save(update_fields=fields)
     if plan.coupon_id:
         services.redeem_coupon(plan.coupon, plan.organization, discount_cents=coupon_saving_cents)
-    services.sync_plan_coverage(plan)
+    services.sync_plan_coverage(plan, workspaces)
     return plan
 
 
@@ -451,7 +454,28 @@ def _settle_earlier_attempt(plan, client):
     return False
 
 
-def purchase_plan(organization, *, brands, cycle, card, holder, remote_ip, email="", coupon=None, client=None):
+def _create_brands(organization, names, owner):
+    """The brands typed as new rows at checkout, created once they are paid for."""
+    from apps.workspaces.services import create_brand
+
+    return [create_brand(organization, name, owner) for name in names]
+
+
+def purchase_plan(
+    organization,
+    *,
+    brands,
+    cycle,
+    card,
+    holder,
+    remote_ip,
+    email="",
+    coupon=None,
+    workspaces=(),
+    new_brand_names=(),
+    owner=None,
+    client=None,
+):
     """Buy ``brands`` brands for the organization and pay the first charge by card.
 
     ``card`` and ``holder`` go to the gateway as they are (see
@@ -461,7 +485,9 @@ def purchase_plan(organization, *, brands, cycle, card, holder, remote_ip, email
     the subscription so every later cycle is charged to it. A ``coupon``
     (already checked by ``services.find_coupon``) prices the subscription
     or, for the first charge only, that charge, and is recorded as used
-    once the card is charged.
+    once the card is charged. ``workspaces`` are the existing brands ticked
+    and ``new_brand_names`` the brands to create (by ``owner``) once paid;
+    the plan covers those first.
 
     Returns the active ``OrganizationPlan``. Raises ``CardRefusedError``
     when the card is declined (the subscription is cancelled, nothing is
@@ -476,6 +502,9 @@ def purchase_plan(organization, *, brands, cycle, card, holder, remote_ip, email
     if plan.is_active:
         return plan
     if _settle_earlier_attempt(plan, client):
+        # The earlier charge went through after all: what this checkout chose is covered by it.
+        chosen = [*workspaces, *_create_brands(organization, new_brand_names, owner)]
+        services.sync_plan_coverage(plan, chosen)
         return plan
 
     quote = services.quote_plan(brands, cycle, coupon)
@@ -537,10 +566,11 @@ def purchase_plan(organization, *, brands, cycle, card, holder, remote_ip, email
             # Paid all the same; only the renewals would come as invoices.
             logger.exception("Could not keep the card on plan %s's subscription", plan.pk)
     logger.info("Organization %s bought a plan of %s brands", organization.pk, brands)
-    return _activate_plan(plan, card=card_info, coupon_saving_cents=quote["coupon_saving_cents"])
+    chosen = [*workspaces, *_create_brands(organization, new_brand_names, owner)]
+    return _activate_plan(plan, card=card_info, coupon_saving_cents=quote["coupon_saving_cents"], workspaces=chosen)
 
 
-def change_plan_brands(plan, brands, *, client=None):
+def change_plan_brands(plan, brands, *, workspaces=(), new_brand_names=(), owner=None, client=None):
     """Change how many brands an active plan covers, and what it charges.
 
     The new value applies from the next charge (no pro rata) and the
@@ -553,5 +583,6 @@ def change_plan_brands(plan, brands, *, client=None):
     plan.brands = brands
     plan.price_cents = quote["monthly_cents"]
     plan.save(update_fields=["brands", "price_cents", "updated_at"])
-    services.sync_plan_coverage(plan)
+    chosen = [*workspaces, *_create_brands(plan.organization, new_brand_names, owner)]
+    services.sync_plan_coverage(plan, chosen)
     return plan

@@ -11,7 +11,7 @@ import pytest
 from django.db.models.signals import post_save
 from django.test import override_settings
 from django.urls import reverse
-from django.utils import timezone
+from django.utils import timezone, translation
 
 from apps.accounts.models import User
 from apps.accounts.signals import create_organization_on_user_create
@@ -20,6 +20,7 @@ from apps.billing.gateways.asaas import AsaasAPIError
 from apps.billing.models import OrganizationPlan, WorkspaceSubscription
 from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
+from apps.social_accounts.models import PlatformVisibility
 from apps.workspaces.models import Workspace
 
 pytestmark = pytest.mark.django_db
@@ -263,33 +264,101 @@ def test_only_who_manages_billing_reaches_the_checkout(client, owner_of):
     assert not OrganizationPlan.objects.filter(organization=org).exists()
 
 
+CARD_FORM = {
+    "cycle": "monthly",
+    "card_number": "5162 3062 1937 8829",
+    "card_holder": "Ana Souza",
+    "card_expiry": "05/30",
+    "card_ccv": "318",
+    "postal_code": "89010-000",
+    "address_number": "10",
+}
+
+
 @override_settings(RATELIMIT_ENABLE=False)
-def test_paying_at_checkout_opens_the_brand_and_keeps_no_card(client, owner_of, monkeypatch):
-    org, (workspace,) = _org_with_workspaces(1)
-    services.set_payer_identity(org, tax_id="24971563792", phone="47999999999")
-    client.force_login(owner_of(org))
+def test_paying_at_checkout_opens_the_brands_chosen_and_keeps_no_card(client, owner_of, monkeypatch):
+    org, (ticked, left_out) = _org_with_workspaces(2)
+    services.set_payer_identity(org, tax_id="24971563792", phone="47988776655")
+    owner = owner_of(org)
+    client.force_login(owner)
     stub = StubAsaas()
     monkeypatch.setattr(contracting, "AsaasClient", lambda: stub)
 
     response = client.post(
-        reverse("billing:checkout_pay", kwargs={"workspace_id": workspace.id}),
-        {
-            "brands": "1",
-            "cycle": "monthly",
-            "card_number": "5162 3062 1937 8829",
-            "card_holder": "Ana Souza",
-            "card_expiry": "05/30",
-            "card_ccv": "318",
-            "postal_code": "89010-000",
-            "address_number": "10",
-        },
+        reverse("billing:checkout_pay", kwargs={"workspace_id": ticked.id}),
+        {**CARD_FORM, "workspaces": [str(ticked.id)], "new_brand": ["Loja Bela", " "], f"name_{ticked.id}": "Sol Café"},
     )
 
-    assert response.status_code == 302 and response["Location"].endswith(f"/workspace/{workspace.id}/calendar/")
+    assert response.status_code == 302
+    assert response["Location"] == reverse("billing:checkout_welcome", kwargs={"workspace_id": ticked.id})
+    assert stub.subscriptions == [{"value_cents": 10000, "cycle": "MONTHLY"}]
     assert stub.charged[0][1] == "5162306219378829"
-    assert _status(workspace) == ACTIVE
+    created = Workspace.objects.get(organization=org, name="Loja Bela")
+    assert WorkspaceMembership.objects.filter(user=owner, workspace=created).exists()
+    assert [_status(w) for w in (ticked, created, left_out)] == [ACTIVE, ACTIVE, PENDING]
+    ticked.refresh_from_db()
+    assert ticked.name == "Sol Café"
     plan = OrganizationPlan.objects.get(organization=org)
     assert "5162306219378829" not in str(list(OrganizationPlan.objects.filter(pk=plan.pk).values()))
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+def test_a_brand_of_another_organization_cannot_be_put_on_the_plan(client, owner_of, monkeypatch):
+    org, (own,) = _org_with_workspaces(1)
+    _other, (foreign,) = _org_with_workspaces(1, name="Other")
+    services.set_payer_identity(org, tax_id="24971563792", phone="47988776655")
+    client.force_login(owner_of(org))
+    stub = StubAsaas()
+    monkeypatch.setattr(contracting, "AsaasClient", lambda: stub)
+
+    client.post(
+        reverse("billing:checkout_pay", kwargs={"workspace_id": own.id}),
+        {**CARD_FORM, "workspaces": [str(own.id), str(foreign.id)], f"name_{foreign.id}": "Hijacked"},
+    )
+
+    assert stub.subscriptions == [{"value_cents": 5000, "cycle": "MONTHLY"}]
+    foreign.refresh_from_db()
+    assert foreign.name == "Brand 1" and _status(foreign) == PENDING
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+def test_a_refused_card_answers_in_place_for_the_page_to_show(client, owner_of, monkeypatch):
+    org, (workspace,) = _org_with_workspaces(1)
+    services.set_payer_identity(org, tax_id="24971563792", phone="47988776655")
+    client.force_login(owner_of(org))
+    monkeypatch.setattr(contracting, "AsaasClient", lambda: StubAsaas(refuse_card=True))
+
+    response = client.post(
+        reverse("billing:checkout_pay", kwargs={"workspace_id": workspace.id}),
+        {**CARD_FORM, "workspaces": [str(workspace.id)]},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 422
+    assert "Transação não autorizada" in response.content.decode()
+
+
+def test_the_quote_prices_the_brands_ticked_and_added(client, owner_of):
+    org, (workspace,) = _org_with_workspaces(1)
+    client.force_login(owner_of(org))
+
+    response = client.get(
+        reverse("billing:checkout_quote", kwargs={"workspace_id": workspace.id}),
+        {"workspaces": [str(workspace.id)], "new_brand": ["A", "B", "C", "D"], "cycle": "yearly"},
+    )
+
+    assert response.context["quote"]["brands"] == 5
+    assert response.context["quote"]["charge_cents"] == (4 * 4000 + 3600) * 12
+
+
+def test_the_welcome_page_leads_to_the_first_steps(client, owner_of):
+    org, (workspace,) = _org_with_workspaces(1)
+    client.force_login(owner_of(org))
+
+    html = client.get(reverse("billing:checkout_welcome", kwargs={"workspace_id": workspace.id})).content.decode()
+
+    for name in ("social_accounts:list", "composer:create_landing", "automations:list"):
+        assert reverse(name, kwargs={"workspace_id": workspace.id}) in html
 
 
 def test_a_new_workspace_takes_a_free_brand_of_the_plan_on_its_contracting_page(client, owner_of):
@@ -304,3 +373,45 @@ def test_a_new_workspace_takes_a_free_brand_of_the_plan_on_its_contracting_page(
 
     assert response.status_code == 302
     assert _status(second) == ACTIVE
+
+
+def test_the_checkout_lists_each_visible_network_once_and_never_a_hidden_one(client, owner_of):
+    org, (workspace,) = _org_with_workspaces(1)
+    client.force_login(owner_of(org))
+    PlatformVisibility.set_visible("pinterest", False)
+
+    networks = client.get(reverse("billing:checkout", kwargs={"workspace_id": workspace.id})).context["networks"]
+
+    keys = [key for key, _name in networks]
+    assert "pinterest" not in keys
+    assert keys.count("linkedin") == 1 and "linkedin_company" not in keys
+    assert "instagram_login" not in keys and "instagram" in keys
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("card_expiry", "13/30", "Enter the card's expiry as MM/YY."),
+        ("card_expiry", "01/20", "This card has expired."),
+        ("card_number", "1234 5678 9101 1121", "This card number is not valid. Check the digits."),
+    ],
+)
+def test_a_card_that_cannot_be_charged_is_refused_before_asaas_is_called(
+    client, owner_of, monkeypatch, field, value, message
+):
+    org, (workspace,) = _org_with_workspaces(1)
+    services.set_payer_identity(org, tax_id="24971563792", phone="47988776655")
+    client.force_login(owner_of(org))
+    monkeypatch.setattr(contracting, "AsaasClient", lambda: pytest.fail("Asaas must not be called"))
+
+    response = client.post(
+        reverse("billing:checkout_pay", kwargs={"workspace_id": workspace.id}),
+        {**CARD_FORM, field: value, "workspaces": [str(workspace.id)]},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 422
+    with translation.override("pt-br"):
+        assert translation.gettext(message) in response.content.decode()
+    assert not OrganizationPlan.objects.filter(organization=org).exists()

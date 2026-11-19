@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 02:47+0000\n"
+"POT-Creation-Date: 2026-11-19 15:51+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -45,7 +45,7 @@ msgstr "CEP"
 msgid "Street"
 msgstr "Rua"
 
-#: apps/accounts/forms.py:81 templates/billing/checkout.html:162
+#: apps/accounts/forms.py:81 templates/billing/checkout.html:398
 msgid "Number"
 msgstr "Número"
 
@@ -69,7 +69,7 @@ msgstr "Informe um CEP com 8 dígitos, como 01310-100."
 msgid "Required to complete the address."
 msgstr "Obrigatório para completar o endereço."
 
-#: apps/accounts/signals.py:36
+#: apps/accounts/signals.py:36 templates/billing/checkout.html:27
 msgid "My brand"
 msgstr "Minha marca"
 
@@ -1035,11 +1035,11 @@ msgid "Connekt Flow — 1 brand of %(name)s"
 msgstr "Connekt Flow — 1 marca de %(name)s"
 
 #
-#: apps/billing/contracting.py:523
+#: apps/billing/contracting.py:552
 msgid "The card was declined."
 msgstr "O cartão foi recusado."
 
-#: apps/billing/contracting.py:529
+#: apps/billing/contracting.py:558
 msgid "The card was not charged. Try again or use another card."
 msgstr "O cartão não foi cobrado. Tente de novo ou use outro cartão."
 
@@ -1064,19 +1064,21 @@ msgstr "Inadimplente"
 msgid "Canceled"
 msgstr "Cancelada"
 
-#: apps/billing/models.py:76
+#: apps/billing/models.py:76 templates/billing/checkout.html:179
 msgid "Courtesy"
 msgstr "Cortesia"
 
 #: apps/billing/models.py:96 apps/calendar/models.py:140
-#: templates/billing/checkout.html:83 templates/billing/staff_console.html:71
+#: templates/billing/_checkout_summary.html:20
+#: templates/billing/checkout.html:134 templates/billing/staff_console.html:71
 #: templates/billing/staff_subscriptions.html:173
-#: templates/billing/subscribe_modal.html:164
+#: templates/billing/subscribe_modal.html:92
 msgid "Monthly"
 msgstr "Mensal"
 
-#: apps/billing/models.py:97 templates/billing/checkout.html:87
-#: templates/billing/subscribe_modal.html:169
+#: apps/billing/models.py:97 templates/billing/_checkout_summary.html:20
+#: templates/billing/checkout.html:137
+#: templates/billing/subscribe_modal.html:97
 msgid "Yearly"
 msgstr "Anual"
 
@@ -1104,23 +1106,23 @@ msgstr "Processado"
 msgid "Ignored"
 msgstr "Ignorado"
 
-#: apps/billing/models.py:711 templates/billing/staff_coupons.html:42
 #
+#: apps/billing/models.py:711 templates/billing/staff_coupons.html:42
 msgid "Percentage"
 msgstr "Porcentagem"
 
-#: apps/billing/models.py:712
 #
+#: apps/billing/models.py:712
 msgid "Fixed amount"
 msgstr "Valor fixo"
 
-#: apps/billing/models.py:715
 #
+#: apps/billing/models.py:715
 msgid "First charge only"
 msgstr "Só na primeira cobrança"
 
-#: apps/billing/models.py:716
 #
+#: apps/billing/models.py:716
 msgid "Every charge"
 msgstr "Em todas as cobranças"
 
@@ -1276,95 +1278,96 @@ msgstr ""
 msgid "Two volume discounts cannot start at the same brand."
 msgstr "Dois descontos por volume não podem começar na mesma marca."
 
-#: apps/billing/services.py:745
 #
+#: apps/billing/services.py:748
 msgid "This coupon does not exist or is no longer valid."
 msgstr "Este cupom não existe ou não é mais válido."
 
-#: apps/billing/services.py:747
 #
+#: apps/billing/services.py:750
 msgid "This coupon has expired."
 msgstr "Este cupom expirou."
 
-#: apps/billing/services.py:749
 #
+#: apps/billing/services.py:752
 msgid "This coupon has run out."
 msgstr "Este cupom esgotou."
 
-#: apps/billing/services.py:751
 #
+#: apps/billing/services.py:754
 msgid "Your account has already used this coupon."
 msgstr "Sua conta já usou este cupom."
 
-#: apps/billing/services.py:772
+#: apps/billing/services.py:775
 msgid "The code takes 3 to 32 letters, digits, hyphens or underscores."
 msgstr "O código leva de 3 a 32 letras, números, hífens ou sublinhados."
 
-#: apps/billing/services.py:774
 #
+#: apps/billing/services.py:777
 msgid "There is already a coupon with this code."
 msgstr "Já existe um cupom com este código."
 
-#: apps/billing/services.py:777
 #
+#: apps/billing/services.py:780
 msgid "Choose a percentage or a fixed amount."
 msgstr "Escolha porcentagem ou valor fixo."
 
-#: apps/billing/services.py:780
+#: apps/billing/services.py:783
 msgid ""
 "Choose whether the coupon applies to the first charge or to every charge."
 msgstr "Escolha se o cupom vale só na primeira cobrança ou em todas."
 
-#: apps/billing/services.py:784
 #
+#: apps/billing/services.py:787
 msgid "Enter a percentage from 1 to 100."
 msgstr "Informe uma porcentagem de 1 a 100."
 
-#: apps/billing/services.py:788
 #
+#: apps/billing/services.py:791
 msgid "The limit of uses must be a whole number."
 msgstr "O limite de usos precisa ser um número inteiro."
 
-#: apps/billing/services.py:793
 #
+#: apps/billing/services.py:796
 msgid "The discount must be more than zero."
 msgstr "O desconto precisa ser maior que zero."
 
-#: apps/billing/services.py:798
 #
+#: apps/billing/services.py:801
 msgid "Enter the last valid day as a date."
 msgstr "Informe o último dia de validade como uma data."
 
-#: apps/billing/services.py:812
 #
+#: apps/billing/services.py:815
 msgid "Enter the discount amount, in reais."
 msgstr "Informe o valor do desconto, em reais."
 
-#: apps/billing/services.py:813
 #
+#: apps/billing/services.py:816
 msgid "The discount is not a valid amount. Enter it as 10,00."
 msgstr "O desconto não é um valor válido. Informe no formato 10,00."
 
-#: apps/billing/services.py:814
 #
+#: apps/billing/services.py:817
 msgid "The discount cannot be negative."
 msgstr "O desconto não pode ser negativo."
 
-#: apps/billing/services.py:815
 #
+#: apps/billing/services.py:818
 msgid "The discount cannot have fractions of a cent. Use at most two decimals."
-msgstr "O desconto não pode ter fração de centavo. Use no máximo duas casas decimais."
+msgstr ""
+"O desconto não pode ter fração de centavo. Use no máximo duas casas decimais."
 
-#: apps/billing/services.py:816
 #
+#: apps/billing/services.py:819
 msgid "That discount is too high to be intentional. Check the amount."
 msgstr "Esse desconto é alto demais para ser intencional. Confira o valor."
 
-#: apps/billing/services.py:1061
+#: apps/billing/services.py:1072
 msgid "This account has already used its free trial."
 msgstr "Esta conta já usou o teste grátis."
 
-#: apps/billing/services.py:1065
+#: apps/billing/services.py:1076
 msgid ""
 "A free trial has already been used with this document, phone or email. "
 "Contract the plan to start, or get in touch with us."
@@ -1381,23 +1384,23 @@ msgstr ""
 "Esta marca usou todos os %(limit)s GB de armazenamento. Exclua arquivos que "
 "você não precisa mais ou contrate espaço extra para continuar enviando."
 
-#: apps/billing/views.py:198 apps/billing/views.py:417
+#: apps/billing/views.py:199 apps/billing/views.py:418
 msgid "Enter a valid CPF or CNPJ for the invoice."
 msgstr "Digite um CPF ou CNPJ válido para a fatura."
 
-#: apps/billing/views.py:415
+#: apps/billing/views.py:416
 msgid "Enter the name or company name the invoices should carry."
 msgstr "Digite o nome ou a razão social que deve constar nas faturas."
 
-#: apps/billing/views.py:419
+#: apps/billing/views.py:420
 msgid "Enter a phone with area code."
 msgstr "Digite um telefone com DDD."
 
-#: apps/billing/views.py:424
+#: apps/billing/views.py:425
 msgid "Enter a valid billing email."
 msgstr "Digite um e-mail de cobrança válido."
 
-#: apps/billing/views.py:436
+#: apps/billing/views.py:437
 msgid ""
 "We could not reach the payment provider, so nothing was changed. Please try "
 "again in a moment."
@@ -1405,11 +1408,11 @@ msgstr ""
 "Não conseguimos acessar o provedor de pagamento, então nada foi alterado. "
 "Tente novamente em instantes."
 
-#: apps/billing/views.py:440
+#: apps/billing/views.py:441
 msgid "Billing data updated. The next invoices will carry it."
 msgstr "Dados de cobrança atualizados. As próximas faturas já saem com eles."
 
-#: apps/billing/views.py:567
+#: apps/billing/views.py:570
 msgid ""
 "Billing is not set up on this installation yet, so no charge was created. "
 "Your workspace is registered and we will contact you to finish the "
@@ -1419,7 +1422,7 @@ msgstr ""
 "pagamento foi criado. Sua marca está registrada e entraremos em contato para "
 "concluir a assinatura."
 
-#: apps/billing/views.py:577 apps/billing/views.py:970
+#: apps/billing/views.py:580 apps/billing/views.py:1152
 msgid ""
 "We could not reach the payment provider. Nothing was charged — please try "
 "again in a moment."
@@ -1427,7 +1430,7 @@ msgstr ""
 "Não conseguimos acessar o provedor de pagamento. Nada foi cobrado — tente "
 "novamente em instantes."
 
-#: apps/billing/views.py:583
+#: apps/billing/views.py:586
 msgid ""
 "Subscription contracted. It activates as soon as the first payment is "
 "confirmed."
@@ -1435,25 +1438,20 @@ msgstr ""
 "Assinatura contratada. Ela é ativada assim que o primeiro pagamento for "
 "confirmado."
 
-#: apps/billing/views.py:608
+#: apps/billing/views.py:611
 msgid ""
 "Enter a valid CPF or CNPJ and a phone with area code to start the free trial."
 msgstr ""
 "Digite um CPF ou CNPJ válido e um telefone com DDD para começar o teste "
 "grátis."
 
-#: apps/billing/views.py:619
-#, python-format
-msgid "Your free trial is on until %(date)s. Enjoy!"
-msgstr "Seu teste grátis vai até %(date)s. Aproveite!"
-
-#: apps/billing/views.py:636
+#: apps/billing/views.py:635
 msgid "We could not reach the payment provider. Please try again in a moment."
 msgstr ""
 "Não conseguimos acessar o provedor de pagamento. Tente novamente em "
 "instantes."
 
-#: apps/billing/views.py:642
+#: apps/billing/views.py:641
 msgid ""
 "There is no open invoice for this workspace. A payment already made can take "
 "a few minutes to show."
@@ -1462,52 +1460,61 @@ msgstr ""
 "alguns minutos para aparecer."
 
 #
-#: apps/billing/views.py:700
+#: apps/billing/views.py:900 templates/billing/checkout.html:349
 msgid "Enter the card number."
 msgstr "Informe o número do cartão."
 
-#: apps/billing/views.py:704
+#: apps/billing/views.py:902 templates/billing/checkout.html:349
+msgid "This card number is not valid. Check the digits."
+msgstr "Este número de cartão não é válido. Confira os dígitos."
+
+#: apps/billing/views.py:906 templates/billing/checkout.html:373
 msgid "Enter the card's expiry as MM/YY."
 msgstr "Informe a validade do cartão como MM/AA."
 
 #
-#: apps/billing/views.py:706
+#: apps/billing/views.py:909 templates/billing/checkout.html:373
+msgid "This card has expired."
+msgstr "Este cartão está vencido."
+
+#
+#: apps/billing/views.py:911
 msgid "Enter the card's security code."
 msgstr "Informe o código de segurança do cartão."
 
 #
-#: apps/billing/views.py:708
+#: apps/billing/views.py:913
 msgid "Enter the name printed on the card."
 msgstr "Informe o nome impresso no cartão."
 
-#: apps/billing/views.py:710
+#: apps/billing/views.py:915
 msgid "Enter the CEP and the number of the card's billing address."
 msgstr "Informe o CEP e o número do endereço de cobrança do cartão."
 
-#: apps/billing/views.py:809
+#: apps/billing/views.py:960
 msgid "Too many payment attempts. Please wait a while before trying again."
 msgstr ""
 "Muitas tentativas de pagamento. Aguarde um pouco antes de tentar de novo."
 
-#: apps/billing/views.py:812 templates/billing/_checkout_quote.html:49
+#: apps/billing/views.py:969 templates/billing/_checkout_quote.html:27
 #, python-format
 msgid "Choose between 1 and %(max)s brands."
 msgstr "Escolha entre 1 e %(max)s marcas."
 
-#: apps/billing/views.py:827 apps/organizations/views.py:96
+#: apps/billing/views.py:979 apps/organizations/views.py:96
 #: apps/organizations/views.py:135
 msgid "Enter a valid CPF or CNPJ and a phone with area code."
 msgstr "Digite um CPF ou CNPJ válido e um telefone com DDD."
 
 #
-#: apps/billing/views.py:857
+#: apps/billing/views.py:1014
 msgid ""
 "Payments are not connected on this installation yet. Nothing was charged."
 msgstr ""
 "Os pagamentos ainda não estão conectados nesta instalação. Nada foi cobrado."
 
 #
-#: apps/billing/views.py:865
+#: apps/billing/views.py:1021
 msgid ""
 "We could not confirm the payment with the provider. If the card was charged, "
 "your brands open in a few minutes; otherwise, try again."
@@ -1515,32 +1522,30 @@ msgstr ""
 "Não conseguimos confirmar o pagamento com o provedor. Se o cartão foi "
 "cobrado, suas marcas abrem em alguns minutos; se não, tente de novo."
 
-#: apps/billing/views.py:871
-msgid "Payment confirmed. Your brands are active."
-msgstr "Pagamento confirmado. Suas marcas estão ativas."
-
-#: apps/billing/views.py:886
-msgid "Choose more brands than the plan has today."
-msgstr "Escolha mais marcas do que o plano tem hoje."
+#
+#
+#: apps/billing/views.py:1042
+msgid "Tick or add the brands to put on the plan."
+msgstr "Marque ou adicione as marcas que entram no plano."
 
 #
-#: apps/billing/views.py:893
+#: apps/billing/views.py:1049
 msgid "We could not reach the payment provider. Please try again."
 msgstr "Não conseguimos acessar o provedor de pagamento. Tente de novo."
 
-#: apps/billing/views.py:896
+#: apps/billing/views.py:1051
 msgid "Brands added to your plan. The new value applies from the next charge."
 msgstr ""
 "Marcas adicionadas ao seu plano. O novo valor vale a partir da próxima "
 "cobrança."
 
-#: apps/billing/views.py:938
+#: apps/billing/views.py:1120
 #, python-format
 msgid ""
 "Choose how much extra storage to contract, between %(min)s GB and %(max)s GB."
 msgstr "Escolha quanto espaço extra contratar, entre %(min)s GB e %(max)s GB."
 
-#: apps/billing/views.py:959
+#: apps/billing/views.py:1141
 #, python-format
 msgid ""
 "Billing is not set up on this installation yet, so no charge was created. "
@@ -1550,7 +1555,7 @@ msgstr ""
 "pagamento foi criado. Seu pedido de %(gb)s GB foi registrado e entraremos em "
 "contato para concluí-lo."
 
-#: apps/billing/views.py:976
+#: apps/billing/views.py:1158
 #, python-format
 msgid ""
 "%(gb)s GB contracted. The space is released as soon as the payment is "
@@ -1559,26 +1564,27 @@ msgstr ""
 "%(gb)s GB contratados. O espaço é liberado assim que o pagamento for "
 "confirmado."
 
-#: apps/billing/views.py:1358
+#: apps/billing/views.py:1540
 #, python-format
 msgid "Coupon %(code)s created."
 msgstr "Cupom %(code)s criado."
 
-#: apps/billing/views.py:1370
+#: apps/billing/views.py:1552
 #, python-format
 msgid "Coupon %(code)s is on again."
 msgstr "O cupom %(code)s está ativo de novo."
 
-#: apps/billing/views.py:1373
+#: apps/billing/views.py:1555
 #, python-format
 msgid "Coupon %(code)s is off. It can no longer be used at checkout."
-msgstr "O cupom %(code)s foi desativado. Ele não pode mais ser usado na contratação."
+msgstr ""
+"O cupom %(code)s foi desativado. Ele não pode mais ser usado na contratação."
 
-#: apps/billing/views.py:1397
+#: apps/billing/views.py:1579
 msgid "The rules were already those values, so nothing changed."
 msgstr "As regras já eram esses valores, então nada foi alterado."
 
-#: apps/billing/views.py:1401
+#: apps/billing/views.py:1583
 msgid ""
 "Rules updated. Discounts and the free trial apply to what is contracted from "
 "now on."
@@ -1586,11 +1592,11 @@ msgstr ""
 "Regras atualizadas. Os descontos e o teste grátis valem para o que for "
 "contratado de agora em diante."
 
-#: apps/billing/views.py:1446
+#: apps/billing/views.py:1628
 msgid "The prices were already those values, so nothing changed."
 msgstr "Os preços já eram esses valores, então nada foi alterado."
 
-#: apps/billing/views.py:1461
+#: apps/billing/views.py:1643
 msgid ""
 "Prices updated. Only subscriptions and add-ons contracted from now on use "
 "the new values — nobody who already bought is re-priced."
@@ -1598,19 +1604,19 @@ msgstr ""
 "Preços atualizados. Somente assinaturas e adicionais contratados de agora em "
 "diante usam os novos valores — ninguém que já comprou é reprecificado."
 
-#: apps/billing/views.py:1748
+#: apps/billing/views.py:1930
 #, python-format
 msgid "Workspace \"%(name)s\" is now exempt and will not be charged."
 msgstr "A marca \"%(name)s\" agora é isenta e não será cobrada."
 
-#: apps/billing/views.py:1753
+#: apps/billing/views.py:1935
 #, python-format
 msgid ""
 "Account \"%(org)s\" now has more exempt workspaces than its limit allows."
 msgstr ""
 "A conta \"%(org)s\" agora tem mais marcas isentas do que o limite permite."
 
-#: apps/billing/views.py:1760
+#: apps/billing/views.py:1942
 #, python-format
 msgid ""
 "Workspace \"%(name)s\" will be charged again. It needs a subscription to "
@@ -1619,18 +1625,18 @@ msgstr ""
 "A marca \"%(name)s\" voltará a ser cobrada. Agora é necessária uma "
 "assinatura para mantê-la ativa."
 
-#: apps/billing/views.py:1764 apps/billing/views.py:2113
-#: apps/workspaces/views.py:329
+#: apps/billing/views.py:1946 apps/billing/views.py:2295
+#: apps/workspaces/views.py:315
 msgid "Unknown action."
 msgstr "Ação desconhecida."
 
-#: apps/billing/views.py:1788 apps/billing/views.py:1851
+#: apps/billing/views.py:1970 apps/billing/views.py:2033
 msgid ""
 "The number of exempt workspaces must be zero or a positive whole number."
 msgstr ""
 "O número de marcas isentas deve ser zero ou um número inteiro positivo."
 
-#: apps/billing/views.py:1799
+#: apps/billing/views.py:1981
 #, python-format
 msgid ""
 "Account \"%(org)s\" may now have up to %(quota)s workspace(s) exempt from "
@@ -1639,7 +1645,7 @@ msgstr ""
 "A conta \"%(org)s\" agora pode ter até %(quota)s marca(s) isenta(s) de "
 "cobrança."
 
-#: apps/billing/views.py:1805
+#: apps/billing/views.py:1987
 msgid ""
 "Workspaces already exempt above the new limit were kept — nobody starts "
 "being charged retroactively."
@@ -1647,17 +1653,17 @@ msgstr ""
 "As marcas já isentas acima do novo limite foram mantidas — ninguém passa a "
 "ser cobrado retroativamente."
 
-#: apps/billing/views.py:1859
+#: apps/billing/views.py:2041
 msgid "Enter the end date as a valid date, or leave it empty for no end date."
 msgstr ""
 "Informe a data de término em um formato válido, ou deixe em branco para não "
 "ter data de término."
 
-#: apps/billing/views.py:1865
+#: apps/billing/views.py:2047
 msgid "The end date is in the past. Choose today or a later date."
 msgstr "A data de término está no passado. Escolha hoje ou uma data posterior."
 
-#: apps/billing/views.py:1879
+#: apps/billing/views.py:2061
 #, python-format
 msgid ""
 "Account \"%(org)s\" has %(quota)s workspace(s) exempt from charges, with no "
@@ -1666,7 +1672,7 @@ msgstr ""
 "A conta \"%(org)s\" tem %(quota)s marca(s) isenta(s) de cobrança, sem data "
 "de término."
 
-#: apps/billing/views.py:1886
+#: apps/billing/views.py:2068
 #, python-format
 msgid ""
 "Account \"%(org)s\" has %(quota)s workspace(s) exempt from charges until "
@@ -1675,7 +1681,7 @@ msgstr ""
 "A conta \"%(org)s\" tem %(quota)s marca(s) isenta(s) de cobrança até "
 "%(date)s; depois dessa data ela volta a ser cobrada automaticamente."
 
-#: apps/billing/views.py:1908
+#: apps/billing/views.py:2090
 #, python-format
 msgid ""
 "Account \"%(org)s\" is billed again. Each workspace needs a subscription to "
@@ -1684,29 +1690,29 @@ msgstr ""
 "A conta \"%(org)s\" voltou a ser cobrada. Cada marca precisa de uma "
 "assinatura para continuar ativa."
 
-#: apps/billing/views.py:1931
+#: apps/billing/views.py:2113
 msgid "The account needs a name."
 msgstr "A conta precisa de um nome."
 
-#: apps/billing/views.py:1950
+#: apps/billing/views.py:2132
 msgid "The account owner needs an e-mail address."
 msgstr "O responsável pela conta precisa de um e-mail."
 
-#: apps/billing/views.py:1955
+#: apps/billing/views.py:2137
 msgid "That is not a valid e-mail address."
 msgstr "Esse e-mail não é válido."
 
-#: apps/billing/views.py:1961
+#: apps/billing/views.py:2143
 #, python-format
 msgid "Another account already uses %(email)s. Nothing was changed."
 msgstr "Outra conta já usa %(email)s. Nada foi alterado."
 
-#: apps/billing/views.py:1972
+#: apps/billing/views.py:2154
 #, python-format
 msgid "Account \"%(org)s\" updated."
 msgstr "Conta \"%(org)s\" atualizada."
 
-#: apps/billing/views.py:2015
+#: apps/billing/views.py:2197
 #, python-format
 msgid ""
 "A password reset e-mail was sent to %(email)s. Only they can set the new "
@@ -1715,11 +1721,11 @@ msgstr ""
 "Um e-mail de redefinição de senha foi enviado para %(email)s. Só a própria "
 "pessoa pode definir a nova senha."
 
-#: apps/billing/views.py:2042
+#: apps/billing/views.py:2224
 msgid "Type the account's email exactly to delete it."
 msgstr "Digite o e-mail da conta exatamente como está para excluí-la."
 
-#: apps/billing/views.py:2055
+#: apps/billing/views.py:2237
 #, python-format
 msgid ""
 "%(email)s was not deleted: the payment provider did not cancel the "
@@ -1728,17 +1734,17 @@ msgstr ""
 "%(email)s não foi excluída: o provedor de pagamento não cancelou as "
 "assinaturas. Tente de novo em instantes."
 
-#: apps/billing/views.py:2065
+#: apps/billing/views.py:2247
 #, python-format
 msgid "%(email)s was deleted, with %(organizations)s."
 msgstr "%(email)s foi excluída, junto com %(organizations)s."
 
-#: apps/billing/views.py:2069
+#: apps/billing/views.py:2251
 #, python-format
 msgid "%(email)s was deleted."
 msgstr "%(email)s foi excluída."
 
-#: apps/billing/views.py:2104
+#: apps/billing/views.py:2286
 #, python-format
 msgid ""
 "%(email)s can no longer sign in. Nothing was deleted — reactivate to restore "
@@ -1747,7 +1753,7 @@ msgstr ""
 "%(email)s não consegue mais entrar. Nada foi excluído — reative para "
 "restaurar o acesso."
 
-#: apps/billing/views.py:2111
+#: apps/billing/views.py:2293
 #, python-format
 msgid "%(email)s can sign in again."
 msgstr "%(email)s pode entrar novamente."
@@ -3249,6 +3255,7 @@ msgid "Open the post and choose when it goes out before scheduling it."
 msgstr "Abra a publicação e escolha quando ela sai antes de agendá-la."
 
 #: apps/calendar/views.py:1066 apps/inbox/views.py:165
+#: templates/billing/_checkout_summary.html:50
 #: templates/organizations/cross_calendar.html:140
 #: templates/workspaces/dashboard.html:156
 msgid "Today"
@@ -4202,7 +4209,7 @@ msgstr "Empresa"
 #: templates/billing/staff_coupons.html:86
 #: templates/billing/staff_subscriptions.html:149
 #: templates/billing/staff_subscriptions.html:172
-#: templates/billing/workspace_billing.html:58
+#: templates/billing/workspace_billing.html:61
 #: templates/calendar/partials/_day_posts.html:38
 #: templates/calendar/partials/_list_table.html:15
 #: templates/calendar/partials/list_view.html:12
@@ -5003,7 +5010,7 @@ msgstr[1] "%(count)s arquivos são usados por posts agendados e foram mantidos."
 msgid "Give the folder a name."
 msgstr "Dê um nome à pasta."
 
-#: apps/members/services.py:535 apps/workspaces/views.py:321
+#: apps/members/services.py:535 apps/workspaces/views.py:307
 msgid "This person is not a member of the organization that owns this brand."
 msgstr "Essa pessoa não é membro da organização dona desta marca."
 
@@ -5011,7 +5018,7 @@ msgstr "Essa pessoa não é membro da organização dona desta marca."
 msgid "Unknown role."
 msgstr "Função desconhecida."
 
-#: apps/members/services.py:541 apps/workspaces/views.py:306
+#: apps/members/services.py:541 apps/workspaces/views.py:292
 msgid "You cannot grant a role higher than your own in this brand."
 msgstr "Você não pode dar uma função acima da sua nesta marca."
 
@@ -6930,7 +6937,8 @@ msgstr "Não foi possível mover a tarefa. Tente novamente."
 msgid "The image could not be saved. Try again."
 msgstr "Não foi possível salvar a imagem. Tente novamente."
 
-#: apps/tasks/views.py:191 templates/calendar/partials/_staff_date_rows.html:18
+#: apps/tasks/views.py:191 templates/billing/checkout.html:222
+#: templates/calendar/partials/_staff_date_rows.html:18
 #: templates/client_portal/admin/partials/client_row.html:54
 #: templates/composer/compose.html:852
 #: templates/composer/partials/_place_picker.html:20
@@ -7066,87 +7074,87 @@ msgid ""
 "Deliver a publishable format for an account connected to this workspace."
 msgstr "Entregue um formato publicável para uma conta conectada a esta marca."
 
-#: apps/workspaces/views.py:124
+#: apps/workspaces/views.py:110
 msgid "Cannot archive the last workspace in the organization."
 msgstr "Não é possível arquivar a última marca da organização."
 
-#: apps/workspaces/views.py:128
+#: apps/workspaces/views.py:114
 #, python-format
 msgid "Workspace \"%(name)s\" has been archived."
 msgstr "Marca \"%(name)s\" arquivada."
 
-#: apps/workspaces/views.py:134
+#: apps/workspaces/views.py:120
 #, python-format
 msgid "Workspace \"%(name)s\" has been restored."
 msgstr "Marca \"%(name)s\" restaurada."
 
-#: apps/workspaces/views.py:145
+#: apps/workspaces/views.py:131
 msgid "Cannot delete the last workspace in the organization."
 msgstr "Não é possível excluir a última marca da organização."
 
-#: apps/workspaces/views.py:151
+#: apps/workspaces/views.py:137
 #, python-format
 msgid "Workspace \"%(name)s\" has been permanently deleted."
 msgstr "Marca \"%(name)s\" excluída permanentemente."
 
-#: apps/workspaces/views.py:158
+#: apps/workspaces/views.py:144
 msgid "Invalid timezone."
 msgstr "Fuso horário inválido."
 
-#: apps/workspaces/views.py:162
+#: apps/workspaces/views.py:148
 msgid "Timezone updated."
 msgstr "Fuso horário atualizado."
 
-#: apps/workspaces/views.py:173
+#: apps/workspaces/views.py:159
 msgid "Invalid segment."
 msgstr "Segmento inválido."
 
-#: apps/workspaces/views.py:175
+#: apps/workspaces/views.py:161
 msgid "Segments updated."
 msgstr "Segmentos atualizados."
 
-#: apps/workspaces/views.py:197
+#: apps/workspaces/views.py:183
 msgid "Logo must be a JPEG, PNG, WebP, or GIF image."
 msgstr "O logo deve ser uma imagem JPEG, PNG, WebP ou GIF."
 
-#: apps/workspaces/views.py:203
+#: apps/workspaces/views.py:189
 msgid "Logo must be under 2 MB."
 msgstr "O logo deve ter menos de 2 MB."
 
-#: apps/workspaces/views.py:213
+#: apps/workspaces/views.py:199
 msgid "Workspace settings updated."
 msgstr "Configurações da marca atualizadas."
 
-#: apps/workspaces/views.py:264
+#: apps/workspaces/views.py:250
 msgid "Invalid approval workflow mode."
 msgstr "Modo de fluxo de aprovação inválido."
 
-#: apps/workspaces/views.py:269
+#: apps/workspaces/views.py:255
 msgid "Approval workflow updated."
 msgstr "Fluxo de aprovação atualizado."
 
-#: apps/workspaces/views.py:315
+#: apps/workspaces/views.py:301
 msgid "Invitation sent."
 msgstr "Convite enviado."
 
-#: apps/workspaces/views.py:324
+#: apps/workspaces/views.py:310
 msgid "Removed from the brand."
 msgstr "Removido da marca."
 
-#: apps/workspaces/views.py:327
+#: apps/workspaces/views.py:313
 msgid "Team updated."
 msgstr "Equipe atualizada."
 
-#: apps/workspaces/views.py:528
+#: apps/workspaces/views.py:514
 #, python-format
 msgid "Enter a goal between 1 and %(max)s posts."
 msgstr "Informe uma meta entre 1 e %(max)s posts."
 
-#: apps/workspaces/views.py:534
+#: apps/workspaces/views.py:520
 msgid "Monthly goal saved."
 msgstr "Meta do mês salva."
 
-#: apps/workspaces/views.py:534
+#: apps/workspaces/views.py:520
 msgid "Monthly goal removed."
 msgstr "Meta do mês removida."
 
@@ -7285,8 +7293,7 @@ msgstr ""
 "target=\"_blank\" rel=\"noopener\" class=\"font-semibold underline hover:no-"
 "underline\" style=\"color: var(--primary);\">Política de Privacidade</a>"
 
-#: templates/account/accept_terms.html:68
-#: templates/billing/subscribe_modal.html:75
+#: templates/account/accept_terms.html:68 templates/billing/checkout.html:493
 #: templates/social_accounts/partials/_connect_guide.html:45
 #: templates/social_accounts/partials/_connect_guide.html:50
 msgid "Continue"
@@ -7770,7 +7777,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/automations/flow_new.html:158 templates/automations/form.html:392
 #: templates/base.html:1136 templates/base.html:1193
 #: templates/billing/account_billing.html:231
-#: templates/billing/staff_console.html:454
+#: templates/billing/checkout.html:624 templates/billing/staff_console.html:454
 #: templates/calendar/calendar.html:576
 #: templates/calendar/partials/_delete_post_modal.html:56
 #: templates/calendar/partials/event_form.html:127
@@ -8371,7 +8378,7 @@ msgstr "Esta campanha não tem anúncios."
 #: templates/ads/partials/_campaign_edit_modal.html:12
 #: templates/ads/partials/_campaign_edit_modal.html:81
 #: templates/automations/flow_builder.html:1105
-#: templates/billing/staff_console.html:205
+#: templates/billing/checkout.html:508 templates/billing/staff_console.html:205
 #: templates/calendar/partials/event_form.html:47
 #: templates/calendar/partials/publish_calendar_shell.html:56
 #: templates/calendar/partials/publish_calendar_shell.html:68
@@ -8580,6 +8587,7 @@ msgid "Search ad account…"
 msgstr "Buscar conta de anúncios…"
 
 #: templates/ads/partials/_settings_body.html:50
+#: templates/billing/checkout.html:183
 msgid "Inactive"
 msgstr "Inativa"
 
@@ -10304,8 +10312,7 @@ msgstr "Nenhum canal conectado ainda"
 msgid "Connect a Facebook or Instagram account to automate replies."
 msgstr "Conecte uma conta do Facebook ou Instagram para automatizar respostas."
 
-#: templates/automations/flow_new.html:158 templates/billing/checkout.html:194
-#: templates/billing/subscribe_modal.html:88
+#: templates/automations/flow_new.html:158
 #: templates/calendar/partials/publish_calendar_shell.html:74
 #: templates/composer/partials/_tag_groups.html:203
 #: templates/inbox/partials/_message_panel.html:16
@@ -10586,6 +10593,7 @@ msgid "Create rule"
 msgstr "Criar regra"
 
 #: templates/automations/list.html:4 templates/automations/list.html:23
+#: templates/billing/checkout.html:546
 msgid "Automations"
 msgstr "Automações"
 
@@ -11061,7 +11069,7 @@ msgctxt "menu"
 msgid "Engage"
 msgstr "Engajar"
 
-#: templates/base.html:638
+#: templates/base.html:638 templates/billing/checkout.html:585
 msgid "More"
 msgstr "Mais"
 
@@ -11081,8 +11089,8 @@ msgid "Moti, the Connekt Flow robot, working on a laptop"
 msgstr "Moti, o robô do Connekt Flow, trabalhando no notebook"
 
 #: templates/base.html:691 templates/base.html:762
-#: templates/billing/subscribe_modal.html:94
-#: templates/billing/subscribe_modal.html:322
+#: templates/billing/checkout.html:37
+#: templates/billing/subscribe_modal.html:250
 #: templates/client_portal/portal_base.html:69
 msgid "Log out"
 msgstr "Sair"
@@ -11135,20 +11143,18 @@ msgstr "Nome da organização"
 
 #: templates/base.html:1176 templates/billing/account_billing.html:184
 #: templates/billing/account_billing.html:212
-#: templates/billing/checkout.html:167
-#: templates/billing/subscribe_modal.html:63
-#: templates/billing/subscribe_modal.html:288
+#: templates/billing/checkout.html:269 templates/billing/checkout.html:609
+#: templates/billing/subscribe_modal.html:216
 msgid "CPF or CNPJ"
 msgstr "CPF ou CNPJ"
 
 #: templates/base.html:1181 templates/billing/account_billing.html:221
-#: templates/billing/checkout.html:174
-#: templates/billing/subscribe_modal.html:68
-#: templates/billing/subscribe_modal.html:291
+#: templates/billing/checkout.html:274 templates/billing/checkout.html:615
+#: templates/billing/subscribe_modal.html:219
 msgid "Phone with area code"
 msgstr "Telefone com DDD"
 
-#: templates/base.html:1186 templates/billing/subscribe_modal.html:73
+#: templates/base.html:1186
 msgid ""
 "Of the organization. They go on its invoices and are what the free trial "
 "asks for."
@@ -11159,13 +11165,36 @@ msgstr ""
 msgid "Name of its first brand"
 msgstr "Nome da primeira marca dela"
 
-#: templates/billing/_checkout_quote.html:15
+#
+#: templates/billing/_checkout_quote.html:10
+msgid "Brands chosen"
+msgstr "Marcas escolhidas"
+
+#
+#: templates/billing/_checkout_quote.html:16
+msgid "New plan total"
+msgstr "Novo total do plano"
+
+#: templates/billing/_checkout_quote.html:16
+msgid "Total"
+msgstr "Total"
+
+#: templates/billing/_checkout_quote.html:16
+#: templates/billing/_checkout_summary.html:19
+#, python-format
+msgid "%(brands)s brand"
+msgid_plural "%(brands)s brands"
+msgstr[0] "%(brands)s marca"
+msgstr[1] "%(brands)s marcas"
+
+#: templates/billing/_checkout_quote.html:17
 #: templates/billing/_storage_quote.html:19
 #: templates/billing/account_billing.html:77
-#: templates/billing/subscribe_modal.html:147
-#: templates/billing/subscribe_modal.html:178
-#: templates/billing/subscribe_modal.html:186
-#: templates/billing/workspace_billing.html:184
+#: templates/billing/checkout.html:201 templates/billing/checkout.html:230
+#: templates/billing/subscribe_modal.html:75
+#: templates/billing/subscribe_modal.html:106
+#: templates/billing/subscribe_modal.html:114
+#: templates/billing/workspace_billing.html:187
 msgid "/month"
 msgstr "/mês"
 
@@ -11179,45 +11208,56 @@ msgstr "R$ %(total)s por ano, no cartão"
 msgid "Save R$ %(saving)s a year"
 msgstr "Economize R$ %(saving)s por ano"
 
-#: templates/billing/_checkout_quote.html:25
+#: templates/billing/_checkout_quote.html:23
 #, python-format
 msgid "R$ %(saving)s off a month for volume"
 msgstr "R$ %(saving)s a menos por mês pelo volume"
 
-#: templates/billing/_checkout_quote.html:31
+#: templates/billing/_checkout_summary.html:12
 #, python-format
-msgid "Coupon %(code)s applied to every charge."
-msgstr "Cupom %(code)s aplicado em todas as cobranças."
+msgid "Save R$ %(saving)s a year on the yearly plan."
+msgstr "Economize R$ %(saving)s por ano no plano anual."
 
-#: templates/billing/_checkout_quote.html:33
+#
+#: templates/billing/_checkout_summary.html:13
+msgid "I want the yearly plan"
+msgstr "Quero o plano anual"
+
+#
+#: templates/billing/_checkout_summary.html:26
+msgid "Volume discount"
+msgstr "Desconto por volume"
+
+#: templates/billing/_checkout_summary.html:31
 #, python-format
-msgid "Coupon %(code)s: R$ %(first)s today, then the price above."
-msgstr "Cupom %(code)s: R$ %(first)s hoje e, depois, o valor acima."
+msgid "Yearly plan −%(percent)s%%"
+msgstr "Plano anual −%(percent)s%%"
 
-#: templates/billing/_checkout_quote.html:41
+#: templates/billing/_checkout_summary.html:36
 #, python-format
-msgid ""
-"New value for %(brands)s brand, from the next charge to the card on the plan."
-msgid_plural ""
-"New value for %(brands)s brands, from the next charge to the card on the "
-"plan."
-msgstr[0] ""
-"Novo valor para %(brands)s marca, a partir da próxima cobrança no cartão do "
-"plano."
-msgstr[1] ""
-"Novo valor para %(brands)s marcas, a partir da próxima cobrança no cartão do "
-"plano."
+msgid "Coupon %(code)s"
+msgstr "Cupom %(code)s"
 
-#: templates/billing/_checkout_quote.html:43
+#
+#
+#: templates/billing/_checkout_summary.html:36
+msgid "first charge"
+msgstr "primeira cobrança"
+
+#
+#: templates/billing/_checkout_summary.html:45
+msgid "From the next charge"
+msgstr "A partir da próxima cobrança"
+
+#: templates/billing/_checkout_summary.html:54
 #, python-format
-msgid "%(brands)s brand, every feature included."
-msgid_plural "%(brands)s brands, every feature included."
-msgstr[0] "%(brands)s marca, todos os recursos incluídos."
-msgstr[1] "%(brands)s marcas, todos os recursos incluídos."
+msgid "Renews on %(date)s for R$ %(total)s, on the card."
+msgstr "Renova em %(date)s por R$ %(total)s, no cartão."
 
-#: templates/billing/_checkout_quote.html:44
-msgid "*Monthly equivalent of the yearly plan."
-msgstr "*Valor equivalente por mês no plano anual."
+#
+#: templates/billing/_checkout_summary.html:59
+msgid "Tick at least one brand."
+msgstr "Marque pelo menos uma marca."
 
 #: templates/billing/_storage_meter.html:13
 #, python-format
@@ -11225,7 +11265,7 @@ msgid "%(used)s of %(limit)s GB used"
 msgstr "%(used)s de %(limit)s GB usados"
 
 #: templates/billing/_storage_meter.html:19
-#: templates/billing/workspace_billing.html:155
+#: templates/billing/workspace_billing.html:158
 msgid "Storage used"
 msgstr "Armazenamento em uso"
 
@@ -11280,7 +11320,7 @@ msgid "Review the largest files"
 msgstr "Ver os arquivos maiores"
 
 #: templates/billing/_storage_warning.html:57
-#: templates/billing/workspace_billing.html:206
+#: templates/billing/workspace_billing.html:209
 msgid "Contract extra storage"
 msgstr "Contratar espaço extra"
 
@@ -11437,6 +11477,7 @@ msgid "extra storage"
 msgstr "armazenamento extra"
 
 #: templates/billing/account_billing.html:152
+#: templates/billing/checkout.html:198
 msgid "Paid"
 msgstr "Pago"
 
@@ -11506,139 +11547,598 @@ msgstr ""
 "dados da emissão."
 
 #
-#: templates/billing/checkout.html:16
-msgid "Add brands"
-msgstr "Adicionar marcas"
+#: templates/billing/checkout.html:24 templates/billing/checkout.html:80
+msgid "Manage your plan"
+msgstr "Gerencie seu plano"
+
+#: templates/billing/checkout.html:24 templates/billing/checkout.html:80
+msgid "Build your plan"
+msgstr "Monte seu plano"
 
 #
-#: templates/billing/checkout.html:16
-msgid "Checkout"
-msgstr "Finalizar contratação"
-
-#: templates/billing/checkout.html:53
-#, python-format
-msgid "Your plan has %(brands)s brand. How many do you want?"
-msgid_plural "Your plan has %(brands)s brands. How many do you want?"
-msgstr[0] "Seu plano tem %(brands)s marca. Quantas você quer?"
-msgstr[1] "Seu plano tem %(brands)s marcas. Quantas você quer?"
-
-#: templates/billing/checkout.html:55
-msgid "How many brands do you manage?"
-msgstr "Quantas marcas você gerencia?"
-
-#
-#: templates/billing/checkout.html:61
+#: templates/billing/checkout.html:28
 msgid "brand"
 msgstr "marca"
 
 #
-#: templates/billing/checkout.html:62
+#: templates/billing/checkout.html:28
 msgid "brands"
 msgstr "marcas"
 
-#
-#: templates/billing/checkout.html:65 templates/billing/checkout.html:68
-msgid "Number of brands"
-msgstr "Número de marcas"
+#: templates/billing/checkout.html:35
+#: templates/billing/subscribe_modal.html:240
+msgid "Back to the workspace"
+msgstr "Voltar para a marca"
 
-#: templates/billing/checkout.html:72
+#: templates/billing/checkout.html:80 templates/billing/subscribe_modal.html:45
+msgid "Your free trial has ended"
+msgstr "Seu teste grátis terminou"
+
+#
+#: templates/billing/checkout.html:84
+msgid ""
+"Tick or add the brands to put on the plan. They are charged to the card on "
+"file from the next charge."
+msgstr ""
+"Marque ou adicione as marcas que entram no plano. Elas são cobradas no "
+"cartão salvo a partir da próxima cobrança."
+
+#
+#: templates/billing/checkout.html:86
+msgid ""
+"Everything you did is kept. Choose the brands and carry on from where you "
+"stopped."
+msgstr ""
+"Tudo o que você fez continua guardado. Escolha as marcas e siga de onde "
+"parou."
+
+#: templates/billing/checkout.html:88
+msgid ""
+"Choose the brands you manage and how you want to pay. Every feature is "
+"included in each one."
+msgstr ""
+"Escolha as marcas que você gerencia e como quer pagar. Todos os recursos "
+"estão incluídos em cada uma."
+
+#: templates/billing/checkout.html:96
+msgid "Connekt Flow · everything included"
+msgstr "Connekt Flow · tudo incluído"
+
+#
+#: templates/billing/checkout.html:99
+msgid "Scheduling and content calendar"
+msgstr "Agendamento e calendário de conteúdo"
+
+#
+#: templates/billing/checkout.html:99
+msgid "Approvals with your team and clients"
+msgstr "Aprovações com sua equipe e clientes"
+
+#
+#: templates/billing/checkout.html:99
+msgid "Unified inbox for comments and messages"
+msgstr "Inbox unificado de comentários e mensagens"
+
+#
+#: templates/billing/checkout.html:100
+msgid "Automations by keyword"
+msgstr "Automações por palavra-chave"
+
+#
+#: templates/billing/checkout.html:100
+msgid "Reports and analytics"
+msgstr "Relatórios e análises"
+
+#
+#: templates/billing/checkout.html:100 templates/billing/checkout.html:566
+msgid "Unlimited team members and clients"
+msgstr "Membros da equipe e clientes ilimitados"
+
+#: templates/billing/checkout.html:111
+msgid "See all features"
+msgstr "Ver todos os recursos"
+
+#: templates/billing/checkout.html:122
+#: templates/intelligence/billing_settings.html:32
+#: templates/intelligence/playground.html:18
+msgid "Plan"
+msgstr "Plano"
+
+#
+#: templates/billing/checkout.html:128 templates/billing/checkout.html:252
+msgid "Payment"
+msgstr "Pagamento"
+
+#: templates/billing/checkout.html:132
+#: templates/billing/subscribe_modal.html:88
+msgid "Billing cycle"
+msgstr "Período de cobrança"
+
+#
+#
+#: templates/billing/checkout.html:150
+msgid "Brands"
+msgstr "Marcas"
+
+#
+#: templates/billing/checkout.html:153
+msgid "Add brands"
+msgstr "Adicionar marcas"
+
+#
+#: templates/billing/checkout.html:156
+msgid "Include"
+msgstr "Incluir"
+
+#
+#: templates/billing/checkout.html:158
+msgid "Price"
+msgstr "Valor"
+
+#
+#: templates/billing/checkout.html:159
+msgid "per brand"
+msgstr "por marca"
+
+#
+#: templates/billing/checkout.html:172 templates/billing/checkout.html:218
+msgid "Brand name"
+msgstr "Nome da marca"
+
+#
+#: templates/billing/checkout.html:178
+msgid "Active on the plan"
+msgstr "Ativa no plano"
+
+#
+#: templates/billing/checkout.html:180
+msgid "Own subscription"
+msgstr "Assinatura própria"
+
+#: templates/billing/checkout.html:181
+#, python-format
+msgid "Trial until %(date)s"
+msgstr "Teste até %(date)s"
+
+#
+#: templates/billing/checkout.html:182
+msgid "Trial ended"
+msgstr "Teste terminou"
+
+#: templates/billing/checkout.html:190
+#, python-format
+msgid "Include %(name)s"
+msgstr "Incluir %(name)s"
+
+#: templates/billing/checkout.html:193
+msgid "Locked"
+msgstr "Bloqueada"
+
+#: templates/billing/checkout.html:220
+msgid "New · created on payment"
+msgstr "Nova · criada no pagamento"
+
+#: templates/billing/checkout.html:237
 #, python-format
 msgid "From the %(minimum)sth brand on, %(percent)s%% off each new brand."
 msgstr ""
 "Da %(minimum)sª marca em diante, %(percent)s%% a menos em cada nova marca."
 
-#: templates/billing/checkout.html:80
-#: templates/billing/subscribe_modal.html:160
-msgid "Billing cycle"
-msgstr "Período de cobrança"
-
-#: templates/billing/checkout.html:104
 #
-msgid "Discount coupon"
-msgstr "Cupom de desconto"
+#: templates/billing/checkout.html:238
+msgid "On the yearly plan the 12 months are charged at once, on the card."
+msgstr "No plano anual, os 12 meses são cobrados de uma vez, no cartão."
 
-#: templates/billing/checkout.html:108 templates/billing/staff_coupons.html:30
-#: templates/billing/staff_coupons.html:81
-msgid "Code"
-msgstr "Código"
+#
+#: templates/billing/checkout.html:248
+msgid "Back to the brands"
+msgstr "Voltar para as marcas"
 
-#: templates/billing/checkout.html:109
-#: templates/components/_period_picker.html:48
-msgid "Apply"
-msgstr "Aplicar"
-
-#: templates/billing/checkout.html:123
+#: templates/billing/checkout.html:254
 #, python-format
 msgid ""
 "Charged to the %(brand)s card ending in %(last4)s, from the next charge."
 msgstr ""
 "Cobrado no cartão %(brand)s final %(last4)s, a partir da próxima cobrança."
 
-#: templates/billing/checkout.html:125
+#: templates/billing/checkout.html:255
 msgid "Charged to the card on the plan, from the next charge."
 msgstr "Cobrado no cartão do plano, a partir da próxima cobrança."
 
 #
-#: templates/billing/checkout.html:129
-msgid "Add brands to the plan"
-msgstr "Adicionar marcas ao plano"
+#: templates/billing/checkout.html:258
+msgid "Billing details"
+msgstr "Dados de faturamento"
 
 #
-#: templates/billing/checkout.html:132
+#: templates/billing/checkout.html:262
+msgid "Company or agency name"
+msgstr "Nome da empresa ou agência"
+
+#: templates/billing/checkout.html:264
+msgid "e.g. Sol Agency"
+msgstr "ex.: Agência Sol"
+
+#
+#
+#: templates/billing/checkout.html:265
+msgid ""
+"It goes on invoices and invitations. Left empty, it takes the name of your "
+"first brand; you can change it later."
+msgstr ""
+"Aparece nas cobranças e nos convites. Em branco, usamos o nome da sua "
+"primeira marca; dá para mudar depois."
+
+#: templates/billing/checkout.html:280
+msgid "How do you want to pay?"
+msgstr "Como você quer pagar?"
+
+#
+#: templates/billing/checkout.html:281
+msgid "Payment method"
+msgstr "Forma de pagamento"
+
+#
+#: templates/billing/checkout.html:286
 msgid "Credit card"
 msgstr "Cartão de crédito"
 
-#: templates/billing/checkout.html:134
+#: templates/billing/checkout.html:287
+msgid "Renews by itself"
+msgstr "Renova sozinho"
+
+#: templates/billing/checkout.html:295
+msgid "Pix Automático · soon"
+msgstr "Pix Automático · em breve"
+
+#: templates/billing/checkout.html:339
 msgid ""
 "Payments are not connected on this installation yet. Nothing will be charged."
 msgstr ""
 "Os pagamentos ainda não estão conectados nesta instalação. Nada será cobrado."
 
 #
-#: templates/billing/checkout.html:138
+#: templates/billing/checkout.html:344
 msgid "Card number"
 msgstr "Número do cartão"
 
 #
-#: templates/billing/checkout.html:143
+#: templates/billing/checkout.html:360 templates/billing/checkout.html:415
 msgid "Name printed on the card"
 msgstr "Nome impresso no cartão"
 
 #
-#: templates/billing/checkout.html:147
+#: templates/billing/checkout.html:368
 msgid "Expiry"
 msgstr "Validade"
 
-#: templates/billing/checkout.html:149
+#: templates/billing/checkout.html:376 templates/billing/checkout.html:416
 msgid "MM/YY"
 msgstr "MM/AA"
 
-#: templates/billing/checkout.html:152
+#: templates/billing/checkout.html:381
 msgid "Security code"
 msgstr "Código de segurança"
 
 #
-#: templates/billing/checkout.html:157
+#: templates/billing/checkout.html:390
 msgid "CEP of the card's address"
 msgstr "CEP do endereço do cartão"
 
+#: templates/billing/checkout.html:441
+msgid "Pix Automático is coming"
+msgstr "O Pix Automático está chegando"
+
+#: templates/billing/checkout.html:442
+msgid ""
+"You will scan one QR code in your bank's app: it pays the first charge and "
+"authorizes the next ones, with nothing to do every month. For now, pay by "
+"card."
+msgstr ""
+"Você vai ler um QR Code no app do seu banco: ele paga a primeira cobrança e "
+"autoriza as próximas, sem nada para fazer todo mês. Por enquanto, pague com "
+"cartão."
+
 #
-#: templates/billing/checkout.html:181
+#: templates/billing/checkout.html:450
+msgid "Order summary"
+msgstr "Resumo do pedido"
+
+#
+#: templates/billing/checkout.html:456
+msgid "Discount coupon"
+msgstr "Cupom de desconto"
+
+#: templates/billing/checkout.html:459 templates/billing/staff_coupons.html:30
+#: templates/billing/staff_coupons.html:81
+msgid "Code"
+msgstr "Código"
+
+#: templates/billing/checkout.html:460
+#: templates/components/_period_picker.html:48
+msgid "Apply"
+msgstr "Aplicar"
+
+#
+#: templates/billing/checkout.html:467
+msgid "Add to the plan"
+msgstr "Adicionar ao plano"
+
+#
+#: templates/billing/checkout.html:467
 msgid "Pay and activate"
 msgstr "Pagar e ativar"
 
 #
-#: templates/billing/checkout.html:182
-msgid "Confirming the payment…"
-msgstr "Confirmando o pagamento…"
+#: templates/billing/checkout.html:468
+msgid "Confirming…"
+msgstr "Confirmando…"
 
-#: templates/billing/checkout.html:186
+#
+#: templates/billing/checkout.html:472
 msgid ""
-"Processed by Asaas. The card is charged now and on every renewal; Connekt "
-"Flow does not keep its details. Cancel whenever you want."
+"Secure payment processed by Asaas. Connekt Flow does not keep the card's "
+"details. Cancel whenever you want."
 msgstr ""
-"Processado pelo Asaas. O cartão é cobrado agora e em cada renovação; o "
-"Connekt Flow não guarda os dados dele. Cancele quando quiser."
+"Pagamento seguro processado pelo Asaas. O Connekt Flow não guarda os dados "
+"do cartão. Cancele quando quiser."
+
+#: templates/billing/checkout.html:487 templates/billing/checkout.html:602
+#, python-format
+msgid "Try %(days)s day free"
+msgid_plural "Try %(days)s days free"
+msgstr[0] "Testar %(days)s dia grátis"
+msgstr[1] "Testar %(days)s dias grátis"
+
+#: templates/billing/checkout.html:490
+#: templates/billing/subscribe_modal.html:255
+msgid "Decide later"
+msgstr "Decidir depois"
+
+#: templates/billing/checkout.html:511
+msgid "What each brand includes"
+msgstr "O que cada marca inclui"
+
+#: templates/billing/checkout.html:515
+msgid "Official integrations"
+msgstr "Integrações oficiais"
+
+#
+#: templates/billing/checkout.html:527
+msgid "Scheduling, management and approval"
+msgstr "Agendamento, gestão e aprovação"
+
+#: templates/billing/checkout.html:529
+msgid "Schedule posts to several networks and accounts at once"
+msgstr "Agendamento de posts para várias redes e contas de uma vez"
+
+#: templates/billing/checkout.html:530
+msgid "Content calendar to plan the month"
+msgstr "Calendário de conteúdo para planejar o mês"
+
+#: templates/billing/checkout.html:531
+msgid "Idea hub with ready models to create the posts"
+msgstr "Central de ideias com modelos prontos para criar os posts"
+
+#: templates/billing/checkout.html:532
+msgid "Approval by the team and by the client, in the client portal"
+msgstr "Aprovação pela equipe e pelo cliente, no portal do cliente"
+
+#: templates/billing/checkout.html:533
+msgid "Tasks and the creation workflow of each post"
+msgstr "Tarefas e fluxo de criação de cada post"
+
+#: templates/billing/checkout.html:534
+msgid "Media library shared by the team"
+msgstr "Biblioteca de mídia compartilhada pela equipe"
+
+#: templates/billing/checkout.html:538
+msgid "Inbox and relationship"
+msgstr "Inbox e relacionamento"
+
+#: templates/billing/checkout.html:540
+msgid ""
+"Comments and direct messages of every network in one inbox, WhatsApp included"
+msgstr ""
+"Comentários e mensagens diretas de todas as redes em um só inbox, com "
+"WhatsApp"
+
+#: templates/billing/checkout.html:541
+msgid "Sales funnel with the conversations as opportunities"
+msgstr "Funil de vendas com as conversas como oportunidades"
+
+#: templates/billing/checkout.html:542
+msgid "Saved replies, assignment to the team and internal notes"
+msgstr "Respostas salvas, atribuição para a equipe e notas internas"
+
+#: templates/billing/checkout.html:548
+msgid "Automatic reply and direct message to whoever comments a keyword"
+msgstr ""
+"Resposta automática e mensagem direta para quem comenta uma palavra-chave"
+
+#: templates/billing/checkout.html:549
+msgid "Visual flow builder with buttons, cards and conditions"
+msgstr "Construtor visual de fluxos com botões, cards e condições"
+
+#: templates/billing/checkout.html:550
+msgid "An automation for each post, switched on when it is published"
+msgstr "Uma automação para cada post, ativada quando ele é publicado"
+
+#: templates/billing/checkout.html:551
+msgid "Ready flow templates to start from"
+msgstr "Modelos de fluxo prontos para começar"
+
+#
+#: templates/billing/checkout.html:555
+msgid "Reports and ads"
+msgstr "Relatórios e anúncios"
+
+#: templates/billing/checkout.html:557
+msgid "Results of each account and each post, in the period you choose"
+msgstr "Resultados de cada conta e de cada post, no período que você escolher"
+
+#: templates/billing/checkout.html:558
+msgid "Meta Ads: create campaigns and follow spend, results and ROAS"
+msgstr "Meta Ads: crie campanhas e acompanhe gasto, resultados e ROAS"
+
+#: templates/billing/checkout.html:559
+msgid "Watch competitors' Instagram profiles"
+msgstr "Acompanhe perfis de concorrentes no Instagram"
+
+#: templates/billing/checkout.html:560
+msgid "Shopee Affiliates offers and commissions"
+msgstr "Ofertas e comissões da Shopee Afiliados"
+
+#: templates/billing/checkout.html:564
+msgid "Other features"
+msgstr "Outros recursos"
+
+#: templates/billing/checkout.html:567
+msgid "API and MCP to connect AI agents"
+msgstr "API e MCP para conectar agentes de IA"
+
+#
+#: templates/billing/checkout.html:577
+msgid "How many brands do you want to add?"
+msgstr "Quantas marcas você quer adicionar?"
+
+#: templates/billing/checkout.html:578
+msgid "You name them now or after paying."
+msgstr "Você dá o nome agora ou depois de pagar."
+
+#
+#: templates/billing/checkout.html:580
+msgid "Fewer"
+msgstr "Menos"
+
+#: templates/billing/checkout.html:592 templates/composer/compose.html:656
+#: templates/composer/create_landing.html:495
+#: templates/composer/create_landing.html:681
+#: templates/composer/partials/_tag_groups.html:200
+#: templates/composer/partials/template_gallery.html:214
+#: templates/funnels/partials/_pick_conversation.html:21
+#: templates/social_accounts/list.html:141
+#: templates/social_accounts/list.html:143
+#: templates/social_accounts/list.html:148
+#: templates/social_accounts/partials/_posting_slots_grid.html:116
+#: templates/tasks/partials/_column.html:78
+#: templates/tasks/partials/_new_item_modal.html:171
+#: templates/tasks/partials/_new_item_options.html:59
+#: templates/tasks/partials/_task_modal.html:209
+msgid "Add"
+msgstr "Adicionar"
+
+#: templates/billing/checkout.html:604
+#, python-format
+msgid ""
+"No card and no charge. The trial opens %(name)s; when it ends, you choose "
+"your plan here."
+msgstr ""
+"Sem cartão e sem cobrança. O teste libera %(name)s; quando terminar, você "
+"escolhe seu plano aqui."
+
+#: templates/billing/checkout.html:619
+#: templates/billing/subscribe_modal.html:225
+msgid "One free trial per account, document, phone and email."
+msgstr "Um teste grátis por conta, documento, telefone e e-mail."
+
+#: templates/billing/checkout.html:627
+#: templates/billing/subscribe_modal.html:223
+msgid "Start free trial"
+msgstr "Começar o teste grátis"
+
+#
+#: templates/billing/checkout_welcome.html:11
+msgid "Your free trial has started"
+msgstr "Seu teste grátis começou"
+
+#
+#: templates/billing/checkout_welcome.html:11
+#: templates/billing/checkout_welcome.html:25
+msgid "Payment confirmed"
+msgstr "Pagamento confirmado"
+
+#
+#: templates/billing/checkout_welcome.html:25
+msgid "Free trial on"
+msgstr "Teste grátis ativo"
+
+#
+#: templates/billing/checkout_welcome.html:27
+msgid "Your free trial has started. Everything is open!"
+msgstr "Seu teste grátis começou. Tudo liberado!"
+
+#: templates/billing/checkout_welcome.html:27
+msgid "All set! You now have full access."
+msgstr "Tudo pronto! Agora você tem acesso completo."
+
+#: templates/billing/checkout_welcome.html:31
+#, python-format
+msgid "Use every feature until %(date)s. Here is the best way to start:"
+msgstr "Use todos os recursos até %(date)s. O melhor jeito de começar:"
+
+#: templates/billing/checkout_welcome.html:33
+msgid "Every feature of Connekt Flow is yours. Here is the best way to start:"
+msgstr "Todos os recursos do Connekt Flow são seus. O melhor jeito de começar:"
+
+#: templates/billing/checkout_welcome.html:44
+#: templates/onboarding/connection_page.html:4
+msgid "Connect your accounts"
+msgstr "Conecte suas contas"
+
+#: templates/billing/checkout_welcome.html:47
+msgid ""
+"Link the brand's Instagram, Facebook, WhatsApp and other networks. It is "
+"what lets you publish, reply and see the results."
+msgstr ""
+"Ligue o Instagram, o Facebook, o WhatsApp e as outras redes da marca. É isso "
+"que permite publicar, responder e ver os resultados."
+
+#
+#: templates/billing/checkout_welcome.html:48
+msgid "Connect accounts"
+msgstr "Conectar contas"
+
+#
+#: templates/billing/checkout_welcome.html:53
+msgid "Create in the idea hub"
+msgstr "Crie na Central de ideias"
+
+#: templates/billing/checkout_welcome.html:56
+msgid ""
+"Start from an idea or a ready model, turn it into a post and schedule it on "
+"the calendar."
+msgstr ""
+"Comece por uma ideia ou um modelo pronto, transforme em post e agende no "
+"calendário."
+
+#
+#: templates/billing/checkout_welcome.html:57
+msgid "Open the idea hub"
+msgstr "Abrir a Central de ideias"
+
+#
+#: templates/billing/checkout_welcome.html:62
+msgid "Automate your posts"
+msgstr "Automatize seus posts"
+
+#: templates/billing/checkout_welcome.html:65
+msgid ""
+"With the posts made, create automations on them: reply to comments and send "
+"a direct message to whoever writes a keyword."
+msgstr ""
+"Com os posts prontos, crie automações neles: responda comentários e mande "
+"mensagem direta para quem escrever uma palavra-chave."
+
+#
+#: templates/billing/checkout_welcome.html:66
+msgid "See automations"
+msgstr "Ver automações"
+
+#
+#: templates/billing/checkout_welcome.html:71
+msgid "Go to the calendar"
+msgstr "Ir para o calendário"
 
 #: templates/billing/staff_console.html:40
 #: templates/billing/staff_console.html:45
@@ -11859,20 +12359,22 @@ msgstr "Cupons"
 msgid ""
 "Discount codes to hand to customers. They are typed at checkout and each "
 "account can use a coupon once."
-msgstr "Códigos de desconto para passar aos clientes. Eles são digitados na contratação e cada conta usa um cupom uma vez."
+msgstr ""
+"Códigos de desconto para passar aos clientes. Eles são digitados na "
+"contratação e cada conta usa um cupom uma vez."
 
-#: templates/billing/staff_coupons.html:25
 #
+#: templates/billing/staff_coupons.html:25
 msgid "New coupon"
 msgstr "Novo cupom"
 
-#: templates/billing/staff_coupons.html:31
 #
+#: templates/billing/staff_coupons.html:31
 msgid "e.g. WELCOME20"
 msgstr "ex.: BEMVINDO20"
 
-#: templates/billing/staff_coupons.html:43
 #
+#: templates/billing/staff_coupons.html:43
 msgid "Amount in R$"
 msgstr "Valor em R$"
 
@@ -11881,13 +12383,13 @@ msgstr "Valor em R$"
 msgid "Applies to"
 msgstr "Vale para"
 
-#: templates/billing/staff_coupons.html:55
 #
+#: templates/billing/staff_coupons.html:55
 msgid "Valid until (optional)"
 msgstr "Válido até (opcional)"
 
-#: templates/billing/staff_coupons.html:59
 #
+#: templates/billing/staff_coupons.html:59
 msgid "Limit of accounts (optional)"
 msgstr "Limite de contas (opcional)"
 
@@ -11895,8 +12397,8 @@ msgstr "Limite de contas (opcional)"
 msgid "Note (only the team sees it)"
 msgstr "Observação (só a equipe vê)"
 
-#: templates/billing/staff_coupons.html:67
 #
+#: templates/billing/staff_coupons.html:67
 msgid "Create coupon"
 msgstr "Criar cupom"
 
@@ -11905,10 +12407,13 @@ msgid ""
 "A fixed amount on every charge comes off each month (twelve times on a "
 "yearly plan); on the first charge it comes off once. No charge goes below R$ "
 "5,00, the least Asaas charges."
-msgstr "Um valor fixo em todas as cobranças sai de cada mês (doze vezes no plano anual); na primeira cobrança, sai uma vez. Nenhuma cobrança fica abaixo de R$ 5,00, o mínimo que o Asaas cobra."
+msgstr ""
+"Um valor fixo em todas as cobranças sai de cada mês (doze vezes no plano "
+"anual); na primeira cobrança, sai uma vez. Nenhuma cobrança fica abaixo de "
+"R$ 5,00, o mínimo que o Asaas cobra."
 
-#: templates/billing/staff_coupons.html:84
 #
+#: templates/billing/staff_coupons.html:84
 msgid "Valid until"
 msgstr "Válido até"
 
@@ -11916,28 +12421,28 @@ msgstr "Válido até"
 msgid "Used"
 msgstr "Usos"
 
-#: templates/billing/staff_coupons.html:102
 #
+#: templates/billing/staff_coupons.html:102
 msgid "On"
 msgstr "Ativo"
 
-#: templates/billing/staff_coupons.html:102
 #
+#: templates/billing/staff_coupons.html:102
 msgid "Off"
 msgstr "Desativado"
 
-#: templates/billing/staff_coupons.html:108
 #
+#: templates/billing/staff_coupons.html:108
 msgid "Switch off"
 msgstr "Desativar"
 
-#: templates/billing/staff_coupons.html:108
 #
+#: templates/billing/staff_coupons.html:108
 msgid "Switch on"
 msgstr "Ativar"
 
-#: templates/billing/staff_coupons.html:118
 #
+#: templates/billing/staff_coupons.html:118
 msgid "No coupon yet. Create the first one above."
 msgstr "Nenhum cupom ainda. Crie o primeiro acima."
 
@@ -12379,7 +12884,7 @@ msgid "Event"
 msgstr "Evento"
 
 #: templates/billing/staff_subscriptions.html:264
-#: templates/billing/workspace_billing.html:223
+#: templates/billing/workspace_billing.html:226
 msgid "Amount"
 msgstr "Quantidade"
 
@@ -12418,65 +12923,15 @@ msgstr ""
 "faturado nem arrecadado, e os totais acima são o que seria faturado quando o "
 "provedor estiver configurado."
 
-#: templates/billing/subscribe_modal.html:23
+#: templates/billing/subscribe_modal.html:13
 msgid "Contract workspace"
 msgstr "Contratar marca"
 
-#: templates/billing/subscribe_modal.html:53
-msgid "Step 1 of 3 · Organization"
-msgstr "Passo 1 de 3 · Organização"
-
-#: templates/billing/subscribe_modal.html:54
-msgid "Welcome! Start with your organization"
-msgstr "Boas-vindas! Comece pela sua organização"
-
-#: templates/billing/subscribe_modal.html:55
-msgid ""
-"The organization is your company or agency. It holds your brands, your team "
-"and the billing data, and appears on invitations and invoices."
-msgstr ""
-"A organização é a sua empresa ou agência. Ela reúne as suas marcas, a equipe "
-"e os dados de cobrança, e aparece nos convites e nas faturas."
-
-#: templates/billing/subscribe_modal.html:57
-msgid "Name of your organization"
-msgstr "Nome da sua organização"
-
-#: templates/billing/subscribe_modal.html:59
-msgid "e.g. Sol Agency"
-msgstr "ex.: Agência Sol"
-
-#: templates/billing/subscribe_modal.html:79
-msgid "Step 2 of 3 · Brand"
-msgstr "Passo 2 de 3 · Marca"
-
-#: templates/billing/subscribe_modal.html:80
-msgid "Now your first brand"
-msgstr "Agora a sua primeira marca"
-
-#: templates/billing/subscribe_modal.html:81
-msgid ""
-"A brand is one business whose social networks you manage: your own or a "
-"client's. Each brand has its own accounts, calendar and inbox. You can add "
-"more later."
-msgstr ""
-"Uma marca é um negócio cujas redes sociais você gerencia: o seu ou o de um "
-"cliente. Cada marca tem as próprias contas, calendário e caixa de entrada. "
-"Você pode criar outras depois."
-
-#: templates/billing/subscribe_modal.html:83
-msgid "Name of your first brand"
-msgstr "Nome da sua primeira marca"
-
-#: templates/billing/subscribe_modal.html:89
-msgid "Continue to the plan"
-msgstr "Continuar para o plano"
-
-#: templates/billing/subscribe_modal.html:110
+#: templates/billing/subscribe_modal.html:38
 msgid "Waiting for the payment"
 msgstr "Aguardando o pagamento"
 
-#: templates/billing/subscribe_modal.html:113
+#: templates/billing/subscribe_modal.html:41
 #, python-format
 msgid ""
 "The subscription of %(name)s is contracted. Pay the invoice by Pix, boleto "
@@ -12486,11 +12941,7 @@ msgstr ""
 "A assinatura de %(name)s está contratada. Pague a fatura por Pix, boleto ou "
 "cartão: esta página abre a marca assim que o pagamento for confirmado."
 
-#: templates/billing/subscribe_modal.html:117
-msgid "Your free trial has ended"
-msgstr "Seu teste grátis terminou"
-
-#: templates/billing/subscribe_modal.html:120
+#: templates/billing/subscribe_modal.html:48
 #, python-format
 msgid ""
 "Everything you did in %(name)s is kept. Contract the subscription to carry "
@@ -12499,15 +12950,15 @@ msgstr ""
 "Tudo o que você fez em %(name)s continua guardado. Contrate a assinatura "
 "para seguir de onde parou."
 
-#: templates/billing/subscribe_modal.html:125
+#: templates/billing/subscribe_modal.html:53
 msgid "Step 3 of 3 · Plan"
 msgstr "Passo 3 de 3 · Plano"
 
-#: templates/billing/subscribe_modal.html:128
+#: templates/billing/subscribe_modal.html:56
 msgid "Activate this workspace"
 msgstr "Ativar esta marca"
 
-#: templates/billing/subscribe_modal.html:132
+#: templates/billing/subscribe_modal.html:60
 #, python-format
 msgid ""
 "The free trial of %(name)s runs until %(date)s. Contract now and nothing "
@@ -12516,35 +12967,35 @@ msgstr ""
 "O teste grátis de %(name)s vai até %(date)s. Contrate agora e nada para "
 "quando ele terminar."
 
-#: templates/billing/subscribe_modal.html:134
+#: templates/billing/subscribe_modal.html:62
 #, python-format
 msgid "%(name)s is ready. Contract the monthly subscription to start using it."
 msgstr ""
 "%(name)s está pronta. Contrate a assinatura mensal para começar a usar."
 
-#: templates/billing/subscribe_modal.html:136
+#: templates/billing/subscribe_modal.html:64
 #, python-format
 msgid "%(name)s is ready. Contract the monthly subscription to keep using it."
 msgstr ""
 "%(name)s está pronto. Contrate a assinatura mensal para continuar usando."
 
-#: templates/billing/subscribe_modal.html:150
-#: templates/billing/workspace_billing.html:94
+#: templates/billing/subscribe_modal.html:78
+#: templates/billing/workspace_billing.html:97
 #, python-format
 msgid "Yearly plan: R$ %(total)s charged once a year."
 msgstr "Plano anual: R$ %(total)s cobrados uma vez por ano."
 
-#: templates/billing/subscribe_modal.html:188
+#: templates/billing/subscribe_modal.html:116
 #, python-format
 msgid "R$ %(total)s charged once a year."
 msgstr "R$ %(total)s cobrados uma vez por ano."
 
-#: templates/billing/subscribe_modal.html:189
+#: templates/billing/subscribe_modal.html:117
 #, python-format
 msgid "You save R$ %(saving)s a year."
 msgstr "Você economiza R$ %(saving)s por ano."
 
-#: templates/billing/subscribe_modal.html:193
+#: templates/billing/subscribe_modal.html:121
 #, python-format
 msgid ""
 "Includes %(percent)s%% off: this is paid brand number %(position)s of your "
@@ -12553,24 +13004,24 @@ msgstr ""
 "Inclui %(percent)s%% de desconto: esta é a %(position)sª marca paga da sua "
 "conta."
 
-#: templates/billing/subscribe_modal.html:196
+#: templates/billing/subscribe_modal.html:124
 msgid "Per workspace. Every feature included."
 msgstr "Por marca. Todos os recursos incluídos."
 
-#: templates/billing/subscribe_modal.html:201
+#: templates/billing/subscribe_modal.html:129
 #, python-format
 msgid "%(limit)s GB of storage, with more available any time"
 msgstr "%(limit)s GB de armazenamento, com mais disponível a qualquer momento"
 
-#: templates/billing/subscribe_modal.html:205
+#: templates/billing/subscribe_modal.html:133
 msgid "Unlimited posts, channels, team members and clients"
 msgstr "Publicações, canais, membros da equipe e clientes ilimitados"
 
-#: templates/billing/subscribe_modal.html:209
+#: templates/billing/subscribe_modal.html:137
 msgid "Cancel whenever you want, no fee"
 msgstr "Cancele quando quiser, sem taxa"
 
-#: templates/billing/subscribe_modal.html:226
+#: templates/billing/subscribe_modal.html:154
 msgid ""
 "Payments are not connected on this installation yet, so pressing Contract "
 "records your request without charging anything. We will get in touch to "
@@ -12580,13 +13031,13 @@ msgstr ""
 "Contratar registra seu pedido sem cobrar nada. Entraremos em contato para "
 "concluí-lo."
 
-#: templates/billing/subscribe_modal.html:237
-#: templates/billing/workspace_billing.html:111
-#: templates/billing/workspace_billing.html:194
+#: templates/billing/subscribe_modal.html:165
+#: templates/billing/workspace_billing.html:114
+#: templates/billing/workspace_billing.html:197
 msgid "Open the invoice and pay"
 msgstr "Abrir a fatura e pagar"
 
-#: templates/billing/subscribe_modal.html:240
+#: templates/billing/subscribe_modal.html:168
 msgid ""
 "The invoice opens in another tab. Pix and card are confirmed in a few "
 "minutes; boleto can take up to three business days."
@@ -12594,7 +13045,7 @@ msgstr ""
 "A fatura abre em outra aba. Pix e cartão são confirmados em poucos minutos; "
 "o boleto pode levar até três dias úteis."
 
-#: templates/billing/subscribe_modal.html:244
+#: templates/billing/subscribe_modal.html:172
 msgid ""
 "The invoice is with whoever contracted this workspace. It opens for everyone "
 "once the payment is confirmed."
@@ -12603,32 +13054,32 @@ msgstr ""
 "pagamento for confirmado."
 
 #
-#: templates/billing/subscribe_modal.html:256
+#: templates/billing/subscribe_modal.html:184
 msgid "Contract with card"
 msgstr "Contratar com cartão"
 
-#: templates/billing/subscribe_modal.html:272
-#: templates/billing/subscribe_modal.html:278
+#: templates/billing/subscribe_modal.html:200
+#: templates/billing/subscribe_modal.html:206
 #, python-format
 msgid "Or try it free for %(days)s day"
 msgid_plural "Or try it free for %(days)s days"
 msgstr[0] "Ou teste grátis por %(days)s dia"
 msgstr[1] "Ou teste grátis por %(days)s dias"
 
-#: templates/billing/subscribe_modal.html:274
+#: templates/billing/subscribe_modal.html:202
 msgid ""
 "No card and no charge. When the trial ends, you decide whether to contract."
 msgstr ""
 "Sem cartão e sem cobrança. Quando o teste terminar, você decide se contrata."
 
-#: templates/billing/subscribe_modal.html:283
+#: templates/billing/subscribe_modal.html:211
 #, python-format
 msgid "Free trial for %(days)s day"
 msgid_plural "Free trial for %(days)s days"
 msgstr[0] "Teste grátis por %(days)s dia"
 msgstr[1] "Teste grátis por %(days)s dias"
 
-#: templates/billing/subscribe_modal.html:286
+#: templates/billing/subscribe_modal.html:214
 msgid ""
 "No card and no charge. Tell us who you are and start now; when the trial "
 "ends, you decide whether to contract."
@@ -12636,15 +13087,7 @@ msgstr ""
 "Sem cartão e sem cobrança. Diga quem você é e comece agora; quando o teste "
 "terminar, você decide se contrata."
 
-#: templates/billing/subscribe_modal.html:295
-msgid "Start free trial"
-msgstr "Começar o teste grátis"
-
-#: templates/billing/subscribe_modal.html:297
-msgid "One free trial per account, document, phone and email."
-msgstr "Um teste grátis por conta, documento, telefone e e-mail."
-
-#: templates/billing/subscribe_modal.html:304
+#: templates/billing/subscribe_modal.html:232
 msgid ""
 "Only a workspace owner or manager, or an organization admin, can contract a "
 "subscription. Ask one of them to activate this workspace."
@@ -12653,19 +13096,11 @@ msgstr ""
 "organização, pode contratar uma assinatura. Peça a uma dessas pessoas para "
 "ativar esta marca."
 
-#: templates/billing/subscribe_modal.html:312
-msgid "Back to the workspace"
-msgstr "Voltar para a marca"
-
-#: templates/billing/subscribe_modal.html:317
+#: templates/billing/subscribe_modal.html:245
 msgid "See my other brands"
 msgstr "Ver minhas outras marcas"
 
-#: templates/billing/subscribe_modal.html:327
-msgid "Decide later"
-msgstr "Decidir depois"
-
-#: templates/billing/subscribe_modal.html:336
+#: templates/billing/subscribe_modal.html:264
 msgid "See billing details"
 msgstr "Ver detalhes da cobrança"
 
@@ -12674,11 +13109,16 @@ msgstr "Ver detalhes da cobrança"
 msgid "Subscription and storage for %(name)s."
 msgstr "Assinatura e armazenamento de %(name)s."
 
-#: templates/billing/workspace_billing.html:42
+#
+#: templates/billing/workspace_billing.html:25
+msgid "Manage plan"
+msgstr "Gerenciar plano"
+
+#: templates/billing/workspace_billing.html:45
 msgid "Billing is not set up yet"
 msgstr "A cobrança ainda não está configurada"
 
-#: templates/billing/workspace_billing.html:44
+#: templates/billing/workspace_billing.html:47
 msgid ""
 "Payments are not connected on this installation, so nothing can be charged "
 "right now. You can still register what you want to contract and we will get "
@@ -12688,24 +13128,24 @@ msgstr ""
 "cobrado agora. Você ainda pode registrar o que quer contratar e entraremos "
 "em contato para concluir."
 
-#: templates/billing/workspace_billing.html:53
+#: templates/billing/workspace_billing.html:56
 #: templates/intelligence/billing_settings.html:28
 msgid "Subscription"
 msgstr "Assinatura"
 
-#: templates/billing/workspace_billing.html:63
+#: templates/billing/workspace_billing.html:66
 #, python-format
 msgid "Free trial until %(date)s. Contract before then and nothing stops."
 msgstr "Teste grátis até %(date)s. Contrate antes disso e nada para."
 
-#: templates/billing/workspace_billing.html:67
+#: templates/billing/workspace_billing.html:70
 msgid ""
 "The free trial has ended. Contract the subscription to use this workspace "
 "again."
 msgstr ""
 "O teste grátis terminou. Contrate a assinatura para voltar a usar esta marca."
 
-#: templates/billing/workspace_billing.html:71
+#: templates/billing/workspace_billing.html:74
 msgid ""
 "This workspace has no subscription yet. It activates once the first payment "
 "is confirmed."
@@ -12713,87 +13153,87 @@ msgstr ""
 "Esta marca ainda não tem assinatura. Ela é ativada quando o primeiro "
 "pagamento for confirmado."
 
-#: templates/billing/workspace_billing.html:75
+#: templates/billing/workspace_billing.html:78
 msgid "This workspace is a courtesy and is not charged."
 msgstr "Esta marca é cortesia e não é cobrada."
 
-#: templates/billing/workspace_billing.html:80
+#: templates/billing/workspace_billing.html:83
 msgid ""
 "The last payment failed. Access returns as soon as the payment goes through."
 msgstr ""
 "O último pagamento falhou. O acesso volta assim que o pagamento for aprovado."
 
-#: templates/billing/workspace_billing.html:86
+#: templates/billing/workspace_billing.html:89
 msgid "Monthly total"
 msgstr "Total mensal"
 
-#: templates/billing/workspace_billing.html:91
+#: templates/billing/workspace_billing.html:94
 #, python-format
 msgid "R$ %(price)s for the workspace"
 msgstr "R$ %(price)s pela marca"
 
-#: templates/billing/workspace_billing.html:92
+#: templates/billing/workspace_billing.html:95
 msgid "add-ons"
 msgstr "adicionais"
 
-#: templates/billing/workspace_billing.html:102
+#: templates/billing/workspace_billing.html:105
 #: templates/intelligence/billing_settings.html:80
 msgid "Current period ends"
 msgstr "O período atual termina em"
 
-#: templates/billing/workspace_billing.html:118
+#: templates/billing/workspace_billing.html:121
 msgid "Contract this workspace"
 msgstr "Contratar esta marca"
 
-#: templates/billing/workspace_billing.html:130
+#: templates/billing/workspace_billing.html:133
 msgid "Storage"
 msgstr "Armazenamento"
 
-#: templates/billing/workspace_billing.html:134
+#: templates/billing/workspace_billing.html:137
 msgid ""
 "Files uploaded to this workspace's gallery count against this allowance."
 msgstr "Os arquivos enviados para a galeria desta marca contam nesta cota."
 
-#: templates/billing/workspace_billing.html:138
+#: templates/billing/workspace_billing.html:141
 #, python-format
 msgid "<span class=\"font-semibold\">%(used)s GB</span> of %(limit)s GB used"
 msgstr ""
 "<span class=\"font-semibold\">%(used)s GB</span> de %(limit)s GB em uso"
 
-#: templates/billing/workspace_billing.html:163
+#: templates/billing/workspace_billing.html:166
 msgid "No space left. Delete files you no longer need, or contract more below."
 msgstr ""
 "Sem espaço. Exclua arquivos que você não precisa mais ou contrate mais "
 "abaixo."
 
-#: templates/billing/workspace_billing.html:165
+#: templates/billing/workspace_billing.html:168
 #, python-format
 msgid "%(remaining)s GB left. Delete old files, or contract more below."
 msgstr ""
 "Restam %(remaining)s GB. Exclua arquivos antigos ou contrate mais abaixo."
 
-#: templates/billing/workspace_billing.html:167
+#: templates/billing/workspace_billing.html:170
 #, python-format
 msgid "%(remaining)s GB available."
 msgstr "%(remaining)s GB disponíveis."
 
-#: templates/billing/workspace_billing.html:173
+#: templates/billing/workspace_billing.html:176
 msgid "Extra storage contracted"
 msgstr "Espaço extra contratado"
 
-#: templates/billing/workspace_billing.html:178
-#: templates/billing/workspace_billing.html:230
+#: templates/billing/workspace_billing.html:181
+#: templates/billing/workspace_billing.html:233
 #, python-format
 msgid "%(gb_amount)s GB"
 msgstr "%(gb_amount)s GB"
 
-#: templates/billing/workspace_billing.html:189
+#: templates/billing/workspace_billing.html:192
 msgid "Space is released once each add-on's first payment is confirmed."
 msgstr ""
 "O espaço é liberado quando o primeiro pagamento de cada adicional for "
 "confirmado."
 
-#: templates/billing/workspace_billing.html:208
+#: templates/billing/workspace_billing.html:211
 #, python-format
 msgid ""
 "R$ %(price)s per GB per month. Choose how much you need — the price updates "
@@ -12802,19 +13242,19 @@ msgstr ""
 "R$ %(price)s por GB por mês. Escolha quanto você precisa — o preço é "
 "atualizado antes de você confirmar."
 
-#: templates/billing/workspace_billing.html:236
+#: templates/billing/workspace_billing.html:239
 msgid "Or type another amount (GB)"
 msgstr "Ou digite outra quantidade (GB)"
 
-#: templates/billing/workspace_billing.html:248
+#: templates/billing/workspace_billing.html:251
 msgid "GB per month"
 msgstr "GB por mês"
 
-#: templates/billing/workspace_billing.html:269
+#: templates/billing/workspace_billing.html:272
 msgid "Confirm and contract"
 msgstr "Confirmar e contratar"
 
-#: templates/billing/workspace_billing.html:272
+#: templates/billing/workspace_billing.html:275
 msgid "Billed monthly, on an invoice of its own, starting today."
 msgstr "Cobrado todo mês, em fatura própria, a partir de hoje."
 
@@ -14240,23 +14680,6 @@ msgstr "Conteúdo da publicação"
 #: templates/composer/compose.html:623
 msgid "What would you like to share?"
 msgstr "O que você quer compartilhar?"
-
-#: templates/composer/compose.html:656
-#: templates/composer/create_landing.html:495
-#: templates/composer/create_landing.html:681
-#: templates/composer/partials/_tag_groups.html:200
-#: templates/composer/partials/template_gallery.html:214
-#: templates/funnels/partials/_pick_conversation.html:21
-#: templates/social_accounts/list.html:141
-#: templates/social_accounts/list.html:143
-#: templates/social_accounts/list.html:148
-#: templates/social_accounts/partials/_posting_slots_grid.html:116
-#: templates/tasks/partials/_column.html:78
-#: templates/tasks/partials/_new_item_modal.html:171
-#: templates/tasks/partials/_new_item_options.html:59
-#: templates/tasks/partials/_task_modal.html:209
-msgid "Add"
-msgstr "Adicionar"
 
 #: templates/composer/compose.html:659 templates/composer/compose.html:2182
 msgid "Search Unsplash"
@@ -18952,11 +19375,6 @@ msgstr "Cobrança do Intelligence"
 msgid "Intelligence subscription for %(org_name)s."
 msgstr "Assinatura do Intelligence para %(org_name)s."
 
-#: templates/intelligence/billing_settings.html:32
-#: templates/intelligence/playground.html:18
-msgid "Plan"
-msgstr "Plano"
-
 #: templates/intelligence/billing_settings.html:52
 msgid "canceling"
 msgstr "cancelando"
@@ -19990,10 +20408,6 @@ msgid ""
 msgstr ""
 "Por segurança, os links de conexão têm prazo de validade. Sua agência pode "
 "gerar um novo a qualquer momento."
-
-#: templates/onboarding/connection_page.html:4
-msgid "Connect your accounts"
-msgstr "Conecte suas contas"
 
 #: templates/onboarding/connection_page.html:30
 #: templates/onboarding/email/connection_link.html:3
@@ -22662,6 +23076,104 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 msgid "Send invitation"
 msgstr "Enviar convite"
 
+#
+#
+#~ msgid "New brand"
+#~ msgstr "Nova marca"
+
+#, python-format
+#~ msgid "Your free trial is on until %(date)s. Enjoy!"
+#~ msgstr "Seu teste grátis vai até %(date)s. Aproveite!"
+
+#~ msgid "Payment confirmed. Your brands are active."
+#~ msgstr "Pagamento confirmado. Suas marcas estão ativas."
+
+#~ msgid "Choose more brands than the plan has today."
+#~ msgstr "Escolha mais marcas do que o plano tem hoje."
+
+#, python-format
+#~ msgid "Coupon %(code)s applied to every charge."
+#~ msgstr "Cupom %(code)s aplicado em todas as cobranças."
+
+#, python-format
+#~ msgid "Coupon %(code)s: R$ %(first)s today, then the price above."
+#~ msgstr "Cupom %(code)s: R$ %(first)s hoje e, depois, o valor acima."
+
+#, python-format
+#~ msgid ""
+#~ "New value for %(brands)s brand, from the next charge to the card on the "
+#~ "plan."
+#~ msgid_plural ""
+#~ "New value for %(brands)s brands, from the next charge to the card on the "
+#~ "plan."
+#~ msgstr[0] ""
+#~ "Novo valor para %(brands)s marca, a partir da próxima cobrança no cartão "
+#~ "do plano."
+#~ msgstr[1] ""
+#~ "Novo valor para %(brands)s marcas, a partir da próxima cobrança no cartão "
+#~ "do plano."
+
+#, python-format
+#~ msgid "%(brands)s brand, every feature included."
+#~ msgid_plural "%(brands)s brands, every feature included."
+#~ msgstr[0] "%(brands)s marca, todos os recursos incluídos."
+#~ msgstr[1] "%(brands)s marcas, todos os recursos incluídos."
+
+#
+#~ msgid "Checkout"
+#~ msgstr "Finalizar contratação"
+
+#, python-format
+#~ msgid "Your plan has %(brands)s brand. How many do you want?"
+#~ msgid_plural "Your plan has %(brands)s brands. How many do you want?"
+#~ msgstr[0] "Seu plano tem %(brands)s marca. Quantas você quer?"
+#~ msgstr[1] "Seu plano tem %(brands)s marcas. Quantas você quer?"
+
+#
+#~ msgid "Number of brands"
+#~ msgstr "Número de marcas"
+
+#
+#~ msgid "Confirming the payment…"
+#~ msgstr "Confirmando o pagamento…"
+
+#~ msgid "Step 1 of 3 · Organization"
+#~ msgstr "Passo 1 de 3 · Organização"
+
+#~ msgid "Welcome! Start with your organization"
+#~ msgstr "Boas-vindas! Comece pela sua organização"
+
+#~ msgid ""
+#~ "The organization is your company or agency. It holds your brands, your "
+#~ "team and the billing data, and appears on invitations and invoices."
+#~ msgstr ""
+#~ "A organização é a sua empresa ou agência. Ela reúne as suas marcas, a "
+#~ "equipe e os dados de cobrança, e aparece nos convites e nas faturas."
+
+#~ msgid "Name of your organization"
+#~ msgstr "Nome da sua organização"
+
+#~ msgid "Step 2 of 3 · Brand"
+#~ msgstr "Passo 2 de 3 · Marca"
+
+#~ msgid "Now your first brand"
+#~ msgstr "Agora a sua primeira marca"
+
+#~ msgid ""
+#~ "A brand is one business whose social networks you manage: your own or a "
+#~ "client's. Each brand has its own accounts, calendar and inbox. You can "
+#~ "add more later."
+#~ msgstr ""
+#~ "Uma marca é um negócio cujas redes sociais você gerencia: o seu ou o de "
+#~ "um cliente. Cada marca tem as próprias contas, calendário e caixa de "
+#~ "entrada. Você pode criar outras depois."
+
+#~ msgid "Name of your first brand"
+#~ msgstr "Nome da sua primeira marca"
+
+#~ msgid "Continue to the plan"
+#~ msgstr "Continuar para o plano"
+
 #~ msgid ""
 #~ "Sign up for Connekt Flow | Schedule posts and run approvals across 10+ "
 #~ "platforms."
@@ -22694,9 +23206,6 @@ msgstr "Enviar convite"
 
 #~ msgid "Capture a content idea"
 #~ msgstr "Registrar uma ideia de conteúdo"
-
-#~ msgid "Pick its day on the calendar"
-#~ msgstr "Escolha o dia no calendário"
 
 #~ msgid "Drag &amp; drop"
 #~ msgstr "Arraste e solte"
@@ -22858,9 +23367,6 @@ msgstr "Enviar convite"
 
 #~ msgid "Another to-do"
 #~ msgstr "Outra tarefa"
-
-#~ msgid "E.g. Approve with the client"
-#~ msgstr "Ex.: Aprovar com o cliente"
 
 #~ msgid "Moti, the Connekt Flow robot, puzzled by a broken link"
 #~ msgstr "Moti, o robô do Connekt Flow, intrigado com um link quebrado"
@@ -23102,14 +23608,8 @@ msgstr "Enviar convite"
 #~ msgid "Welcome! Let's set up your account"
 #~ msgstr "Boas-vindas! Vamos preparar a sua conta"
 
-#~ msgid "Two names and you are in. Both can be changed later."
-#~ msgstr "Dois nomes e você já entra. Os dois podem ser alterados depois."
-
 #~ msgid "Your plan, the brands you pay for and their payments."
 #~ msgstr "Seu plano, as marcas que você paga e os pagamentos delas."
-
-#~ msgid "Active plan"
-#~ msgstr "Plano ativo"
 
 #~ msgid "Billing data"
 #~ msgstr "Dados de cobrança"
@@ -23368,10 +23868,6 @@ msgstr "Enviar convite"
 
 #~ msgid "Sources connected to the Radar."
 #~ msgstr "Fontes conectadas ao Radar."
-
-#, python-format
-#~ msgid "Shopee Affiliates offer: %(name)s"
-#~ msgstr "Oferta da Shopee Afiliados: %(name)s"
 
 #, python-format
 #~ msgid "Estimated commission: %(amount)s"

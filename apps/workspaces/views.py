@@ -15,12 +15,12 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from apps.analytics.metrics import PLATFORM_PRIMARY
-from apps.billing import services
 from apps.common.htmx import toast_response
 from apps.common.periods import parse_period
 from apps.media_library.services import schedule_stored_file_removal, tenant_stored_files
 from apps.members.decorators import require_workspace_role
 from apps.members.models import OrgMembership, WorkspaceMembership
+from apps.workspaces.services import create_brand
 
 from . import dashboard
 from .models import Workspace
@@ -65,28 +65,14 @@ def workspace_create(request):
     if membership is None or membership.org_role not in (OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN):
         raise PermissionDenied("Insufficient organization role.")
 
-    workspace = Workspace.objects.create(
-        organization=membership.organization,
-        name=name,
-    )
-
-    WorkspaceMembership.objects.create(
-        user=request.user,
-        workspace=workspace,
-        workspace_role=WorkspaceMembership.WorkspaceRole.OWNER,
-    )
+    workspace = create_brand(membership.organization, name, request.user)
 
     # Set as current workspace
     request.user.last_workspace_id = workspace.id
     request.user.save(update_fields=["last_workspace_id"])
 
     # A new workspace is the billable unit, so the next screen is the
-    # contracting modal rather than the calendar. ``ensure_subscription``
-    # runs here (not only in the modal) so the row exists even if the
-    # creator closes the tab — the staff console and the storage quota
-    # both read it, and a workspace with no row at all reads as having no
-    # quota at all.
-    services.ensure_subscription(workspace)
+    # contracting page rather than the calendar.
     return redirect("billing:subscribe_modal", workspace_id=workspace.id)
 
 

@@ -53,6 +53,9 @@ CYCLE_YEARLY = "YEARLY"
 # UNDEFINED as exactly that choice.
 BILLING_TYPE_UNDEFINED = "UNDEFINED"
 
+#: How long a card charge may take before it is given up as unknown.
+CARD_CHARGE_TIMEOUT_SECONDS = 60
+
 
 class AsaasError(Exception):
     """Any failure talking to Asaas. Base of everything below."""
@@ -126,7 +129,7 @@ class AsaasClient:
 
     # -- plumbing ---------------------------------------------------------
 
-    def _request(self, method, path, *, json=None, params=None):
+    def _request(self, method, path, *, json=None, params=None, timeout=None):
         """Perform one Asaas call and return its decoded body.
 
         Refuses to leave the process without a key: firing the request
@@ -144,7 +147,7 @@ class AsaasClient:
                 url,
                 json=json,
                 params=params,
-                timeout=self.timeout,
+                timeout=timeout or self.timeout,
                 headers={
                     # Asaas authenticates on this bespoke header. It is
                     # never logged — see the except branches below, which
@@ -374,6 +377,9 @@ class AsaasClient:
             "POST",
             f"/payments/{payment_id}/payWithCreditCard",
             json={"creditCard": card, "creditCardHolderInfo": holder, "remoteIp": remote_ip},
+            # The card network is slower than the rest of the API (the sandbox
+            # took over 20 s), and a timeout here leaves the charge unknown.
+            timeout=max(self.timeout, CARD_CHARGE_TIMEOUT_SECONDS),
         )
 
     def cancel_subscription(self, subscription_id):
