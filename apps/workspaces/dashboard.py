@@ -13,8 +13,10 @@ from typing import Any
 
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.translation import gettext_noop
 
 from apps.analytics import services as analytics
+from apps.analytics.metrics import METRICS, PLATFORM_METRICS
 from apps.composer.models import PlatformPost
 from apps.social_accounts.models import SocialAccount
 
@@ -106,23 +108,41 @@ def month_goal_progress(workspace, today: date, tz) -> dict[str, Any]:
 
 
 def network_card(account: SocialAccount, days: int, end: date | None = None) -> dict[str, Any]:
-    """One account's headline numbers for the "By network" row: followers, the
-    platform's primary metric and the engagement rate, each with its change
-    against the previous period when the platform gives one. The period is the
-    ``days`` days ending on ``end`` (today when ``None``)."""
+    """One account's headline numbers for the "By network" row.
+
+    ``stats`` holds up to three of them, chosen from what the platform itself
+    reports: its audience total when it has one (subscribers on YouTube, none
+    on Google Business), its primary metric, then the engagement rate when
+    there is something to divide by, and otherwise the platform's next metrics
+    (watch time on YouTube, clicks on Google Business). Each one carries
+    ``derived`` — value and change against the previous period — except the
+    audience total, which is a number of today. The period is the ``days`` days
+    ending on ``end`` (today when ``None``).
+    """
     # Set by analytics.services.analytics_accounts, which the accounts come from.
     if getattr(account, "analytics_verdict", None) is not None:
         return {"account": account, "available": False, "reason": getattr(account, "analytics_unavailable_reason", "")}
+    catalog = PLATFORM_METRICS.get(account.platform, [])
     bundle = analytics.account_analytics_bundle(account, days, end)
-    chart = analytics.hero_chart_data(account, days, bundle=bundle, end=end)
+    primary = analytics.hero_chart_data(account, days, bundle=bundle, end=end)
     engagement = analytics.engagement_card(account, days, bundle=bundle)
-    return {
-        "account": account,
-        "available": True,
-        "followers": account.follower_count,
-        "primary": chart,
-        "engagement": engagement["rate"] if engagement and engagement["rate"].denominator else None,
-    }
+
+    stats: list[dict[str, Any]] = []
+    audience = next((m for m in ("subscribers", "follows", "followers") if m in catalog), None)
+    if audience:
+        label = METRICS["subscribers" if audience == "subscribers" else "followers"]["label"]
+        stats.append({"label": label, "value": account.follower_count, "derived": None})
+    if primary["metric"]:
+        stats.append({"label": primary["label"], "derived": primary["derived"]})
+    if engagement and engagement["rate"].denominator:
+        stats.append({"label": gettext_noop("Engagement"), "derived": engagement["rate"]})
+    others = analytics.hero_cards(account, days, bundle=bundle, end=end) + (engagement["parts"] if engagement else [])
+    stats.extend(
+        {"label": other["label"], "derived": other["derived"]}
+        for other in others
+        if other["metric"] != primary["metric"]
+    )
+    return {"account": account, "available": True, "stats": stats[:3]}
 
 
 def my_open_tasks(workspace, user, today: date, limit: int = 5) -> dict[str, Any]:

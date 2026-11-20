@@ -314,7 +314,17 @@ def _account_metrics_to_dict(metrics, platform: str) -> dict[str, float]:
         if total_followers is not None:
             out["followers"] = float(total_followers)
     extra = getattr(metrics, "extra", {}) or {}
-    for key in ("views", "watch_time", "avg_view_pct", "subscribers", "likes", "comments", "shares"):
+    for key in (
+        "views",
+        "watch_time",
+        "avg_view_pct",
+        "subscribers",
+        "likes",
+        "comments",
+        "shares",
+        "replies",
+        "reposts",
+    ):
         v = extra.get(key)
         if v is not None:
             with contextlib.suppress(TypeError, ValueError):
@@ -575,6 +585,13 @@ def _write_post_snapshot(
 # API call when today is the only missing day.
 _ACCOUNT_METRICS_RECENT_DAYS = 3
 
+# A day is first read while it is still running — the hourly sync writes its
+# rows minutes after midnight — so what is stored then is the start of the day,
+# not the day. Once the day has been over for this long it is read one more
+# time, and that read is the one that stays. The margin covers the platforms
+# that close a day on their own clock (Threads: midnight Pacific).
+_ACCOUNT_DAY_SETTLES_AFTER = timedelta(hours=12)
+
 # Earliest plausible startDate for a YouTube Analytics ``/reports`` query —
 # YouTube launched 2005-02-14, so any channel's creation date is on or after
 # this. Used as the lower bound when fetching LIFETIME per-video metrics so
@@ -599,6 +616,28 @@ def _needs_empty_follower_count_refresh(account) -> bool:
     return account.follower_count <= 0 and account.platform in _FOLLOWER_TOTAL_REFRESH_PLATFORMS
 
 
+def _account_day_awaits_final_read(account, day: dt_date, now) -> bool:
+    """True when ``day`` is over, has rows, and none was read after it settled."""
+    from datetime import datetime, time
+
+    from django.db.models import Max
+
+    from .models import AccountInsightsSnapshot
+
+    settled_at = datetime.combine(day, time.max, tzinfo=timezone.get_current_timezone()) + _ACCOUNT_DAY_SETTLES_AFTER
+    if now < settled_at:
+        return False
+    last_read = AccountInsightsSnapshot.objects.filter(social_account=account, date=day).aggregate(
+        last=Max("captured_at")
+    )["last"]
+    return last_read is not None and last_read < settled_at
+
+
+def _recent_account_days(provider) -> int:
+    """How many days back the account sync looks: one for a provider that only reports lifetime totals."""
+    return _ACCOUNT_METRICS_RECENT_DAYS if getattr(provider, "account_metrics_supports_date_range", True) else 1
+
+
 def _sync_account_metrics(
     account,
     on_date: dt_date,
@@ -611,9 +650,9 @@ def _sync_account_metrics(
     """Fetch account-level metrics for ``on_date`` and any recent missing days.
 
     Walks ``on_date`` and the prior ``_ACCOUNT_METRICS_RECENT_DAYS - 1`` days,
-    skipping days that already have an :class:`AccountInsightsSnapshot`. For
-    providers without lag (Instagram, Facebook) this is a no-op past
-    ``on_date`` because the existing rows short-circuit the iteration.
+    skipping days that already have an :class:`AccountInsightsSnapshot` —
+    except a finished day whose rows were all read while it was still running,
+    which is read once more (:func:`_account_day_awaits_final_read`).
 
     ``force_today`` re-fetches ``on_date`` even when its rows already exist.
     One-shot backfills pass it because they run at the moments the token's
@@ -663,7 +702,8 @@ def _sync_account_metrics(
     # historical observations — that fabricates fake history. Run only the
     # current day for them; backfill of true historical values is impossible
     # without an API that supports it.
-    recent_days = _ACCOUNT_METRICS_RECENT_DAYS if getattr(provider, "account_metrics_supports_date_range", True) else 1
+    recent_days = _recent_account_days(provider)
+    now = timezone.now()
     # ``followers`` is a live point-in-time total: the provider returns the
     # current count regardless of the requested window, so it is valid only for
     # the day the sync runs. Capture it from whichever offset returns it (so a
@@ -675,7 +715,8 @@ def _sync_account_metrics(
         target = on_date - timedelta(days=offset)
         has_rows_for_day = AccountInsightsSnapshot.objects.filter(social_account=account, date=target).exists()
         needs_current_day_refetch = target == on_date and (force_today or _needs_empty_follower_count_refresh(account))
-        if has_rows_for_day and not needs_current_day_refetch:
+        final_read = target < on_date and _account_day_awaits_final_read(account, target, now)
+        if has_rows_for_day and not needs_current_day_refetch and not final_read:
             continue
         start = datetime.combine(target, time.min, tzinfo=tz)
         end = datetime.combine(target, time.max, tzinfo=tz)
@@ -709,6 +750,11 @@ def _sync_account_metrics(
             raw=extra.get("raw_insights", {}),
             errors=extra.get("insight_errors", {}),
         )
+        if final_read:
+            # A metric the platform no longer reports for the day keeps its
+            # row; marking the whole day as read stops it being asked for again
+            # every hour.
+            AccountInsightsSnapshot.objects.filter(social_account=account, date=target).update(captured_at=now)
 
     if current_followers is not None and "followers" in PLATFORM_METRICS.get(account.platform, []):
         # Live total → on_date only, idempotently: recovers a value fetched at a
@@ -1408,8 +1454,12 @@ def _sync_one_account(account, on_date, now, *, cache, force_today=False, deadli
                     end_date=report_end,
                     captured_at__gte=now - timedelta(hours=24),
                 ).exists()
+            awaits_final_read = account.platform != "youtube" and any(
+                _account_day_awaits_final_read(account, on_date - timedelta(days=offset), now)
+                for offset in range(1, _recent_account_days(provider))
+            )
             if not account.analytics_needs_reconnect and (
-                force_today or not has_today_rows or _needs_empty_follower_count_refresh(account)
+                force_today or not has_today_rows or awaits_final_read or _needs_empty_follower_count_refresh(account)
             ):
                 try:
                     _sync_account_metrics(

@@ -1,7 +1,7 @@
 {% load i18n static analytics_extras %}
 {% comment %}
-The "By network" cards of the dashboard: followers, the platform's primary
-metric and engagement for every connected account. Each card recomputes that
+The "By network" cards of the dashboard: up to three headline numbers of every
+connected account, chosen per platform (dashboard.network_card). Each card recomputes that
 account's analytics, so the dashboard shows first and this row loads after
 (workspace_dashboard with partial=networks).
 {% endcomment %}
@@ -22,20 +22,17 @@ account's analytics, so the dashboard shows first and this row loads after
         </div>
         {% if card.available %}
         <dl class="grid grid-cols-3 gap-2">
+            {% for stat in card.stats %}
             <div class="min-w-0">
-                <dt class="text-xs text-neutral-600">{% translate "Followers" %}</dt>
-                <dd class="text-lg font-bold text-neutral-950">{{ card.followers|fmt_metric }}</dd>
+                <dt class="text-xs text-neutral-600 truncate">{% translate stat.label %}</dt>
+                {% if stat.derived %}
+                <dd class="text-lg font-bold text-neutral-950">{% if stat.derived.available %}{{ stat.derived.value|fmt_metric:stat.derived.kind }}{% else %}—{% endif %}</dd>
+                {% if stat.derived.available and stat.derived.comparison_available %}<dd>{% include "analytics/_delta_chip.html" with delta=stat.derived.delta %}</dd>{% endif %}
+                {% else %}
+                <dd class="text-lg font-bold text-neutral-950">{{ stat.value|fmt_metric }}</dd>
+                {% endif %}
             </div>
-            <div class="min-w-0">
-                <dt class="text-xs text-neutral-600 truncate">{% translate card.primary.label %}</dt>
-                <dd class="text-lg font-bold text-neutral-950">{% if card.primary.derived.available %}{{ card.primary.derived.value|fmt_metric:card.primary.derived.kind }}{% else %}—{% endif %}</dd>
-                {% if card.primary.derived.available and card.primary.derived.comparison_available %}<dd>{% include "analytics/_delta_chip.html" with delta=card.primary.derived.delta %}</dd>{% endif %}
-            </div>
-            <div class="min-w-0">
-                <dt class="text-xs text-neutral-600">{% translate "Engagement" %}</dt>
-                <dd class="text-lg font-bold text-neutral-950">{% if card.engagement %}{{ card.engagement.value|fmt_metric:"percent" }}{% else %}—{% endif %}</dd>
-                {% if card.engagement and card.engagement.comparison_available %}<dd>{% include "analytics/_delta_chip.html" with delta=card.engagement.delta %}</dd>{% endif %}
-            </div>
+            {% endfor %}
         </dl>
         {% else %}
         <p class="text-xs text-neutral-600">{{ card.reason }}</p>

@@ -189,3 +189,94 @@ class TestInboxReplies:
         assert create.args[:2] == ("POST", "https://graph.threads.net/v1.0/U1/threads")
         assert create.kwargs["data"] == {"media_type": "TEXT", "text": "Temos sim!", "reply_to_id": "R1"}
         assert result.platform_message_id == "R-out"
+
+
+class TestProfileInsights:
+    DAY = (datetime(2026, 11, 19, tzinfo=UTC), datetime(2026, 11, 19, 23, 59, 59, tzinfo=UTC))
+
+    @staticmethod
+    def _day_insights():
+        return _response(
+            {
+                "data": [
+                    {
+                        "name": "views",
+                        "period": "day",
+                        "values": [
+                            {"value": 3, "end_time": "2026-11-18T08:00:00+0000"},
+                            {"value": 8, "end_time": "2026-11-19T08:00:00+0000"},
+                        ],
+                    },
+                    {"name": "likes", "period": "day", "total_value": {"value": 1}},
+                    {"name": "replies", "period": "day", "total_value": {"value": 2}},
+                ]
+            }
+        )
+
+    @patch.object(ThreadsProvider, "_request")
+    def test_a_past_day_reads_its_own_views_and_the_totals_without_the_follower_total(self, mock_request):
+        mock_request.return_value = self._day_insights()
+
+        metrics = ThreadsProvider(CREDENTIALS).get_account_metrics("token", self.DAY)
+
+        (call,) = mock_request.call_args_list
+        assert call.args[:2] == ("GET", "https://graph.threads.net/v1.0/me/threads_insights")
+        assert call.kwargs["params"] == {
+            "metric": "views,likes,replies,reposts,quotes",
+            "since": int(self.DAY[0].timestamp()),
+            "until": int(self.DAY[1].timestamp()),
+        }
+        # The neighbouring day Threads sends along is not added to this one.
+        assert metrics.extra["views"] == 8
+        assert (metrics.extra["likes"], metrics.extra["replies"], metrics.extra["reposts"]) == (1, 2, 0)
+        assert metrics.followers is None
+
+    @patch.object(ThreadsProvider, "_request")
+    def test_a_range_that_reaches_now_also_reads_the_follower_total(self, mock_request):
+        mock_request.side_effect = [
+            self._day_insights(),
+            _response({"data": [{"name": "followers_count", "period": "day", "total_value": {"value": 34}}]}),
+        ]
+        now = datetime.now(UTC)
+
+        metrics = ThreadsProvider(CREDENTIALS).get_account_metrics(
+            "token", (now.replace(hour=0), now.replace(hour=23, minute=59))
+        )
+
+        assert mock_request.call_args_list[1].kwargs["params"] == {"metric": "followers_count"}
+        assert metrics.followers == 34
+
+    @patch.object(ThreadsProvider, "_request")
+    def test_the_history_is_the_views_of_each_day(self, mock_request):
+        mock_request.return_value = self._day_insights()
+
+        series = ThreadsProvider(CREDENTIALS).get_account_metrics_series("token", self.DAY)
+
+        assert series == {"views": {"2026-11-18": 3.0, "2026-11-19": 8.0}}
+
+
+class TestExistingPosts:
+    @patch.object(ThreadsProvider, "_request")
+    def test_the_profile_s_own_posts_are_listed_without_the_reposts(self, mock_request):
+        mock_request.return_value = _response(
+            {
+                "data": [
+                    {
+                        "id": "P1",
+                        "text": "Oi",
+                        "timestamp": "2026-11-19T22:03:22+0000",
+                        "permalink": "https://www.threads.com/@loja/post/abc",
+                        "media_type": "IMAGE",
+                        "media_url": "https://cdn.example/p1.jpg",
+                    },
+                    {"id": "P2", "media_type": "REPOST_FACADE"},
+                ]
+            }
+        )
+
+        (post,) = ThreadsProvider(CREDENTIALS).list_existing_posts("token")
+
+        assert mock_request.call_args.args[:2] == ("GET", "https://graph.threads.net/v1.0/me/threads")
+        assert (post.platform_post_id, post.caption, post.media_kind) == ("P1", "Oi", "image")
+        assert post.published_at == datetime(2026, 11, 19, 22, 3, 22, tzinfo=UTC)
+        assert post.thumbnail_url == "https://cdn.example/p1.jpg"

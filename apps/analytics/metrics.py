@@ -64,8 +64,10 @@ PLATFORM_METRICS: dict[str, list[str]] = {
     "tiktok": ["views", "likes", "comments", "shares", "engagement"],
     # Bluesky / AT Protocol post aggregates: like, repost, reply counts (no impressions/views).
     "bluesky": ["likes", "reposts", "replies", "follows"],
-    # Threads insights: views, likes, replies, reposts; account follower growth.
-    "threads": ["views", "likes", "replies", "reposts", "follows"],
+    # Threads insights: views, likes, replies, reposts. ``followers`` is the
+    # profile's total: Threads reports no daily follows, so growth is the
+    # difference between the totals stored day by day.
+    "threads": ["views", "likes", "replies", "reposts", "followers"],
     # Pinterest pin analytics: impressions, saves, pin clicks, outbound clicks, engagement.
     "pinterest": ["impressions", "saves", "clicks", "outbound", "engagement"],
     # Google Business Profile performance: search/map impressions, clicks, calls, directions.

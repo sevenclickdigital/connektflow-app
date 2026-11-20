@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from urllib.parse import urlencode
 
 from .base import SocialProvider
 from .exceptions import OAuthError, ProviderError, PublishError
+from .meta_history import walk_history
 from .types import (
+    AccountMetrics,
     AccountProfile,
     AuthType,
     CommentResult,
+    ExistingPost,
     InboxMessage,
     MediaType,
     OAuthTokens,
@@ -33,6 +36,8 @@ REPLY_PAGES_PER_POST = 4
 # Read a little behind the last reply stored, so one that the platform listed
 # late is not skipped; the inbox drops what it already has.
 REPLY_POLL_OVERLAP = timedelta(minutes=10)
+# The profile metrics Threads answers for a date range.
+PROFILE_DAY_METRICS = "views,likes,replies,reposts,quotes"
 REPLY_FIELDS = (
     "id,text,username,timestamp,permalink,media_type,media_url,thumbnail_url,"
     "root_post,replied_to,is_reply_owned_by_me,profile_picture_url"
@@ -83,6 +88,25 @@ def inbox_reply(item: dict, post_id: str, post_permalink: str, stamp: datetime |
             "sender_avatar_url": str(item.get("profile_picture_url") or ""),
             "attachments": attachments,
         },
+    )
+
+
+def _existing_post(entry: dict) -> ExistingPost | None:
+    """A post of the profile's timeline, or None for a repost or an entry without id."""
+    post_id = str(entry.get("id") or "")
+    media_type = str(entry.get("media_type") or "")
+    if not post_id or media_type == "REPOST_FACADE":
+        return None
+    media_url = entry.get("media_url") or ""
+    return ExistingPost(
+        platform_post_id=post_id,
+        caption=str(entry.get("text") or "").strip(),
+        published_at=reply_timestamp(entry.get("timestamp")),
+        permalink=entry.get("permalink") or "",
+        media_url=media_url,
+        thumbnail_url=entry.get("thumbnail_url") or media_url,
+        media_kind={"IMAGE": "image", "VIDEO": "video", "CAROUSEL_ALBUM": "carousel"}.get(media_type, ""),
+        extra=entry,
     )
 
 
@@ -625,6 +649,75 @@ class ThreadsProvider(SocialProvider):
     # ------------------------------------------------------------------
     # Analytics
     # ------------------------------------------------------------------
+
+    def list_existing_posts(self, access_token: str, *, limit: int = 100) -> list[ExistingPost]:
+        """The profile's own posts, newest first. Reposts of other people's posts are left out."""
+        return walk_history(
+            self._request,
+            url=f"{API_BASE}/me/threads",
+            access_token=access_token,
+            fields="id,text,timestamp,permalink,media_type,media_url,thumbnail_url",
+            to_post=_existing_post,
+            limit=limit,
+        )
+
+    def _profile_insights(self, access_token: str, metric: str, date_range=None) -> dict[str, dict]:
+        """The profile's insights (``threads_manage_insights``), keyed by metric name."""
+        params: dict = {"metric": metric}
+        if date_range:
+            params["since"] = int(date_range[0].timestamp())
+            params["until"] = int(date_range[1].timestamp())
+        body = self._request("GET", f"{API_BASE}/me/threads_insights", access_token=access_token, params=params).json()
+        return {str(item.get("name") or ""): item for item in body.get("data", [])}
+
+    @staticmethod
+    def _views_by_day(item: dict | None) -> dict[date, int]:
+        """Profile views per day.
+
+        ``views`` is the one profile metric Threads breaks out per day. A day
+        there is a Pacific day, named by the date of its ``end_time``, and a
+        range that is not aligned to it comes back with the neighbouring day
+        too: the value is read by date, never summed over the answer.
+        """
+        days: dict[date, int] = {}
+        for point in (item or {}).get("values") or []:
+            stamp = reply_timestamp(point.get("end_time"))
+            if stamp:
+                days[stamp.date()] = int(point.get("value") or 0)
+        return days
+
+    def get_account_metrics(self, access_token: str, date_range: tuple[datetime, datetime]) -> AccountMetrics:
+        """The profile's day: views, and the likes, replies, reposts and quotes its posts received.
+
+        The follower total is the profile's current one whatever the range, so
+        it is read only for a range that reaches the present.
+        """
+        start, end = date_range
+        insights = self._profile_insights(access_token, PROFILE_DAY_METRICS, date_range)
+        totals = {
+            name: int((insights.get(name, {}).get("total_value") or {}).get("value") or 0)
+            for name in ("likes", "replies", "reposts", "quotes")
+        }
+        followers = None
+        if end >= datetime.now(UTC):
+            total = self._profile_insights(access_token, "followers_count").get("followers_count", {})
+            value = (total.get("total_value") or {}).get("value")
+            followers = int(value) if value is not None else None
+        return AccountMetrics(
+            followers=followers,
+            extra={
+                "views": self._views_by_day(insights.get("views")).get(start.date(), 0),
+                **totals,
+                "raw_insights": insights,
+            },
+        )
+
+    def get_account_metrics_series(
+        self, access_token: str, date_range: tuple[datetime, datetime]
+    ) -> dict[str, dict[str, float]]:
+        """Daily profile views for the range: the only metric Threads dates day by day."""
+        views = self._profile_insights(access_token, "views", date_range).get("views")
+        return {"views": {day.isoformat(): float(value) for day, value in self._views_by_day(views).items()}}
 
     def get_post_metrics(self, access_token: str, post_id: str) -> PostMetrics:
         resp = self._request(

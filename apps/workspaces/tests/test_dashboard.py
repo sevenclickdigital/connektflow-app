@@ -517,3 +517,33 @@ def test_see_more_opens_the_special_dates_page_with_the_date_picked():
 
     _date_links([special, event], brand_id, can_plan=False)
     assert special["more_url"] == event["more_url"] == ""
+
+
+# --- network cards ------------------------------------------------------------
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("platform", "labels"),
+    [
+        ("instagram", ["Followers", "Reach", "Views"]),
+        ("threads", ["Followers", "Views", "Likes"]),
+        ("youtube", ["Subscribers", "Views", "Watch time"]),
+        ("google_business", ["Impressions", "Link clicks"]),
+    ],
+)
+def test_a_network_card_shows_the_numbers_its_platform_reports(brand, platform, labels):
+    from apps.workspaces.dashboard import network_card
+
+    account = SocialAccount.objects.create(
+        workspace=brand,
+        platform=platform,
+        account_platform_id=f"{platform}-1",
+        account_name="Brand",
+        oauth_access_token="token",
+        connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+    )
+
+    card = network_card(account, 30)
+
+    assert [stat["label"] for stat in card["stats"]] == labels

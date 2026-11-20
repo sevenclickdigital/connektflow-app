@@ -1424,3 +1424,86 @@ class TestTheQuotaStormEndToEnd:
         assert all(p.analytics_failure_count == 0 for p in posts)
         assert all(p.analytics_attempted_at is None for p in posts)
         assert all(_post_cadence_due(p, platform="youtube") for p in posts)
+
+
+@pytest.mark.django_db
+class TestAFinishedDayIsReadOnceMore:
+    """The hourly sync writes a day minutes after it starts; the number that
+    stays has to be the one read after the day is over."""
+
+    @staticmethod
+    def _threads(workspace):
+        return SocialAccount.objects.create(
+            workspace=workspace,
+            platform="threads",
+            account_platform_id="th-1",
+            account_name="Loja",
+            oauth_access_token="token",
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+
+    @staticmethod
+    def _row(account, day, value, captured_at):
+        from apps.analytics.models import AccountInsightsSnapshot
+
+        row = AccountInsightsSnapshot.objects.create(social_account=account, metric_key="views", date=day, value=value)
+        AccountInsightsSnapshot.objects.filter(pk=row.pk).update(captured_at=captured_at)
+        return row
+
+    def _sync(self, account, provider, now):
+        from apps.analytics.tasks import _sync_one_account
+
+        with (
+            patch("apps.analytics.tasks._analytics_provider_and_token", return_value=(provider, "tok")),
+            patch("apps.analytics.tasks.timezone.now", return_value=now),
+        ):
+            _sync_one_account(account, now.date(), now, cache={})
+
+    def _provider(self):
+        from providers.types import AccountMetrics
+
+        provider = MagicMock(credentials={}, post_metrics_batch_size=1)
+        provider.account_metrics_supports_date_range = True
+        provider.get_account_metrics.return_value = AccountMetrics(
+            followers=None, extra={"views": 40, "likes": 3, "replies": 2, "reposts": 1}
+        )
+        return provider
+
+    def test_yesterday_read_at_its_start_is_replaced_once_it_has_settled(self, workspace):
+        from datetime import UTC, datetime
+
+        from apps.analytics.models import AccountInsightsSnapshot
+
+        account = self._threads(workspace)
+        now = datetime(2026, 11, 20, 13, 5, tzinfo=UTC)
+        today, yesterday = now.date(), now.date() - timedelta(days=1)
+        self._row(account, today, 0, datetime(2026, 11, 20, 0, 11, tzinfo=UTC))
+        self._row(account, yesterday, 0, datetime(2026, 11, 19, 0, 11, tzinfo=UTC))
+        provider = self._provider()
+
+        self._sync(account, provider, now)
+        self._sync(account, provider, now + timedelta(hours=1))
+
+        # Today is still running and is not read again; the second sync finds
+        # yesterday settled and reads nothing. The day before had no row at all.
+        read = [call.args[1][0].date() for call in provider.get_account_metrics.call_args_list]
+        assert read == [yesterday, yesterday - timedelta(days=1)]
+        stored = dict(
+            AccountInsightsSnapshot.objects.filter(social_account=account, date=yesterday).values_list(
+                "metric_key", "value"
+            )
+        )
+        assert stored == {"views": 40.0, "likes": 3.0, "replies": 2.0, "reposts": 1.0}
+
+    def test_yesterday_is_left_alone_until_it_has_settled(self, workspace):
+        from datetime import UTC, datetime
+
+        account = self._threads(workspace)
+        now = datetime(2026, 11, 20, 6, 5, tzinfo=UTC)
+        self._row(account, now.date(), 0, datetime(2026, 11, 20, 0, 11, tzinfo=UTC))
+        self._row(account, now.date() - timedelta(days=1), 0, datetime(2026, 11, 19, 0, 11, tzinfo=UTC))
+        provider = self._provider()
+
+        self._sync(account, provider, now)
+
+        provider.get_account_metrics.assert_not_called()
