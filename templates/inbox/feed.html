@@ -183,6 +183,7 @@ function inboxController() {
             type: one(initial.type),
             q: initial.q || '',
             sort: '{{ sort|escapejs }}',
+            group: '{{ group|default:"person"|escapejs }}',
             {% if funnel %}funnel: '{{ funnel.id }}',
             stage: '{{ active_stage|default:""|escapejs }}',{% endif %}
         },

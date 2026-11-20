@@ -1,0 +1,41 @@
+{% load i18n tz %}
+{% comment %}
+A page of a post's comments (inbox.views.post_comments), and the "Load more" button
+that swaps itself for the next page. Each comment opens its conversation in the
+panel. "New" marks the ones that were unread before this page was drawn (drawing
+it reads them). The URL goes through data-url, like the list's rows.
+{% endcomment %}
+{% if marked_read and request.GET.rows %}<span hidden x-init="$dispatch('inbox-list-refresh')"></span>{% endif %}
+{% for comment in comments %}
+{% url 'inbox:message_detail' workspace_id=workspace.id message_id=comment.id as comment_path %}
+<div class="flex items-start gap-3 px-4 sm:px-5 py-3 border-b border-neutral-100 cursor-pointer hover:bg-neutral-50"
+     data-url="{{ comment_path }}"
+     @click="if (typeof selectMessage === 'function') selectMessage('{{ comment.id }}', $el.dataset.url); else window.location = $el.dataset.url"
+     @keydown.enter="if (typeof selectMessage === 'function') selectMessage('{{ comment.id }}', $el.dataset.url); else window.location = $el.dataset.url"
+     role="button" tabindex="0">
+    {% if comment.sender_avatar_url %}
+    <img src="{{ comment.sender_avatar_url }}" alt="" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
+    {% else %}
+    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-neutral-600 flex-shrink-0" style="background: var(--surface-2);">{{ comment.sender_name|make_list|first|upper }}</div>
+    {% endif %}
+    <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2">
+            <span class="text-[13px] font-semibold text-neutral-900 truncate">{{ comment.sender_name }}</span>
+            {% if comment.status == "unread" %}<span class="pill pill-brand flex-shrink-0">{% translate "New" %}</span>{% endif %}
+            {% if comment.answered %}<span class="pill pill-success flex-shrink-0">{% translate "Answered" %}</span>{% endif %}
+            {% if comment.status == "resolved" or comment.status == "archived" %}<span class="badge-pill badge-status-{{ comment.status }} flex-shrink-0">{{ comment.get_status_display }}</span>{% endif %}
+            <span class="text-[11px] text-neutral-500 ml-auto flex-shrink-0" title="{{ comment.received_at|timezone:workspace.effective_timezone|date:'SHORT_DATETIME_FORMAT' }}">{% blocktranslate with time=comment.received_at|timesince %}{{ time }} ago{% endblocktranslate %}</span>
+        </div>
+        <p class="text-[13px] text-neutral-700 mt-0.5 break-words">{% if comment.body %}{{ comment.body|truncatechars:280 }}{% elif comment.extra.attachments %}{% translate "Attachment" %}{% else %}{% translate "Message without text" %}{% endif %}</p>
+    </div>
+</div>
+{% endfor %}
+{% if has_more %}
+<div class="px-5 py-4 text-center" id="inbox-post-more">
+    <button type="button" class="btn-outline text-xs"
+            hx-get="{% url 'inbox:post_comments' workspace_id=workspace.id account_id=account.id %}?{{ next_query }}"
+            hx-target="#inbox-post-more" hx-swap="outerHTML">
+        {% translate "Load more" %}
+    </button>
+</div>
+{% endif %}

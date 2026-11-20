@@ -430,14 +430,26 @@ def fill_instagram_mention(message_id) -> bool:
 THREAD_FIELDS = ("social_account_id", "message_type", "thread_sender", "thread_post")
 
 
-def with_thread_key(qs):
-    """Annotate ``thread_sender`` and ``thread_post`` on inbox messages."""
+def with_thread_key(qs, *, by_post: bool = False):
+    """Annotate ``thread_sender`` and ``thread_post`` on inbox messages.
+
+    ``by_post`` blanks ``thread_sender`` on comments, so every comment on a post
+    shares one key: the inbox list grouped by post (one entry per post instead
+    of one per person and post).
+    """
     from django.db.models import Case, CharField, Value, When
     from django.db.models.fields.json import KeyTextTransform
     from django.db.models.functions import Coalesce, NullIf
 
+    sender = Coalesce(NullIf("sender_handle", Value("")), "sender_name")
+    if by_post:
+        sender = Case(
+            When(message_type=InboxMessage.MessageType.COMMENT, then=Value("")),
+            default=sender,
+            output_field=CharField(),
+        )
     return qs.annotate(
-        thread_sender=Coalesce(NullIf("sender_handle", Value("")), "sender_name"),
+        thread_sender=sender,
         thread_post=Case(
             When(
                 message_type=InboxMessage.MessageType.COMMENT,
@@ -453,16 +465,27 @@ def with_thread_key(qs):
     )
 
 
-def latest_per_thread(qs):
+def latest_per_thread(qs, *, by_post: bool = False):
     """The latest message of each conversation among ``qs``, keyed by ``with_thread_key``."""
     latest_ids = [
         row["id"]
-        for row in with_thread_key(qs)
+        for row in with_thread_key(qs, by_post=by_post)
         .order_by(*THREAD_FIELDS, "-received_at")
         .distinct(*THREAD_FIELDS)
         .values("id", *THREAD_FIELDS)
     ]
-    return with_thread_key(InboxMessage.objects.filter(id__in=latest_ids))
+    return with_thread_key(InboxMessage.objects.filter(id__in=latest_ids), by_post=by_post)
+
+
+def post_comments(workspace_id, social_account_id, post_key: str):
+    """Every comment on one post of one account, as the list grouped by post keys it."""
+    return with_thread_key(
+        InboxMessage.objects.filter(
+            workspace_id=workspace_id,
+            social_account_id=social_account_id,
+            message_type=InboxMessage.MessageType.COMMENT,
+        )
+    ).filter(thread_post=post_key)
 
 
 def thread_key(message: InboxMessage) -> tuple:
@@ -556,6 +579,31 @@ def post_preview(message: InboxMessage) -> dict | None:
         _remember_post_origin(message, post_id, preview.get("product_type") or "")
     cache.set(key, preview or {}, POST_PREVIEW_TTL)
     return preview
+
+
+def cached_post_previews(messages) -> dict:
+    """``{message.id: preview}`` for the posts of ``messages``, without a platform read.
+
+    The inbox list grouped by post shows each post's caption and picture: posts
+    published through Connekt Flow are read locally and the others come from
+    the cache ``post_preview`` fills when a comment is opened. A post nobody
+    opened yet has no entry, and the list shows it without them.
+    """
+    from django.core.cache import cache
+
+    previews, keys = {}, {}
+    for message in messages:
+        if message.related_post_id:
+            previews[message.id] = _local_post_preview(message)
+            continue
+        extra = message.extra or {}
+        post_id = str(extra.get("stored_post_id") or extra.get("post_id") or "")
+        if message.message_type == InboxMessage.MessageType.COMMENT and post_id:
+            keys[f"inbox:post-preview:{message.social_account_id}:{post_id}"] = message.id
+    for key, preview in cache.get_many(list(keys)).items():
+        if preview:
+            previews[keys[key]] = preview
+    return previews
 
 
 def _remember_post_origin(message: InboxMessage, post_id: str, origin: str) -> None:

@@ -386,3 +386,85 @@ class TestTagPost:
         read.assert_not_called()
         assert 'src="https://cdn/tag.jpg"' in body
         assert 'href="https://www.instagram.com/p/abc/"' in body
+
+
+@pytest.mark.django_db
+class TestGroupByPost:
+    def _comments(self, workspace, account):
+        for pid, handle, post, hours in (
+            ("c1", "ana", "p1", 3),
+            ("c2", "bia", "p1", 2),
+            ("c3", "ana", "p2", 1),
+        ):
+            _message(
+                workspace,
+                account,
+                pid,
+                hours_ago=hours,
+                message_type="comment",
+                sender_handle=handle,
+                extra={"post_id": post},
+            )
+
+    def _post_url(self, workspace, account):
+        return reverse("inbox:post_comments", kwargs={"workspace_id": workspace.id, "account_id": account.id})
+
+    def test_comments_come_one_entry_per_post_and_the_choice_is_remembered(
+        self, member_client, inbox_workspace, inbox_account
+    ):
+        self._comments(inbox_workspace, inbox_account)
+        dm = _message(inbox_workspace, inbox_account, "dm", hours_ago=4, message_type="dm", sender_handle="ana")
+
+        grouped = member_client.get(_feed(inbox_workspace), {"group": "post"}, HTTP_HX_REQUEST="true")
+        again = member_client.get(_feed(inbox_workspace), HTTP_HX_REQUEST="true")
+        by_person = member_client.get(_feed(inbox_workspace), {"group": "person"}, HTTP_HX_REQUEST="true")
+
+        rows = {(m.thread_post, m.thread_count, m.is_post_group) for m in grouped.context["inbox_messages"]}
+        assert rows == {("p1", 2, True), ("p2", 1, True), ("", 1, False)}
+        assert dm.id in {m.id for m in grouped.context["inbox_messages"]}
+        assert again.context["group"] == "post"
+        assert by_person.context["total"] == 4
+
+    def test_the_post_lists_its_comments_and_reads_them(self, member_client, inbox_workspace, inbox_account):
+        from unittest import mock
+
+        from django.core.cache import cache
+
+        cache.clear()
+        self._comments(inbox_workspace, inbox_account)
+        url = self._post_url(inbox_workspace, inbox_account)
+
+        with mock.patch("providers.facebook.FacebookProvider.get_post_preview", return_value={"caption": "Launch"}):
+            response = member_client.get(url, {"post": "p1"}, HTTP_HX_REQUEST="true")
+
+        assert [c.platform_message_id for c in response.context["comments"]] == ["c2", "c1"]
+        assert "Launch" in response.content.decode()
+        assert set(
+            InboxMessage.objects.filter(platform_message_id__in=["c1", "c2"]).values_list("status", flat=True)
+        ) == {InboxMessage.Status.OPEN}
+        assert InboxMessage.objects.get(platform_message_id="c3").status == InboxMessage.Status.UNREAD
+
+    def test_unanswered_leaves_out_the_comments_with_a_sent_reply(self, member_client, inbox_workspace, inbox_account):
+        from apps.inbox.models import InboxReply
+
+        self._comments(inbox_workspace, inbox_account)
+        answered = InboxMessage.objects.get(platform_message_id="c2")
+        InboxReply.objects.create(inbox_message=answered, body="Thanks", status=InboxReply.Status.SENT)
+        url = self._post_url(inbox_workspace, inbox_account)
+
+        rows = member_client.get(url, {"post": "p1", "show": "unanswered", "rows": "1"}).context["comments"]
+
+        assert [c.platform_message_id for c in rows] == ["c1"]
+
+    def test_another_workspaces_post_is_not_found(self, member_client, inbox_workspace, organization):
+        other = Workspace.objects.create(organization=organization, name="Other")
+        account = SocialAccount.objects.create(
+            workspace=other, platform="facebook", account_platform_id="pg-x", account_name="X"
+        )
+        _message(other, account, "c-x", hours_ago=1, message_type="comment", extra={"post_id": "p1"})
+
+        url = reverse("inbox:post_comments", kwargs={"workspace_id": inbox_workspace.id, "account_id": account.id})
+
+        response = member_client.get(url, {"post": "p1"})
+
+        assert response.status_code == 404

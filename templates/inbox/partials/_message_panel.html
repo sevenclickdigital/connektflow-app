@@ -42,6 +42,13 @@ status, sentiment and assignment actions; also the body of message_detail.html.
                     <span class="truncate">{% blocktranslate with caption=post_preview.caption|default:_("Post without caption")|truncatechars:40 %}Post: {{ caption }}{% endblocktranslate %}</span>
                 </span>
                 {% endif %}
+                {% if post_comments_url %}
+                <button type="button" class="pill pill-neutral hover:bg-neutral-200 transition-colors" data-url="{{ post_comments_url }}"
+                        @click="htmx.ajax('GET', $el.dataset.url, { target: '#inbox-detail-panel', swap: 'innerHTML' })">
+                    <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                    {% translate "All comments on the post" %}
+                </button>
+                {% endif %}
                 {% include "inbox/partials/_sentiment_badge.html" %}
                 {% if sla_config and sla_config.is_active and message.status != 'resolved' and message.status != 'archived' %}
                 {% include "inbox/partials/_sla_badge.html" %}

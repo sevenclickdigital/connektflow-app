@@ -3,6 +3,7 @@
 import logging
 from collections import Counter
 from datetime import timedelta
+from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -101,12 +102,24 @@ def _detail_context(workspace, message, *, actor=None):
         "post_preview": post,
         "contact": contact,
         "person_channels": _person_channels(message, contact),
+        "post_comments_url": _post_comments_url(workspace, message),
         "newer_message": newer,
         "reply_limit": REPLY_LIMITS.get((message.message_type == "dm", message.social_account.platform)),
         "sender_first_name": (message.sender_name or "").split(" ")[0].lstrip("@+"),
         "reply_eligibility": inbox_services.reply_eligibility(message, origin="web_inbox", actor=actor),
         **_bubble_context(message),
     }
+
+
+def _post_comments_url(workspace, message) -> str:
+    """Where a comment's conversation links to every comment on its post, or ""."""
+    post_key = inbox_services.thread_key(message)[3]
+    if not post_key:
+        return ""
+    path = reverse(
+        "inbox:post_comments", kwargs={"workspace_id": workspace.id, "account_id": message.social_account_id}
+    )
+    return f"{path}?{urlencode({'post': post_key})}"
 
 
 def _person_channels(message, contact):
@@ -338,6 +351,23 @@ def inbox_feed(request, workspace_id):
     return render(request, "inbox/feed.html", context)
 
 
+GROUP_BY_PERSON = "person"
+GROUP_BY_POST = "post"
+
+
+def _list_group(request) -> str:
+    """How the inbox list groups comments: per person and post, or per post.
+
+    Chosen in the list (``group``) and kept in the session, so whoever reviews
+    posts with many comments finds the list grouped by post next time.
+    """
+    group = request.GET.get("group")
+    if group in (GROUP_BY_PERSON, GROUP_BY_POST):
+        request.session["inbox_group"] = group
+        return group
+    return GROUP_BY_POST if request.session.get("inbox_group") == GROUP_BY_POST else GROUP_BY_PERSON
+
+
 def feed_context(request, workspace, *, scope_threads=None):
     """The inbox page's list and filters, under the request's filters.
 
@@ -347,6 +377,8 @@ def feed_context(request, workspace, *, scope_threads=None):
     stage's conversations and to add its own context.
     """
     qs = InboxMessage.objects.for_workspace(workspace.id).select_related("social_account", "assigned_to")
+    group = _list_group(request) if scope_threads is None else GROUP_BY_PERSON
+    by_post = group == GROUP_BY_POST
 
     # Filters
     platforms = request.GET.getlist("platform")
@@ -361,7 +393,7 @@ def feed_context(request, workspace, *, scope_threads=None):
     # for the type buttons.
     unread_threads = Counter(
         row["message_type"]
-        for row in inbox_services.with_thread_key(qs.filter(status=InboxMessage.Status.UNREAD))
+        for row in inbox_services.with_thread_key(qs.filter(status=InboxMessage.Status.UNREAD), by_post=by_post)
         .order_by()
         .values(*inbox_services.THREAD_FIELDS)
         .distinct()
@@ -398,9 +430,9 @@ def feed_context(request, workspace, *, scope_threads=None):
 
     # One entry per conversation: its latest message under the filters, with
     # how many messages it holds and how many of them are unread.
-    keyed = inbox_services.with_thread_key(qs).order_by()
+    keyed = inbox_services.with_thread_key(qs, by_post=by_post).order_by()
     sort = "oldest" if request.GET.get("sort") == "oldest" else "newest"
-    threads = inbox_services.latest_per_thread(qs)
+    threads = inbox_services.latest_per_thread(qs, by_post=by_post)
     extra_context = {}
     if scope_threads is not None:
         threads, extra_context = scope_threads(threads)
@@ -415,12 +447,17 @@ def feed_context(request, workspace, *, scope_threads=None):
         .values(*inbox_services.THREAD_FIELDS)
         .annotate(n=Count("id"), unread=Count("id", filter=Q(status=InboxMessage.Status.UNREAD)))
     }
-    other_channels = other_channels_by_message(workspace.id, messages)
+    for message in messages:
+        message.is_post_group = by_post and message.message_type == InboxMessage.MessageType.COMMENT
+    post_rows = [message for message in messages if message.is_post_group]
+    previews = inbox_services.cached_post_previews(post_rows)
+    other_channels = other_channels_by_message(workspace.id, [m for m in messages if not m.is_post_group])
     for message in messages:
         row = stats.get(tuple(getattr(message, field) for field in inbox_services.THREAD_FIELDS), {})
         message.thread_count = row.get("n", 1)
         message.thread_unread = row.get("unread", 0)
         message.other_channels = other_channels.get(message.id, [])
+        message.post_preview = previews.get(message.id)
 
     # SLA config for countdown display
     sla_config = InboxSLAConfig.objects.filter(workspace=workspace, is_active=True).first()
@@ -446,6 +483,8 @@ def feed_context(request, workspace, *, scope_threads=None):
         "type_counts": type_counts,
         "type_buttons": TYPE_BUTTONS,
         "sort": sort,
+        "group": group,
+        "can_group": scope_threads is None,
         "active_filters": {
             "platform": platforms,
             "platforms": platforms,
@@ -554,6 +593,92 @@ def message_detail(request, workspace_id, message_id):
         return render(request, "inbox/partials/_message_panel.html", context)
     context["emoji_categories"] = emoji_catalogue()
     return render(request, "inbox/message_detail.html", context)
+
+
+POST_COMMENTS_PER_PAGE = 50
+POST_COMMENT_FILTERS = ("all", "unread", "unanswered")
+
+
+@login_required
+@require_permission("use_inbox")
+@require_GET
+def post_comments(request, workspace_id, account_id):
+    """One post's comments, the list grouped by post opens: the post on top and its
+    comments newest first, 50 at a time, with the unread / unanswered filters and
+    a search. The comments drawn are read; the others keep their status."""
+    workspace = _get_workspace(request, workspace_id)
+    account = get_object_or_404(SocialAccount, id=account_id, workspace=workspace)
+    post_key = request.GET.get("post", "").strip()[:255]
+    if not post_key:
+        raise Http404
+    comments = inbox_services.post_comments(workspace.id, account.id, post_key)
+    latest = comments.select_related("social_account", "related_post__post").order_by("-received_at").first()
+    if latest is None:
+        raise Http404
+    show = request.GET.get("show", "all")
+    if show not in POST_COMMENT_FILTERS:
+        show = "all"
+    if show == "unread":
+        comments = comments.filter(status=InboxMessage.Status.UNREAD)
+    elif show == "unanswered":
+        comments = comments.exclude(replies__status=InboxReply.Status.SENT)
+    q = request.GET.get("q", "").strip()[:200]
+    if q:
+        comments = comments.filter(Q(body__icontains=q) | Q(sender_name__icontains=q) | Q(sender_handle__icontains=q))
+    try:
+        page = max(1, int(request.GET.get("page", "1")))
+    except ValueError:
+        page = 1
+    start = (page - 1) * POST_COMMENTS_PER_PAGE
+    rows = list(
+        comments.select_related("social_account")
+        .annotate(answered=Count("replies", filter=Q(replies__status=InboxReply.Status.SENT)))
+        .order_by("-received_at")[start : start + POST_COMMENTS_PER_PAGE + 1]
+    )
+    has_more = len(rows) > POST_COMMENTS_PER_PAGE
+    rows = rows[:POST_COMMENTS_PER_PAGE]
+    unread = [row.pk for row in rows if row.status == InboxMessage.Status.UNREAD]
+    if unread:
+        InboxMessage.objects.filter(pk__in=unread, status=InboxMessage.Status.UNREAD).update(
+            status=InboxMessage.Status.OPEN
+        )
+    query = {"post": post_key, "show": show, "q": q}
+    context = {
+        "workspace": workspace,
+        "account": account,
+        "comments": rows,
+        "has_more": has_more,
+        "next_query": urlencode({**query, "page": page + 1, "rows": 1}),
+        "post_key": post_key,
+        "marked_read": bool(unread),
+        "show": show,
+        "q": q,
+    }
+    if request.GET.get("rows"):
+        return render(request, "inbox/partials/_post_comment_rows.html", context)
+    post = inbox_services.post_preview(latest)
+    if post and not post.get("error"):
+        post["origin_label"] = dict(InboxMessage.ORIGIN_CHOICES).get(post.get("product_type"), "")
+    base = InboxMessage.objects.filter(
+        pk__in=inbox_services.post_comments(workspace.id, account.id, post_key).values("pk")
+    )
+    context.update(
+        {
+            "post_preview": post,
+            "latest": latest,
+            "total": base.count(),
+            "unread_total": base.filter(status=InboxMessage.Status.UNREAD).count(),
+            "panel_url": reverse(
+                "inbox:post_comments", kwargs={"workspace_id": workspace.id, "account_id": account.id}
+            ),
+            "filters": [
+                ("all", _("All")),
+                ("unread", pgettext_lazy("post comments filter", "Unread")),
+                ("unanswered", _("Unanswered")),
+            ],
+        }
+    )
+    return render(request, "inbox/partials/_post_panel.html", context)
 
 
 # --- Reply ---

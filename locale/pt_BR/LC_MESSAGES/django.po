@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-20 01:33+0000\n"
+"POT-Creation-Date: 2026-11-20 01:53+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -755,7 +755,7 @@ msgstr "Curtidas"
 msgid "Reactions"
 msgstr "Reações"
 
-#: apps/analytics/metrics.py:22 apps/inbox/views.py:249
+#: apps/analytics/metrics.py:22 apps/inbox/views.py:262
 #: templates/composer/compose.html:2012
 msgid "Comments"
 msgstr "Comentários"
@@ -3261,7 +3261,7 @@ msgstr "Esta publicação precisa ser aprovada antes de ser agendada."
 msgid "Open the post and choose when it goes out before scheduling it."
 msgstr "Abra a publicação e escolha quando ela sai antes de agendá-la."
 
-#: apps/calendar/views.py:1066 apps/inbox/views.py:222
+#: apps/calendar/views.py:1066 apps/inbox/views.py:235
 #: templates/billing/_checkout_summary.html:50
 #: templates/organizations/cross_calendar.html:140
 #: templates/workspaces/dashboard.html:156
@@ -3338,7 +3338,8 @@ msgstr[0] "último %(days)d dia"
 msgstr[1] "últimos %(days)d dias"
 
 #: apps/composer/builtin_templates.py:12 apps/composer/idea_icons.py:114
-#: apps/radar/reports.py:190 templates/analytics/_post_table.html:16
+#: apps/inbox/views.py:675 apps/radar/reports.py:190
+#: templates/analytics/_post_table.html:16
 #: templates/billing/staff_subscriptions.html:152
 #: templates/calendar/partials/_platform_pills.html:11
 #: templates/calendar/partials/publish_approvals.html:22
@@ -4995,20 +4996,29 @@ msgstr "As reações só estão disponíveis em conversas do WhatsApp."
 msgid "That reaction is not available."
 msgstr "Essa reação não está disponível."
 
-#: apps/inbox/views.py:224
+#: apps/inbox/views.py:237
 msgid "Yesterday"
 msgstr "Ontem"
 
-#: apps/inbox/views.py:248
+#: apps/inbox/views.py:261
 msgctxt "inbox type button"
 msgid "Inbox"
 msgstr "Inbox"
 
-#: apps/inbox/views.py:250
+#: apps/inbox/views.py:263
 msgid "Mentions"
 msgstr "Menções"
 
-#: apps/inbox/views.py:679
+#: apps/inbox/views.py:676
+msgctxt "post comments filter"
+msgid "Unread"
+msgstr "Não lidos"
+
+#: apps/inbox/views.py:677
+msgid "Unanswered"
+msgstr "Sem resposta"
+
+#: apps/inbox/views.py:804
 msgid "The reaction was not sent"
 msgstr "A reação não foi enviada"
 
@@ -9729,6 +9739,8 @@ msgstr "compartilhado com o cliente"
 #: templates/funnels/board.html:143
 #: templates/inbox/partials/_draft_reply_item.html:11
 #: templates/inbox/partials/_message_row.html:49
+#: templates/inbox/partials/_post_comment_rows.html:27
+#: templates/inbox/partials/_post_row.html:38
 #: templates/notifications/email/digest.html:14
 #: templates/notifications/email/digest.txt:6
 #: templates/notifications/partials/drawer.html:74
@@ -9808,6 +9820,8 @@ msgstr "Interna"
 #: templates/inbox/partials/_chat_incoming.html:59
 #: templates/inbox/partials/_draft_reply_item.html:16
 #: templates/inbox/partials/_message_row.html:51
+#: templates/inbox/partials/_post_comment_rows.html:29
+#: templates/inbox/partials/_post_row.html:40
 #: templates/inbox/partials/_reply_item.html:16
 msgid "Attachment"
 msgstr "Anexo"
@@ -10510,6 +10524,7 @@ msgstr "Conecte uma conta do Facebook ou Instagram para automatizar respostas."
 #: templates/calendar/partials/publish_calendar_shell.html:74
 #: templates/composer/partials/_tag_groups.html:203
 #: templates/inbox/partials/_message_panel.html:16
+#: templates/inbox/partials/_post_panel.html:15
 #: templates/radar/shopee_connect.html:9
 #: templates/social_accounts/bluesky_connect.html:10
 #: templates/social_accounts/devto_connect.html:10
@@ -12860,6 +12875,7 @@ msgid "Month"
 msgstr "Mês"
 
 #: templates/billing/staff_goals.html:154
+#: templates/inbox/partials/_post_comment_rows.html:24
 msgid "New"
 msgstr "Novo"
 
@@ -12933,6 +12949,7 @@ msgstr "Fim"
 #: templates/funnels/board.html:97 templates/funnels/board.html:98
 #: templates/inbox/partials/_entry_facts.html:23
 #: templates/inbox/partials/_message_row.html:75
+#: templates/inbox/partials/_post_row.html:49
 msgid "Origin"
 msgstr "Origem"
 
@@ -17220,13 +17237,13 @@ msgid "Search media..."
 msgstr "Buscar mídias..."
 
 #: templates/composer/partials/media_picker.html:217
-#: templates/inbox/partials/_message_list.html:14
+#: templates/inbox/partials/_message_list.html:27
 #: templates/media_library/library_index.html:212
 msgid "Newest first"
 msgstr "Mais recentes primeiro"
 
 #: templates/composer/partials/media_picker.html:218
-#: templates/inbox/partials/_message_list.html:15
+#: templates/inbox/partials/_message_list.html:28
 #: templates/media_library/library_index.html:213
 msgid "Oldest first"
 msgstr "Mais antigas primeiro"
@@ -17989,6 +18006,8 @@ msgstr "Buscar oportunidade…"
 #: templates/funnels/partials/_pick_conversation.html:16
 #: templates/inbox/partials/_chat_incoming.html:14
 #: templates/inbox/partials/_message_row.html:51
+#: templates/inbox/partials/_post_comment_rows.html:29
+#: templates/inbox/partials/_post_row.html:40
 msgid "Message without text"
 msgstr "Mensagem sem texto"
 
@@ -18322,14 +18341,17 @@ msgstr "Limpar todos os filtros"
 #: templates/inbox/partials/_entry_facts.html:33
 #: templates/inbox/partials/_entry_facts.html:35
 #: templates/inbox/partials/_message_panel.html:43
-#: templates/inbox/partials/_message_panel.html:91
-#: templates/inbox/partials/_message_panel.html:99
+#: templates/inbox/partials/_message_panel.html:98
+#: templates/inbox/partials/_message_panel.html:106
+#: templates/inbox/partials/_post_panel.html:31
+#: templates/inbox/partials/_post_row.html:33
 msgid "Post without caption"
 msgstr "Publicação sem legenda"
 
 #: templates/inbox/partials/_entry_facts.html:38
-#: templates/inbox/partials/_message_panel.html:58
-#: templates/inbox/partials/_message_panel.html:76
+#: templates/inbox/partials/_message_panel.html:65
+#: templates/inbox/partials/_message_panel.html:83
+#: templates/inbox/partials/_post_panel.html:40
 msgid "Open post"
 msgstr "Abrir publicação"
 
@@ -18370,18 +18392,30 @@ msgstr "Reabrir"
 msgid "Mark as resolved"
 msgstr "Marcar como resolvida"
 
-#: templates/inbox/partials/_message_list.html:9
+#: templates/inbox/partials/_message_list.html:11
 #, python-format
 msgid "%(counter)s entry"
 msgid_plural "%(counter)s entries"
 msgstr[0] "%(counter)s entrada"
 msgstr[1] "%(counter)s entradas"
 
-#: templates/inbox/partials/_message_list.html:12
+#: templates/inbox/partials/_message_list.html:16
+msgid "Group"
+msgstr "Agrupar"
+
+#: templates/inbox/partials/_message_list.html:18
+msgid "By person"
+msgstr "Por pessoa"
+
+#: templates/inbox/partials/_message_list.html:19
+msgid "By post"
+msgstr "Por post"
+
+#: templates/inbox/partials/_message_list.html:25
 msgid "Sort"
 msgstr "Ordenar"
 
-#: templates/inbox/partials/_message_list.html:24
+#: templates/inbox/partials/_message_list.html:38
 #, python-format
 msgid ""
 "Showing the first %(counter)s entry. Narrow the filters to find the others."
@@ -18398,15 +18432,20 @@ msgstr[1] ""
 msgid "Post: %(caption)s"
 msgstr "Post: %(caption)s"
 
-#: templates/inbox/partials/_message_panel.html:75
+#: templates/inbox/partials/_message_panel.html:50
+msgid "All comments on the post"
+msgstr "Todos os comentários do post"
+
+#: templates/inbox/partials/_message_panel.html:82
+#: templates/inbox/partials/_post_panel.html:31
 msgid "The post this comment is on could not be loaded from the platform."
 msgstr "Não foi possível carregar da plataforma a publicação deste comentário."
 
-#: templates/inbox/partials/_message_panel.html:109
+#: templates/inbox/partials/_message_panel.html:116
 msgid "This person wrote again. Open the latest message"
 msgstr "Esta pessoa escreveu de novo. Abrir a mensagem mais recente"
 
-#: templates/inbox/partials/_message_panel.html:126
+#: templates/inbox/partials/_message_panel.html:133
 msgid "Sending…"
 msgstr "Enviando…"
 
@@ -18451,6 +18490,53 @@ msgstr "Buscar contatos"
 #: templates/inbox/partials/_person_channels.html:63
 msgid "Main contact"
 msgstr "Contato principal"
+
+#: templates/inbox/partials/_post_comment_rows.html:25
+msgid "Answered"
+msgstr "Respondido"
+
+#: templates/inbox/partials/_post_comment_rows.html:38
+msgid "Load more"
+msgstr "Carregar mais"
+
+#: templates/inbox/partials/_post_panel.html:34
+#: templates/inbox/partials/_post_row.html:44
+#, python-format
+msgid "%(counter)s comment"
+msgid_plural "%(counter)s comments"
+msgstr[0] "%(counter)s comentário"
+msgstr[1] "%(counter)s comentários"
+
+#: templates/inbox/partials/_post_panel.html:34
+#, python-format
+msgid "%(counter)s unread"
+msgid_plural "%(counter)s unread"
+msgstr[0] "%(counter)s não lido"
+msgstr[1] "%(counter)s não lidos"
+
+#: templates/inbox/partials/_post_panel.html:56
+msgid "Search comments"
+msgstr "Buscar comentários"
+
+#: templates/inbox/partials/_post_panel.html:64
+msgid "No comment matches these filters."
+msgstr "Nenhum comentário com esses filtros."
+
+#: templates/inbox/partials/_post_panel.html:64
+msgid "This post has no comments yet."
+msgstr "Este post ainda não tem comentários."
+
+#: templates/inbox/partials/_post_row.html:33
+#, python-format
+msgid "Post by %(account)s"
+msgstr "Post de %(account)s"
+
+#: templates/inbox/partials/_post_row.html:36
+#, python-format
+msgid "%(counter)s unread comment"
+msgid_plural "%(counter)s unread comments"
+msgstr[0] "%(counter)s comentário não lido"
+msgstr[1] "%(counter)s comentários não lidos"
 
 #: templates/inbox/partials/_reply_composer.html:11
 msgid "Pending replies"
