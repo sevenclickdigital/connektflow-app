@@ -221,6 +221,21 @@ def contact_merge(request, workspace_id):
     return toast_response(tone="success", title=title, events=CONTACTS_CHANGED)
 
 
+@login_required
+@require_permission("use_inbox")
+@require_GET
+def contact_merge_candidates(request, workspace_id, contact_id):
+    """The contacts the inbox's merge dialog offers for ``contact_id``: the
+    suggestions, or what the search typed in it finds."""
+    contact = get_object_or_404(Contact, id=contact_id, workspace_id=workspace_id)
+    query = request.GET.get("q", "").strip()
+    return render(
+        request,
+        "contacts/partials/_merge_candidates.html",
+        {"candidates": services.merge_candidates(contact, query), "query": query},
+    )
+
+
 def _valid_uuids(values) -> list[str]:
     import uuid
 

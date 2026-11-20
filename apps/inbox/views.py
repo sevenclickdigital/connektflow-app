@@ -16,7 +16,13 @@ from django.utils.translation import pgettext_lazy
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.composer.emoji import emoji_catalogue
-from apps.contacts.services import contact_for_message
+from apps.contacts.models import ChannelKind
+from apps.contacts.services import (
+    channel_kind_for,
+    contact_conversations,
+    contact_for_message,
+    other_channels_by_message,
+)
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
 from apps.notifications.engine import notify
@@ -79,6 +85,7 @@ def _detail_context(workspace, message, *, actor=None):
     post = inbox_services.post_preview(message)
     if post and not post.get("error"):
         post["origin_label"] = dict(InboxMessage.ORIGIN_CHOICES).get(post.get("product_type"), "")
+    contact = contact_for_message(message)
     return {
         "workspace": workspace,
         "message": message,
@@ -92,13 +99,40 @@ def _detail_context(workspace, message, *, actor=None):
         "status_choices": InboxMessage.Status.choices,
         "sentiment_choices": InboxMessage.Sentiment.choices,
         "post_preview": post,
-        "contact": contact_for_message(message),
+        "contact": contact,
+        "person_channels": _person_channels(message, contact),
         "newer_message": newer,
         "reply_limit": REPLY_LIMITS.get((message.message_type == "dm", message.social_account.platform)),
         "sender_first_name": (message.sender_name or "").split(" ")[0].lstrip("@+"),
         "reply_eligibility": inbox_services.reply_eligibility(message, origin="web_inbox", actor=actor),
         **_bubble_context(message),
     }
+
+
+def _person_channels(message, contact):
+    """The contact's conversations on each channel, for the chips in the conversation header.
+
+    Empty unless the contact talks through more than one channel (their DM on
+    two networks, a DM and comments…). ``active`` marks the open one's channel.
+    """
+    if contact is None:
+        return []
+    chips = []
+    for latest in contact_conversations(contact):
+        kind = channel_kind_for(latest.social_account.platform, latest.message_type)
+        label = ChannelKind(kind).label if kind else latest.social_account.get_platform_display()
+        if latest.message_type != InboxMessage.MessageType.DM:
+            label = f"{label} · {latest.get_message_type_display()}"
+        chips.append(
+            {
+                "message": latest,
+                "kind": kind or latest.social_account.platform,
+                "label": label,
+                "active": (latest.social_account_id, latest.message_type)
+                == (message.social_account_id, message.message_type),
+            }
+        )
+    return chips if len(chips) > 1 else []
 
 
 def _bubble_context(message):
@@ -381,10 +415,12 @@ def feed_context(request, workspace, *, scope_threads=None):
         .values(*inbox_services.THREAD_FIELDS)
         .annotate(n=Count("id"), unread=Count("id", filter=Q(status=InboxMessage.Status.UNREAD)))
     }
+    other_channels = other_channels_by_message(workspace.id, messages)
     for message in messages:
         row = stats.get(tuple(getattr(message, field) for field in inbox_services.THREAD_FIELDS), {})
         message.thread_count = row.get("n", 1)
         message.thread_unread = row.get("unread", 0)
+        message.other_channels = other_channels.get(message.id, [])
 
     # SLA config for countdown display
     sla_config = InboxSLAConfig.objects.filter(workspace=workspace, is_active=True).first()

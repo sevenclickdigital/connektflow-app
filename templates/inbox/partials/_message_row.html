@@ -40,6 +40,12 @@ all and thread_unread of them unread (inbox_feed).
             <span class="flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-neutral-100 text-[11px] font-semibold text-neutral-600 inline-flex items-center justify-center"
                   title="{% blocktranslate count counter=message.thread_count %}{{ counter }} message in this conversation{% plural %}{{ counter }} messages in this conversation{% endblocktranslate %}">{{ message.thread_count }}</span>
             {% endif %}
+            {% if message.other_channels %}
+            <span class="flex items-center gap-0.5 flex-shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5" title="{% translate 'Also talks through other channels' %}">
+                <span class="sr-only">{% translate "Also talks through other channels" %}</span>
+                {% for kind in message.other_channels %}{% include "partials/_platform_icon.html" with platform=kind size="sm" %}{% endfor %}
+            </span>
+            {% endif %}
             <span class="text-[11px] text-neutral-500 ml-auto flex-shrink-0" title="{{ message.received_at|timezone:workspace.effective_timezone|date:'SHORT_DATETIME_FORMAT' }}">{% blocktranslate with time=message.received_at|timesince %}{{ time }} ago{% endblocktranslate %}</span>
         </div>
         <p class="inbox-row-preview text-[13px] text-neutral-600 truncate leading-snug mt-0.5">{% if message.body %}{{ message.body|truncatewords:20 }}{% elif message.extra.attachments %}{% translate "Attachment" %}{% else %}{% translate "Message without text" %}{% endif %}</p>

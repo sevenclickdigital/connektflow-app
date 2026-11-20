@@ -392,6 +392,72 @@ class TestInboxPanel:
 
         assert services.contact_for_message(message) is None
 
+    def _carla_on_two_networks(self, workspace):
+        ig = _account(workspace)
+        fb = _account(workspace, platform="facebook", ig_id="page-1")
+        ig_dm = _message(ig, "1789", kind="dm", extra={"sender_handle": "carla.arq"}, name="carla.arq", days_ago=1)
+        fb_dm = _message(fb, "3809", kind="dm", name="Carla Martins")
+        keep = services.record_inbox_sender(ig_dm.pk)
+        other = services.record_inbox_sender(fb_dm.pk)
+        return ig_dm, fb_dm, keep, other
+
+    def test_after_a_merge_the_conversation_links_the_persons_other_channel(self):
+        workspace = _workspace("A")
+        ig_dm, fb_dm, keep, other = self._carla_on_two_networks(workspace)
+        client = _client(_user("a@x.com", workspace, Role.EDITOR))
+        detail = reverse("inbox:message_detail", kwargs={"workspace_id": workspace.id, "message_id": ig_dm.id})
+
+        assert client.get(detail, HTTP_HX_REQUEST="true").context["person_channels"] == []
+
+        client.post(
+            reverse("contacts:merge", kwargs={"workspace_id": workspace.id}),
+            {"ids": [str(keep.id), str(other.id)], "keep": str(keep.id)},
+        )
+        response = client.get(detail, HTTP_HX_REQUEST="true")
+
+        chips = response.context["person_channels"]
+        assert [(chip["message"], chip["kind"], chip["active"]) for chip in chips] == [
+            (fb_dm, "messenger", False),
+            (ig_dm, "instagram", True),
+        ]
+        page = response.content.decode()
+        assert reverse("inbox:message_detail", kwargs={"workspace_id": workspace.id, "message_id": fb_dm.id}) in page
+
+    def test_the_list_shows_the_other_channels_of_a_merged_sender(self):
+        workspace = _workspace("A")
+        ig_dm, fb_dm, keep, other = self._carla_on_two_networks(workspace)
+        services.merge_contacts(workspace.id, keep.id, [keep.id, other.id])
+
+        result = services.other_channels_by_message(workspace.id, [ig_dm, fb_dm])
+
+        assert result == {ig_dm.id: ["messenger"], fb_dm.id: ["instagram"]}
+
+    def test_the_merge_dialog_suggests_a_contact_with_the_same_first_name(self):
+        workspace = _workspace("A")
+        _ig_dm, _fb_dm, keep, other = self._carla_on_two_networks(workspace)
+        Contact.objects.create(workspace=workspace, name="Bruno")
+        foreign = Contact.objects.create(workspace=_workspace("B"), name="Carla Foreign")
+        client = _client(_user("a@x.com", workspace, Role.EDITOR))
+        url = reverse("contacts:merge_candidates", kwargs={"workspace_id": workspace.id, "contact_id": keep.id})
+
+        suggested = client.get(url).context["candidates"]
+        searched = client.get(url, {"q": "bru"}).context["candidates"]
+
+        assert suggested == [other]
+        assert [c.name for c in searched] == ["Bruno"]
+        assert foreign not in suggested
+
+    def test_the_merge_dialog_refuses_another_workspaces_contact(self):
+        mine, theirs = _workspace("A"), _workspace("B")
+        foreign = Contact.objects.create(workspace=theirs, name="Foreign")
+        client = _client(_user("a@x.com", mine, Role.EDITOR))
+
+        response = client.get(
+            reverse("contacts:merge_candidates", kwargs={"workspace_id": mine.id, "contact_id": foreign.id})
+        )
+
+        assert response.status_code == 404
+
 
 class TestPhoto:
     def _png(self):

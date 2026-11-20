@@ -48,6 +48,7 @@ status, sentiment and assignment actions; also the body of message_detail.html.
                 {% endif %}
             </div>
             <p class="text-xs text-neutral-500 mt-1.5">{{ message.received_at|timezone:workspace.effective_timezone|date:"DATETIME_FORMAT" }}</p>
+            {% include "inbox/partials/_person_channels.html" %}
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
             {% if message.post_url %}

@@ -258,6 +258,85 @@ def interactions_queryset(contact: Contact):
     return InboxMessage.objects.filter(match, workspace_id=contact.workspace_id)
 
 
+def contact_conversations(contact: Contact) -> list:
+    """One inbox message per place the contact talks to the workspace, newest first.
+
+    The latest message of each (account, type) the contact wrote in: their DM on
+    each network, their latest comment, and so on. Opening one opens its
+    conversation, which is how the inbox moves between a person's channels.
+    """
+    latest = (
+        interactions_queryset(contact)
+        .select_related("social_account")
+        .order_by("social_account_id", "message_type", "-received_at")
+        .distinct("social_account_id", "message_type")
+    )
+    return sorted(latest, key=lambda message: message.received_at, reverse=True)
+
+
+def other_channels_by_message(workspace_id, messages) -> dict:
+    """For each inbox message, the other channels its sender's contact talks through.
+
+    ``{message.id: [kind, …]}`` with the kinds of the contact's channels that
+    carry an inbox link, minus the message's own. The list of entries shows them
+    beside the sender, so a contact merged across networks reads as one person.
+    Two queries for the whole page; senders are matched on the inbox ID only.
+    """
+    keys = {}
+    for message in messages:
+        kind = channel_kind_for(message.social_account.platform, message.message_type)
+        if kind and message.sender_handle:
+            keys[message.id] = (kind, message.sender_handle)
+    if not keys:
+        return {}
+    owners = {
+        (row["kind"], row["external_id"]): row["contact_id"]
+        for row in ContactChannel.objects.filter(
+            workspace_id=workspace_id, external_id__in={handle for _kind, handle in keys.values()}
+        ).values("kind", "external_id", "contact_id")
+    }
+    kinds_by_contact: dict = {}
+    for row in (
+        ContactChannel.objects.filter(contact_id__in=set(owners.values()))
+        .exclude(external_id="")
+        .values("contact_id", "kind")
+    ):
+        kinds_by_contact.setdefault(row["contact_id"], set()).add(row["kind"])
+    result = {}
+    for message_id, (kind, handle) in keys.items():
+        others = kinds_by_contact.get(owners.get((kind, handle)), set()) - {kind}
+        if others:
+            result[message_id] = sorted(others)
+    return result
+
+
+MERGE_CANDIDATES_LIMIT = 6
+
+
+def merge_candidates(contact: Contact, query: str = "") -> list[Contact]:
+    """Contacts that may be the same person as ``contact``, to merge from the inbox.
+
+    With ``query``, the workspace's contacts the list's search finds. Without
+    it, the suggestions: contacts whose name starts with the same first word,
+    since the same person on another network usually keeps their first name
+    ("Robison F. Borges" on Messenger, "robison.sevenclick" on Instagram).
+    Meta gives no link between a person's Instagram and Messenger IDs, so the
+    team confirms every merge.
+    """
+    if query:
+        qs = filter_contacts(contact.workspace_id, {"q": query[:100]})
+    else:
+        first = re.split(r"[\s._\-]+", (contact.name or "").strip().lstrip("@+"))[0]
+        if len(first) < 3 or first.isdigit():
+            return []
+        qs = Contact.objects.for_workspace(contact.workspace_id).filter(name__istartswith=first)
+    return list(
+        qs.exclude(pk=contact.pk)
+        .prefetch_related("channels")
+        .order_by(F("last_contact_at").desc(nulls_last=True), "name")[:MERGE_CANDIDATES_LIMIT]
+    )
+
+
 def refresh_interactions(contact: Contact, *, now=None) -> None:
     """Recount the contact's interactions in the window and its last contact date."""
     now = now or timezone.now()

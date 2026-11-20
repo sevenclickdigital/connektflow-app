@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 20:20+0000\n"
+"POT-Creation-Date: 2026-11-20 00:35+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -752,7 +752,7 @@ msgstr "Curtidas"
 msgid "Reactions"
 msgstr "Reações"
 
-#: apps/analytics/metrics.py:22 apps/inbox/views.py:214
+#: apps/analytics/metrics.py:22 apps/inbox/views.py:249
 #: templates/composer/compose.html:2012
 msgid "Comments"
 msgstr "Comentários"
@@ -858,7 +858,7 @@ msgstr "Use uma imagem PNG, JPEG, WebP ou GIF."
 
 #: apps/approvals/templatetags/approval_extras.py:13
 #: apps/calendar/status_board.py:42 apps/composer/models.py:475
-#: apps/inbox/models.py:204 templates/automations/flow_builder.html:100
+#: apps/inbox/models.py:208 templates/automations/flow_builder.html:100
 #: templates/automations/staff_template_list.html:104
 #: templates/calendar/calendar.html:547
 #: templates/calendar/partials/publish_calendar_shell.html:98
@@ -913,7 +913,7 @@ msgstr "Publicado parcialmente"
 
 #: apps/approvals/templatetags/approval_extras.py:35 apps/billing/models.py:420
 #: apps/composer/models.py:484 apps/composer/models.py:564
-#: apps/composer/models.py:988 apps/inbox/models.py:206
+#: apps/composer/models.py:988 apps/inbox/models.py:210
 #: apps/notifications/models.py:42
 #: templates/calendar/partials/publish_calendar_shell.html:104
 #: templates/composer/partials/media_picker.html:254
@@ -950,6 +950,18 @@ msgstr "Respostas a avaliações — em breve"
 #: apps/automations/channels.py:35
 msgid "This channel doesn't support automations"
 msgstr "Este canal não suporta automações"
+
+#: apps/automations/flow.py:537
+msgid ""
+"This flow sends more than one private message before the person answers, and "
+"Instagram and Facebook only deliver the first. Put everything in one "
+"message, or add a reply button to the first message and connect the next "
+"ones to it."
+msgstr ""
+"Este fluxo envia mais de uma mensagem privada antes de a pessoa responder, e "
+"o Instagram e o Facebook só entregam a primeira. Junte tudo em uma mensagem "
+"só, ou adicione um botão de resposta à primeira mensagem e ligue as próximas "
+"a ele."
 
 #: apps/automations/forms.py:71
 msgid "Matches the whole comment"
@@ -996,22 +1008,6 @@ msgstr "Não foi possível ler a tela."
 #: apps/automations/template_views.py:267
 msgid "This flow has too many steps."
 msgstr "Este fluxo tem etapas demais."
-
-#: templates/inbox/partials/_message_panel.html
-msgid "Sending…"
-msgstr "Enviando…"
-
-#: apps/automations/flow.py
-msgid ""
-"This flow sends more than one private message before the person answers, "
-"and Instagram and Facebook only deliver the first. Put everything in one "
-"message, or add a reply button to the first message and connect the next "
-"ones to it."
-msgstr ""
-"Este fluxo envia mais de uma mensagem privada antes de a pessoa responder, "
-"e o Instagram e o Facebook só entregam a primeira. Junte tudo em uma "
-"mensagem só, ou adicione um botão de resposta à primeira mensagem e ligue "
-"as próximas a ele."
 
 #: apps/automations/template_views.py:323 apps/composer/staff_views.py:93
 msgid "Template saved."
@@ -3262,7 +3258,7 @@ msgstr "Esta publicação precisa ser aprovada antes de ser agendada."
 msgid "Open the post and choose when it goes out before scheduling it."
 msgstr "Abra a publicação e escolha quando ela sai antes de agendá-la."
 
-#: apps/calendar/views.py:1066 apps/inbox/views.py:188
+#: apps/calendar/views.py:1066 apps/inbox/views.py:222
 #: templates/billing/_checkout_summary.html:50
 #: templates/organizations/cross_calendar.html:140
 #: templates/workspaces/dashboard.html:156
@@ -4415,17 +4411,17 @@ msgctxt "engagement"
 msgid "Low"
 msgstr "Baixo"
 
-#: apps/contacts/services.py:588
+#: apps/contacts/services.py:667
 msgid "The file must be a CSV saved as UTF-8."
 msgstr "O arquivo deve ser um CSV salvo em UTF-8."
 
-#: apps/contacts/services.py:592
+#: apps/contacts/services.py:671
 msgid "The first line must name the columns, and one of them must be \"name\"."
 msgstr ""
 "A primeira linha deve ter os nomes das colunas, e uma delas deve ser "
 "\"name\"."
 
-#: apps/contacts/services.py:597
+#: apps/contacts/services.py:676
 #, python-format
 msgid "Only the first %(count)s rows were read."
 msgstr "Só as primeiras %(count)s linhas foram lidas."
@@ -4497,24 +4493,24 @@ msgid_plural "%(count)s contacts merged into %(name)s."
 msgstr[0] "%(count)s contato mesclado em %(name)s."
 msgstr[1] "%(count)s contatos mesclados em %(name)s."
 
-#: apps/contacts/views.py:254
+#: apps/contacts/views.py:269
 #, python-format
 msgid "Moved to the %(funnel)s funnel."
 msgstr "Movido para o funil %(funnel)s."
 
-#: apps/contacts/views.py:256
+#: apps/contacts/views.py:271
 msgid "Removed from the funnel."
 msgstr "Removido do funil."
 
-#: apps/contacts/views.py:280
+#: apps/contacts/views.py:295
 msgid "Choose a CSV file to import."
 msgstr "Escolha um arquivo CSV para importar."
 
-#: apps/contacts/views.py:283
+#: apps/contacts/views.py:298
 msgid "The file must be under 2 MB."
 msgstr "O arquivo deve ter menos de 2 MB."
 
-#: apps/contacts/views.py:291
+#: apps/contacts/views.py:306
 #, python-format
 msgid ""
 "Import finished: %(created)s created, %(skipped)s skipped (no name or "
@@ -4711,7 +4707,7 @@ msgstr "Etapa adicionada."
 msgid "Stage deleted. Its conversations moved to %(stage)s."
 msgstr "Etapa excluída. As conversas dela foram para %(stage)s."
 
-#: apps/inbox/forms.py:14 templates/inbox/partials/_reply_composer.html:99
+#: apps/inbox/forms.py:14 templates/inbox/partials/_reply_composer.html:101
 msgid "Write a reply..."
 msgstr "Escreva uma resposta..."
 
@@ -4806,22 +4802,22 @@ msgstr "Negativo"
 msgid "Auto"
 msgstr "Automático"
 
-#: apps/inbox/models.py:165 templates/funnels/board.html:99
+#: apps/inbox/models.py:169 templates/funnels/board.html:99
 msgctxt "inbox message origin"
 msgid "Feed"
 msgstr "Feed"
 
-#: apps/inbox/models.py:166 templates/funnels/board.html:101
+#: apps/inbox/models.py:170 templates/funnels/board.html:101
 msgctxt "inbox message origin"
 msgid "Story"
 msgstr "Story"
 
-#: apps/inbox/models.py:167 templates/funnels/board.html:100
+#: apps/inbox/models.py:171 templates/funnels/board.html:100
 msgctxt "inbox message origin"
 msgid "Reels"
 msgstr "Reels"
 
-#: apps/inbox/models.py:205
+#: apps/inbox/models.py:209
 #: templates/calendar/partials/publish_list_shell.html:24
 #: templates/inbox/partials/_reply_item.html:21
 msgid "Sent"
@@ -4870,7 +4866,7 @@ msgstr "A mensagem original está sem o identificador de quem a enviou."
 msgid "This activity was authored by the business rather than a customer."
 msgstr "Esta atividade foi feita pela própria empresa, não por um cliente."
 
-#: apps/inbox/reply_policy.py:107
+#: apps/inbox/reply_policy.py:110
 msgid ""
 "The customer message time could not be verified. Wait for a new message "
 "before replying."
@@ -4878,14 +4874,14 @@ msgstr ""
 "Não foi possível confirmar o horário da mensagem do cliente. Aguarde uma "
 "nova mensagem para responder."
 
-#: apps/inbox/reply_policy.py:117
+#: apps/inbox/reply_policy.py:120
 msgid "The seven-day reply window has closed. Wait for a new customer message."
 msgstr ""
 "Já se passaram mais de 7 dias desde a última mensagem do cliente, e a "
 "plataforma não permite mais responder. Você poderá responder quando ele "
 "escrever de novo."
 
-#: apps/inbox/reply_policy.py:121
+#: apps/inbox/reply_policy.py:124
 msgid ""
 "The 24-hour reply window has closed. A person must review and send this "
 "reply from the web inbox."
@@ -4893,7 +4889,7 @@ msgstr ""
 "A janela de 24 horas para responder fechou. Uma pessoa precisa revisar e "
 "enviar esta resposta pela caixa de entrada."
 
-#: apps/inbox/reply_policy.py:128
+#: apps/inbox/reply_policy.py:131
 msgid ""
 "Human Agent access is not enabled for this Meta app. An administrator must "
 "enable it after Meta approval."
@@ -4902,16 +4898,16 @@ msgstr ""
 "até 7 dias exige o acesso “Human Agent” da Meta, que ainda não está ativo "
 "neste app; um administrador pode ativá-lo após a aprovação da Meta."
 
-#: apps/inbox/reply_policy.py:148
+#: apps/inbox/reply_policy.py:151
 msgid "Reconnect this WhatsApp number before replying."
 msgstr "Reconecte este número de WhatsApp antes de responder."
 
-#: apps/inbox/reply_policy.py:152 providers/whatsapp.py:260
-#: providers/whatsapp.py:296
+#: apps/inbox/reply_policy.py:155 providers/whatsapp.py:265
+#: providers/whatsapp.py:301
 msgid "The original message is missing the customer's number."
 msgstr "A mensagem original está sem o número do cliente."
 
-#: apps/inbox/reply_policy.py:169 providers/whatsapp.py:59
+#: apps/inbox/reply_policy.py:172 providers/whatsapp.py:59
 msgid ""
 "More than 24 hours have passed since the customer last wrote. WhatsApp only "
 "delivers approved template messages until they write again."
@@ -4927,8 +4923,8 @@ msgstr "Esta conversa não permite citar uma mensagem."
 msgid "The quoted message is not part of this conversation."
 msgstr "A mensagem citada não faz parte desta conversa."
 
-#: apps/inbox/services.py:104 providers/whatsapp.py:285
-#: providers/whatsapp.py:311
+#: apps/inbox/services.py:104 providers/whatsapp.py:290
+#: providers/whatsapp.py:316
 msgid ""
 "Delivery could not be confirmed. Check the conversation before retrying."
 msgstr ""
@@ -4961,20 +4957,20 @@ msgstr "As reações só estão disponíveis em conversas do WhatsApp."
 msgid "That reaction is not available."
 msgstr "Essa reação não está disponível."
 
-#: apps/inbox/views.py:190
+#: apps/inbox/views.py:224
 msgid "Yesterday"
 msgstr "Ontem"
 
-#: apps/inbox/views.py:213
+#: apps/inbox/views.py:248
 msgctxt "inbox type button"
 msgid "Inbox"
 msgstr "Inbox"
 
-#: apps/inbox/views.py:215
+#: apps/inbox/views.py:250
 msgid "Mentions"
 msgstr "Menções"
 
-#: apps/inbox/views.py:642
+#: apps/inbox/views.py:679
 msgid "The reaction was not sent"
 msgstr "A reação não foi enviada"
 
@@ -7313,15 +7309,25 @@ msgid "This number is not in the test recipient list of the WhatsApp app."
 msgstr ""
 "Este número não está na lista de destinatários de teste do app do WhatsApp."
 
-#: providers/whatsapp.py:67
+#: providers/whatsapp.py:68
+msgid ""
+"WhatsApp has not approved this number's display name and sends nothing until "
+"it does. Check the name in WhatsApp Manager: it may be under review or "
+"declined."
+msgstr ""
+"O WhatsApp não aprovou o nome de exibição deste número e não envia nada até "
+"aprovar. Confira o nome no Gerenciador do WhatsApp: ele pode estar em "
+"análise ou ter sido recusado."
+
+#: providers/whatsapp.py:72
 msgid "The WhatsApp number is not registered on the Cloud API. Reconnect it."
 msgstr "O número de WhatsApp não está registrado na Cloud API. Reconecte-o."
 
-#: providers/whatsapp.py:69
+#: providers/whatsapp.py:74
 msgid "WhatsApp does not accept this kind of message."
 msgstr "O WhatsApp não aceita este tipo de mensagem."
 
-#: providers/whatsapp.py:122
+#: providers/whatsapp.py:127
 msgid ""
 "WhatsApp is limiting how fast this number can send. Wait a few minutes and "
 "try again."
@@ -7329,12 +7335,12 @@ msgstr ""
 "O WhatsApp está limitando a velocidade de envio deste número. Aguarde alguns "
 "minutos e tente de novo."
 
-#: providers/whatsapp.py:264
+#: providers/whatsapp.py:269
 msgid "WhatsApp messages must contain text and fit within 4,096 characters."
 msgstr ""
 "As mensagens do WhatsApp precisam ter texto e caber em 4.096 caracteres."
 
-#: providers/whatsapp.py:330 providers/whatsapp.py:333
+#: providers/whatsapp.py:335 providers/whatsapp.py:338
 msgid "This file is too large to open here."
 msgstr "Este arquivo é grande demais para abrir aqui."
 
@@ -7938,6 +7944,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/contacts/partials/_results.html:68
 #: templates/funnels/partials/_settings_list.html:17
 #: templates/funnels/partials/_settings_list.html:60
+#: templates/inbox/partials/_person_channels.html:57
 #: templates/inbox/partials/_saved_reply_form.html:24
 #: templates/inbox/sla_config.html:64 templates/intelligence/subscribe.html:19
 #: templates/media_library/_asset_detail_panel.html:93
@@ -9683,7 +9690,7 @@ msgstr "compartilhado com o cliente"
 #: templates/composer/partials/feed_events_batch.html:41
 #: templates/funnels/board.html:143
 #: templates/inbox/partials/_draft_reply_item.html:11
-#: templates/inbox/partials/_message_row.html:43
+#: templates/inbox/partials/_message_row.html:49
 #: templates/notifications/email/digest.html:14
 #: templates/notifications/email/digest.txt:6
 #: templates/notifications/partials/drawer.html:74
@@ -9760,9 +9767,9 @@ msgid "Internal"
 msgstr "Interna"
 
 #: templates/approvals/partials/comment_list.html:28
-#: templates/inbox/partials/_chat_incoming.html:58
+#: templates/inbox/partials/_chat_incoming.html:59
 #: templates/inbox/partials/_draft_reply_item.html:16
-#: templates/inbox/partials/_message_row.html:45
+#: templates/inbox/partials/_message_row.html:51
 #: templates/inbox/partials/_reply_item.html:16
 msgid "Attachment"
 msgstr "Anexo"
@@ -10247,6 +10254,7 @@ msgstr "Enviar"
 #: templates/calendar/partials/publish_calendar_shell.html:76
 #: templates/components/_skeleton.html:20
 #: templates/composer/partials/_tag_manager.html:83
+#: templates/inbox/partials/_person_channels.html:53
 #: templates/radar/partials/_source_card.html:126
 msgid "Loading…"
 msgstr "Carregando…"
@@ -10343,7 +10351,7 @@ msgid "Add step"
 msgstr "Adicionar etapa"
 
 #: templates/automations/flow_builder.html:1231
-#: templates/inbox/partials/_reply_composer.html:171
+#: templates/inbox/partials/_reply_composer.html:173
 msgid "Reply to comment"
 msgstr "Responder ao comentário"
 
@@ -12886,7 +12894,7 @@ msgstr "Fim"
 #: templates/billing/staff_impersonations.html:56
 #: templates/funnels/board.html:97 templates/funnels/board.html:98
 #: templates/inbox/partials/_entry_facts.html:23
-#: templates/inbox/partials/_message_row.html:69
+#: templates/inbox/partials/_message_row.html:75
 msgid "Origin"
 msgstr "Origem"
 
@@ -15026,7 +15034,7 @@ msgid "Search Unsplash"
 msgstr "Buscar no Unsplash"
 
 #: templates/composer/compose.html:685
-#: templates/inbox/partials/_reply_composer.html:107
+#: templates/inbox/partials/_reply_composer.html:109
 msgid "Insert emoji"
 msgstr "Inserir emoji"
 
@@ -17686,6 +17694,22 @@ msgstr ""
 "Uma linha cujo WhatsApp, Instagram ou e-mail já pertence a um contato é "
 "ignorada. Até 5.000 linhas e 2 MB."
 
+#: templates/contacts/partials/_merge_candidates.html:8
+msgid "Contacts found"
+msgstr "Contatos encontrados"
+
+#: templates/contacts/partials/_merge_candidates.html:8
+msgid "Possibly the same person"
+msgstr "Talvez a mesma pessoa"
+
+#: templates/contacts/partials/_merge_candidates.html:26
+msgid "No contact found for this search."
+msgstr "Nenhum contato encontrado nesta busca."
+
+#: templates/contacts/partials/_merge_candidates.html:28
+msgid "No similar contact. Search by name, @ or phone."
+msgstr "Nenhum contato parecido. Busque por nome, @ ou telefone."
+
 #: templates/contacts/partials/_results.html:23
 #, python-brace-format
 msgctxt "contacts"
@@ -17700,6 +17724,7 @@ msgstr "{n} selecionados"
 
 #: templates/contacts/partials/_results.html:27
 #: templates/contacts/partials/_results.html:69
+#: templates/inbox/partials/_person_channels.html:58
 msgctxt "contacts"
 msgid "Merge"
 msgstr "Mesclar"
@@ -17913,7 +17938,7 @@ msgstr "Buscar oportunidade…"
 #: templates/funnels/board.html:139
 #: templates/funnels/partials/_pick_conversation.html:16
 #: templates/inbox/partials/_chat_incoming.html:14
-#: templates/inbox/partials/_message_row.html:45
+#: templates/inbox/partials/_message_row.html:51
 msgid "Message without text"
 msgstr "Mensagem sem texto"
 
@@ -18178,21 +18203,21 @@ msgstr "Abrir anexo de %(type)s"
 msgid "Message options"
 msgstr "Opções da mensagem"
 
-#: templates/inbox/partials/_chat_incoming.html:53
+#: templates/inbox/partials/_chat_incoming.html:54
 #, python-format
 msgid "React with %(emoji)s"
 msgstr "Reagir com %(emoji)s"
 
-#: templates/inbox/partials/_chat_incoming.html:60
+#: templates/inbox/partials/_chat_incoming.html:61
 msgctxt "message action"
 msgid "Reply"
 msgstr "Responder"
 
-#: templates/inbox/partials/_chat_incoming.html:64
+#: templates/inbox/partials/_chat_incoming.html:65
 msgid "Message copied"
 msgstr "Mensagem copiada"
 
-#: templates/inbox/partials/_chat_incoming.html:66
+#: templates/inbox/partials/_chat_incoming.html:67
 msgid "Copy text"
 msgstr "Copiar texto"
 
@@ -18247,14 +18272,14 @@ msgstr "Limpar todos os filtros"
 #: templates/inbox/partials/_entry_facts.html:33
 #: templates/inbox/partials/_entry_facts.html:35
 #: templates/inbox/partials/_message_panel.html:43
-#: templates/inbox/partials/_message_panel.html:90
-#: templates/inbox/partials/_message_panel.html:98
+#: templates/inbox/partials/_message_panel.html:91
+#: templates/inbox/partials/_message_panel.html:99
 msgid "Post without caption"
 msgstr "Publicação sem legenda"
 
 #: templates/inbox/partials/_entry_facts.html:38
-#: templates/inbox/partials/_message_panel.html:57
-#: templates/inbox/partials/_message_panel.html:75
+#: templates/inbox/partials/_message_panel.html:58
+#: templates/inbox/partials/_message_panel.html:76
 msgid "Open post"
 msgstr "Abrir publicação"
 
@@ -18323,13 +18348,17 @@ msgstr[1] ""
 msgid "Post: %(caption)s"
 msgstr "Post: %(caption)s"
 
-#: templates/inbox/partials/_message_panel.html:74
+#: templates/inbox/partials/_message_panel.html:75
 msgid "The post this comment is on could not be loaded from the platform."
 msgstr "Não foi possível carregar da plataforma a publicação deste comentário."
 
-#: templates/inbox/partials/_message_panel.html:108
+#: templates/inbox/partials/_message_panel.html:109
 msgid "This person wrote again. Open the latest message"
 msgstr "Esta pessoa escreveu de novo. Abrir a mensagem mais recente"
+
+#: templates/inbox/partials/_message_panel.html:126
+msgid "Sending…"
+msgstr "Enviando…"
 
 #: templates/inbox/partials/_message_reaction.html:12
 msgid "Remove the reaction"
@@ -18341,6 +18370,38 @@ msgid "%(counter)s message in this conversation"
 msgid_plural "%(counter)s messages in this conversation"
 msgstr[0] "%(counter)s mensagem nesta conversa"
 msgstr[1] "%(counter)s mensagens nesta conversa"
+
+#: templates/inbox/partials/_message_row.html:44
+#: templates/inbox/partials/_message_row.html:45
+msgid "Also talks through other channels"
+msgstr "Também conversa por outros canais"
+
+#: templates/inbox/partials/_person_channels.html:27
+msgid "Merge contact"
+msgstr "Mesclar contato"
+
+#: templates/inbox/partials/_person_channels.html:41
+#, python-format
+msgid "Merge another contact into %(name)s"
+msgstr "Mesclar outro contato em %(name)s"
+
+#: templates/inbox/partials/_person_channels.html:44
+msgid ""
+"Pick the contact that is the same person on another channel. Its channels, "
+"tags and interactions move to this contact, its conversations show here as "
+"the same person, and it is deleted."
+msgstr ""
+"Escolha o contato que é a mesma pessoa em outro canal. Os canais, as "
+"tags e as interações dele passam para este contato, as conversas dele "
+"aparecem aqui como da mesma pessoa, e ele é excluído."
+
+#: templates/inbox/partials/_person_channels.html:46
+msgid "Search by name, @ or phone"
+msgstr "Buscar por nome, @ ou telefone"
+
+#: templates/inbox/partials/_person_channels.html:46
+msgid "Search contacts"
+msgstr "Buscar contatos"
 
 #: templates/inbox/partials/_reply_composer.html:11
 msgid "Pending replies"
@@ -18376,58 +18437,58 @@ msgstr "Gerenciar respostas salvas"
 msgid "Create a saved reply"
 msgstr "Criar resposta salva"
 
-#: templates/inbox/partials/_reply_composer.html:90
+#: templates/inbox/partials/_reply_composer.html:92
 msgid "Reply without quoting"
 msgstr "Responder sem citar"
 
-#: templates/inbox/partials/_reply_composer.html:115
+#: templates/inbox/partials/_reply_composer.html:117
 #: templates/inbox/saved_replies.html:4 templates/inbox/saved_replies.html:16
 msgid "Saved Replies"
 msgstr "Respostas salvas"
 
-#: templates/inbox/partials/_reply_composer.html:121
+#: templates/inbox/partials/_reply_composer.html:123
 msgid "Search saved replies"
 msgstr "Buscar respostas salvas"
 
-#: templates/inbox/partials/_reply_composer.html:139
+#: templates/inbox/partials/_reply_composer.html:141
 #, python-format
 msgid "Insert the name (%(name)s)"
 msgstr "Inserir o nome (%(name)s)"
 
-#: templates/inbox/partials/_reply_composer.html:140
+#: templates/inbox/partials/_reply_composer.html:142
 msgid "Insert the customer name"
 msgstr "Inserir o nome do cliente"
 
-#: templates/inbox/partials/_reply_composer.html:144
+#: templates/inbox/partials/_reply_composer.html:146
 msgid "Enter to send · Shift+Enter for a new line"
 msgstr "Enter para enviar · Shift+Enter para nova linha"
 
-#: templates/inbox/partials/_reply_composer.html:155
+#: templates/inbox/partials/_reply_composer.html:157
 #, python-format
 msgid "Reply will be posted on %(platform_name)s"
 msgstr "A resposta será publicada em %(platform_name)s"
 
-#: templates/inbox/partials/_reply_composer.html:163
+#: templates/inbox/partials/_reply_composer.html:165
 msgid "Save as draft"
 msgstr "Salvar como rascunho"
 
-#: templates/inbox/partials/_reply_composer.html:171
+#: templates/inbox/partials/_reply_composer.html:173
 msgid "Send message"
 msgstr "Enviar mensagem"
 
-#: templates/inbox/partials/_reply_composer.html:171
+#: templates/inbox/partials/_reply_composer.html:173
 msgid "Send Reply"
 msgstr "Enviar resposta"
 
-#: templates/inbox/partials/_reply_composer.html:193
+#: templates/inbox/partials/_reply_composer.html:195
 msgid "Send this flow to this person now?"
 msgstr "Enviar este fluxo para esta pessoa agora?"
 
-#: templates/inbox/partials/_reply_composer.html:194
+#: templates/inbox/partials/_reply_composer.html:196
 msgid "Start flow"
 msgstr "Iniciar fluxo"
 
-#: templates/inbox/partials/_reply_composer.html:199
+#: templates/inbox/partials/_reply_composer.html:201
 msgid ""
 "The flow answers this comment with a private message, within Meta's 7-day "
 "window. It runs once per comment."
@@ -18435,14 +18496,14 @@ msgstr ""
 "O fluxo responde este comentário com uma mensagem privada, dentro da janela "
 "de 7 dias da Meta. Ele roda uma vez por comentário."
 
-#: templates/inbox/partials/_reply_composer.html:203
+#: templates/inbox/partials/_reply_composer.html:205
 msgid ""
 "This post has no flow yet. Create one in Automation to answer its comments."
 msgstr ""
 "Este post ainda não tem fluxo. Crie um em Automação para responder os "
 "comentários dele."
 
-#: templates/inbox/partials/_reply_composer.html:203
+#: templates/inbox/partials/_reply_composer.html:205
 msgid ""
 "Flows start from a comment on a Facebook or Instagram post; this "
 "conversation has none to run."
@@ -18450,11 +18511,11 @@ msgstr ""
 "Fluxos começam a partir de um comentário em um post do Facebook ou do "
 "Instagram; esta conversa não tem nenhum para rodar."
 
-#: templates/inbox/partials/_reply_composer.html:221
+#: templates/inbox/partials/_reply_composer.html:223
 msgid "Add an internal note (only visible to your team)..."
 msgstr "Adicione uma nota interna (visível apenas para sua equipe)..."
 
-#: templates/inbox/partials/_reply_composer.html:229
+#: templates/inbox/partials/_reply_composer.html:231
 msgid "Add Note"
 msgstr "Adicionar nota"
 
@@ -23486,23 +23547,10 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 msgid "Send invitation"
 msgstr "Enviar convite"
 
-#: providers/whatsapp.py
-msgid ""
-"WhatsApp has not approved this number's display name and sends nothing until "
-"it does. Check the name in WhatsApp Manager: it may be under review or "
-"declined."
-msgstr ""
-"O WhatsApp não aprovou o nome de exibição deste número e não envia nada até "
-"aprovar. Confira o nome no Gerenciador do WhatsApp: ele pode estar em análise "
-"ou ter sido recusado."
-
 #~ msgid "%(users)s user"
 #~ msgid_plural "%(users)s users"
 #~ msgstr[0] "%(users)s usuário"
 #~ msgstr[1] "%(users)s usuários"
-
-#~ msgid "Search by name, e-mail or account"
-#~ msgstr "Buscar por nome, e-mail ou conta"
 
 #~ msgid "This account has no workspaces."
 #~ msgstr "Esta conta não tem marcas."

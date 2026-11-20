@@ -14,4 +14,5 @@ urlpatterns = [
     path("<uuid:contact_id>/", views.contact_edit, name="edit"),
     path("<uuid:contact_id>/delete/", views.contact_delete, name="delete"),
     path("<uuid:contact_id>/funnel/", views.contact_set_funnel, name="set_funnel"),
+    path("<uuid:contact_id>/merge-candidates/", views.contact_merge_candidates, name="merge_candidates"),
 ]
