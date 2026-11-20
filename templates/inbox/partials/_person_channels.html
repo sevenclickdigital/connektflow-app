@@ -3,13 +3,17 @@
 The open conversation's person across channels, under its header (_message_panel.html).
 person_channels (views._person_channels): one chip per channel the contact talks
 through, the open one marked; a click opens that channel's conversation in the
-panel. "Merge contact" joins another contact into this one (contacts:merge, the
-candidates from contacts:merge_candidates), so the two networks' conversations
-show here as the same person. Context: _detail_context.
+panel. "Merge contact" joins one or more contacts with this one (contacts:merge, the
+candidates from contacts:merge_candidates), so the networks' conversations show
+here as the same person; the team picks the main contact, the one that stays
+(this one by default). Names reach Alpine through data-name, never inside an
+expression. Context: _detail_context.
 {% endcomment %}
 {% if contact %}
 {% url 'inbox:message_detail' workspace_id=workspace.id message_id=message.id as panel_path %}
-<div class="flex flex-wrap items-center gap-1.5 mt-2" x-data="{ mergeOpen: false, other: '' }">
+<div class="flex flex-wrap items-center gap-1.5 mt-2" data-id="{{ contact.id }}" data-name="{{ contact.name }}"
+     x-data="{ mergeOpen: false, others: [], current: $el.dataset.id, keep: $el.dataset.id, names: { [$el.dataset.id]: $el.dataset.name } }"
+     x-effect="if (keep !== current && !others.includes(keep)) keep = current">
     {% for chip in person_channels %}
     {% if chip.active %}
     <span class="chip active" aria-current="true">{% include "partials/_platform_icon.html" with platform=chip.kind size="sm" %}{{ chip.label }}</span>
@@ -31,17 +35,17 @@ show here as the same person. Context: _detail_context.
          x-transition.opacity @keydown.escape.window="mergeOpen = false">
         <form class="modal-panel" @click.outside="mergeOpen = false"
               hx-post="{% url 'contacts:merge' workspace_id=workspace.id %}" hx-swap="none"
-              @htmx:after-request="if ($event.detail.elt === $el && $event.detail.successful) { mergeOpen = false; htmx.ajax('GET', '{{ panel_path }}{% if panel_mode == "funnel" %}?mode=funnel{% endif %}', { target: '#inbox-detail-panel', swap: 'innerHTML' }); $dispatch('inbox-list-refresh'); }">
+              @htmx:after-request="if ($event.detail.elt === $el && $event.detail.successful) { mergeOpen = false; others = []; keep = current; htmx.ajax('GET', '{{ panel_path }}{% if panel_mode == "funnel" %}?mode=funnel{% endif %}', { target: '#inbox-detail-panel', swap: 'innerHTML' }); $dispatch('inbox-list-refresh'); }">
             <input type="hidden" name="ids" value="{{ contact.id }}">
-            <input type="hidden" name="keep" value="{{ contact.id }}">
+            <template x-for="id in others" :key="id"><input type="hidden" name="ids" :value="id"></template>
             <div class="modal-header">
                 <div class="modal-icon is-brand">
                     <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 009 9"/></svg>
                 </div>
-                <div class="modal-title" id="inbox-merge-title">{% blocktranslate with name=contact.name %}Merge another contact into {{ name }}{% endblocktranslate %}</div>
+                <div class="modal-title" id="inbox-merge-title">{% translate "Merge contacts" %}</div>
             </div>
             <div class="modal-body">
-                <p>{% translate "Pick the contact that is the same person on another channel. Its channels, tags and interactions move to this contact, its conversations show here as the same person, and it is deleted." %}</p>
+                <p>{% translate "Tick the contacts that are the same person on other channels and choose the main contact. The others' channels, tags and interactions move to it, their conversations show as the same person, and they are deleted." %}</p>
                 <input type="search" name="q" autocomplete="off" class="form-input-styled text-sm"
                        placeholder="{% translate 'Search by name, @ or phone' %}" aria-label="{% translate 'Search contacts' %}"
                        hx-get="{% url 'contacts:merge_candidates' workspace_id=workspace.id contact_id=contact.id %}"
@@ -52,10 +56,23 @@ show here as the same person. Context: _detail_context.
                      hx-trigger="merge-open once" hx-swap="innerHTML">
                     <p class="text-sm text-neutral-600">{% translate "Loading…" %}</p>
                 </div>
+                <div x-show="others.length" x-cloak class="mt-4 pt-4 border-t border-neutral-300">
+                    <p class="text-xs font-semibold text-neutral-600 mb-2" id="inbox-merge-keep">{% translate "Main contact" %}</p>
+                    <div class="space-y-2" role="radiogroup" aria-labelledby="inbox-merge-keep">
+                        <template x-for="id in [current, ...others]" :key="id">
+                            <label class="flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors"
+                                   :class="keep === id ? 'border-brand-300 bg-brand-50' : 'border-neutral-300 hover:bg-neutral-50'">
+                                <input type="radio" name="keep" :value="id" x-model="keep" class="bb-checkbox">
+                                <span class="text-sm font-semibold text-neutral-900 truncate flex-1" x-text="names[id]"></span>
+                                <span x-show="id === current" class="pill pill-neutral flex-shrink-0">{% translate "This conversation" %}</span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-ghost" @click="mergeOpen = false">{% translate "Cancel" %}</button>
-                <button type="submit" class="btn-brand" :disabled="!other">{% translate "Merge" context "contacts" %}</button>
+                <button type="submit" class="btn-brand" :disabled="!others.length">{% translate "Merge" context "contacts" %}<span x-show="others.length > 1" x-text="'(' + others.length + ')'"></span></button>
             </div>
         </form>
     </div>

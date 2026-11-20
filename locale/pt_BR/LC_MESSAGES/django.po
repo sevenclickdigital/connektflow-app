@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-20 00:35+0000\n"
+"POT-Creation-Date: 2026-11-20 01:20+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -7944,7 +7944,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/contacts/partials/_results.html:68
 #: templates/funnels/partials/_settings_list.html:17
 #: templates/funnels/partials/_settings_list.html:60
-#: templates/inbox/partials/_person_channels.html:57
+#: templates/inbox/partials/_person_channels.html:74
 #: templates/inbox/partials/_saved_reply_form.html:24
 #: templates/inbox/sla_config.html:64 templates/intelligence/subscribe.html:19
 #: templates/media_library/_asset_detail_panel.html:93
@@ -10254,7 +10254,7 @@ msgstr "Enviar"
 #: templates/calendar/partials/publish_calendar_shell.html:76
 #: templates/components/_skeleton.html:20
 #: templates/composer/partials/_tag_manager.html:83
-#: templates/inbox/partials/_person_channels.html:53
+#: templates/inbox/partials/_person_channels.html:57
 #: templates/radar/partials/_source_card.html:126
 msgid "Loading…"
 msgstr "Carregando…"
@@ -17694,19 +17694,19 @@ msgstr ""
 "Uma linha cujo WhatsApp, Instagram ou e-mail já pertence a um contato é "
 "ignorada. Até 5.000 linhas e 2 MB."
 
-#: templates/contacts/partials/_merge_candidates.html:8
+#: templates/contacts/partials/_merge_candidates.html:9
 msgid "Contacts found"
 msgstr "Contatos encontrados"
 
-#: templates/contacts/partials/_merge_candidates.html:8
+#: templates/contacts/partials/_merge_candidates.html:9
 msgid "Possibly the same person"
 msgstr "Talvez a mesma pessoa"
 
-#: templates/contacts/partials/_merge_candidates.html:26
+#: templates/contacts/partials/_merge_candidates.html:27
 msgid "No contact found for this search."
 msgstr "Nenhum contato encontrado nesta busca."
 
-#: templates/contacts/partials/_merge_candidates.html:28
+#: templates/contacts/partials/_merge_candidates.html:29
 msgid "No similar contact. Search by name, @ or phone."
 msgstr "Nenhum contato parecido. Busque por nome, @ ou telefone."
 
@@ -17724,7 +17724,7 @@ msgstr "{n} selecionados"
 
 #: templates/contacts/partials/_results.html:27
 #: templates/contacts/partials/_results.html:69
-#: templates/inbox/partials/_person_channels.html:58
+#: templates/inbox/partials/_person_channels.html:75
 msgctxt "contacts"
 msgid "Merge"
 msgstr "Mesclar"
@@ -17734,6 +17734,7 @@ msgid "Delete the selected contacts? This cannot be undone."
 msgstr "Excluir os contatos selecionados? Isso não pode ser desfeito."
 
 #: templates/contacts/partials/_results.html:53
+#: templates/inbox/partials/_person_channels.html:45
 msgid "Merge contacts"
 msgstr "Mesclar contatos"
 
@@ -18376,32 +18377,35 @@ msgstr[1] "%(counter)s mensagens nesta conversa"
 msgid "Also talks through other channels"
 msgstr "Também conversa por outros canais"
 
-#: templates/inbox/partials/_person_channels.html:27
+#: templates/inbox/partials/_person_channels.html:31
 msgid "Merge contact"
 msgstr "Mesclar contato"
 
-#: templates/inbox/partials/_person_channels.html:41
-#, python-format
-msgid "Merge another contact into %(name)s"
-msgstr "Mesclar outro contato em %(name)s"
-
-#: templates/inbox/partials/_person_channels.html:44
+#: templates/inbox/partials/_person_channels.html:48
 msgid ""
-"Pick the contact that is the same person on another channel. Its channels, "
-"tags and interactions move to this contact, its conversations show here as "
-"the same person, and it is deleted."
+"Tick the contacts that are the same person on other channels and choose the "
+"main contact. The others' channels, tags and interactions move to it, their "
+"conversations show as the same person, and they are deleted."
 msgstr ""
-"Escolha o contato que é a mesma pessoa em outro canal. Os canais, as "
-"tags e as interações dele passam para este contato, as conversas dele "
-"aparecem aqui como da mesma pessoa, e ele é excluído."
+"Marque os contatos que são a mesma pessoa em outros canais e escolha o "
+"contato principal. Os canais, as tags e as interações dos outros passam para "
+"ele, as conversas deles aparecem como da mesma pessoa, e eles são excluídos."
 
-#: templates/inbox/partials/_person_channels.html:46
+#: templates/inbox/partials/_person_channels.html:50
 msgid "Search by name, @ or phone"
 msgstr "Buscar por nome, @ ou telefone"
 
-#: templates/inbox/partials/_person_channels.html:46
+#: templates/inbox/partials/_person_channels.html:50
 msgid "Search contacts"
 msgstr "Buscar contatos"
+
+#: templates/inbox/partials/_person_channels.html:60
+msgid "Main contact"
+msgstr "Contato principal"
+
+#: templates/inbox/partials/_person_channels.html:67
+msgid "This conversation"
+msgstr "Esta conversa"
 
 #: templates/inbox/partials/_reply_composer.html:11
 msgid "Pending replies"
@@ -23546,6 +23550,10 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 #: templates/workspaces/team.html:102
 msgid "Send invitation"
 msgstr "Enviar convite"
+
+#, python-format
+#~ msgid "Merge contacts into %(name)s"
+#~ msgstr "Mesclar contatos em %(name)s"
 
 #~ msgid "%(users)s user"
 #~ msgid_plural "%(users)s users"

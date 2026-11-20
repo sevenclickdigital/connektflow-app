@@ -423,6 +423,24 @@ class TestInboxPanel:
         page = response.content.decode()
         assert reverse("inbox:message_detail", kwargs={"workspace_id": workspace.id, "message_id": fb_dm.id}) in page
 
+    def test_the_main_contact_can_be_the_other_one(self):
+        workspace = _workspace("A")
+        ig_dm, fb_dm, on_screen, main = self._carla_on_two_networks(workspace)
+        client = _client(_user("a@x.com", workspace, Role.EDITOR))
+
+        client.post(
+            reverse("contacts:merge", kwargs={"workspace_id": workspace.id}),
+            {"ids": [str(on_screen.id), str(main.id)], "keep": str(main.id)},
+        )
+        response = client.get(
+            reverse("inbox:message_detail", kwargs={"workspace_id": workspace.id, "message_id": ig_dm.id}),
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert not Contact.objects.filter(pk=on_screen.pk).exists()
+        assert response.context["contact"] == main
+        assert [chip["message"] for chip in response.context["person_channels"]] == [fb_dm, ig_dm]
+
     def test_the_list_shows_the_other_channels_of_a_merged_sender(self):
         workspace = _workspace("A")
         ig_dm, fb_dm, keep, other = self._carla_on_two_networks(workspace)
