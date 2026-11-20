@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, timedelta
 
 import pytest
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.contacts import services
-from apps.contacts.forms import is_valid_cnpj, is_valid_cpf
+from apps.contacts.forms import ContactForm, is_valid_cnpj, is_valid_cpf
 from apps.contacts.models import Contact, ContactChannel
 from apps.inbox.models import InboxMessage
 from apps.radar.tests.test_radar import Role, _client, _user, _workspace
@@ -325,7 +325,8 @@ class TestMerge:
         assert not Contact.objects.filter(pk=other.pk).exists()
         assert sorted(keep.channels.values_list("kind", flat=True)) == ["instagram", "messenger"]
         assert keep.channels.filter(is_primary=True).count() == 1
-        assert (keep.tags, keep.company, keep.notes) == (["Client", "VIP"], "Martins Arq", "First\n\nSecond")
+        assert (keep.tags, keep.company) == (["Client", "VIP"], "Martins Arq")
+        assert keep.notes == "First\n\nMerged from Carla Martins\nContact source: Facebook\n\nSecond"
         assert keep.interactions_90d == 2
 
     def test_a_shared_channel_is_not_duplicated_and_keeps_the_inbox_link(self):
@@ -352,6 +353,68 @@ class TestMerge:
 
         assert "could not be found" in response["HX-Trigger"]
         assert Contact.objects.filter(pk=foreign.pk).exists()
+
+    def test_conflicting_values_are_written_into_the_notes_and_the_kept_ones_stay(self):
+        workspace = _workspace("A")
+        keep = Contact.objects.create(workspace=workspace, name="Carla", company="Studio A", status="lead")
+        other = Contact.objects.create(
+            workspace=workspace,
+            name="Carla Martins",
+            company="Martins Arq",
+            status="active",
+            birth_date=date(1990, 3, 7),
+            avatar_url="https://cdn.example.com/a.jpg",
+            notes="Prefers WhatsApp",
+        )
+        Contact.objects.filter(pk=keep.pk).update(
+            birth_date=date(1991, 1, 1), avatar_url="https://cdn.example.com/b.jpg"
+        )
+
+        services.merge_contacts(workspace.id, keep.id, [other.id])
+
+        keep.refresh_from_db()
+        assert (keep.name, keep.company, keep.status) == ("Carla", "Studio A", "lead")
+        assert keep.birth_date == date(1991, 1, 1)
+        lines = keep.notes.split("\n")
+        assert lines[0] == "Merged from Carla Martins"
+        assert "Company: Martins Arq" in lines
+        assert "Status: Active" in lines
+        assert any(line.startswith("Date of birth: ") and "1990" in line for line in lines)
+        assert not any("cdn.example.com" in line for line in lines)
+        assert keep.notes.endswith("\n\nPrefers WhatsApp")
+
+    def test_identical_contacts_only_append_the_notes(self):
+        workspace = _workspace("A")
+        keep = Contact.objects.create(workspace=workspace, name="Carla", company="Studio A", notes="First")
+        other = Contact.objects.create(workspace=workspace, name="Carla", company="", notes="Second")
+
+        services.merge_contacts(workspace.id, keep.id, [other.id])
+
+        keep.refresh_from_db()
+        assert keep.notes == "First\n\nSecond"
+
+    def test_long_notes_are_kept_whole_and_the_contact_stays_editable(self):
+        workspace = _workspace("A")
+        first, second = "a" * services.MAX_NOTES_LENGTH, "b" * services.MAX_NOTES_LENGTH
+        keep = Contact.objects.create(workspace=workspace, name="Carla", notes=first)
+        other = Contact.objects.create(workspace=workspace, name="Carla", notes=second)
+
+        services.merge_contacts(workspace.id, keep.id, [other.id])
+
+        keep.refresh_from_db()
+        assert keep.notes == f"{first}\n\n{second}"
+        form = ContactForm(
+            instance=keep,
+            data={"name": "Carla", "kind": "person", "status": "lead", "source": "manual", "notes": keep.notes},
+        )
+        form.is_valid()
+        assert "notes" not in form.errors
+        too_long = ContactForm(
+            instance=keep,
+            data={"name": "Carla", "kind": "person", "status": "lead", "source": "manual", "notes": keep.notes + "c"},
+        )
+        too_long.is_valid()
+        assert "notes" in too_long.errors
 
     def test_a_single_contact_is_not_a_merge(self):
         workspace = _workspace("A")
@@ -475,6 +538,50 @@ class TestInboxPanel:
         )
 
         assert response.status_code == 404
+
+    def test_the_merge_summary_counts_channels_interactions_and_filled_fields(self):
+        workspace = _workspace("A")
+        now = timezone.now()
+        contact = Contact.objects.create(
+            workspace=workspace,
+            name="Carla",
+            company="Studio",
+            tags=["VIP"],
+            city="Recife",
+            avatar_url="https://example.com/a.jpg",
+            interactions_90d=12,
+            last_contact_at=now - timedelta(days=2),
+        )
+        for value in ("carla.arq", "carla@example.com"):
+            ContactChannel.objects.create(
+                workspace=workspace, contact=contact, kind="instagram" if "@" not in value else "email", value=value
+            )
+        empty = Contact.objects.create(workspace=workspace, name="Carla M", tags=[])
+
+        summary = services.merge_summary(contact, now=now)
+
+        assert (summary["channels"], summary["interactions"], summary["fields"]) == (2, 12, 4)
+        assert summary["text"] == "2 channels · 12 interactions · 4 fields filled · last contact 2\xa0days ago"
+        assert services.merge_summary(empty, now=now)["text"] == "0 channels · 0 interactions · 0 fields filled"
+
+    def test_the_merge_dialog_marks_the_most_complete_contact(self):
+        workspace = _workspace("A")
+        _ig_dm, _fb_dm, on_screen, other = self._carla_on_two_networks(workspace)
+        client = _client(_user("a@x.com", workspace, Role.EDITOR))
+        url = reverse("contacts:merge_candidates", kwargs={"workspace_id": workspace.id, "contact_id": on_screen.id})
+        Contact.objects.filter(pk__in=[on_screen.pk, other.pk]).update(interactions_90d=0)
+
+        tied = client.get(url)
+        Contact.objects.filter(pk=other.pk).update(company="Studio", city="Recife")
+        marked = client.get(url)
+
+        assert tied.context["most_complete_id"] is None
+        assert "Most complete" not in tied.content.decode()
+        assert marked.context["most_complete_id"] == other.pk
+        page = marked.content.decode()
+        assert page.count("Most complete") == 1
+        assert f'value="{other.id}"' in page
+        assert "2 fields filled" in page
 
 
 class TestPhoto:

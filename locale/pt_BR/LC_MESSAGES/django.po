@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-20 01:20+0000\n"
+"POT-Creation-Date: 2026-11-20 01:33+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -25,7 +25,8 @@ msgstr ""
 msgid "Select"
 msgstr "Selecionar"
 
-#: apps/accounts/forms.py:61 apps/contacts/forms.py:112
+#: apps/accounts/forms.py:61 apps/contacts/forms.py:111
+#: apps/contacts/services.py:534
 msgid "State"
 msgstr "Estado"
 
@@ -57,7 +58,8 @@ msgstr "Complemento"
 msgid "Neighborhood"
 msgstr "Bairro"
 
-#: apps/accounts/forms.py:84 apps/contacts/forms.py:111
+#: apps/accounts/forms.py:84 apps/contacts/forms.py:110
+#: apps/contacts/services.py:533
 msgid "City"
 msgstr "Cidade"
 
@@ -243,7 +245,8 @@ msgstr "Idade mínima"
 msgid "Maximum age"
 msgstr "Idade máxima"
 
-#: apps/ads/forms.py:80 apps/contacts/forms.py:103
+#: apps/ads/forms.py:80 apps/contacts/forms.py:102
+#: apps/contacts/services.py:526
 msgid "Gender"
 msgstr "Gênero"
 
@@ -4183,23 +4186,25 @@ msgstr "Ele aparece para todas as marcas assim que a nossa equipe aprovar."
 msgid "This tag no longer exists."
 msgstr "Esta tag não existe mais."
 
-#: apps/contacts/forms.py:100
+#: apps/contacts/forms.py:99
 msgid "Full name"
 msgstr "Nome completo"
 
-#: apps/contacts/forms.py:101
+#: apps/contacts/forms.py:100 apps/contacts/services.py:523
 msgid "Contact type"
 msgstr "Tipo de contato"
 
-#: apps/contacts/forms.py:102
+#: apps/contacts/forms.py:101 apps/contacts/services.py:525
 msgid "Date of birth"
 msgstr "Data de nascimento"
 
-#: apps/contacts/forms.py:104 apps/contacts/models.py:51
+#: apps/contacts/forms.py:103 apps/contacts/models.py:51
+#: apps/contacts/services.py:527
 msgid "Company"
 msgstr "Empresa"
 
-#: apps/contacts/forms.py:105 apps/tasks/creative_formats.py:169
+#: apps/contacts/forms.py:104 apps/contacts/services.py:528
+#: apps/tasks/creative_formats.py:169
 #: templates/ads/partials/_campaign_edit_modal.html:39
 #: templates/ads/partials/_overview.html:18
 #: templates/analytics/_shopee_orders.html:27
@@ -4220,8 +4225,8 @@ msgstr "Empresa"
 msgid "Status"
 msgstr "Status"
 
-#: apps/contacts/forms.py:106 templates/contacts/list.html:87
-#: templates/contacts/partials/_results.html:88
+#: apps/contacts/forms.py:105 apps/contacts/services.py:529
+#: templates/contacts/list.html:87 templates/contacts/partials/_results.html:88
 #: templates/contacts/partials/_row.html:33 templates/funnels/board.html:4
 #: templates/funnels/board.html:82
 #: templates/funnels/partials/_opportunity_details.html:29
@@ -4230,7 +4235,7 @@ msgstr "Status"
 msgid "Funnel"
 msgstr "Funil"
 
-#: apps/contacts/forms.py:107
+#: apps/contacts/forms.py:106 apps/contacts/services.py:530
 #: templates/composer/partials/_special_dates_tab.html:67
 #: templates/composer/partials/_special_dates_tab.html:243
 #: templates/composer/partials/_special_dates_tab.html:338
@@ -4238,89 +4243,91 @@ msgstr "Funil"
 msgid "Segment"
 msgstr "Segmento"
 
-#: apps/contacts/forms.py:108
+#: apps/contacts/forms.py:107 apps/contacts/services.py:531
 msgid "Contact source"
 msgstr "Origem do contato"
 
-#: apps/contacts/forms.py:109
+#: apps/contacts/forms.py:108
 msgid "Engagement level"
 msgstr "Nível de engajamento"
 
-#: apps/contacts/forms.py:110 templates/accounts/settings.html:82
-#: templates/emails/base.html:87 templates/emails/base.txt:17
+#: apps/contacts/forms.py:109 apps/contacts/services.py:532
+#: templates/accounts/settings.html:82 templates/emails/base.html:87
+#: templates/emails/base.txt:17
 msgid "Address"
 msgstr "Endereço"
 
-#: apps/contacts/forms.py:113 apps/contacts/forms.py:119
+#: apps/contacts/forms.py:112 apps/contacts/forms.py:118
+#: apps/contacts/services.py:535
 msgid "CEP"
 msgstr "CEP"
 
-#: apps/contacts/forms.py:114
+#: apps/contacts/forms.py:113
 #: templates/funnels/partials/_opportunity_details.html:93
 msgid "Notes"
 msgstr "Notas"
 
-#: apps/contacts/forms.py:118
+#: apps/contacts/forms.py:117 apps/contacts/services.py:524
 msgid "CPF / CNPJ"
 msgstr "CPF / CNPJ"
 
-#: apps/contacts/forms.py:126
+#: apps/contacts/forms.py:125
 msgid "Automatic"
 msgstr "Automático"
 
-#: apps/contacts/forms.py:131
+#: apps/contacts/forms.py:130
 msgid "e.g. Sales"
 msgstr "ex.: Comercial"
 
-#: apps/contacts/forms.py:132
+#: apps/contacts/forms.py:131
 msgid "e.g. Architects"
 msgstr "ex.: Arquitetos"
 
-#: apps/contacts/forms.py:148
+#: apps/contacts/forms.py:147
 msgid "Enter the contact's name."
 msgstr "Digite o nome do contato."
 
-#: apps/contacts/forms.py:159
+#: apps/contacts/forms.py:158
 msgid "Enter a valid CPF or CNPJ."
 msgstr "Digite um CPF ou CNPJ válido."
 
-#: apps/contacts/forms.py:164
+#: apps/contacts/forms.py:163
 msgid "Choose a Brazilian state."
 msgstr "Escolha um estado brasileiro."
 
-#: apps/contacts/forms.py:172
+#: apps/contacts/forms.py:171
 msgid "A CEP has 8 digits."
 msgstr "O CEP tem 8 dígitos."
 
-#: apps/contacts/forms.py:178
+#: apps/contacts/forms.py:183
 #, python-format
 msgid "Notes can have up to %(max)s characters."
 msgstr "As observações podem ter até %(max)s caracteres."
 
-#: apps/contacts/forms.py:213
+#: apps/contacts/forms.py:218
 #, python-format
 msgid "%(value)s is not a valid email address."
 msgstr "%(value)s não é um e-mail válido."
 
-#: apps/contacts/forms.py:216
+#: apps/contacts/forms.py:221
 #, python-format
 msgid "%(value)s is not a valid phone number. Include the area code."
 msgstr "%(value)s não é um telefone válido. Inclua o DDD."
 
-#: apps/contacts/forms.py:223
+#: apps/contacts/forms.py:228
 #, python-format
 msgid "A contact can have up to %(max)s channels."
 msgstr "Um contato pode ter até %(max)s canais."
 
-#: apps/contacts/forms.py:239
+#: apps/contacts/forms.py:244
 msgid "The photo must be a JPEG, PNG or WebP image."
 msgstr "A foto deve ser uma imagem JPEG, PNG ou WebP."
 
-#: apps/contacts/forms.py:241
+#: apps/contacts/forms.py:246
 msgid "The photo must be under 2 MB."
 msgstr "A foto deve ter menos de 2 MB."
 
-#: apps/contacts/forms.py:248
+#: apps/contacts/forms.py:253
 msgid "Could not read the image file."
 msgstr "Não foi possível ler o arquivo de imagem."
 
@@ -4411,17 +4418,48 @@ msgctxt "engagement"
 msgid "Low"
 msgstr "Baixo"
 
-#: apps/contacts/services.py:667
+#: apps/contacts/services.py:375
+#, python-format
+msgid "%(count)d channel"
+msgid_plural "%(count)d channels"
+msgstr[0] "%(count)d canal"
+msgstr[1] "%(count)d canais"
+
+#: apps/contacts/services.py:376
+#, python-format
+msgid "%(count)d interaction"
+msgid_plural "%(count)d interactions"
+msgstr[0] "%(count)d interação"
+msgstr[1] "%(count)d interações"
+
+#: apps/contacts/services.py:377
+#, python-format
+msgid "%(count)d field filled"
+msgid_plural "%(count)d fields filled"
+msgstr[0] "%(count)d campo preenchido"
+msgstr[1] "%(count)d campos preenchidos"
+
+#: apps/contacts/services.py:381
+#, python-format
+msgid "last contact %(time)s ago"
+msgstr "último contato há %(time)s"
+
+#: apps/contacts/services.py:558
+#, python-format
+msgid "Merged from %(name)s"
+msgstr "Mesclado de %(name)s"
+
+#: apps/contacts/services.py:785
 msgid "The file must be a CSV saved as UTF-8."
 msgstr "O arquivo deve ser um CSV salvo em UTF-8."
 
-#: apps/contacts/services.py:671
+#: apps/contacts/services.py:789
 msgid "The first line must name the columns, and one of them must be \"name\"."
 msgstr ""
 "A primeira linha deve ter os nomes das colunas, e uma delas deve ser "
 "\"name\"."
 
-#: apps/contacts/services.py:676
+#: apps/contacts/services.py:794
 #, python-format
 msgid "Only the first %(count)s rows were read."
 msgstr "Só as primeiras %(count)s linhas foram lidas."
@@ -4493,24 +4531,24 @@ msgid_plural "%(count)s contacts merged into %(name)s."
 msgstr[0] "%(count)s contato mesclado em %(name)s."
 msgstr[1] "%(count)s contatos mesclados em %(name)s."
 
-#: apps/contacts/views.py:269
+#: apps/contacts/views.py:281
 #, python-format
 msgid "Moved to the %(funnel)s funnel."
 msgstr "Movido para o funil %(funnel)s."
 
-#: apps/contacts/views.py:271
+#: apps/contacts/views.py:283
 msgid "Removed from the funnel."
 msgstr "Removido do funil."
 
-#: apps/contacts/views.py:295
+#: apps/contacts/views.py:307
 msgid "Choose a CSV file to import."
 msgstr "Escolha um arquivo CSV para importar."
 
-#: apps/contacts/views.py:298
+#: apps/contacts/views.py:310
 msgid "The file must be under 2 MB."
 msgstr "O arquivo deve ter menos de 2 MB."
 
-#: apps/contacts/views.py:306
+#: apps/contacts/views.py:318
 #, python-format
 msgid ""
 "Import finished: %(created)s created, %(skipped)s skipped (no name or "
@@ -7944,7 +7982,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/contacts/partials/_results.html:68
 #: templates/funnels/partials/_settings_list.html:17
 #: templates/funnels/partials/_settings_list.html:60
-#: templates/inbox/partials/_person_channels.html:74
+#: templates/inbox/partials/_person_channels.html:81
 #: templates/inbox/partials/_saved_reply_form.html:24
 #: templates/inbox/sla_config.html:64 templates/intelligence/subscribe.html:19
 #: templates/media_library/_asset_detail_panel.html:93
@@ -10254,7 +10292,7 @@ msgstr "Enviar"
 #: templates/calendar/partials/publish_calendar_shell.html:76
 #: templates/components/_skeleton.html:20
 #: templates/composer/partials/_tag_manager.html:83
-#: templates/inbox/partials/_person_channels.html:57
+#: templates/inbox/partials/_person_channels.html:60
 #: templates/radar/partials/_source_card.html:126
 msgid "Loading…"
 msgstr "Carregando…"
@@ -17694,19 +17732,30 @@ msgstr ""
 "Uma linha cujo WhatsApp, Instagram ou e-mail já pertence a um contato é "
 "ignorada. Até 5.000 linhas e 2 MB."
 
-#: templates/contacts/partials/_merge_candidates.html:9
+#: templates/contacts/partials/_merge_candidates.html:15
+#: templates/inbox/partials/_person_channels.html:74
+msgid "This conversation"
+msgstr "Esta conversa"
+
+#: templates/contacts/partials/_merge_candidates.html:16
+#: templates/contacts/partials/_merge_candidates.html:30
+#: templates/inbox/partials/_person_channels.html:73
+msgid "Most complete"
+msgstr "Mais completo"
+
+#: templates/contacts/partials/_merge_candidates.html:19
 msgid "Contacts found"
 msgstr "Contatos encontrados"
 
-#: templates/contacts/partials/_merge_candidates.html:9
+#: templates/contacts/partials/_merge_candidates.html:19
 msgid "Possibly the same person"
 msgstr "Talvez a mesma pessoa"
 
-#: templates/contacts/partials/_merge_candidates.html:27
+#: templates/contacts/partials/_merge_candidates.html:42
 msgid "No contact found for this search."
 msgstr "Nenhum contato encontrado nesta busca."
 
-#: templates/contacts/partials/_merge_candidates.html:29
+#: templates/contacts/partials/_merge_candidates.html:44
 msgid "No similar contact. Search by name, @ or phone."
 msgstr "Nenhum contato parecido. Busque por nome, @ ou telefone."
 
@@ -17724,7 +17773,7 @@ msgstr "{n} selecionados"
 
 #: templates/contacts/partials/_results.html:27
 #: templates/contacts/partials/_results.html:69
-#: templates/inbox/partials/_person_channels.html:75
+#: templates/inbox/partials/_person_channels.html:82
 msgctxt "contacts"
 msgid "Merge"
 msgstr "Mesclar"
@@ -17734,7 +17783,7 @@ msgid "Delete the selected contacts? This cannot be undone."
 msgstr "Excluir os contatos selecionados? Isso não pode ser desfeito."
 
 #: templates/contacts/partials/_results.html:53
-#: templates/inbox/partials/_person_channels.html:45
+#: templates/inbox/partials/_person_channels.html:48
 msgid "Merge contacts"
 msgstr "Mesclar contatos"
 
@@ -18377,11 +18426,11 @@ msgstr[1] "%(counter)s mensagens nesta conversa"
 msgid "Also talks through other channels"
 msgstr "Também conversa por outros canais"
 
-#: templates/inbox/partials/_person_channels.html:31
+#: templates/inbox/partials/_person_channels.html:34
 msgid "Merge contact"
 msgstr "Mesclar contato"
 
-#: templates/inbox/partials/_person_channels.html:48
+#: templates/inbox/partials/_person_channels.html:51
 msgid ""
 "Tick the contacts that are the same person on other channels and choose the "
 "main contact. The others' channels, tags and interactions move to it, their "
@@ -18391,21 +18440,17 @@ msgstr ""
 "contato principal. Os canais, as tags e as interações dos outros passam para "
 "ele, as conversas deles aparecem como da mesma pessoa, e eles são excluídos."
 
-#: templates/inbox/partials/_person_channels.html:50
+#: templates/inbox/partials/_person_channels.html:53
 msgid "Search by name, @ or phone"
 msgstr "Buscar por nome, @ ou telefone"
 
-#: templates/inbox/partials/_person_channels.html:50
+#: templates/inbox/partials/_person_channels.html:53
 msgid "Search contacts"
 msgstr "Buscar contatos"
 
-#: templates/inbox/partials/_person_channels.html:60
+#: templates/inbox/partials/_person_channels.html:63
 msgid "Main contact"
 msgstr "Contato principal"
-
-#: templates/inbox/partials/_person_channels.html:67
-msgid "This conversation"
-msgstr "Esta conversa"
 
 #: templates/inbox/partials/_reply_composer.html:11
 msgid "Pending replies"
@@ -23551,10 +23596,6 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 msgid "Send invitation"
 msgstr "Enviar convite"
 
-#, python-format
-#~ msgid "Merge contacts into %(name)s"
-#~ msgstr "Mesclar contatos em %(name)s"
-
 #~ msgid "%(users)s user"
 #~ msgid_plural "%(users)s users"
 #~ msgstr[0] "%(users)s usuário"
@@ -24409,9 +24450,6 @@ msgstr "Enviar convite"
 
 #~ msgid "changed who is responsible"
 #~ msgstr "alterou os responsáveis"
-
-#~ msgid "completed"
-#~ msgstr "concluiu"
 
 #~ msgid "delivered the art for"
 #~ msgstr "entregou a arte de"

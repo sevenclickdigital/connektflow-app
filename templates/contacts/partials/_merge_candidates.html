@@ -1,21 +1,36 @@
 {% load i18n %}
 {% comment %}
 The contacts the inbox's merge dialog offers (contacts:merge_candidates): one
-checkbox each, bound to the dialog's "others" list (and its name to "names", for
-the main-contact choice), which the form posts to contacts:merge beside the
-contact on screen; a ticked contact stays ticked when a search redraws this list. Without a search these are suggestions by name.
+checkbox each, bound to the dialog's "others" list (and its name, data summary
+and score to "names", "summaries" and "scores", for the main-contact choice),
+which the form posts to contacts:merge beside the contact on screen; a ticked
+contact stays ticked when a search redraws this list. Without a search these are
+suggestions by name. Each row shows services.merge_summary's line, and
+most_complete_id (services.most_complete, among these and the contact on screen)
+gets the "Most complete" pill. The first line hands the contact on screen's
+summary and score to the dialog the same way, through data-* attributes.
 {% endcomment %}
+<div class="mb-3 flex items-center gap-2 text-xs text-neutral-600" data-summary="{{ current_summary.text }}" data-score="{{ current_summary.score }}"
+     x-init="summaries[current] = $el.dataset.summary; scores[current] = Number($el.dataset.score)">
+    <span class="min-w-0 flex-1 truncate"><span class="font-semibold">{% translate "This conversation" %}:</span> {{ current_summary.text }}</span>
+    {% if most_complete_id == current_id %}<span class="pill pill-brand flex-shrink-0">{% translate "Most complete" %}</span>{% endif %}
+</div>
 {% if candidates %}
 <p class="text-xs font-semibold text-neutral-600 mb-2">{% if query %}{% translate "Contacts found" %}{% else %}{% translate "Possibly the same person" %}{% endif %}</p>
 <div class="space-y-2">
     {% for contact in candidates %}
     <label class="flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors"
            :class="others.includes('{{ contact.id }}') ? 'border-brand-300 bg-brand-50' : 'border-neutral-300 hover:bg-neutral-50'">
-        <input type="checkbox" value="{{ contact.id }}" data-name="{{ contact.name }}" x-model="others" @change="names[$el.value] = $el.dataset.name" class="bb-checkbox">
+        <input type="checkbox" value="{{ contact.id }}" data-name="{{ contact.name }}" data-summary="{{ contact.merge_summary.text }}" data-score="{{ contact.merge_summary.score }}"
+               x-model="others" @change="names[$el.value] = $el.dataset.name; summaries[$el.value] = $el.dataset.summary; scores[$el.value] = Number($el.dataset.score)" class="bb-checkbox">
         {% include "contacts/partials/_avatar.html" with size="w-8 h-8" %}
         <span class="min-w-0 flex-1">
-            <span class="block text-sm font-semibold text-neutral-900 truncate">{{ contact.name }}</span>
+            <span class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-neutral-900 truncate">{{ contact.name }}</span>
+                {% if contact.pk == most_complete_id %}<span class="pill pill-brand flex-shrink-0">{% translate "Most complete" %}</span>{% endif %}
+            </span>
             {% for channel in contact.channels.all %}{% if forloop.first %}<span class="block text-xs text-neutral-600 truncate">{{ channel.display_value }}</span>{% endif %}{% endfor %}
+            <span class="block text-xs text-neutral-600 truncate">{{ contact.merge_summary.text }}</span>
         </span>
         <span class="flex items-center gap-1 flex-shrink-0">
             {% for channel in contact.channels.all %}{% ifchanged channel.kind %}<span title="{{ channel.get_kind_display }}">{% include "partials/_platform_icon.html" with platform=channel.kind size="sm" %}</span>{% endifchanged %}{% endfor %}

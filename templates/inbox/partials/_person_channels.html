@@ -6,13 +6,16 @@ through, the open one marked; a click opens that channel's conversation in the
 panel. "Merge contact" joins one or more contacts with this one (contacts:merge, the
 candidates from contacts:merge_candidates), so the networks' conversations show
 here as the same person; the team picks the main contact, the one that stays
-(this one by default). Names reach Alpine through data-name, never inside an
-expression. Context: _detail_context.
+(this one by default), each with its data summary and the most complete marked
+("best": the strictly highest score of services.merge_summary among them). Names,
+summaries and scores reach Alpine through data-* attributes in the candidates
+partial, never inside an expression. Context: _detail_context.
 {% endcomment %}
 {% if contact %}
 {% url 'inbox:message_detail' workspace_id=workspace.id message_id=message.id as panel_path %}
 <div class="flex flex-wrap items-center gap-1.5 mt-2" data-id="{{ contact.id }}" data-name="{{ contact.name }}"
-     x-data="{ mergeOpen: false, others: [], current: $el.dataset.id, keep: $el.dataset.id, names: { [$el.dataset.id]: $el.dataset.name } }"
+     x-data="{ mergeOpen: false, others: [], current: $el.dataset.id, keep: $el.dataset.id, names: { [$el.dataset.id]: $el.dataset.name }, summaries: {}, scores: {},
+              get best() { const ids = [this.current, ...this.others].filter(id => id in this.scores).sort((a, b) => this.scores[b] - this.scores[a]); return ids.length > 1 && this.scores[ids[0]] > this.scores[ids[1]] ? ids[0] : null; } }"
      x-effect="if (keep !== current && !others.includes(keep)) keep = current">
     {% for chip in person_channels %}
     {% if chip.active %}
@@ -63,7 +66,11 @@ expression. Context: _detail_context.
                             <label class="flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors"
                                    :class="keep === id ? 'border-brand-300 bg-brand-50' : 'border-neutral-300 hover:bg-neutral-50'">
                                 <input type="radio" name="keep" :value="id" x-model="keep" class="bb-checkbox">
-                                <span class="text-sm font-semibold text-neutral-900 truncate flex-1" x-text="names[id]"></span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block text-sm font-semibold text-neutral-900 truncate" x-text="names[id]"></span>
+                                    <span x-show="summaries[id]" class="block text-xs text-neutral-600 truncate" x-text="summaries[id]"></span>
+                                </span>
+                                <span x-show="best === id" class="pill pill-brand flex-shrink-0">{% translate "Most complete" %}</span>
                                 <span x-show="id === current" class="pill pill-neutral flex-shrink-0">{% translate "This conversation" %}</span>
                             </label>
                         </template>

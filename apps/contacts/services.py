@@ -11,8 +11,10 @@ from datetime import timedelta
 
 from django.db import IntegrityError, transaction
 from django.db.models import CharField, Count, F, Func, Max, Q, QuerySet
-from django.utils import timezone
+from django.utils import formats, timezone
+from django.utils.timesince import timesince
 from django.utils.translation import gettext as _
+from django.utils.translation import ngettext
 
 from .models import ENGAGEMENT_WINDOW_DAYS, ChannelKind, Contact, ContactChannel
 
@@ -337,6 +339,68 @@ def merge_candidates(contact: Contact, query: str = "") -> list[Contact]:
     )
 
 
+#: Profile fields that count as filled data in ``merge_summary`` (photo and
+#: avatar_url count once, as the picture).
+_SUMMARY_FIELDS = (
+    "tax_id",
+    "birth_date",
+    "gender",
+    "company",
+    "funnel",
+    "segment",
+    "tags",
+    "address",
+    "city",
+    "state",
+    "postal_code",
+    "notes",
+)
+
+
+def merge_summary(contact: Contact, *, now=None) -> dict:
+    """How much data ``contact`` holds, for the inbox's merge dialog.
+
+    Channels come from ``contact.channels.all()``, so prefetch them on lists
+    (``merge_candidates`` does). ``score`` ranks the contacts: each channel and
+    each filled profile field is a point, and the interactions in the window
+    only break ties between equal points. ``text`` is the translated line the
+    dialog shows ("3 channels · 12 interactions · 5 fields filled · last contact
+    2 days ago").
+    """
+    channels = len(contact.channels.all())
+    fields = sum(1 for name in _SUMMARY_FIELDS if getattr(contact, name))
+    fields += 1 if (contact.photo or contact.avatar_url) else 0
+    interactions = contact.interactions_90d or 0
+    parts = [
+        ngettext("%(count)d channel", "%(count)d channels", channels) % {"count": channels},
+        ngettext("%(count)d interaction", "%(count)d interactions", interactions) % {"count": interactions},
+        ngettext("%(count)d field filled", "%(count)d fields filled", fields) % {"count": fields},
+    ]
+    if contact.last_contact_at:
+        when = timesince(contact.last_contact_at, now or timezone.now(), depth=1)
+        parts.append(_("last contact %(time)s ago") % {"time": when})
+    return {
+        "channels": channels,
+        "interactions": interactions,
+        "fields": fields,
+        "last_contact_at": contact.last_contact_at,
+        "score": (channels + fields) * 1000 + min(interactions, 999),
+        "text": " · ".join(parts),
+    }
+
+
+def most_complete(summaries: dict) -> object | None:
+    """The key of the summary with the strictly highest score, or None on a tie
+    for first place (or with fewer than two summaries): the dialog marks a
+    contact only when one clearly holds more data."""
+    if len(summaries) < 2:
+        return None
+    ranked = sorted(summaries.items(), key=lambda item: item[1]["score"], reverse=True)
+    if ranked[0][1]["score"] == ranked[1][1]["score"]:
+        return None
+    return ranked[0][0]
+
+
 def refresh_interactions(contact: Contact, *, now=None) -> None:
     """Recount the contact's interactions in the window and its last contact date."""
     now = now or timezone.now()
@@ -442,15 +506,70 @@ _MERGE_FILL_FIELDS = (
 )
 MAX_MERGE = 20
 
+#: Characters a person can type in a contact's notes (form and CSV import). A
+#: merge keeps every note whole, so a merged contact may hold more.
+MAX_NOTES_LENGTH = 5000
+
+
+def _merge_labels() -> dict[str, str]:
+    """The fields whose differing value on a merged contact is written into the
+    kept contact's notes, with the label the contact form shows.
+
+    ``avatar_url`` is left out (a platform picture link; the kept photo already
+    wins) and so is ``engagement_manual`` (a level set by hand, while the level
+    shown is recomputed from the interactions of every merged channel).
+    """
+    return {
+        "kind": _("Contact type"),
+        "tax_id": _("CPF / CNPJ"),
+        "birth_date": _("Date of birth"),
+        "gender": _("Gender"),
+        "company": _("Company"),
+        "status": _("Status"),
+        "funnel": _("Funnel"),
+        "segment": _("Segment"),
+        "source": _("Contact source"),
+        "address": _("Address"),
+        "city": _("City"),
+        "state": _("State"),
+        "postal_code": _("CEP"),
+    }
+
+
+def _merge_display(contact: Contact, name: str) -> str:
+    value = getattr(contact, name)
+    if name == "birth_date":
+        return formats.date_format(value, "SHORT_DATE_FORMAT")
+    if Contact._meta.get_field(name).choices:
+        return str(getattr(contact, f"get_{name}_display")())
+    return str(value)
+
+
+def _merge_note(keep: Contact, other: Contact) -> str:
+    """What ``other`` holds that ``keep`` does not take: its name when it differs
+    and each field set to another value, under a "Merged from" line. Empty when
+    nothing differs."""
+    lines = [
+        f"{label}: {_merge_display(other, name)}"
+        for name, label in _merge_labels().items()
+        if getattr(other, name) and getattr(other, name) != getattr(keep, name)
+    ]
+    if lines or other.name != keep.name:
+        lines.insert(0, _("Merged from %(name)s") % {"name": other.name})
+    return "\n".join(lines)
+
 
 def merge_contacts(workspace_id, keep_id, other_ids) -> Contact:
     """Fold ``other_ids`` into the contact ``keep_id`` and delete them.
 
     The kept contact receives every channel (with its inbox link, so both
     networks' interactions count for it), the union of the tags, the most
-    recent last contact, the notes appended, a photo when it has none, and
-    any field it left empty. Raises ``Contact.DoesNotExist`` when an id is not
-    a contact of this workspace.
+    recent last contact, a photo when it has none, and any field it left
+    empty. Nothing else is lost: for each merged contact its notes, whole, go
+    under a "Merged from <name>" block listing the name and the fields whose
+    value differs from the kept one (``_merge_note``), so the notes may exceed
+    ``MAX_NOTES_LENGTH``. Raises ``Contact.DoesNotExist`` when an id is not a
+    contact of this workspace.
     """
     others_ids = [str(i) for i in other_ids if str(i) != str(keep_id)]
     with transaction.atomic():
@@ -477,8 +596,7 @@ def merge_contacts(workspace_id, keep_id, other_ids) -> Contact:
             keep.tags = clean_tags([*(keep.tags or []), *(other.tags or [])])
             if other.last_contact_at and (keep.last_contact_at is None or other.last_contact_at > keep.last_contact_at):
                 keep.last_contact_at = other.last_contact_at
-            if other.notes:
-                notes.append(other.notes)
+            notes.extend(part for part in (_merge_note(keep, other), other.notes) if part)
             for channel in other.channels.order_by("position", "created_at"):
                 same = keep.channels.filter(kind=channel.kind, value=channel.value).first()
                 if same is not None:
@@ -495,7 +613,7 @@ def merge_contacts(workspace_id, keep_id, other_ids) -> Contact:
                 has_primary = has_primary or channel.is_primary
                 channel.save(update_fields=["contact", "position", "is_primary"])
                 position += 1
-        keep.notes = "\n\n".join(notes)[:500]
+        keep.notes = "\n\n".join(notes)
         keep.save()
         for other in others:
             if other.photo:
@@ -709,7 +827,7 @@ def import_csv(workspace_id, raw: bytes, *, user=None) -> ImportResult:
                 source=_choice(row.get("source", ""), Contact.Source.values, Contact.Source.IMPORT),
                 city=row.get("city", "")[:120],
                 state=row.get("state", "")[:2].upper(),
-                notes=row.get("notes", "")[:500],
+                notes=row.get("notes", "")[:MAX_NOTES_LENGTH],
                 created_by=user,
             )
             contact.save()

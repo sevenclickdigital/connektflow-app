@@ -5,9 +5,8 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 from .models import ChannelKind, Contact
-from .services import ChannelInput, clean_tags, normalize_channel_value
+from .services import MAX_NOTES_LENGTH, ChannelInput, clean_tags, normalize_channel_value
 
-MAX_NOTES_LENGTH = 500
 FIELD_SIZE = "text-sm px-3 py-2 border rounded-lg"
 MAX_CHANNELS = 10
 MAX_PHOTO_BYTES = 2 * 1024 * 1024
@@ -172,10 +171,16 @@ class ContactForm(forms.ModelForm):
             raise ValidationError(_("A CEP has 8 digits."))
         return f"{digits[:5]}-{digits[5:]}"
 
+    @property
+    def notes_limit(self) -> int:
+        """``MAX_NOTES_LENGTH``, or the stored notes' length when a merge made them
+        longer, so the contact stays editable without cutting them."""
+        return max(MAX_NOTES_LENGTH, len(self.instance.notes or ""))
+
     def clean_notes(self):
         notes = (self.cleaned_data.get("notes") or "").strip()
-        if len(notes) > MAX_NOTES_LENGTH:
-            raise ValidationError(_("Notes can have up to %(max)s characters.") % {"max": MAX_NOTES_LENGTH})
+        if len(notes) > self.notes_limit:
+            raise ValidationError(_("Notes can have up to %(max)s characters.") % {"max": self.notes_limit})
         return notes
 
     def clean_funnel(self):

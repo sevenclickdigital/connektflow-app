@@ -23,7 +23,7 @@ from apps.members.decorators import require_permission
 from apps.social_accounts.models import SocialAccount
 
 from . import services
-from .forms import BRAZIL_STATES, MAX_NOTES_LENGTH, ContactForm, clean_photo, parse_channels
+from .forms import BRAZIL_STATES, ContactForm, clean_photo, parse_channels
 from .models import ChannelKind, Contact
 
 logger = logging.getLogger(__name__)
@@ -154,7 +154,7 @@ def _form_page(request, workspace_id, contact: Contact | None):
             "tags_data": form["tags"].value() if request.method == "POST" else form.initial.get("tags", ""),
             "facets": facets,
             "states": BRAZIL_STATES,
-            "max_notes": MAX_NOTES_LENGTH,
+            "max_notes": form.notes_limit,
             "interactions": interactions,
             "computed_engagement": Contact.Engagement(Contact.level_for(instance.interactions_90d)).label,
         },
@@ -226,13 +226,25 @@ def contact_merge(request, workspace_id):
 @require_GET
 def contact_merge_candidates(request, workspace_id, contact_id):
     """The contacts the inbox's merge dialog offers for ``contact_id``: the
-    suggestions, or what the search typed in it finds."""
+    suggestions, or what the search typed in it finds, each with its data
+    summary, and the most complete among them and the contact on screen."""
     contact = get_object_or_404(Contact, id=contact_id, workspace_id=workspace_id)
     query = request.GET.get("q", "").strip()
+    candidates = services.merge_candidates(contact, query)
+    now = timezone.now()
+    summaries = {item.pk: services.merge_summary(item, now=now) for item in [contact, *candidates]}
+    for candidate in candidates:
+        candidate.merge_summary = summaries[candidate.pk]
     return render(
         request,
         "contacts/partials/_merge_candidates.html",
-        {"candidates": services.merge_candidates(contact, query), "query": query},
+        {
+            "candidates": candidates,
+            "query": query,
+            "current_summary": summaries[contact.pk],
+            "most_complete_id": services.most_complete(summaries),
+            "current_id": contact.pk,
+        },
     )
 
 
