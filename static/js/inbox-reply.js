@@ -13,6 +13,12 @@
  * picked on its bubble: the bubble's menu (inboxMessageMenu, below) announces
  * it with an `inbox-quote` window event, since the two live in different
  * Alpine scopes.
+ *
+ * Sending is slow (the platform answers inside the request), so the box
+ * empties at once and the text shows as a "sending" bubble in the chat
+ * (`inbox-sending` / `inbox-sent` window events, drawn by _message_panel.html).
+ * Nothing else can be sent until the answer arrives, and a refusal puts the
+ * text back in the box.
  */
 window.inboxReply = function (options) {
   return {
@@ -26,6 +32,7 @@ window.inboxReply = function (options) {
     savedOpen: false,
     savedQuery: '',
     quote: null,
+    sending: null,
 
     setQuote(detail) {
       this.mode = 'reply';
@@ -35,7 +42,29 @@ window.inboxReply = function (options) {
 
     get count() { return [...this.replyText].length; },
     get over() { return this.limit > 0 && this.count > this.limit; },
-    get sendable() { return this.canSend && !this.over && this.replyText.trim().length > 0; },
+    get sendable() { return this.canSend && !this.sending && !this.over && this.replyText.trim().length > 0; },
+
+    /* The form's own request only: its "save as draft" button posts from inside it. */
+    sendStarted(event) {
+      if (event.detail.elt !== event.currentTarget) return;
+      this.sending = { text: this.replyText, quote: this.quote };
+      this.replyText = '';
+      this.quote = null;
+      this.reset(this.$refs.reply);
+      this.$dispatch('inbox-sending', { text: this.sending.text });
+    },
+
+    sendFinished(event) {
+      if (event.detail.elt !== event.currentTarget || !this.sending) return;
+      const refused = !event.detail.successful || event.detail.xhr.getResponseHeader('HX-Reply-Failed');
+      if (refused && !this.replyText) {
+        this.replyText = this.sending.text;
+        this.quote = this.sending.quote;
+        this.$nextTick(() => this.grow(this.$refs.reply));
+      }
+      this.sending = null;
+      this.$dispatch('inbox-sent');
+    },
 
     field() { return this.mode === 'note' ? this.$refs.note : this.$refs.reply; },
 

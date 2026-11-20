@@ -72,7 +72,9 @@
         <form hx-post="{% url 'inbox:send_reply' workspace_id=workspace.id message_id=message.id %}"
               hx-target="#inbox-thread"
               hx-swap="beforeend"
-              @htmx:after-request="if (!$event.detail.xhr.getResponseHeader('HX-Reply-Failed')) { replyText = ''; quote = null; reset($refs.reply); }">
+              hx-sync="this:drop"
+              @htmx:before-request="sendStarted($event)"
+              @htmx:after-request="sendFinished($event)">
             {% csrf_token %}
             {% comment %}The customer's message this reply quotes, picked on its bubble (inbox-quote event).{% endcomment %}
             <input type="hidden" name="quote" :value="quote ? quote.id : ''">

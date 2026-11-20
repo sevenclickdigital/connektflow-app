@@ -1,4 +1,4 @@
-{% load humanize i18n %}
+{% load humanize i18n tz %}
 {% comment %}
 The open entry: the conversation and, on wide screens, its details column
 (_message_details.html). Swapped into #inbox-detail-panel by the feed and by the
@@ -47,7 +47,7 @@ status, sentiment and assignment actions; also the body of message_detail.html.
                 {% include "inbox/partials/_sla_badge.html" %}
                 {% endif %}
             </div>
-            <p class="text-xs text-neutral-500 mt-1.5">{{ message.received_at|date:"DATETIME_FORMAT" }}</p>
+            <p class="text-xs text-neutral-500 mt-1.5">{{ message.received_at|timezone:workspace.effective_timezone|date:"DATETIME_FORMAT" }}</p>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
             {% if message.post_url %}
@@ -109,6 +109,20 @@ status, sentiment and assignment actions; also the body of message_detail.html.
         {% endif %}
 
         {% include "inbox/partials/_thread.html" %}
+
+        {% comment %}
+        The reply on its way to the platform, shown the moment it is sent (the
+        composer announces it with the inbox-sending / inbox-sent window
+        events). It sits outside the thread so the thread's own redraw keeps it.
+        {% endcomment %}
+        <div x-data="{ text: '' }" x-show="text" x-cloak class="flex flex-col items-end"
+             @inbox-sending.window="text = $event.detail.text; $nextTick(() => { $el.parentElement.scrollTop = $el.parentElement.scrollHeight })"
+             @inbox-sent.window="text = ''">
+            <div class="chat-bubble chat-bubble-out opacity-70">
+                <span class="whitespace-pre-wrap break-words" x-text="text"></span>
+                <span class="chat-meta">{% translate "Sending…" %}</span>
+            </div>
+        </div>
     </div>
 
     <!-- Reply composer (pinned to bottom) -->
