@@ -109,7 +109,7 @@ class TestCreatesAnOperator:
         _run(OPERATOR_EMAIL)
         client.force_login(User.objects.get(email=OPERATOR_EMAIL))
 
-        assert client.get("/billing/staff/").status_code == 200
+        assert client.get("/staff/").status_code == 200
 
     def test_refuses_to_create_without_a_password_source(self):
         """Non-interactive and no --generate-password must not invent one."""
@@ -143,28 +143,30 @@ class TestIdempotence:
         assert Organization.objects.count() == 0
         assert Workspace.objects.count() == 0
 
-    def test_promoting_an_existing_customer_sets_staff(self):
-        customer = User.objects.create_user(email="client@example.com", password="x", tos_accepted_at=timezone.now())
-        assert customer.is_staff is False
+    def test_promoting_a_spare_account_sets_staff(self):
+        """An account that belongs to nothing can join the team as it is."""
+        spare = User.objects.create_user(email="spare@example.com", password="x", tos_accepted_at=timezone.now())
+        OrgMembership.objects.filter(user=spare).delete()
+        WorkspaceMembership.objects.filter(user=spare).delete()
 
-        _run("client@example.com")
+        _run("spare@example.com")
 
-        customer.refresh_from_db()
-        assert customer.is_staff is True
+        spare.refresh_from_db()
+        assert spare.is_staff is True
 
 
 @pytest.mark.django_db
-class TestPromotionDoesNotTouchBilling:
-    """Promotion must never change what anybody owes.
+class TestACustomerIsNeverPromoted:
+    """A team account owns nothing, so a customer gets a second account instead.
 
-    The whole reason the product owner gets a second account rather than a
-    flag: granting staff for support must not move a customer's invoice,
-    and it must not silently strip their memberships either.
+    The refusal changes nothing about what the customer owns or owes.
     """
 
     @pytest.fixture
     def customer(self):
         user = User.objects.create_user(email="client@example.com", password="x", tos_accepted_at=timezone.now())
+        OrgMembership.objects.filter(user=user).delete()
+        WorkspaceMembership.objects.filter(user=user).delete()
         org = Organization.objects.create(name="Client Co")
         workspace = Workspace.objects.create(organization=org, name="Client Social")
         OrgMembership.objects.create(user=user, organization=org, org_role=OrgMembership.OrgRole.OWNER)
@@ -173,32 +175,28 @@ class TestPromotionDoesNotTouchBilling:
         )
         return user, org, workspace
 
-    def test_memberships_survive_promotion(self, customer):
+    def test_the_command_refuses(self, customer):
+        user, _org, _workspace = customer
+
+        with pytest.raises(CommandError):
+            _run(user.email)
+
+        user.refresh_from_db()
+        assert user.is_staff is False
+
+    def test_a_workspace_guest_is_refused_too(self, customer):
+        """Belonging to one brand, with no organization, is still being a customer."""
+        user, org, _workspace = customer
+        OrgMembership.objects.filter(user=user, organization=org).delete()
+
+        with pytest.raises(CommandError):
+            _run(user.email)
+
+    def test_memberships_survive_the_refusal(self, customer):
         user, org, workspace = customer
 
-        _run(user.email)
+        with pytest.raises(CommandError):
+            _run(user.email)
 
         assert OrgMembership.objects.filter(user=user, organization=org).exists()
         assert WorkspaceMembership.objects.filter(user=user, workspace=workspace).exists()
-
-    def test_no_courtesy_is_granted(self, customer):
-        """A promoted customer keeps paying. ``is_staff`` is not an exemption."""
-        user, _org, workspace = customer
-
-        _run(user.email)
-
-        subscription = WorkspaceSubscription.objects.filter(workspace=workspace).first()
-        if subscription is not None:
-            assert subscription.status != WorkspaceSubscription.Status.COURTESY
-
-    def test_subscription_status_is_untouched(self, customer):
-        from apps.billing import services
-
-        user, _org, workspace = customer
-        before = services.ensure_subscription(workspace)
-        before_status = before.status
-
-        _run(user.email)
-
-        before.refresh_from_db()
-        assert before.status == before_status

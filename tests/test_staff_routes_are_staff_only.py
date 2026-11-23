@@ -1,12 +1,12 @@
-"""Every route of the administrative area answers only to staff.
+"""Every route of the administrative area answers only to the team.
 
-The administrative area (layouts/admin_shell.html) is made of the
-``apps.<app>.staff_urls`` modules mounted in config/urls.py. Their paths
-carry no organization or workspace, so no membership check stands in front
-of them: each view must check ``is_staff`` itself. This walks every route of
-every such module — found from the root URLconf, so a new module is covered
-without touching this file — and asks it, with GET and POST, as a visitor
-and as an organization owner who is not staff.
+The administrative area is everything ``config/staff_urls.py`` mounts under
+``/staff/``. Its paths carry no organization or workspace, so no membership
+check stands in front of them: each view must carry ``staff_required`` or
+``superadmin_required`` itself. This walks every route mounted there — so a
+new screen is covered without touching this file — and asks it, with GET and
+POST, as a visitor and as an organization owner who is not staff. It also
+checks that no ``staff_urls`` module is mounted anywhere else.
 """
 
 from __future__ import annotations
@@ -16,17 +16,23 @@ import uuid
 import pytest
 from django.urls import URLResolver, get_resolver, reverse
 
+from apps.accounts.operators import STAFF_AREA_PREFIX
+
 STAFF_URLCONF_SUFFIX = ".staff_urls"
+
+
+def _area():
+    """The resolver of the administrative area in the root URLconf."""
+    return next(
+        entry
+        for entry in get_resolver().url_patterns
+        if isinstance(entry, URLResolver) and str(entry.pattern) == STAFF_AREA_PREFIX
+    )
 
 
 def _staff_routes():
     routes = []
-    for entry in get_resolver().url_patterns:
-        if not isinstance(entry, URLResolver):
-            continue
-        module = getattr(entry.urlconf_module, "__name__", "")
-        if not module.endswith(STAFF_URLCONF_SUFFIX):
-            continue
+    for entry in _area().url_patterns:
         for pattern in entry.url_patterns:
             kwargs = {}
             for name, converter in pattern.pattern.converters.items():
@@ -42,6 +48,24 @@ ROUTES = _staff_routes()
 
 def test_the_administrative_area_has_routes_to_check():
     assert len(ROUTES) > 20
+
+
+def test_every_route_of_the_area_is_under_its_prefix():
+    assert all(route.values[0].startswith(f"/{STAFF_AREA_PREFIX}") for route in ROUTES)
+
+
+def test_no_staff_module_is_mounted_outside_the_area():
+    """A ``staff_urls`` module mounted at the root would be a team screen the
+    prefix rule does not cover."""
+    outside = [
+        entry.urlconf_module.__name__
+        for entry in get_resolver().url_patterns
+        if isinstance(entry, URLResolver)
+        and entry is not _area()
+        and getattr(entry.urlconf_module, "__name__", "").endswith(STAFF_URLCONF_SUFFIX)
+    ]
+
+    assert outside == []
 
 
 @pytest.mark.django_db

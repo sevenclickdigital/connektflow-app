@@ -13,7 +13,7 @@ requesting user is not a member of — an operator editing the shared
 library is a member of nothing relevant, so a workspace-scoped path would
 refuse the only thing this area exists to do.
 
-Access is ``is_staff``, enforced by ``_staff_required`` on each view and
+Access is ``is_staff``, enforced by ``staff_required`` on each view and
 not here, so the rule travels with the view rather than with the mount
 point.
 """

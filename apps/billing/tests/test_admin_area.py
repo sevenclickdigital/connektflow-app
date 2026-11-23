@@ -1,6 +1,6 @@
 """The administrative area: who reaches it, and what it survives.
 
-Four screens behind ``_staff_required`` — Customers (the old single
+Four screens behind ``staff_required`` — Customers (the old single
 console), Plan and prices, Subscriptions, Access log — rendered through
 ``templates/layouts/admin_shell.html``, which is ``base.html`` with the
 administrative navigation in place of the product's (the arrangement
@@ -60,6 +60,7 @@ def operator(db):
             email="ops@example.com",
             password="x",
             is_staff=True,
+            is_superuser=True,
             tos_accepted_at=timezone.now(),
         )
     finally:
@@ -125,7 +126,7 @@ class TestAdminAreaAccess:
     def test_customer_is_forbidden(self, client, customer, name):
         """Being the owner of your own account grants nothing here.
 
-        403 and not a redirect: ``_staff_required`` raises
+        403 and not a redirect: ``staff_required`` raises
         PermissionDenied so an authenticated member who found the URL
         gets a refusal instead of bouncing off the login page forever.
         """
@@ -760,11 +761,14 @@ class TestOperatorCannotFallIntoTheProduct:
             "media_library_org:shared_index",
         ],
     )
-    def test_org_scoped_product_screens_refuse_rather_than_break(self, client, operator, name):
-        """A clear refusal, never a 500 on a missing organization."""
+    def test_org_scoped_product_screens_send_the_operator_back(self, client, operator, name):
+        """Sent back to the area, never a 500 on a missing organization."""
         client.force_login(operator)
 
-        assert client.get(reverse(name)).status_code == 403
+        response = client.get(reverse(name))
+
+        assert response.status_code == 302
+        assert response.url == reverse("billing_staff:staff_console")
 
     def test_a_customer_is_not_redirected_into_the_area(self, client, customer):
         client.force_login(customer)
@@ -778,7 +782,7 @@ class TestOperatorCannotFallIntoTheProduct:
         """Guards the invariant the three views share, at the source: the
         area is gated on ``impersonation.is_operator`` and nothing else,
         so a view that reads ``user.is_staff`` directly would diverge."""
-        request = rf.get("/billing/staff/")
+        request = rf.get("/staff/")
         request.user = operator
         request.session = {}
         assert impersonation.is_operator(request) is True

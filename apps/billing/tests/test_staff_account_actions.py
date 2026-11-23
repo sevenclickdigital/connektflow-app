@@ -49,7 +49,7 @@ def operator(db):
     post_save.disconnect(create_organization_on_user_create, sender=User)
     try:
         return User.objects.create_user(
-            email="ops@example.com", password="x", is_staff=True, tos_accepted_at=timezone.now()
+            email="ops@example.com", password="x", is_staff=True, is_superuser=True, tos_accepted_at=timezone.now()
         )
     finally:
         post_save.connect(create_organization_on_user_create, sender=User)

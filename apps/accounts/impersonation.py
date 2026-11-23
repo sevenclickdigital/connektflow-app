@@ -16,6 +16,12 @@ decorator:
   gated on it are closed. An operator who wants to comp a workspace must
   stop impersonating first. Otherwise the audit trail would show a
   customer's account performing operator actions.
+- **A takeover cannot schedule or publish.** It exists to look at what
+  the customer sees and to fix their settings, not to speak in their
+  name on a social network. While one is active, :func:`block_publishing`
+  makes ``PlatformPost.save`` refuse a row entering ``scheduled`` — the
+  one state every way of publishing goes through — with
+  :class:`PublishingBlockedError`.
 - **Every takeover is recorded**, start and end, in
   ``ImpersonationSession``.
 
@@ -47,6 +53,9 @@ instead of carrying a snapshot of the privilege around.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
+
 from django.contrib.auth import get_user_model, login, logout
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
@@ -66,6 +75,30 @@ RECORD_SESSION_KEY = "impersonation_record_id"
 # AUTHENTICATION_BACKENDS and is the one that would have answered for a
 # password login.
 _BACKEND = "django.contrib.auth.backends.ModelBackend"
+
+
+# True while the request being served is a takeover. A context variable
+# because the model that enforces the rule has no request to ask.
+_publishing_blocked: ContextVar[bool] = ContextVar("impersonation_publishing_blocked", default=False)
+
+
+class PublishingBlockedError(PermissionDenied):
+    """A takeover tried to schedule or publish a post."""
+
+
+@contextmanager
+def block_publishing():
+    """Refuse scheduling for the duration of the block (one takeover request)."""
+    token = _publishing_blocked.set(True)
+    try:
+        yield
+    finally:
+        _publishing_blocked.reset(token)
+
+
+def publishing_blocked():
+    """Whether the code running now is serving a takeover."""
+    return _publishing_blocked.get()
 
 
 def is_impersonating(request):
@@ -133,6 +166,17 @@ def is_operator(request):
         return False
     user = getattr(request, "user", None)
     return bool(user and user.is_authenticated and user.is_active and user.is_staff)
+
+
+def is_superadmin(request):
+    """True when this request may use the superadmin-only surfaces.
+
+    The team has two levels, told apart by the flags Django already has:
+    ``is_staff`` alone is support, ``is_staff`` with ``is_superuser`` is
+    superadmin. Money, platform switches and the team itself are
+    superadmin-only.
+    """
+    return is_operator(request) and request.user.is_superuser
 
 
 def may_impersonate(operator, target):

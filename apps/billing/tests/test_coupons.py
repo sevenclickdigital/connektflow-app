@@ -123,7 +123,9 @@ def test_adding_brands_keeps_a_coupon_on_every_charge():
 
 
 def _user(email, *, staff=False):
-    return User.objects.create_user(email=email, password="x", tos_accepted_at=timezone.now(), is_staff=staff)
+    return User.objects.create_user(
+        email=email, password="x", tos_accepted_at=timezone.now(), is_staff=staff, is_superuser=staff
+    )
 
 
 def test_only_staff_create_and_switch_coupons(client):

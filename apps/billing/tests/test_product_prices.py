@@ -75,6 +75,7 @@ def operator(db):
             email="ops@example.com",
             password="x",
             is_staff=True,
+            is_superuser=True,
             tos_accepted_at=timezone.now(),
         )
     finally:

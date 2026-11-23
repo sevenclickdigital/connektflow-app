@@ -185,9 +185,14 @@ class TestAccountPagesGate:
         assert client.get(reverse("members:list")).status_code == 200
 
     def test_staff_is_not_sent_to_contract(self, required):
+        """A team account is kept in the administrative area, not asked to pay."""
         client, workspace = _signed_up()
         User.objects.filter(email="new@example.com").update(is_staff=True)
-        assert client.get(reverse("members:list")).status_code == 200
+
+        response = client.get(reverse("members:list"))
+
+        assert response.status_code == 302
+        assert response.url == reverse("billing_staff:staff_console")
 
     def test_account_pages_are_open_while_the_switch_is_off(self, settings):
         settings.BILLING_REQUIRE_SUBSCRIPTION = False

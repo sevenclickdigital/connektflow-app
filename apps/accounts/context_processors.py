@@ -1,7 +1,9 @@
 """Request context the chrome in ``base.html`` needs about who you are.
 
-One processor, and it only ever adds keys during an impersonation. The
-banner it feeds is not decoration: an operator who forgets they are
+One processor. It adds ``impersonation`` during a takeover and
+``is_superadmin`` for a superadmin of the team, which the administrative
+navigation and screens read to leave out what support cannot use (the
+views refuse it either way). The banner the first one feeds is not decoration: an operator who forgets they are
 inside a customer's account and publishes a post, deletes an asset or
 replies to a DM does it *as that customer*, and nothing in the rest of
 the interface would look any different. So the flag is computed on every
@@ -23,10 +25,10 @@ def impersonation_banner(request):
     """Expose ``impersonation`` while this session wears another account.
 
     Absent otherwise, so the partial costs one ``{% if %}`` on every
-    normal page.
+    normal page. Outside a takeover, ``is_superadmin`` for a superadmin.
     """
     if not impersonation.is_impersonating(request):
-        return {}
+        return {"is_superadmin": True} if impersonation.is_superadmin(request) else {}
 
     operator = impersonation.real_user(request)
     return {

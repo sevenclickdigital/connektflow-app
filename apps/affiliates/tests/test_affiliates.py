@@ -236,7 +236,11 @@ class TestStaff:
     @pytest.fixture
     def operator(self, client):
         staff = User.objects.create_user(
-            email="ops@connektflow.example", password="x", is_staff=True, tos_accepted_at=timezone.now()
+            email="ops@connektflow.example",
+            password="x",
+            is_staff=True,
+            is_superuser=True,
+            tos_accepted_at=timezone.now(),
         )
         client.force_login(staff)
         return staff

@@ -224,10 +224,14 @@ def revoke_oauth_tokens_on_new_password(sender, request, user, **kwargs):
 
 @receiver(post_save, sender="accounts.User")
 def create_organization_on_user_create(sender, instance, created, **kwargs):
-    """Handle any user creation path (createsuperuser, admin, shell).
+    """Handle any user creation path (admin, shell).
 
     The allauth signal fires *after* post_save, so for normal signups
     post_save runs first and the allauth handler is a no-op (idempotent guard).
+
+    A team account (``is_staff``, which ``createsuperuser`` also sets) gets
+    nothing: it never belongs to an organization or a workspace, see
+    ``apps/accounts/operators.py``.
     """
-    if created:
+    if created and not instance.is_staff:
         provision_organization_and_workspace(instance)

@@ -17,8 +17,7 @@ flex column, as the task board's, a tall board would otherwise squeeze it.
 "See how it works" opens the page's YouTube video (onboarding.PageHelpVideo,
 set by the operator in the administrative area) in a modal; the player is
 only mounted while the modal is open, so closing it stops the video. A page
-without a video shows staff a link to add one and shows customers nothing,
-in a row that keeps its height either way.
+without a video shows nothing there, in a row that keeps its height either way.
 
 Expects: tab. Optional: hero_margin, the classes for the space below it
 (mb-6 by default; mb-0 where the page's own layout spaces it).
@@ -107,11 +106,6 @@ Expects: tab. Optional: hero_margin, the classes for the space below it
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10.5-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg>
                 {% translate "See how it works" %}
             </button>
-            {% elif request.user.is_staff %}
-            <a href="{% url 'onboarding_staff:help_videos' %}" class="btn-ghost">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                {% translate "Add a video for this page" %}
-            </a>
             {% endif %}
         </div>
     </div>

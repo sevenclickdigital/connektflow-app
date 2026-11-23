@@ -43,6 +43,7 @@ def _user(email, *, is_staff=False):
         name=email.split("@")[0],
         tos_accepted_at=timezone.now(),
         is_staff=is_staff,
+        is_superuser=is_staff,
     )
 
 

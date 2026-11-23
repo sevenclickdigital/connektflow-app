@@ -4,8 +4,7 @@ Global dates (no segment) reach every brand; a segment's dates reach the
 brands that chose it. The built-in holidays live in ``holidays.py`` and are
 listed here read-only, so the operator sees what is already covered.
 
-Access is ``_staff_required``, borrowed from ``apps.billing.views`` like the
-flow template shelf does.
+Access is ``staff_required`` (``apps.accounts.decorators``).
 """
 
 import json
@@ -18,7 +17,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from apps.billing.views import _staff_required
+from apps.accounts.decorators import staff_required
 from apps.common.validators import clean_display_name
 from apps.media_library.validators import image_storage_filename
 from apps.tasks import creative_formats
@@ -42,7 +41,7 @@ def _back():
     return redirect("calendar_staff:dates")
 
 
-@_staff_required
+@staff_required
 @require_GET
 def dates(request):
     today = timezone.localdate()
@@ -69,7 +68,7 @@ def dates(request):
     )
 
 
-@_staff_required
+@staff_required
 @require_POST
 def segment_create(request):
     name = clean_display_name(request.POST.get("name", ""))[:100]
@@ -83,7 +82,7 @@ def segment_create(request):
     return _back()
 
 
-@_staff_required
+@staff_required
 @require_POST
 def segment_update(request, segment_id):
     """Rename a segment, change its emoji, or take it off / put it back on offer."""
@@ -105,7 +104,7 @@ def segment_update(request, segment_id):
     return _back()
 
 
-@_staff_required
+@staff_required
 @require_POST
 def segment_delete(request, segment_id):
     get_object_or_404(DateSegment, id=segment_id).delete()
@@ -122,7 +121,7 @@ def _posted_art_items(request) -> list:
     return raw if isinstance(raw, list) else []
 
 
-@_staff_required
+@staff_required
 @require_POST
 def date_create(request):
     """Add a date: global when no segment is sent, else of that segment."""
@@ -166,7 +165,7 @@ def date_create(request):
     return _back()
 
 
-@_staff_required
+@staff_required
 @require_POST
 def date_delete(request, date_id):
     special_date = get_object_or_404(SpecialDate, id=date_id)

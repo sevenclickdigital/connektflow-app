@@ -20,7 +20,7 @@ from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
 from apps.workspaces.models import Workspace
 
-STAFF_CONSOLE = "/billing/staff/"
+STAFF_CONSOLE = "/staff/"
 
 
 @pytest.fixture

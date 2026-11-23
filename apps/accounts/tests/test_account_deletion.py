@@ -21,7 +21,9 @@ CANCEL = "apps.billing.gateways.asaas.AsaasClient.cancel_subscription"
 
 
 def _user(email, *, staff=False):
-    return User.objects.create_user(email=email, password="x", tos_accepted_at=timezone.now(), is_staff=staff)
+    return User.objects.create_user(
+        email=email, password="x", tos_accepted_at=timezone.now(), is_staff=staff, is_superuser=staff
+    )
 
 
 def _org(name, owner, *, gateway_id=""):

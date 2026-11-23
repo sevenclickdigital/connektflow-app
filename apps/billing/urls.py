@@ -6,7 +6,7 @@ workspace, which is the billable unit.
 
 The staff console lives in ``staff_urls`` instead, because it has no
 workspace (or organization) in its path by design: it lists every
-account so an operator can comp one. See ``views._is_billing_staff``.
+account so an operator can comp one. See ``apps.accounts.decorators``.
 """
 
 from django.urls import path

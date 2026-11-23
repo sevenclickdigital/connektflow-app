@@ -1,0 +1,99 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+Team: the accounts that administer the product and the level of each.
+Superadmin only (apps.accounts.staff_views). A person's own row has no
+actions, by the rule the views enforce.
+{% endcomment %}
+
+{% block title %}{% translate "Team" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="mb-4 lg:mb-[25px]">
+  <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950" style="letter-spacing: -0.01em;">{% translate "Team" %}</h1>
+  <p class="text-sm text-neutral-600 mt-1">{% translate "Who administers the product. Support serves customers and looks after the product's content; a superadmin also handles prices, coupons, affiliates, platforms and this team." %}</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="flex-shrink-0">
+<section class="a-card p-5 mb-6">
+  <h2 class="text-base font-semibold text-neutral-950">{% translate "Add a person" %}</h2>
+  <p class="text-xs text-neutral-600 mt-1 max-w-2xl">{% translate "They receive an e-mail to set their own password. A team account never belongs to an organization or a brand, so it cannot be a customer's e-mail address." %}</p>
+  <form method="post" action="{% url 'accounts_staff:team_add' %}" class="mt-4 flex flex-wrap items-end gap-3">
+    {% csrf_token %}
+    <div class="flex-1 min-w-52">
+      <label for="team-email" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">{% translate "E-mail" %}</label>
+      <input type="email" id="team-email" name="email" required autocomplete="off" class="form-input-styled w-full">
+    </div>
+    <div class="flex-1 min-w-40">
+      <label for="team-name" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">{% translate "Name" %}</label>
+      <input type="text" id="team-name" name="name" maxlength="100" autocomplete="off" class="form-input-styled w-full">
+    </div>
+    <div class="min-w-40">
+      <label for="team-role" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">{% translate "Level" %}</label>
+      <select id="team-role" name="role" class="form-input-styled w-full">
+        <option value="support">{% translate "Support" %}</option>
+        <option value="superadmin">{% translate "Superadmin" %}</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-soft">{% translate "Add to the team" %}</button>
+  </form>
+</section>
+
+<section class="a-card overflow-hidden mb-6">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500 border-b border-neutral-300">
+          <th class="px-5 py-3">{% translate "Person" %}</th>
+          <th class="px-3 py-3">{% translate "Level" %}</th>
+          <th class="px-3 py-3">{% translate "Last sign-in" %}</th>
+          <th class="px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in members %}
+        <tr class="border-b border-neutral-200 last:border-0">
+          <td class="px-5 py-3">
+            <div class="text-neutral-950">{{ member.name|default:"—" }}</div>
+            <div class="text-xs text-neutral-600 break-all">{{ member.email }}</div>
+          </td>
+          <td class="px-3 py-3 whitespace-nowrap">
+            {% if member.is_superuser %}<span class="pill pill-brand">{% translate "Superadmin" %}</span>{% else %}<span class="pill pill-neutral">{% translate "Support" %}</span>{% endif %}
+            {% if not member.is_active %}<span class="pill pill-error">{% translate "Sign-in disabled" %}</span>{% endif %}
+          </td>
+          <td class="px-3 py-3 whitespace-nowrap text-neutral-600">{% if member.last_login %}{{ member.last_login|date:"SHORT_DATETIME_FORMAT" }}{% else %}{% translate "Never" %}{% endif %}</td>
+          <td class="px-5 py-3">
+            {% if member.pk == request.user.pk %}
+            <p class="text-xs text-neutral-500 text-right">{% translate "Your account" %}</p>
+            {% else %}
+            <div class="flex flex-wrap justify-end gap-2">
+              <form method="post" action="{% url 'accounts_staff:team_set_role' user_id=member.id %}">
+                {% csrf_token %}
+                {% if member.is_superuser %}
+                <input type="hidden" name="role" value="support">
+                <button type="submit" class="btn-ghost text-xs">{% translate "Make support" %}</button>
+                {% else %}
+                <input type="hidden" name="role" value="superadmin">
+                <button type="submit" class="btn-ghost text-xs">{% translate "Make superadmin" %}</button>
+                {% endif %}
+              </form>
+              <form method="post" action="{% url 'accounts_staff:team_remove' user_id=member.id %}"
+                    data-confirm="{% blocktranslate with email=member.email %}Remove {{ email }} from the team?{% endblocktranslate %}"
+                    data-confirm-body="{% translate "The account is deleted and can no longer sign in. The access log keeps its e-mail." %}"
+                    data-confirm-label="{% translate "Remove" %}" data-confirm-tone="danger">
+                {% csrf_token %}
+                <button type="submit" class="btn-danger-soft text-xs">{% translate "Remove" %}</button>
+              </form>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+</div>
+{% endblock %}

@@ -1,8 +1,7 @@
 """The operator's screen for the page banners' "See how it works" videos: one
 YouTube link per page, seen by every brand.
 
-Access is ``_staff_required``, borrowed from ``apps.billing.views`` like the
-other screens of the administrative area.
+Access is ``staff_required`` (``apps.accounts.decorators``).
 """
 
 from django.contrib import messages
@@ -10,13 +9,13 @@ from django.shortcuts import redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from apps.billing.views import _staff_required
+from apps.accounts.decorators import staff_required
 
 from . import help_videos
 from .models import PageHelpVideo
 
 
-@_staff_required
+@staff_required
 @require_GET
 def help_videos_list(request):
     saved = {row.page: row.video_url for row in PageHelpVideo.objects.all()}
@@ -24,7 +23,7 @@ def help_videos_list(request):
     return render(request, "onboarding/staff_help_videos.html", {"admin_active": "help_videos", "pages": pages})
 
 
-@_staff_required
+@staff_required
 @require_POST
 def help_video_save(request):
     page = request.POST.get("page", "")

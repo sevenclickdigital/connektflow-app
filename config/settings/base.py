@@ -119,6 +119,8 @@ MIDDLEWARE = [
     "apps.accounts.middleware.TosAcceptanceMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
     "apps.members.middleware.RBACMiddleware",
+    # After RBAC: it drops the tenant context RBAC resolved for a team account.
+    "apps.accounts.middleware.OperatorAreaMiddleware",
     # After RBAC: it reads the workspace RBAC resolved from the URL.
     "apps.billing.middleware.SubscriptionGateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

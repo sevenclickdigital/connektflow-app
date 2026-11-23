@@ -4,7 +4,7 @@ One switch per platform over ``PlatformVisibility``: a hidden platform leaves
 the connect page, the sidebar's connect shortcuts and the composer's "Connect
 channel" card for every brand; a hidden opportunity source (``apps.radar.sources``)
 leaves the Platforms page and the Radar for brands that have not linked it.
-Meant for turning one on once it is configured. Access is ``_staff_required``,
+Meant for turning one on once it is configured. Access is ``superadmin_required``,
 like the other screens of the administrative area.
 """
 
@@ -13,7 +13,7 @@ from django.shortcuts import render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from apps.billing.views import _staff_required
+from apps.accounts.decorators import superadmin_required
 from apps.common.htmx import toast_response
 from apps.radar.sources import UPCOMING, all_sources
 
@@ -22,7 +22,7 @@ from .models import PlatformCredential, PlatformVisibility
 from .views import _get_configured_platforms
 
 
-@_staff_required
+@superadmin_required
 @require_GET
 def platforms_list(request):
     hidden = PlatformVisibility.hidden_keys()
@@ -56,7 +56,7 @@ def platforms_list(request):
     )
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def platform_toggle(request):
     platform = request.POST.get("platform", "")

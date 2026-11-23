@@ -16,10 +16,15 @@ def sidebar_context(request):
     if not hasattr(request, "user") or not request.user.is_authenticated:
         return {}
 
+    from apps.accounts import impersonation
     from apps.members.models import WorkspaceMembership
     from apps.social_accounts.models import AnalyticsPlatformConfig, SocialAccount
 
     analytics_enabled_platforms = AnalyticsPlatformConfig.enabled_platforms()
+
+    # A team account is shown nothing of the product (apps/accounts/operators.py),
+    # whatever it is a member of: no brand switcher, no affiliate panel.
+    is_operator = impersonation.is_operator(request)
 
     # User's workspaces (non-archived)
     workspace_memberships = (
@@ -30,7 +35,7 @@ def sidebar_context(request):
         .select_related("workspace__organization")
         .order_by("workspace__name")
     )
-    sidebar_workspaces = [wm.workspace for wm in workspace_memberships]
+    sidebar_workspaces = [] if is_operator else [wm.workspace for wm in workspace_memberships]
 
     # The same brands under the organization each belongs to. The user's own
     # organizations come first, in the order they joined them, each with
@@ -97,7 +102,7 @@ def sidebar_context(request):
     # The account menu links to the affiliate panel only for a switched-on affiliate.
     from apps.affiliates.models import Affiliate
 
-    is_affiliate = Affiliate.objects.filter(user=request.user, is_active=True).exists()
+    is_affiliate = not is_operator and Affiliate.objects.filter(user=request.user, is_active=True).exists()
 
     return {
         "is_affiliate": is_affiliate,

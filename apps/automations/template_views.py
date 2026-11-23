@@ -10,8 +10,8 @@ created by the author's first save. Nothing here writes on the customer's
 behalf, which is what keeps this feature out of the save path: a bug in the
 library cannot damage a saved automation.
 
-**The operator** gets the rest, all behind ``_staff_required`` borrowed from the
-billing console. The shelf is a product asset, not a workspace's — see
+**The operator** gets the rest, all behind ``staff_required``
+(``apps.accounts.decorators``). The shelf is a product asset, not a workspace's — see
 ``FlowTemplate`` — so these paths carry no ``workspace_id`` and no membership
 could grant access to them. ``is_staff`` is the flag Django already reserves for
 operators and the one the billing console uses for exactly this reason.
@@ -35,9 +35,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
+from apps.accounts.decorators import staff_required
 from apps.automations import flow as flow_compiler
 from apps.automations.models import FlowTemplate
-from apps.billing.views import _staff_required
 from apps.media_library.validators import image_storage_filename
 from apps.members.decorators import require_permission
 
@@ -111,7 +111,7 @@ def template_picker(request, workspace_id):
 # ---------------------------------------------------------------------------
 
 
-@_staff_required
+@staff_required
 @require_GET
 def template_list(request):
     """The shelf: every template, published or not, in the order customers see.
@@ -133,7 +133,7 @@ def template_list(request):
     )
 
 
-@_staff_required
+@staff_required
 @require_POST
 def template_create(request):
     """Make an empty template and open its canvas.
@@ -172,7 +172,7 @@ def _next_position() -> int:
     return 0 if highest is None else highest + 1
 
 
-@_staff_required
+@staff_required
 @require_GET
 def template_edit(request, template_id):
     """The canvas for one template — the customer's builder, in template mode.
@@ -206,14 +206,14 @@ def template_edit(request, template_id):
             "compiled": flow_compiler.compile_graph(graph),
             "keyword_mode_choices": _keyword_mode_choices(),
             # The canvas asks this before drawing the edit affordances. An
-            # operator on this screen has already passed ``_staff_required``.
+            # operator on this screen has already passed ``staff_required``.
             "can_manage": True,
             "admin_active": "flow_templates",
         },
     )
 
 
-@_staff_required
+@staff_required
 @require_POST
 def template_save(request, template_id):
     """Persist a template's canvas. Returns JSON — the builder posts by fetch.
@@ -269,7 +269,7 @@ def _parse_graph(request):
     return graph, None
 
 
-@_staff_required
+@staff_required
 @require_POST
 def template_details(request, template_id):
     """Save the fields that are not the canvas: name, description, thumbnail, shelf.
@@ -333,7 +333,7 @@ def _thumbnail_error(upload):
     return None
 
 
-@_staff_required
+@staff_required
 @require_POST
 def template_delete(request, template_id):
     """Remove a template from the shelf.
@@ -349,7 +349,7 @@ def template_delete(request, template_id):
     return redirect("automations_staff:template_list")
 
 
-@_staff_required
+@staff_required
 @require_POST
 def template_duplicate(request, template_id):
     """Copy a template and open the copy.

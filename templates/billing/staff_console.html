@@ -18,7 +18,7 @@ object so it merges with x-show's display instead of replacing it. Every
 action is a POST with a CSRF token. ``may_impersonate`` and
 ``may_deactivate`` come from the view by the rules the POSTs enforce.
 
-Access is ``is_staff`` (apps/billing/views._is_billing_staff).
+Access is ``is_staff`` (apps/accounts/decorators.py).
 {% endcomment %}
 
 {% block title %}{% translate "Customers" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
@@ -133,7 +133,9 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
                    :style="{ top: menuY + 'px', left: menuX + 'px' }" :class="menuUp && '-translate-y-full'"
                    class="fixed -translate-x-full z-50 w-64 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-lg text-left">
                 <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100" @click="openModal('edit')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>{% translate "Account details" %}</button>
+                {% if is_superadmin %}
                 <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100" @click="openModal('courtesy')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M17 6l3 3M15 8l2 2"/></svg>{% translate "Manage exemption" %}</button>
+                {% endif %}
                 {% if row.owner %}{% with p=row.owner %}
                 <div class="my-1 border-t border-neutral-100"></div>
                 <p class="px-2.5 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{% translate "Account owner" %}</p>
@@ -156,8 +158,10 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
                   <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>{% translate "Restore sign-in" %}</button>
                   {% endif %}
                 </form>
+                {% if is_superadmin %}
                 <div class="my-1 border-t border-neutral-100"></div>
                 <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-red-700 hover:bg-red-50" @click="openModal('delete', '{{ p.user.id }}')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>{% translate "Delete user" %}</button>
+                {% endif %}
                 {% endif %}
                 {% endwith %}{% endif %}
               </div>
@@ -196,6 +200,7 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
           </td>
           <td class="px-3 py-2.5 text-right tabular-nums text-neutral-800 whitespace-nowrap">R$ {{ ws.monthly_total_cents|brl }}</td>
           <td class="px-4 py-2.5 text-right">
+            {% if is_superadmin %}
             <button type="button" data-menu-button @click="toggleMenu('ws-{{ ws.workspace.id }}', $event)"
                     :aria-expanded="menuFor === 'ws-{{ ws.workspace.id }}' ? 'true' : 'false'" aria-label="{% translate 'Actions' %}"
                     class="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50 cursor-pointer">
@@ -216,6 +221,7 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
                 </form>
               </div>
             </template>
+            {% endif %}
           </td>
         </tr>
         {% for p in ws.users %}
@@ -255,8 +261,10 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
                   <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>{% translate "Restore sign-in" %}</button>
                   {% endif %}
                 </form>
+                {% if is_superadmin %}
                 <div class="my-1 border-t border-neutral-100"></div>
                 <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-red-700 hover:bg-red-50" @click="openModal('delete', '{{ p.user.id }}')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>{% translate "Delete user" %}</button>
+                {% endif %}
                 {% endif %}
               </div>
             </template>
@@ -316,8 +324,10 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
                   <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>{% translate "Restore sign-in" %}</button>
                   {% endif %}
                 </form>
+                {% if is_superadmin %}
                 <div class="my-1 border-t border-neutral-100"></div>
                 <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-red-700 hover:bg-red-50" @click="openModal('delete', '{{ p.user.id }}')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>{% translate "Delete user" %}</button>
+                {% endif %}
                 {% endif %}
               </div>
             </template>
@@ -342,6 +352,7 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
                 <h2 id="account-{{ row.organization.id }}" class="modal-title truncate">{{ row.organization.name }}</h2>
                 {% if row.owner %}<p class="text-xs text-neutral-600 break-all">{{ row.owner.user.email }}</p>{% endif %}
               </div>
+              {% if is_superadmin %}
               <div class="flex gap-1 px-5 pt-2 border-b border-neutral-100" x-show="panel === 'edit' || panel === 'courtesy'">
                 <button type="button" @click="panel = 'edit'" :class="panel === 'edit' ? 'border-brand-700 text-neutral-950' : 'border-transparent text-neutral-600 hover:text-neutral-800'" class="px-2.5 py-2 text-xs font-semibold border-b-2 cursor-pointer whitespace-nowrap">{% translate "Edit account" %}</button>
                 <button type="button" @click="panel = 'courtesy'" :class="panel === 'courtesy' ? 'border-brand-700 text-neutral-950' : 'border-transparent text-neutral-600 hover:text-neutral-800'" class="px-2.5 py-2 text-xs font-semibold border-b-2 cursor-pointer whitespace-nowrap">{% translate "Exemption" %}</button>
@@ -417,6 +428,7 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
                     </p>
                     {% endif %}
                   </div>
+              {% endif %}
 <div x-show="panel === 'edit'" x-cloak class="px-5 py-4">
                     <dl class="mb-4 rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
                       <dt class="col-span-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">{% translate "About the business" %}</dt>
@@ -431,6 +443,7 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
                       <dd class="col-span-2 text-neutral-600">{% translate "Not answered." %}</dd>
                       {% endif %}
                     </dl>
+                    {% if is_superadmin %}
                     <form method="post" action="{% url 'billing_staff:edit_account' org_id=row.organization.id %}"
                           class="space-y-3">
                       {% csrf_token %}
@@ -473,6 +486,7 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
                         {% translate "Save changes" %}
                       </button>
                     </form>
+                    {% endif %}
                   </div>
               {% for p in row.people %}
               <div x-show="panel === 'person' && person === '{{ p.user.id }}'" x-cloak class="px-5 py-4">
@@ -486,7 +500,7 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
                   <dt class="text-neutral-500">{% translate "Last sign-in" %}</dt><dd class="text-neutral-950">{% if p.user.last_login %}{{ p.user.last_login|date:"SHORT_DATETIME_FORMAT" }}{% else %}{% translate "Never" %}{% endif %}</dd>
                 </dl>
               </div>
-              {% if p.may_deactivate %}
+              {% if p.may_deactivate and is_superadmin %}
               <div x-show="panel === 'delete' && person === '{{ p.user.id }}'" x-cloak class="px-5 py-4">
                 <p class="text-sm font-semibold text-neutral-950">{% blocktranslate with email=p.user.email %}Delete {{ email }} for good?{% endblocktranslate %}</p>
                 <p class="text-xs text-neutral-600 mt-1">{% translate "The user and the organizations only they own are erased with their brands, posts and media; their subscriptions are cancelled at the payment provider. This cannot be undone." %}</p>

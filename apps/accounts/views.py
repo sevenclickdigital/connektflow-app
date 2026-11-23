@@ -13,6 +13,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.accounts import impersonation
 from apps.accounts.forms import ProfileForm
+from apps.accounts.operators import OPERATOR_HOME
 from apps.billing import services as billing_services
 from apps.organizations.views import needs_welcome
 
@@ -30,6 +31,13 @@ def dashboard(request):
     from apps.members.models import WorkspaceMembership
 
     user = request.user
+
+    # The team's home is the administrative area, whatever the account is a
+    # member of (see apps/accounts/operators.py). Asked through
+    # ``is_operator`` rather than ``user.is_staff``: during a takeover the
+    # session is the customer and must land where the customer would.
+    if impersonation.is_operator(request):
+        return redirect(OPERATOR_HOME)
 
     # Only trust last_workspace_id if the user still has an active membership
     # in that workspace. Otherwise the org may have been deleted out from under
@@ -61,21 +69,6 @@ def dashboard(request):
         user.last_workspace_id = membership.workspace.id
         user.save(update_fields=["last_workspace_id"])
         return redirect("workspaces:dashboard", workspace_id=membership.workspace.id)
-
-    # An operator account owns nothing on purpose — no organization, no
-    # workspace, so nothing to bill (see
-    # apps/accounts/management/commands/create_operator.py). The
-    # "create a workspace" screen below is therefore exactly wrong for
-    # them: it is an invitation to become a customer, which is the
-    # coupling the separate operator account exists to undo. Send them to
-    # the console they logged in to use.
-    #
-    # Checked through ``impersonation.is_operator`` rather than
-    # ``user.is_staff``: an operator impersonating a customer who happens
-    # to have no workspace must see what that customer sees, not be
-    # bounced to a console their session may not open.
-    if impersonation.is_operator(request):
-        return redirect("billing_staff:staff_console")
 
     return render(request, "accounts/dashboard.html")
 

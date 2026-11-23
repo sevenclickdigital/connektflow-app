@@ -101,10 +101,10 @@ def test_the_banner_plays_its_page_video_in_the_privacy_enhanced_player():
 
 
 @pytest.mark.django_db
-def test_without_a_video_only_staff_are_offered_to_add_one():
+def test_without_a_video_the_product_offers_no_way_into_the_administrative_area():
     link = reverse("onboarding_staff:help_videos")
 
-    assert link in _banner("tasks", _user("op@example.com", staff=True))
+    assert link not in _banner("tasks", _user("op@example.com", staff=True))
     assert link not in _banner("tasks", _user("customer@example.com"))
 
 

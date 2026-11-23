@@ -786,6 +786,29 @@ class PlatformPost(models.Model):
         """
         return self.status not in self.PROTECTED_STATUSES
 
+    def _refuse_scheduling_in_takeover(self):
+        """Raise when a support takeover is putting this row in the queue.
+
+        Called wherever a row may enter ``scheduled`` — the one state every
+        way of publishing goes through, since the worker publishes what it
+        finds there. A row already scheduled passes. The flag is read before
+        the row is looked up, so an ordinary save pays nothing. See
+        ``apps.accounts.impersonation.block_publishing``.
+        """
+        from apps.accounts import impersonation
+
+        if not impersonation.publishing_blocked():
+            return
+        scheduled = self.Status.SCHEDULED
+        if self._state.adding or not type(self).objects.filter(pk=self.pk, status=scheduled).exists():
+            raise impersonation.PublishingBlockedError("Support access cannot schedule or publish a post.")
+
+    def save(self, *args, **kwargs):
+        """Save the row; :meth:`transition_to` guards the ones saved in bulk."""
+        if self.status == self.Status.SCHEDULED:
+            self._refuse_scheduling_in_takeover()
+        super().save(*args, **kwargs)
+
     # ------------------------------------------------------------------
     # State machine
     # ------------------------------------------------------------------
@@ -802,6 +825,8 @@ class PlatformPost(models.Model):
                 f"Invalid status transition: {self.status} → {new_status}. "
                 f"Allowed: {self.VALID_TRANSITIONS.get(self.status, set())}"
             )
+        if new_status == self.Status.SCHEDULED:
+            self._refuse_scheduling_in_takeover()
         self.status = new_status
         if new_status == "published":
             self.published_at = timezone.now()

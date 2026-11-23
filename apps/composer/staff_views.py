@@ -1,8 +1,7 @@
 """The operator's shelf of idea templates: the starting points every brand
 sees in the create page's Templates tab.
 
-Access is ``_staff_required``, borrowed from ``apps.billing.views`` like the
-other screens of the administrative area.
+Access is ``staff_required`` (``apps.accounts.decorators``).
 """
 
 from django.contrib import messages
@@ -13,7 +12,7 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from apps.billing.views import _staff_required
+from apps.accounts.decorators import staff_required
 
 from . import idea_icons
 from .forms import IdeaTemplateForm, VariationFormSet
@@ -21,7 +20,7 @@ from .models import IdeaTemplate
 from .services import review_template
 
 
-@_staff_required
+@staff_required
 @require_GET
 def template_list(request):
     query = request.GET.get("q", "").strip()
@@ -60,7 +59,7 @@ def template_list(request):
     )
 
 
-@_staff_required
+@staff_required
 @require_http_methods(["GET", "POST"])
 def template_edit(request, template_id=None):
     """Create a template (no id) or change one."""
@@ -105,7 +104,7 @@ def template_edit(request, template_id=None):
     )
 
 
-@_staff_required
+@staff_required
 @require_POST
 def template_toggle(request, template_id):
     template = get_object_or_404(IdeaTemplate, id=template_id)
@@ -117,7 +116,7 @@ def template_toggle(request, template_id):
     return redirect("composer_staff:idea_templates")
 
 
-@_staff_required
+@staff_required
 @require_POST
 def template_review(request, template_id):
     """Approve a template a customer sent (it goes on every shelf) or reject it."""
@@ -128,7 +127,7 @@ def template_review(request, template_id):
     return redirect(f"{reverse('composer_staff:idea_templates')}?tab=sent")
 
 
-@_staff_required
+@staff_required
 @require_POST
 def template_delete(request, template_id):
     get_object_or_404(IdeaTemplate, id=template_id).delete()

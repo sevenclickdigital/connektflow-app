@@ -241,8 +241,9 @@ def accept_invitation(invitation, user, *, require_email_match=True):
             owns, which often differs from the invited address).
 
     Raises:
-        ValueError: If the invitation is expired, already accepted, or the
-            user's email does not match (when require_email_match is True).
+        ValueError: If the invitation is expired, already accepted, the
+            user's email does not match (when require_email_match is True),
+            or the user is a team account.
     """
     if invitation.is_expired:
         raise ValueError("This invitation has expired.")
@@ -251,6 +252,11 @@ def accept_invitation(invitation, user, *, require_email_match=True):
 
     if require_email_match and user.email.lower() != invitation.email.lower():
         raise ValueError("This invitation was sent to a different email address.")
+
+    # A team account owns nothing (apps/accounts/operators.py): joining a
+    # customer's organization would make it a customer.
+    if user.is_staff:
+        raise ValueError("A team account cannot join an organization. Use a separate account.")
 
     # Create org membership (skip if exists, e.g. user was already added)
     org_membership, created = OrgMembership.objects.get_or_create(

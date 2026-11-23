@@ -7,17 +7,17 @@ URL surface:
 - ``/workspace/<workspace_id>/billing/subscribe/confirm/``: POST, contracts
 - ``/workspace/<workspace_id>/billing/storage/quote/``    : HTMX price quote
 - ``/workspace/<workspace_id>/billing/storage/``          : POST, buys GB
-- ``/billing/staff/``                                     : customers
-- ``/billing/staff/plans/``                               : plan and prices
-- ``/billing/staff/plans/prices/``                        : POST, list prices
-- ``/billing/staff/subscriptions/``                       : subscriptions
-- ``/billing/staff/impersonations/``                      : access log
-- ``/billing/staff/courtesy/<target_workspace_id>/``      : POST, comp toggle
-- ``/billing/staff/quota/<org_id>/``                      : POST, org quota
-- ``/billing/staff/accounts/<org_id>/courtesy/``          : POST, timed comp
-- ``/billing/staff/accounts/<org_id>/edit/``              : POST, name/e-mail
-- ``/billing/staff/users/<target_user_id>/reset-password/``: POST, allauth mail
-- ``/billing/staff/users/<target_user_id>/active/``       : POST, de/reactivate
+- ``/staff/``                                             : customers
+- ``/staff/plans/``                                       : plan and prices
+- ``/staff/plans/prices/``                                : POST, list prices
+- ``/staff/subscriptions/``                               : subscriptions
+- ``/staff/impersonations/``                              : access log
+- ``/staff/courtesy/<target_workspace_id>/``              : POST, comp toggle
+- ``/staff/quota/<org_id>/``                              : POST, org quota
+- ``/staff/accounts/<org_id>/courtesy/``                  : POST, timed comp
+- ``/staff/accounts/<org_id>/edit/``                      : POST, name/e-mail
+- ``/staff/users/<target_user_id>/reset-password/``        : POST, allauth mail
+- ``/staff/users/<target_user_id>/active/``               : POST, de/reactivate
 
 Two things this module is careful about, because both are states the
 product is actually in today:
@@ -34,7 +34,6 @@ product is actually in today:
 
 from __future__ import annotations
 
-import functools
 import logging
 import re
 
@@ -56,6 +55,7 @@ from django.views.decorators.http import require_GET, require_POST
 from django_ratelimit.decorators import ratelimit
 
 from apps.accounts import impersonation
+from apps.accounts.decorators import staff_required, superadmin_required
 from apps.accounts.impersonation import client_ip
 from apps.accounts.models import ImpersonationSession, User
 from apps.affiliates import services as affiliate_services
@@ -1308,53 +1308,7 @@ def contract_storage(request, workspace_id):
 # careful to say. The first half is what ``billing.ProductPrice`` fixes.
 
 
-def _is_billing_staff(request):
-    """Gate for the cross-organization billing console.
-
-    ``is_staff``, not ``require_org_permission``: every org-scoped
-    decorator in this codebase resolves an ``OrgMembership`` for the
-    ``org_id`` in the URL, and this console deliberately has no org in
-    its URL — it lists *every* organization so the product owner can comp
-    one. There is no membership that could grant that, and inventing an
-    org permission for it would mean any customer who grants themselves
-    that permission could read every other customer's billing.
-
-    ``is_staff`` is the account flag Django already reserves for
-    operators, is what ``/admin/`` uses, and is not something a customer
-    can set on themselves through the product.
-
-    Asked via ``impersonation.is_operator`` rather than reading
-    ``request.user.is_staff`` directly, because the two answers differ in
-    one case that matters: while an operator is impersonating a customer
-    for support, this console must be closed. Letting it through would
-    mean the session acting as the customer everywhere else could comp a
-    workspace or read every other account's billing, and the audit trail
-    would record the customer's identity doing it.
-    """
-    return impersonation.is_operator(request)
-
-
-def _staff_required(view_func):
-    """``login_required`` plus the staff check, 403 for logged-in non-staff.
-
-    Deliberately not ``user_passes_test``: that redirects to the login
-    page on failure, so an already-authenticated member who found the URL
-    would bounce between login and here forever. Raising
-    ``PermissionDenied`` matches how every other permission failure in
-    this codebase ends, while the outer ``login_required`` still sends an
-    anonymous visitor to log in.
-    """
-
-    @functools.wraps(view_func)
-    def _wrapped(request, *args, **kwargs):
-        if not _is_billing_staff(request):
-            raise PermissionDenied("Staff access required.")
-        return view_func(request, *args, **kwargs)
-
-    return login_required(_wrapped)
-
-
-@_staff_required
+@staff_required
 @require_GET
 def staff_console(request):
     """Customers: every account, its brands and the people in each brand.
@@ -1544,7 +1498,7 @@ def _may_deactivate(operator, target):
     return not target.is_staff
 
 
-@_staff_required
+@superadmin_required
 @require_GET
 def staff_plans(request):
     """The plan: what a workspace costs, what it includes, and a form to
@@ -1627,7 +1581,7 @@ _PRICE_FIELDS = (
 )
 
 
-@_staff_required
+@superadmin_required
 @require_GET
 def staff_coupons(request):
     """The coupons customers type at checkout: create one, see how much each was used, switch one off."""
@@ -1644,7 +1598,7 @@ def staff_coupons(request):
     )
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def staff_create_coupon(request):
     try:
@@ -1657,7 +1611,7 @@ def staff_create_coupon(request):
     return redirect("billing_staff:coupons")
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def staff_toggle_coupon(request, coupon_id):
     """Switch a coupon off or back on. Plans already paid with it keep their price."""
@@ -1673,7 +1627,7 @@ def staff_toggle_coupon(request, coupon_id):
     return redirect("billing_staff:coupons")
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def staff_update_rules(request):
     """Save the billing rules: yearly discount, free trial, volume discounts and the subscription lock.
@@ -1700,7 +1654,7 @@ def staff_update_rules(request):
     return redirect("billing_staff:plans")
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def staff_update_prices(request):
     """Change the product's list prices.
@@ -1719,7 +1673,7 @@ def staff_update_prices(request):
     view, not by ``services.set_price``, and not by any UPDATE either one
     runs. A customer's bill can only change by contracting something new.
 
-    Behind ``_staff_required`` like every other write in this area, which
+    Behind ``staff_required`` like every other write in this area, which
     also closes it during an impersonated session: a price changed from
     inside a customer's session would be recorded against the customer's
     identity in the trail, which is worse than no trail.
@@ -1834,7 +1788,7 @@ def _event_amount_cents(payload):
         return None
 
 
-@_staff_required
+@staff_required
 @require_GET
 def staff_subscriptions(request):
     """Every subscription, one per row, plus what the provider has said.
@@ -1985,7 +1939,7 @@ def staff_subscriptions(request):
     )
 
 
-@_staff_required
+@superadmin_required
 @require_GET
 def staff_goals(request):
     """Goal and profit calculator: a projection the operator plays with.
@@ -2017,7 +1971,7 @@ def staff_goals(request):
     )
 
 
-@_staff_required
+@staff_required
 @require_GET
 def staff_impersonation_log(request):
     """Who was inside a customer's account, and when.
@@ -2047,7 +2001,7 @@ def staff_impersonation_log(request):
     )
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def staff_toggle_courtesy(request, target_workspace_id):
     """Grant or revoke a workspace's billing exemption.
@@ -2096,7 +2050,7 @@ def staff_toggle_courtesy(request, target_workspace_id):
     return redirect("billing_staff:staff_console")
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def staff_set_courtesy_quota(request, org_id):
     """Set how many of an organization's EXISTING workspaces go unbilled.
@@ -2152,7 +2106,7 @@ def staff_set_courtesy_quota(request, org_id):
 # customer off.
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def staff_grant_courtesy(request, org_id):
     """Release an account from charges, for a stated number of days.
@@ -2221,7 +2175,7 @@ def staff_grant_courtesy(request, org_id):
     return redirect("billing_staff:staff_console")
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def staff_revoke_courtesy(request, org_id):
     """End an account's exemption now, ahead of any deadline.
@@ -2241,7 +2195,7 @@ def staff_revoke_courtesy(request, org_id):
     return redirect("billing_staff:staff_console")
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def staff_edit_account(request, org_id):
     """Rename the organization and correct its owner's name and e-mail.
@@ -2305,7 +2259,7 @@ def staff_edit_account(request, org_id):
     return redirect("billing_staff:staff_console")
 
 
-@_staff_required
+@staff_required
 @require_POST
 def staff_send_password_reset(request, target_user_id):
     """Mail the customer allauth's own password-reset link.
@@ -2348,7 +2302,7 @@ def staff_send_password_reset(request, target_user_id):
     return redirect("billing_staff:staff_console")
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def staff_delete_user(request, target_user_id):
     """Delete a customer's account for good, with the organizations only they own.
@@ -2400,7 +2354,7 @@ def staff_delete_user(request, target_user_id):
     return redirect("billing_staff:staff_console")
 
 
-@_staff_required
+@staff_required
 @require_POST
 def staff_set_user_active(request, target_user_id):
     """Switch a customer's sign-in on or off. Deletes nothing.

@@ -1,7 +1,6 @@
 """The operator's Affiliates screen: who is an affiliate, how each performs, what is owed.
 
-Access is ``_staff_required``, borrowed from ``apps.billing.views`` like the
-other administrative screens.
+Access is ``superadmin_required`` (``apps.accounts.decorators``).
 """
 
 import logging
@@ -11,17 +10,17 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
+from apps.accounts.decorators import superadmin_required
 from apps.affiliates import services
 from apps.affiliates.models import Affiliate, Payout
 from apps.billing.models import Coupon
-from apps.billing.views import _staff_required
 
 logger = logging.getLogger(__name__)
 
 RESOLVED_PAYOUTS_SHOWN = 50
 
 
-@_staff_required
+@superadmin_required
 @require_GET
 def affiliates(request):
     rows = list(Affiliate.objects.select_related("user", "coupon"))
@@ -48,7 +47,7 @@ def affiliates(request):
     )
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def save_affiliate(request, affiliate_id=None):
     """Create an affiliate (switched off), or change one."""
@@ -69,7 +68,7 @@ def save_affiliate(request, affiliate_id=None):
     return redirect("affiliates_staff:affiliates")
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def toggle_affiliate(request, affiliate_id):
     """Switch an affiliate on or off. Off closes the link and the panel and stops new commissions."""
@@ -86,7 +85,7 @@ def toggle_affiliate(request, affiliate_id):
     return redirect("affiliates_staff:affiliates")
 
 
-@_staff_required
+@superadmin_required
 @require_POST
 def resolve_payout(request, payout_id):
     """Mark a requested withdrawal paid, or reject it."""

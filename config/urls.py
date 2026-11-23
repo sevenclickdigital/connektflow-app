@@ -7,6 +7,7 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.views.static import serve
 
+from apps.accounts.operators import STAFF_AREA_PREFIX
 from apps.accounts.views import health_check
 from apps.affiliates import views as affiliate_views
 from apps.api.api import api as agent_api
@@ -99,24 +100,15 @@ urlpatterns = [
     path("workspace/<uuid:workspace_id>/media/", include("apps.media_library.urls")),
     # Per-workspace billing: contracting, subscription status, extra disk.
     path("workspace/<uuid:workspace_id>/billing/", include("apps.billing.urls")),
-    # Cross-organization billing console. Deliberately outside any
-    # org/workspace prefix — it lists every account, so there is no org in
-    # the path that a membership check could key on. Gated on is_staff in
-    # the views.
-    path("billing/staff/", include("apps.billing.staff_urls")),
-    path("billing/staff/affiliates/", include("apps.affiliates.staff_urls")),
-    # An affiliate's public link and their own panel.
+    # The three audiences of the application each have their own group of
+    # routes. The team: the whole administrative area under /staff/
+    # (config/staff_urls.py), closed to customers and the only part of the
+    # application a team account can open.
+    path(STAFF_AREA_PREFIX, include("config.staff_urls")),
+    # An affiliate: the public link they share and their own panel.
     path("af/<slug:slug>/", affiliate_views.link, name="affiliate_link"),
     path("affiliate/", include("apps.affiliates.urls")),
-    # The flow template library, for the same reason and under the same gate:
-    # the shelf belongs to the product, not to a workspace, so there is no
-    # workspace in the path for a membership check to key on.
-    path("automations/staff/templates/", include("apps.automations.staff_urls")),
-    path("calendar/staff/dates/", include("apps.calendar.staff_urls")),
-    path("composer/staff/ideas/", include("apps.composer.staff_urls")),
-    path("radar/staff/hashtags/", include("apps.radar.staff_urls")),
-    path("onboarding/staff/videos/", include("apps.onboarding.staff_urls")),
-    path("social-accounts/staff/platforms/", include("apps.social_accounts.staff_urls")),
+    # A customer: everything else in this list.
     # Client Portal (Stream F)
     path("portal/", include("apps.client_portal.urls")),
     path("notifications/", include("apps.notifications.urls")),

@@ -1,8 +1,7 @@
 """The operator's screen for market hashtags: the hashtags of each segment
 and the Instagram account they are read through.
 
-Access is ``_staff_required``, borrowed from ``apps.billing.views`` like the
-other screens of the administrative area.
+Access is ``staff_required`` (``apps.accounts.decorators``).
 """
 
 from django.contrib import messages
@@ -10,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
-from apps.billing.views import _staff_required
+from apps.accounts.decorators import staff_required
 from apps.calendar.models import DateSegment
 from apps.social_accounts.models import SocialAccount
 
@@ -36,7 +35,7 @@ def _operator_accounts(user):
     )
 
 
-@_staff_required
+@staff_required
 @require_GET
 def hashtags(request):
     rows = list(MarketHashtag.objects.select_related("segment").order_by("source", "-posts", "tag"))
@@ -58,7 +57,7 @@ def hashtags(request):
     )
 
 
-@_staff_required
+@staff_required
 @require_POST
 def hashtag_add(request):
     segment = None
@@ -71,14 +70,14 @@ def hashtag_add(request):
     return _back()
 
 
-@_staff_required
+@staff_required
 @require_POST
 def hashtag_delete(request, hashtag_id):
     get_object_or_404(MarketHashtag, id=hashtag_id).delete()
     return _back()
 
 
-@_staff_required
+@staff_required
 @require_POST
 def collector_account(request):
     """Choose the account the hashtags are read through, or none."""
@@ -90,7 +89,7 @@ def collector_account(request):
     return _back()
 
 
-@_staff_required
+@staff_required
 @require_POST
 def collect_now(request):
     """Queue a reading now, beside the weekly one."""
