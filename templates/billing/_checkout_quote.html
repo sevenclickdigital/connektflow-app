@@ -1,32 +1,32 @@
 {% load i18n billing_extras %}
 {% comment %}
-The checkout's foot bar (#quote-bar): brands chosen and the total, priced
-by apps.billing.services.quote_plan through views.checkout_quote. When it
-comes from that view (an HTMX request) the order summary of the payment
-step (#summary-totals) is refreshed with it, out of band.
+The checkout's foot bar (#quote-bar): the total with the number of brands
+and the cycle above it, the list price struck through when a discount
+applies and, on yearly, what is charged a year. Priced by
+apps.billing.services.quote_plan through views.checkout_quote. When it
+comes from that view (an HTMX request) the saving at the foot of the brands
+(#quote-saving) and the order summary of the payment step (#summary-totals)
+are refreshed with it, out of band.
 {% endcomment %}
-<div class="flex flex-wrap items-center gap-x-6 gap-y-1">
-  <div class="hidden sm:block">
-    <p class="text-xs text-neutral-500">{% translate "Brands chosen" %}</p>
-    <p class="text-lg font-semibold text-neutral-950 tabular-nums">{% if plan %}{{ quote.brands|default:plan.brands }}{% else %}{{ quote.brands|default:0 }}{% endif %}</p>
-  </div>
-  <div class="h-10 w-px bg-neutral-200 hidden sm:block" aria-hidden="true"></div>
+<div class="flex flex-wrap items-center gap-x-5 gap-y-2">
   {% if quote %}
-  <div>
-    <p class="text-xs text-neutral-500">{% if plan %}{% translate "New plan total" %}{% else %}{% translate "Total" %}{% endif %}<span class="sm:hidden"> · {% blocktranslate count brands=quote.brands %}{{ brands }} brand{% plural %}{{ brands }} brands{% endblocktranslate %}</span></p>
-    <p class="text-xl font-bold text-brand-700 tabular-nums">R$ {{ quote.monthly_cents|brl }}<span class="text-sm font-normal text-neutral-600">{% translate "/month" %}</span></p>
-    {% if quote.cycle == "yearly" %}<p class="text-xs text-neutral-600">{% blocktranslate with total=quote.charge_cents|brl %}R$ {{ total }} a year, charged to the card{% endblocktranslate %}</p>{% endif %}
+  <div class="min-w-0">
+    <p class="text-xs font-medium text-neutral-600">
+      {% if plan %}{% translate "New plan total" %}{% else %}{% translate "Total" %}{% endif %}
+      · {% blocktranslate count brands=quote.brands %}{{ brands }} brand{% plural %}{{ brands }} brands{% endblocktranslate %}
+      · {% if quote.cycle == "yearly" %}{% translate "Yearly" %}{% else %}{% translate "Monthly" %}{% endif %}
+    </p>
+    <p class="flex items-baseline gap-2 leading-tight">
+      {% if quote.list_monthly_cents > quote.monthly_cents %}<span class="text-sm text-neutral-400 line-through tabular-nums">R$ {{ quote.list_monthly_cents|brl }}</span>{% endif %}
+      <span class="text-2xl font-extrabold text-brand-700 tabular-nums" style="letter-spacing: -0.02em;">R$ {{ quote.monthly_cents|brl }}</span><span class="text-sm font-medium text-neutral-500">{% translate "/month" %}</span>
+      {% if quote.cycle == "yearly" %}<span class="hidden md:inline text-xs text-neutral-600">· {% blocktranslate with total=quote.charge_cents|brl %}R$ {{ total }} a year{% endblocktranslate %}</span>{% endif %}
+    </p>
   </div>
-  {% if quote.yearly_saving_cents or quote.volume_saving_cents %}
-  <div class="hidden sm:block rounded-lg border border-green-200 bg-green-50 px-3 py-1.5">
-    {% if quote.yearly_saving_cents %}<p class="text-xs font-semibold text-green-700">{% blocktranslate with saving=quote.yearly_saving_cents|brl %}Save R$ {{ saving }} a year{% endblocktranslate %}</p>{% endif %}
-    {% if quote.volume_saving_cents %}<p class="text-xs text-green-700">{% blocktranslate with saving=quote.volume_saving_cents|brl %}R$ {{ saving }} off a month for volume{% endblocktranslate %}</p>{% endif %}
-  </div>
-  {% endif %}
   {% else %}
   <p class="text-sm text-neutral-600">{% blocktranslate with max=max_brands|default:50 %}Choose between 1 and {{ max }} brands.{% endblocktranslate %}</p>
   {% endif %}
 </div>
 {% if request.htmx %}
 <div id="summary-totals" hx-swap-oob="innerHTML">{% include "billing/_checkout_summary.html" %}</div>
+<div id="quote-saving" hx-swap-oob="innerHTML">{% include "billing/_checkout_saving.html" %}</div>
 {% endif %}

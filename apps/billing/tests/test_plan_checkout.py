@@ -388,6 +388,35 @@ def test_the_checkout_lists_each_visible_network_once_and_never_a_hidden_one(cli
     assert "instagram_login" not in keys and "instagram" in keys
 
 
+def test_a_first_purchase_of_one_brand_has_nothing_to_tick(client, owner_of):
+    org, (workspace,) = _org_with_workspaces(1)
+    client.force_login(owner_of(org))
+
+    response = client.get(reverse("billing:checkout", kwargs={"workspace_id": workspace.id}))
+
+    assert response.context["choose_brands"] is False
+    # The brand is still on the order, ticked out of sight.
+    page = response.content.decode()
+    assert f'name="workspaces" value="{workspace.pk}" data-quote checked class="hidden"' in page
+    # A brand that has not been used yet is not called inactive.
+    with translation.override("pt-br"):
+        assert translation.gettext("Activated on payment") in page
+        assert translation.gettext("Inactive") not in page
+
+
+def test_several_brands_or_an_earlier_plan_let_the_brands_be_ticked(client, owner_of):
+    org, workspaces = _org_with_workspaces(2)
+    client.force_login(owner_of(org))
+    url = reverse("billing:checkout", kwargs={"workspace_id": workspaces[0].id})
+    assert client.get(url).context["choose_brands"] is True
+
+    renewing, (brand,) = _org_with_workspaces(1, name="Renewing")
+    _buy(renewing, client=StubAsaas())
+    OrganizationPlan.objects.filter(organization=renewing).update(status=WorkspaceSubscription.Status.CANCELED)
+    client.force_login(owner_of(renewing, role=OrgMembership.OrgRole.ADMIN))
+    assert client.get(reverse("billing:checkout", kwargs={"workspace_id": brand.id})).context["choose_brands"] is True
+
+
 @override_settings(RATELIMIT_ENABLE=False)
 @pytest.mark.parametrize(
     ("field", "value", "message"),

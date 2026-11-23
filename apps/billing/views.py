@@ -68,7 +68,7 @@ from apps.common.validators import clean_display_name
 from apps.members.decorators import require_org_role
 from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
-from apps.organizations.views import needs_about
+from apps.organizations.views import needs_about, needs_welcome
 from apps.social_accounts.models import PlatformVisibility
 from apps.workspaces.models import Workspace
 
@@ -603,7 +603,8 @@ def start_trial(request, workspace_id):
     workspace = _get_workspace(request, workspace_id)
     _require_manage_billing(request, workspace)
 
-    # Asked in the trial dialog of the checkout unless already on file.
+    # Asked in the checkout's billing details, which the trial goes through
+    # without the payment, unless already on file.
     profile = services.ensure_billing_profile(workspace.organization)
     tax_id = services.valid_tax_id(request.POST.get("tax_id")) or profile.tax_id
     phone = services.valid_phone(request.POST.get("phone")) or profile.phone
@@ -730,11 +731,14 @@ def _checkout_brands(plan, workspaces, names):
 
 
 def _apply_names(request, organization, rows):
-    """Rename the brands edited in place, and name an unnamed organization.
+    """Rename the brands edited in place and keep what the billing details asked.
 
-    The first screen of a new account: the brand it was created with is
-    renamed on its row, and the organization, still with its sign-up name,
-    takes the one typed at payment (or the first brand's).
+    The brand an account was created with is renamed on its row. The name
+    the invoices carry (``payer_name``) and the billing details' extra
+    question (clients served, or segment) are kept. An organization still
+    with its sign-up name (it is named on the "about your business" step)
+    takes the first brand's. Runs before the customer is created at Asaas,
+    which takes the payer name.
     """
     for row in rows:
         if not row["renamable"]:
@@ -743,11 +747,59 @@ def _apply_names(request, organization, rows):
         if name and name != row["workspace"].name:
             row["workspace"].name = name
             row["workspace"].save(update_fields=["name"])
-    if organization.is_unnamed and _can_manage_billing(request, rows[0]["workspace"]):
+    if not _can_manage_billing(request, rows[0]["workspace"]):
+        return
+    # Whose name the invoices carry, typed in the billing details.
+    payer_name = clean_display_name(request.POST.get("payer_name", ""), max_length=255)
+    if payer_name:
+        profile = services.ensure_billing_profile(organization)
+        if payer_name != profile.payer_name:
+            profile.payer_name = payer_name
+            profile.save(update_fields=["payer_name", "updated_at"])
+    if organization.is_unnamed:
         name = clean_display_name(request.POST.get("organization_name", "")) or rows[0]["workspace"].name
         if name and name != Organization.DEFAULT_NAME:
             organization.name = name
             organization.save(update_fields=["name"])
+    # The extra question of the billing details (_checkout_wording), kept
+    # when the answer is one of its choices.
+    for field, choices in (
+        ("client_count", Organization.ClientCount.values),
+        ("business_segment", Organization.Segment.values),
+    ):
+        answer = request.POST.get(field, "")
+        if answer in choices and answer != getattr(organization, field):
+            setattr(organization, field, answer)
+            organization.save(update_fields=[field])
+
+
+def _checkout_wording(organization):
+    """The billing details' extra question, after the account's activity.
+
+    The activity comes from the "about your business" step: how many clients
+    an agency or a freelancer serves, or the segment of a business or of the
+    company a marketing analyst works for. None without an activity.
+    """
+    clients = ("client_count", _("How many clients do you serve today?"), Organization.ClientCount.choices)
+    questions = {
+        Organization.Activity.AGENCY: clients,
+        Organization.Activity.FREELANCER: clients,
+        Organization.Activity.ENTREPRENEUR: (
+            "business_segment",
+            _("What is your business's segment?"),
+            Organization.Segment.choices,
+        ),
+        Organization.Activity.MARKETING_ANALYST: (
+            "business_segment",
+            _("What is the company's segment?"),
+            Organization.Segment.choices,
+        ),
+    }
+    question = questions.get(organization.business_activity)
+    if question is None:
+        return {"extra": None}
+    field, label, choices = question
+    return {"extra": {"field": field, "label": label, "choices": choices, "value": getattr(organization, field)}}
 
 
 def _included_networks() -> list[tuple[str, str]]:
@@ -791,21 +843,28 @@ def checkout(request, workspace_id):
         if services.is_workspace_active(workspace.pk):
             return redirect("calendar:calendar", workspace_id=workspace.id)
 
+    had_plan = plan is not None
     plan = _active_plan(organization)
     rows = _brand_rows(request, organization, plan)
     for row in rows:
         # Ticked from the start: the brand being opened, and every brand on trial or off.
         row["checked"] = row["selectable"] and (row["workspace"].pk == workspace.pk or not plan)
     workspaces = [row["workspace"] for row in rows if row.get("checked")]
-    cycle = plan.billing_cycle if plan else _parse_cycle(request.GET.get("cycle"))
+    # Yearly unless the link asks for monthly: the cheaper choice is the one shown first.
+    cycle = plan.billing_cycle if plan else _parse_cycle(request.GET.get("cycle") or WorkspaceSubscription.Cycle.YEARLY)
     brands = _checkout_brands(plan, workspaces, []) or 1
     profile = services.ensure_billing_profile(organization)
+    # The "Include" ticks are for an organization that has had a plan, or
+    # that has several brands to choose from. A first purchase of the one
+    # brand an account starts with has nothing to choose: it is included.
+    choose_brands = had_plan or sum(row["selectable"] for row in rows) > 1
     subscription = services.ensure_subscription(workspace)
     context = {
         "workspace": workspace,
         "organization": organization,
         "plan": plan,
         "rows": rows,
+        "choose_brands": choose_brands,
         "cycle": cycle,
         "annual_percent": services.annual_discount_percent(),
         "volume_tiers": services.volume_discounts(),
@@ -816,11 +875,11 @@ def checkout(request, workspace_id):
         "quote": services.quote_plan(brands, cycle, plan.coupon if plan else None),
         "add_choices": ADD_BRAND_CHOICES,
         "max_brands": services.PLAN_MAX_BRANDS,
-        "needs_tax_id": not profile.tax_id,
-        "needs_phone": not profile.phone,
         "payer_tax_id": profile.tax_id,
         "payer_phone": profile.phone,
-        "ask_organization_name": organization.is_unnamed,
+        "payer_name": profile.payer_name,
+        "in_setup": needs_welcome(request, workspace),
+        "wording": _checkout_wording(organization),
         "trial_available": not plan and services.trial_available(workspace, request.user),
         "trial_days": services.trial_days(),
         "trial_expired": subscription.trial_expired,
@@ -846,7 +905,7 @@ def _renewal_date(cycle):
 def checkout_quote(request, workspace_id):
     """HTMX fragment: the total of the brands ticked and the cycle, priced by the server.
 
-    The foot bar, plus the order summary of the payment step out of band.
+    The foot bar, plus the saving under the brands and the order summary of the payment step out of band.
     """
     workspace = _get_workspace(request, workspace_id)
     organization = workspace.organization

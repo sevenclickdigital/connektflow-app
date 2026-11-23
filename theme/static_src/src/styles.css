@@ -1040,6 +1040,21 @@ input.idea-title-input::placeholder {
 .a-card-hover:hover { box-shadow: var(--shadow-md); border-color: var(--primary-ring); transform: translateY(-2px); }
 
 /* Page header: title 24/600, description, actions on the right */
+/* The bar of actions floating at the foot of the window, as wide as the
+   page's content column (max-w-6xl less its px-6 padding): the contracting
+   steps (about page and checkout). The page leaves room for it with a bottom padding (pb-32). */
+.floating-bar { position: fixed; left: 0; right: 0; bottom: 0.5rem; z-index: 30; padding: 0 1rem; }
+@media (min-width: 640px) { .floating-bar { bottom: 1rem; padding: 0 1.5rem; } }
+.floating-bar-panel {
+  max-width: 69rem; margin: 0 auto; min-height: 4.5rem;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1.5rem;
+  padding: 0.75rem 1rem 0.75rem 1.25rem;
+  background: var(--surface-0); border: 1px solid var(--neutral-200); border-radius: 12px; box-shadow: var(--shadow-lg);
+}
+
+/* The main action of a floating bar: the same size on every setup step. */
+.floating-bar-action { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.625rem 1.5rem; font-size: 0.875rem; font-weight: 600; box-shadow: var(--shadow-md); }
+
 .page-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 1.5rem; }
 .page-title { font-size: 1.5rem; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; color: var(--text-primary); }
 .page-description { font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem; }

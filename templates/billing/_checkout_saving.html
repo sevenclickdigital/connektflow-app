@@ -1,0 +1,26 @@
+{% load i18n billing_extras %}
+{% comment %}
+What the order saves, at the foot of the checkout's brands (#quote-saving):
+the yearly and volume savings of the quote or, on monthly, a button that
+switches to yearly and says what it saves. Rendered with the page and again,
+out of band, with every quote (_checkout_quote.html).
+{% endcomment %}
+{% if quote.yearly_saving_cents or quote.volume_saving_cents %}
+<div class="flex flex-wrap items-center gap-2">
+  {% if quote.yearly_saving_cents %}
+  <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--success-50)] text-[var(--success-700)] ring-1 ring-inset ring-[var(--success-500)]/30 px-3 py-1 text-sm font-semibold">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.5"/></svg>
+    {% blocktranslate with saving=quote.yearly_saving_cents|brl %}You are saving R$ {{ saving }} a year{% endblocktranslate %}
+  </span>
+  {% endif %}
+  {% if quote.volume_saving_cents %}<span class="pill pill-success">{% blocktranslate with saving=quote.volume_saving_cents|brl %}R$ {{ saving }} off a month for volume{% endblocktranslate %}</span>{% endif %}
+</div>
+{% elif yearly_quote and yearly_quote.yearly_saving_cents %}
+<div>
+  <button type="button" class="inline-flex items-center gap-1.5 rounded-full bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200 px-3 py-1 text-sm font-semibold hover:bg-brand-100 cursor-pointer"
+          @click="cycle = 'yearly'; quote()">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.5"/></svg>
+    {% blocktranslate with saving=yearly_quote.yearly_saving_cents|brl %}Switch to yearly and save R$ {{ saving }} a year{% endblocktranslate %}
+  </button>
+</div>
+{% endif %}

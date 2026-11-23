@@ -14,6 +14,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from apps.accounts import impersonation
 from apps.accounts.forms import ProfileForm
 from apps.billing import services as billing_services
+from apps.organizations.views import needs_welcome
 
 logger = logging.getLogger(__name__)
 
@@ -39,16 +40,12 @@ def dashboard(request):
             workspace_id=user.last_workspace_id,
             workspace__is_archived=False,
         ).exists():
-            # A new account starts by naming its organization and brand (the
-            # welcome step of the contracting page), whether or not unpaid
-            # brands are locked. Once the brand is in use it is not asked again.
-            org = request.org
+            # An account still being set up goes back to its setup steps,
+            # whether or not unpaid brands are locked. Once a brand is in use
+            # it is not sent there again.
             if (
-                org is not None
-                and org.is_unnamed
-                and request.org_membership.org_role == "owner"
-                and request.workspace is not None
-                and request.workspace.organization_id == org.id
+                request.workspace is not None
+                and needs_welcome(request, request.workspace)
                 and not billing_services.is_workspace_active(request.workspace)
             ):
                 return redirect("billing:subscribe_modal", workspace_id=user.last_workspace_id)

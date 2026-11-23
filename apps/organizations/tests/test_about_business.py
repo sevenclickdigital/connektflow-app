@@ -1,10 +1,13 @@
-"""The "about your business" step a new account is asked once, before its plan."""
+"""The "about your business" step a new account answers once, before its plan,
+and the checkout's billing details worded after it."""
 
 import pytest
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
+from apps.billing import services as billing
+from apps.billing.models import WorkspaceSubscription
 from apps.members.models import WorkspaceMembership
 from apps.organizations.models import Organization
 
@@ -41,7 +44,7 @@ def test_the_answers_are_kept_and_the_plan_comes_next(client):
             "business_activity": "agency",
             "team_size": "2_5",
             "referral_source": "instagram",
-            "goals": ["schedule", "reports"],
+            "organization_name": "  Agência   Sol ",
         },
     )
 
@@ -52,24 +55,36 @@ def test_the_answers_are_kept_and_the_plan_comes_next(client):
         "2_5",
         "instagram",
     )
-    assert organization.goals == ["schedule", "reports"]
+    assert organization.name == "Agência Sol"
     assert organization.about_answered_at is not None
     assert client.get(reverse("billing:checkout", kwargs={"workspace_id": workspace.id})).status_code == 200
 
 
 @pytest.mark.django_db
-def test_skipping_closes_the_step_without_answers(client):
+@pytest.mark.parametrize(
+    "answers",
+    [
+        {"action": "skip"},
+        {"business_activity": "agency", "team_size": "2_5", "referral_source": "instagram"},
+        {
+            "business_activity": "agency",
+            "team_size": "2_5",
+            "referral_source": "instagram",
+            "organization_name": "My Organization",
+        },
+    ],
+    ids=["skipped", "no name", "sign-up name"],
+)
+def test_the_step_cannot_be_skipped_or_left_half_answered(client, answers):
     _user, workspace = _signed_up(client)
 
-    client.post(
-        reverse("organizations:about"),
-        {"workspace": str(workspace.id), "action": "skip", "business_activity": "agency"},
-    )
+    response = client.post(reverse("organizations:about"), {"workspace": str(workspace.id), **answers})
 
-    organization = Organization.objects.get(pk=workspace.organization_id)
-    assert organization.about_answered_at is not None
-    assert organization.business_activity == ""
-    assert client.get(_about_url(workspace)).headers["Location"] == reverse("dashboard")
+    assert response.status_code == 200
+    assert Organization.objects.get(pk=workspace.organization_id).about_answered_at is None
+    assert client.get(reverse("billing:checkout", kwargs={"workspace_id": workspace.id})).headers[
+        "Location"
+    ] == _about_url(workspace)
 
 
 @pytest.mark.django_db
@@ -78,7 +93,12 @@ def test_an_answer_outside_the_choices_is_refused(client):
 
     response = client.post(
         reverse("organizations:about"),
-        {"workspace": str(workspace.id), "action": "save", "business_activity": "astronaut", "goals": ["fly"]},
+        {
+            "workspace": str(workspace.id),
+            "action": "save",
+            "business_activity": "astronaut",
+            "organization_name": "Sol",
+        },
     )
 
     assert response.status_code == 200
@@ -111,3 +131,72 @@ def test_an_existing_account_is_not_asked(client):
     response = client.get(reverse("billing:checkout", kwargs={"workspace_id": workspace.id}))
 
     assert response.status_code == 200
+
+
+ANSWERS = {"team_size": "2_5", "referral_source": "instagram", "organization_name": "Agência Sol"}
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("activity", "field", "answer"),
+    [("agency", "client_count", "6_15"), ("entrepreneur", "business_segment", "food")],
+)
+def test_the_checkout_asks_after_the_activity_and_keeps_the_answer(client, settings, activity, field, answer):
+    settings.BILLING_TRIAL_DAYS = 7
+    _user, workspace = _signed_up(client)
+    client.post(
+        reverse("organizations:about"),
+        {"workspace": str(workspace.id), "business_activity": activity, **ANSWERS},
+    )
+    checkout = client.get(reverse("billing:checkout", kwargs={"workspace_id": workspace.id}))
+    assert checkout.context["wording"]["extra"]["field"] == field
+
+    client.post(
+        reverse("billing:start_trial", kwargs={"workspace_id": workspace.id}),
+        {"tax_id": "529.982.247-25", "phone": "(11) 98888-7777", field: answer},
+    )
+
+    assert getattr(Organization.objects.get(pk=workspace.organization_id), field) == answer
+
+
+@pytest.mark.django_db
+def test_an_extra_answer_outside_its_choices_is_not_kept(client, settings):
+    settings.BILLING_TRIAL_DAYS = 7
+    _user, workspace = _signed_up(client)
+    client.post(
+        reverse("organizations:about"),
+        {"workspace": str(workspace.id), "business_activity": "agency", **ANSWERS},
+    )
+
+    client.post(
+        reverse("billing:start_trial", kwargs={"workspace_id": workspace.id}),
+        {"tax_id": "529.982.247-25", "phone": "(11) 98888-7777", "client_count": "9000"},
+    )
+
+    assert Organization.objects.get(pk=workspace.organization_id).client_count == ""
+
+
+@pytest.mark.django_db
+def test_a_new_account_can_go_back_and_change_its_answers(client):
+    _user, workspace = _signed_up(client)
+    client.post(
+        reverse("organizations:about"),
+        {"workspace": str(workspace.id), "business_activity": "agency", **ANSWERS},
+    )
+
+    page = client.get(_about_url(workspace))
+    assert page.status_code == 200
+    assert page.context["form"]["business_activity"].value() == "agency"
+
+    client.post(
+        reverse("organizations:about"),
+        {"workspace": str(workspace.id), "business_activity": "entrepreneur", **ANSWERS},
+    )
+    assert Organization.objects.get(pk=workspace.organization_id).business_activity == "entrepreneur"
+
+    # Named here, the account is still being set up until a brand is in use.
+    assert client.get(_about_url(workspace)).status_code == 200
+    subscription = billing.ensure_subscription(workspace)
+    subscription.status = WorkspaceSubscription.Status.ACTIVE
+    subscription.save(update_fields=["status"])
+    assert client.get(_about_url(workspace)).headers["Location"] == reverse("dashboard")

@@ -10,8 +10,10 @@ class Organization(models.Model):
     #: owner gives it a real one on the welcome step.
     DEFAULT_NAME = "My Organization"
 
-    # The "about your business" step a new account is shown before its plan
-    # (organizations.views.about_view). Every answer is optional.
+    # The "about your business" step a new account answers before its plan
+    # (organizations.views.about_view), where its name is asked after the
+    # activity (name_question). The checkout's billing details ask one more
+    # question after it (billing.views._checkout_wording).
     class Activity(models.TextChoices):
         FREELANCER = "freelancer", _("Freelancer")
         ENTREPRENEUR = "entrepreneur", _("Entrepreneur")
@@ -30,6 +32,26 @@ class Organization(models.Model):
         REFERRAL = "referral", _("A friend or colleague")
         YOUTUBE = "youtube", _("YouTube")
         OTHER = "other", _("Somewhere else")
+
+    # Asked on the checkout's billing details, by activity: agencies and
+    # freelancers how many clients they serve, businesses and marketing
+    # analysts the company's segment.
+    class ClientCount(models.TextChoices):
+        FEW = "1_5", _("1 to 5 clients")
+        SOME = "6_15", _("6 to 15 clients")
+        MANY = "16_50", _("16 to 50 clients")
+        LOTS = "51_plus", _("More than 50 clients")
+
+    class Segment(models.TextChoices):
+        RETAIL = "retail", _("Retail and e-commerce")
+        FOOD = "food", _("Food and drink")
+        HEALTH = "health", _("Health and wellness")
+        BEAUTY = "beauty", _("Beauty and aesthetics")
+        EDUCATION = "education", _("Education")
+        SERVICES = "services", _("Services")
+        REAL_ESTATE = "real_estate", _("Real estate")
+        TECHNOLOGY = "technology", _("Technology")
+        OTHER = "other", _("Another segment")
 
     class Goal(models.TextChoices):
         SCHEDULE = "schedule", _("Plan and schedule posts")
@@ -55,8 +77,10 @@ class Organization(models.Model):
     referral_source = models.CharField(max_length=16, choices=Source.choices, blank=True, default="", db_default="")
     #: Values of ``Goal``; several may be picked.
     goals = models.JSONField(default=list, blank=True, db_default=models.Value([], output_field=models.JSONField()))
-    #: When the owner answered or skipped the step; it is not shown again after.
+    #: When the owner answered the step; it is not shown again after.
     about_answered_at = models.DateTimeField(blank=True, null=True)
+    client_count = models.CharField(max_length=16, choices=ClientCount.choices, blank=True, default="", db_default="")
+    business_segment = models.CharField(max_length=16, choices=Segment.choices, blank=True, default="", db_default="")
 
     # Deletion workflow
     deletion_requested_at = models.DateTimeField(blank=True, null=True)
@@ -102,6 +126,21 @@ class Organization(models.Model):
         """The goals picked on the "about your business" step, as their labels."""
         labels = dict(self.Goal.choices)
         return [labels[goal] for goal in self.goals if goal in labels]
+
+    @classmethod
+    def name_question(cls, activity):
+        """How the organization's name is asked after its activity: (label, placeholder).
+
+        Asked as the agency's, the company's, the name a freelancer's clients
+        know them by, or the employer's; generic without an activity.
+        """
+        questions = {
+            cls.Activity.AGENCY: (_("Your agency's name"), _("e.g. Sol Agency")),
+            cls.Activity.FREELANCER: (_("The name your clients know you by"), _("e.g. Ana Souza Social Media")),
+            cls.Activity.ENTREPRENEUR: (_("Your company's name"), _("e.g. Sol Bakery")),
+            cls.Activity.MARKETING_ANALYST: (_("The name of the company you work for"), _("e.g. Sol Stores")),
+        }
+        return questions.get(activity, (_("Company or agency name"), _("e.g. Sol Agency")))
 
     @property
     def is_unnamed(self):

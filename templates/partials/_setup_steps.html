@@ -1,0 +1,57 @@
+{% load i18n %}
+{% comment %}
+The phases of contracting, as numbered steps joined by a line: "Your
+company" (organizations/about.html), "Plan" and "Payment" (billing/checkout.html;
+"Your details" instead of "Payment" when the free trial was chosen).
+
+  phase="about"     on the about page: the company is the current step.
+  phase="checkout"  inside the checkout's Alpine scope, which drives the
+                    plan and payment steps through ``step`` (1 or 2) and
+                    ``trial``; clicking "Plan" goes back to it.
+  with_company      on the checkout, whether "Your company" is shown (done)
+                    before the plan: a new account, not a customer managing
+                    an existing plan. It links back to the about page, to
+                    change the answers; ``workspace`` must be in the context.
+{% endcomment %}
+<ol class="flex items-center gap-3 text-sm" aria-label="{% translate 'Steps' %}">
+  {% if phase == "about" or with_company %}
+  <li class="flex items-center gap-2"{% if phase == "about" %} aria-current="step"{% endif %}>
+    {% if phase == "about" %}
+    <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-brand-700 text-white">1</span>
+    <span class="font-semibold text-neutral-950">{% translate "Your company" %}</span>
+    {% else %}
+    <a href="{% url 'organizations:about' %}?workspace={{ workspace.id }}" class="group flex items-center gap-2" title="{% translate 'Change your answers' %}">
+      <span class="w-7 h-7 rounded-full flex items-center justify-center bg-brand-100 text-brand-800 group-hover:bg-brand-200" aria-hidden="true">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>
+      <span class="text-neutral-600 group-hover:text-neutral-950 group-hover:underline">{% translate "Your company" %}</span>
+    </a>
+    {% endif %}
+  </li>
+  <li class="w-8 sm:w-10 h-px bg-neutral-300" aria-hidden="true"></li>
+  {% endif %}
+
+  {% if phase == "about" %}
+  <li class="flex items-center gap-2">
+    <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-neutral-200 text-neutral-600">2</span>
+    <span class="text-neutral-600">{% translate "Plan" %}</span>
+  </li>
+  <li class="w-8 sm:w-10 h-px bg-neutral-300" aria-hidden="true"></li>
+  <li class="flex items-center gap-2">
+    <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-neutral-200 text-neutral-600">3</span>
+    <span class="text-neutral-600">{% translate "Payment" %}</span>
+  </li>
+  {% else %}
+  <li>
+    <button type="button" @click="step = 1" class="flex items-center gap-2 cursor-pointer">
+      <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" :class="step === 1 ? 'bg-brand-700 text-white' : 'bg-brand-100 text-brand-800'">{% if with_company %}2{% else %}1{% endif %}</span>
+      <span :class="step === 1 ? 'font-semibold text-neutral-950' : 'text-neutral-600'">{% translate "Plan" %}</span>
+    </button>
+  </li>
+  <li class="w-8 sm:w-10 h-px bg-neutral-300" aria-hidden="true"></li>
+  <li class="flex items-center gap-2">
+    <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" :class="step === 2 ? 'bg-brand-700 text-white' : 'bg-neutral-200 text-neutral-600'">{% if with_company %}3{% else %}2{% endif %}</span>
+    <span :class="step === 2 ? 'font-semibold text-neutral-950' : 'text-neutral-600'"><span x-show="!trial">{% translate "Payment" %}</span><span x-show="trial" x-cloak>{% translate "Your details" %}</span></span>
+  </li>
+  {% endif %}
+</ol>

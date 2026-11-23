@@ -35,6 +35,20 @@ def _signed_up(email="new@example.com"):
     return client, workspace
 
 
+def _answer_about(client, workspace):
+    """Answer the "about your business" step a new account goes through before its plan."""
+    client.post(
+        reverse("organizations:about"),
+        {
+            "workspace": str(workspace.id),
+            "business_activity": "agency",
+            "team_size": "solo",
+            "referral_source": "google",
+            "organization_name": "Agência Sol",
+        },
+    )
+
+
 def _url(name, workspace):
     return reverse(name, kwargs={"workspace_id": workspace.id})
 
@@ -59,8 +73,13 @@ def gateway(settings):
 
 @pytest.mark.django_db
 class TestGate:
-    def test_a_new_account_lands_on_the_plan(self, required):
+    def test_a_new_account_lands_on_the_plan_once_it_has_said_what_it_does(self, required):
         client, workspace = _signed_up()
+        about = f"{reverse('organizations:about')}?workspace={workspace.id}"
+        assert client.get(reverse("dashboard"), follow=True).redirect_chain[-1][0] == about
+
+        _answer_about(client, workspace)
+
         response = client.get(reverse("dashboard"), follow=True)
         assert response.redirect_chain[-1][0] == _url("billing:checkout", workspace)
         assert response.status_code == 200
@@ -95,6 +114,7 @@ class TestGate:
 
     def test_billing_pages_stay_open_to_a_locked_workspace(self, required):
         client, workspace = _signed_up()
+        _answer_about(client, workspace)
         assert client.get(_url("billing:subscribe_modal", workspace), follow=True).status_code == 200
         assert client.get(_url("billing:checkout", workspace)).status_code == 200
         assert client.get(_url("billing:workspace_billing", workspace)).status_code == 200

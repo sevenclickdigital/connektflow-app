@@ -56,19 +56,25 @@ def settings_view(request):
 
 
 def needs_welcome(request, workspace):
-    """Whether the user should name their organization and brand first.
+    """Whether the account is still being set up by its owner.
 
-    True for the owner of an organization that still has its sign-up name,
-    looking at one of its brands. Asked by the contracting page, which
-    shows the welcome step before the plan, and by the dashboard.
+    True for the owner of the organization, looking at one of its brands,
+    while the organization has its sign-up name, or once it has been named
+    on the "about your business" step until a brand is in use (paid,
+    comped or on trial). The about step stays open meanwhile, and the
+    checkout shows it as the first of the setup steps.
     """
     membership = request.org_membership
-    return bool(
+    if not (
         membership
         and membership.org_role == OrgMembership.OrgRole.OWNER
         and membership.organization_id == workspace.organization_id
-        and membership.organization.is_unnamed
-    )
+    ):
+        return False
+    organization = membership.organization
+    if organization.is_unnamed:
+        return True
+    return organization.about_answered_at is not None and not billing_services.is_workspace_active(workspace)
 
 
 @login_required
@@ -111,7 +117,7 @@ def welcome_view(request):
 def needs_about(request, workspace):
     """Whether the new account's owner is still to be asked about their business.
 
-    Asked once, before the welcome step: answering or skipping both close it.
+    Asked once, before the plan; answering closes it.
     """
     return workspace.organization.about_answered_at is None and needs_welcome(request, workspace)
 
@@ -119,30 +125,33 @@ def needs_about(request, workspace):
 @login_required
 @require_http_methods(["GET", "POST"])
 def about_view(request):
-    """Ask a new account what it does, how big it is, how it found us and what it wants.
+    """Ask a new account what it does, its name, how big it is and how it found us.
 
-    Shown once, right after sign-up and before the plan. Every answer is
-    optional and "Skip" closes the step as well; the answers show on the
+    Shown right after sign-up and before the plan, and not skippable (the
+    checkout's first step links back to it while the account is being set
+    up). The organization is named here, asked after the activity; the
+    checkout asks one more question after it, and the answers show on the
     administrative Customers screen.
     """
     workspace = Workspace.objects.filter(
         id=request.GET.get("workspace") or request.POST.get("workspace") or None,
         memberships__user=request.user,
     ).first()
-    if workspace is None or not needs_about(request, workspace):
+    # Open while the account is being set up, answered or not: the checkout
+    # links back here to change the answers until a brand is in use.
+    if workspace is None or not needs_welcome(request, workspace):
         return redirect("dashboard")
 
     organization = workspace.organization
     form = AboutBusinessForm(instance=organization)
     if request.method == "POST":
-        if request.POST.get("action") != "skip":
-            form = AboutBusinessForm(request.POST, instance=organization)
-            if not form.is_valid():
-                return _render_about(request, form, workspace)
-            form.save(commit=False)
+        form = AboutBusinessForm(request.POST, instance=organization)
+        if not form.is_valid():
+            return _render_about(request, form, workspace)
+        form.save(commit=False)
         organization.about_answered_at = django_tz.now()
         organization.save(
-            update_fields=["business_activity", "team_size", "referral_source", "goals", "about_answered_at"]
+            update_fields=["name", "business_activity", "team_size", "referral_source", "about_answered_at"]
         )
         return redirect("billing:checkout", workspace_id=workspace.id)
     return _render_about(request, form, workspace)
@@ -164,6 +173,15 @@ ACTIVITY_DESCRIPTIONS = {
 
 
 def _render_about(request, form, workspace):
+    # The name is asked after the activity: every wording goes to the page,
+    # which switches it as a card is picked, starting from the one chosen.
+    name_questions = {
+        value: [str(text) for text in Organization.name_question(value)]
+        for value in [*Organization.Activity.values, ""]
+    }
+    activity = form["business_activity"].value()
+    if activity not in Organization.Activity.values:
+        activity = ""
     return render(
         request,
         "organizations/about.html",
@@ -175,8 +193,8 @@ def _render_about(request, form, workspace):
             ],
             "team_sizes": Organization.TeamSize.choices,
             "sources": Organization.Source.choices,
-            "goal_choices": Organization.Goal.choices,
-            "selected_goals": form["goals"].value() or [],
+            "name_question": dict(zip(("label", "placeholder"), name_questions[activity], strict=True)),
+            "name_questions": {"activity": activity, "questions": name_questions},
         },
     )
 

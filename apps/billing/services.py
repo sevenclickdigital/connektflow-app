@@ -700,6 +700,8 @@ def quote_plan(brands, cycle=WorkspaceSubscription.Cycle.MONTHLY, coupon=None):
         "coupon": coupon,
         # What the coupon takes off today's charge.
         "coupon_saving_cents": plain_charge_cents - first_charge_cents,
+        # The list price a month for every brand, before any discount.
+        "list_monthly_cents": list_cents * brands,
         # The list price of each charge, before any discount.
         "list_charge_cents": list_cents * brands * (12 if yearly else 1),
         # What the volume tiers take off the list price, per month and per charge.
@@ -1308,14 +1310,10 @@ def grant_account_courtesy(organization, *, quota, expires_on=None, note="", gra
     )
 
     workspaces = list(organization.workspaces.order_by("created_at", "id"))
-    comped = 0
-    for workspace in workspaces:
-        if comped >= quota:
-            break
+    for workspace in workspaces[: max(quota, 0)]:
         sub = ensure_subscription(workspace)
         if sub.status != WorkspaceSubscription.Status.COURTESY:
             grant_courtesy(workspace, note=note)
-        comped += 1
     return profile
 
 

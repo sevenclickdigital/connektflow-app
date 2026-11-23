@@ -1,10 +1,12 @@
 {% load i18n billing_extras %}
 {% comment %}
-The figures of the checkout's order summary: list price, what each discount
-takes off, what is charged today and when it renews. Rendered with the page
-and again with every quote (_checkout_quote.html, out of band). With an
-active ``plan`` it shows the plan's new value from the next charge. When the
-choice is monthly, ``yearly_quote`` offers the yearly plan.
+The figures of the checkout's order summary: the plan and its cycle, the
+list price, what each discount takes off and the total of the first charge
+(with its monthly equivalent on yearly, and the renewal value when a
+first-charge coupon lowers it). Rendered with the page and again with every
+quote (_checkout_quote.html, out of band). With an active ``plan`` it shows
+the plan's new value from the next charge. When the choice is monthly,
+``yearly_quote`` offers the yearly plan.
 {% endcomment %}
 {% if quote %}
 {% if yearly_quote and yearly_quote.yearly_saving_cents %}
@@ -13,26 +15,30 @@ choice is monthly, ``yearly_quote`` offers the yearly plan.
   <button type="button" class="mt-2 text-sm font-semibold text-brand-700 hover:underline cursor-pointer" @click="cycle = 'yearly'; quote()">{% translate "I want the yearly plan" %}</button>
 </div>
 {% endif %}
-<dl class="space-y-2 text-sm">
+<div class="flex items-start justify-between gap-3">
+  <div>
+    <p class="text-xs text-neutral-600">{% translate "Chosen plan" %}</p>
+    <p class="text-lg font-bold text-neutral-950">Connekt Flow</p>
+  </div>
+  <span class="pill pill-success">{% if quote.cycle == "yearly" %}{% translate "Yearly" %}{% else %}{% translate "Monthly" %}{% endif %}</span>
+</div>
+<dl class="mt-4 pt-4 border-t border-neutral-200 space-y-2 text-sm">
   <div class="flex justify-between gap-3">
-    <dt class="text-neutral-600">
-      {% blocktranslate count brands=quote.brands %}{{ brands }} brand{% plural %}{{ brands }} brands{% endblocktranslate %}
-      · {% if quote.cycle == "yearly" %}{% translate "Yearly" %}{% else %}{% translate "Monthly" %}{% endif %}
-    </dt>
+    <dt class="text-neutral-800">{% blocktranslate count brands=quote.brands %}{{ brands }} brand{% plural %}{{ brands }} brands{% endblocktranslate %}</dt>
     <dd class="tabular-nums text-neutral-950">R$ {{ quote.list_charge_cents|brl }}</dd>
   </div>
   {% if quote.volume_charge_saving_cents %}
-  <div class="flex justify-between gap-3 text-green-700">
+  <div class="flex justify-between gap-3 text-[var(--success-700)]">
     <dt>{% translate "Volume discount" %}</dt><dd class="tabular-nums">−R$ {{ quote.volume_charge_saving_cents|brl }}</dd>
   </div>
   {% endif %}
   {% if quote.yearly_saving_cents %}
-  <div class="flex justify-between gap-3 text-green-700">
-    <dt>{% blocktranslate with percent=quote.annual_percent %}Yearly plan −{{ percent }}%{% endblocktranslate %}</dt><dd class="tabular-nums">−R$ {{ quote.yearly_saving_cents|brl }}</dd>
+  <div class="flex justify-between gap-3 text-[var(--success-700)]">
+    <dt>{% blocktranslate with percent=quote.annual_percent %}Plan discount ({{ percent }}%){% endblocktranslate %}</dt><dd class="tabular-nums">−R$ {{ quote.yearly_saving_cents|brl }}</dd>
   </div>
   {% endif %}
   {% if quote.coupon_saving_cents %}
-  <div class="flex justify-between gap-3 text-green-700">
+  <div class="flex justify-between gap-3 text-[var(--success-700)]">
     <dt>{% blocktranslate with code=quote.coupon.code %}Coupon {{ code }}{% endblocktranslate %}{% if quote.coupon.duration == "first" %} · {% translate "first charge" %}{% endif %}</dt>
     <dd class="tabular-nums">−R$ {{ quote.coupon_saving_cents|brl }}</dd>
   </div>
@@ -47,12 +53,15 @@ choice is monthly, ``yearly_quote`` offers the yearly plan.
   </div>
   {% else %}
   <div class="flex justify-between items-baseline gap-3">
-    <span class="text-sm font-semibold text-neutral-950">{% translate "Today" %}</span>
-    <span class="text-2xl font-bold text-brand-700 tabular-nums">R$ {{ quote.first_charge_cents|brl }}</span>
+    <span class="text-lg font-bold text-neutral-950">{% translate "Total" %}</span>
+    <span class="text-3xl font-extrabold text-brand-700 tabular-nums" style="letter-spacing: -0.02em;">R$ {{ quote.first_charge_cents|brl }}<span class="text-lg font-bold">{% if quote.cycle == "yearly" %}{% translate "/year" %}{% else %}{% translate "/month" %}{% endif %}</span></span>
   </div>
-  <p class="text-xs text-neutral-600 mt-1 text-right">
-    {% blocktranslate with date=renews_on|date:"d/m/Y" total=quote.charge_cents|brl %}Renews on {{ date }} for R$ {{ total }}, on the card.{% endblocktranslate %}
-  </p>
+  {% if quote.cycle == "yearly" %}
+  <p class="text-sm text-neutral-600 mt-1 text-right">{% blocktranslate with monthly=quote.monthly_cents|brl %}Equivalent to R$ {{ monthly }}/month{% endblocktranslate %}</p>
+  {% endif %}
+  {% if quote.first_charge_cents != quote.charge_cents %}
+  <p class="text-xs text-neutral-600 mt-1 text-right">{% blocktranslate with date=renews_on|date:"d/m/Y" total=quote.charge_cents|brl %}Renews on {{ date }} for R$ {{ total }}.{% endblocktranslate %}</p>
+  {% endif %}
   {% endif %}
 </div>
 {% else %}

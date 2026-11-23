@@ -180,21 +180,32 @@ def test_the_billing_page_shows_the_brands_of_the_organization_in_use_only(clien
 
 
 @pytest.mark.django_db
-def test_a_new_account_names_its_brand_and_organization_on_the_checkout(client, settings):
+def test_a_new_account_is_named_before_the_plan_and_names_its_brand_and_payer_on_the_checkout(client, settings):
     settings.BILLING_TRIAL_DAYS = 7
     _user, workspace = _signed_up(client)
     checkout = reverse("billing:checkout", kwargs={"workspace_id": workspace.id})
-    client.post(reverse("organizations:about"), {"workspace": str(workspace.id), "action": "skip"})
+    client.post(
+        reverse("organizations:about"),
+        {
+            "workspace": str(workspace.id),
+            "business_activity": "agency",
+            "team_size": "solo",
+            "referral_source": "google",
+            "organization_name": "Agência Sol",
+        },
+    )
+    assert Organization.objects.get(pk=workspace.organization_id).name == "Agência Sol"
 
     landing = client.get(reverse("dashboard"), follow=True)
     assert landing.redirect_chain[-1][0] == checkout
-    assert landing.context["ask_organization_name"] is True
+    # Still in setup: the checkout shows the company step as done, to go back to.
+    assert landing.context["in_setup"] is True
 
     response = client.post(
         reverse("billing:start_trial", kwargs={"workspace_id": workspace.id}),
         {
             f"name_{workspace.id}": "Padaria Sol",
-            "organization_name": "Agência Sol",
+            "payer_name": "Sol Comunicação Ltda",
             "tax_id": "529.982.247-25",
             "phone": "(11) 98888-7777",
         },
@@ -206,7 +217,11 @@ def test_a_new_account_names_its_brand_and_organization_on_the_checkout(client, 
     workspace.refresh_from_db()
     assert (workspace.organization.name, workspace.name) == ("Agência Sol", "Padaria Sol")
     profile = billing.ensure_billing_profile(workspace.organization)
-    assert (profile.tax_id, profile.phone) == ("52998224725", "11988887777")
+    assert (profile.payer_name, profile.tax_id, profile.phone) == (
+        "Sol Comunicação Ltda",
+        "52998224725",
+        "11988887777",
+    )
 
 
 @pytest.mark.django_db
