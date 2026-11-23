@@ -40,6 +40,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
+from apps.affiliates import services as affiliate_services
 from apps.billing import services
 from apps.billing.gateways.asaas import GATEWAY, AsaasClient, AsaasError
 from apps.billing.models import BillingEvent, OrganizationPlan, WorkspaceAddon, WorkspaceSubscription
@@ -178,6 +179,7 @@ def _apply(event, event_type, payload):
     plan = OrganizationPlan.objects.filter(gateway_subscription_id=subscription_id).first()
     if plan is not None:
         _apply_to_plan(plan, target, payload)
+        affiliate_services.record_payment_event(plan.organization, event_type, payload)
         _finish(event, BillingEvent.Status.PROCESSED)
         return
 
@@ -186,6 +188,7 @@ def _apply(event, event_type, payload):
     ).first()
     if sub is not None:
         _apply_to_subscription(sub, target, payload)
+        affiliate_services.record_payment_event(sub.workspace.organization, event_type, payload)
         event.subscription = sub
         _finish(event, BillingEvent.Status.PROCESSED)
         return
@@ -193,6 +196,7 @@ def _apply(event, event_type, payload):
     addon = WorkspaceAddon.objects.filter(gateway_subscription_id=subscription_id).first()
     if addon is not None:
         _apply_to_addon(addon, target, payload)
+        affiliate_services.record_payment_event(addon.workspace.organization, event_type, payload)
         event.addon = addon
         _finish(event, BillingEvent.Status.PROCESSED)
         return

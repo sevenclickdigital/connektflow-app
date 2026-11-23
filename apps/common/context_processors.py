@@ -11,6 +11,7 @@ def sidebar_context(request):
         sidebar_org_groups: those workspaces by organization, for the switcher
         sidebar_unread_inbox_count: unread inbox messages, for the badge
         sidebar_has_ads: whether the workspace has Meta Ads connected, for the Ads entry
+        is_affiliate: whether the user is a switched-on affiliate, for the account menu
     """
     if not hasattr(request, "user") or not request.user.is_authenticated:
         return {}
@@ -93,7 +94,13 @@ def sidebar_context(request):
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,
         ).exists()
 
+    # The account menu links to the affiliate panel only for a switched-on affiliate.
+    from apps.affiliates.models import Affiliate
+
+    is_affiliate = Affiliate.objects.filter(user=request.user, is_active=True).exists()
+
     return {
+        "is_affiliate": is_affiliate,
         "sidebar_workspaces": sidebar_workspaces,
         "sidebar_org_groups": sidebar_org_groups,
         "can_create_organization": bool(getattr(request, "org_memberships", [])),

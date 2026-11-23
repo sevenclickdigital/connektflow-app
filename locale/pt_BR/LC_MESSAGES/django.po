@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 14:21+0000\n"
+"POT-Creation-Date: 2026-11-23 14:52+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -385,7 +385,7 @@ msgid "Traffic"
 msgstr "Tráfego"
 
 #: apps/ads/services.py:43 apps/composer/idea_icons.py:77
-#: apps/composer/models.py:1103 apps/workspaces/dashboard.py:138
+#: apps/composer/models.py:1119 apps/workspaces/dashboard.py:138
 #: templates/contacts/list.html:90 templates/contacts/partials/_results.html:89
 #: templates/inbox/partials/_message_details.html:91
 msgid "Engagement"
@@ -396,7 +396,7 @@ msgstr "Engajamento"
 msgid "Leads"
 msgstr "Cadastros"
 
-#: apps/ads/services.py:45 apps/composer/models.py:1105
+#: apps/ads/services.py:45 apps/composer/models.py:1121
 #: apps/radar/reports.py:46
 msgid "Sales"
 msgstr "Vendas"
@@ -439,6 +439,7 @@ msgid "Active"
 msgstr "Ativa"
 
 #: apps/ads/services.py:70 apps/automations/models.py:200
+#: apps/social_accounts/whatsapp_templates.py:37
 msgid "Paused"
 msgstr "Pausada"
 
@@ -450,17 +451,18 @@ msgstr "Campanha pausada"
 msgid "Ad set paused"
 msgstr "Conjunto pausado"
 
-#: apps/ads/services.py:73 apps/composer/models.py:986
+#: apps/ads/services.py:73 apps/composer/models.py:1002
 msgid "Processing"
 msgstr "Processando"
 
-#: apps/ads/services.py:74 apps/tasks/services.py:37
+#: apps/ads/services.py:74 apps/social_accounts/whatsapp_templates.py:34
+#: apps/social_accounts/whatsapp_templates.py:35 apps/tasks/services.py:37
 msgid "In review"
 msgstr "Em revisão"
 
 #: apps/ads/services.py:75 apps/approvals/templatetags/approval_extras.py:16
 #: apps/calendar/status_board.py:50 apps/composer/models.py:478
-#: apps/composer/models.py:1155
+#: apps/composer/models.py:1171 apps/social_accounts/whatsapp_templates.py:33
 #: templates/calendar/partials/publish_approvals.html:25
 #: templates/calendar/partials/publish_calendar_shell.html:100
 msgid "Approved"
@@ -474,8 +476,11 @@ msgstr "Com problemas"
 msgid "Billing pending"
 msgstr "Pagamento pendente"
 
-#: apps/ads/services.py:78 apps/approvals/templatetags/approval_extras.py:24
-#: apps/composer/models.py:480 apps/composer/models.py:1157
+#: apps/ads/services.py:78 apps/affiliates/models.py:116
+#: apps/approvals/templatetags/approval_extras.py:24
+#: apps/composer/models.py:480 apps/composer/models.py:1173
+#: apps/social_accounts/whatsapp_templates.py:36
+#: templates/affiliates/_payout_status.html:1
 #: templates/calendar/partials/publish_approvals.html:26
 #: templates/composer/staff_idea_templates.html:95
 msgid "Rejected"
@@ -565,20 +570,20 @@ msgstr "Esta campanha não foi encontrada na conta de anúncios conectada."
 msgid "Not informed"
 msgstr "Não informado"
 
-#: apps/ads/services.py:619 apps/composer/services.py:975
+#: apps/ads/services.py:619 apps/composer/services.py:1097
 #: apps/social_accounts/models.py:656
 msgid "Feed"
 msgstr "Feed"
 
 #: apps/ads/services.py:620 apps/ads/services.py:621 apps/ads/services.py:622
-#: apps/analytics/services.py:811 apps/composer/models.py:1098
+#: apps/analytics/services.py:813 apps/composer/models.py:1114
 #: templates/composer/partials/_crop_editor.html:67
 msgid "Stories"
 msgstr "Stories"
 
 #: apps/ads/services.py:623 apps/ads/services.py:624 apps/ads/services.py:625
-#: apps/analytics/services.py:809 apps/composer/models.py:557
-#: apps/composer/models.py:1097 apps/composer/services.py:977
+#: apps/analytics/services.py:811 apps/composer/models.py:557
+#: apps/composer/models.py:1113 apps/composer/services.py:1099
 #: apps/social_accounts/models.py:658 apps/tasks/creative_formats.py:96
 #: apps/tasks/creative_formats.py:106
 msgid "Reels"
@@ -682,15 +687,15 @@ msgstr "Escolha um dos objetivos oferecidos."
 msgid "The Meta sign-in was cancelled or refused."
 msgstr "O login da Meta foi cancelado ou recusado."
 
-#: apps/ads/views.py:169 apps/social_accounts/views.py:495
+#: apps/ads/views.py:169 apps/social_accounts/views.py:496
 msgid "Invalid or expired OAuth state. Please try again."
 msgstr "Estado de OAuth inválido ou expirado. Tente novamente."
 
-#: apps/ads/views.py:177 apps/social_accounts/views.py:501
+#: apps/ads/views.py:177 apps/social_accounts/views.py:502
 msgid "OAuth session mismatch. Please try again."
 msgstr "A sessão de OAuth não confere. Tente novamente."
 
-#: apps/ads/views.py:192 apps/social_accounts/views.py:488
+#: apps/ads/views.py:192 apps/social_accounts/views.py:489
 msgid "Missing authorization code or state parameter."
 msgstr "Código de autorização ou parâmetro de estado ausente."
 
@@ -745,7 +750,135 @@ msgstr "Campanha renomeada."
 msgid "Ad set updated."
 msgstr "Conjunto de anúncios atualizado."
 
-#: apps/analytics/metrics.py:17 apps/composer/models.py:1106
+#: apps/affiliates/models.py:31
+msgid "3 months"
+msgstr "3 meses"
+
+#: apps/affiliates/models.py:32
+msgid "6 months"
+msgstr "6 meses"
+
+#: apps/affiliates/models.py:33
+msgid "12 months"
+msgstr "12 meses"
+
+#: apps/affiliates/models.py:34
+msgid "24 months"
+msgstr "24 meses"
+
+#: apps/affiliates/models.py:91
+msgid "Link"
+msgstr "Link"
+
+#: apps/affiliates/models.py:92
+msgid "Coupon"
+msgstr "Cupom"
+
+#: apps/affiliates/models.py:114
+msgid "Requested"
+msgstr "Solicitado"
+
+#: apps/affiliates/models.py:115 templates/affiliates/_payout_status.html:1
+#: templates/billing/account_billing.html:152
+#: templates/billing/checkout.html:202
+msgid "Paid"
+msgstr "Pago"
+
+#: apps/affiliates/models.py:148 templates/affiliates/staff_affiliates.html:91
+msgid "Earned"
+msgstr "Ganho"
+
+#: apps/affiliates/models.py:150 templates/billing/account_billing.html:152
+msgid "Reversed"
+msgstr "Estornado"
+
+#: apps/affiliates/services.py:73
+msgid "The link name takes 3 to 40 lower-case letters, digits or hyphens."
+msgstr "O nome do link aceita de 3 a 40 letras minúsculas, números ou hifens."
+
+#: apps/affiliates/services.py:75
+msgid "There is already an affiliate with this link name."
+msgstr "Já existe um afiliado com este nome de link."
+
+#: apps/affiliates/services.py:79
+msgid "Enter the commission as a percentage from 1 to 100."
+msgstr "Informe a comissão como uma porcentagem de 1 a 100."
+
+#: apps/affiliates/services.py:82
+msgid "Choose for how long the affiliate earns commission."
+msgstr "Escolha por quanto tempo o afiliado ganha comissão."
+
+#: apps/affiliates/services.py:86
+msgid "Enter the minimum withdrawal as an amount in R$."
+msgstr "Informe o saque mínimo como um valor em R$."
+
+#: apps/affiliates/services.py:93
+msgid ""
+"There is no coupon with this code. Create it on the Coupons screen first."
+msgstr "Não existe cupom com este código. Crie-o antes na tela de Cupons."
+
+#: apps/affiliates/services.py:95
+msgid "This coupon already belongs to another affiliate."
+msgstr "Este cupom já pertence a outro afiliado."
+
+#: apps/affiliates/services.py:101
+msgid "There is no account with this e-mail. The person has to sign up first."
+msgstr "Não existe conta com este e-mail. A pessoa precisa se cadastrar antes."
+
+#: apps/affiliates/services.py:103
+msgid "This account is already an affiliate."
+msgstr "Esta conta já é afiliada."
+
+#: apps/affiliates/services.py:337
+msgid "Enter the Pix key to receive the payment."
+msgstr "Informe a chave Pix para receber o pagamento."
+
+#: apps/affiliates/services.py:341
+msgid "You already have a withdrawal waiting to be paid."
+msgstr "Você já tem um saque aguardando pagamento."
+
+#: apps/affiliates/services.py:345
+msgid "Your balance has not reached the minimum withdrawal yet."
+msgstr "Seu saldo ainda não atingiu o saque mínimo."
+
+#: apps/affiliates/services.py:357
+msgid "This withdrawal has already been resolved."
+msgstr "Este saque já foi resolvido."
+
+#: apps/affiliates/staff_views.py:65
+#, python-format
+msgid ""
+"Affiliate %(name)s created. Switch it on to open the link and the panel."
+msgstr "Afiliado %(name)s criado. Ative-o para liberar o link e o painel."
+
+#: apps/affiliates/staff_views.py:68
+#, python-format
+msgid "Affiliate %(name)s saved."
+msgstr "Afiliado %(name)s salvo."
+
+#: apps/affiliates/staff_views.py:81
+#, python-format
+msgid "Affiliate %(name)s is on."
+msgstr "Afiliado %(name)s ativado."
+
+#: apps/affiliates/staff_views.py:84
+#, python-format
+msgid "Affiliate %(name)s is off. The link and the panel are closed."
+msgstr "Afiliado %(name)s desativado. O link e o painel estão fechados."
+
+#: apps/affiliates/staff_views.py:102
+msgid "Withdrawal marked as paid."
+msgstr "Saque marcado como pago."
+
+#: apps/affiliates/staff_views.py:104
+msgid "Withdrawal rejected. The amount is back in the affiliate's balance."
+msgstr "Saque recusado. O valor voltou para o saldo do afiliado."
+
+#: apps/affiliates/views.py:92
+msgid "Withdrawal requested. We will pay it to the Pix key you entered."
+msgstr "Saque solicitado. Vamos pagar na chave Pix que você informou."
+
+#: apps/analytics/metrics.py:17 apps/composer/models.py:1122
 #: templates/ads/partials/_insights.html:27
 msgid "Reach"
 msgstr "Alcance"
@@ -819,7 +952,7 @@ msgstr "% médio assistido"
 msgid "Engagement rate"
 msgstr "Taxa de engajamento"
 
-#: apps/analytics/services.py:481
+#: apps/analytics/services.py:482
 msgid ""
 "Metrics reported by YouTube. Data may be delayed. Percentage comparisons, "
 "when available, are calculated from reported totals."
@@ -828,31 +961,31 @@ msgstr ""
 "comparações em porcentagem, quando disponíveis, são calculadas a partir dos "
 "totais informados."
 
-#: apps/analytics/services.py:492
+#: apps/analytics/services.py:493
 msgid "engagement rate"
 msgstr "taxa de engajamento"
 
-#: apps/analytics/services.py:494
+#: apps/analytics/services.py:495
 msgid "daily averages"
 msgstr "médias diárias"
 
-#: apps/analytics/services.py:497
+#: apps/analytics/services.py:498
 msgid "estimates built from per-video counts"
 msgstr "estimativas feitas a partir dos números de cada vídeo"
 
-#: apps/analytics/services.py:499
+#: apps/analytics/services.py:500
 msgid "estimates built from per-post counts"
 msgstr "estimativas feitas a partir dos números de cada publicação"
 
-#: apps/analytics/services.py:502
+#: apps/analytics/services.py:503
 msgid "follower growth"
 msgstr "crescimento de seguidores"
 
-#: apps/analytics/services.py:503
+#: apps/analytics/services.py:504
 msgid "changes in percent vs. the previous period"
 msgstr "variações em porcentagem em relação ao período anterior"
 
-#: apps/analytics/services.py:505
+#: apps/analytics/services.py:506
 #, python-format
 msgid ""
 "Underlying data comes from %(platform)s. The %(listed)s are calculated by "
@@ -861,19 +994,19 @@ msgstr ""
 "Os dados de origem vêm de %(platform)s. São calculados pelo Connekt Flow, e "
 "não informados por %(platform)s: %(listed)s."
 
-#: apps/analytics/services.py:507 apps/composer/views.py:838
-#: apps/composer/views.py:847 apps/composer/views.py:5140
+#: apps/analytics/services.py:508 apps/composer/views.py:839
+#: apps/composer/views.py:848 apps/composer/views.py:5178
 #: templates/composer/compose.html:1231
 msgid "and"
 msgstr "e"
 
-#: apps/analytics/services.py:814 apps/composer/models.py:1096
+#: apps/analytics/services.py:816 apps/composer/models.py:1112
 #: apps/tasks/creative_formats.py:120
 msgid "Carousel"
 msgstr "Carrossel"
 
-#: apps/analytics/services.py:816 apps/composer/idea_icons.py:55
-#: apps/composer/models.py:1099 apps/media_library/models.py:83
+#: apps/analytics/services.py:818 apps/composer/idea_icons.py:55
+#: apps/composer/models.py:1115 apps/media_library/models.py:83
 #: apps/tasks/creative_formats.py:113 apps/tasks/creative_formats.py:119
 #: apps/tasks/creative_formats.py:127 apps/tasks/creative_formats.py:134
 #: apps/tasks/creative_formats.py:156 apps/tasks/creative_formats.py:179
@@ -883,11 +1016,11 @@ msgstr "Carrossel"
 msgid "Video"
 msgstr "Vídeo"
 
-#: apps/analytics/services.py:818
+#: apps/analytics/services.py:820
 msgid "Single image"
 msgstr "Imagem única"
 
-#: apps/analytics/services.py:819 apps/composer/forms.py:285
+#: apps/analytics/services.py:821 apps/composer/forms.py:285
 #: apps/composer/idea_icons.py:61
 #: templates/composer/partials/template_gallery.html:186
 msgid "Text"
@@ -974,7 +1107,7 @@ msgstr "Publicado parcialmente"
 
 #: apps/approvals/templatetags/approval_extras.py:35 apps/billing/models.py:420
 #: apps/composer/models.py:484 apps/composer/models.py:564
-#: apps/composer/models.py:988 apps/inbox/models.py:210
+#: apps/composer/models.py:1004 apps/inbox/models.py:210
 #: apps/notifications/models.py:42
 #: templates/calendar/partials/publish_calendar_shell.html:104
 #: templates/composer/partials/media_picker.html:254
@@ -1117,7 +1250,7 @@ msgid "The card was not charged. Try again or use another card."
 msgstr "O cartão não foi cobrado. Tente de novo ou use outro cartão."
 
 #: apps/billing/models.py:72 apps/billing/models.py:284
-#: apps/composer/models.py:562 apps/composer/models.py:985
+#: apps/composer/models.py:562 apps/composer/models.py:1001
 #: apps/notifications/models.py:40 apps/radar/reports.py:53
 #: templates/automations/log.html:71 templates/billing/account_billing.html:113
 #: templates/billing/staff_subscriptions.html:198
@@ -1131,6 +1264,7 @@ msgid "Past due"
 msgstr "Inadimplente"
 
 #: apps/billing/models.py:75 apps/billing/models.py:286
+#: templates/affiliates/_referral_status.html:1
 #: templates/billing/staff_console.html:109
 #: templates/billing/staff_console.html:184
 #: templates/billing/staff_subscriptions.html:116
@@ -1451,23 +1585,23 @@ msgstr "Ativada no pagamento"
 msgid "Inactive"
 msgstr "Inativa"
 
-#: apps/billing/views.py:199 apps/billing/views.py:418
+#: apps/billing/views.py:200 apps/billing/views.py:419
 msgid "Enter a valid CPF or CNPJ for the invoice."
 msgstr "Digite um CPF ou CNPJ válido para a fatura."
 
-#: apps/billing/views.py:416
+#: apps/billing/views.py:417
 msgid "Enter the name or company name the invoices should carry."
 msgstr "Digite o nome ou a razão social que deve constar nas faturas."
 
-#: apps/billing/views.py:420
+#: apps/billing/views.py:421
 msgid "Enter a phone with area code."
 msgstr "Digite um telefone com DDD."
 
-#: apps/billing/views.py:425
+#: apps/billing/views.py:426
 msgid "Enter a valid billing email."
 msgstr "Digite um e-mail de cobrança válido."
 
-#: apps/billing/views.py:437
+#: apps/billing/views.py:438
 msgid ""
 "We could not reach the payment provider, so nothing was changed. Please try "
 "again in a moment."
@@ -1475,11 +1609,11 @@ msgstr ""
 "Não conseguimos acessar o provedor de pagamento, então nada foi alterado. "
 "Tente novamente em instantes."
 
-#: apps/billing/views.py:441
+#: apps/billing/views.py:442
 msgid "Billing data updated. The next invoices will carry it."
 msgstr "Dados de cobrança atualizados. As próximas faturas já saem com eles."
 
-#: apps/billing/views.py:570
+#: apps/billing/views.py:571
 msgid ""
 "Billing is not set up on this installation yet, so no charge was created. "
 "Your workspace is registered and we will contact you to finish the "
@@ -1489,7 +1623,7 @@ msgstr ""
 "pagamento foi criado. Sua marca está registrada e entraremos em contato para "
 "concluir a assinatura."
 
-#: apps/billing/views.py:580 apps/billing/views.py:1260
+#: apps/billing/views.py:581 apps/billing/views.py:1266
 msgid ""
 "We could not reach the payment provider. Nothing was charged — please try "
 "again in a moment."
@@ -1497,7 +1631,7 @@ msgstr ""
 "Não conseguimos acessar o provedor de pagamento. Nada foi cobrado — tente "
 "novamente em instantes."
 
-#: apps/billing/views.py:586
+#: apps/billing/views.py:587
 msgid ""
 "Subscription contracted. It activates as soon as the first payment is "
 "confirmed."
@@ -1505,20 +1639,20 @@ msgstr ""
 "Assinatura contratada. Ela é ativada assim que o primeiro pagamento for "
 "confirmado."
 
-#: apps/billing/views.py:612
+#: apps/billing/views.py:613
 msgid ""
 "Enter a valid CPF or CNPJ and a phone with area code to start the free trial."
 msgstr ""
 "Digite um CPF ou CNPJ válido e um telefone com DDD para começar o teste "
 "grátis."
 
-#: apps/billing/views.py:636
+#: apps/billing/views.py:637
 msgid "We could not reach the payment provider. Please try again in a moment."
 msgstr ""
 "Não conseguimos acessar o provedor de pagamento. Tente novamente em "
 "instantes."
 
-#: apps/billing/views.py:642
+#: apps/billing/views.py:643
 msgid ""
 "There is no open invoice for this workspace. A payment already made can take "
 "a few minutes to show."
@@ -1526,56 +1660,56 @@ msgstr ""
 "Não há fatura em aberto para esta marca. Um pagamento já feito pode levar "
 "alguns minutos para aparecer."
 
-#: apps/billing/views.py:915 templates/billing/checkout.html:369
+#: apps/billing/views.py:921 templates/billing/checkout.html:369
 msgid "Enter the card number."
 msgstr "Informe o número do cartão."
 
-#: apps/billing/views.py:917 templates/billing/checkout.html:369
+#: apps/billing/views.py:923 templates/billing/checkout.html:369
 msgid "This card number is not valid. Check the digits."
 msgstr "Este número de cartão não é válido. Confira os dígitos."
 
-#: apps/billing/views.py:921 templates/billing/checkout.html:391
+#: apps/billing/views.py:927 templates/billing/checkout.html:391
 msgid "Enter the card's expiry as MM/YY."
 msgstr "Informe a validade do cartão como MM/AA."
 
-#: apps/billing/views.py:924 templates/billing/checkout.html:391
+#: apps/billing/views.py:930 templates/billing/checkout.html:391
 msgid "This card has expired."
 msgstr "Este cartão está vencido."
 
-#: apps/billing/views.py:926
+#: apps/billing/views.py:932
 msgid "Enter the card's security code."
 msgstr "Informe o código de segurança do cartão."
 
-#: apps/billing/views.py:928
+#: apps/billing/views.py:934
 msgid "Enter the name printed on the card."
 msgstr "Informe o nome impresso no cartão."
 
-#: apps/billing/views.py:930
+#: apps/billing/views.py:936
 msgid "Enter the CEP and the number of the card's billing address."
 msgstr "Informe o CEP e o número do endereço de cobrança do cartão."
 
-#: apps/billing/views.py:980 templates/billing/_checkout_quote.html:26
+#: apps/billing/views.py:986 templates/billing/_checkout_quote.html:26
 #, python-format
 msgid "Choose between 1 and %(max)s brands."
 msgstr "Escolha entre 1 e %(max)s marcas."
 
-#: apps/billing/views.py:991 apps/organizations/views.py:104
+#: apps/billing/views.py:997 apps/organizations/views.py:104
 #: apps/organizations/views.py:247
 msgid "Enter a valid CPF or CNPJ and a phone with area code."
 msgstr "Digite um CPF ou CNPJ válido e um telefone com DDD."
 
-#: apps/billing/views.py:1022 apps/billing/views.py:1088
+#: apps/billing/views.py:1028 apps/billing/views.py:1094
 msgid "Too many payment attempts. Please wait a while before trying again."
 msgstr ""
 "Muitas tentativas de pagamento. Aguarde um pouco antes de tentar de novo."
 
-#: apps/billing/views.py:1060 apps/billing/views.py:1107
+#: apps/billing/views.py:1066 apps/billing/views.py:1113
 msgid ""
 "Payments are not connected on this installation yet. Nothing was charged."
 msgstr ""
 "Os pagamentos ainda não estão conectados nesta instalação. Nada foi cobrado."
 
-#: apps/billing/views.py:1067
+#: apps/billing/views.py:1073
 msgid ""
 "We could not confirm the payment with the provider. If the card was charged, "
 "your brands open in a few minutes; otherwise, try again."
@@ -1583,32 +1717,32 @@ msgstr ""
 "Não conseguimos confirmar o pagamento com o provedor. Se o cartão foi "
 "cobrado, suas marcas abrem em alguns minutos; se não, tente de novo."
 
-#: apps/billing/views.py:1112
+#: apps/billing/views.py:1118
 msgid ""
 "We could not create the Pix QR code with the provider. Please try again."
 msgstr "Não conseguimos gerar o QR Code Pix com o provedor. Tente de novo."
 
-#: apps/billing/views.py:1150
+#: apps/billing/views.py:1156
 msgid "Tick or add the brands to put on the plan."
 msgstr "Marque ou adicione as marcas que entram no plano."
 
-#: apps/billing/views.py:1157
+#: apps/billing/views.py:1163
 msgid "We could not reach the payment provider. Please try again."
 msgstr "Não conseguimos acessar o provedor de pagamento. Tente de novo."
 
-#: apps/billing/views.py:1159
+#: apps/billing/views.py:1165
 msgid "Brands added to your plan. The new value applies from the next charge."
 msgstr ""
 "Marcas adicionadas ao seu plano. O novo valor vale a partir da próxima "
 "cobrança."
 
-#: apps/billing/views.py:1228
+#: apps/billing/views.py:1234
 #, python-format
 msgid ""
 "Choose how much extra storage to contract, between %(min)s GB and %(max)s GB."
 msgstr "Escolha quanto espaço extra contratar, entre %(min)s GB e %(max)s GB."
 
-#: apps/billing/views.py:1249
+#: apps/billing/views.py:1255
 #, python-format
 msgid ""
 "Billing is not set up on this installation yet, so no charge was created. "
@@ -1618,7 +1752,7 @@ msgstr ""
 "pagamento foi criado. Seu pedido de %(gb)s GB foi registrado e entraremos em "
 "contato para concluí-lo."
 
-#: apps/billing/views.py:1266
+#: apps/billing/views.py:1272
 #, python-format
 msgid ""
 "%(gb)s GB contracted. The space is released as soon as the payment is "
@@ -1627,27 +1761,27 @@ msgstr ""
 "%(gb)s GB contratados. O espaço é liberado assim que o pagamento for "
 "confirmado."
 
-#: apps/billing/views.py:1650
+#: apps/billing/views.py:1656
 #, python-format
 msgid "Coupon %(code)s created."
 msgstr "Cupom %(code)s criado."
 
-#: apps/billing/views.py:1662
+#: apps/billing/views.py:1668
 #, python-format
 msgid "Coupon %(code)s is on again."
 msgstr "O cupom %(code)s está ativo de novo."
 
-#: apps/billing/views.py:1665
+#: apps/billing/views.py:1671
 #, python-format
 msgid "Coupon %(code)s is off. It can no longer be used at checkout."
 msgstr ""
 "O cupom %(code)s foi desativado. Ele não pode mais ser usado na contratação."
 
-#: apps/billing/views.py:1689
+#: apps/billing/views.py:1695
 msgid "The rules were already those values, so nothing changed."
 msgstr "As regras já eram esses valores, então nada foi alterado."
 
-#: apps/billing/views.py:1693
+#: apps/billing/views.py:1699
 msgid ""
 "Rules updated. Discounts and the free trial apply to what is contracted from "
 "now on."
@@ -1655,11 +1789,11 @@ msgstr ""
 "Regras atualizadas. Os descontos e o teste grátis valem para o que for "
 "contratado de agora em diante."
 
-#: apps/billing/views.py:1738
+#: apps/billing/views.py:1744
 msgid "The prices were already those values, so nothing changed."
 msgstr "Os preços já eram esses valores, então nada foi alterado."
 
-#: apps/billing/views.py:1753
+#: apps/billing/views.py:1759
 msgid ""
 "Prices updated. Only subscriptions and add-ons contracted from now on use "
 "the new values — nobody who already bought is re-priced."
@@ -1667,38 +1801,38 @@ msgstr ""
 "Preços atualizados. Somente assinaturas e adicionais contratados de agora em "
 "diante usam os novos valores — ninguém que já comprou é reprecificado."
 
-#: apps/billing/views.py:2004 templates/billing/staff_console.html:24
+#: apps/billing/views.py:2010 templates/billing/staff_console.html:24
 #: templates/billing/staff_console.html:29
 #: templates/billing/staff_goals.html:135
 #: templates/billing/staff_goals.html:156 templates/layouts/admin_shell.html:46
 msgid "Customers"
 msgstr "Clientes"
 
-#: apps/billing/views.py:2005
+#: apps/billing/views.py:2011
 msgid "Monthly revenue"
 msgstr "Faturamento mensal"
 
-#: apps/billing/views.py:2006
+#: apps/billing/views.py:2012
 msgid "Monthly profit"
 msgstr "Lucro mensal"
 
-#: apps/billing/views.py:2007 apps/composer/idea_icons.py:24
+#: apps/billing/views.py:2013 apps/composer/idea_icons.py:24
 msgid "Goal"
 msgstr "Meta"
 
-#: apps/billing/views.py:2072
+#: apps/billing/views.py:2078
 #, python-format
 msgid "Workspace \"%(name)s\" is now exempt and will not be charged."
 msgstr "A marca \"%(name)s\" agora é isenta e não será cobrada."
 
-#: apps/billing/views.py:2077
+#: apps/billing/views.py:2083
 #, python-format
 msgid ""
 "Account \"%(org)s\" now has more exempt workspaces than its limit allows."
 msgstr ""
 "A conta \"%(org)s\" agora tem mais marcas isentas do que o limite permite."
 
-#: apps/billing/views.py:2084
+#: apps/billing/views.py:2090
 #, python-format
 msgid ""
 "Workspace \"%(name)s\" will be charged again. It needs a subscription to "
@@ -1707,18 +1841,18 @@ msgstr ""
 "A marca \"%(name)s\" voltará a ser cobrada. Agora é necessária uma "
 "assinatura para mantê-la ativa."
 
-#: apps/billing/views.py:2088 apps/billing/views.py:2437
+#: apps/billing/views.py:2094 apps/billing/views.py:2443
 #: apps/workspaces/views.py:315
 msgid "Unknown action."
 msgstr "Ação desconhecida."
 
-#: apps/billing/views.py:2112 apps/billing/views.py:2175
+#: apps/billing/views.py:2118 apps/billing/views.py:2181
 msgid ""
 "The number of exempt workspaces must be zero or a positive whole number."
 msgstr ""
 "O número de marcas isentas deve ser zero ou um número inteiro positivo."
 
-#: apps/billing/views.py:2123
+#: apps/billing/views.py:2129
 #, python-format
 msgid ""
 "Account \"%(org)s\" may now have up to %(quota)s workspace(s) exempt from "
@@ -1727,7 +1861,7 @@ msgstr ""
 "A conta \"%(org)s\" agora pode ter até %(quota)s marca(s) isenta(s) de "
 "cobrança."
 
-#: apps/billing/views.py:2129
+#: apps/billing/views.py:2135
 msgid ""
 "Workspaces already exempt above the new limit were kept — nobody starts "
 "being charged retroactively."
@@ -1735,17 +1869,17 @@ msgstr ""
 "As marcas já isentas acima do novo limite foram mantidas — ninguém passa a "
 "ser cobrado retroativamente."
 
-#: apps/billing/views.py:2183
+#: apps/billing/views.py:2189
 msgid "Enter the end date as a valid date, or leave it empty for no end date."
 msgstr ""
 "Informe a data de término em um formato válido, ou deixe em branco para não "
 "ter data de término."
 
-#: apps/billing/views.py:2189
+#: apps/billing/views.py:2195
 msgid "The end date is in the past. Choose today or a later date."
 msgstr "A data de término está no passado. Escolha hoje ou uma data posterior."
 
-#: apps/billing/views.py:2203
+#: apps/billing/views.py:2209
 #, python-format
 msgid ""
 "Account \"%(org)s\" has %(quota)s workspace(s) exempt from charges, with no "
@@ -1754,7 +1888,7 @@ msgstr ""
 "A conta \"%(org)s\" tem %(quota)s marca(s) isenta(s) de cobrança, sem data "
 "de término."
 
-#: apps/billing/views.py:2210
+#: apps/billing/views.py:2216
 #, python-format
 msgid ""
 "Account \"%(org)s\" has %(quota)s workspace(s) exempt from charges until "
@@ -1763,7 +1897,7 @@ msgstr ""
 "A conta \"%(org)s\" tem %(quota)s marca(s) isenta(s) de cobrança até "
 "%(date)s; depois dessa data ela volta a ser cobrada automaticamente."
 
-#: apps/billing/views.py:2232
+#: apps/billing/views.py:2238
 #, python-format
 msgid ""
 "Account \"%(org)s\" is billed again. Each workspace needs a subscription to "
@@ -1772,29 +1906,29 @@ msgstr ""
 "A conta \"%(org)s\" voltou a ser cobrada. Cada marca precisa de uma "
 "assinatura para continuar ativa."
 
-#: apps/billing/views.py:2255
+#: apps/billing/views.py:2261
 msgid "The account needs a name."
 msgstr "A conta precisa de um nome."
 
-#: apps/billing/views.py:2274
+#: apps/billing/views.py:2280
 msgid "The account owner needs an e-mail address."
 msgstr "O responsável pela conta precisa de um e-mail."
 
-#: apps/billing/views.py:2279
+#: apps/billing/views.py:2285
 msgid "That is not a valid e-mail address."
 msgstr "Esse e-mail não é válido."
 
-#: apps/billing/views.py:2285
+#: apps/billing/views.py:2291
 #, python-format
 msgid "Another account already uses %(email)s. Nothing was changed."
 msgstr "Outra conta já usa %(email)s. Nada foi alterado."
 
-#: apps/billing/views.py:2296
+#: apps/billing/views.py:2302
 #, python-format
 msgid "Account \"%(org)s\" updated."
 msgstr "Conta \"%(org)s\" atualizada."
 
-#: apps/billing/views.py:2339
+#: apps/billing/views.py:2345
 #, python-format
 msgid ""
 "A password reset e-mail was sent to %(email)s. Only they can set the new "
@@ -1803,11 +1937,11 @@ msgstr ""
 "Um e-mail de redefinição de senha foi enviado para %(email)s. Só a própria "
 "pessoa pode definir a nova senha."
 
-#: apps/billing/views.py:2366
+#: apps/billing/views.py:2372
 msgid "Type the account's email exactly to delete it."
 msgstr "Digite o e-mail da conta exatamente como está para excluí-la."
 
-#: apps/billing/views.py:2379
+#: apps/billing/views.py:2385
 #, python-format
 msgid ""
 "%(email)s was not deleted: the payment provider did not cancel the "
@@ -1816,17 +1950,17 @@ msgstr ""
 "%(email)s não foi excluída: o provedor de pagamento não cancelou as "
 "assinaturas. Tente de novo em instantes."
 
-#: apps/billing/views.py:2389
+#: apps/billing/views.py:2395
 #, python-format
 msgid "%(email)s was deleted, with %(organizations)s."
 msgstr "%(email)s foi excluída, junto com %(organizations)s."
 
-#: apps/billing/views.py:2393
+#: apps/billing/views.py:2399
 #, python-format
 msgid "%(email)s was deleted."
 msgstr "%(email)s foi excluída."
 
-#: apps/billing/views.py:2428
+#: apps/billing/views.py:2434
 #, python-format
 msgid ""
 "%(email)s can no longer sign in. Nothing was deleted — reactivate to restore "
@@ -1835,7 +1969,7 @@ msgstr ""
 "%(email)s não consegue mais entrar. Nada foi excluído — reative para "
 "restaurar o acesso."
 
-#: apps/billing/views.py:2435
+#: apps/billing/views.py:2441
 #, python-format
 msgid "%(email)s can sign in again."
 msgstr "%(email)s pode entrar novamente."
@@ -3328,7 +3462,7 @@ msgstr "Você só pode mover as suas publicações."
 msgid "You don't have permission to approve posts."
 msgstr "Você não tem permissão para aprovar publicações."
 
-#: apps/calendar/status_board.py:127 apps/composer/views.py:1677
+#: apps/calendar/status_board.py:127 apps/composer/views.py:1678
 msgid "This post has to be approved before it is scheduled."
 msgstr "Esta publicação precisa ser aprovada antes de ser agendada."
 
@@ -3357,39 +3491,48 @@ msgstr "Todas as publicações"
 msgid "%(platform)s post"
 msgstr "Post do %(platform)s"
 
-#: apps/calendar/views.py:2106 apps/calendar/views.py:2155
+#: apps/calendar/views.py:1423
+msgid "Post updated"
+msgstr "Publicação atualizada"
+
+#: apps/calendar/views.py:1424
+#, python-format
+msgid "The new text is live on %(network)s."
+msgstr "O novo texto já está no ar em %(network)s."
+
+#: apps/calendar/views.py:2150 apps/calendar/views.py:2199
 msgid "Fill in the name and the dates."
 msgstr "Preencha o nome e as datas."
 
-#: apps/calendar/views.py:2109 apps/calendar/views.py:2160
+#: apps/calendar/views.py:2153 apps/calendar/views.py:2204
 msgid "Choose a valid colour."
 msgstr "Escolha uma cor válida."
 
-#: apps/calendar/views.py:2115
+#: apps/calendar/views.py:2159
 msgid "Enter valid dates."
 msgstr "Informe datas válidas."
 
-#: apps/calendar/views.py:2139
+#: apps/calendar/views.py:2183
 msgid "Campaign added to the calendar."
 msgstr "Campanha adicionada ao calendário."
 
-#: apps/calendar/views.py:2182
+#: apps/calendar/views.py:2226
 msgid "Campaign updated."
 msgstr "Campanha atualizada."
 
-#: apps/calendar/views.py:2198
+#: apps/calendar/views.py:2242
 msgid "Campaign deleted."
 msgstr "Campanha excluída."
 
-#: apps/calendar/views.py:2264
+#: apps/calendar/views.py:2308
 msgid "Unknown column."
 msgstr "Coluna desconhecida."
 
-#: apps/calendar/views.py:2272
+#: apps/calendar/views.py:2316
 msgid "The post was not moved."
 msgstr "A publicação não foi movida."
 
-#: apps/calendar/views.py:2298
+#: apps/calendar/views.py:2342
 #, python-format
 msgid "Moved to “%(column)s”."
 msgstr "Movida para “%(column)s”."
@@ -3427,42 +3570,42 @@ msgstr[1] "últimos %(days)d dias"
 msgid "All"
 msgstr "Todos"
 
-#: apps/composer/builtin_templates.py:13 apps/composer/models.py:1084
+#: apps/composer/builtin_templates.py:13 apps/composer/models.py:1100
 msgid "Tip"
 msgstr "Dica"
 
 #: apps/composer/builtin_templates.py:14 apps/composer/idea_icons.py:119
-#: apps/composer/models.py:1085
+#: apps/composer/models.py:1101
 msgid "Case Study"
 msgstr "Estudo de caso"
 
 #: apps/composer/builtin_templates.py:15 apps/composer/idea_icons.py:124
-#: apps/composer/models.py:1086
+#: apps/composer/models.py:1102
 msgid "Story"
 msgstr "História"
 
 #: apps/composer/builtin_templates.py:16 apps/composer/idea_icons.py:130
-#: apps/composer/models.py:1087
+#: apps/composer/models.py:1103
 msgid "How-to"
 msgstr "Tutorial"
 
 #: apps/composer/builtin_templates.py:17 apps/composer/idea_icons.py:67
-#: apps/composer/models.py:1088
+#: apps/composer/models.py:1104
 msgid "Question"
 msgstr "Pergunta"
 
 #: apps/composer/builtin_templates.py:18 apps/composer/idea_icons.py:135
-#: apps/composer/models.py:1089
+#: apps/composer/models.py:1105
 msgid "Opinion"
 msgstr "Opinião"
 
 #: apps/composer/builtin_templates.py:19 apps/composer/idea_icons.py:139
-#: apps/composer/models.py:1090 templates/calendar/calendar.html:24
+#: apps/composer/models.py:1106 templates/calendar/calendar.html:24
 msgid "List"
 msgstr "Lista"
 
 #: apps/composer/builtin_templates.py:20 apps/composer/idea_icons.py:144
-#: apps/composer/models.py:1091
+#: apps/composer/models.py:1107
 msgid "Behind the Scenes"
 msgstr "Bastidores"
 
@@ -3585,7 +3728,7 @@ msgid "Custom first comment..."
 msgstr "Primeiro comentário específico..."
 
 #: apps/composer/forms.py:173 templates/calendar/partials/_list_table.html:13
-#: templates/calendar/partials/_post_card.html:76
+#: templates/calendar/partials/_post_card.html:93
 #: templates/composer/partials/_special_dates_tab.html:247
 #: templates/composer/partials/_template_art_items.html:23
 #: templates/composer/partials/template_gallery.html:352
@@ -3628,7 +3771,7 @@ msgstr "Descrição"
 msgid "Text of the template"
 msgstr "Texto do modelo"
 
-#: apps/composer/forms.py:254
+#: apps/composer/forms.py:254 apps/social_accounts/whatsapp_templates.py:55
 #: templates/calendar/partials/_staff_date_rows.html:33
 #: templates/composer/compose.html:1540
 #: templates/composer/partials/template_gallery.html:35
@@ -3636,6 +3779,7 @@ msgstr "Texto do modelo"
 #: templates/composer/staff_idea_templates.html:44
 #: templates/social_accounts/account_select.html:74
 #: templates/social_accounts/list.html:77
+#: templates/social_accounts/partials/_whatsapp_templates_list.html:19
 msgid "Category"
 msgstr "Categoria"
 
@@ -3757,7 +3901,7 @@ msgid "Deadline"
 msgstr "Prazo"
 
 #: apps/composer/idea_icons.py:51 apps/composer/models.py:558
-#: apps/composer/services.py:978 apps/social_accounts/models.py:659
+#: apps/composer/services.py:1100 apps/social_accounts/models.py:659
 #: apps/tasks/creative_formats.py:152 templates/accounts/settings.html:47
 msgid "Photo"
 msgstr "Foto"
@@ -3858,15 +4002,15 @@ msgstr "Pronto"
 msgid "On Hold"
 msgstr "Em espera"
 
-#: apps/composer/models.py:555 apps/composer/models.py:1095
-#: apps/composer/services.py:975 apps/social_accounts/models.py:656
+#: apps/composer/models.py:555 apps/composer/models.py:1111
+#: apps/composer/services.py:1097 apps/social_accounts/models.py:656
 #: apps/tasks/creative_formats.py:161 templates/analytics/_post_table.html:36
 #: templates/inbox/partials/_entry_facts.html:29
 #: templates/tasks/partials/_task_summary.html:81
 msgid "Post"
 msgstr "Publicação"
 
-#: apps/composer/models.py:556 apps/composer/services.py:976
+#: apps/composer/models.py:556 apps/composer/services.py:1098
 #: apps/social_accounts/models.py:657 apps/tasks/creative_formats.py:95
 #: apps/tasks/creative_formats.py:105 apps/tasks/creative_formats.py:131
 msgctxt "publishing format"
@@ -3881,27 +4025,40 @@ msgstr "Não solicitado"
 msgid "Posted"
 msgstr "Publicado"
 
-#: apps/composer/models.py:987 apps/radar/reports.py:52
+#: apps/composer/models.py:1003 apps/radar/reports.py:52
 msgid "Completed"
 msgstr "Concluído"
 
-#: apps/composer/models.py:1104
+#: apps/composer/models.py:1120
 msgid "Authority"
 msgstr "Autoridade"
 
-#: apps/composer/models.py:1107
+#: apps/composer/models.py:1123
 msgid "Community"
 msgstr "Comunidade"
 
-#: apps/composer/models.py:1108 apps/organizations/models.py:54
+#: apps/composer/models.py:1124 apps/organizations/models.py:54
 msgid "Education"
 msgstr "Educação"
 
-#: apps/composer/models.py:1156
+#: apps/composer/models.py:1172
 msgid "Waiting for approval"
 msgstr "Aguardando aprovação"
 
-#: apps/composer/services.py:567
+#: apps/composer/services.py:422
+msgid "This post's text can't be changed on the network from here."
+msgstr "O texto desta publicação não pode ser alterado na rede por aqui."
+
+#: apps/composer/services.py:425
+msgid "Write the post's text."
+msgstr "Escreva o texto da publicação."
+
+#: apps/composer/services.py:431
+#, python-format
+msgid "The text is longer than the %(limit)s characters this network accepts."
+msgstr "O texto passa dos %(limit)s caracteres que esta rede aceita."
+
+#: apps/composer/services.py:689
 #, python-format
 msgid ""
 "%(platform)s can only publish videos. Add a video to this post before "
@@ -3910,7 +4067,7 @@ msgstr ""
 "O %(platform)s só publica vídeos. Adicione um vídeo a esta publicação antes "
 "de agendá-la."
 
-#: apps/composer/services.py:571
+#: apps/composer/services.py:693
 #, python-format
 msgid ""
 "%(platform)s needs an image or a video. Add one to this post before "
@@ -3919,23 +4076,23 @@ msgstr ""
 "O %(platform)s precisa de uma imagem ou um vídeo. Adicione um a esta "
 "publicação antes de agendá-la."
 
-#: apps/composer/services.py:593 templates/composer/compose.html:2514
+#: apps/composer/services.py:715 templates/composer/compose.html:2514
 #: templates/composer/partials/_preview_vertical.html:101
 msgid "A Story needs at least one photo or video."
 msgstr "Um Story precisa de pelo menos uma foto ou um vídeo."
 
-#: apps/composer/services.py:595 templates/composer/compose.html:2515
+#: apps/composer/services.py:717 templates/composer/compose.html:2515
 #: templates/composer/partials/_preview_vertical.html:101
 msgid "A Reel needs exactly one video."
 msgstr "Um Reel precisa de exatamente um vídeo."
 
-#: apps/composer/services.py:596 templates/composer/compose.html:2516
+#: apps/composer/services.py:718 templates/composer/compose.html:2516
 #: templates/composer/partials/_preview_vertical.html:16
 #: templates/composer/partials/_preview_vertical.html:22
 msgid "A profile photo needs exactly one image."
 msgstr "Uma foto do perfil precisa de exatamente uma imagem."
 
-#: apps/composer/services.py:679
+#: apps/composer/services.py:801
 #, python-format
 msgid ""
 "%(platform)s takes up to %(limit)d photos in one post and this one has "
@@ -3944,7 +4101,7 @@ msgstr ""
 "O %(platform)s aceita até %(limit)d fotos em uma publicação e esta tem "
 "%(count)d. Remova algumas antes de agendá-la."
 
-#: apps/composer/services.py:716
+#: apps/composer/services.py:838
 msgid ""
 "Pinterest needs a board for every pin. Choose one for this post in the "
 "composer before scheduling it."
@@ -3952,13 +4109,13 @@ msgstr ""
 "O Pinterest precisa de uma pasta para cada pin. Escolha uma para esta "
 "publicação no editor antes de agendá-la."
 
-#: apps/composer/services.py:763
+#: apps/composer/services.py:885
 #, python-format
 msgid "This post is scheduled as %(format)s on %(platform)s. %(reason)s"
 msgstr ""
 "Esta publicação está agendada como %(format)s no %(platform)s. %(reason)s"
 
-#: apps/composer/services.py:774
+#: apps/composer/services.py:896
 #, python-format
 msgid ""
 "This post is scheduled to %(platform)s, which needs a video on it. Keep one "
@@ -3968,7 +4125,7 @@ msgstr ""
 "nela. Mantenha um na publicação ou cancele primeiro o agendamento no "
 "%(platform)s."
 
-#: apps/composer/services.py:779
+#: apps/composer/services.py:901
 #, python-format
 msgid ""
 "This post is scheduled to %(platform)s, which needs an image or a video on "
@@ -3990,7 +4147,7 @@ msgstr "Modelo recusado."
 msgid "Template deleted."
 msgstr "Modelo excluído."
 
-#: apps/composer/views.py:150
+#: apps/composer/views.py:151
 msgid ""
 "No open posting slot within the scheduling horizon — add posting slots or "
 "free one up."
@@ -3998,12 +4155,12 @@ msgstr ""
 "Nenhum horário livre dentro do período de agendamento — adicione horários de "
 "publicação ou libere um."
 
-#: apps/composer/views.py:665
+#: apps/composer/views.py:666
 #, python-format
 msgid "Select a Pinterest board for %(account)s."
 msgstr "Selecione uma pasta do Pinterest para %(account)s."
 
-#: apps/composer/views.py:763
+#: apps/composer/views.py:764
 #, python-format
 msgid ""
 "%(account)s: Instagram publishes a single video in the feed as a Reel. "
@@ -4012,27 +4169,27 @@ msgstr ""
 "%(account)s: o Instagram publica um vídeo único no feed como Reel. Escolha "
 "Feed ou Reels, não os dois."
 
-#: apps/composer/views.py:834
+#: apps/composer/views.py:835
 #, python-format
 msgid "%(platforms)s can only publish videos."
 msgid_plural "%(platforms)s can only publish videos."
 msgstr[0] "O %(platforms)s só publica vídeos."
 msgstr[1] "%(platforms)s só publicam vídeos."
 
-#: apps/composer/views.py:843
+#: apps/composer/views.py:844
 #, python-format
 msgid "%(platforms)s needs an image or a video."
 msgid_plural "%(platforms)s need an image or a video."
 msgstr[0] "O %(platforms)s precisa de uma imagem ou um vídeo."
 msgstr[1] "%(platforms)s precisam de uma imagem ou um vídeo."
 
-#: apps/composer/views.py:855
+#: apps/composer/views.py:856
 msgid "Add a video to this post, or deselect that account."
 msgid_plural "Add a video to this post, or deselect those accounts."
 msgstr[0] "Adicione um vídeo a esta publicação ou desmarque essa conta."
 msgstr[1] "Adicione um vídeo a esta publicação ou desmarque essas contas."
 
-#: apps/composer/views.py:863
+#: apps/composer/views.py:864
 msgid "Add an image or a video to this post, or deselect that account."
 msgid_plural ""
 "Add an image or a video to this post, or deselect those accounts."
@@ -4041,88 +4198,88 @@ msgstr[0] ""
 msgstr[1] ""
 "Adicione uma imagem ou um vídeo a esta publicação ou desmarque essas contas."
 
-#: apps/composer/views.py:1715 templates/composer/compose.html:2505
+#: apps/composer/views.py:1716 templates/composer/compose.html:2505
 msgid "Scheduled time must be in the future."
 msgstr "O horário agendado precisa estar no futuro."
 
-#: apps/composer/views.py:1728
+#: apps/composer/views.py:1729
 msgid "Date and time required."
 msgstr "Data e hora são obrigatórias."
 
-#: apps/composer/views.py:1751 apps/composer/views.py:1795
+#: apps/composer/views.py:1752 apps/composer/views.py:1796
 msgid "No active queue found for the selected channel."
 msgstr "Nenhuma fila ativa encontrada para o canal selecionado."
 
-#: apps/composer/views.py:2070
+#: apps/composer/views.py:2071
 msgid "Read-only — not saved"
 msgstr "Somente leitura — não salvo"
 
-#: apps/composer/views.py:2107
+#: apps/composer/views.py:2108
 msgid "Nothing to save yet"
 msgstr "Nada para salvar ainda"
 
-#: apps/composer/views.py:2137
+#: apps/composer/views.py:2138
 #, python-format
 msgid "Saved %(time)s"
 msgstr "Salvo às %(time)s"
 
-#: apps/composer/views.py:2364 apps/composer/views.py:3234
-#: apps/composer/views.py:4166
+#: apps/composer/views.py:2365 apps/composer/views.py:3235
+#: apps/composer/views.py:4204
 msgid "No file provided"
 msgstr "Nenhum arquivo enviado"
 
-#: apps/composer/views.py:2369
+#: apps/composer/views.py:2370
 msgid "Only image files are allowed"
 msgstr "Apenas arquivos de imagem são permitidos"
 
-#: apps/composer/views.py:2615
+#: apps/composer/views.py:2616
 msgid "Could not read video duration."
 msgstr "Não foi possível ler a duração do vídeo."
 
-#: apps/composer/views.py:2630
+#: apps/composer/views.py:2631
 msgid "Could not extract frames."
 msgstr "Não foi possível extrair os quadros."
 
-#: apps/composer/views.py:2671
+#: apps/composer/views.py:2672
 msgid "Missing search query"
 msgstr "Informe um termo de busca"
 
-#: apps/composer/views.py:2684
+#: apps/composer/views.py:2685
 msgid "Could not reach Unsplash. Try again."
 msgstr "Não foi possível acessar o Unsplash. Tente novamente."
 
-#: apps/composer/views.py:2689
+#: apps/composer/views.py:2690
 msgid "Unsplash rate limit reached. Try again in a few minutes."
 msgstr ""
 "Limite de requisições do Unsplash atingido. Tente novamente em alguns "
 "minutos."
 
-#: apps/composer/views.py:2691 templates/composer/compose.html:2493
+#: apps/composer/views.py:2692 templates/composer/compose.html:2493
 msgid "Unsplash search failed. Try again."
 msgstr "A busca no Unsplash falhou. Tente novamente."
 
-#: apps/composer/views.py:2718
+#: apps/composer/views.py:2719
 msgid "Unexpected response from Unsplash. Try again."
 msgstr "Resposta inesperada do Unsplash. Tente novamente."
 
-#: apps/composer/views.py:2745
+#: apps/composer/views.py:2746
 msgid "No photos selected"
 msgstr "Nenhuma foto selecionada"
 
-#: apps/composer/views.py:2748
+#: apps/composer/views.py:2749
 #, python-format
 msgid "Select at most %(count)s photos per import."
 msgstr "Selecione no máximo %(count)s fotos por importação."
 
-#: apps/composer/views.py:2860
+#: apps/composer/views.py:2861
 msgid "Could not import the selected photos."
 msgstr "Não foi possível importar as fotos selecionadas."
 
-#: apps/composer/views.py:2910
+#: apps/composer/views.py:2911
 msgid "Failed to fetch boards"
 msgstr "Não foi possível carregar as pastas"
 
-#: apps/composer/views.py:2950
+#: apps/composer/views.py:2951
 msgid ""
 "Place search isn't enabled for this app on Meta yet: it needs the Page "
 "Public Metadata Access feature approved in App Review."
@@ -4130,46 +4287,55 @@ msgstr ""
 "A busca de locais ainda não está liberada para este app na Meta: ela precisa "
 "do recurso Page Public Metadata Access aprovado na revisão do app."
 
-#: apps/composer/views.py:2954
+#: apps/composer/views.py:2955
 msgid "Could not search places right now. Try again in a moment."
 msgstr "Não foi possível buscar locais agora. Tente de novo em instantes."
 
-#: apps/composer/views.py:3413 apps/composer/views.py:3496
+#: apps/composer/views.py:3414 apps/composer/views.py:3497
 msgid "This post has already published and can't be edited."
 msgstr "Esta publicação já foi publicada e não pode ser editada."
 
-#: apps/composer/views.py:3541
+#: apps/composer/views.py:3542
 msgid "Marked as published. Thank you!"
 msgstr "Marcado como publicado. Obrigado!"
 
-#: apps/composer/views.py:3618
+#: apps/composer/views.py:3619
 msgid "You don't have permission to delete this post."
 msgstr "Você não tem permissão para excluir esta publicação."
 
-#: apps/composer/views.py:3719
+#: apps/composer/views.py:3697
+#, python-format
+msgid ""
+"%(network)s didn't give this post's link. The post may be gone from there, "
+"or the account may need to be reconnected."
+msgstr ""
+"%(network)s não informou o link desta publicação. Ela pode ter sido removida "
+"de lá, ou a conta pode precisar ser reconectada."
+
+#: apps/composer/views.py:3757
 msgid "Brainstorming"
 msgstr "Brainstorming"
 
-#: apps/composer/views.py:3720
+#: apps/composer/views.py:3758
 msgctxt "idea column"
 msgid "Under review"
 msgstr "Em avaliação"
 
-#: apps/composer/views.py:3721
+#: apps/composer/views.py:3759
 msgctxt "idea column"
 msgid "Approved"
 msgstr "Aprovadas"
 
-#: apps/composer/views.py:3722
+#: apps/composer/views.py:3760
 msgctxt "idea column"
 msgid "Discarded"
 msgstr "Descartadas"
 
-#: apps/composer/views.py:3754
+#: apps/composer/views.py:3792
 msgid "This is a place to plan ✍️ your content"
 msgstr "Este é o lugar para planejar ✍️ seu conteúdo"
 
-#: apps/composer/views.py:3756
+#: apps/composer/views.py:3794
 msgid ""
 "Save your Ideas before converting them into posts. Brainstorm, plan ahead, "
 "and keep everything organized in one place."
@@ -4177,82 +4343,82 @@ msgstr ""
 "Salve suas ideias antes de transformá-las em publicações. Tenha ideias, "
 "planeje com antecedência e mantenha tudo organizado em um só lugar."
 
-#: apps/composer/views.py:3788
+#: apps/composer/views.py:3826
 msgid "First ideas to explore."
 msgstr "Ideias iniciais para explorar."
 
-#: apps/composer/views.py:3789
+#: apps/composer/views.py:3827
 msgid "Weighing whether it works and in which format."
 msgstr "Analisando a viabilidade e o formato."
 
-#: apps/composer/views.py:3790
+#: apps/composer/views.py:3828
 msgid "Ideas ready for production."
 msgstr "Ideias prontas para produção."
 
-#: apps/composer/views.py:3791
+#: apps/composer/views.py:3829
 msgid "Ideas that will not be used."
 msgstr "Ideias que não serão utilizadas."
 
-#: apps/composer/views.py:4007 apps/media_library/cropping.py:32
+#: apps/composer/views.py:4045 apps/media_library/cropping.py:32
 #: apps/tasks/views.py:976
 msgid "Storage quota exceeded. Free up space or upgrade your plan."
 msgstr ""
 "Cota de armazenamento excedida. Libere espaço ou faça upgrade do seu plano."
 
-#: apps/composer/views.py:4080
+#: apps/composer/views.py:4118
 msgid "The template is now one of your ideas."
 msgstr "O modelo agora é uma das suas ideias."
 
-#: apps/composer/views.py:4589
+#: apps/composer/views.py:4627
 msgid "Name is required."
 msgstr "O nome é obrigatório."
 
-#: apps/composer/views.py:4618
+#: apps/composer/views.py:4656
 msgid "Column must be empty before deleting."
 msgstr "A coluna precisa estar vazia antes de ser excluída."
 
-#: apps/composer/views.py:4858
+#: apps/composer/views.py:4896
 msgid "CSV file too large (max 5 MB)."
 msgstr "Arquivo CSV muito grande (máx. 5 MB)."
 
-#: apps/composer/views.py:4868
+#: apps/composer/views.py:4906
 msgid "CSV file is empty."
 msgstr "O arquivo CSV está vazio."
 
-#: apps/composer/views.py:5176
+#: apps/composer/views.py:5214
 msgid "Tag name is required."
 msgstr "O nome da tag é obrigatório."
 
-#: apps/composer/views.py:5179
+#: apps/composer/views.py:5217
 msgid "Unknown tag kind."
 msgstr "Tipo de etiqueta desconhecido."
 
-#: apps/composer/views.py:5194
+#: apps/composer/views.py:5232
 msgid "Group name is required."
 msgstr "O nome do grupo é obrigatório."
 
-#: apps/composer/views.py:5205
+#: apps/composer/views.py:5243
 msgid "A group with this name already exists."
 msgstr "Já existe um grupo com este nome."
 
-#: apps/composer/views.py:5228
+#: apps/composer/views.py:5266
 msgid "The template was not sent."
 msgstr "O modelo não foi enviado."
 
-#: apps/composer/views.py:5241
+#: apps/composer/views.py:5279
 #, python-format
 msgid "You already have %(count)s templates waiting for approval."
 msgstr "Você já tem %(count)s modelos aguardando aprovação."
 
-#: apps/composer/views.py:5246
+#: apps/composer/views.py:5284
 msgid "Template sent. Thank you!"
 msgstr "Modelo enviado. Obrigado!"
 
-#: apps/composer/views.py:5247
+#: apps/composer/views.py:5285
 msgid "It reaches every brand's shelf once our team approves it."
 msgstr "Ele aparece para todas as marcas assim que a nossa equipe aprovar."
 
-#: apps/composer/views.py:5279
+#: apps/composer/views.py:5317
 msgid "This tag no longer exists."
 msgstr "Esta tag não existe mais."
 
@@ -4276,7 +4442,10 @@ msgstr "Empresa"
 #: apps/contacts/forms.py:104 apps/contacts/services.py:528
 #: apps/tasks/creative_formats.py:169
 #: templates/ads/partials/_campaign_edit_modal.html:39
-#: templates/ads/partials/_overview.html:18
+#: templates/ads/partials/_overview.html:18 templates/affiliates/panel.html:100
+#: templates/affiliates/panel.html:128
+#: templates/affiliates/staff_affiliates.html:93
+#: templates/affiliates/staff_affiliates.html:154
 #: templates/analytics/_shopee_orders.html:27
 #: templates/automations/staff_template_list.html:73
 #: templates/billing/staff_console.html:59
@@ -4292,6 +4461,7 @@ msgstr "Empresa"
 #: templates/inbox/partials/_message_details.html:18
 #: templates/intelligence/billing_settings.html:38
 #: templates/notifications/history.html:65
+#: templates/social_accounts/partials/_whatsapp_templates_list.html:21
 msgid "Status"
 msgstr "Status"
 
@@ -4943,7 +5113,7 @@ msgid "Reconnect this account before sending DMs."
 msgstr "Reconecte esta conta antes de enviar mensagens diretas."
 
 #: apps/inbox/reply_policy.py:63
-#: templates/social_accounts/partials/_account_card.html:141
+#: templates/social_accounts/partials/_account_card.html:144
 msgid ""
 "Instagram DM access is unavailable for this connection. Contact your "
 "administrator to enable it."
@@ -5011,12 +5181,12 @@ msgstr ""
 msgid "Reconnect this WhatsApp number before replying."
 msgstr "Reconecte este número de WhatsApp antes de responder."
 
-#: apps/inbox/reply_policy.py:155 providers/whatsapp.py:265
-#: providers/whatsapp.py:301
+#: apps/inbox/reply_policy.py:155 providers/whatsapp.py:285
+#: providers/whatsapp.py:321
 msgid "The original message is missing the customer's number."
 msgstr "A mensagem original está sem o número do cliente."
 
-#: apps/inbox/reply_policy.py:172 providers/whatsapp.py:59
+#: apps/inbox/reply_policy.py:172 providers/whatsapp.py:79
 msgid ""
 "More than 24 hours have passed since the customer last wrote. WhatsApp only "
 "delivers approved template messages until they write again."
@@ -5032,8 +5202,8 @@ msgstr "Esta conversa não permite citar uma mensagem."
 msgid "The quoted message is not part of this conversation."
 msgstr "A mensagem citada não faz parte desta conversa."
 
-#: apps/inbox/services.py:104 providers/whatsapp.py:290
-#: providers/whatsapp.py:316
+#: apps/inbox/services.py:104 providers/whatsapp.py:310
+#: providers/whatsapp.py:336
 msgid ""
 "Delivery could not be confirmed. Check the conversation before retrying."
 msgstr ""
@@ -5354,7 +5524,7 @@ msgstr "Modelos"
 #: templates/calendar/staff_dates.html:17
 #: templates/composer/create_landing.html:172
 #: templates/composer/create_landing.html:194
-#: templates/layouts/admin_shell.html:94
+#: templates/layouts/admin_shell.html:100
 msgid "Special dates"
 msgstr "Datas comemorativas"
 
@@ -5457,7 +5627,7 @@ msgstr "Não foi possível enviar o link agora. Tente novamente em instantes."
 msgid "Connection link sent to %(email)s."
 msgstr "Link de conexão enviado para %(email)s."
 
-#: apps/onboarding/views.py:694 apps/social_accounts/views.py:1016
+#: apps/onboarding/views.py:694 apps/social_accounts/views.py:1017
 msgid "Invalid instance URL. Private or reserved addresses are not allowed."
 msgstr ""
 "URL de instância inválida. Endereços privados ou reservados não são "
@@ -5814,7 +5984,9 @@ msgstr "Adicionada à mão"
 msgid "Found on Instagram"
 msgstr "Encontrada no Instagram"
 
-#: apps/radar/reports.py:44 templates/analytics/_shopee_orders.html:29
+#: apps/radar/reports.py:44 templates/affiliates/panel.html:161
+#: templates/affiliates/staff_affiliates.html:86
+#: templates/analytics/_shopee_orders.html:29
 msgid "Commission"
 msgstr "Comissão"
 
@@ -6699,6 +6871,69 @@ msgstr ""
 msgid "The post couldn't be deleted from the network. Try again."
 msgstr "Não foi possível excluir a publicação da rede. Tente novamente."
 
+#: apps/social_accounts/error_messages.py:113
+msgid ""
+"The network refused to change this post with the permissions this account "
+"granted. Reconnect the account."
+msgstr ""
+"A rede recusou a alteração desta publicação com as permissões que esta conta "
+"concedeu. Reconecte a conta."
+
+#: apps/social_accounts/error_messages.py:115
+msgid ""
+"The network was unavailable, so the post wasn't changed. Try again in a "
+"moment."
+msgstr ""
+"A rede estava indisponível, então a publicação não foi alterada. Tente "
+"novamente em instantes."
+
+#: apps/social_accounts/error_messages.py:116
+msgid ""
+"The network's request limit was reached, so the post wasn't changed. Try "
+"again later."
+msgstr ""
+"O limite de requisições da rede foi atingido, então a publicação não foi "
+"alterada. Tente novamente mais tarde."
+
+#: apps/social_accounts/error_messages.py:118
+msgid ""
+"The network refused to change this post. It may already be gone, or be one "
+"it doesn't let apps edit, such as a post used in an ad."
+msgstr ""
+"A rede recusou a alteração desta publicação. Ela pode já ter sido removida "
+"ou ser de um tipo que a rede não deixa aplicativos editarem, como uma "
+"publicação usada em anúncio."
+
+#: apps/social_accounts/error_messages.py:121
+msgid "The post couldn't be changed on the network. Try again."
+msgstr "Não foi possível alterar a publicação na rede. Tente novamente."
+
+#: apps/social_accounts/error_messages.py:124
+msgid ""
+"WhatsApp refused this with the permissions this number granted. Reconnect "
+"the number and try again."
+msgstr ""
+"O WhatsApp recusou o pedido com as permissões que este número concedeu. "
+"Reconecte o número e tente de novo."
+
+#: apps/social_accounts/error_messages.py:126
+msgid "WhatsApp was unavailable or limiting requests. Try again in a moment."
+msgstr ""
+"O WhatsApp estava indisponível ou limitando as requisições. Tente de novo em "
+"instantes."
+
+#: apps/social_accounts/error_messages.py:128
+msgid ""
+"WhatsApp refused this template. Check that the name isn't already used in "
+"this language and that the message fits the category."
+msgstr ""
+"O WhatsApp recusou este modelo. Confira se o nome já não é usado neste "
+"idioma e se a mensagem combina com a categoria."
+
+#: apps/social_accounts/error_messages.py:131
+msgid "WhatsApp didn't answer as expected. Try again."
+msgstr "O WhatsApp não respondeu como esperado. Tente de novo."
+
 #: apps/social_accounts/models.py:43
 msgid "Not checked"
 msgstr "Não verificado"
@@ -6769,7 +7004,7 @@ msgstr "%(platform)s está visível para os clientes."
 msgid "%(platform)s is hidden from customers."
 msgstr "%(platform)s está oculto para os clientes."
 
-#: apps/social_accounts/views.py:309 templates/ads/index.html:7
+#: apps/social_accounts/views.py:310 templates/ads/index.html:7
 #: templates/analytics/_page_header.html:23
 #: templates/analytics/_page_header.html:107
 #: templates/analytics/meta_ads.html:4
@@ -6777,20 +7012,20 @@ msgstr "%(platform)s está oculto para os clientes."
 msgid "Meta Ads"
 msgstr "Meta Ads"
 
-#: apps/social_accounts/views.py:336
+#: apps/social_accounts/views.py:337
 msgid "WhatsApp is still loading. Try again in a moment."
 msgstr "O WhatsApp ainda está carregando. Tente de novo em instantes."
 
-#: apps/social_accounts/views.py:337
+#: apps/social_accounts/views.py:338
 msgid "The WhatsApp connection was cancelled."
 msgstr "A conexão com o WhatsApp foi cancelada."
 
-#: apps/social_accounts/views.py:338
+#: apps/social_accounts/views.py:339
 msgid "Pick a phone number in the WhatsApp window to finish connecting."
 msgstr ""
 "Escolha um número de telefone na janela do WhatsApp para concluir a conexão."
 
-#: apps/social_accounts/views.py:340
+#: apps/social_accounts/views.py:341
 msgid ""
 "Numbers in use in the WhatsApp Business app can't be connected yet. Use a "
 "number that isn't on the app."
@@ -6798,7 +7033,7 @@ msgstr ""
 "Números em uso no app WhatsApp Business ainda não podem ser conectados. Use "
 "um número que não esteja no app."
 
-#: apps/social_accounts/views.py:342
+#: apps/social_accounts/views.py:343
 msgid ""
 "The WhatsApp window reported an error. Try again, or check the number in "
 "WhatsApp Manager."
@@ -6806,11 +7041,11 @@ msgstr ""
 "A janela do WhatsApp informou um erro. Tente de novo ou confira o número no "
 "Gerenciador do WhatsApp."
 
-#: apps/social_accounts/views.py:411
+#: apps/social_accounts/views.py:412
 msgid "This platform is not available."
 msgstr "Esta plataforma não está disponível."
 
-#: apps/social_accounts/views.py:417
+#: apps/social_accounts/views.py:418
 #, python-format
 msgid ""
 "Platform credentials for %(platform)s are not configured. Please contact "
@@ -6819,16 +7054,16 @@ msgstr ""
 "As credenciais da plataforma %(platform)s não estão configuradas. Fale com o "
 "administrador."
 
-#: apps/social_accounts/views.py:477
+#: apps/social_accounts/views.py:478
 #, python-format
 msgid "OAuth error: %(error)s"
 msgstr "Erro de OAuth: %(error)s"
 
-#: apps/social_accounts/views.py:506
+#: apps/social_accounts/views.py:507
 msgid "Platform mismatch in OAuth callback."
 msgstr "A plataforma não confere no retorno do OAuth."
 
-#: apps/social_accounts/views.py:585
+#: apps/social_accounts/views.py:586
 msgid ""
 "No LinkedIn Company Pages were found for your account. Only Company Pages "
 "you administer can be connected — personal profiles connect via the LinkedIn "
@@ -6842,7 +7077,7 @@ msgstr ""
 "proprietário dela para conceder acesso de Admin em LinkedIn → Admin tools → "
 "Manage admins e conecte novamente."
 
-#: apps/social_accounts/views.py:594
+#: apps/social_accounts/views.py:595
 msgid ""
 "No Google Business locations were found for your account. Only verified "
 "locations can be connected. If you expected to see one, check that it is "
@@ -6854,7 +7089,7 @@ msgstr ""
 "confirme que ela está verificada e que esta conta do Google tem acesso a ela "
 "em Google Business Profile → Businesses e conecte novamente."
 
-#: apps/social_accounts/views.py:603
+#: apps/social_accounts/views.py:604
 msgid ""
 "No Instagram Business accounts were found for your account. Only Instagram "
 "Business or Creator accounts linked to a Facebook Page can be connected "
@@ -6866,7 +7101,7 @@ msgstr ""
 "uma página do Facebook. Se você esperava ver uma conta, confirme que ela "
 "está vinculada a uma página que você administra e conecte novamente."
 
-#: apps/social_accounts/views.py:610
+#: apps/social_accounts/views.py:611
 msgid ""
 "No Facebook Pages were found for your account. Only Pages can be connected — "
 "personal profiles are not supported by the Facebook API. If you expected to "
@@ -6879,24 +7114,24 @@ msgstr ""
 "remover o app em Configurações do Facebook → Integrações comerciais, depois "
 "conecte novamente."
 
-#: apps/social_accounts/views.py:632
+#: apps/social_accounts/views.py:633
 #, python-format
 msgid "Connected %(name)s successfully."
 msgstr "%(name)s conectada com sucesso."
 
-#: apps/social_accounts/views.py:652
+#: apps/social_accounts/views.py:653
 msgid "Failed to connect account. Please try again."
 msgstr "Não foi possível conectar a conta. Tente novamente."
 
-#: apps/social_accounts/views.py:668
+#: apps/social_accounts/views.py:669
 msgid "No accounts to select. Please start over."
 msgstr "Nenhuma conta para selecionar. Comece de novo."
 
-#: apps/social_accounts/views.py:707
+#: apps/social_accounts/views.py:708
 msgid "Please select at least one account."
 msgstr "Selecione ao menos uma conta."
 
-#: apps/social_accounts/views.py:725
+#: apps/social_accounts/views.py:726
 #, python-format
 msgid ""
 "Could not connect %(name)s: your Facebook access cannot create content for "
@@ -6905,7 +7140,7 @@ msgstr ""
 "Não foi possível conectar %(name)s: seu acesso no Facebook não permite criar "
 "conteúdo para esta página."
 
-#: apps/social_accounts/views.py:733
+#: apps/social_accounts/views.py:734
 #, python-format
 msgid ""
 "Could not connect %(name)s: the platform did not provide an account token."
@@ -6913,58 +7148,58 @@ msgstr ""
 "Não foi possível conectar %(name)s: a plataforma não forneceu um token de "
 "conta."
 
-#: apps/social_accounts/views.py:769
+#: apps/social_accounts/views.py:770
 #, python-format
 msgid "Could not connect %(name)s: %(reason)s"
 msgstr "Não foi possível conectar %(name)s: %(reason)s"
 
-#: apps/social_accounts/views.py:778
+#: apps/social_accounts/views.py:779
 #, python-format
 msgid "Connected: %(names)s"
 msgstr "Conectadas: %(names)s"
 
-#: apps/social_accounts/views.py:803
+#: apps/social_accounts/views.py:804
 msgid "Handle and app password are required."
 msgstr "Usuário e senha de app são obrigatórios."
 
-#: apps/social_accounts/views.py:824
+#: apps/social_accounts/views.py:825
 #, python-format
 msgid "Connected %(name)s on Bluesky."
 msgstr "%(name)s conectada no Bluesky."
 
-#: apps/social_accounts/views.py:839
+#: apps/social_accounts/views.py:840
 msgid "Failed to connect Bluesky account. Check your handle and app password."
 msgstr ""
 "Não foi possível conectar a conta do Bluesky. Confira o usuário e a senha de "
 "app."
 
-#: apps/social_accounts/views.py:868
+#: apps/social_accounts/views.py:869
 msgid "A DEV.to API key is required."
 msgstr "A chave de API do DEV.to é obrigatória."
 
-#: apps/social_accounts/views.py:884
+#: apps/social_accounts/views.py:885
 #, python-format
 msgid "Connected %(name)s on DEV.to."
 msgstr "%(name)s conectada no DEV.to."
 
-#: apps/social_accounts/views.py:890
+#: apps/social_accounts/views.py:891
 msgid "Failed to connect DEV.to account. Check your API key."
 msgstr "Não foi possível conectar a conta do DEV.to. Confira sua chave de API."
 
-#: apps/social_accounts/views.py:928
+#: apps/social_accounts/views.py:929
 msgid "WhatsApp did not finish the connection. Try again."
 msgstr "O WhatsApp não concluiu a conexão. Tente de novo."
 
-#: apps/social_accounts/views.py:931
+#: apps/social_accounts/views.py:932
 msgid "WhatsApp is not configured. Contact your administrator."
 msgstr "O WhatsApp não está configurado. Fale com o administrador."
 
-#: apps/social_accounts/views.py:952
+#: apps/social_accounts/views.py:953
 msgid ""
 "That phone number does not belong to the WhatsApp account you authorized."
 msgstr "Esse número não pertence à conta do WhatsApp que você autorizou."
 
-#: apps/social_accounts/views.py:976
+#: apps/social_accounts/views.py:977
 msgid ""
 "Meta refused the WhatsApp connection. Try again, or check the number in "
 "WhatsApp Manager."
@@ -6972,81 +7207,91 @@ msgstr ""
 "A Meta recusou a conexão do WhatsApp. Tente de novo ou confira o número no "
 "Gerenciador do WhatsApp."
 
-#: apps/social_accounts/views.py:982
+#: apps/social_accounts/views.py:983
 #, python-format
 msgid "WhatsApp %(number)s connected. New messages arrive in the inbox."
 msgstr "WhatsApp %(number)s conectado. As novas mensagens chegam no inbox."
 
-#: apps/social_accounts/views.py:1007
+#: apps/social_accounts/views.py:1008
 msgid "Instance URL is required."
 msgstr "A URL da instância é obrigatória."
 
-#: apps/social_accounts/views.py:1049
+#: apps/social_accounts/views.py:1050
 #, python-format
 msgid "Failed to register with %(url)s. Check the URL."
 msgstr "Não foi possível registrar em %(url)s. Confira a URL."
 
-#: apps/social_accounts/views.py:1154 apps/social_accounts/views.py:1189
+#: apps/social_accounts/views.py:1155 apps/social_accounts/views.py:1190
 #, python-format
 msgid "Reconnect %(label)s first — its connection isn't healthy."
 msgstr "Reconecte %(label)s primeiro — a conexão não está saudável."
 
-#: apps/social_accounts/views.py:1170
+#: apps/social_accounts/views.py:1171
 #, python-format
 msgid "Real-time updates are back on for %(label)s."
 msgstr "As atualizações em tempo real voltaram a funcionar para %(label)s."
 
-#: apps/social_accounts/views.py:1172
+#: apps/social_accounts/views.py:1173
 msgid "Couldn't set up real-time updates. Please try again."
 msgstr ""
 "Não foi possível ativar as atualizações em tempo real. Tente novamente."
 
-#: apps/social_accounts/views.py:1213
+#: apps/social_accounts/views.py:1214
 #, python-format
 msgid "Importing the history of %(label)s. This card shows when it is done."
 msgstr ""
 "Importando o histórico de %(label)s. Este cartão avisa quando terminar."
 
-#: apps/social_accounts/views.py:1232
+#: apps/social_accounts/views.py:1233
 #, python-format
 msgid "Removing the old history of %(label)s. This card shows when it is done."
 msgstr ""
 "Removendo o histórico antigo de %(label)s. Este cartão avisa quando terminar."
 
-#: apps/social_accounts/views.py:1256
+#: apps/social_accounts/views.py:1257
 msgid "The old history could not be removed. Try again."
 msgstr "Não foi possível remover o histórico antigo. Tente de novo."
 
-#: apps/social_accounts/views.py:1258
+#: apps/social_accounts/views.py:1259
 msgid "The history could not be imported. Try again."
 msgstr "Não foi possível importar o histórico. Tente de novo."
 
-#: apps/social_accounts/views.py:1264
+#: apps/social_accounts/views.py:1265
 #, python-format
 msgid "Old history removed: %(count)s message."
 msgid_plural "Old history removed: %(count)s messages."
 msgstr[0] "Histórico antigo removido: %(count)s mensagem."
 msgstr[1] "Histórico antigo removido: %(count)s mensagens."
 
-#: apps/social_accounts/views.py:1266
+#: apps/social_accounts/views.py:1267
 #, python-format
 msgid "History imported: %(count)s message."
 msgid_plural "History imported: %(count)s messages."
 msgstr[0] "Histórico importado: %(count)s mensagem."
 msgstr[1] "Histórico importado: %(count)s mensagens."
 
-#: apps/social_accounts/views.py:1298
+#: apps/social_accounts/views.py:1299
 #, python-format
 msgid "Disconnected %(name)s. YouTube data was deleted immediately."
 msgstr ""
 "%(name)s desconectada. Os dados do YouTube foram excluídos imediatamente."
 
-#: apps/social_accounts/views.py:1325
+#: apps/social_accounts/views.py:1326
 #, python-format
 msgid "Disconnected %(name)s."
 msgstr "%(name)s desconectada."
 
-#: apps/social_accounts/views.py:1514
+#: apps/social_accounts/views.py:1365
+msgid "Template sent for review"
+msgstr "Modelo enviado para revisão"
+
+#: apps/social_accounts/views.py:1366
+msgid "WhatsApp reviews it before it can be used, usually within a day."
+msgstr ""
+"O WhatsApp analisa o modelo antes de ele poder ser usado, em geral em até um "
+"dia."
+
+#: apps/social_accounts/views.py:1569
 #, python-format
 msgid ""
 "This workspace already has a %(platform)s account. Disconnect it before "
@@ -7060,6 +7305,66 @@ msgstr[0] ""
 msgstr[1] ""
 "Esta marca já tem o máximo de %(limit)s contas do %(platform)s. Desconecte "
 "uma antes de conectar outra."
+
+#: apps/social_accounts/whatsapp_templates.py:21
+msgid "Utility: about an order, a booking or an account"
+msgstr "Utilidade: sobre um pedido, um agendamento ou uma conta"
+
+#: apps/social_accounts/whatsapp_templates.py:22
+msgid "Marketing: offers, news and invitations"
+msgstr "Marketing: ofertas, novidades e convites"
+
+#: apps/social_accounts/whatsapp_templates.py:26
+msgid "Portuguese (Brazil)"
+msgstr "Português (Brasil)"
+
+#: apps/social_accounts/whatsapp_templates.py:27 config/settings/base.py:249
+msgid "English (US)"
+msgstr "Inglês (EUA)"
+
+#: apps/social_accounts/whatsapp_templates.py:28
+msgid "Spanish"
+msgstr "Espanhol"
+
+#: apps/social_accounts/whatsapp_templates.py:38
+msgid "Disabled"
+msgstr "Desativado"
+
+#: apps/social_accounts/whatsapp_templates.py:48
+#: templates/ads/partials/_campaign_edit_modal.html:27
+#: templates/affiliates/_affiliate_fields.html:8
+#: templates/api_keys/_issue_modal.html:33
+#: templates/automations/flow_builder.html:851
+#: templates/automations/flow_builder.html:1158
+#: templates/billing/staff_console.html:56
+#: templates/billing/staff_console.html:481
+#: templates/composer/categories.html:37
+#: templates/media_library/_asset_grid.html:42
+#: templates/social_accounts/partials/_whatsapp_templates_list.html:18
+msgid "Name"
+msgstr "Nome"
+
+#: apps/social_accounts/whatsapp_templates.py:50
+msgid "Use only lowercase letters, numbers and underscores."
+msgstr "Use só letras minúsculas, números e sublinhados."
+
+#: apps/social_accounts/whatsapp_templates.py:51
+msgid "Lowercase letters, numbers and underscores, for example order_shipped."
+msgstr "Letras minúsculas, números e sublinhados, por exemplo pedido_enviado."
+
+#: apps/social_accounts/whatsapp_templates.py:60 templates/base.html:755
+#: templates/social_accounts/partials/_whatsapp_templates_list.html:20
+msgid "Language"
+msgstr "Idioma"
+
+#: apps/social_accounts/whatsapp_templates.py:65
+#: templates/social_accounts/partials/_whatsapp_templates_list.html:22
+msgid "Message"
+msgstr "Mensagem"
+
+#: apps/social_accounts/whatsapp_templates.py:73
+msgid "Variables such as {{1}} can't be used in a template created here."
+msgstr "Variáveis como {{1}} não podem ser usadas em um modelo criado aqui."
 
 #: apps/tasks/creative_formats.py:93 apps/tasks/creative_formats.py:112
 #: apps/tasks/creative_formats.py:170
@@ -7534,24 +7839,20 @@ msgstr "Meta do mês salva."
 msgid "Monthly goal removed."
 msgstr "Meta do mês removida."
 
-#: config/settings/base.py:247
+#: config/settings/base.py:248
 msgid "Português (Brasil)"
 msgstr "Português (Brasil)"
 
-#: config/settings/base.py:248
-msgid "English (US)"
-msgstr "Inglês (EUA)"
-
-#: providers/whatsapp.py:63
+#: providers/whatsapp.py:83
 msgid "WhatsApp could not deliver this message to the customer's number."
 msgstr "O WhatsApp não conseguiu entregar esta mensagem no número do cliente."
 
-#: providers/whatsapp.py:65
+#: providers/whatsapp.py:85
 msgid "This number is not in the test recipient list of the WhatsApp app."
 msgstr ""
 "Este número não está na lista de destinatários de teste do app do WhatsApp."
 
-#: providers/whatsapp.py:68
+#: providers/whatsapp.py:88
 msgid ""
 "WhatsApp has not approved this number's display name and sends nothing until "
 "it does. Check the name in WhatsApp Manager: it may be under review or "
@@ -7561,15 +7862,15 @@ msgstr ""
 "aprovar. Confira o nome no Gerenciador do WhatsApp: ele pode estar em "
 "análise ou ter sido recusado."
 
-#: providers/whatsapp.py:72
+#: providers/whatsapp.py:92
 msgid "The WhatsApp number is not registered on the Cloud API. Reconnect it."
 msgstr "O número de WhatsApp não está registrado na Cloud API. Reconecte-o."
 
-#: providers/whatsapp.py:74
+#: providers/whatsapp.py:94
 msgid "WhatsApp does not accept this kind of message."
 msgstr "O WhatsApp não aceita este tipo de mensagem."
 
-#: providers/whatsapp.py:127
+#: providers/whatsapp.py:147
 msgid ""
 "WhatsApp is limiting how fast this number can send. Wait a few minutes and "
 "try again."
@@ -7577,12 +7878,12 @@ msgstr ""
 "O WhatsApp está limitando a velocidade de envio deste número. Aguarde alguns "
 "minutos e tente de novo."
 
-#: providers/whatsapp.py:269
+#: providers/whatsapp.py:289
 msgid "WhatsApp messages must contain text and fit within 4,096 characters."
 msgstr ""
 "As mensagens do WhatsApp precisam ter texto e caber em 4.096 caracteres."
 
-#: providers/whatsapp.py:335 providers/whatsapp.py:338
+#: providers/whatsapp.py:355 providers/whatsapp.py:358
 msgid "This file is too large to open here."
 msgstr "Este arquivo é grande demais para abrir aqui."
 
@@ -8155,11 +8456,12 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/automations/flow_builder.html:900
 #: templates/automations/flow_builder.html:1121
 #: templates/automations/flow_new.html:158 templates/automations/form.html:392
-#: templates/base.html:1136 templates/base.html:1193
+#: templates/base.html:1143 templates/base.html:1200
 #: templates/billing/account_billing.html:231
 #: templates/billing/staff_console.html:499
 #: templates/calendar/calendar.html:576
 #: templates/calendar/partials/_delete_post_modal.html:56
+#: templates/calendar/partials/_post_card.html:54
 #: templates/calendar/partials/event_form.html:127
 #: templates/calendar/partials/publish_approvals.html:87
 #: templates/calendar/queues.html:65 templates/calendar/staff_dates.html:66
@@ -8266,7 +8568,7 @@ msgstr "Não recebeu o e-mail?"
 #: templates/analytics/_meta_ads_body.html:16
 #: templates/analytics/_shopee_body.html:13
 #: templates/calendar/partials/_board_columns.html:88
-#: templates/social_accounts/partials/_account_card.html:180
+#: templates/social_accounts/partials/_account_card.html:183
 msgid "Try again"
 msgstr "Tentar novamente"
 
@@ -8422,7 +8724,7 @@ msgstr ""
 "Crie uma marca para começar a agendar publicações, gerenciar conteúdo e "
 "colaborar com sua equipe."
 
-#: templates/accounts/dashboard.html:55 templates/base.html:1131
+#: templates/accounts/dashboard.html:55 templates/base.html:1138
 #: templates/workspaces/list.html:65
 msgid "Workspace name"
 msgstr "Nome da marca"
@@ -8790,10 +9092,10 @@ msgstr "Esta campanha não tem anúncios."
 #: templates/funnels/board.html:212 templates/inbox/feed.html:148
 #: templates/radar/partials/_share_dialog.html:18
 #: templates/radar/partials/_source_card.html:121
-#: templates/social_accounts/partials/_account_card.html:111
-#: templates/social_accounts/partials/_account_card.html:188
-#: templates/social_accounts/partials/_account_card.html:207
-#: templates/social_accounts/partials/_account_card.html:228
+#: templates/social_accounts/partials/_account_card.html:114
+#: templates/social_accounts/partials/_account_card.html:191
+#: templates/social_accounts/partials/_account_card.html:210
+#: templates/social_accounts/partials/_account_card.html:231
 #: templates/social_accounts/partials/_connect_guide.html:16
 #: templates/tasks/board.html:121 templates/tasks/partials/_art_thumb.html:29
 #: templates/tasks/partials/_new_item_modal.html:29
@@ -8801,17 +9103,6 @@ msgstr "Esta campanha não tem anúncios."
 #: templates/workspaces/settings.html:166
 msgid "Close"
 msgstr "Fechar"
-
-#: templates/ads/partials/_campaign_edit_modal.html:27
-#: templates/api_keys/_issue_modal.html:33
-#: templates/automations/flow_builder.html:851
-#: templates/automations/flow_builder.html:1158
-#: templates/billing/staff_console.html:56
-#: templates/billing/staff_console.html:481
-#: templates/composer/categories.html:37
-#: templates/media_library/_asset_grid.html:42
-msgid "Name"
-msgstr "Nome"
 
 #: templates/ads/partials/_campaign_edit_modal.html:34
 #: templates/funnels/partials/_settings_list.html:22
@@ -9052,9 +9343,11 @@ msgid "Choose an ad account"
 msgstr "Escolha uma conta de anúncios"
 
 #: templates/ads/partials/_settings_body.html:141
+#: templates/affiliates/staff_affiliates.html:131
 #: templates/automations/flow_builder.html:262
 #: templates/automations/flow_builder.html:904
 #: templates/billing/account_billing.html:230
+#: templates/calendar/partials/_post_card.html:53
 #: templates/calendar/staff_dates.html:65 templates/composer/categories.html:44
 #: templates/composer/categories.html:90
 #: templates/composer/staff_idea_template_form.html:140
@@ -9113,9 +9406,9 @@ msgstr ""
 "Desconectar o Meta Ads? As campanhas continuam rodando na conta de anúncios."
 
 #: templates/ads/settings.html:47 templates/radar/partials/_source_card.html:61
-#: templates/social_accounts/partials/_account_card.html:91
-#: templates/social_accounts/partials/_account_card.html:189
-#: templates/social_accounts/partials/_account_card.html:229
+#: templates/social_accounts/partials/_account_card.html:94
+#: templates/social_accounts/partials/_account_card.html:192
+#: templates/social_accounts/partials/_account_card.html:232
 #: templates/social_accounts/partials/_disconnect_confirm.html:56
 msgid "Disconnect"
 msgstr "Desconectar"
@@ -9128,6 +9421,408 @@ msgstr "Moti, o robô do Connekt Flow, segurando o logo do Facebook"
 #: templates/ads/settings.html:64
 msgid "Fetching your ad accounts from Meta…"
 msgstr "Buscando suas contas de anúncios na Meta…"
+
+#: templates/affiliates/_affiliate_fields.html:12
+msgid "Link name"
+msgstr "Nome do link"
+
+#: templates/affiliates/_affiliate_fields.html:15
+msgid "e.g. ana-souza"
+msgstr "ex.: ana-souza"
+
+#: templates/affiliates/_affiliate_fields.html:19
+#, python-format
+msgid "Commission (%%)"
+msgstr "Comissão (%%)"
+
+#: templates/affiliates/_affiliate_fields.html:23
+msgid "Earns on each customer for"
+msgstr "Ganha sobre cada cliente por"
+
+#: templates/affiliates/_affiliate_fields.html:29
+msgid "Minimum withdrawal in R$"
+msgstr "Saque mínimo em R$"
+
+#: templates/affiliates/_affiliate_fields.html:33
+msgid "Coupon filled in at checkout (optional)"
+msgstr "Cupom preenchido no checkout (opcional)"
+
+#: templates/affiliates/_affiliate_fields.html:35
+msgid "No coupon"
+msgstr "Sem cupom"
+
+#: templates/affiliates/_affiliate_fields.html:41
+#: templates/billing/staff_coupons.html:63
+msgid "Note (only the team sees it)"
+msgstr "Observação (só a equipe vê)"
+
+#: templates/affiliates/_payout_status.html:1
+msgid "Waiting for payment"
+msgstr "Aguardando pagamento"
+
+#: templates/affiliates/_referral_status.html:1
+msgid "Signed up"
+msgstr "Cadastrado"
+
+#: templates/affiliates/_referral_status.html:1
+msgid "Payment overdue"
+msgstr "Pagamento em atraso"
+
+#: templates/affiliates/_referral_status.html:1
+msgid "Subscriber"
+msgstr "Assinante"
+
+#: templates/affiliates/panel.html:9 templates/affiliates/panel.html:14
+#: templates/base.html:736
+msgid "Affiliate panel"
+msgstr "Painel do afiliado"
+
+#: templates/affiliates/panel.html:15
+#, python-format
+msgid ""
+"You earn %(percent)s%% of every payment an account you brought makes, during "
+"the %(months)s months after its first payment."
+msgstr ""
+"Você ganha %(percent)s%% de cada pagamento feito por uma conta que você "
+"indicou, durante os %(months)s meses seguintes ao primeiro pagamento dela."
+
+#: templates/affiliates/panel.html:23
+msgid "Your link"
+msgstr "Seu link"
+
+#: templates/affiliates/panel.html:27 templates/api_keys/_token_reveal.html:42
+#: templates/api_keys/_token_reveal.html:49
+#: templates/billing/_pix_qr_code.html:31
+#: templates/onboarding/partials/_connection_link_created.html:43
+msgid "Copy"
+msgstr "Copiar"
+
+#: templates/affiliates/panel.html:28 templates/api_keys/_token_reveal.html:43
+#: templates/billing/_pix_qr_code.html:32
+#: templates/composer/manual_publish.html:46
+msgid "Copied"
+msgstr "Copiado"
+
+#: templates/affiliates/panel.html:32
+msgid "Whoever signs up within 30 days of opening this link counts as yours."
+msgstr ""
+"Quem se cadastrar em até 30 dias depois de abrir este link conta como "
+"indicação sua."
+
+#: templates/affiliates/panel.html:34
+#, python-format
+msgid ""
+"Their checkout already comes with your coupon %(code)s; an account that pays "
+"with it counts as yours even without the link."
+msgstr ""
+"O checkout dessas contas já vem com o seu cupom %(code)s; uma conta que paga "
+"com ele conta como sua mesmo sem o link."
+
+#: templates/affiliates/panel.html:41
+#: templates/affiliates/staff_affiliates.html:22
+msgid "Link visits"
+msgstr "Visitas ao link"
+
+#: templates/affiliates/panel.html:45
+#: templates/affiliates/staff_affiliates.html:23
+#: templates/affiliates/staff_affiliates.html:88
+msgid "Sign-ups"
+msgstr "Cadastros"
+
+#: templates/affiliates/panel.html:49
+#: templates/affiliates/staff_affiliates.html:24
+msgid "Paying accounts"
+msgstr "Contas pagantes"
+
+#: templates/affiliates/panel.html:53
+#: templates/affiliates/staff_affiliates.html:26
+msgid "Commission earned"
+msgstr "Comissão gerada"
+
+#: templates/affiliates/panel.html:59
+msgid "Withdrawal"
+msgstr "Saque"
+
+#: templates/affiliates/panel.html:62
+msgid "Available to withdraw"
+msgstr "Disponível para saque"
+
+#: templates/affiliates/panel.html:66
+msgid "Requested, waiting for payment"
+msgstr "Solicitado, aguardando pagamento"
+
+#: templates/affiliates/panel.html:70
+msgid "Already paid to you"
+msgstr "Já pago a você"
+
+#: templates/affiliates/panel.html:78
+msgid "Pix key to receive the payment"
+msgstr "Chave Pix para receber o pagamento"
+
+#: templates/affiliates/panel.html:81
+#, python-format
+msgid "Request R$ %(amount)s"
+msgstr "Solicitar R$ %(amount)s"
+
+#: templates/affiliates/panel.html:84
+msgid ""
+"Your withdrawal is waiting to be paid. You can ask for another one after it."
+msgstr ""
+"Seu saque está aguardando pagamento. Você poderá solicitar outro depois dele."
+
+#: templates/affiliates/panel.html:86
+#, python-format
+msgid "You can ask for a withdrawal once the balance reaches R$ %(amount)s."
+msgstr "Você poderá solicitar um saque quando o saldo chegar a R$ %(amount)s."
+
+#: templates/affiliates/panel.html:88
+msgid ""
+"A commission enters the balance when the payment is received. A charge that "
+"is overdue earns nothing until it is paid, and a refunded payment takes its "
+"commission back."
+msgstr ""
+"A comissão entra no saldo quando o pagamento é recebido. Uma cobrança em "
+"atraso não gera nada até ser paga, e um pagamento estornado leva a comissão "
+"de volta."
+
+#: templates/affiliates/panel.html:93
+msgid "Withdrawals"
+msgstr "Saques"
+
+#: templates/affiliates/panel.html:98
+#: templates/affiliates/staff_affiliates.html:44
+msgid "Requested on"
+msgstr "Solicitado em"
+
+#: templates/affiliates/panel.html:99
+#: templates/affiliates/staff_affiliates.html:153
+#: templates/billing/staff_subscriptions.html:264
+#: templates/billing/workspace_billing.html:226
+msgid "Amount"
+msgstr "Quantidade"
+
+#: templates/affiliates/panel.html:101
+#: templates/affiliates/staff_affiliates.html:156
+msgid "Note"
+msgstr "Observação"
+
+#: templates/affiliates/panel.html:120
+msgid "Accounts you brought"
+msgstr "Contas que você indicou"
+
+#: templates/affiliates/panel.html:126 templates/affiliates/panel.html:159
+#: templates/automations/form.html:76
+#: templates/billing/staff_subscriptions.html:170
+#: templates/billing/staff_subscriptions.html:263
+#: templates/layouts/settings.html:22
+msgid "Account"
+msgstr "Conta"
+
+#: templates/affiliates/panel.html:127
+msgid "Signed up on"
+msgstr "Cadastro em"
+
+#: templates/affiliates/panel.html:129
+msgid "Commission until"
+msgstr "Comissão até"
+
+#: templates/affiliates/panel.html:130
+msgid "You earned"
+msgstr "Você ganhou"
+
+#: templates/affiliates/panel.html:147
+msgid "Nobody signed up by your link yet. Share it to start."
+msgstr "Ninguém se cadastrou pelo seu link ainda. Compartilhe-o para começar."
+
+#: templates/affiliates/panel.html:153
+msgid "Commissions"
+msgstr "Comissões"
+
+#: templates/affiliates/panel.html:158
+msgid "Paid on"
+msgstr "Pago em"
+
+#: templates/affiliates/panel.html:160 templates/billing/checkout.html:261
+#: templates/partials/_setup_steps.html:42
+#: templates/partials/_setup_steps.html:54
+msgid "Payment"
+msgstr "Pagamento"
+
+#: templates/affiliates/panel.html:171 templates/affiliates/panel.html:172
+msgid "Refunded"
+msgstr "Estornado"
+
+#: templates/affiliates/staff_affiliates.html:10
+#: templates/affiliates/staff_affiliates.html:14
+#: templates/layouts/admin_shell.html:79
+msgid "Affiliates"
+msgstr "Afiliados"
+
+#: templates/affiliates/staff_affiliates.html:10
+#: templates/automations/flow_builder.html:7
+#: templates/automations/staff_template_list.html:25
+#: templates/billing/staff_console.html:24
+#: templates/billing/staff_coupons.html:12
+#: templates/billing/staff_goals.html:18
+#: templates/billing/staff_impersonations.html:19
+#: templates/billing/staff_plans.html:25
+#: templates/billing/staff_subscriptions.html:32
+#: templates/calendar/staff_dates.html:12
+#: templates/composer/staff_idea_templates.html:12
+#: templates/layouts/admin_shell.html:38 templates/layouts/settings.html:73
+#: templates/onboarding/staff_help_videos.html:11
+#: templates/radar/staff_market_hashtags.html:12
+#: templates/social_accounts/staff_platforms.html:14
+msgid "Administration"
+msgstr "Administração"
+
+#: templates/affiliates/staff_affiliates.html:15
+msgid ""
+"Partners who bring customers by a link or a coupon and earn a share of what "
+"those customers pay. An affiliate only works after being switched on."
+msgstr ""
+"Parceiros que trazem clientes por um link ou um cupom e ganham uma parte do "
+"que esses clientes pagam. Um afiliado só funciona depois de ativado."
+
+#: templates/affiliates/staff_affiliates.html:25
+msgid "Revenue brought"
+msgstr "Receita trazida"
+
+#: templates/affiliates/staff_affiliates.html:27
+msgid "Not withdrawn yet"
+msgstr "Ainda não sacado"
+
+#: templates/affiliates/staff_affiliates.html:28
+msgid "Paid to affiliates"
+msgstr "Pago aos afiliados"
+
+#: templates/affiliates/staff_affiliates.html:34
+msgid "Withdrawals to pay"
+msgstr "Saques a pagar"
+
+#: templates/affiliates/staff_affiliates.html:35
+msgid ""
+"Pay to the Pix key outside the product, then mark it paid. Rejecting puts "
+"the amount back in the affiliate's balance."
+msgstr ""
+"Pague na chave Pix por fora do produto e depois marque como pago. Recusar "
+"devolve o valor ao saldo do afiliado."
+
+#: templates/affiliates/staff_affiliates.html:44
+msgid "Pix key"
+msgstr "Chave Pix"
+
+#: templates/affiliates/staff_affiliates.html:47
+msgid "Note for the affiliate (optional)"
+msgstr "Observação para o afiliado (opcional)"
+
+#: templates/affiliates/staff_affiliates.html:51
+msgid "Mark as paid"
+msgstr "Marcar como pago"
+
+#: templates/affiliates/staff_affiliates.html:52
+#: templates/approvals/partials/_approval_row.html:130
+#: templates/client_portal/_client_card.html:68
+#: templates/composer/staff_idea_templates.html:86
+msgid "Reject"
+msgstr "Rejeitar"
+
+#: templates/affiliates/staff_affiliates.html:63
+msgid "New affiliate"
+msgstr "Novo afiliado"
+
+#: templates/affiliates/staff_affiliates.html:64
+msgid ""
+"The person needs an account in Connekt Flow first. The affiliate is created "
+"switched off."
+msgstr ""
+"A pessoa precisa ter uma conta no Connekt Flow antes. O afiliado é criado "
+"desativado."
+
+#: templates/affiliates/staff_affiliates.html:69
+msgid "Account e-mail"
+msgstr "E-mail da conta"
+
+#: templates/affiliates/staff_affiliates.html:74
+msgid "Create affiliate"
+msgstr "Criar afiliado"
+
+#: templates/affiliates/staff_affiliates.html:85
+#: templates/affiliates/staff_affiliates.html:152
+msgid "Affiliate"
+msgstr "Afiliado"
+
+#: templates/affiliates/staff_affiliates.html:87
+msgid "Visits"
+msgstr "Visitas"
+
+#: templates/affiliates/staff_affiliates.html:89
+#: templates/billing/staff_subscriptions.html:100
+msgid "Paying"
+msgstr "Pagando"
+
+#: templates/affiliates/staff_affiliates.html:90
+#: templates/billing/staff_goals.html:157
+msgid "Revenue"
+msgstr "Faturamento"
+
+#: templates/affiliates/staff_affiliates.html:92
+msgid "Balance"
+msgstr "Saldo"
+
+#: templates/affiliates/staff_affiliates.html:113
+#: templates/billing/staff_coupons.html:102
+msgid "On"
+msgstr "Ativo"
+
+#: templates/affiliates/staff_affiliates.html:113
+#: templates/billing/staff_coupons.html:102
+msgid "Off"
+msgstr "Desativado"
+
+#: templates/affiliates/staff_affiliates.html:116
+#: templates/api_keys/_key_row.html:66
+#: templates/approvals/partials/_approval_row.html:111
+#: templates/automations/staff_template_list.html:115
+#: templates/calendar/partials/_list_row.html:102
+#: templates/calendar/partials/_post_actions_menu.html:31
+#: templates/calendar/partials/_post_card.html:112
+#: templates/calendar/staff_dates.html:69
+#: templates/composer/staff_idea_templates.html:98
+#: templates/contacts/partials/_row.html:62
+#: templates/funnels/partials/_settings_list.html:49
+#: templates/media_library/_asset_detail_panel.html:44
+#: templates/media_library/_asset_detail_panel.html:51
+#: templates/media_library/_shared_asset_card.html:67
+#: templates/media_library/asset_edit.html:4
+#: templates/organizations/workspaces.html:165
+#: templates/tasks/partials/_art_thumb.html:36
+#: templates/tasks/partials/_task_modal.html:35
+#: templates/tasks/partials/_task_modal.html:57
+msgid "Edit"
+msgstr "Editar"
+
+#: templates/affiliates/staff_affiliates.html:120
+#: templates/billing/staff_coupons.html:108
+msgid "Switch off"
+msgstr "Desativar"
+
+#: templates/affiliates/staff_affiliates.html:120
+#: templates/billing/staff_coupons.html:108
+msgid "Switch on"
+msgstr "Ativar"
+
+#: templates/affiliates/staff_affiliates.html:141
+msgid "No affiliate yet. Create the first one above."
+msgstr "Nenhum afiliado ainda. Crie o primeiro acima."
+
+#: templates/affiliates/staff_affiliates.html:147
+msgid "Withdrawals resolved"
+msgstr "Saques resolvidos"
+
+#: templates/affiliates/staff_affiliates.html:155
+msgid "Resolved on"
+msgstr "Resolvido em"
 
 #: templates/analytics/_delta_chip.html:1
 #, python-format
@@ -9324,9 +10019,9 @@ msgstr ""
 #: templates/analytics/_page.html:16
 #: templates/radar/partials/_source_card.html:53
 #: templates/radar/partials/_source_card.html:57
-#: templates/social_accounts/partials/_account_card.html:160
-#: templates/social_accounts/partials/_account_card.html:193
-#: templates/social_accounts/partials/_account_card.html:233
+#: templates/social_accounts/partials/_account_card.html:163
+#: templates/social_accounts/partials/_account_card.html:196
+#: templates/social_accounts/partials/_account_card.html:236
 #: templates/social_accounts/partials/_meta_ads_card.html:25
 msgid "Reconnect"
 msgstr "Reconectar"
@@ -9410,7 +10105,8 @@ msgstr "Publicado em %(date)s"
 msgid "ago"
 msgstr "atrás"
 
-#: templates/analytics/_post_detail.html:53
+#: templates/analytics/_post_detail.html:54
+#: templates/calendar/partials/_post_card.html:123
 #, python-format
 msgid "View on %(platform)s"
 msgstr "Ver em %(platform)s"
@@ -9517,7 +10213,7 @@ msgstr[0] "pedido"
 msgstr[1] "pedidos"
 
 #: templates/analytics/_shopee_orders.html:24
-#: templates/composer/compose.html:1337 templates/layouts/admin_shell.html:128
+#: templates/composer/compose.html:1337 templates/layouts/admin_shell.html:134
 msgid "Product"
 msgstr "Produto"
 
@@ -9666,27 +10362,6 @@ msgstr "Nunca usada"
 msgid "Issued by %(name)s"
 msgstr "Emitida por %(name)s"
 
-#: templates/api_keys/_key_row.html:66
-#: templates/approvals/partials/_approval_row.html:111
-#: templates/automations/staff_template_list.html:115
-#: templates/calendar/partials/_list_row.html:102
-#: templates/calendar/partials/_post_actions_menu.html:31
-#: templates/calendar/partials/_post_card.html:95
-#: templates/calendar/staff_dates.html:69
-#: templates/composer/staff_idea_templates.html:98
-#: templates/contacts/partials/_row.html:62
-#: templates/funnels/partials/_settings_list.html:49
-#: templates/media_library/_asset_detail_panel.html:44
-#: templates/media_library/_asset_detail_panel.html:51
-#: templates/media_library/_shared_asset_card.html:67
-#: templates/media_library/asset_edit.html:4
-#: templates/organizations/workspaces.html:165
-#: templates/tasks/partials/_art_thumb.html:36
-#: templates/tasks/partials/_task_modal.html:35
-#: templates/tasks/partials/_task_modal.html:57
-msgid "Edit"
-msgstr "Editar"
-
 #: templates/api_keys/_key_row.html:82
 msgid "Edit API key"
 msgstr "Editar chave de API"
@@ -9781,19 +10456,6 @@ msgstr ""
 "Nome da chave: <strong style=\"color: var(--text-secondary);\">%(key_name)s</"
 "strong>"
 
-#: templates/api_keys/_token_reveal.html:42
-#: templates/api_keys/_token_reveal.html:49
-#: templates/billing/_pix_qr_code.html:31
-#: templates/onboarding/partials/_connection_link_created.html:43
-msgid "Copy"
-msgstr "Copiar"
-
-#: templates/api_keys/_token_reveal.html:43
-#: templates/billing/_pix_qr_code.html:32
-#: templates/composer/manual_publish.html:46
-msgid "Copied"
-msgstr "Copiado"
-
 #: templates/api_keys/_token_reveal.html:57
 msgid "I've saved it"
 msgstr "Já salvei"
@@ -9886,7 +10548,7 @@ msgstr "Proposto para %(date)s"
 #: templates/calendar/partials/_board_columns.html:70
 #: templates/calendar/partials/_day_posts.html:50
 #: templates/calendar/partials/_list_row.html:31
-#: templates/calendar/partials/_post_card.html:39
+#: templates/calendar/partials/_post_card.html:42
 #: templates/calendar/partials/_side_panel.html:61
 #: templates/calendar/partials/list_view.html:38
 #: templates/calendar/queue_detail.html:79
@@ -9961,12 +10623,6 @@ msgstr "Retomar"
 #: templates/tasks/partials/_task_modal.html:282
 msgid "Request changes"
 msgstr "Solicitar alterações"
-
-#: templates/approvals/partials/_approval_row.html:130
-#: templates/client_portal/_client_card.html:68
-#: templates/composer/staff_idea_templates.html:86
-msgid "Reject"
-msgstr "Rejeitar"
 
 #: templates/approvals/partials/_approval_row.html:133
 msgid "Reason for rejection (required), shared with the creator…"
@@ -10082,23 +10738,6 @@ msgid "No version history available"
 msgstr "Nenhum histórico de versões disponível"
 
 #: templates/automations/flow_builder.html:7
-#: templates/automations/staff_template_list.html:25
-#: templates/billing/staff_console.html:24
-#: templates/billing/staff_coupons.html:12
-#: templates/billing/staff_goals.html:18
-#: templates/billing/staff_impersonations.html:19
-#: templates/billing/staff_plans.html:25
-#: templates/billing/staff_subscriptions.html:32
-#: templates/calendar/staff_dates.html:12
-#: templates/composer/staff_idea_templates.html:12
-#: templates/layouts/admin_shell.html:38 templates/layouts/settings.html:73
-#: templates/onboarding/staff_help_videos.html:11
-#: templates/radar/staff_market_hashtags.html:12
-#: templates/social_accounts/staff_platforms.html:14
-msgid "Administration"
-msgstr "Administração"
-
-#: templates/automations/flow_builder.html:7
 #: templates/automations/flow_builder.html:129
 msgid "Flow builder"
 msgstr "Construtor de fluxo"
@@ -10200,7 +10839,7 @@ msgstr ""
 #: templates/calendar/calendar.html:549 templates/calendar/calendar.html:580
 #: templates/calendar/partials/_delete_post_modal.html:81
 #: templates/calendar/partials/_post_actions_menu.html:36
-#: templates/calendar/partials/_post_card.html:114
+#: templates/calendar/partials/_post_card.html:143
 #: templates/calendar/staff_dates.html:79 templates/composer/compose.html:1776
 #: templates/composer/compose.html:2489
 #: templates/composer/create_landing.html:473
@@ -10804,13 +11443,6 @@ msgstr ""
 msgid "Which comments this rule picks up."
 msgstr "Quais comentários esta regra identifica."
 
-#: templates/automations/form.html:76
-#: templates/billing/staff_subscriptions.html:170
-#: templates/billing/staff_subscriptions.html:263
-#: templates/layouts/settings.html:22
-msgid "Account"
-msgstr "Conta"
-
 #: templates/automations/form.html:79
 msgid "Comment automations run on Instagram and Facebook only."
 msgstr ""
@@ -11331,7 +11963,7 @@ msgstr ""
 
 #: templates/automations/staff_template_list.html:25
 #: templates/automations/staff_template_list.html:31
-#: templates/layouts/admin_shell.html:82
+#: templates/layouts/admin_shell.html:88
 msgid "Flow templates"
 msgstr "Modelos de fluxo"
 
@@ -11351,6 +11983,7 @@ msgstr "Dê um nome ao novo modelo"
 #: templates/composer/staff_idea_template_form.html:8
 #: templates/composer/staff_idea_template_form.html:13
 #: templates/composer/staff_idea_templates.html:22
+#: templates/social_accounts/whatsapp_templates.html:16
 msgid "New template"
 msgstr "Novo modelo"
 
@@ -11379,7 +12012,7 @@ msgstr "Posição"
 #: templates/billing/staff_console.html:200
 #: templates/billing/staff_console.html:231
 #: templates/billing/staff_console.html:292
-#: templates/calendar/partials/_post_card.html:88
+#: templates/calendar/partials/_post_card.html:105
 #: templates/contacts/partials/_results.html:91
 msgid "Actions"
 msgstr "Ações"
@@ -11492,7 +12125,7 @@ msgstr "Inteligência"
 msgid "Moti, the Connekt Flow robot, working on a laptop"
 msgstr "Moti, o robô do Connekt Flow, trabalhando no notebook"
 
-#: templates/base.html:691 templates/base.html:762
+#: templates/base.html:691 templates/base.html:769
 #: templates/billing/subscribe_modal.html:250
 #: templates/client_portal/portal_base.html:69
 #: templates/partials/_setup_header.html:35
@@ -11503,19 +12136,15 @@ msgstr "Sair"
 msgid "My profile"
 msgstr "Meu perfil"
 
-#: templates/base.html:748
-msgid "Language"
-msgstr "Idioma"
-
-#: templates/base.html:783
+#: templates/base.html:790
 msgid "Toggle menu"
 msgstr "Alternar menu"
 
-#: templates/base.html:1127 templates/organizations/workspaces.html:160
+#: templates/base.html:1134 templates/organizations/workspaces.html:160
 msgid "Create workspace"
 msgstr "Criar marca"
 
-#: templates/base.html:1140 templates/base.html:1196
+#: templates/base.html:1147 templates/base.html:1203
 #: templates/calendar/queues.html:64 templates/composer/compose.html:1679
 #: templates/composer/compose.html:1687 templates/composer/compose.html:1755
 #: templates/composer/create_landing.html:4
@@ -11529,11 +12158,11 @@ msgstr "Criar marca"
 msgid "Create"
 msgstr "Criar"
 
-#: templates/base.html:1167 templates/organizations/workspaces.html:15
+#: templates/base.html:1174 templates/organizations/workspaces.html:15
 msgid "Create organization"
 msgstr "Criar organização"
 
-#: templates/base.html:1168
+#: templates/base.html:1175
 msgid ""
 "For another company of yours. It has its own brands, team and billing data, "
 "separate from the others."
@@ -11541,31 +12170,31 @@ msgstr ""
 "Para outra empresa sua. Ela tem marcas, equipe e dados de cobrança próprios, "
 "separados das outras."
 
-#: templates/base.html:1171 templates/organizations/workspaces.html:110
+#: templates/base.html:1178 templates/organizations/workspaces.html:110
 msgid "Organization Name"
 msgstr "Nome da organização"
 
-#: templates/base.html:1176 templates/billing/account_billing.html:184
+#: templates/base.html:1183 templates/billing/account_billing.html:184
 #: templates/billing/account_billing.html:212
 #: templates/billing/checkout.html:281
 #: templates/billing/subscribe_modal.html:216
 msgid "CPF or CNPJ"
 msgstr "CPF ou CNPJ"
 
-#: templates/base.html:1181 templates/billing/account_billing.html:221
+#: templates/base.html:1188 templates/billing/account_billing.html:221
 #: templates/billing/checkout.html:289
 #: templates/billing/subscribe_modal.html:219
 msgid "Phone with area code"
 msgstr "Telefone com DDD"
 
-#: templates/base.html:1186
+#: templates/base.html:1193
 msgid ""
 "Of the organization. They go on its invoices and are what the free trial "
 "asks for."
 msgstr ""
 "Da organização. Eles vão nas faturas dela e são o que o teste grátis pede."
 
-#: templates/base.html:1187
+#: templates/base.html:1194
 msgid "Name of its first brand"
 msgstr "Nome da primeira marca dela"
 
@@ -11942,20 +12571,11 @@ msgid "extra storage"
 msgstr "armazenamento extra"
 
 #: templates/billing/account_billing.html:152
-#: templates/billing/checkout.html:202
-msgid "Paid"
-msgstr "Pago"
-
-#: templates/billing/account_billing.html:152
 #: templates/billing/staff_subscriptions.html:65
 #: templates/billing/staff_subscriptions.html:112
 #: templates/workspaces/dashboard.html:154
 msgid "Overdue"
 msgstr "Em atraso"
-
-#: templates/billing/account_billing.html:152
-msgid "Reversed"
-msgstr "Estornado"
 
 #: templates/billing/account_billing.html:159
 msgid "See invoice"
@@ -12184,11 +12804,6 @@ msgstr ""
 #: templates/billing/checkout.html:245
 msgid "On the yearly plan the 12 months are charged at once, on the card."
 msgstr "No plano anual, os 12 meses são cobrados de uma vez, no cartão."
-
-#: templates/billing/checkout.html:261 templates/partials/_setup_steps.html:42
-#: templates/partials/_setup_steps.html:54
-msgid "Payment"
-msgstr "Pagamento"
 
 #: templates/billing/checkout.html:263
 #, python-format
@@ -12964,10 +13579,6 @@ msgstr "Válido até (opcional)"
 msgid "Limit of accounts (optional)"
 msgstr "Limite de contas (opcional)"
 
-#: templates/billing/staff_coupons.html:63
-msgid "Note (only the team sees it)"
-msgstr "Observação (só a equipe vê)"
-
 #: templates/billing/staff_coupons.html:67
 msgid "Create coupon"
 msgstr "Criar cupom"
@@ -12989,22 +13600,6 @@ msgstr "Válido até"
 #: templates/billing/staff_coupons.html:85
 msgid "Used"
 msgstr "Usos"
-
-#: templates/billing/staff_coupons.html:102
-msgid "On"
-msgstr "Ativo"
-
-#: templates/billing/staff_coupons.html:102
-msgid "Off"
-msgstr "Desativado"
-
-#: templates/billing/staff_coupons.html:108
-msgid "Switch off"
-msgstr "Desativar"
-
-#: templates/billing/staff_coupons.html:108
-msgid "Switch on"
-msgstr "Ativar"
 
 #: templates/billing/staff_coupons.html:118
 msgid "No coupon yet. Create the first one above."
@@ -13188,10 +13783,6 @@ msgstr "Novo"
 msgid "Lost"
 msgstr "Saídas"
 
-#: templates/billing/staff_goals.html:157
-msgid "Revenue"
-msgstr "Faturamento"
-
 #: templates/billing/staff_goals.html:158
 msgid "Costs"
 msgstr "Custos"
@@ -13206,7 +13797,7 @@ msgstr "Lucro acumulado"
 
 #: templates/billing/staff_impersonations.html:19
 #: templates/billing/staff_impersonations.html:24
-#: templates/layouts/admin_shell.html:118
+#: templates/layouts/admin_shell.html:124
 msgid "Access log"
 msgstr "Registro de acessos"
 
@@ -13529,10 +14120,6 @@ msgstr "Assinaturas por situação"
 msgid "Counted across every account. Open Customers to act on one."
 msgstr "Contadas em todas as contas. Abra Clientes para agir sobre uma."
 
-#: templates/billing/staff_subscriptions.html:100
-msgid "Paying"
-msgstr "Pagando"
-
 #: templates/billing/staff_subscriptions.html:104
 msgid "Workspaces not charged"
 msgstr "Sem cobrança"
@@ -13614,11 +14201,6 @@ msgstr ""
 #: templates/notifications/preferences.html:34
 msgid "Event"
 msgstr "Evento"
-
-#: templates/billing/staff_subscriptions.html:264
-#: templates/billing/workspace_billing.html:226
-msgid "Amount"
-msgstr "Quantidade"
 
 #: templates/billing/staff_subscriptions.html:289
 msgid "not matched to an account"
@@ -14117,6 +14699,7 @@ msgid "New draft"
 msgstr "Novo rascunho"
 
 #: templates/calendar/partials/_board_columns.html:117
+#: templates/social_accounts/partials/_whatsapp_template_form.html:20
 #: templates/tasks/partials/_task_modal.html:275
 msgid "Send for review"
 msgstr "Enviar para revisão"
@@ -14224,12 +14807,12 @@ msgid "Automation"
 msgstr "Automação"
 
 #: templates/calendar/partials/_list_row.html:96
-#: templates/calendar/partials/_post_card.html:107
+#: templates/calendar/partials/_post_card.html:136
 msgid "Set up automation"
 msgstr "Configurar automação"
 
 #: templates/calendar/partials/_list_row.html:106
-#: templates/calendar/partials/_post_card.html:101
+#: templates/calendar/partials/_post_card.html:130
 #: templates/composer/compose.html:573
 msgid "Clone"
 msgstr "Clonar"
@@ -14292,28 +14875,38 @@ msgstr "Todas as redes"
 msgid "Tags"
 msgstr "Tags"
 
-#: templates/calendar/partials/_post_card.html:45
+#: templates/calendar/partials/_post_card.html:48
+msgid "Post text"
+msgstr "Texto da publicação"
+
+#: templates/calendar/partials/_post_card.html:51
+#, python-format
+msgid "Saving changes the text of the post that is live on %(network)s."
+msgstr ""
+"Ao salvar, o texto da publicação que está no ar em %(network)s é alterado."
+
+#: templates/calendar/partials/_post_card.html:62
 #: templates/calendar/partials/publish_calendar_shell.html:52
 msgid "Post details"
 msgstr "Informações do post"
 
-#: templates/calendar/partials/_post_card.html:55
+#: templates/calendar/partials/_post_card.html:72
 msgid "Created on"
 msgstr "Criado em"
 
-#: templates/calendar/partials/_post_card.html:60
+#: templates/calendar/partials/_post_card.html:77
 msgid "Published on"
 msgstr "Publicado em"
 
-#: templates/calendar/partials/_post_card.html:67
+#: templates/calendar/partials/_post_card.html:84
 msgid "Planned for"
 msgstr "Previsto para"
 
-#: templates/calendar/partials/_post_card.html:67
+#: templates/calendar/partials/_post_card.html:84
 msgid "Scheduled for"
 msgstr "Agendado para"
 
-#: templates/calendar/partials/_post_card.html:95
+#: templates/calendar/partials/_post_card.html:112
 #: templates/calendar/partials/day_grid.html:42
 #: templates/calendar/partials/day_grid.html:53
 #: templates/calendar/partials/week_grid.html:50
@@ -14324,6 +14917,10 @@ msgstr "Agendado para"
 #: templates/social_accounts/partials/_meta_ads_card.html:27
 msgid "Open"
 msgstr "Abrir"
+
+#: templates/calendar/partials/_post_card.html:117
+msgid "Edit text"
+msgstr "Editar texto"
 
 #: templates/calendar/partials/_side_panel.html:12
 msgid "Month summary"
@@ -14505,7 +15102,7 @@ msgid "Caption"
 msgstr "Legenda"
 
 #: templates/calendar/partials/list_view.html:15
-#: templates/layouts/admin_shell.html:112
+#: templates/layouts/admin_shell.html:118
 #: templates/social_accounts/staff_platforms.html:14
 #: templates/social_accounts/staff_platforms.html:18
 msgid "Platforms"
@@ -14655,7 +15252,7 @@ msgstr "Horários de publicação"
 
 #: templates/calendar/posting_slots.html:5
 #: templates/calendar/posting_slots.html:10
-#: templates/social_accounts/partials/_account_card.html:221
+#: templates/social_accounts/partials/_account_card.html:224
 msgid "Posting Schedule"
 msgstr "Agenda de publicação"
 
@@ -16268,7 +16865,7 @@ msgstr ""
 #: templates/composer/staff_idea_template_form.html:12
 #: templates/composer/staff_idea_templates.html:12
 #: templates/composer/staff_idea_templates.html:17
-#: templates/layouts/admin_shell.html:88
+#: templates/layouts/admin_shell.html:94
 msgid "Content templates"
 msgstr "Modelos de conteúdo"
 
@@ -20438,19 +21035,19 @@ msgstr ""
 "Você será redirecionado ao Stripe para concluir o pagamento com segurança. "
 "Nunca vemos os dados do seu cartão."
 
-#: templates/layouts/admin_shell.html:100
+#: templates/layouts/admin_shell.html:106
 #: templates/radar/staff_market_hashtags.html:12
 #: templates/radar/staff_market_hashtags.html:16
 msgid "Market hashtags"
 msgstr "Hashtags do mercado"
 
-#: templates/layouts/admin_shell.html:106
+#: templates/layouts/admin_shell.html:112
 #: templates/onboarding/staff_help_videos.html:11
 #: templates/onboarding/staff_help_videos.html:15
 msgid "Help videos"
 msgstr "Vídeos de ajuda"
 
-#: templates/layouts/admin_shell.html:131
+#: templates/layouts/admin_shell.html:137
 msgid "Back to the product"
 msgstr "Voltar para o produto"
 
@@ -22757,15 +23354,19 @@ msgid "Attention"
 msgstr "Atenção"
 
 #: templates/social_accounts/partials/_account_card.html:72
-#: templates/social_accounts/partials/_account_card.html:213
+#: templates/social_accounts/partials/_account_card.html:216
 msgid "Manage connection"
 msgstr "Gerenciar conexão"
 
-#: templates/social_accounts/partials/_account_card.html:75
+#: templates/social_accounts/partials/_account_card.html:74
+msgid "Message templates"
+msgstr "Modelos de mensagem"
+
+#: templates/social_accounts/partials/_account_card.html:78
 msgid "Import the history?"
 msgstr "Importar o histórico?"
 
-#: templates/social_accounts/partials/_account_card.html:76
+#: templates/social_accounts/partials/_account_card.html:79
 msgid ""
 "The comments and conversations from before this account was connected come "
 "into the inbox, without notifications. You can take them out again with "
@@ -22775,16 +23376,16 @@ msgstr ""
 "caixa de entrada, sem gerar notificações. Você pode tirá-los de novo em "
 "Remover histórico antigo."
 
-#: templates/social_accounts/partials/_account_card.html:77
-#: templates/social_accounts/partials/_account_card.html:79
+#: templates/social_accounts/partials/_account_card.html:80
+#: templates/social_accounts/partials/_account_card.html:82
 msgid "Import history"
 msgstr "Importar histórico"
 
-#: templates/social_accounts/partials/_account_card.html:84
+#: templates/social_accounts/partials/_account_card.html:87
 msgid "Remove the old history?"
 msgstr "Remover o histórico antigo?"
 
-#: templates/social_accounts/partials/_account_card.html:85
+#: templates/social_accounts/partials/_account_card.html:88
 #, python-format
 msgid ""
 "The comments and conversations from before %(date)s, the day this account "
@@ -22795,28 +23396,28 @@ msgstr ""
 "foi conectada, saem da caixa de entrada, junto com as respostas e anotações "
 "feitas neles. Nada é apagado na rede social."
 
-#: templates/social_accounts/partials/_account_card.html:86
-#: templates/social_accounts/partials/_account_card.html:88
+#: templates/social_accounts/partials/_account_card.html:89
+#: templates/social_accounts/partials/_account_card.html:91
 msgid "Remove old history"
 msgstr "Remover histórico antigo"
 
-#: templates/social_accounts/partials/_account_card.html:100
+#: templates/social_accounts/partials/_account_card.html:103
 msgid "Removing old history…"
 msgstr "Removendo histórico antigo…"
 
-#: templates/social_accounts/partials/_account_card.html:100
+#: templates/social_accounts/partials/_account_card.html:103
 msgid "Importing history…"
 msgstr "Importando histórico…"
 
-#: templates/social_accounts/partials/_account_card.html:119
+#: templates/social_accounts/partials/_account_card.html:122
 msgid "The connection was lost"
 msgstr "A conexão foi perdida"
 
-#: templates/social_accounts/partials/_account_card.html:119
+#: templates/social_accounts/partials/_account_card.html:122
 msgid "Some features are unavailable."
 msgstr "Alguns recursos estão indisponíveis."
 
-#: templates/social_accounts/partials/_account_card.html:125
+#: templates/social_accounts/partials/_account_card.html:128
 msgid ""
 "Connekt Flow can no longer reach this account. Scheduled posts for it will "
 "fail and new comments stop arriving until you reconnect."
@@ -22825,7 +23426,7 @@ msgstr ""
 "agendadas para ela vão falhar e novos comentários deixam de chegar até você "
 "reconectar."
 
-#: templates/social_accounts/partials/_account_card.html:127
+#: templates/social_accounts/partials/_account_card.html:130
 msgid ""
 "The access to this account expires soon. Reconnect to renew it before "
 "scheduled posts start failing."
@@ -22833,7 +23434,7 @@ msgstr ""
 "O acesso a esta conta expira em breve. Reconecte para renová-lo antes que as "
 "publicações agendadas comecem a falhar."
 
-#: templates/social_accounts/partials/_account_card.html:138
+#: templates/social_accounts/partials/_account_card.html:141
 #, python-format
 msgid ""
 "This account was connected without %(scopes)s. Anything relying on them will "
@@ -22842,7 +23443,7 @@ msgstr ""
 "Esta conta foi conectada sem %(scopes)s. Tudo o que depende disso vai falhar "
 "até a permissão ser concedida — reconecte para tentar de novo."
 
-#: templates/social_accounts/partials/_account_card.html:143
+#: templates/social_accounts/partials/_account_card.html:146
 msgid ""
 "DMs unavailable: grant messaging access on the linked Facebook Page, then "
 "reconnect this account."
@@ -22850,28 +23451,28 @@ msgstr ""
 "DMs indisponíveis: conceda acesso a mensagens na página do Facebook "
 "vinculada e reconecte esta conta."
 
-#: templates/social_accounts/partials/_account_card.html:154
+#: templates/social_accounts/partials/_account_card.html:157
 msgid "Some real-time inbox updates are unavailable."
 msgstr ""
 "Algumas atualizações em tempo real da caixa de entrada não estão disponíveis."
 
-#: templates/social_accounts/partials/_account_card.html:155
+#: templates/social_accounts/partials/_account_card.html:158
 msgid "We couldn't set up real-time updates for this account."
 msgstr ""
 "Não conseguimos configurar as atualizações em tempo real para esta conta."
 
-#: templates/social_accounts/partials/_account_card.html:156
+#: templates/social_accounts/partials/_account_card.html:159
 msgid ""
 "Activity with the required permissions can still arrive through polling."
 msgstr ""
 "A atividade com as permissões necessárias ainda pode chegar por "
 "sincronização periódica."
 
-#: templates/social_accounts/partials/_account_card.html:180
+#: templates/social_accounts/partials/_account_card.html:183
 msgid "Trying…"
 msgstr "Tentando…"
 
-#: templates/social_accounts/partials/_account_card.html:222
+#: templates/social_accounts/partials/_account_card.html:225
 msgid ""
 "Set recurring time slots for when queued posts are automatically published."
 msgstr ""
@@ -22988,6 +23589,10 @@ msgstr "Remover horário"
 msgid "Add time slot"
 msgstr "Adicionar horário"
 
+#: templates/social_accounts/partials/_whatsapp_templates_list.html:11
+msgid "This account has no templates yet."
+msgstr "Esta conta ainda não tem modelos."
+
 #: templates/social_accounts/staff_platforms.html:19
 msgid ""
 "Choose which networks and opportunity sources customers can connect. A "
@@ -23011,6 +23616,32 @@ msgstr "Sem credenciais"
 #, python-format
 msgid "Show %(name)s to customers"
 msgstr "Mostrar %(name)s para os clientes"
+
+#: templates/social_accounts/whatsapp_templates.html:3
+#: templates/social_accounts/whatsapp_templates.html:8
+msgid "WhatsApp message templates"
+msgstr "Modelos de mensagem do WhatsApp"
+
+#: templates/social_accounts/whatsapp_templates.html:9
+#, python-format
+msgid ""
+"The templates of the WhatsApp Business Account behind %(number)s. A template "
+"is the only message WhatsApp delivers after the 24 hours a customer's "
+"message keeps the conversation open, and Meta reviews each one before it can "
+"be used."
+msgstr ""
+"Os modelos da conta do WhatsApp Business do número %(number)s. Um modelo é a "
+"única mensagem que o WhatsApp entrega depois das 24 horas em que a mensagem "
+"de um cliente mantém a conversa aberta, e a Meta analisa cada um antes de "
+"ele poder ser usado."
+
+#: templates/social_accounts/whatsapp_templates.html:23
+msgid "Templates in this account"
+msgstr "Modelos desta conta"
+
+#: templates/social_accounts/whatsapp_templates.html:30
+msgid "Fetching the templates from WhatsApp…"
+msgstr "Buscando os modelos no WhatsApp…"
 
 #: templates/socialaccount/email/account_connected_message.html:3
 #: templates/socialaccount/email/account_connected_message.html:4
@@ -24283,11 +24914,6 @@ msgstr "Enviar convite"
 #~ msgid "Open YouTube"
 #~ msgstr "Abrir o YouTube"
 
-#~ msgid "ad account"
-#~ msgid_plural "ad accounts"
-#~ msgstr[0] "conta de anúncios"
-#~ msgstr[1] "contas de anúncios"
-
 #~ msgid "Ad sets"
 #~ msgstr "Conjuntos de anúncios"
 
@@ -24783,9 +25409,6 @@ msgstr "Enviar convite"
 
 #~ msgid "Add Event"
 #~ msgstr "Adicionar evento"
-
-#~ msgid "Edit Event"
-#~ msgstr "Editar evento"
 
 #~ msgid "Add Custom Event"
 #~ msgstr "Adicionar evento personalizado"

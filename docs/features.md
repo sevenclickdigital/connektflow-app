@@ -352,6 +352,13 @@ People and companies the workspace talks to (sidebar: Engajar → Contatos, for 
 ## Billing (not in spec) — `apps/billing/`
 
 - The billable unit is the **workspace**. There is one plan with every feature, priced per workspace per month: R$ 50,00 (`BILLING_WORKSPACE_PRICE_CENTS`), with 10 GB of disk included. Extra disk is sold as `WorkspaceStorageAddon` rows, at R$ 2,00 per GB per month by default (a placeholder price). Money is stored in integer cents and disk in bytes.
+## Affiliates (not in spec) — `apps/affiliates/`
+
+- An operator makes an existing account an affiliate and switches it on; affiliates are off by default and only a switched-on one has the link and the panel.
+- Link `/af/<name>/`: whoever signs up within 30 days of opening it is that affiliate's referral. Their checkout comes with the affiliate's coupon already typed; an account that pays with that coupon without the link counts too.
+- Each payment received from a referred account earns the affiliate their percentage, during the months set for them counted from the account's first payment. Overdue charges earn nothing until paid; refunds take the commission back.
+- Affiliate panel (`/affiliate/`, account menu → "Affiliate panel"): the link with a copy button, visits, sign-ups, paying accounts, commission earned, the accounts brought with their status, each commission, and the balance. Once the balance reaches the minimum the affiliate asks to withdraw it, giving a Pix key; the operator pays it and marks it paid.
+
 - Gateway: **Asaas** (`gateways/asaas.py`; `ASAAS_API_KEY`, `ASAAS_API_BASE` defaults to sandbox).
   - The Organization is the Asaas customer, and each workspace is its own Asaas subscription (`contracting.py`). Contracting is idempotent.
   - Asaas refuses a customer without a CPF or CNPJ, so the first contract of an organization asks for it (`_tax_id_field.html`, checked with the validators of `apps/contacts/forms.py`), unless the account already gave it to start a free trial. It is kept on `OrganizationBillingProfile.tax_id` and sent to Asaas with the phone. A refusal from Asaas (HTTP 400) is shown to the customer in Asaas's own words.
@@ -375,6 +382,7 @@ People and companies the workspace talks to (sidebar: Engajar → Contatos, for 
   - Subscription list with counts, and the impersonation log.
   - Goal calculator (`billing_staff:goals`, `staff_goals`, `templates/billing/staff_goals.html`): a month-by-month projection of customers, revenue and profit from price per customer, customers today, new and lost customers per month, the monthly growth of new customers, fixed costs, cost per customer and a monthly revenue goal, over 1–120 months (24 by default). It shows the end figures, the month the goal and break-even are reached, the new customers per month the goal needs, a customers chart, a revenue-and-profit chart and the table. Computed in the browser and never saved; the view only seeds the list price and the `active` subscriptions.
 
+  - Affiliates (`affiliates_staff:affiliates`, `apps/affiliates/`): make an account an affiliate (by its e-mail; created switched off), set its link name, commission percentage, for how long it earns on each customer (3, 6, 12 or 24 months), minimum withdrawal and coupon, and switch it on or off. Shows visits, sign-ups, paying accounts, revenue, commission and balance per affiliate and in total, and the withdrawals to pay (mark paid or reject).
 ---
 
 ## Operational and compliance

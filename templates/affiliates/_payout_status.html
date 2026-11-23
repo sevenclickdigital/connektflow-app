@@ -1,0 +1,1 @@
+{% load i18n %}{% if payout.status == "paid" %}<span class="pill pill-success"><i></i>{% translate "Paid" %}</span>{% elif payout.status == "rejected" %}<span class="pill pill-error"><i></i>{% translate "Rejected" %}</span>{% else %}<span class="pill pill-warning"><i></i>{% translate "Waiting for payment" %}</span>{% endif %}

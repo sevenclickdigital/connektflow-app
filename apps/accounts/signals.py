@@ -164,6 +164,15 @@ def create_organization_on_signup(sender, request, user, **kwargs):
     # post_save already handled this, so this is a no-op (idempotent guard).
     provision_organization_and_workspace(user)
 
+    # The account came by an affiliate's link: it is that affiliate's referral.
+    # A failure here must not undo the sign-up.
+    from apps.affiliates import services as affiliate_services
+
+    try:
+        affiliate_services.attribute_signup(request, user)
+    except Exception:
+        logger.exception("Could not attribute the sign-up of user %s to an affiliate", user.pk)
+
     # Try to set the organization timezone from the browser cookie set during signup.
     _set_org_timezone_from_browser(request, user)
 

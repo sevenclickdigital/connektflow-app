@@ -85,6 +85,7 @@ LOCAL_APPS = [
     "apps.client_portal",
     "apps.onboarding",
     "apps.billing",
+    "apps.affiliates",
     # Always installed (migrations consistent across deployments). URLs +
     # templates short-circuit when ``settings.INTELLIGENCE_ENABLED`` is False,
     # so self-hosters who don't set the Intelligence env vars get no

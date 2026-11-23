@@ -58,6 +58,7 @@ from django_ratelimit.decorators import ratelimit
 from apps.accounts import impersonation
 from apps.accounts.impersonation import client_ip
 from apps.accounts.models import ImpersonationSession, User
+from apps.affiliates import services as affiliate_services
 from apps.billing import contracting, services
 from apps.billing.gateways.asaas import AsaasAPIError, AsaasError, AsaasNotConfigured
 from apps.billing.models import BillingEvent, Coupon, ProductPrice, WorkspaceAddon, WorkspaceSubscription
@@ -813,6 +814,10 @@ def checkout(request, workspace_id):
     cycle = plan.billing_cycle if plan else _parse_cycle(request.GET.get("cycle") or WorkspaceSubscription.Cycle.YEARLY)
     brands = _checkout_brands(plan, workspaces, []) or 1
     profile = services.ensure_billing_profile(organization)
+    # An account an affiliate brought starts with that affiliate's coupon typed in.
+    referral_coupon = None
+    if not plan:
+        referral_coupon, _error = _checkout_coupon(affiliate_services.checkout_coupon_code(organization), organization)
     # The "Include" ticks are for an organization that has had a plan, or
     # that has several brands to choose from. A first purchase of the one
     # brand an account starts with has nothing to choose: it is included.
@@ -831,7 +836,8 @@ def checkout(request, workspace_id):
             "monthly": services.quote_plan(1, WorkspaceSubscription.Cycle.MONTHLY)["monthly_cents"],
             "yearly": services.quote_plan(1, WorkspaceSubscription.Cycle.YEARLY)["monthly_cents"],
         },
-        "quote": services.quote_plan(brands, cycle, plan.coupon if plan else None),
+        "quote": services.quote_plan(brands, cycle, plan.coupon if plan else referral_coupon),
+        "referral_coupon": referral_coupon,
         "add_choices": ADD_BRAND_CHOICES,
         "max_brands": services.PLAN_MAX_BRANDS,
         "payer_tax_id": profile.tax_id,

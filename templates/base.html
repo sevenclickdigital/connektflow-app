@@ -718,6 +718,13 @@
                             <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             {% translate "My profile" %}
                         </a>
+                        {% if is_affiliate %}
+                        <a href="{% url 'affiliates:panel' %}"
+                           class="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-800 hover:bg-black/[0.04] transition-colors">
+                            <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.5-1.5"/></svg>
+                            {% translate "Affiliate panel" %}
+                        </a>
+                        {% endif %}
                     </div>
 
 

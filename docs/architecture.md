@@ -62,6 +62,7 @@ docker-compose.dokploy.yml                         # production
 | `analytics` | Account and post metrics, history import |
 | `notifications` | In-app, email and webhook notifications, digests |
 | `billing` | Per-workspace subscription via Asaas, storage add-ons, staff console |
+| `affiliates` | Affiliate programme: links, referrals, commissions on received payments, payouts |
 | `intelligence` | Optional client for the hosted BrightBean Intelligence SaaS (third-party, run by upstream) |
 | `api_keys` | `bb_studio_` keys, audit log, hourly usage |
 | `api` | Agent REST API (`/api/v1/`) |
@@ -229,6 +230,17 @@ Other inbound webhooks: `/webhooks/resend/` (Svix-signed bounces/suppressions â†
 - Access: `SubscriptionGateMiddleware` (`apps/billing/middleware.py`, after `RBACMiddleware`) redirects any URL carrying a `workspace_id` to the contracting page when `services.subscription_required()` is on (set on Plans and prices, else `BILLING_REQUIRE_SUBSCRIPTION`) and the workspace is not `active` or `courtesy`. HTMX requests get `204` + `HX-Redirect`. The `billing` URL namespace is exempt. The account pages without a `workspace_id` (`ACCOUNT_NAMESPACES`, minus `OPEN_ACCOUNT_VIEWS`) are gated on the person instead: closed to a non-staff user none of whose brands is in use (`services.has_workspace_in_use`), who is sent to the contracting page of a brand of theirs.
 
 ---
+
+### Affiliates
+
+`apps/affiliates/`. A partner who brings customers and earns a share of what they pay. It sits on top of billing and reads nothing from Asaas itself.
+
+- Models: `Affiliate` (one per user, `is_active` false until an operator switches it on; `slug`, `commission_percent`, `commission_months` of 3, 6, 12 or 24, `min_payout_cents`, an optional `billing.Coupon`), `AffiliateClickDay` (link visits per day), `Referral` (one per organization, for good; `source` link or coupon), `Commission` (one per gateway payment id) and `Payout`.
+- Attribution: `/af/<slug>/` (`views.link`, public) counts the visit, sets the signed cookie `cf_aff` for 30 days (last link wins) and goes to sign-up; `accounts.signals.create_organization_on_signup` calls `services.attribute_signup`, which makes the new organization a referral. An organization without a referral that paid with an affiliate's coupon becomes one at its first payment (`services._referral_for`). An affiliate never earns on an organization they belong to.
+- Coupon: the checkout of a referred organization starts with the affiliate's coupon filled in (`services.checkout_coupon_code`, read by `billing.views.checkout`).
+- Commission: `billing.webhooks._apply` hands every payment event it matched to a plan, a subscription or an add-on to `services.record_payment_event`. A paid event (`PAYMENT_CONFIRMED` / `PAYMENT_RECEIVED`, whichever comes first for a payment id) earns `commission_percent` of the payment's `value`, from the first payment until `Referral.commission_until` (first payment + the affiliate's months, fixed then). Nothing is earned on an unpaid charge or while the affiliate is off. A refund, chargeback or deleted payment reverses the commission; when it was already paid out, a negative row (`<payment id>:reversal`) comes off the next balance. An error here fails the webhook event, so Asaas delivers it again.
+- Payout: the affiliate asks for the whole available balance once it reaches their minimum, giving a Pix key (`services.request_payout`, one open request at a time, enforced by a partial unique constraint). An operator pays outside the product and marks it paid, or rejects it, which puts the commissions back in the balance (`services.resolve_payout`).
+- UI: the affiliate's panel at `/affiliate/` (`affiliates:panel`, 404 unless the user is a switched-on affiliate; linked from the account menu through `is_affiliate` in `sidebar_context`) and the operator's screen at `/billing/staff/affiliates/` (`affiliates_staff:*`, `_staff_required`).
 
 ## 12. Intelligence (optional)
 

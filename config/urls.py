@@ -8,6 +8,7 @@ from django.urls import include, path, re_path
 from django.views.static import serve
 
 from apps.accounts.views import health_check
+from apps.affiliates import views as affiliate_views
 from apps.api.api import api as agent_api
 from apps.common import legal_views
 from apps.oauth_server import views as oauth_views
@@ -103,6 +104,10 @@ urlpatterns = [
     # the path that a membership check could key on. Gated on is_staff in
     # the views.
     path("billing/staff/", include("apps.billing.staff_urls")),
+    path("billing/staff/affiliates/", include("apps.affiliates.staff_urls")),
+    # An affiliate's public link and their own panel.
+    path("af/<slug:slug>/", affiliate_views.link, name="affiliate_link"),
+    path("affiliate/", include("apps.affiliates.urls")),
     # The flow template library, for the same reason and under the same gate:
     # the shelf belongs to the product, not to a workspace, so there is no
     # workspace in the path for a membership check to key on.

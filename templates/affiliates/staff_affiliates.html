@@ -1,0 +1,175 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n billing_extras %}
+{% comment %}
+Affiliates (apps.affiliates.staff_views.affiliates). The operator makes an
+account an affiliate here, switches it on (a new one is off), and sees what
+each one brought and earned. Withdrawals the affiliates asked for are paid
+outside the product and marked paid here.
+{% endcomment %}
+
+{% block title %}{% translate "Affiliates" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <h1 class="page-title">{% translate "Affiliates" %}</h1>
+  <p class="page-description">{% translate "Partners who bring customers by a link or a coupon and earn a share of what those customers pay. An affiliate only works after being switched on." %}</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <section class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+    <div class="a-card p-4"><p class="text-xs text-neutral-600">{% translate "Link visits" %}</p><p class="text-xl font-semibold text-neutral-950 tabular-nums mt-1">{{ totals.clicks }}</p></div>
+    <div class="a-card p-4"><p class="text-xs text-neutral-600">{% translate "Sign-ups" %}</p><p class="text-xl font-semibold text-neutral-950 tabular-nums mt-1">{{ totals.signups }}</p></div>
+    <div class="a-card p-4"><p class="text-xs text-neutral-600">{% translate "Paying accounts" %}</p><p class="text-xl font-semibold text-neutral-950 tabular-nums mt-1">{{ totals.paying }}</p></div>
+    <div class="a-card p-4"><p class="text-xs text-neutral-600">{% translate "Revenue brought" %}</p><p class="text-xl font-semibold text-neutral-950 tabular-nums mt-1">R$ {{ totals.revenue_cents|brl }}</p></div>
+    <div class="a-card p-4"><p class="text-xs text-neutral-600">{% translate "Commission earned" %}</p><p class="text-xl font-semibold text-neutral-950 tabular-nums mt-1">R$ {{ totals.commission_cents|brl }}</p></div>
+    <div class="a-card p-4"><p class="text-xs text-neutral-600">{% translate "Not withdrawn yet" %}</p><p class="text-xl font-semibold text-neutral-950 tabular-nums mt-1">R$ {{ totals.available_cents|brl }}</p></div>
+    <div class="a-card p-4"><p class="text-xs text-neutral-600">{% translate "Paid to affiliates" %}</p><p class="text-xl font-semibold text-neutral-950 tabular-nums mt-1">R$ {{ totals.paid_cents|brl }}</p></div>
+  </section>
+
+  {% if open_payouts %}
+  <section class="rounded-xl border border-neutral-300 bg-white overflow-hidden">
+    <div class="px-5 py-4 border-b border-neutral-100">
+      <h2 class="text-base font-semibold text-neutral-950">{% translate "Withdrawals to pay" %}</h2>
+      <p class="text-xs text-neutral-600 mt-1">{% translate "Pay to the Pix key outside the product, then mark it paid. Rejecting puts the amount back in the affiliate's balance." %}</p>
+    </div>
+    <ul class="divide-y divide-neutral-100">
+      {% for payout in open_payouts %}
+      <li class="px-5 py-4">
+        <form method="post" action="{% url 'affiliates_staff:resolve_payout' payout_id=payout.id %}" class="flex flex-col lg:flex-row lg:items-end gap-3">
+          {% csrf_token %}
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-neutral-950">{{ payout.affiliate.name }} · R$ {{ payout.amount_cents|brl }}</p>
+            <p class="text-xs text-neutral-600 mt-0.5">{% translate "Pix key" %}: <span class="font-medium text-neutral-900 break-all">{{ payout.pix_key }}</span> · {% translate "Requested on" %} {{ payout.requested_at|date:"d/m/Y" }}</p>
+          </div>
+          <div class="lg:w-64">
+            <label for="note-{{ payout.id }}" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Note for the affiliate (optional)" %}</label>
+            <input type="text" id="note-{{ payout.id }}" name="note" maxlength="255" class="form-input-styled w-full">
+          </div>
+          <div class="flex gap-2">
+            <button type="submit" name="action" value="paid" class="btn-brand px-4 py-2.5 text-sm font-semibold">{% translate "Mark as paid" %}</button>
+            <button type="submit" name="action" value="rejected" class="btn-soft px-4 py-2.5 text-sm font-semibold">{% translate "Reject" %}</button>
+          </div>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <section class="rounded-xl border border-neutral-300 bg-white overflow-hidden">
+    <div class="px-5 py-4 border-b border-neutral-100">
+      <h2 class="text-base font-semibold text-neutral-950">{% translate "New affiliate" %}</h2>
+      <p class="text-xs text-neutral-600 mt-1">{% translate "The person needs an account in Connekt Flow first. The affiliate is created switched off." %}</p>
+    </div>
+    <form method="post" action="{% url 'affiliates_staff:create' %}" class="px-5 py-5 grid grid-cols-1 sm:grid-cols-6 gap-4">
+      {% csrf_token %}
+      <div class="sm:col-span-2">
+        <label for="email" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Account e-mail" %}</label>
+        <input type="email" id="email" name="email" required class="form-input-styled w-full">
+      </div>
+      {% include "affiliates/_affiliate_fields.html" with prefix="new" %}
+      <div class="sm:col-span-2 flex items-end">
+        <button type="submit" class="btn-brand w-full py-2.5 text-sm font-semibold">{% translate "Create affiliate" %}</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="rounded-xl border border-neutral-300 bg-white overflow-hidden">
+    {% if affiliates %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-neutral-100 bg-neutral-50">
+            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Affiliate" %}</th>
+            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Commission" %}</th>
+            <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Visits" %}</th>
+            <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Sign-ups" %}</th>
+            <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Paying accounts" %}</th>
+            <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Revenue" %}</th>
+            <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Earned" %}</th>
+            <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Balance" %}</th>
+            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Status" %}</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        {% for affiliate in affiliates %}
+        <tbody class="border-b border-neutral-100" x-data="{ editing: false }">
+          <tr>
+            <td class="px-4 py-3">
+              <span class="font-semibold text-neutral-950">{{ affiliate.name }}</span>
+              <p class="text-xs text-neutral-500 mt-0.5">/af/{{ affiliate.slug }}{% if affiliate.user %} · {{ affiliate.user.email }}{% endif %}{% if affiliate.coupon %} · {{ affiliate.coupon.code }}{% endif %}</p>
+              {% if affiliate.note %}<p class="text-xs text-neutral-500 mt-0.5">{{ affiliate.note }}</p>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-neutral-700 whitespace-nowrap">{{ affiliate.commission_percent }}% · {{ affiliate.get_commission_months_display }}</td>
+            <td class="px-4 py-3 text-right tabular-nums">{{ affiliate.numbers.clicks }}</td>
+            <td class="px-4 py-3 text-right tabular-nums">{{ affiliate.numbers.signups }}</td>
+            <td class="px-4 py-3 text-right tabular-nums">{{ affiliate.numbers.paying }}</td>
+            <td class="px-4 py-3 text-right tabular-nums whitespace-nowrap">R$ {{ affiliate.numbers.revenue_cents|brl }}</td>
+            <td class="px-4 py-3 text-right tabular-nums whitespace-nowrap">R$ {{ affiliate.numbers.commission_cents|brl }}</td>
+            <td class="px-4 py-3 text-right tabular-nums whitespace-nowrap">R$ {{ affiliate.numbers.available_cents|brl }}</td>
+            <td class="px-4 py-3">
+              {% if affiliate.is_active %}<span class="pill pill-success"><i></i>{% translate "On" %}</span>{% else %}<span class="pill pill-neutral">{% translate "Off" %}</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right whitespace-nowrap">
+              <button type="button" class="text-xs font-semibold text-brand-700 hover:underline cursor-pointer mr-3" @click="editing = !editing">{% translate "Edit" %}</button>
+              <form method="post" action="{% url 'affiliates_staff:toggle' affiliate_id=affiliate.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="text-xs font-semibold text-brand-700 hover:underline cursor-pointer">
+                  {% if affiliate.is_active %}{% translate "Switch off" %}{% else %}{% translate "Switch on" %}{% endif %}
+                </button>
+              </form>
+            </td>
+          </tr>
+          <tr x-show="editing" x-cloak>
+            <td colspan="10" class="px-4 py-4 bg-neutral-50">
+              <form method="post" action="{% url 'affiliates_staff:edit' affiliate_id=affiliate.id %}" class="grid grid-cols-1 sm:grid-cols-6 gap-4">
+                {% csrf_token %}
+                {% include "affiliates/_affiliate_fields.html" with prefix=affiliate.id %}
+                <div class="sm:col-span-2 flex items-end">
+                  <button type="submit" class="btn-brand w-full py-2.5 text-sm font-semibold">{% translate "Save" %}</button>
+                </div>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+        {% endfor %}
+      </table>
+    </div>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-center text-neutral-600">{% translate "No affiliate yet. Create the first one above." %}</p>
+    {% endif %}
+  </section>
+
+  {% if resolved_payouts %}
+  <section class="rounded-xl border border-neutral-300 bg-white overflow-hidden">
+    <h2 class="px-5 py-4 text-base font-semibold text-neutral-950 border-b border-neutral-100">{% translate "Withdrawals resolved" %}</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-neutral-100 bg-neutral-50">
+            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Affiliate" %}</th>
+            <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Amount" %}</th>
+            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Status" %}</th>
+            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Resolved on" %}</th>
+            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Note" %}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-neutral-100">
+          {% for payout in resolved_payouts %}
+          <tr>
+            <td class="px-4 py-3 font-semibold text-neutral-950">{{ payout.affiliate.name }}</td>
+            <td class="px-4 py-3 text-right tabular-nums">R$ {{ payout.amount_cents|brl }}</td>
+            <td class="px-4 py-3">{% include "affiliates/_payout_status.html" %}</td>
+            <td class="px-4 py-3 text-neutral-700">{{ payout.resolved_at|date:"d/m/Y" }}{% if payout.resolved_by %} · {{ payout.resolved_by.email }}{% endif %}</td>
+            <td class="px-4 py-3 text-neutral-700">{{ payout.note|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
