@@ -93,6 +93,7 @@ urlpatterns = [
     path("compose/<uuid:post_id>/delete/", views.post_delete, name="post_delete"),
     # Clone / Repost
     path("compose/<uuid:post_id>/clone/", views.clone_post_view, name="clone_post"),
+    path("published/<uuid:platform_post_id>/open/", views.post_open, name="post_open"),
     # Content Categories
     path("categories/", views.category_list, name="category_list"),
     path("categories/create/", views.category_create, name="category_create"),

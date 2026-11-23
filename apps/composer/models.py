@@ -710,6 +710,22 @@ class PlatformPost(models.Model):
             return "yes"
         return "no"
 
+    @property
+    def network_edit(self) -> bool:
+        """Whether the text of this row's live post can be changed on the network from here.
+
+        Only a post published from here: a network that edits posts through its
+        API edits the ones the app made, not the ones imported from the profile.
+        """
+        import providers
+        from apps.analytics.history_import import IMPORT_MARKER
+
+        if self.status != self.Status.PUBLISHED or not self.platform_post_id:
+            return False
+        if (self.platform_extra or {}).get(IMPORT_MARKER):
+            return False
+        return providers.can_edit_post(self.social_account.platform, self.format)
+
     # Recommended aspect ratio of the art per format, and per platform for the
     # ordinary post. Story, Reels, profile photo and the Instagram feed match the
     # composer's crop rules (compose.html ratioRule); the rest are the platforms'

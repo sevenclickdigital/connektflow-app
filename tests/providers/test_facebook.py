@@ -1913,3 +1913,30 @@ def test_a_facebook_story_cannot_be_deleted():
     assert FacebookProvider.can_delete_post("default")
     assert FacebookProvider.can_delete_post("reel")
     assert not FacebookProvider.can_delete_post("story")
+
+
+def test_edit_post_sends_the_new_text_to_the_page_scoped_post():
+    provider = FacebookProvider({"client_id": "id", "client_secret": "secret", "page_id": "page-1"})
+    provider._request = MagicMock(return_value=_resp({"success": True}))
+
+    provider.edit_post("page-token", "777", "New text")
+
+    provider._request.assert_called_once_with(
+        "POST", "https://graph.facebook.com/v25.0/page-1_777", access_token="page-token", data={"message": "New text"}
+    )
+
+
+def test_edit_post_raises_what_facebook_answered():
+    provider = FacebookProvider({"client_id": "id", "client_secret": "secret", "page_id": "page-1"})
+    forbidden = APIError("facebook API error 403", status_code=403, platform="facebook")
+    provider._request = MagicMock(side_effect=forbidden)
+
+    with pytest.raises(APIError):
+        provider.edit_post("page-token", "777", "New text")
+    assert provider._request.call_count == 1
+
+
+def test_only_a_facebook_feed_post_has_text_to_edit():
+    assert FacebookProvider.can_edit_post("default")
+    assert not FacebookProvider.can_edit_post("reel")
+    assert not FacebookProvider.can_edit_post("story")

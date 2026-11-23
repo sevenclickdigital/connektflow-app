@@ -1,0 +1,22 @@
+{% load i18n %}
+{% comment %}
+The form that creates a WhatsApp message template. It posts over HTMX to
+social_accounts:whatsapp_templates and is replaced by what comes back: itself
+with the errors, or empty once the template went to Meta's review.
+Expects: form (MessageTemplateForm), account, workspace_id.
+{% endcomment %}
+<form hx-post="{% url 'social_accounts:whatsapp_templates' workspace_id=workspace_id account_id=account.id %}"
+      hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]">
+    {% for error in form.non_field_errors %}
+    <p class="alert-error mb-4 text-sm" role="alert">{{ error }}</p>
+    {% endfor %}
+    <div class="grid gap-4 sm:grid-cols-2">
+        {% include "components/_form_field.html" with field=form.name class="sm:col-span-2" %}
+        {% include "components/_form_field.html" with field=form.category %}
+        {% include "components/_form_field.html" with field=form.language %}
+        {% include "components/_form_field.html" with field=form.body class="sm:col-span-2" %}
+    </div>
+    <div class="mt-5 flex justify-end">
+        <button type="submit" class="btn-brand">{% translate "Send for review" %}</button>
+    </div>
+</form>

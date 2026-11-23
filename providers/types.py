@@ -198,6 +198,23 @@ class ReplyResult:
 
 
 @dataclass(frozen=True)
+class MessageTemplate:
+    """A WhatsApp message template of a WhatsApp Business Account.
+
+    ``status`` and ``category`` are the Cloud API's own values (``APPROVED``,
+    ``PENDING``, ``REJECTED``…; ``MARKETING``, ``UTILITY``, ``AUTHENTICATION``).
+    ``body`` is the text of the BODY component, the only one read here.
+    """
+
+    id: str
+    name: str
+    language: str = ""
+    category: str = ""
+    status: str = ""
+    body: str = ""
+
+
+@dataclass(frozen=True)
 class ExistingPost:
     """One post already on the platform, as the account's own history shows it.
 

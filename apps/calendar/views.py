@@ -1339,18 +1339,18 @@ def day_posts(request, workspace_id):
     )
 
 
-@login_required
-def post_card(request, workspace_id, platform_post_id):
-    """The card a calendar chip opens: the post as it goes out, its dates and what can be done with it."""
-    from apps.automations.matching import COMMENT_PLATFORMS
-    from apps.composer.services import apply_format_media
-
-    workspace = _get_workspace(request, workspace_id)
-    pp = get_object_or_404(
+def _platform_post_in(workspace, platform_post_id):
+    return get_object_or_404(
         PlatformPost.objects.select_related("post", "post__author", "social_account"),
         id=platform_post_id,
         post__workspace=workspace,
     )
+
+
+def _render_post_card(request, workspace, pp):
+    from apps.automations.matching import COMMENT_PLATFORMS
+    from apps.composer.services import apply_format_media, post_view_url
+
     attachments = apply_format_media(pp, list(pp.post.media_attachments.select_related("media_asset")))
 
     account = pp.social_account
@@ -1365,6 +1365,7 @@ def post_card(request, workspace_id, platform_post_id):
 
     membership = request.workspace_membership
     perms = membership.effective_permissions if membership else {}
+    can_change = _can_change_post(request, pp.post)
     return render(
         request,
         "calendar/partials/_post_card.html",
@@ -1377,12 +1378,55 @@ def post_card(request, workspace_id, platform_post_id):
             "type_label": type_label,
             "display_timezone": _coerce_timezone(request.GET.get("tz"), workspace.effective_timezone),
             "can_clone": perms.get("create_posts", False),
-            "can_delete": pp.post.author_id == request.user.id or perms.get("edit_others_posts", False),
+            "can_delete": can_change,
+            "can_edit_text": can_change and perms.get("create_posts", False) and pp.network_edit,
+            "view_url": post_view_url(pp),
             "can_automate": (
                 perms.get("use_inbox", False) and account.platform in COMMENT_PLATFORMS and not pp.is_story
             ),
         },
     )
+
+
+@login_required
+def post_card(request, workspace_id, platform_post_id):
+    """The card a calendar chip opens: the post as it goes out, its dates and what can be done with it."""
+    workspace = _get_workspace(request, workspace_id)
+    return _render_post_card(request, workspace, _platform_post_in(workspace, platform_post_id))
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def post_card_edit_text(request, workspace_id, platform_post_id):
+    """Change the text of a published post on its network, from its card.
+
+    Answers with the card as it now reads. A refusal, ours or the network's,
+    keeps the card and answers 422 with the reason.
+    """
+    from apps.composer.services import PostEditError, edit_published_text
+
+    workspace = _get_workspace(request, workspace_id)
+    pp = _platform_post_in(workspace, platform_post_id)
+    if not _can_change_post(request, pp.post):
+        raise PermissionDenied("You can't change this post.")
+    try:
+        edit_published_text(pp, request.POST.get("text", ""))
+    except PostEditError as exc:
+        # base.html shows a failed HTMX request's text in the error toast.
+        return HttpResponse(str(exc), status=422, content_type="text/plain; charset=utf-8")
+    response = _render_post_card(request, workspace, pp)
+    response["HX-Trigger"] = json.dumps(
+        {
+            "showToast": {
+                "tone": "success",
+                "title": _("Post updated"),
+                "body": _("The new text is live on %(network)s.")
+                % {"network": pp.social_account.get_platform_display()},
+            }
+        }
+    )
+    return response
 
 
 @login_required

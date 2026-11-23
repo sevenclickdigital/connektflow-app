@@ -30,6 +30,7 @@ from .types import (
     AccountProfile,
     AuthType,
     MediaType,
+    MessageTemplate,
     OAuthTokens,
     PostType,
     PublishContent,
@@ -51,6 +52,25 @@ MAX_TEXT_LENGTH = 4096
 # Error codes the Cloud API answers a send with that the person sending can act
 # on. Everything else stays a generic APIError, routed by the shared handling.
 _RATE_LIMIT_CODES = {4, 80007, 130429, 131048, 131056}
+
+
+# How many templates the list reads. An account holds 250 by default.
+TEMPLATE_LIST_LIMIT = 300
+
+
+def _message_template(item: dict) -> MessageTemplate:
+    body = next(
+        (c.get("text") or "" for c in item.get("components") or [] if str(c.get("type") or "").upper() == "BODY"),
+        "",
+    )
+    return MessageTemplate(
+        id=str(item.get("id") or ""),
+        name=str(item.get("name") or ""),
+        language=str(item.get("language") or ""),
+        category=str(item.get("category") or ""),
+        status=str(item.get("status") or ""),
+        body=body,
+    )
 
 
 def send_error_message(code) -> str:
@@ -337,6 +357,54 @@ class WhatsAppProvider(SocialProvider):
         if len(response.content) > max_bytes:
             raise MessagingError(_("This file is too large to open here."), platform=self.platform_name)
         return response.content, str(meta.get("mime_type") or response.headers.get("content-type") or "")
+
+    # ------------------------------------------------------------------
+    # Message templates
+    # ------------------------------------------------------------------
+
+    def list_message_templates(self, access_token: str) -> list[MessageTemplate]:
+        """The WhatsApp Business Account's templates, as Meta lists them, up to ``TEMPLATE_LIST_LIMIT``."""
+        templates: list[MessageTemplate] = []
+        params: dict = {"fields": "id,name,status,category,language,components", "limit": 100}
+        while len(templates) < TEMPLATE_LIST_LIMIT:
+            body = self._request(
+                "GET", f"{BASE_URL}/{self.waba_id}/message_templates", access_token=access_token, params=params
+            ).json()
+            templates.extend(_message_template(item) for item in body.get("data", []))
+            after = ((body.get("paging") or {}).get("cursors") or {}).get("after")
+            if not after or not body.get("data"):
+                break
+            params = {**params, "after": after}
+        return templates[:TEMPLATE_LIST_LIMIT]
+
+    def create_message_template(
+        self, access_token: str, *, name: str, language: str, category: str, body: str
+    ) -> MessageTemplate:
+        """Create a text-only template and send it to Meta's review.
+
+        The body carries no variables: a ``{{1}}`` needs an example value per
+        variable, which this does not send.
+        """
+        data = self._request(
+            "POST",
+            f"{BASE_URL}/{self.waba_id}/message_templates",
+            access_token=access_token,
+            json={
+                "name": name,
+                "language": language,
+                "category": category,
+                "components": [{"type": "BODY", "text": body}],
+            },
+        ).json()
+        return MessageTemplate(
+            id=str(data.get("id") or ""),
+            name=name,
+            language=language,
+            # Meta may file the template under another category than the one asked for.
+            category=str(data.get("category") or category),
+            status=str(data.get("status") or ""),
+            body=body,
+        )
 
     # ------------------------------------------------------------------
     # Webhooks

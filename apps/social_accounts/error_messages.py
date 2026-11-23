@@ -109,6 +109,27 @@ DELETE_REJECTED_MESSAGE = _(
 )
 DELETE_GENERIC_MESSAGE = _("The post couldn't be deleted from the network. Try again.")
 
+EDIT_RECONNECT_MESSAGE = _(
+    "The network refused to change this post with the permissions this account granted. Reconnect the account."
+)
+EDIT_TEMPORARY_MESSAGE = _("The network was unavailable, so the post wasn't changed. Try again in a moment.")
+EDIT_RATE_LIMIT_MESSAGE = _("The network's request limit was reached, so the post wasn't changed. Try again later.")
+EDIT_REJECTED_MESSAGE = _(
+    "The network refused to change this post. It may already be gone, or be one it doesn't let apps edit, "
+    "such as a post used in an ad."
+)
+EDIT_GENERIC_MESSAGE = _("The post couldn't be changed on the network. Try again.")
+
+TEMPLATE_RECONNECT_MESSAGE = _(
+    "WhatsApp refused this with the permissions this number granted. Reconnect the number and try again."
+)
+TEMPLATE_TEMPORARY_MESSAGE = _("WhatsApp was unavailable or limiting requests. Try again in a moment.")
+TEMPLATE_REJECTED_MESSAGE = _(
+    "WhatsApp refused this template. Check that the name isn't already used in this language "
+    "and that the message fits the category."
+)
+TEMPLATE_GENERIC_MESSAGE = _("WhatsApp didn't answer as expected. Try again.")
+
 # A failed webhook subscription costs real-time delivery, not delivery itself:
 # the inbox still polls comments every few minutes. The copy says so, so nobody
 # reads a missing subscription as a broken inbox.
@@ -439,6 +460,42 @@ def friendly_delete_error(exc: Exception) -> str:
                 _REJECTED: DELETE_REJECTED_MESSAGE,
             },
             DELETE_GENERIC_MESSAGE,
+        )
+    )
+
+
+def friendly_edit_error(exc: Exception) -> str:
+    """Map a refused edit of a published post to a message safe to show,
+    in the language of the request."""
+    return gettext(
+        _friendly(
+            exc,
+            {
+                _RECONNECT: EDIT_RECONNECT_MESSAGE,
+                _RATE_LIMITED: EDIT_RATE_LIMIT_MESSAGE,
+                _QUOTA_EXHAUSTED: EDIT_RATE_LIMIT_MESSAGE,
+                _UNAVAILABLE: EDIT_TEMPORARY_MESSAGE,
+                _REJECTED: EDIT_REJECTED_MESSAGE,
+            },
+            EDIT_GENERIC_MESSAGE,
+        )
+    )
+
+
+def friendly_template_error(exc: Exception) -> str:
+    """Map a failed listing or creation of WhatsApp message templates to a
+    message safe to show, in the language of the request."""
+    return gettext(
+        _friendly(
+            exc,
+            {
+                _RECONNECT: TEMPLATE_RECONNECT_MESSAGE,
+                _RATE_LIMITED: TEMPLATE_TEMPORARY_MESSAGE,
+                _QUOTA_EXHAUSTED: TEMPLATE_TEMPORARY_MESSAGE,
+                _UNAVAILABLE: TEMPLATE_TEMPORARY_MESSAGE,
+                _REJECTED: TEMPLATE_REJECTED_MESSAGE,
+            },
+            TEMPLATE_GENERIC_MESSAGE,
         )
     )
 

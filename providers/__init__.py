@@ -120,6 +120,12 @@ def can_delete_post(platform: str, post_format: str) -> bool:
     return bool(provider_cls and provider_cls.can_delete_post(post_format))
 
 
+def can_edit_post(platform: str, post_format: str) -> bool:
+    """Whether ``platform``'s API changes the text of a published post of ``post_format``."""
+    provider_cls = PROVIDER_REGISTRY.get(platform)
+    return bool(provider_cls and provider_cls.can_edit_post(post_format))
+
+
 def delete_post_scope(platform: str) -> str:
     """The extra OAuth scope ``platform`` needs to delete a post, or ""."""
     return getattr(PROVIDER_REGISTRY.get(platform), "delete_post_scope", "")

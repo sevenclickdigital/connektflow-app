@@ -808,6 +808,29 @@ class FacebookProvider(SocialProvider):
             platform=self.platform_name,
         )
 
+    @classmethod
+    def can_edit_post(cls, post_format: str) -> bool:
+        # The text of a feed post; a Story has none and a Reel is a video node.
+        return post_format == "default"
+
+    def edit_post(self, access_token: str, post_id: str, text: str, *, post_format: str = "default") -> None:
+        """Replace a Page post's text. Facebook only lets an app edit the posts it published itself."""
+        first_error: APIError | None = None
+        for target in self._post_node_ids(post_id):
+            try:
+                self._request("POST", f"{BASE_URL}/{target}", access_token=access_token, data={"message": text})
+            except APIError as exc:
+                # Same rule as delete_post: only "no such object" earns the next candidate.
+                if exc.status_code not in (400, 404):
+                    raise
+                first_error = first_error or exc
+                continue
+            return
+        raise first_error or APIError(
+            f"No usable Facebook node to edit for post {post_id}",
+            platform=self.platform_name,
+        )
+
     def publish_comment(self, access_token: str, post_id: str, text: str) -> CommentResult:
         first_error: APIError | None = None
         for target in self._post_node_ids(post_id):

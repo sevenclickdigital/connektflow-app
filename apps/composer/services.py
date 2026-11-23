@@ -317,6 +317,128 @@ def can_edit_post(post, user, effective_permissions) -> bool:
     return user_id is not None and post.author_id == user_id
 
 
+#: Hosts a link to a post on each network may point at. A link is read from
+#: the network's API and opened from our pages, so it is only followed there.
+PERMALINK_HOSTS = {
+    "facebook": ("facebook.com", "fb.watch"),
+    "instagram": ("instagram.com",),
+    "instagram_login": ("instagram.com",),
+    "threads": ("threads.net", "threads.com"),
+}
+
+#: Networks whose post link cannot be built from the post id: it is asked for
+#: when someone opens the post (``fetch_post_permalink``).
+PERMALINK_LOOKUP_PLATFORMS = ("instagram", "instagram_login", "threads")
+
+
+def _trusted_permalink(platform: str, url: object) -> str:
+    """``url`` when it is an https link on one of the network's own hosts, else ""."""
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(str(url or ""))
+    host = (parts.hostname or "").lower()
+    if parts.scheme != "https" or not any(
+        host == h or host.endswith(f".{h}") for h in PERMALINK_HOSTS.get(platform, ())
+    ):
+        return ""
+    return parts.geturl()
+
+
+def post_permalink(platform_post) -> str:
+    """A link to the published post on its network that needs no call to it, or "".
+
+    A post imported from the profile carries the link the network listed it
+    with. For the rest it is built from ``platform_post_id`` where the network
+    addresses a post by its id: Facebook resolves ``/<id>`` on its own (the id
+    is stored bare, without the Page's), YouTube by the video id. Instagram and
+    Threads have no id-addressable link (``PERMALINK_LOOKUP_PLATFORMS``).
+    """
+    from urllib.parse import quote
+
+    post_id = (getattr(platform_post, "platform_post_id", "") or "").strip()
+    if not post_id:
+        return ""
+    platform = getattr(platform_post.social_account, "platform", "")
+    imported = _trusted_permalink(platform, (platform_post.platform_extra or {}).get("permalink"))
+    if imported:
+        return imported
+    if platform == "facebook":
+        return f"https://www.facebook.com/{quote(post_id)}"
+    if platform == "youtube":
+        return f"https://www.youtube.com/watch?v={quote(post_id)}"
+    return ""
+
+
+def post_view_url(platform_post) -> str:
+    """Where "View on <network>" leads for a published row, or "" when nothing can open it.
+
+    The post's own link when it is known without asking the network, else the
+    page that asks for it and redirects (``composer:post_open``).
+    """
+    from django.urls import reverse
+
+    if platform_post.status != platform_post.Status.PUBLISHED or not platform_post.platform_post_id:
+        return ""
+    link = post_permalink(platform_post)
+    if link:
+        return link
+    if platform_post.social_account.platform in PERMALINK_LOOKUP_PLATFORMS:
+        return reverse(
+            "composer:post_open",
+            kwargs={"workspace_id": platform_post.post.workspace_id, "platform_post_id": platform_post.id},
+        )
+    return ""
+
+
+def fetch_post_permalink(platform_post) -> str:
+    """The post's link, asking the network for it when it cannot be built. Raises ``ProviderError``.
+
+    "" when the network answers without a link it can be trusted to be its own.
+    """
+    link = post_permalink(platform_post)
+    if link or not platform_post.platform_post_id:
+        return link
+    from apps.publisher.engine import permalink_on_network
+
+    return _trusted_permalink(platform_post.social_account.platform, permalink_on_network(platform_post))
+
+
+class PostEditError(Exception):
+    """A published post's text could not be changed; the message is safe to show."""
+
+
+def edit_published_text(platform_post, text: str) -> None:
+    """Change the text of a published row's post on its network, then here.
+
+    ``text`` replaces the row's own caption; the post's published tags stay
+    after it, as they went out. Nothing is kept here when the network refuses.
+    Raises ``PostEditError`` with the reason.
+    """
+    from apps.publisher.engine import edit_on_network
+    from apps.social_accounts.error_messages import friendly_edit_error
+    from providers.exceptions import ProviderError
+
+    if not platform_post.network_edit:
+        raise PostEditError(_("This post's text can't be changed on the network from here."))
+    text = (text or "").strip()
+    if not text:
+        raise PostEditError(_("Write the post's text."))
+    previous = platform_post.platform_specific_caption
+    platform_post.platform_specific_caption = text
+    if platform_post.is_over_limit:
+        platform_post.platform_specific_caption = previous
+        raise PostEditError(
+            _("The text is longer than the %(limit)s characters this network accepts.")
+            % {"limit": platform_post.char_limit}
+        )
+    try:
+        edit_on_network(platform_post, platform_post.effective_caption)
+    except ProviderError as exc:
+        platform_post.platform_specific_caption = previous
+        raise PostEditError(friendly_edit_error(exc)) from exc
+    platform_post.save(update_fields=["platform_specific_caption", "updated_at"])
+
+
 def base_content_snapshot(post):
     """Reviewable base content used to detect edits to an approved post."""
     return (post.title, post.caption, post.first_comment, tuple(post.tags or []))

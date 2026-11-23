@@ -3,10 +3,13 @@
 What a calendar chip opens: the post as it goes out on this account (left), its
 type, dates and status, and the actions on it (right).
 Expects: workspace, pp (PlatformPost), account, media (MediaAsset or None),
-media_count, type_label, display_timezone, can_clone, can_automate.
+media_count, type_label, display_timezone, can_clone, can_automate, can_delete,
+can_edit_text (the live post's text can be changed on its network: the "Edit text"
+action swaps the caption for a form that posts to calendar:post_card_edit_text and
+gets this card back) and view_url (the post on its network, or empty).
 {% endcomment %}
 {% timezone display_timezone %}
-<div class="cal-post-card-grid">
+<div class="cal-post-card-grid" x-data="{ editing: false }">
     <div class="p-4 min-w-0">
         <div class="flex items-center gap-2.5 mb-3 min-w-0">
             <div class="relative flex-shrink-0">
@@ -36,8 +39,22 @@ media_count, type_label, display_timezone, can_clone, can_automate.
         {% endif %}
 
         {% with caption=pp.effective_caption %}
-        <p class="text-xs text-neutral-700 whitespace-pre-wrap break-words {% if media %}mt-3{% endif %}" style="display: -webkit-box; -webkit-line-clamp: {% if media %}3{% else %}10{% endif %}; -webkit-box-orient: vertical; overflow: hidden;">{% if caption %}{{ caption }}{% else %}<span class="italic text-neutral-500">{% translate "(no caption)" %}</span>{% endif %}</p>
+        <p x-show="!editing" class="text-xs text-neutral-700 whitespace-pre-wrap break-words {% if media %}mt-3{% endif %}" style="display: -webkit-box; -webkit-line-clamp: {% if media %}3{% else %}10{% endif %}; -webkit-box-orient: vertical; overflow: hidden;">{% if caption %}{{ caption }}{% else %}<span class="italic text-neutral-500">{% translate "(no caption)" %}</span>{% endif %}</p>
         {% endwith %}
+        {% if can_edit_text %}
+        <form x-show="editing" x-cloak class="{% if media %}mt-3{% endif %}"
+              hx-post="{% url 'calendar:post_card_edit_text' workspace_id=workspace.id platform_post_id=pp.id %}"
+              hx-target="closest .cal-post-card-grid" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]">
+            {% translate "Post text" as text_label %}
+            <textarea name="text" rows="6" required maxlength="{{ pp.char_limit }}" aria-label="{{ text_label }}"
+                      class="form-input-styled w-full text-xs">{% if pp.platform_specific_caption is not None %}{{ pp.platform_specific_caption }}{% else %}{{ pp.post.caption }}{% endif %}</textarea>
+            <p class="text-[11px] text-neutral-600 mt-1.5">{% blocktranslate with network=account.get_platform_display %}Saving changes the text of the post that is live on {{ network }}.{% endblocktranslate %}</p>
+            <div class="flex flex-col gap-1 mt-2.5 text-xs">
+                <button type="submit" class="cal-card-action is-primary justify-center">{% translate "Save" %}</button>
+                <button type="button" class="cal-card-action justify-center" @click="editing = false">{% translate "Cancel" %}</button>
+            </div>
+        </form>
+        {% endif %}
     </div>
 
     <div class="cal-post-card-side">
@@ -92,6 +109,18 @@ media_count, type_label, display_timezone, can_clone, can_automate.
                     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                     {% if pp.status == "published" or pp.status == "publishing" %}{% translate "Open" %}{% else %}{% translate "Edit" %}{% endif %}
                 </a>
+                {% if can_edit_text %}
+                <button type="button" class="cal-card-action" @click="editing = true" x-show="!editing">
+                    <svg class="w-4 h-4 flex-shrink-0 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h7"/></svg>
+                    {% translate "Edit text" %}
+                </button>
+                {% endif %}
+                {% if view_url %}
+                <a href="{{ view_url }}" target="_blank" rel="noopener noreferrer" class="cal-card-action">
+                    <svg class="w-4 h-4 flex-shrink-0 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    {% blocktranslate with platform=account.get_platform_display %}View on {{ platform }}{% endblocktranslate %}
+                </a>
+                {% endif %}
                 {% if can_clone %}
                 <button type="button" class="cal-card-action"
                         hx-post="{% url 'composer:clone_post' workspace_id=workspace.id post_id=pp.post_id %}" hx-swap="none">

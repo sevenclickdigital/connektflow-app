@@ -70,6 +70,9 @@ that finds the job finished brings the toast with the result.
             <div x-show="menu" x-cloak @click.away="menu = false" x-transition
                  class="absolute right-0 top-full mt-1 z-20 w-48 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1">
                 <button type="button" @click="menu = false; manage = true" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Manage connection" %}</button>
+                {% if account.platform == "whatsapp" %}
+                <a href="{% url 'social_accounts:whatsapp_templates' workspace_id=workspace_id account_id=account.id %}" class="block w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50">{% translate "Message templates" %}</a>
+                {% endif %}
                 {% if account.can_import_inbox_history %}
                 <form method="post" action="{% url 'social_accounts:import_inbox_history' workspace_id=workspace_id account_id=account.id %}"
                       data-confirm="{% translate 'Import the history?' %}"

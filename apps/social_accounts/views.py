@@ -21,9 +21,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.utils.translation import ngettext
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from django_ratelimit.decorators import ratelimit
 
+from apps.common.htmx import lazy_body_urls, wants_lazy_body
 from apps.common.validators import is_safe_url as _is_safe_url
 from apps.credentials.models import PlatformCredential, derive_is_configured
 from apps.members.decorators import require_permission
@@ -1324,6 +1325,60 @@ def disconnect(request, workspace_id, account_id):
 
     messages.success(request, _("Disconnected %(name)s.") % {"name": account_name})
     return _after_disconnect(request, workspace_id)
+
+
+@login_required
+@require_permission("manage_social_accounts")
+@require_http_methods(["GET", "POST"])
+@ratelimit(key="user", rate="20/m", method="POST", block=True)
+def whatsapp_templates(request, workspace_id, account_id):
+    """The message templates of a connected WhatsApp number: the list Meta holds, and a form to create one.
+
+    The list is read from Meta on every visit, so it loads after the page
+    (``partial=body``). The form posts over HTMX and gets itself back: with
+    its errors, or empty after the template went to Meta's review, when the
+    list is told to load again.
+    """
+    from .whatsapp_templates import MessageTemplateForm, TemplateError, create_template, list_templates
+
+    account = get_object_or_404(SocialAccount.objects.for_workspace(workspace_id), id=account_id, platform="whatsapp")
+    context = {"account": account, "workspace_id": workspace_id}
+
+    if request.method == "POST":
+        form = MessageTemplateForm(request.POST)
+        created = False
+        if form.is_valid():
+            try:
+                create_template(account, **form.cleaned_data)
+            except TemplateError as exc:
+                form.add_error(None, str(exc))
+            else:
+                logger.info("User %s created a WhatsApp template on account %s", request.user.pk, account.id)
+                created = True
+                form = MessageTemplateForm()
+        response = render(request, "social_accounts/partials/_whatsapp_template_form.html", {**context, "form": form})
+        if created:
+            response["HX-Trigger"] = json.dumps(
+                {
+                    "showToast": {
+                        "tone": "success",
+                        "title": _("Template sent for review"),
+                        "body": _("WhatsApp reviews it before it can be used, usually within a day."),
+                    },
+                    "whatsappTemplatesChanged": True,
+                }
+            )
+        return response
+
+    if wants_lazy_body(request):
+        try:
+            context["templates"] = list_templates(account)
+        except TemplateError as exc:
+            context["list_error"] = str(exc)
+        return render(request, "social_accounts/partials/_whatsapp_templates_list.html", context)
+
+    context.update(form=MessageTemplateForm(), **lazy_body_urls(request))
+    return render(request, "social_accounts/whatsapp_templates.html", context)
 
 
 # ------------------------------------------------------------------

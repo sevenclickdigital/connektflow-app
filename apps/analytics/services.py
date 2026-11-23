@@ -20,6 +20,7 @@ from django.utils.text import get_text_list
 from django.utils.translation import gettext
 
 from apps.composer.models import PlatformPost
+from apps.composer.services import post_view_url
 from apps.social_accounts.models import SocialAccount
 
 from .constants import NO_ANALYTICS_PLATFORMS
@@ -764,6 +765,7 @@ def post_detail(post: PlatformPost) -> dict[str, Any]:
         "days_ago": (timezone.now() - post.published_at).days if post.published_at else None,
         "media_kind": _media_kind(post),
         "media_preview": _first_media_preview(post),
+        "view_url": post_view_url(post),
         "captured_at": max_captured,
         "metric_tiles": [
             {

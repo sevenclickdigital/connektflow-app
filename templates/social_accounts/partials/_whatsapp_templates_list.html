@@ -1,0 +1,38 @@
+{% load i18n %}
+{% comment %}
+The message templates Meta holds for a WhatsApp Business Account, loaded into
+whatsapp_templates.html. Expects: templates (rows of
+social_accounts.whatsapp_templates.list_templates) or list_error.
+{% endcomment %}
+{% if list_error %}
+<p class="alert-error text-sm" role="alert">{{ list_error }}</p>
+{% elif not templates %}
+<div class="a-card px-6 py-8 text-center">
+    <p class="text-sm text-neutral-600">{% translate "This account has no templates yet." %}</p>
+</div>
+{% else %}
+<div class="a-card overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-xs text-neutral-600 border-b border-neutral-300">
+                <th class="px-4 py-3 font-semibold">{% translate "Name" %}</th>
+                <th class="px-4 py-3 font-semibold">{% translate "Category" %}</th>
+                <th class="px-4 py-3 font-semibold">{% translate "Language" %}</th>
+                <th class="px-4 py-3 font-semibold">{% translate "Status" %}</th>
+                <th class="px-4 py-3 font-semibold">{% translate "Message" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for template in templates %}
+            <tr class="border-b border-neutral-300 last:border-0 align-top">
+                <td class="px-4 py-3 font-semibold text-neutral-950 break-all">{{ template.name }}</td>
+                <td class="px-4 py-3 text-neutral-800 whitespace-nowrap">{{ template.category|default:"—" }}</td>
+                <td class="px-4 py-3 text-neutral-800 whitespace-nowrap">{{ template.language|default:"—" }}</td>
+                <td class="px-4 py-3"><span class="pill {{ template.pill }}"><i></i>{{ template.status }}</span></td>
+                <td class="px-4 py-3 text-neutral-800 whitespace-pre-wrap break-words min-w-[16rem]">{{ template.body|default:"—"|truncatechars:240 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}

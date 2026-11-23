@@ -3,7 +3,7 @@
 Para cada permissão e recurso que o app da Meta pede: o que o código faz com ela, o texto para colar no formulário do App Review e o roteiro da gravação de tela.
 
 - **App:** Connekt Flow, App ID `4547728542177947`, portfólio empresarial `1575031336120607`.
-- **Verificado em:** 18 de novembro de 2026, contra o código em `main` e o estado do app lido pelas ferramentas de desenvolvedor da Meta.
+- **Verificado em:** 23 de novembro de 2026, contra o código em `main` e o estado do app lido pelas ferramentas de desenvolvedor da Meta.
 - **Escopo:** tudo o que faz login pela Meta: Páginas do Facebook, Instagram (Login do Facebook), Threads, WhatsApp e Meta Ads.
 
 Os blocos "Texto para enviar" estão em inglês porque os revisores da Meta leem em inglês; todo o resto está em português. Os nomes dos botões aparecem como a interface em inglês mostra, com o rótulo em português entre parênteses, porque a Meta recomenda gravar com a interface em inglês.
@@ -12,13 +12,13 @@ Os blocos "Texto para enviar" estão em inglês porque os revisores da Meta leem
 
 | Item | Estado |
 |---|---|
-| Modo do app | Desenvolvimento. Manter assim até a aprovação: em modo Ao vivo, uma permissão não aprovada para de funcionar até para quem tem papel no app |
-| Envio de App Review | Existe um rascunho (`4547728542177947` → App Review), não enviado, com 26 itens |
+| Modo do app | **Ao vivo** (lido em 23/11/2026). Sem acesso avançado, as permissões só funcionam para quem tem papel no app. Antes de gravar, confirme que o diálogo de login mostra a lista completa de permissões para a conta usada; se não mostrar, volte o app para Desenvolvimento até a aprovação |
+| Envio de App Review | Existe um rascunho (`4547728542177947` → App Review), não enviado, com 27 itens (os 26 deste guia mais `instagram_manage_contents`, que sai). Nenhum envio anterior no histórico |
 | Acesso avançado | Nenhum concedido ainda |
 | Verificação da empresa | Aprovada |
 | Política de privacidade / termos | `https://connektflow.com.br/privacidade/`, `https://connektflow.com.br/termos/` |
 | Conformidade | Sem violações nem ações obrigatórias em aberto |
-| Webhooks | Página: `feed`, `mention`, `messages`. Instagram: `comments`, `mentions`, `messages`. Conta do WhatsApp Business: `messages`, `account_update`. Todos batem com o código. Falta assinar o do Threads (`replies`), descrito em `threads_read_replies` |
+| Webhooks | Página: `feed`, `mention`, `messages`. Instagram: `comments`, `mentions`, `messages`. Conta do WhatsApp Business: `messages`, `account_update`. Todos batem com o código. O do Threads (`replies`), descrito em `threads_read_replies`, fica no painel do caso de uso do Threads e não pôde ser lido daqui: confira lá se está assinado |
 | URIs de redirecionamento OAuth | Callbacks do Facebook, Instagram e Meta Ads registrados. O do Threads fica no painel do caso de uso do Threads e não pôde ser lido daqui |
 
 ## 2. Corrigir antes de enviar
@@ -28,15 +28,10 @@ Os blocos "Texto para enviar" estão em inglês porque os revisores da Meta leem
 3. **O Marketing API Access Tier exige 500 chamadas à API de Marketing nos últimos 15 dias, com menos de 15% de erro**, e não uma chamada. Veja a seção 5.5.
 4. **Exclusão de dados do usuário: configurada.** Em Configurações do app → Básico está a *URL de callback para exclusão de dados* `https://app.connektflow.com.br/data-deletion/` (conferido no painel em 19/11/2026). A consulta pela ferramenta de desenvolvedor da Meta continua devolvendo esse campo vazio; vale o painel.
 5. **O e-mail de contato `contato@connektflow.com.br` não está verificado.** As notificações da análise vão para ele.
-6. **`instagram_manage_contents` fica fora deste envio** (decidido em 19/11/2026). A exclusão de posts no Instagram continua desligada em produção (`PLATFORM_INSTAGRAM_FACEBOOK_DELETE_SCOPE_ENABLED=false`). Falta remover a permissão do rascunho no painel: Casos de uso → *Gerenciar mensagens e conteúdo no Instagram* → Permissões e recursos → remover `instagram_manage_contents`. Enquanto ela estiver no rascunho sem gravação, a Meta rejeita.
-7. **Três recursos que o código usa não estão no rascunho**: Instagram Public Content Access, Page Public Metadata Access e Human Agent. Veja a seção 6.
-8. **Exigências de gravação da Meta que o app não cobre hoje.** Cada uma está detalhada na sua seção:
-   - `pages_manage_posts`: a Meta pede criar, editar e excluir. O app não edita um post que já está no Facebook.
-   - `threads_basic`: a Meta pede listar os posts do próprio usuário no Threads. O app mostra apenas os posts publicados por ele.
-   - `threads_manage_insights`: a Meta pede métricas do perfil e métricas por post. O provedor lê apenas métricas por post.
-   - `whatsapp_business_management`: a Meta pede ver a criação de um modelo de mensagem. O app não cria modelos; o WhatsApp Manager é aceito para isso.
-9. **"Ver em Facebook / Instagram / Threads", na gaveta do post em Relatórios, é um link morto** (`href="#"`). A Meta quer ver o resultado no app dela, então abra a Página ou o perfil em outra aba durante a gravação.
-10. **Remover do rascunho o que o app não usa**: `email`, os itens de jogos e todas as permissões `instagram_business_*`. O Login do Instagram não está configurado em produção. Selecionar permissões desnecessárias é motivo comum de rejeição.
+6. **`instagram_manage_contents` fica fora deste envio** (decidido em 19/11/2026), mas em 23/11/2026 ainda estava no rascunho. A exclusão de posts no Instagram continua desligada em produção (`PLATFORM_INSTAGRAM_FACEBOOK_DELETE_SCOPE_ENABLED=false`). Remover no painel: Casos de uso → *Gerenciar mensagens e conteúdo no Instagram* → Permissões e recursos → remover `instagram_manage_contents`. Enquanto ela estiver no rascunho sem gravação, a Meta rejeita.
+7. **Quatro recursos que o código usa não estão no rascunho**: Business Asset User Profile Access, Instagram Public Content Access, Human Agent e Page Public Metadata Access. Nenhum tem o acesso padrão configurado no app. Veja a seção 6.
+8. **A ferramenta da Meta responde que o envio está bloqueado** ("não é possível enviar enquanto um envio anterior estiver em análise"), embora o status seja não enviado e o histórico esteja vazio. Abra App Review no painel e confira se há algo pendente antes de contar com a data de envio.
+9. **`pages_messaging` pede uma Página de teste** indicada no painel (etapa `test_page`).
 
 ## 3. Regras para todas as gravações
 
@@ -189,15 +184,16 @@ connected the Page.
 
 #### `pages_manage_posts`
 
-- **Para que serve:** publicar e excluir conteúdo da Página: `POST /{page}/feed`, `/photos`, `/videos`, `/video_reels`, `/video_stories`, `/photo_stories` e `DELETE /{post}`.
+- **Para que serve:** publicar, editar e excluir conteúdo da Página: `POST /{page}/feed`, `/photos`, `/videos`, `/video_reels`, `/video_stories`, `/photo_stories`, `POST /{post}` com `message` (trocar o texto) e `DELETE /{post}`.
 - **Texto para enviar:**
 
 ```
 Connekt Flow's main feature is composing, scheduling and publishing posts. With
 pages_manage_posts our users publish text, link, photo, multi-photo, video, Reel
 and Story posts to the Pages they manage, immediately or at a scheduled time,
-often after an internal approval step. They can also delete a published post
-from the Page from inside Connekt Flow.
+often after an internal approval step. From the post's card in the calendar they
+can also correct the text of a post they published and delete a published post
+from the Page.
 ```
 
 - **Gravação:**
@@ -206,8 +202,9 @@ from the Page from inside Connekt Flow.
   3. Em **Where to publish** (Onde publicar), selecione a Página com o formato **Feed**. Digite o texto, anexe uma imagem e clique em **Publish now** (Publicar agora).
   4. Barra lateral → **Calendar** (Calendário). Abra o post e mostre o status **Published** (Publicado).
   5. Abra a Página no facebook.com em outra aba e mostre o post.
-  6. De volta ao calendário, abra o post → **Delete** (Excluir). Mantenha marcado **Also delete it from Facebook** (Excluir também do Facebook) e confirme. Recarregue a Página no facebook.com e mostre que o post sumiu.
-- **Risco:** o texto da Meta pede "creates, edits, and deletes". O app não edita um post que já está no Facebook. Diga isso nas observações ("Connekt Flow creates and deletes Page posts; it does not edit published posts") ou implemente a edição antes de enviar.
+  6. De volta ao calendário, abra o post → **Edit text** (Editar texto), mude o texto e clique em **Save** (Salvar). Clique em **View on Facebook** (Ver em Facebook) e mostre o texto novo no post.
+  7. De volta ao calendário, abra o post → **Delete** (Excluir). Mantenha marcado **Also delete it from Facebook** (Excluir também do Facebook) e confirme. Recarregue a Página no facebook.com e mostre que o post sumiu.
+- **Limite:** o Facebook só deixa um app editar os posts que ele mesmo publicou, e o app edita o texto de posts de feed. Posts importados da Página, Stories e Reels não têm **Edit text**.
 
 #### `pages_manage_engagement`
 
@@ -416,22 +413,23 @@ O Threads tem login próprio (`https://www.threads.com/oauth/authorize`) e host 
 
 #### `threads_basic`
 
-- **Para que serve:** `GET /me?fields=id,username,name,threads_profile_picture_url,threads_biography` e `GET /{container}?fields=status,error_message` durante a publicação.
+- **Para que serve:** `GET /me?fields=id,username,name,threads_profile_picture_url,threads_biography`, `GET /me/threads` (os posts do próprio perfil, na importação de histórico de Relatórios), `GET /{post}?fields=...,permalink` (o link de **View on Threads**) e `GET /{container}?fields=status,error_message` durante a publicação.
 - **Texto para enviar:**
 
 ```
 Connekt Flow reads the id, username, name and profile picture of the Threads
 profile the user connects, to show it on the account card and in the composer's
-list of destinations. The posts a user publishes to Threads through Connekt Flow
-are listed, with their text and media, in the calendar and in the Reports
-screen, visible only to the members of that user's workspace.
+list of destinations. In the Reports screen the user can import the posts
+already on their own Threads profile; these, and the posts published through
+Connekt Flow, are listed with their text and media, visible only to the members
+of that user's workspace.
 ```
 
 - **Gravação:**
   1. Conecte o perfil do Threads, mostrando a tela de permissões.
   2. Mostre o card da conta com nome, usuário e foto.
-  3. Barra lateral → **Reports** → escolha a conta do Threads. Em **All posts**, clique em um post e mostre o texto e a mídia.
-- **Risco:** a Meta pede "retrieve a list of the user's own Threads posts". O app lista apenas o que foi publicado por ele; não lê os posts do perfil no Threads (`GET /me/threads` não é chamado). Se a Meta recusar, a importação de histórico que existe para Facebook e Instagram precisa ser estendida ao Threads.
+  3. Barra lateral → **Reports** → escolha a conta do Threads. No aviso sobre publicações que ainda não estão aqui, clique em **Import** (Importar).
+  4. Em **All posts**, mostre os posts do perfil, clique em um e mostre o texto e a mídia. Clique em **View on Threads** (Ver em Threads) e mostre o mesmo post no threads.com.
 
 #### `threads_content_publish`
 
@@ -452,22 +450,21 @@ their other social profiles, immediately or at a scheduled time.
 
 #### `threads_manage_insights`
 
-- **Para que serve:** `GET /{post}/insights?metric=views,likes,replies,reposts,quotes`.
+- **Para que serve:** `GET /me/threads_insights` (do perfil: `views`, `likes`, `replies`, `reposts`, `quotes`, `followers_count`) e `GET /{post}/insights?metric=views,likes,replies,reposts,quotes`.
 - **Texto para enviar:**
 
 ```
-Connekt Flow's Reports screen shows how each post a user published to Threads
-performed: views, likes, replies, reposts and quotes, and the totals for the
-period the user picks. Our users use it to compare their Threads results with
-their other social profiles.
+Connekt Flow's Reports screen shows how a connected Threads profile performs:
+the profile's views, likes, replies, reposts, quotes and follower count for the
+period the user picks, and the views, likes, replies, reposts and quotes of
+each post. Our users use it to compare their Threads results with their other
+social profiles.
 ```
 
 - **Gravação:**
   1. Conecte o perfil do Threads, mostrando a tela de permissões.
-  2. Barra lateral → **Reports** → escolha a conta do Threads. Mostre os cards do período.
+  2. Barra lateral → **Reports** → escolha a conta do Threads. Mostre os cards do período, que são as métricas do perfil, com os seguidores.
   3. Em **All posts**, clique em um post e mostre os números de **Performance**.
-- **Risco:** a Meta pede métricas do perfil (seguidores, alcance) e métricas por post. O provedor lê apenas métricas por post; não há chamada a `GET /{user}/threads_insights`. Os cards da tela de Relatórios são totais dos posts.
-
 #### `threads_manage_replies`
 
 - **Para que serve:** publicar respostas em nome do usuário: o primeiro comentário do composer, como resposta ao próprio post, e a resposta dada pela Caixa de entrada a quem respondeu um post. Nos dois casos, `POST /{user}/threads` com `reply_to_id` e depois `POST /{user}/threads_publish`.
@@ -515,7 +512,7 @@ O WhatsApp conecta pelo Embedded Signup: **Social Accounts** → card **WhatsApp
 
 #### `whatsapp_business_management`
 
-- **Para que serve:** trocar o código do cadastro por um token da empresa (`GET /oauth/access_token`), `GET /{waba}/phone_numbers`, e `POST`, `GET` e `DELETE /{waba}/subscribed_apps`.
+- **Para que serve:** trocar o código do cadastro por um token da empresa (`GET /oauth/access_token`), `GET /{waba}/phone_numbers`, `POST`, `GET` e `DELETE /{waba}/subscribed_apps`, e `GET` e `POST /{waba}/message_templates` (listar e criar modelos de mensagem).
 - **Texto para enviar:**
 
 ```
@@ -524,14 +521,17 @@ Embedded Signup. We use whatsapp_business_management to confirm that the phone
 number the business chose belongs to that WhatsApp Business Account and to
 subscribe the account to our webhooks, so the customer messages it receives
 reach the business's inbox in Connekt Flow. We remove the subscription when the
-business disconnects.
+business disconnects. The business also sees the message templates of its
+WhatsApp Business Account, with their review status, and creates new text
+templates from Connekt Flow.
 ```
 
 - **Gravação:**
   1. Barra lateral → **Social Accounts** → **WhatsApp** → **Connect** → **Continue**. Percorra a janela do Embedded Signup, escolhendo a conta e o número.
   2. Mostre a mensagem de sucesso e o card do WhatsApp com o número.
-  3. Abra o WhatsApp Manager dessa conta e crie um modelo de mensagem, já que a Meta pede ver um sendo criado "on your app or the WhatsApp Manager".
-- **Risco:** o app não cria nem lista modelos. É o passo 3 que atende à exigência da Meta.
+  3. No card do WhatsApp, abra **More actions** (Mais ações) → **Message templates** (Modelos de mensagem). Mostre a lista de modelos da conta com o status de cada um.
+  4. Em **New template** (Novo modelo), preencha nome, categoria, idioma e mensagem e clique em **Send for review** (Enviar para revisão). Mostre o aviso de envio e o modelo novo na lista, em análise.
+- **Limite:** o app cria modelos só de texto, sem variáveis, e não envia modelos: as respostas do inbox ficam dentro da janela de 24 horas.
 
 #### `whatsapp_business_messaging`
 
@@ -634,7 +634,7 @@ Um recurso é solicitado separadamente das permissões. Nenhum destes está no r
 | **Instagram Public Content Access** | Radar → Pesquisa no Instagram → **Hashtags** (`GET /ig_hashtag_search`, `/{hashtag}/top_media`, `/recent_media`) | Não configurado. Item opcional do caso de uso do Instagram | Adicionar no caso de uso do Instagram e solicitar, ou aceitar que a aba Hashtags fique desligada para os clientes |
 | **Page Public Metadata Access** | Seletor de local do composer para Facebook e Instagram (`GET /pages/search`) | Não está em nenhum caso de uso que o app tem ou pode adicionar | Perguntar ao suporte da Meta como solicitar para este tipo de app, ou deixar o seletor desligado: ele já avisa o usuário de que a busca não está liberada |
 | **Human Agent** | Responder a uma mensagem do Messenger ou do Instagram entre 24 horas e 7 dias depois de o cliente escrever | Não configurado. Item opcional dos casos de uso do Messenger e do Instagram. A configuração do app está desligada | Solicitar só quando a resposta em 7 dias for desejada, e então ligar `PLATFORM_FACEBOOK_HUMAN_AGENT_ENABLED` |
-| **Business Asset User Profile Access** | O nome do cliente no inbox e nas automações (`GET /{psid}` e `GET /{igsid}`) | Não configurado. Item opcional dos casos de uso de Páginas, Messenger e Instagram | A referência de perfil do Messenger da Meta lista este recurso como exigido para `name`. Solicitar junto com as permissões de mensagens |
+| **Business Asset User Profile Access** | O nome do cliente no inbox e nas automações (`GET /{psid}` e `GET /{igsid}`) | Não configurado. Item opcional dos casos de uso de Páginas, Messenger, Instagram e Marketing | A referência de perfil do Messenger da Meta lista este recurso como exigido para `name`. Solicitar junto com as permissões de mensagens |
 
 ### Texto e gravação de cada um
 
@@ -693,7 +693,7 @@ Gravação: a gravação de `pages_messaging`, parando no cabeçalho da conversa
 
 ## 7. Ordem do trabalho
 
-1. Resolver a seção 2: e-mail de contato, remover `instagram_manage_contents` do rascunho, os itens não usados do rascunho, os recursos.
+1. Resolver a seção 2: o erro do teste de `whatsapp_business_management`, e-mail de contato, remover `instagram_manage_contents` do rascunho, os recursos, a Página de teste e o bloqueio de envio.
 2. Conectar todas as contas com um login que tenha papel no app e executar cada roteiro uma vez, sem gravar. Isso faz as chamadas de teste.
 3. Usar as telas de Anúncios todos os dias até atingir a contagem de chamadas da API de Marketing.
 4. Esperar 2 dias e conferir no painel que cada permissão mostra a sua chamada de teste.

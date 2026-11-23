@@ -75,6 +75,11 @@ urlpatterns = [
         name="account_card",
     ),
     path(
+        "<uuid:workspace_id>/<uuid:account_id>/whatsapp-templates/",
+        views.whatsapp_templates,
+        name="whatsapp_templates",
+    ),
+    path(
         "<uuid:workspace_id>/<uuid:account_id>/disconnect/",
         views.disconnect,
         name="disconnect",

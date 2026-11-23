@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "WhatsApp message templates" %} - {{ request.workspace.name }} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "WhatsApp message templates" %}</h1>
+        <p class="page-description">{% blocktranslate with number=account.account_handle|default:account.account_name %}The templates of the WhatsApp Business Account behind {{ number }}. A template is the only message WhatsApp delivers after the 24 hours a customer's message keeps the conversation open, and Meta reviews each one before it can be used.{% endblocktranslate %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="mb-8">
+    <h2 class="section-title">{% translate "New template" %}</h2>
+    <div class="a-card p-5">
+        {% include "social_accounts/partials/_whatsapp_template_form.html" %}
+    </div>
+</section>
+
+<section>
+    <h2 class="section-title">{% translate "Templates in this account" %}</h2>
+    {% comment %}
+    The list is read from Meta on every visit (nothing is stored): the page shows
+    at once and the list loads into this element, again after a template is created.
+    {% endcomment %}
+    <div hx-get="{{ body_url }}" hx-trigger="load, whatsappTemplatesChanged from:body" hx-swap="innerHTML" data-inline-error="#lazy-load-status">
+        {% translate "Fetching the templates from WhatsApp…" as loading_label %}{% include "components/_skeleton.html" with variant="table" label=loading_label %}
+    </div>
+</section>
+{% endblock %}

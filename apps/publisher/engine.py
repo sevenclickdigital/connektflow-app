@@ -372,6 +372,19 @@ def delete_from_network(platform_post) -> None:
         provider.delete_post(access_token, post_id, post_format=platform_post.format)
 
 
+def edit_on_network(platform_post, text: str) -> None:
+    """Replace the text of a published row's post on its network. Raises when refused."""
+    provider, access_token = _provider_and_access_token(platform_post.social_account)
+    provider.edit_post(access_token, platform_post.platform_post_id, text, post_format=platform_post.format)
+
+
+def permalink_on_network(platform_post) -> str:
+    """The public link the network gives for a published row's post, or "" when it gives none."""
+    provider, access_token = _provider_and_access_token(platform_post.social_account)
+    preview = provider.get_post_preview(access_token, platform_post.platform_post_id) or {}
+    return str(preview.get("url") or "")
+
+
 class _ProviderUploadCache:
     """The :class:`providers.types.UploadCache` the engine hands to providers.
 

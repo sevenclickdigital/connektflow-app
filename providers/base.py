@@ -362,6 +362,23 @@ class SocialProvider(HttpProvider):
         """
         raise NotImplementedError(f"{self.platform_name} does not delete published posts")
 
+    @classmethod
+    def can_edit_post(cls, post_format: str) -> bool:
+        """Whether the platform's API changes the text of a published post of ``post_format``.
+
+        ``post_format`` is a ``PlatformPost.Format`` value. A classmethod for the
+        same reason as ``can_delete_post``.
+        """
+        return False
+
+    def edit_post(self, access_token: str, post_id: str, text: str, *, post_format: str = "default") -> None:
+        """Replace the text of a published post. Raises when the platform refuses.
+
+        ``post_id`` is what ``publish_post`` returned as ``platform_post_id``.
+        Only implemented where ``can_edit_post`` answers True.
+        """
+        raise NotImplementedError(f"{self.platform_name} does not edit published posts")
+
     def publish_comment(self, access_token: str, post_id: str, text: str) -> CommentResult:
         """Post a comment on an existing post (e.g. first comment)."""
         raise NotImplementedError(f"{self.platform_name} does not support comments")

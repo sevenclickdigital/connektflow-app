@@ -35,6 +35,7 @@ from apps.automations import flow as flow_compiler
 from apps.automations import matching, services
 from apps.automations.models import AutomationRule, PostAutomation
 from apps.composer.models import PlatformPost
+from apps.composer.services import post_permalink
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
 from apps.social_accounts.models import SocialAccount
@@ -98,31 +99,6 @@ def supports_automation(platform_post) -> bool:
 def _flow_for(platform_post):
     """This post's flow, or ``None``. One query, with the rule."""
     return PostAutomation.objects.filter(platform_post=platform_post).select_related("rule").first()
-
-
-def post_permalink(platform_post) -> str:
-    """A link to the post on the platform, or ``""``.
-
-    Built from ``platform_post_id`` rather than read from a stored
-    ``permalink_url``. The stored one only exists once a comment has arrived
-    carrying it, so a freshly published post would have no link at exactly the
-    moment someone is setting up its automation — and it is platform-supplied
-    data, which is the kind this codebase deliberately does not render as a
-    link elsewhere (see ``actions.render_text``).
-
-    Facebook's id is ``PAGEID_POSTID`` on some edges and bare on others; the
-    bare form is what ``PlatformPost`` stores, and Facebook resolves
-    ``/<id>`` on its own. Instagram has no id-addressable permalink at all
-    without an extra API call, so it returns empty and the UI simply shows no
-    link rather than a broken one.
-    """
-    post_id = (getattr(platform_post, "platform_post_id", "") or "").strip()
-    if not post_id:
-        return ""
-    platform = getattr(platform_post.social_account, "platform", "")
-    if platform == "facebook":
-        return f"https://www.facebook.com/{post_id}"
-    return ""
 
 
 #: Bounds on what the settings modal may set. The ceiling is a sanity limit

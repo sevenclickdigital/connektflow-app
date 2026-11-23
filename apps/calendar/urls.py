@@ -11,6 +11,7 @@ urlpatterns = [
     path("reschedule/", views.reschedule_post, name="reschedule"),
     path("day/", views.day_posts, name="day_posts"),
     path("post-card/<uuid:platform_post_id>/", views.post_card, name="post_card"),
+    path("post-card/<uuid:platform_post_id>/text/", views.post_card_edit_text, name="post_card_edit_text"),
     path("special-dates/toggle/", views.special_dates_toggle, name="special_dates_toggle"),
     path("special-dates/favorite/", views.special_date_favorite, name="special_date_favorite"),
     path(

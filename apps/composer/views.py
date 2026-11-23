@@ -28,6 +28,7 @@ from django.utils.text import get_text_list
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy, ngettext, override, pgettext
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
+from django_ratelimit.decorators import ratelimit
 
 from apps.billing.storage_usage import WorkspaceStorageExceededError
 from apps.common.htmx import toast_response
@@ -3663,6 +3664,43 @@ def post_delete(request, workspace_id, post_id):
         status=204,
         headers={"HX-Trigger": "postChanged"},
     )
+
+
+@login_required
+@require_GET
+@ratelimit(key="user", rate="30/m", method="GET", block=True)
+def post_open(request, workspace_id, platform_post_id):
+    """Open a published post on its network, for the networks whose link has to be asked for.
+
+    Rate limited because each visit is a round trip to the network on a
+    request thread. When the network gives no link, the person lands on the
+    calendar with the reason instead of on a dead page.
+    """
+    from .services import fetch_post_permalink
+
+    workspace = _get_workspace(request, workspace_id)
+    platform_post = get_object_or_404(
+        PlatformPost.objects.select_related("social_account", "post"),
+        id=platform_post_id,
+        post__workspace=workspace,
+        status=PlatformPost.Status.PUBLISHED,
+    )
+    try:
+        link = fetch_post_permalink(platform_post)
+    except ProviderError as exc:
+        logger.warning("Could not read the link of PlatformPost %s: %s", platform_post.id, exc)
+        link = ""
+    if not link:
+        messages.error(
+            request,
+            _(
+                "%(network)s didn't give this post's link. The post may be gone from there, "
+                "or the account may need to be reconnected."
+            )
+            % {"network": platform_post.social_account.get_platform_display()},
+        )
+        return redirect("calendar:calendar", workspace_id=workspace.id)
+    return redirect(link)
 
 
 @login_required
