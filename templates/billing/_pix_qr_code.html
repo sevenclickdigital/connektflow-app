@@ -1,11 +1,12 @@
-{% load i18n billing_extras %}
+{% load i18n tz billing_extras %}
 {% comment %}
 The Pix Automático QR code of the checkout (billing.views.checkout_pix),
 swapped into #pix-panel: the image and the copy-and-paste code, what it
 pays now and renews, until when it can be paid, and a poll of
 billing:checkout_status every few seconds that moves on to the welcome page
-once the webhook has activated the plan. Past ``expires_in`` seconds it says
-the code has expired; the bar's button makes a new one.
+once the webhook has activated the plan. The expiry is shown in Brasília
+time, Asaas's; past ``expires_in`` seconds it says the code has expired and
+the bar's button makes a new one.
 {% endcomment %}
 <div class="rounded-xl border border-neutral-300 p-5 flex flex-col sm:flex-row gap-5"
      x-data="{ expired: false, copied: false }"
@@ -18,7 +19,7 @@ the code has expired; the bar's button makes a new one.
       <strong class="tabular-nums">R$ {{ qr_code.value_cents|brl }}</strong>
       · {% if plan.is_yearly %}{% translate "yearly plan" %}{% else %}{% translate "monthly plan" %}{% endif %}
     </p>
-    <p class="text-xs text-neutral-600 mt-0.5" x-show="!expired">{% blocktranslate with time=qr_code.expires_at|date:"d/m H:i" %}Can be paid until {{ time }}{% endblocktranslate %}</p>
+    <p class="text-xs text-neutral-600 mt-0.5" x-show="!expired">{% blocktranslate with time=qr_code.expires_at|timezone:"America/Sao_Paulo"|date:"d/m H:i" %}Can be paid until {{ time }}{% endblocktranslate %}</p>
     <p class="text-xs font-semibold text-red-700 mt-0.5" x-show="expired" x-cloak>{% translate "This QR code has expired. Generate another one below." %}</p>
 
     <label for="pix-payload" class="block text-xs font-semibold text-neutral-700 mt-4 mb-1">{% translate "Or use Pix copy and paste" %}</label>

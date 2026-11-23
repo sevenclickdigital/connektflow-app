@@ -191,6 +191,7 @@ def test_a_new_account_is_named_before_the_plan_and_names_its_brand_and_payer_on
             "business_activity": "agency",
             "team_size": "solo",
             "referral_source": "google",
+            "client_count": "1_5",
             "organization_name": "Agência Sol",
         },
     )

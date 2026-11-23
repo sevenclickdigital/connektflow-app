@@ -44,6 +44,7 @@ def _answer_about(client, workspace):
             "business_activity": "agency",
             "team_size": "solo",
             "referral_source": "google",
+            "client_count": "1_5",
             "organization_name": "Agência Sol",
         },
     )
@@ -128,6 +129,70 @@ class TestGate:
         _client, workspace = _signed_up()
         stranger, _own = _signed_up("stranger@example.com")
         assert stranger.get(_url("calendar:calendar", workspace)).status_code == 403
+
+
+ACCOUNT_PAGES = [
+    "members:list",
+    "settings_manager:index",
+    "notifications:list",
+    "api_keys:list",
+    "organizations:workspaces",
+    "organizations:cross_workspace_calendar",
+    "media_library_org:shared_index",
+    "workspaces:list",
+]
+
+
+@pytest.mark.django_db
+class TestAccountPagesGate:
+    """The pages of no brand open only once a brand the person belongs to is in use."""
+
+    @pytest.mark.parametrize("name", ACCOUNT_PAGES)
+    def test_an_account_page_sends_someone_without_a_brand_in_use_to_contract(self, required, name):
+        client, workspace = _signed_up()
+        response = client.get(reverse(name))
+        assert response.status_code == 302
+        assert response.headers["Location"] == _url("billing:subscribe_modal", workspace)
+
+    def test_a_fragment_of_an_account_page_is_told_to_leave(self, required):
+        client, workspace = _signed_up()
+        response = client.get(reverse("notifications:drawer"), HTTP_HX_REQUEST="true")
+        assert (response.status_code, response.headers["HX-Redirect"]) == (
+            204,
+            _url("billing:subscribe_modal", workspace),
+        )
+
+    @pytest.mark.parametrize(
+        "name", ["accounts:settings", "billing_account:overview", "notifications:unread_count", "organizations:about"]
+    )
+    def test_the_essentials_stay_open(self, required, name):
+        client, workspace = _signed_up()
+        url = reverse(name) + (f"?workspace={workspace.id}" if name == "organizations:about" else "")
+        response = client.get(url)
+        assert not (
+            response.status_code == 302 and response.headers["Location"] == _url("billing:subscribe_modal", workspace)
+        )
+
+    @pytest.mark.parametrize("status", ["active", "courtesy", "trial"])
+    def test_account_pages_open_once_a_brand_is_in_use(self, required, status):
+        client, workspace = _signed_up()
+        sub = services.ensure_subscription(workspace)
+        if status == "trial":
+            sub.trial_ends_at = timezone.now() + datetime.timedelta(days=7)
+        else:
+            sub.status = status
+        sub.save()
+        assert client.get(reverse("members:list")).status_code == 200
+
+    def test_staff_is_not_sent_to_contract(self, required):
+        client, workspace = _signed_up()
+        User.objects.filter(email="new@example.com").update(is_staff=True)
+        assert client.get(reverse("members:list")).status_code == 200
+
+    def test_account_pages_are_open_while_the_switch_is_off(self, settings):
+        settings.BILLING_REQUIRE_SUBSCRIPTION = False
+        client, _workspace = _signed_up()
+        assert client.get(reverse("members:list")).status_code == 200
 
 
 @pytest.mark.django_db

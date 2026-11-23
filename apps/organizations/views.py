@@ -125,7 +125,7 @@ def needs_about(request, workspace):
 @login_required
 @require_http_methods(["GET", "POST"])
 def about_view(request):
-    """Ask a new account what it does, its name, how big it is and how it found us.
+    """Ask a new account what it does, its name, one question after it, its size and how it found us.
 
     Shown right after sign-up and before the plan, and not skippable (the
     checkout's first step links back to it while the account is being set
@@ -151,7 +151,15 @@ def about_view(request):
         form.save(commit=False)
         organization.about_answered_at = django_tz.now()
         organization.save(
-            update_fields=["name", "business_activity", "team_size", "referral_source", "about_answered_at"]
+            update_fields=[
+                "name",
+                "business_activity",
+                "team_size",
+                "referral_source",
+                "client_count",
+                "business_segment",
+                "about_answered_at",
+            ]
         )
         return redirect("billing:checkout", workspace_id=workspace.id)
     return _render_about(request, form, workspace)
@@ -179,6 +187,13 @@ def _render_about(request, form, workspace):
         value: [str(text) for text in Organization.name_question(value)]
         for value in [*Organization.Activity.values, ""]
     }
+    # The question after the activity, per activity: its field and its label.
+    extra_questions = {
+        value: [field, str(label)]
+        for value in Organization.Activity.values
+        if (question := Organization.extra_question(value))
+        for field, label in [question]
+    }
     activity = form["business_activity"].value()
     if activity not in Organization.Activity.values:
         activity = ""
@@ -194,7 +209,10 @@ def _render_about(request, form, workspace):
             "team_sizes": Organization.TeamSize.choices,
             "sources": Organization.Source.choices,
             "name_question": dict(zip(("label", "placeholder"), name_questions[activity], strict=True)),
-            "name_questions": {"activity": activity, "questions": name_questions},
+            "name_questions": {"activity": activity, "questions": name_questions, "extras": extra_questions},
+            "extra_question": dict(zip(("field", "label"), extra_questions.get(activity, ["", ""]), strict=True)),
+            "client_counts": Organization.ClientCount.choices,
+            "segments": Organization.Segment.choices,
         },
     )
 

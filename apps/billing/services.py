@@ -1184,6 +1184,14 @@ def is_workspace_active(workspace):
     return bool(sub and sub.is_active)
 
 
+def has_workspace_in_use(user):
+    """Whether any brand ``user`` belongs to may be used: paid, comped or on a running trial."""
+    subscriptions = WorkspaceSubscription.objects.filter(
+        workspace__memberships__user=user, workspace__is_archived=False
+    )
+    return any(subscription.is_active for subscription in subscriptions)
+
+
 def is_subscription_current(workspace):
     """True when a workspace's money is in order right now.
 

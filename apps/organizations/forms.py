@@ -10,13 +10,16 @@ class AboutBusinessForm(forms.ModelForm):
 
     The organization is named here: its name is asked after the activity
     (Organization.name_question) and replaces the one it was created with.
+    One more question follows the activity (Organization.extra_question):
+    clients served or segment, required for that activity; the answer to
+    the other one is cleared.
     """
 
     organization_name = forms.CharField(max_length=100)
 
     class Meta:
         model = Organization
-        fields = ["business_activity", "team_size", "referral_source"]
+        fields = ["business_activity", "team_size", "referral_source", "client_count", "business_segment"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -30,6 +33,17 @@ class AboutBusinessForm(forms.ModelForm):
         if not name or name == Organization.DEFAULT_NAME:
             raise forms.ValidationError(_("Enter a name."))
         return name
+
+    def clean(self):
+        cleaned = super().clean()
+        question = Organization.extra_question(cleaned.get("business_activity"))
+        asked = question[0] if question else None
+        for field in ("client_count", "business_segment"):
+            if field != asked:
+                cleaned[field] = ""
+            elif not cleaned.get(field):
+                self.add_error(field, _("Answer this question."))
+        return cleaned
 
     def save(self, commit=True):
         self.instance.name = self.cleaned_data["organization_name"]

@@ -430,11 +430,12 @@ class AsaasClient:
             "frequency": frequency,
             "contractId": str(contract_id)[:35],
             "startDate": start_date.isoformat(),
-            "value": str(cents_to_value(value_cents)),
+            # Numbers, not strings: this endpoint refuses "480.00" ("parse_error").
+            "value": float(cents_to_value(value_cents)),
             "paymentCreationMode": "SUBSCRIPTION",
             "immediateQrCode": {
                 "expirationSeconds": expiration_seconds,
-                "originalValue": str(cents_to_value(first_value_cents)),
+                "originalValue": float(cents_to_value(first_value_cents)),
             },
         }
         if description:

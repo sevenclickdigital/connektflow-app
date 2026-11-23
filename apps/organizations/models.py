@@ -11,9 +11,8 @@ class Organization(models.Model):
     DEFAULT_NAME = "My Organization"
 
     # The "about your business" step a new account answers before its plan
-    # (organizations.views.about_view), where its name is asked after the
-    # activity (name_question). The checkout's billing details ask one more
-    # question after it (billing.views._checkout_wording).
+    # (organizations.views.about_view), where its name and one more question
+    # are asked after the activity (name_question, extra_question).
     class Activity(models.TextChoices):
         FREELANCER = "freelancer", _("Freelancer")
         ENTREPRENEUR = "entrepreneur", _("Entrepreneur")
@@ -141,6 +140,21 @@ class Organization(models.Model):
             cls.Activity.MARKETING_ANALYST: (_("The name of the company you work for"), _("e.g. Sol Stores")),
         }
         return questions.get(activity, (_("Company or agency name"), _("e.g. Sol Agency")))
+
+    @classmethod
+    def extra_question(cls, activity):
+        """The question asked after the activity: (field, label), or None without one.
+
+        How many clients an agency or a freelancer serves; the segment of a
+        business, or of the company a marketing analyst works for.
+        """
+        clients = ("client_count", _("How many clients do you serve today?"))
+        return {
+            cls.Activity.AGENCY: clients,
+            cls.Activity.FREELANCER: clients,
+            cls.Activity.ENTREPRENEUR: ("business_segment", _("What is your business's segment?")),
+            cls.Activity.MARKETING_ANALYST: ("business_segment", _("What is the company's segment?")),
+        }.get(activity)
 
     @property
     def is_unnamed(self):

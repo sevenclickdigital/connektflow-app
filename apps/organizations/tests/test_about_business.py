@@ -44,6 +44,7 @@ def test_the_answers_are_kept_and_the_plan_comes_next(client):
             "business_activity": "agency",
             "team_size": "2_5",
             "referral_source": "instagram",
+            "client_count": "6_15",
             "organization_name": "  Agência   Sol ",
         },
     )
@@ -138,42 +139,44 @@ ANSWERS = {"team_size": "2_5", "referral_source": "instagram", "organization_nam
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    ("activity", "field", "answer"),
-    [("agency", "client_count", "6_15"), ("entrepreneur", "business_segment", "food")],
+    ("activity", "field", "answer", "other"),
+    [
+        ("agency", "client_count", "6_15", "business_segment"),
+        ("entrepreneur", "business_segment", "food", "client_count"),
+    ],
 )
-def test_the_checkout_asks_after_the_activity_and_keeps_the_answer(client, settings, activity, field, answer):
-    settings.BILLING_TRIAL_DAYS = 7
+def test_the_question_after_the_activity_is_kept_and_the_other_one_is_not(client, activity, field, answer, other):
     _user, workspace = _signed_up(client)
+
     client.post(
         reverse("organizations:about"),
-        {"workspace": str(workspace.id), "business_activity": activity, **ANSWERS},
+        {
+            "workspace": str(workspace.id),
+            "business_activity": activity,
+            field: answer,
+            other: "1_5" if other == "client_count" else "food",
+            **ANSWERS,
+        },
     )
-    checkout = client.get(reverse("billing:checkout", kwargs={"workspace_id": workspace.id}))
-    assert checkout.context["wording"]["extra"]["field"] == field
 
-    client.post(
-        reverse("billing:start_trial", kwargs={"workspace_id": workspace.id}),
-        {"tax_id": "529.982.247-25", "phone": "(11) 98888-7777", field: answer},
-    )
-
-    assert getattr(Organization.objects.get(pk=workspace.organization_id), field) == answer
+    organization = Organization.objects.get(pk=workspace.organization_id)
+    assert (getattr(organization, field), getattr(organization, other)) == (answer, "")
+    assert organization.about_answered_at is not None
 
 
 @pytest.mark.django_db
-def test_an_extra_answer_outside_its_choices_is_not_kept(client, settings):
-    settings.BILLING_TRIAL_DAYS = 7
+@pytest.mark.parametrize("answer", ["", "9000"], ids=["unanswered", "outside the choices"])
+def test_the_question_after_the_activity_must_be_answered_from_its_choices(client, answer):
     _user, workspace = _signed_up(client)
-    client.post(
+
+    response = client.post(
         reverse("organizations:about"),
-        {"workspace": str(workspace.id), "business_activity": "agency", **ANSWERS},
+        {"workspace": str(workspace.id), "business_activity": "agency", "client_count": answer, **ANSWERS},
     )
 
-    client.post(
-        reverse("billing:start_trial", kwargs={"workspace_id": workspace.id}),
-        {"tax_id": "529.982.247-25", "phone": "(11) 98888-7777", "client_count": "9000"},
-    )
-
-    assert Organization.objects.get(pk=workspace.organization_id).client_count == ""
+    assert response.status_code == 200
+    organization = Organization.objects.get(pk=workspace.organization_id)
+    assert (organization.about_answered_at, organization.client_count) == (None, "")
 
 
 @pytest.mark.django_db
@@ -181,7 +184,7 @@ def test_a_new_account_can_go_back_and_change_its_answers(client):
     _user, workspace = _signed_up(client)
     client.post(
         reverse("organizations:about"),
-        {"workspace": str(workspace.id), "business_activity": "agency", **ANSWERS},
+        {"workspace": str(workspace.id), "business_activity": "agency", "client_count": "1_5", **ANSWERS},
     )
 
     page = client.get(_about_url(workspace))
@@ -190,10 +193,9 @@ def test_a_new_account_can_go_back_and_change_its_answers(client):
 
     client.post(
         reverse("organizations:about"),
-        {"workspace": str(workspace.id), "business_activity": "entrepreneur", **ANSWERS},
+        {"workspace": str(workspace.id), "business_activity": "entrepreneur", "business_segment": "food", **ANSWERS},
     )
     assert Organization.objects.get(pk=workspace.organization_id).business_activity == "entrepreneur"
-
     # Named here, the account is still being set up until a brand is in use.
     assert client.get(_about_url(workspace)).status_code == 200
     subscription = billing.ensure_subscription(workspace)

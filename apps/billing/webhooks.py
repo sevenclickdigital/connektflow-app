@@ -41,7 +41,7 @@ from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
 from apps.billing import services
-from apps.billing.gateways.asaas import GATEWAY
+from apps.billing.gateways.asaas import GATEWAY, AsaasClient, AsaasError
 from apps.billing.models import BillingEvent, OrganizationPlan, WorkspaceAddon, WorkspaceSubscription
 
 logger = logging.getLogger(__name__)
@@ -215,12 +215,26 @@ def _apply_pix_authorization(event, payload):
         logger.warning("Asaas webhook: no plan for Pix Automático authorization %s", authorization_id)
         _finish(event, BillingEvent.Status.IGNORED)
         return
-    subscription_id = authorization.get("subscriptionId") or ""
+    subscription_id = authorization.get("subscriptionId") or _authorization_subscription(authorization_id)
     if subscription_id and subscription_id != plan.gateway_subscription_id:
         plan.gateway_subscription_id = subscription_id
         plan.save(update_fields=["gateway_subscription_id", "updated_at"])
     _apply_to_plan(plan, WorkspaceSubscription.Status.ACTIVE, payload)
     _finish(event, BillingEvent.Status.PROCESSED)
+
+
+def _authorization_subscription(authorization_id):
+    """The subscription Asaas created for an activated authorization, asked of Asaas.
+
+    The activation event may not carry it, and the renewals' payment events
+    only name the subscription: without it they would find no plan. A
+    failure here is logged and leaves the plan activated all the same.
+    """
+    try:
+        return AsaasClient().get_pix_automatic_authorization(authorization_id).get("subscriptionId") or ""
+    except AsaasError:
+        logger.exception("Asaas webhook: could not read Pix Automático authorization %s", authorization_id)
+        return ""
 
 
 def _apply_to_subscription(sub, target, payload):

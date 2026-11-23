@@ -4,12 +4,13 @@
 "About your business" (apps.organizations.views.about_view): asked once to a
 new account, right after sign-up and before its plan. The activity is a set
 of cards (radios), team size and how they found us are selects, and the
-organization's name is asked after the activity (Organization.name_question:
-every wording is handed over in #about-name-questions and switched as a card
-is picked). It is the first of the setup steps (partials/_setup_steps.html)
-and every question is answered. It shares the head
-(partials/_setup_header.html), width and floating action bar (.floating-bar)
-of the checkout, and replaces base.html's app_shell like the checkout.
+organization's name and one more question are asked after the activity
+(Organization.name_question and extra_question: every wording is handed
+over in #about-name-questions and switched as a card is picked). It is the
+first of the setup steps (partials/_setup_steps.html) and every question is
+answered. It shares the head (partials/_setup_header.html), width and
+floating action bar (.floating-bar) of the checkout, and replaces base.html's
+app_shell like the checkout.
 {% endcomment %}
 
 {% block title %}{% translate "Tell us about you" %} - Connekt Flow{% endblock %}
@@ -85,6 +86,29 @@ of the checkout, and replaces base.html's app_shell like the checkout.
                    :placeholder="questions[activity][1]" placeholder="{{ name_question.placeholder }}" class="form-input-styled pl-10 w-full">
           </div>
           <p class="text-xs text-neutral-600 mt-1">{% translate "It is how your account appears to your team and on invitations; you can change it later." %}</p>
+
+          {% comment %}
+          The question after the activity (Organization.extra_question): the
+          select of its field shows, with its label, and the other one hides.
+          {% endcomment %}
+          <div class="mt-6" x-show="extras[activity]" {% if not extra_question.field %}x-cloak{% endif %}>
+            <label class="block text-sm font-semibold text-neutral-950 mb-2" :for="extras[activity] && 'about-' + extras[activity][0]" x-text="extras[activity] && extras[activity][1]">{{ extra_question.label }}</label>
+            <div class="relative">
+              <svg class="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+              <select id="about-client_count" name="client_count" class="form-input-styled pl-10 bb-select cursor-pointer w-full"
+                      x-show="extras[activity] && extras[activity][0] === 'client_count'" :required="extras[activity] && extras[activity][0] === 'client_count'"
+                      {% if extra_question.field != "client_count" %}x-cloak{% endif %}>
+                <option value="">{% translate "Choose an option" %}</option>
+                {% for value, label in client_counts %}<option value="{{ value }}" {% if form.client_count.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+              <select id="about-business_segment" name="business_segment" class="form-input-styled pl-10 bb-select cursor-pointer w-full"
+                      x-show="extras[activity] && extras[activity][0] === 'business_segment'" :required="extras[activity] && extras[activity][0] === 'business_segment'"
+                      {% if extra_question.field != "business_segment" %}x-cloak{% endif %}>
+                <option value="">{% translate "Choose an option" %}</option>
+                {% for value, label in segments %}<option value="{{ value }}" {% if form.business_segment.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
       </div>

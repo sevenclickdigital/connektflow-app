@@ -733,8 +733,7 @@ def _apply_names(request, organization, rows):
     """Rename the brands edited in place and keep what the billing details asked.
 
     The brand an account was created with is renamed on its row. The name
-    the invoices carry (``payer_name``) and the billing details' extra
-    question (clients served, or segment) are kept. An organization still
+    the invoices carry (``payer_name``) is kept. An organization still
     with its sign-up name (it is named on the "about your business" step)
     takes the first brand's. Runs before the customer is created at Asaas,
     which takes the payer name.
@@ -760,45 +759,6 @@ def _apply_names(request, organization, rows):
         if name and name != Organization.DEFAULT_NAME:
             organization.name = name
             organization.save(update_fields=["name"])
-    # The extra question of the billing details (_checkout_wording), kept
-    # when the answer is one of its choices.
-    for field, choices in (
-        ("client_count", Organization.ClientCount.values),
-        ("business_segment", Organization.Segment.values),
-    ):
-        answer = request.POST.get(field, "")
-        if answer in choices and answer != getattr(organization, field):
-            setattr(organization, field, answer)
-            organization.save(update_fields=[field])
-
-
-def _checkout_wording(organization):
-    """The billing details' extra question, after the account's activity.
-
-    The activity comes from the "about your business" step: how many clients
-    an agency or a freelancer serves, or the segment of a business or of the
-    company a marketing analyst works for. None without an activity.
-    """
-    clients = ("client_count", _("How many clients do you serve today?"), Organization.ClientCount.choices)
-    questions = {
-        Organization.Activity.AGENCY: clients,
-        Organization.Activity.FREELANCER: clients,
-        Organization.Activity.ENTREPRENEUR: (
-            "business_segment",
-            _("What is your business's segment?"),
-            Organization.Segment.choices,
-        ),
-        Organization.Activity.MARKETING_ANALYST: (
-            "business_segment",
-            _("What is the company's segment?"),
-            Organization.Segment.choices,
-        ),
-    }
-    question = questions.get(organization.business_activity)
-    if question is None:
-        return {"extra": None}
-    field, label, choices = question
-    return {"extra": {"field": field, "label": label, "choices": choices, "value": getattr(organization, field)}}
 
 
 def _included_networks() -> list[tuple[str, str]]:
@@ -878,7 +838,6 @@ def checkout(request, workspace_id):
         "payer_phone": profile.phone,
         "payer_name": profile.payer_name,
         "in_setup": needs_welcome(request, workspace),
-        "wording": _checkout_wording(organization),
         "trial_available": not plan and services.trial_available(workspace, request.user),
         "trial_days": services.trial_days(),
         "trial_expired": subscription.trial_expired,

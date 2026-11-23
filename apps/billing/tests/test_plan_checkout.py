@@ -15,7 +15,7 @@ from django.utils import timezone, translation
 
 from apps.accounts.models import User
 from apps.accounts.signals import create_organization_on_user_create
-from apps.billing import contracting, services
+from apps.billing import contracting, services, webhooks
 from apps.billing.gateways.asaas import AsaasAPIError
 from apps.billing.models import OrganizationPlan, WorkspaceSubscription
 from apps.members.models import OrgMembership, WorkspaceMembership
@@ -106,7 +106,7 @@ class StubAsaas:
         return {
             "id": f"auth_{number}",
             "status": "CREATED",
-            "subscriptionId": f"sub_pix_{number}",
+            "subscriptionId": None,
             "encodedImage": "iVBORw0KGgo=",
             "payload": f"00020126pix{number}",
             "immediateQrCode": {"expirationDate": "2030-01-01 12:00:00"},
@@ -490,11 +490,7 @@ def test_paying_by_pix_answers_the_qr_code_and_leaves_the_plan_pending(client, o
     assert authorization["start_date"] == services.renewal_date(WorkspaceSubscription.Cycle.YEARLY)
     assert stub.charged == [] and stub.subscriptions == []
     plan = OrganizationPlan.objects.get(organization=org)
-    assert (plan.status, plan.gateway_authorization_id, plan.gateway_subscription_id) == (
-        PENDING,
-        "auth_1",
-        "sub_pix_1",
-    )
+    assert (plan.status, plan.gateway_authorization_id) == (PENDING, "auth_1")
     assert _status(workspace) == PENDING
 
 
@@ -535,6 +531,9 @@ def test_the_plan_paid_by_pix_opens_when_the_bank_authorizes_it_and_the_page_mov
     client.force_login(owner_of(org))
     monkeypatch.setattr(contracting, "AsaasClient", lambda: StubAsaas())
     client.post(_pix_url("checkout_pix", workspace), {"cycle": "monthly", "workspaces": [str(workspace.id)]})
+    activated = StubAsaas()
+    activated.get_pix_automatic_authorization = lambda authorization_id: {"subscriptionId": "sub_after_activation"}
+    monkeypatch.setattr(webhooks, "AsaasClient", lambda: activated)
     status_url = _pix_url("checkout_status", workspace)
     assert client.get(status_url, headers={"HX-Request": "true"}).status_code == 204
 
@@ -550,7 +549,9 @@ def test_the_plan_paid_by_pix_opens_when_the_bank_authorizes_it_and_the_page_mov
     )
 
     assert webhook.status_code == 200
-    assert OrganizationPlan.objects.get(organization=org).status == ACTIVE
+    plan = OrganizationPlan.objects.get(organization=org)
+    # The renewals' events name the subscription Asaas created on activation.
+    assert (plan.status, plan.gateway_subscription_id) == (ACTIVE, "sub_after_activation")
     assert _status(workspace) == ACTIVE
     moved = client.get(status_url, headers={"HX-Request": "true"})
     assert moved["HX-Redirect"] == reverse("billing:checkout_welcome", kwargs={"workspace_id": workspace.id})
@@ -565,3 +566,39 @@ def test_only_who_manages_billing_generates_a_pix_qr_code_or_follows_it(client, 
 
     assert client.post(_pix_url("checkout_pix", workspace), {"workspaces": [str(workspace.id)]}).status_code == 403
     assert client.get(_pix_url("checkout_status", workspace)).status_code == 403
+
+
+def test_the_bar_buttons_sit_inside_the_checkout_form(client, owner_of):
+    """A stray closing tag once ended the form early and left Continue and the payment buttons doing nothing."""
+    from html.parser import HTMLParser
+
+    org, (workspace,) = _org_with_workspaces(1)
+    client.force_login(owner_of(org))
+    page = client.get(_pix_url("checkout", workspace)).content.decode()
+
+    class Depth(HTMLParser):
+        """Follows the form as a browser does: a closing tag of an element around it ends it too."""
+
+        def __init__(self):
+            super().__init__()
+            self.depth, self.form_depth, self.buttons_in_form = 0, None, []
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            if tag == "form" and attrs.get("id") == "checkout-form":
+                self.form_depth = self.depth
+            if tag == "div":
+                self.depth += 1
+            if tag == "button" and self.form_depth is not None:
+                self.buttons_in_form.append(attrs.get("@click") or attrs.get("hx-post") or "")
+
+        def handle_endtag(self, tag):
+            if tag == "div":
+                self.depth -= 1
+            if tag == "form" or (self.form_depth is not None and self.depth < self.form_depth):
+                self.form_depth = None
+
+    parser = Depth()
+    parser.feed(page)
+    assert "next(false)" in parser.buttons_in_form
+    assert _pix_url("checkout_pix", workspace) in parser.buttons_in_form
