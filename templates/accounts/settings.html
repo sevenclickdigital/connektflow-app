@@ -81,7 +81,41 @@
                 <div class="p-6">
                     <h3 class="text-base font-semibold text-neutral-950">{% translate "Address" %}</h3>
                     <p class="text-xs text-neutral-500 mt-0.5 mb-4">{% translate "Used for contracts and invoices. Fill it all in, or leave it blank." %}</p>
-                    <div class="grid grid-cols-1 sm:grid-cols-6 gap-4">
+                    {% comment %}
+                    Typing the eighth digit of the CEP looks the address up
+                    (accounts:cep_lookup) and fills in what came back, leaving
+                    number and complement to the person. A CEP that is not found
+                    or a lookup that fails only shows a hint: the fields stay
+                    open to be typed by hand.
+                    {% endcomment %}
+                    <div class="grid grid-cols-1 sm:grid-cols-6 gap-4"
+                         data-lookup-url="{% url 'accounts:cep_lookup' %}"
+                         data-not-found="{% translate "CEP not found. Fill in the address below." %}"
+                         data-unavailable="{% translate "The address could not be looked up now. Fill it in below." %}"
+                         x-data="{ hint: '', loading: false, last: '',
+                                   async lookup(raw) {
+                                       const cep = raw.replace(/\D/g, '');
+                                       if (cep.length !== 8 || cep === this.last) return;
+                                       this.last = cep; this.hint = ''; this.loading = true;
+                                       try {
+                                           const response = await fetch(this.$el.dataset.lookupUrl + '?cep=' + cep);
+                                           if (response.ok) {
+                                               const found = await response.json();
+                                               for (const [key, value] of Object.entries(found)) {
+                                                   const field = this.$el.querySelector('[name=address_' + key + ']');
+                                                   if (field && value) field.value = value;
+                                               }
+                                               this.$el.querySelector('[name=address_number]').focus();
+                                           } else {
+                                               this.hint = response.status === 404 ? this.$el.dataset.notFound : this.$el.dataset.unavailable;
+                                           }
+                                       } catch (error) {
+                                           this.hint = this.$el.dataset.unavailable;
+                                       } finally { this.loading = false; }
+                                   } }"
+                         @input="$event.target.name === 'address_postal_code' && lookup($event.target.value)">
+                        <p class="sm:col-span-6 text-xs text-neutral-600 -mb-2" x-show="loading || hint" x-cloak
+                           x-text="loading ? $el.dataset.loading : hint" data-loading="{% translate "Looking up the address…" %}" role="status"></p>
                         {% include "components/_form_field.html" with field=profile_form.address_postal_code hide_optional=True class="sm:col-span-2" %}
                         {% include "components/_form_field.html" with field=profile_form.address_street hide_optional=True class="sm:col-span-4" %}
                         {% include "components/_form_field.html" with field=profile_form.address_number hide_optional=True class="sm:col-span-2" %}

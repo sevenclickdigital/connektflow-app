@@ -12,6 +12,7 @@ urlpatterns = [
     path("accept-terms/", views.accept_terms, name="accept_terms"),
     path("popup-done/", views.login_popup_done, name="login_popup_done"),
     path("settings/", views.account_settings, name="settings"),
+    path("settings/cep/", views.cep_lookup, name="cep_lookup"),
     path("logout/", views.logout_view, name="logout"),
     path("review-banner/dismiss/", views.dismiss_review_banner, name="dismiss_review_banner"),
     # Operator support impersonation. POST only — see views_impersonation.

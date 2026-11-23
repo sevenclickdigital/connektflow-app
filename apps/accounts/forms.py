@@ -1,10 +1,9 @@
 """Forms for the account centre (profile)."""
 
-import re
-
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
+from .address import cep_digits
 from .models import User
 
 # Brazilian states (UF), the only addresses the product bills today.
@@ -100,7 +99,10 @@ class ProfileForm(forms.ModelForm):
         for name, field in self.fields.items():
             css = "form-input-styled bb-select cursor-pointer" if name == "address_state" else "form-input-styled"
             field.widget.attrs.update({"class": css, "autocomplete": autocomplete.get(name, "off")})
-        self.fields["address_postal_code"].widget.attrs.update({"inputmode": "numeric", "placeholder": "00000-000"})
+        # data-mask: the shared masks in base.html keep it as 00000-000.
+        self.fields["address_postal_code"].widget.attrs.update(
+            {"inputmode": "numeric", "placeholder": "00000-000", "data-mask": "cep"}
+        )
         # Accounts created before first/last name existed only have ``name``:
         # offer it split, so the person confirms rather than retypes it.
         user = self.instance
@@ -113,8 +115,8 @@ class ProfileForm(forms.ModelForm):
         raw = self.cleaned_data.get("address_postal_code", "").strip()
         if not raw:
             return ""
-        digits = re.sub(r"\D", "", raw)
-        if len(digits) != 8:
+        digits = cep_digits(raw)
+        if not digits:
             raise forms.ValidationError(_("Enter a CEP with 8 digits, like 01310-100."))
         return f"{digits[:5]}-{digits[5:]}"
 

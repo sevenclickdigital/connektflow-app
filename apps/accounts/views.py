@@ -9,9 +9,9 @@ from django.shortcuts import redirect, render, resolve_url
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from apps.accounts import impersonation
+from apps.accounts import address, impersonation
 from apps.accounts.forms import ProfileForm
 from apps.accounts.operators import OPERATOR_HOME
 from apps.billing import services as billing_services
@@ -100,6 +100,27 @@ def account_settings(request):
         return redirect("accounts:settings")
 
     return _render_account_settings(request, user, settings_active, profile_form)
+
+
+@login_required
+@require_GET
+def cep_lookup(request):
+    """The address of a CEP, as JSON, for the profile's address form to fill in.
+
+    400 for something that is not a CEP, 404 when no address has it and 502
+    when the lookup service fails; the form shows a hint for the last two and
+    the person types the address by hand.
+    """
+    digits = address.cep_digits(request.GET.get("cep", ""))
+    if not digits:
+        return JsonResponse({"error": "invalid"}, status=400)
+    try:
+        found = address.lookup_cep(digits)
+    except address.CepLookupError:
+        return JsonResponse({"error": "unavailable"}, status=502)
+    if found is None:
+        return JsonResponse({"error": "not_found"}, status=404)
+    return JsonResponse(found)
 
 
 def _render_account_settings(request, user, settings_active, profile_form):

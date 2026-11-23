@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 15:22+0000\n"
+"POT-Creation-Date: 2026-11-23 16:05+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -18,68 +18,68 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: apps/accounts/forms.py:12 apps/common/templatetags/common_extras.py:104
+#: apps/accounts/forms.py:11 apps/common/templatetags/common_extras.py:104
 #: templates/automations/flow_builder.html:215
 #: templates/calendar/partials/_select_checkbox.html:11
 #: templates/inbox/partials/_message_row.html:27
 msgid "Select"
 msgstr "Selecionar"
 
-#: apps/accounts/forms.py:61 apps/contacts/forms.py:111
+#: apps/accounts/forms.py:60 apps/contacts/forms.py:111
 #: apps/contacts/services.py:534
 msgid "State"
 msgstr "Estado"
 
-#: apps/accounts/forms.py:77
+#: apps/accounts/forms.py:76
 msgid "First name"
 msgstr "Nome"
 
-#: apps/accounts/forms.py:78
+#: apps/accounts/forms.py:77
 msgid "Last name"
 msgstr "Sobrenome"
 
-#: apps/accounts/forms.py:79
+#: apps/accounts/forms.py:78
 msgid "Postal code (CEP)"
 msgstr "CEP"
 
-#: apps/accounts/forms.py:80
+#: apps/accounts/forms.py:79
 msgid "Street"
 msgstr "Rua"
 
-#: apps/accounts/forms.py:81 templates/billing/checkout.html:416
+#: apps/accounts/forms.py:80 templates/billing/checkout.html:416
 msgid "Number"
 msgstr "Número"
 
-#: apps/accounts/forms.py:82
+#: apps/accounts/forms.py:81
 msgid "Complement"
 msgstr "Complemento"
 
-#: apps/accounts/forms.py:83
+#: apps/accounts/forms.py:82
 msgid "Neighborhood"
 msgstr "Bairro"
 
-#: apps/accounts/forms.py:84 apps/contacts/forms.py:110
+#: apps/accounts/forms.py:83 apps/contacts/forms.py:110
 #: apps/contacts/services.py:533
 msgid "City"
 msgstr "Cidade"
 
-#: apps/accounts/forms.py:118
+#: apps/accounts/forms.py:120
 msgid "Enter a CEP with 8 digits, like 01310-100."
 msgstr "Informe um CEP com 8 dígitos, como 01310-100."
 
-#: apps/accounts/forms.py:130
+#: apps/accounts/forms.py:132
 msgid "Required to complete the address."
 msgstr "Obrigatório para completar o endereço."
 
-#: apps/accounts/forms.py:154
+#: apps/accounts/forms.py:156
 msgid "Your name"
 msgstr "Seu nome"
 
-#: apps/accounts/forms.py:156
+#: apps/accounts/forms.py:158
 msgid "e.g. Ana Souza"
 msgstr "ex.: Ana Souza"
 
-#: apps/accounts/forms.py:170
+#: apps/accounts/forms.py:172
 msgid "Enter your name."
 msgstr "Informe seu nome."
 
@@ -142,64 +142,73 @@ msgstr "A equipe precisa de pelo menos um superadmin ativo."
 msgid "The level of %(email)s was changed."
 msgstr "O nível de %(email)s foi alterado."
 
-#: apps/accounts/staff_views.py:142
+#: apps/accounts/staff_views.py:143
 #, python-format
 msgid "%(email)s was removed from the team."
 msgstr "%(email)s foi removido da equipe."
+
+#: apps/accounts/staff_views.py:147
+#, python-format
+msgid ""
+"%(email)s left the team and is a customer account again, with its "
+"organizations and brands."
+msgstr ""
+"%(email)s saiu da equipe e voltou a ser uma conta de cliente, com suas "
+"organizações e marcas."
 
 #: apps/accounts/views.py:94
 msgid "Profile updated."
 msgstr "Perfil atualizado."
 
-#: apps/accounts/views.py:129
+#: apps/accounts/views.py:150
 msgid "Photo removed."
 msgstr "Foto removida."
 
-#: apps/accounts/views.py:144
+#: apps/accounts/views.py:165
 msgid "Photo must be a JPEG, PNG, WebP, or GIF image."
 msgstr "A foto deve ser uma imagem JPEG, PNG, WebP ou GIF."
 
-#: apps/accounts/views.py:150
+#: apps/accounts/views.py:171
 msgid "Photo must be under 2 MB."
 msgstr "A foto deve ter menos de 2 MB."
 
-#: apps/accounts/views.py:166
+#: apps/accounts/views.py:187
 msgid "Photo must be at least 180×180 pixels."
 msgstr "A foto deve ter no mínimo 180×180 pixels."
 
-#: apps/accounts/views.py:169
+#: apps/accounts/views.py:190
 msgid "Could not read image file."
 msgstr "Não foi possível ler o arquivo de imagem."
 
-#: apps/accounts/views.py:181
+#: apps/accounts/views.py:202
 msgid "Photo updated."
 msgstr "Foto atualizada."
 
-#: apps/accounts/views.py:191
+#: apps/accounts/views.py:212
 msgid "Current password is required."
 msgstr "A senha atual é obrigatória."
 
-#: apps/accounts/views.py:195
+#: apps/accounts/views.py:216
 msgid "Current password is incorrect."
 msgstr "A senha atual está incorreta."
 
-#: apps/accounts/views.py:199
+#: apps/accounts/views.py:220
 msgid "New password cannot be empty."
 msgstr "A nova senha não pode ficar em branco."
 
-#: apps/accounts/views.py:203
+#: apps/accounts/views.py:224
 msgid "New password must be at least 8 characters."
 msgstr "A nova senha deve ter no mínimo 8 caracteres."
 
-#: apps/accounts/views.py:207
+#: apps/accounts/views.py:228
 msgid "New passwords do not match."
 msgstr "As senhas não coincidem."
 
-#: apps/accounts/views.py:213
+#: apps/accounts/views.py:234
 msgid "Password changed."
 msgstr "Senha alterada."
 
-#: apps/accounts/views.py:221
+#: apps/accounts/views.py:242
 msgid ""
 "The apps connected to your account were disconnected. Authorize them again "
 "to keep using them."
@@ -207,7 +216,7 @@ msgstr ""
 "Os aplicativos conectados à sua conta foram desconectados. Autorize-os "
 "novamente para continuar usando."
 
-#: apps/accounts/views.py:266
+#: apps/accounts/views.py:287
 #, python-format
 msgid ""
 "You are the sole owner of: %(orgs)s. Transfer ownership or delete the "
@@ -216,15 +225,15 @@ msgstr ""
 "Você é o único proprietário de: %(orgs)s. Transfira a propriedade ou exclua "
 "a organização antes de excluir sua conta."
 
-#: apps/accounts/views.py:276
+#: apps/accounts/views.py:297
 msgid "Your account has been deleted."
 msgstr "Sua conta foi excluída."
 
-#: apps/accounts/views.py:297
+#: apps/accounts/views.py:318
 msgid "You are signed in"
 msgstr "Você entrou"
 
-#: apps/accounts/views.py:313
+#: apps/accounts/views.py:334
 msgid "You must agree to the Terms of Service and Privacy Policy to continue."
 msgstr ""
 "Você precisa aceitar os Termos de Serviço e a Política de Privacidade para "
@@ -1109,7 +1118,7 @@ msgstr "Use uma imagem PNG, JPEG, WebP ou GIF."
 #: apps/approvals/templatetags/approval_extras.py:13
 #: apps/calendar/status_board.py:42 apps/composer/models.py:475
 #: apps/inbox/models.py:208 templates/automations/flow_builder.html:100
-#: templates/automations/staff_template_list.html:104
+#: templates/automations/staff_template_list.html:103
 #: templates/calendar/calendar.html:547
 #: templates/calendar/partials/publish_calendar_shell.html:98
 #: templates/inbox/partials/_draft_reply_item.html:8
@@ -4503,7 +4512,7 @@ msgstr "Empresa"
 #: templates/affiliates/staff_affiliates.html:93
 #: templates/affiliates/staff_affiliates.html:154
 #: templates/analytics/_shopee_orders.html:27
-#: templates/automations/staff_template_list.html:73
+#: templates/automations/staff_template_list.html:72
 #: templates/billing/staff_console.html:59
 #: templates/billing/staff_coupons.html:86
 #: templates/billing/staff_subscriptions.html:149
@@ -4940,7 +4949,7 @@ msgstr "Cinza"
 msgid "Moved"
 msgstr "Movida"
 
-#: apps/funnels/models.py:119 templates/automations/staff_template_list.html:75
+#: apps/funnels/models.py:119 templates/automations/staff_template_list.html:74
 msgid "Updated"
 msgstr "Atualizado"
 
@@ -8874,7 +8883,19 @@ msgstr "em %(org)s"
 msgid "Used for contracts and invoices. Fill it all in, or leave it blank."
 msgstr "Usado em contratos e cobranças. Preencha completo ou deixe em branco."
 
-#: templates/accounts/settings.html:96
+#: templates/accounts/settings.html:94
+msgid "CEP not found. Fill in the address below."
+msgstr "CEP não encontrado. Preencha o endereço abaixo."
+
+#: templates/accounts/settings.html:95
+msgid "The address could not be looked up now. Fill it in below."
+msgstr "Não foi possível buscar o endereço agora. Preencha abaixo."
+
+#: templates/accounts/settings.html:119
+msgid "Looking up the address…"
+msgstr "Buscando o endereço…"
+
+#: templates/accounts/settings.html:131
 #: templates/calendar/partials/event_form.html:130
 #: templates/workspaces/approvals_settings.html:72
 #: templates/workspaces/settings.html:26 templates/workspaces/settings.html:55
@@ -8882,23 +8903,23 @@ msgstr "Usado em contratos e cobranças. Preencha completo ou deixe em branco."
 msgid "Save Changes"
 msgstr "Salvar alterações"
 
-#: templates/accounts/settings.html:104
+#: templates/accounts/settings.html:139
 msgid "Password"
 msgstr "Senha"
 
-#: templates/accounts/settings.html:109 templates/accounts/settings.html:110
+#: templates/accounts/settings.html:144 templates/accounts/settings.html:145
 msgid "Current password"
 msgstr "Senha atual"
 
-#: templates/accounts/settings.html:113 templates/accounts/settings.html:114
+#: templates/accounts/settings.html:148 templates/accounts/settings.html:149
 msgid "New password"
 msgstr "Nova senha"
 
-#: templates/accounts/settings.html:117 templates/accounts/settings.html:118
+#: templates/accounts/settings.html:152 templates/accounts/settings.html:153
 msgid "Confirm new password"
 msgstr "Confirmar nova senha"
 
-#: templates/accounts/settings.html:120
+#: templates/accounts/settings.html:155
 msgid "Change Password"
 msgstr "Alterar senha"
 
@@ -8912,7 +8933,7 @@ msgstr "Equipe"
 #: templates/accounts/staff_team.html:9
 #: templates/affiliates/staff_affiliates.html:10
 #: templates/automations/flow_builder.html:7
-#: templates/automations/staff_template_list.html:25
+#: templates/automations/staff_template_list.html:24
 #: templates/billing/staff_console.html:24
 #: templates/billing/staff_coupons.html:12
 #: templates/billing/staff_goals.html:18
@@ -9006,6 +9027,14 @@ msgstr "Tornar superadmin"
 #, python-format
 msgid "Remove %(email)s from the team?"
 msgstr "Remover %(email)s da equipe?"
+
+#: templates/accounts/staff_team.html:84
+msgid ""
+"This account also owns organizations or brands, so it is kept as a customer "
+"account and only loses the access to this area."
+msgstr ""
+"Esta conta também tem organizações ou marcas, por isso continua como conta "
+"de cliente e só perde o acesso a esta área."
 
 #: templates/accounts/staff_team.html:84
 msgid ""
@@ -9933,7 +9962,7 @@ msgstr "Desativado"
 #: templates/affiliates/staff_affiliates.html:116
 #: templates/api_keys/_key_row.html:66
 #: templates/approvals/partials/_approval_row.html:111
-#: templates/automations/staff_template_list.html:115
+#: templates/automations/staff_template_list.html:114
 #: templates/calendar/partials/_list_row.html:102
 #: templates/calendar/partials/_post_actions_menu.html:31
 #: templates/calendar/partials/_post_card.html:112
@@ -10897,7 +10926,7 @@ msgid "Flow template"
 msgstr "Modelo de fluxo"
 
 #: templates/automations/flow_builder.html:100
-#: templates/automations/staff_template_list.html:104
+#: templates/automations/staff_template_list.html:103
 msgid "On the shelf"
 msgstr "Na vitrine"
 
@@ -10985,7 +11014,7 @@ msgstr ""
 "monitorar os comentários sozinho assim que a publicação entrar no ar."
 
 #: templates/automations/flow_builder.html:401
-#: templates/automations/staff_template_list.html:139
+#: templates/automations/staff_template_list.html:138
 #: templates/calendar/calendar.html:549 templates/calendar/calendar.html:580
 #: templates/calendar/partials/_delete_post_modal.html:81
 #: templates/calendar/partials/_post_actions_menu.html:36
@@ -11312,7 +11341,7 @@ msgid "Ready-made flows you can edit afterwards."
 msgstr "Fluxos prontos que você pode editar depois."
 
 #: templates/automations/flow_builder.html:1062
-#: templates/automations/staff_template_list.html:154
+#: templates/automations/staff_template_list.html:153
 #: templates/composer/templates_list.html:64
 msgid "No templates yet"
 msgstr "Nenhum modelo ainda"
@@ -12111,13 +12140,13 @@ msgstr ""
 "Confira os tipos de correspondência das palavras-chave, o escopo das "
 "publicações e a lista de exclusão — a exclusão prevalece sobre a inclusão."
 
-#: templates/automations/staff_template_list.html:25
-#: templates/automations/staff_template_list.html:31
+#: templates/automations/staff_template_list.html:24
+#: templates/automations/staff_template_list.html:30
 #: templates/layouts/admin_shell.html:49
 msgid "Flow templates"
 msgstr "Modelos de fluxo"
 
-#: templates/automations/staff_template_list.html:34
+#: templates/automations/staff_template_list.html:33
 msgid ""
 "Ready-made automations customers can start from. Published ones appear in "
 "the flow builder."
@@ -12125,11 +12154,11 @@ msgstr ""
 "Automações prontas que os clientes podem usar como ponto de partida. As "
 "publicadas aparecem no editor de fluxos."
 
-#: templates/automations/staff_template_list.html:48
+#: templates/automations/staff_template_list.html:47
 msgid "Name the new template"
 msgstr "Dê um nome ao novo modelo"
 
-#: templates/automations/staff_template_list.html:52
+#: templates/automations/staff_template_list.html:51
 #: templates/composer/staff_idea_template_form.html:8
 #: templates/composer/staff_idea_template_form.html:13
 #: templates/composer/staff_idea_templates.html:22
@@ -12137,26 +12166,26 @@ msgstr "Dê um nome ao novo modelo"
 msgid "New template"
 msgstr "Novo modelo"
 
-#: templates/automations/staff_template_list.html:61
+#: templates/automations/staff_template_list.html:60
 msgid "The shelf"
 msgstr "A vitrine"
 
-#: templates/automations/staff_template_list.html:63
+#: templates/automations/staff_template_list.html:62
 #, python-format
 msgid "%(counter)s template is visible to customers."
 msgid_plural "%(counter)s templates are visible to customers."
 msgstr[0] "%(counter)s modelo está visível para os clientes."
 msgstr[1] "%(counter)s modelos estão visíveis para os clientes."
 
-#: templates/automations/staff_template_list.html:72
+#: templates/automations/staff_template_list.html:71
 msgid "Template"
 msgstr "Modelo"
 
-#: templates/automations/staff_template_list.html:74
+#: templates/automations/staff_template_list.html:73
 msgid "Position"
 msgstr "Posição"
 
-#: templates/automations/staff_template_list.html:76
+#: templates/automations/staff_template_list.html:75
 #: templates/billing/staff_console.html:63
 #: templates/billing/staff_console.html:127
 #: templates/billing/staff_console.html:205
@@ -12167,16 +12196,16 @@ msgstr "Posição"
 msgid "Actions"
 msgstr "Ações"
 
-#: templates/automations/staff_template_list.html:122
+#: templates/automations/staff_template_list.html:121
 msgid "Duplicate"
 msgstr "Duplicar"
 
-#: templates/automations/staff_template_list.html:135
+#: templates/automations/staff_template_list.html:134
 msgid "Delete this template? Flows already created from it are not affected."
 msgstr ""
 "Excluir este modelo? Os fluxos já criados a partir dele não são afetados."
 
-#: templates/automations/staff_template_list.html:156
+#: templates/automations/staff_template_list.html:155
 msgid "Name one above to start drawing it on the canvas."
 msgstr "Dê um nome acima para começar a desenhá-lo na tela."
 
