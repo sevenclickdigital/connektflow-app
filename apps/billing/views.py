@@ -39,7 +39,6 @@ import logging
 import re
 
 from allauth.account.forms import ResetPasswordForm
-from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -885,19 +884,13 @@ def checkout(request, workspace_id):
         "trial_expired": subscription.trial_expired,
         "subscription_required": services.subscription_required(),
         "gateway_configured": _gateway_configured(),
-        "renews_on": _renewal_date(cycle),
+        "renews_on": services.renewal_date(cycle),
         "networks": _included_networks(),
         "yearly_quote": services.quote_plan(brands, WorkspaceSubscription.Cycle.YEARLY)
         if not plan and cycle == WorkspaceSubscription.Cycle.MONTHLY
         else None,
     }
     return render(request, "billing/checkout.html", context)
-
-
-def _renewal_date(cycle):
-    """When a plan bought today charges again."""
-    step = relativedelta(years=1) if cycle == WorkspaceSubscription.Cycle.YEARLY else relativedelta(months=1)
-    return timezone.localdate() + step
 
 
 @login_required
@@ -922,7 +915,7 @@ def checkout_quote(request, workspace_id):
         "chosen_count": len(workspaces) + len(names),
         "coupon_error": coupon_error,
         "max_brands": services.PLAN_MAX_BRANDS,
-        "renews_on": _renewal_date(cycle),
+        "renews_on": services.renewal_date(cycle),
         "annual_percent": services.annual_discount_percent(),
         "yearly_quote": services.quote_plan(brands, WorkspaceSubscription.Cycle.YEARLY, coupon)
         if brands and not plan and cycle == WorkspaceSubscription.Cycle.MONTHLY
@@ -1010,6 +1003,53 @@ def _checkout_done(request, workspace, *, trial=False):
     return redirect(target)
 
 
+def _checkout_order(request, organization, *, card):
+    """What the checkout's payment step asks for, checked before anything reaches Asaas.
+
+    The brands ticked and added, the coupon, the CPF or CNPJ and phone (kept
+    when they changed) and, when ``card`` is set, the card. Returns
+    ``(order, None)`` with the brands, the new brand names, the coupon, the
+    document, the phone and the parsed card and address, or ``(None, error
+    response)``. The names and the billing details' answers are applied
+    once the order is valid.
+    """
+    rows = _brand_rows(request, organization, None)
+    workspaces, names = _chosen(request.POST, rows)
+    brands = _checkout_brands(None, workspaces, names)
+    if brands is None:
+        return None, _checkout_error(
+            request, _("Choose between 1 and %(max)s brands.") % {"max": services.PLAN_MAX_BRANDS}
+        )
+    coupon, coupon_error = _checkout_coupon(request.POST.get("coupon"), organization)
+    if coupon_error:
+        return None, _checkout_error(request, coupon_error)
+    profile = services.ensure_billing_profile(organization)
+    # What was typed now wins over what is on file: a retry after Asaas
+    # refused the phone or the document must send the corrected one.
+    tax_id = services.valid_tax_id(request.POST.get("tax_id")) or profile.tax_id
+    phone = services.valid_phone(request.POST.get("phone")) or profile.phone
+    if not tax_id or not phone:
+        return None, _checkout_error(request, _("Enter a valid CPF or CNPJ and a phone with area code."))
+    card_data, address = None, None
+    if card:
+        card_data, address, error = _parse_card(request.POST)
+        if error:
+            return None, _checkout_error(request, error)
+    if (tax_id, phone) != (profile.tax_id, profile.phone):
+        services.set_payer_identity(organization, tax_id=tax_id, phone=phone)
+    _apply_names(request, organization, rows)
+    return {
+        "brands": brands,
+        "workspaces": workspaces,
+        "names": names,
+        "coupon": coupon,
+        "tax_id": tax_id,
+        "phone": phone,
+        "card": card_data,
+        "address": address,
+    }, None
+
+
 @login_required
 @require_POST
 @ratelimit(key="user", rate="8/h", method="POST", block=False)
@@ -1025,27 +1065,11 @@ def checkout_pay(request, workspace_id):
         # Already paid for: brands are added to it, never bought twice.
         return checkout_add_brands(request, workspace_id)
 
-    rows = _brand_rows(request, organization, None)
-    workspaces, names = _chosen(request.POST, rows)
-    brands = _checkout_brands(None, workspaces, names)
-    if brands is None:
-        return _checkout_error(request, _("Choose between 1 and %(max)s brands.") % {"max": services.PLAN_MAX_BRANDS})
-    coupon, coupon_error = _checkout_coupon(request.POST.get("coupon"), organization)
-    if coupon_error:
-        return _checkout_error(request, coupon_error)
-    profile = services.ensure_billing_profile(organization)
-    # What was typed now wins over what is on file: a retry after Asaas
-    # refused the phone or the document must send the corrected one.
-    tax_id = services.valid_tax_id(request.POST.get("tax_id")) or profile.tax_id
-    phone = services.valid_phone(request.POST.get("phone")) or profile.phone
-    if not tax_id or not phone:
-        return _checkout_error(request, _("Enter a valid CPF or CNPJ and a phone with area code."))
-    card, address, error = _parse_card(request.POST)
+    order, error = _checkout_order(request, organization, card=True)
     if error:
-        return _checkout_error(request, error)
-    if (tax_id, phone) != (profile.tax_id, profile.phone):
-        services.set_payer_identity(organization, tax_id=tax_id, phone=phone)
-    _apply_names(request, organization, rows)
+        return error
+    brands, workspaces, names, coupon = order["brands"], order["workspaces"], order["names"], order["coupon"]
+    tax_id, phone, card, address = order["tax_id"], order["phone"], order["card"], order["address"]
 
     email = organization.billing_email or request.user.email
     holder = {**address, "email": email, "cpfCnpj": tax_id, "phone": phone}
@@ -1086,6 +1110,68 @@ def checkout_pay(request, workspace_id):
             ),
         )
     return _checkout_done(request, workspace)
+
+
+@login_required
+@require_POST
+@ratelimit(key="user", rate="8/h", method="POST", block=False)
+def checkout_pix(request, workspace_id):
+    """Buy the brands ticked and added by Pix Automático: answer the QR code to pay.
+
+    The QR code pays the first charge and authorizes the renewals; the page
+    then waits for the payment (``checkout_status``). A new QR code
+    withdraws the one before it.
+    """
+    workspace = _get_workspace(request, workspace_id)
+    _require_manage_billing(request, workspace)
+    organization = workspace.organization
+    if getattr(request, "limited", False):
+        return _checkout_error(request, _("Too many payment attempts. Please wait a while before trying again."))
+    if _active_plan(organization):
+        return _checkout_done(request, workspace)
+
+    order, error = _checkout_order(request, organization, card=False)
+    if error:
+        return error
+    try:
+        plan, qr_code = contracting.start_pix_plan(
+            organization,
+            brands=order["brands"],
+            cycle=_parse_cycle(request.POST.get("cycle")),
+            email=organization.billing_email or request.user.email,
+            coupon=order["coupon"],
+            workspaces=order["workspaces"],
+            new_brand_names=order["names"],
+            owner=request.user,
+        )
+    except AsaasNotConfigured:
+        return _checkout_error(request, _("Payments are not connected on this installation yet. Nothing was charged."))
+    except AsaasError as exc:
+        logger.exception("Pix checkout failed for organization %s", organization.pk)
+        return _checkout_error(
+            request,
+            _gateway_refusal(exc) or _("We could not create the Pix QR code with the provider. Please try again."),
+        )
+    if qr_code is None:
+        # An earlier QR code had been paid after all.
+        return _checkout_done(request, workspace)
+    qr_code["expires_in"] = max(int((qr_code["expires_at"] - timezone.now()).total_seconds()), 0)
+    return render(
+        request,
+        "billing/_pix_qr_code.html",
+        {"workspace": workspace, "plan": plan, "qr_code": qr_code},
+    )
+
+
+@login_required
+@require_GET
+def checkout_status(request, workspace_id):
+    """HTMX poll of the Pix QR code: on to the welcome page once the plan is paid, else nothing."""
+    workspace = _get_workspace(request, workspace_id)
+    _require_manage_billing(request, workspace)
+    if _active_plan(workspace.organization):
+        return _checkout_done(request, workspace)
+    return HttpResponse(status=204)
 
 
 @login_required

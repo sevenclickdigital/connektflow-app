@@ -13,8 +13,8 @@ of a new account. Wide, in two steps on one page:
    rows with "Add brands", and each row's name can be edited in place (the
    brand a new account was created with gets its name here). The cycle sits
    beside the steps; the bar floating at the foot keeps the total and leads on.
-2. The payment: how to pay (card, or Pix once Asaas enables Pix Automático)
-   beside the order summary. With an active plan there is no card: the
+2. The payment: how to pay (card, or Pix Automático: a QR code that pays the
+   first charge and authorizes the renewals) beside the order summary. With an active plan there is no card: the
    brands are added and charged to the card on file from the next charge.
 
 Prices come from the server: #quote-source asks billing:checkout_quote with
@@ -45,6 +45,7 @@ the part that posted. Card fields are passed to Asaas and kept nowhere.
           trial: false,
           featuresOpen: false,
           sending: false,
+          pixReady: false,
           picked: 0,
           init() { this.$nextTick(() => this.count()); },
           count() { this.picked = this.$root.querySelectorAll('input[name=workspaces]:checked').length + this.newBrands.length; },
@@ -52,7 +53,7 @@ the part that posted. Card fields are passed to Asaas and kept nowhere.
           addBrands(n) { const base = this.$root.querySelectorAll('[data-brand-row]').length + this.newBrands.length; for (let i = 1; i <= n; i++) { this.newBrands.push({ id: Date.now() + i, name: this.$root.dataset.newLabel + ' ' + (base + i) }); } this.adding = false; this.addCount = 1; this.quote(); },
           next(trial) { this.trial = trial; this.step = 2; window.scrollTo({ top: 0, behavior: 'smooth' }); }
         }"
-        @htmx:before-request="if ($event.detail.elt !== $refs.quoteSource) sending = true"
+        @htmx:before-request="if ($event.detail.elt !== $refs.quoteSource && !('poll' in $event.detail.elt.dataset)) sending = true"
         @htmx:after-request="sending = false">
     {% csrf_token %}
     <div id="quote-source" x-ref="quoteSource" class="hidden"
@@ -322,7 +323,7 @@ the part that posted. Card fields are passed to Asaas and kept nowhere.
               <svg class="w-6 h-6 text-brand-700 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2.5l4.5 4.5-4.5 4.5L7.5 7z"/><path d="M12 12.5l4.5 4.5-4.5 4.5-4.5-4.5z"/><path d="M2.5 12L7 7.5 11.5 12 7 16.5z"/><path d="M12.5 12L17 7.5l4.5 4.5-4.5 4.5z"/></svg>
               <span>
                 <span class="block text-sm font-semibold text-neutral-950">Pix</span>
-                <span class="block text-xs text-neutral-600">{% translate "Pix Automático · soon" %}</span>
+                <span class="block text-xs text-neutral-600">{% translate "Pix Automático · renews through your bank" %}</span>
               </span>
             </label>
           </div>
@@ -453,18 +454,23 @@ the part that posted. Card fields are passed to Asaas and kept nowhere.
           </div>
 
           {% comment %}
-          Pix Automático: the first payment and the authorization of the next
-          ones in one QR code, scanned in the bank's app. Shown as coming:
-          Asaas has not enabled it on the account yet.
+          Pix Automático: one QR code, scanned in the bank's app, pays the
+          first charge and authorizes the renewals. The bar's button asks
+          billing:checkout_pix for it (_pix_qr_code.html), swapped in here.
           {% endcomment %}
-          <div class="mt-5 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-5 flex items-start gap-4" x-show="method === 'pix'" x-cloak>
-            <div class="w-24 h-24 rounded-lg bg-white border border-neutral-200 flex items-center justify-center flex-shrink-0 text-neutral-300">
-              <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 19h2M19 14h2"/></svg>
+          <div class="mt-5" x-show="method === 'pix'" x-cloak>
+            <div id="pix-panel">
+              <div class="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-5 flex items-start gap-4">
+                <div class="w-20 h-20 rounded-lg bg-white border border-neutral-200 flex items-center justify-center flex-shrink-0 text-brand-700">
+                  <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 19h2M19 14h2"/></svg>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-neutral-950">{% translate "Pay with Pix in your bank's app" %}</p>
+                  <p class="text-sm text-neutral-600 mt-1">{% translate "Generate the QR code below and scan it: it pays the first charge and authorizes the renewals, with nothing to do every month." %}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <p class="text-sm font-semibold text-neutral-950">{% translate "Pix Automático is coming" %}</p>
-              <p class="text-sm text-neutral-600 mt-1">{% translate "You will scan one QR code in your bank's app: it pays the first charge and authorizes the next ones, with nothing to do every month. For now, pay by card." %}</p>
-            </div>
+          </div>
           </div>
           </div>
           {% endif %}
@@ -549,11 +555,18 @@ the part that posted. Card fields are passed to Asaas and kept nowhere.
           <p id="checkout-error" class="text-sm text-red-700 empty:hidden" role="alert"></p>
         </div>
         <div class="flex items-center gap-4">
-          <button type="submit" class="btn-brand floating-bar-action" x-show="!trial"
-                  :disabled="sending || picked === 0{% if not plan %} || method !== 'card'{% endif %}">
+          <button type="submit" class="btn-brand floating-bar-action" x-show="!trial{% if not plan %} && method === 'card'{% endif %}"
+                  :disabled="sending || picked === 0">
             <span x-show="!sending">{% if plan %}{% translate "Add to the plan" %}{% else %}{% translate "Pay and activate" %}{% endif %}</span>
             <span x-show="sending" x-cloak>{% translate "Confirming…" %}</span>
           </button>
+          {% if not plan %}
+          <button type="button" class="btn-brand floating-bar-action" x-show="!trial && method === 'pix'" x-cloak :disabled="sending || picked === 0"
+                  hx-post="{% url 'billing:checkout_pix' workspace_id=workspace.id %}" hx-include="#checkout-form" hx-target="#pix-panel" hx-swap="innerHTML">
+            <span x-show="!sending"><span x-show="!pixReady">{% translate "Generate Pix QR code" %}</span><span x-show="pixReady" x-cloak>{% translate "Generate another QR code" %}</span></span>
+            <span x-show="sending" x-cloak>{% translate "Generating…" %}</span>
+          </button>
+          {% endif %}
           {% if trial_available %}
           <button type="button" class="btn-brand floating-bar-action" x-show="trial" x-cloak :disabled="sending"
                   hx-post="{% url 'billing:start_trial' workspace_id=workspace.id %}" hx-include="#checkout-form" hx-swap="none">

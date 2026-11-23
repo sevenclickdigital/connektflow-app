@@ -16,6 +16,7 @@ import re
 import uuid
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
+from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models, transaction
@@ -846,6 +847,12 @@ def _plan_eligible_rows(plan):
         .select_related("workspace")
         .order_by("workspace__created_at")
     )
+
+
+def renewal_date(cycle):
+    """When a plan bought today charges again."""
+    step = relativedelta(years=1) if cycle == WorkspaceSubscription.Cycle.YEARLY else relativedelta(months=1)
+    return timezone.localdate() + step
 
 
 def sync_plan_coverage(plan, workspaces=()):

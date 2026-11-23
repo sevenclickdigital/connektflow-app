@@ -68,6 +68,12 @@ UNPAID_EVENTS = frozenset(
 
 CANCELED_EVENTS = frozenset({"SUBSCRIPTION_DELETED"})
 
+# A plan paid by Pix Automático: the first charge paid and the renewals
+# authorized by the payer's bank. Only then is the plan active; Asaas's
+# docs warn that PAYMENT_RECEIVED alone does not mean the authorization
+# went through.
+PIX_AUTHORIZED_EVENTS = frozenset({"PIX_AUTOMATIC_RECURRING_AUTHORIZATION_ACTIVATED"})
+
 
 @csrf_exempt
 @require_POST
@@ -149,6 +155,9 @@ def _verify(request, token):
 
 def _apply(event, event_type, payload):
     """Route one event to the status change it implies."""
+    if event_type in PIX_AUTHORIZED_EVENTS:
+        _apply_pix_authorization(event, payload)
+        return
     if event_type in CANCELED_EVENTS:
         target = WorkspaceSubscription.Status.CANCELED
     elif event_type in PAID_EVENTS:
@@ -193,6 +202,25 @@ def _apply(event, event_type, payload):
     # precisely because this is the case someone will need to explain.
     logger.warning("Asaas webhook: no local row for subscription %s", subscription_id)
     _finish(event, BillingEvent.Status.IGNORED)
+
+
+def _apply_pix_authorization(event, payload):
+    """Activate the plan whose Pix Automático authorization the payer's bank confirmed."""
+    authorization = payload.get("authorization")
+    authorization_id = authorization.get("id") if isinstance(authorization, dict) else ""
+    plan = (
+        OrganizationPlan.objects.filter(gateway_authorization_id=authorization_id).first() if authorization_id else None
+    )
+    if plan is None:
+        logger.warning("Asaas webhook: no plan for Pix Automático authorization %s", authorization_id)
+        _finish(event, BillingEvent.Status.IGNORED)
+        return
+    subscription_id = authorization.get("subscriptionId") or ""
+    if subscription_id and subscription_id != plan.gateway_subscription_id:
+        plan.gateway_subscription_id = subscription_id
+        plan.save(update_fields=["gateway_subscription_id", "updated_at"])
+    _apply_to_plan(plan, WorkspaceSubscription.Status.ACTIVE, payload)
+    _finish(event, BillingEvent.Status.PROCESSED)
 
 
 def _apply_to_subscription(sub, target, payload):

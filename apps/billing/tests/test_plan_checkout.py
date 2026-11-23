@@ -100,6 +100,25 @@ class StubAsaas:
         self.values.append((subscription_id, value_cents))
         return {}
 
+    def create_pix_automatic_authorization(self, **kwargs):
+        self.authorizations = [*getattr(self, "authorizations", []), kwargs]
+        number = len(self.authorizations)
+        return {
+            "id": f"auth_{number}",
+            "status": "CREATED",
+            "subscriptionId": f"sub_pix_{number}",
+            "encodedImage": "iVBORw0KGgo=",
+            "payload": f"00020126pix{number}",
+            "immediateQrCode": {"expirationDate": "2030-01-01 12:00:00"},
+        }
+
+    def get_pix_automatic_authorization(self, authorization_id):
+        return {"id": authorization_id, "status": getattr(self, "authorization_status", "CREATED")}
+
+    def cancel_pix_automatic_authorization(self, authorization_id):
+        self.withdrawn = [*getattr(self, "withdrawn", []), authorization_id]
+        return {}
+
 
 def _org_with_workspaces(count, name="Acme"):
     org = Organization.objects.create(name=name)
@@ -444,3 +463,105 @@ def test_a_card_that_cannot_be_charged_is_refused_before_asaas_is_called(
     with translation.override("pt-br"):
         assert translation.gettext(message) in response.content.decode()
     assert not OrganizationPlan.objects.filter(organization=org).exists()
+
+
+# -- Pix Automático --------------------------------------------------------------
+
+
+def _pix_url(name, workspace):
+    return reverse(f"billing:{name}", kwargs={"workspace_id": workspace.id})
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+def test_paying_by_pix_answers_the_qr_code_and_leaves_the_plan_pending(client, owner_of, monkeypatch):
+    org, (workspace,) = _org_with_workspaces(1)
+    services.set_payer_identity(org, tax_id="24971563792", phone="47988776655")
+    client.force_login(owner_of(org))
+    stub = StubAsaas()
+    monkeypatch.setattr(contracting, "AsaasClient", lambda: stub)
+
+    response = client.post(_pix_url("checkout_pix", workspace), {"cycle": "yearly", "workspaces": [str(workspace.id)]})
+
+    assert response.status_code == 200
+    assert b"00020126pix1" in response.content
+    (authorization,) = stub.authorizations
+    assert authorization["frequency"] == "ANNUALLY"
+    assert (authorization["value_cents"], authorization["first_value_cents"]) == (48000, 48000)
+    assert authorization["start_date"] == services.renewal_date(WorkspaceSubscription.Cycle.YEARLY)
+    assert stub.charged == [] and stub.subscriptions == []
+    plan = OrganizationPlan.objects.get(organization=org)
+    assert (plan.status, plan.gateway_authorization_id, plan.gateway_subscription_id) == (
+        PENDING,
+        "auth_1",
+        "sub_pix_1",
+    )
+    assert _status(workspace) == PENDING
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+def test_a_pix_qr_code_needs_the_billing_details_first(client, owner_of, monkeypatch):
+    org, (workspace,) = _org_with_workspaces(1)
+    client.force_login(owner_of(org))
+    monkeypatch.setattr(contracting, "AsaasClient", lambda: pytest.fail("Asaas must not be called"))
+
+    response = client.post(
+        _pix_url("checkout_pix", workspace), {"workspaces": [str(workspace.id)]}, headers={"HX-Request": "true"}
+    )
+
+    assert response.status_code == 422
+    assert not OrganizationPlan.objects.filter(organization=org, gateway_authorization_id__gt="").exists()
+
+
+@override_settings(RATELIMIT_ENABLE=False)
+def test_a_new_pix_qr_code_withdraws_the_one_before(client, owner_of, monkeypatch):
+    org, (workspace,) = _org_with_workspaces(1)
+    services.set_payer_identity(org, tax_id="24971563792", phone="47988776655")
+    client.force_login(owner_of(org))
+    stub = StubAsaas()
+    monkeypatch.setattr(contracting, "AsaasClient", lambda: stub)
+    form = {"cycle": "monthly", "workspaces": [str(workspace.id)]}
+
+    client.post(_pix_url("checkout_pix", workspace), form)
+    client.post(_pix_url("checkout_pix", workspace), form)
+
+    assert stub.withdrawn == ["auth_1"]
+    assert OrganizationPlan.objects.get(organization=org).gateway_authorization_id == "auth_2"
+
+
+@override_settings(ASAAS_WEBHOOK_TOKEN="tok", RATELIMIT_ENABLE=False)
+def test_the_plan_paid_by_pix_opens_when_the_bank_authorizes_it_and_the_page_moves_on(client, owner_of, monkeypatch):
+    org, (workspace,) = _org_with_workspaces(1)
+    services.set_payer_identity(org, tax_id="24971563792", phone="47988776655")
+    client.force_login(owner_of(org))
+    monkeypatch.setattr(contracting, "AsaasClient", lambda: StubAsaas())
+    client.post(_pix_url("checkout_pix", workspace), {"cycle": "monthly", "workspaces": [str(workspace.id)]})
+    status_url = _pix_url("checkout_status", workspace)
+    assert client.get(status_url, headers={"HX-Request": "true"}).status_code == 204
+
+    webhook = client.post(
+        reverse("asaas_webhook"),
+        data={
+            "id": "evt_pix_1",
+            "event": "PIX_AUTOMATIC_RECURRING_AUTHORIZATION_ACTIVATED",
+            "authorization": {"id": "auth_1", "status": "ACTIVE"},
+        },
+        content_type="application/json",
+        headers={"asaas-access-token": "tok"},
+    )
+
+    assert webhook.status_code == 200
+    assert OrganizationPlan.objects.get(organization=org).status == ACTIVE
+    assert _status(workspace) == ACTIVE
+    moved = client.get(status_url, headers={"HX-Request": "true"})
+    assert moved["HX-Redirect"] == reverse("billing:checkout_welcome", kwargs={"workspace_id": workspace.id})
+
+
+def test_only_who_manages_billing_generates_a_pix_qr_code_or_follows_it(client, owner_of):
+    org, (workspace,) = _org_with_workspaces(1)
+    viewer = owner_of(
+        org, role=OrgMembership.OrgRole.MEMBER, workspace_role=WorkspaceMembership.WorkspaceRole.CONTRIBUTOR
+    )
+    client.force_login(viewer)
+
+    assert client.post(_pix_url("checkout_pix", workspace), {"workspaces": [str(workspace.id)]}).status_code == 403
+    assert client.get(_pix_url("checkout_status", workspace)).status_code == 403

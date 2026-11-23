@@ -659,6 +659,9 @@ class OrganizationPlan(models.Model):
     gateway = models.CharField(max_length=32, blank=True, default="")
     gateway_customer_id = models.CharField(max_length=255, blank=True, default="")
     gateway_subscription_id = models.CharField(max_length=255, blank=True, default="", db_index=True)
+    # The Pix Automático authorization of a plan paid by Pix: its QR code pays
+    # the first charge and authorizes the renewals. Empty when paid by card.
+    gateway_authorization_id = models.CharField(max_length=64, blank=True, default="", db_default="")
     # Shown on the billing page ("Mastercard ending in 8829"). The card
     # itself stays at the gateway, which keeps only a token on its side.
     # The coupon paid with, kept so a resize prices its "every charge"

@@ -32,7 +32,9 @@ is a retry. Idempotency is held in three layers:
 
 from __future__ import annotations
 
+import datetime
 import logging
+import zoneinfo
 
 from django.conf import settings
 from django.db import transaction
@@ -48,6 +50,10 @@ logger = logging.getLogger(__name__)
 
 #: Asaas statuses of a subscription that will not charge again.
 ENDED_SUBSCRIPTION_STATUSES = frozenset({"INACTIVE", "EXPIRED"})
+
+#: Pix Automático authorization statuses: paid and authorized, and over.
+PIX_AUTHORIZATION_ACTIVE = "ACTIVE"
+PIX_AUTHORIZATION_ENDED = frozenset({"CANCELLED", "REFUSED", "EXPIRED"})
 
 #: Asaas statuses of a charge the customer still has to pay.
 UNPAID_PAYMENT_STATUSES = frozenset({"PENDING", "OVERDUE"})
@@ -434,14 +440,31 @@ def _activate_plan(plan, *, card=None, coupon_saving_cents=0, workspaces=()):
 
 
 def _settle_earlier_attempt(plan, client):
-    """Deal with the gateway subscription a previous checkout left behind.
+    """Deal with what a previous checkout left behind at the gateway.
 
-    A checkout whose card charge never answered (a timeout) leaves the plan
-    pending with its subscription at Asaas. If that charge went through
-    after all, the plan is activated now instead of charging the card a
-    second time; otherwise the subscription is cancelled so the new
+    A Pix QR code generated earlier is withdrawn, so it cannot be paid on
+    top of this checkout; one already paid and authorized activates the
+    plan instead. A checkout whose card charge never answered (a timeout)
+    leaves the plan pending with its subscription at Asaas. If that charge
+    went through after all, the plan is activated now instead of charging
+    a second time; otherwise the subscription is cancelled so the new
     checkout starts clean. Returns True when the plan turned out paid.
     """
+    if plan.gateway_authorization_id:
+        try:
+            authorization = client.get_pix_automatic_authorization(plan.gateway_authorization_id)
+        except asaas_gateway.AsaasAPIError as exc:
+            if exc.status_code != 404:
+                raise
+            # Gone at Asaas: nothing left to withdraw.
+            authorization = {"status": "CANCELLED"}
+        if authorization.get("status") == PIX_AUTHORIZATION_ACTIVE:
+            _activate_plan(plan)
+            return True
+        if authorization.get("status") not in PIX_AUTHORIZATION_ENDED:
+            client.cancel_pix_automatic_authorization(plan.gateway_authorization_id)
+        plan.gateway_authorization_id = ""
+        plan.save(update_fields=["gateway_authorization_id", "updated_at"])
     if not plan.gateway_subscription_id:
         return False
     payments = client.list_subscription_payments(plan.gateway_subscription_id)
@@ -568,6 +591,92 @@ def purchase_plan(
     logger.info("Organization %s bought a plan of %s brands", organization.pk, brands)
     chosen = [*workspaces, *_create_brands(organization, new_brand_names, owner)]
     return _activate_plan(plan, card=card_info, coupon_saving_cents=quote["coupon_saving_cents"], workspaces=chosen)
+
+
+def start_pix_plan(
+    organization,
+    *,
+    brands,
+    cycle,
+    email="",
+    coupon=None,
+    workspaces=(),
+    new_brand_names=(),
+    owner=None,
+    client=None,
+):
+    """Buy ``brands`` brands for the organization by Pix Automático.
+
+    Creates a Pix Automático authorization whose QR code pays the first
+    charge (``first_charge_cents`` of ``services.quote_plan``) and, once
+    paid, authorizes the renewals, which Asaas charges from the next cycle
+    through the subscription it creates. The plan stays pending until the
+    ``PIX_AUTOMATIC_RECURRING_AUTHORIZATION_ACTIVATED`` webhook activates it
+    (``webhooks._apply``). Brands typed as new rows are created now, as
+    unpaid brands, so the plan covers them when it activates.
+
+    Returns ``(plan, qr_code)``: ``qr_code`` holds ``image`` (base64 PNG),
+    ``payload`` (the copy-and-paste code), ``expires_at`` and
+    ``value_cents``, or is None when an earlier attempt turned out paid
+    and the plan is active. Raises ``AsaasError`` when Asaas refuses.
+    """
+    client = client or AsaasClient()
+    plan, _created = OrganizationPlan.objects.get_or_create(organization=organization)
+    if plan.is_active:
+        return plan, None
+    if _settle_earlier_attempt(plan, client):
+        chosen = [*workspaces, *_create_brands(organization, new_brand_names, owner)]
+        services.sync_plan_coverage(plan, chosen)
+        return plan, None
+
+    quote = services.quote_plan(brands, cycle, coupon)
+    profile = ensure_customer(organization, client=client, email=email)
+    yearly = quote["cycle"] == WorkspaceSubscription.Cycle.YEARLY
+    authorization = client.create_pix_automatic_authorization(
+        customer_id=profile.gateway_customer_id,
+        frequency=asaas_gateway.PIX_FREQUENCY_YEARLY if yearly else asaas_gateway.PIX_FREQUENCY_MONTHLY,
+        contract_id=plan.pk.hex,
+        start_date=services.renewal_date(quote["cycle"]),
+        value_cents=quote["charge_cents"],
+        first_value_cents=quote["first_charge_cents"],
+        description="Connekt Flow",
+    )
+    authorization_id = authorization.get("id") or ""
+    if not authorization_id or not authorization.get("payload"):
+        raise AsaasError("Asaas returned a Pix Automático authorization without its QR code.")
+
+    plan.brands = brands
+    plan.billing_cycle = quote["cycle"]
+    plan.price_cents = quote["monthly_cents"]
+    plan.gateway = GATEWAY
+    plan.gateway_customer_id = profile.gateway_customer_id
+    plan.gateway_authorization_id = authorization_id
+    plan.gateway_subscription_id = authorization.get("subscriptionId") or ""
+    plan.status = WorkspaceSubscription.Status.PENDING
+    plan.coupon = coupon
+    plan.card_brand = ""
+    plan.card_last4 = ""
+    plan.save()
+    _create_brands(organization, new_brand_names, owner)
+    logger.info("Organization %s asked to pay a plan of %s brands by Pix", organization.pk, brands)
+
+    expires = (authorization.get("immediateQrCode") or {}).get("expirationDate") or ""
+    return plan, {
+        "image": authorization.get("encodedImage") or "",
+        "payload": authorization["payload"],
+        "expires_at": _asaas_datetime(expires)
+        or timezone.now() + datetime.timedelta(seconds=asaas_gateway.PIX_QR_CODE_SECONDS),
+        "value_cents": quote["first_charge_cents"],
+    }
+
+
+def _asaas_datetime(raw):
+    """An Asaas ``YYYY-MM-DD HH:MM:SS`` (Brasília time) as an aware datetime, or None."""
+    try:
+        naive = datetime.datetime.strptime(str(raw), "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return None
+    return timezone.make_aware(naive, zoneinfo.ZoneInfo("America/Sao_Paulo"))
 
 
 def change_plan_brands(plan, brands, *, workspaces=(), new_brand_names=(), owner=None, client=None):

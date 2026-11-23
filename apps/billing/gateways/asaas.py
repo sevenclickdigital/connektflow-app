@@ -56,6 +56,13 @@ BILLING_TYPE_UNDEFINED = "UNDEFINED"
 #: How long a card charge may take before it is given up as unknown.
 CARD_CHARGE_TIMEOUT_SECONDS = 60
 
+#: How long the Pix Automático QR code of a checkout can be paid.
+PIX_QR_CODE_SECONDS = 3600
+
+# Asaas's frequencies of a Pix Automático authorization.
+PIX_FREQUENCY_MONTHLY = "MONTHLY"
+PIX_FREQUENCY_YEARLY = "ANNUALLY"
+
 
 class AsaasError(Exception):
     """Any failure talking to Asaas. Base of everything below."""
@@ -391,3 +398,53 @@ class AsaasClient:
         period they paid for.
         """
         return self._request("DELETE", f"/subscriptions/{subscription_id}")
+
+    # -- Pix Automático -----------------------------------------------------
+
+    def create_pix_automatic_authorization(
+        self,
+        *,
+        customer_id,
+        frequency,
+        contract_id,
+        start_date,
+        value_cents,
+        first_value_cents,
+        description="",
+        expiration_seconds=PIX_QR_CODE_SECONDS,
+    ):
+        """Ask the payer to pay the first charge and authorize the next ones, in one QR code.
+
+        Asaas's "journey 3": the QR code (``encodedImage``, a base64 PNG,
+        and ``payload``, the copy-and-paste code) pays ``first_value_cents``
+        now; once paid, the payer's bank confirms the authorization and the
+        ``PIX_AUTOMATIC_RECURRING_AUTHORIZATION_ACTIVATED`` webhook arrives.
+        ``paymentCreationMode=SUBSCRIPTION`` has Asaas charge ``value_cents``
+        every ``frequency`` (``MONTHLY`` or ``ANNUALLY``) from
+        ``start_date`` through the subscription it creates
+        (``subscriptionId``). ``contract_id`` and ``description`` are capped
+        at 35 characters by Asaas.
+        """
+        payload = {
+            "customerId": customer_id,
+            "frequency": frequency,
+            "contractId": str(contract_id)[:35],
+            "startDate": start_date.isoformat(),
+            "value": str(cents_to_value(value_cents)),
+            "paymentCreationMode": "SUBSCRIPTION",
+            "immediateQrCode": {
+                "expirationSeconds": expiration_seconds,
+                "originalValue": str(cents_to_value(first_value_cents)),
+            },
+        }
+        if description:
+            payload["description"] = description[:35]
+        return self._request("POST", "/pix/automatic/authorizations", json=payload)
+
+    def get_pix_automatic_authorization(self, authorization_id):
+        """An authorization with its ``status``: CREATED, ACTIVE, CANCELLED, REFUSED or EXPIRED."""
+        return self._request("GET", f"/pix/automatic/authorizations/{authorization_id}")
+
+    def cancel_pix_automatic_authorization(self, authorization_id):
+        """Withdraw an authorization: its QR code stops working and nothing more is charged."""
+        return self._request("DELETE", f"/pix/automatic/authorizations/{authorization_id}")
