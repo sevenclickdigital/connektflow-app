@@ -14,8 +14,8 @@ class Organization(models.Model):
     # (organizations.views.about_view), where its name and one more question
     # are asked after the activity (name_question, extra_question).
     class Activity(models.TextChoices):
-        FREELANCER = "freelancer", _("Freelancer")
         ENTREPRENEUR = "entrepreneur", _("Entrepreneur")
+        FREELANCER = "freelancer", _("Freelancer")
         AGENCY = "agency", _("Agency")
         MARKETING_ANALYST = "marketing_analyst", _("Marketing analyst")
 
@@ -27,9 +27,14 @@ class Organization(models.Model):
 
     class Source(models.TextChoices):
         INSTAGRAM = "instagram", _("Instagram")
-        GOOGLE = "google", _("Google search")
-        REFERRAL = "referral", _("A friend or colleague")
+        FACEBOOK = "facebook", _("Facebook")
+        TIKTOK = "tiktok", _("TikTok")
         YOUTUBE = "youtube", _("YouTube")
+        LINKEDIN = "linkedin", _("LinkedIn")
+        WHATSAPP = "whatsapp", _("WhatsApp")
+        GOOGLE = "google", _("Google search")
+        AI_ASSISTANT = "ai_assistant", _("ChatGPT or another AI assistant")
+        REFERRAL = "referral", _("A friend or colleague")
         OTHER = "other", _("Somewhere else")
 
     # Asked on the checkout's billing details, by activity: agencies and
@@ -74,6 +79,8 @@ class Organization(models.Model):
     business_activity = models.CharField(max_length=32, choices=Activity.choices, blank=True, default="", db_default="")
     team_size = models.CharField(max_length=16, choices=TeamSize.choices, blank=True, default="", db_default="")
     referral_source = models.CharField(max_length=16, choices=Source.choices, blank=True, default="", db_default="")
+    #: Where, in their own words, when the source picked is "somewhere else".
+    referral_source_other = models.CharField(max_length=100, blank=True, default="", db_default="")
     #: Values of ``Goal``; several may be picked.
     goals = models.JSONField(default=list, blank=True, db_default=models.Value([], output_field=models.JSONField()))
     #: When the owner answered the step; it is not shown again after.

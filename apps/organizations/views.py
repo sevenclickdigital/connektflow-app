@@ -156,6 +156,7 @@ def about_view(request):
                 "business_activity",
                 "team_size",
                 "referral_source",
+                "referral_source_other",
                 "client_count",
                 "business_segment",
                 "about_answered_at",
@@ -167,11 +168,11 @@ def about_view(request):
 
 #: What each activity card says under its name.
 ACTIVITY_DESCRIPTIONS = {
-    Organization.Activity.FREELANCER: gettext_lazy(
-        "I work on projects on my own, without a company or agency between me and the client."
-    ),
     Organization.Activity.ENTREPRENEUR: gettext_lazy(
         "I have my own business, already running or getting off the ground."
+    ),
+    Organization.Activity.FREELANCER: gettext_lazy(
+        "I work on projects on my own, without a company or agency between me and the client."
     ),
     Organization.Activity.AGENCY: gettext_lazy("I own or work at an agency that looks after other brands."),
     Organization.Activity.MARKETING_ANALYST: gettext_lazy(

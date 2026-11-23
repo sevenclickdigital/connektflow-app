@@ -423,7 +423,7 @@ Access is ``is_staff`` (apps/billing/views._is_billing_staff).
                       {% if row.organization.about_answered_at %}
                       <dt class="text-neutral-600">{% translate "Activity" %}</dt><dd class="text-neutral-900">{{ row.organization.get_business_activity_display|default:"—" }}</dd>
                       <dt class="text-neutral-600">{% translate "Team size" %}</dt><dd class="text-neutral-900">{{ row.organization.get_team_size_display|default:"—" }}</dd>
-                      <dt class="text-neutral-600">{% translate "Found us through" %}</dt><dd class="text-neutral-900">{{ row.organization.get_referral_source_display|default:"—" }}</dd>
+                      <dt class="text-neutral-600">{% translate "Found us through" %}</dt><dd class="text-neutral-900">{{ row.organization.get_referral_source_display|default:"—" }}{% if row.organization.referral_source_other %}: {{ row.organization.referral_source_other }}{% endif %}</dd>
                       <dt class="text-neutral-600">{% translate "Goals" %}</dt><dd class="text-neutral-900">{{ row.organization.goal_labels|join:", "|default:"—" }}</dd>
                       {% if row.organization.client_count %}<dt class="text-neutral-600">{% translate "Clients served" %}</dt><dd class="text-neutral-900">{{ row.organization.get_client_count_display }}</dd>{% endif %}
                       {% if row.organization.business_segment %}<dt class="text-neutral-600">{% translate "Segment" %}</dt><dd class="text-neutral-900">{{ row.organization.get_business_segment_display }}</dd>{% endif %}

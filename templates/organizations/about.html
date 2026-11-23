@@ -67,12 +67,16 @@ app_shell like the checkout.
               {% for value, label in team_sizes %}<option value="{{ value }}" {% if form.team_size.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
             </select>
           </div>
-          <div>
+          <div x-data="{ source: '' }" x-init="source = $refs.source.value">
             <label for="about-source" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "How did you hear about Connekt Flow?" %}</label>
-            <select id="about-source" name="referral_source" required class="form-input-styled bb-select cursor-pointer w-full">
+            <select id="about-source" name="referral_source" required x-ref="source" @change="source = $event.target.value" class="form-input-styled bb-select cursor-pointer w-full">
               <option value="">{% translate "Choose an option" %}</option>
               {% for value, label in sources %}<option value="{{ value }}" {% if form.referral_source.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
             </select>
+            {% translate "Where did you see or hear about us?" as source_other_label %}
+            <input type="text" name="referral_source_other" maxlength="100" value="{{ form.referral_source_other.value|default:'' }}"
+                   aria-label="{{ source_other_label }}" placeholder="{{ source_other_label }}"
+                   class="form-input-styled w-full mt-3" x-show="source === 'other'" {% if form.referral_source.value != "other" %}x-cloak{% endif %}>
           </div>
         </div>
 

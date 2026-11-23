@@ -12,14 +12,22 @@ class AboutBusinessForm(forms.ModelForm):
     (Organization.name_question) and replaces the one it was created with.
     One more question follows the activity (Organization.extra_question):
     clients served or segment, required for that activity; the answer to
-    the other one is cleared.
+    the other one is cleared. Whoever found us "somewhere else" may say
+    where; the text is kept only with that source.
     """
 
     organization_name = forms.CharField(max_length=100)
 
     class Meta:
         model = Organization
-        fields = ["business_activity", "team_size", "referral_source", "client_count", "business_segment"]
+        fields = [
+            "business_activity",
+            "team_size",
+            "referral_source",
+            "referral_source_other",
+            "client_count",
+            "business_segment",
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -43,6 +51,8 @@ class AboutBusinessForm(forms.ModelForm):
                 cleaned[field] = ""
             elif not cleaned.get(field):
                 self.add_error(field, _("Answer this question."))
+        typed = cleaned.get("referral_source") == Organization.Source.OTHER
+        cleaned["referral_source_other"] = clean_display_name(cleaned.get("referral_source_other", "")) if typed else ""
         return cleaned
 
     def save(self, commit=True):

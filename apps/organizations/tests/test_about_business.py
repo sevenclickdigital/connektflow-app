@@ -63,6 +63,31 @@ def test_the_answers_are_kept_and_the_plan_comes_next(client):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
+    ("source", "kept"),
+    [("other", "Podcast do João"), ("instagram", "")],
+)
+def test_where_else_is_kept_only_with_the_somewhere_else_source(client, source, kept):
+    _user, workspace = _signed_up(client)
+
+    client.post(
+        reverse("organizations:about"),
+        {
+            "workspace": str(workspace.id),
+            "business_activity": "agency",
+            "team_size": "2_5",
+            "referral_source": source,
+            "referral_source_other": "  Podcast   do João ",
+            "client_count": "6_15",
+            "organization_name": "Agência Sol",
+        },
+    )
+
+    organization = Organization.objects.get(pk=workspace.organization_id)
+    assert (organization.referral_source, organization.referral_source_other) == (source, kept)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
     "answers",
     [
         {"action": "skip"},
