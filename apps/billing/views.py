@@ -41,6 +41,7 @@ from allauth.account.forms import ResetPasswordForm
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
 from django.db.models import Count, Prefetch, Q, Sum
@@ -60,9 +61,17 @@ from apps.accounts.impersonation import client_ip
 from apps.accounts.models import ImpersonationSession, User
 from apps.affiliates import services as affiliate_services
 from apps.billing import contracting, services
-from apps.billing.gateways.asaas import AsaasAPIError, AsaasError, AsaasNotConfigured
-from apps.billing.models import BillingEvent, Coupon, ProductPrice, WorkspaceAddon, WorkspaceSubscription
+from apps.billing.gateways.asaas import AsaasAPIError, AsaasClient, AsaasError, AsaasNotConfigured
+from apps.billing.models import (
+    BillingEvent,
+    Coupon,
+    PlanBrandAddition,
+    ProductPrice,
+    WorkspaceAddon,
+    WorkspaceSubscription,
+)
 from apps.billing.storage_usage import storage_status
+from apps.billing.templatetags.billing_extras import brl
 from apps.billing.webhooks import PAID_EVENTS, UNPAID_EVENTS
 from apps.common.validators import clean_display_name
 from apps.members.decorators import require_org_role
@@ -71,6 +80,7 @@ from apps.organizations.models import Organization
 from apps.organizations.views import needs_about, needs_welcome
 from apps.social_accounts.models import PlatformVisibility
 from apps.workspaces.models import Workspace
+from apps.workspaces.services import NEW_BRAND_SESSION_KEY, discard_unused_brand
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +102,9 @@ STORAGE_ADDON_MAX_GB = 1000
 # anyone inside this account recently") is a recency question. Also what
 # keeps the page off a full-table scan if that ever stops being true.
 IMPERSONATION_LOG_LIMIT = 200
+
+# How long the checkout's running total trusts a plan's next charge date before asking the gateway again.
+NEXT_CHARGE_CACHE_SECONDS = 600
 
 
 # ---------------------------------------------------------------------------
@@ -724,6 +737,34 @@ def _chosen(data, rows):
     return workspaces, names[: services.PLAN_MAX_BRANDS]
 
 
+def _next_charge_cache_key(plan):
+    return f"billing:next-charge:{plan.pk}"
+
+
+def _brand_addition_quote(plan, brands):
+    """What adding brands up to ``brands`` to the active plan is charged now, or None.
+
+    For the checkout's running total, refreshed on every tick: the plan's
+    next charge date is asked from the gateway once and kept for a few
+    minutes. None when there is nothing to add or the gateway does not
+    answer; the charge itself always asks again (``contracting.add_plan_brands``).
+    """
+    if brands <= plan.brands:
+        return None
+    key = _next_charge_cache_key(plan)
+    next_on = cache.get(key)
+    if next_on is None:
+        try:
+            next_on = contracting.next_charge_date(plan, AsaasClient())
+        except AsaasError:
+            logger.warning("Could not ask the next charge of plan %s", plan.pk, exc_info=True)
+            return None
+        if next_on is None:
+            return None
+        cache.set(key, next_on, NEXT_CHARGE_CACHE_SECONDS)
+    return services.quote_brand_addition(plan, brands, next_on)
+
+
 def _checkout_brands(plan, workspaces, names):
     """How many brands the plan has after this checkout, or None past the limit."""
     total = (plan.brands if plan else 0) + len(workspaces) + len(names)
@@ -787,8 +828,9 @@ def checkout(request, workspace_id):
     a tick, plus new ones added as rows, and the cycle; a bar at the foot
     keeps the total. Then the payment beside the order summary. Without an
     active plan the card is charged now and kept for every renewal; with
-    one, the brands ticked are added to it and charged to the card on file
-    from the next charge. Also where a new account starts, once asked about
+    one, the brands ticked are added to it once the days until its next
+    charge are paid (``contracting.add_plan_brands``). Also where a new
+    account starts, once asked about
     its business: it names its brand on its row and can start the free
     trial instead.
     """
@@ -844,6 +886,13 @@ def checkout(request, workspace_id):
         "payer_phone": profile.phone,
         "payer_name": profile.payer_name,
         "in_setup": needs_welcome(request, workspace),
+        # Leaving the page gives up on a brand created just now; any other is kept.
+        "just_created": request.session.get(NEW_BRAND_SESSION_KEY) == str(workspace.id),
+        # Brands asked for on the active plan whose proportional charge is still unpaid.
+        "pending_addition": plan.brand_additions.filter(status=PlanBrandAddition.Status.PENDING).first()
+        if plan
+        else None,
+        "addition": _brand_addition_quote(plan, brands) if plan else None,
         "trial_available": not plan and services.trial_available(workspace, request.user),
         "trial_days": services.trial_days(),
         "trial_expired": subscription.trial_expired,
@@ -856,6 +905,40 @@ def checkout(request, workspace_id):
         else None,
     }
     return render(request, "billing/checkout.html", context)
+
+
+@login_required
+@require_POST
+def checkout_cancel(request, workspace_id):
+    """Leave the checkout without contracting or starting a trial.
+
+    A brand created just before (``NEW_BRAND_SESSION_KEY``) and never used is
+    deleted: the person gave up on creating it. Any other brand is kept as it
+    is. Home then goes back to a brand in use, not to this one's lock, and
+    the person lands on their organizations.
+    """
+    workspace = _get_workspace(request, workspace_id)
+    _require_manage_billing(request, workspace)
+    name = workspace.name
+    just_created = request.session.pop(NEW_BRAND_SESSION_KEY, None) == str(workspace.id)
+    discarded = just_created and discard_unused_brand(workspace)
+
+    in_use = next(
+        (
+            membership.workspace_id
+            for membership in WorkspaceMembership.objects.filter(
+                user=request.user, workspace__is_archived=False
+            ).select_related("workspace__billing_subscription")
+            if services.is_workspace_active(membership.workspace)
+        ),
+        None,
+    )
+    request.user.last_workspace_id = in_use
+    request.user.save(update_fields=["last_workspace_id"])
+
+    if discarded:
+        messages.info(request, _("The brand “%(name)s” was not created.") % {"name": name})
+    return redirect("organizations:workspaces")
 
 
 @login_required
@@ -876,6 +959,7 @@ def checkout_quote(request, workspace_id):
     context = {
         "workspace": workspace,
         "plan": plan,
+        "addition": _brand_addition_quote(plan, brands) if plan and brands else None,
         "quote": services.quote_plan(brands, cycle, coupon) if brands else None,
         "chosen_count": len(workspaces) + len(names),
         "coupon_error": coupon_error,
@@ -1156,13 +1240,38 @@ def checkout_add_brands(request, workspace_id):
         return _checkout_error(request, _("Tick or add the brands to put on the plan."))
     _apply_names(request, organization, rows)
     try:
-        contracting.change_plan_brands(plan, brands, workspaces=workspaces, new_brand_names=names, owner=request.user)
+        addition, quote = contracting.add_plan_brands(
+            plan,
+            brands,
+            workspaces=workspaces,
+            new_brand_names=names,
+            owner=request.user,
+            remote_ip=client_ip(request) or "",
+        )
+    except contracting.CardRefusedError as exc:
+        return _checkout_error(request, str(exc))
     except AsaasError as exc:
         logger.exception("Could not add brands to plan %s", plan.pk)
         return _checkout_error(
             request, _gateway_refusal(exc) or _("We could not reach the payment provider. Please try again.")
         )
-    messages.success(request, _("Brands added to your plan. The new value applies from the next charge."))
+    cache.delete(_next_charge_cache_key(plan))
+    if addition is not None:
+        # The days until the next charge are still to be paid: the brands
+        # go on the plan when the payment provider confirms it.
+        target = addition.invoice_url or reverse("billing:checkout", kwargs={"workspace_id": workspace.id})
+        return _hx_redirect(target) if request.htmx else redirect(target)
+    if quote["amount_cents"]:
+        messages.success(
+            request,
+            _(
+                "Brands added to your plan. R$ %(amount)s was charged for the days until %(date)s, "
+                "when the plan's new value starts."
+            )
+            % {"amount": brl(quote["amount_cents"]), "date": date_format(quote["next_charge_on"], "SHORT_DATE_FORMAT")},
+        )
+    else:
+        messages.success(request, _("Brands added to your plan. The new value applies from the next charge."))
     target = reverse("calendar:calendar", kwargs={"workspace_id": workspace.id})
     return _hx_redirect(target) if request.htmx else redirect(target)
 
@@ -1319,7 +1428,8 @@ def staff_console(request):
     with its own status, disk and charge, and under it the users linked to
     that brand with their role there. A user linked to several brands shows
     under each of them. Members of the organization linked to no brand are
-    listed in a group of their own so nobody drops off the screen.
+    listed in a group of their own so nobody drops off the screen. Accounts
+    come ordered by their owner's e-mail, then by name.
 
     ``people`` is each account's distinct users, for the per-person details
     and deletion panels. ``may_impersonate`` and ``may_deactivate`` are
@@ -1417,6 +1527,17 @@ def staff_console(request):
                 "storage_percent": _storage_percent(workspace_rows),
             }
         )
+
+    # By the owner's e-mail, then by name: the accounts of one person sit
+    # together, which is how support looks for them. Accounts with no member
+    # go last.
+    rows.sort(
+        key=lambda row: (
+            row["owner"] is None,
+            row["owner"]["user"].email.lower() if row["owner"] else "",
+            row["organization"].name.lower(),
+        )
+    )
 
     return render(
         request,

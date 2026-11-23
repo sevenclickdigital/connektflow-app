@@ -2,7 +2,8 @@
 {% comment %}
 The checkout's foot bar (#quote-bar): the total with the number of brands
 and the cycle above it, the list price struck through when a discount
-applies and, on yearly, what is charged a year. Priced by
+applies, on yearly what is charged a year and, for brands added to an
+active plan, what is charged now. Priced by
 apps.billing.services.quote_plan through views.checkout_quote. When it
 comes from that view (an HTMX request) the saving at the foot of the brands
 (#quote-saving) and the order summary of the payment step (#summary-totals)
@@ -22,6 +23,20 @@ are refreshed with it, out of band.
       {% if quote.cycle == "yearly" %}<span class="hidden md:inline text-xs text-neutral-600">· {% blocktranslate with total=quote.charge_cents|brl %}R$ {{ total }} a year{% endblocktranslate %}</span>{% endif %}
     </p>
   </div>
+  {% comment %}
+  Brands added to an active plan: what is charged now for the days until
+  the plan's next charge (services.quote_brand_addition), or that nothing
+  is, when the value is under the gateway's minimum.
+  {% endcomment %}
+  {% if addition %}
+  <p class="text-xs text-neutral-700 w-full sm:w-auto">
+    {% if addition.amount_cents %}
+    {% blocktranslate with amount=addition.amount_cents|brl date=addition.next_charge_on|date:"SHORT_DATE_FORMAT" count days=addition.days_left %}<strong>R$ {{ amount }} charged now</strong> for the {{ days }} day until {{ date }}, when the new total starts.{% plural %}<strong>R$ {{ amount }} charged now</strong> for the {{ days }} days until {{ date }}, when the new total starts.{% endblocktranslate %}
+    {% else %}
+    {% blocktranslate with date=addition.next_charge_on|date:"SHORT_DATE_FORMAT" %}Nothing is charged now: the new total starts on {{ date }}.{% endblocktranslate %}
+    {% endif %}
+  </p>
+  {% endif %}
   {% else %}
   <p class="text-sm text-neutral-600">{% blocktranslate with max=max_brands|default:50 %}Choose between 1 and {{ max }} brands.{% endblocktranslate %}</p>
   {% endif %}

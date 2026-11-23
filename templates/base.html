@@ -424,6 +424,7 @@
                     <svg class="w-4 h-4 text-neutral-500 flex-shrink-0 transition-transform" :class="wsOpen && 'rotate-180'" x-show="!sidebarCollapsed" x-cloak fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
 
+                {# Wider than the sidebar, over the page, so long organization and brand names fit on one line. #}
                 <!-- Workspace dropdown -->
                 <div x-show="wsOpen" @click.away="wsOpen = false" x-cloak
                      x-transition:enter="transition ease-out duration-100"
@@ -432,7 +433,7 @@
                      x-transition:leave="transition ease-in duration-75"
                      x-transition:leave-start="opacity-100"
                      x-transition:leave-end="opacity-0"
-                     class="absolute left-3 right-3 top-full mt-1 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 py-1 z-50">
+                     class="absolute left-3 top-full mt-1 w-72 max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 py-1 z-50">
                     {% comment %}
                     The brands under the organization each belongs to. Opening a
                     brand is what changes the organization in use (see
@@ -715,6 +716,14 @@
                             <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             {% translate "My profile" %}
                         </a>
+                        {# Only with an organization to manage: a team account and a brand's guest have none. #}
+                        {% if request.org_membership %}
+                        <a href="{% url 'organizations:workspaces' %}"
+                           class="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-800 hover:bg-black/[0.04] transition-colors">
+                            <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                            {% translate "Manage organization" %}
+                        </a>
+                        {% endif %}
                         {% if is_affiliate %}
                         <a href="{% url 'affiliates:panel' %}"
                            class="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-800 hover:bg-black/[0.04] transition-colors">

@@ -1,4 +1,6 @@
 import calendar as cal_mod
+import logging
+import uuid
 from collections import defaultdict
 from datetime import date, timedelta
 
@@ -8,7 +10,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Count, Q
-from django.shortcuts import redirect, render
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone as django_tz
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
@@ -26,7 +29,10 @@ from apps.members.models import OrgMembership, WorkspaceMembership
 from apps.organizations.forms import AboutBusinessForm
 from apps.organizations.models import Organization
 from apps.social_accounts.models import SocialAccount
+from apps.workspaces import services as workspace_services
 from apps.workspaces.models import Workspace
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -60,9 +66,13 @@ def needs_welcome(request, workspace):
 
     True for the owner of the organization, looking at one of its brands,
     while the organization has its sign-up name, or once it has been named
-    on the "about your business" step until a brand is in use (paid,
-    comped or on trial). The about step stays open meanwhile, and the
+    on the "about your business" step, until one of its brands is in use
+    (paid, comped or on trial). The about step stays open meanwhile, and the
     checkout shows it as the first of the setup steps.
+
+    An organization with a brand in use is set up, whatever its name and
+    whether or not it answered the about step: another brand created in it
+    goes straight to its plan.
     """
     membership = request.org_membership
     if not (
@@ -72,9 +82,9 @@ def needs_welcome(request, workspace):
     ):
         return False
     organization = membership.organization
-    if organization.is_unnamed:
-        return True
-    return organization.about_answered_at is not None and not billing_services.is_workspace_active(workspace)
+    if billing_services.organization_has_brand_in_use(organization):
+        return False
+    return organization.is_unnamed or organization.about_answered_at is not None
 
 
 @login_required
@@ -264,6 +274,38 @@ def create_view(request):
 
 
 @login_required
+@require_POST
+def move_brand_view(request):
+    """Move a brand to another organization of the same person.
+
+    Both the brand's organization and the destination are looked up among the
+    organizations where the person is owner or admin, so an id from the form
+    pointing anywhere else is a 404. The rules of the move itself, billing
+    included, are in ``workspaces.services.move_brand``.
+    """
+    allowed = workspace_services.movable_organization_ids(request.user)
+    try:
+        brand_id = uuid.UUID(request.POST.get("brand", ""))
+        destination_id = uuid.UUID(request.POST.get("destination", ""))
+    except ValueError as error:
+        raise Http404 from error
+    workspace = get_object_or_404(Workspace, id=brand_id, organization_id__in=allowed)
+    destination = get_object_or_404(Organization, id__in=allowed, pk=destination_id)
+
+    try:
+        workspace_services.move_brand(workspace, destination)
+    except workspace_services.BrandMoveError as error:
+        messages.error(request, str(error))
+        return redirect("organizations:workspaces")
+    logger.info("User %s moved brand %s to organization %s", request.user.pk, workspace.pk, destination.pk)
+    messages.success(
+        request,
+        _("%(brand)s is now in %(organization)s.") % {"brand": workspace.name, "organization": destination.name},
+    )
+    return redirect("organizations:workspaces")
+
+
+@login_required
 @require_org_role(OrgMembership.OrgRole.MEMBER)
 def workspaces_view(request):
     """Account centre → Organizations: each one with its brands underneath.
@@ -271,7 +313,7 @@ def workspaces_view(request):
     Lists the organizations the user belongs to, newest first, then those
     where they were only added to a brand. Read only from the user's own
     memberships, so nothing they don't belong to can appear. The numbers of
-    an organization (members, connected channels, owner) and the members of
+    an organization (members, connected channels, owner) and the member count of
     its brands are shown only to someone who belongs to it.
     """
     org = request.org
@@ -281,6 +323,8 @@ def workspaces_view(request):
     )
     managing_roles = (WorkspaceMembership.WorkspaceRole.OWNER, WorkspaceMembership.WorkspaceRole.MANAGER)
     org_admin_roles = (OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN)
+    admin_org_ids = {org_id for org_id, role in org_roles.items() if role in org_admin_roles}
+    api_key_org_ids = {m.organization_id for m in request.org_memberships if m.can_manage_api_keys}
 
     def group_for(organization):
         org_role = org_roles.get(organization.id)
@@ -289,6 +333,9 @@ def workspaces_view(request):
             "is_current": organization.id == org.id,
             "is_member": org_role is not None,
             "can_edit": org_role in org_admin_roles,
+            # What the page's filter reads: an organization waiting to be deleted is the inactive one.
+            "status": "inactive" if organization.deletion_scheduled_for else "active",
+            "archived_count": 0,
             "brands": [],
         }
 
@@ -321,7 +368,7 @@ def workspaces_view(request):
             Q(organization_id__in=org_roles.keys()) | Q(id__in=brand_roles.keys(), is_archived=False)
         )
         .select_related("organization")
-        .prefetch_related("memberships__user")
+        .prefetch_related("memberships")
         .order_by("organization__name", "is_archived", "name")
     )
     for ws in workspaces:
@@ -333,13 +380,17 @@ def workspaces_view(request):
             "workspace": ws,
             "is_member": brand_role is not None,
             "can_manage": brand_role in managing_roles or org_roles.get(ws.organization_id) in org_admin_roles,
+            # The brand's API keys page needs the person in the brand, as every page of its settings does.
+            "can_api_keys": brand_role is not None and ws.organization_id in api_key_org_ids and not ws.is_archived,
+            # Out of an organization the person administers, when there is another to move it to.
+            "can_move": ws.organization_id in admin_org_ids and len(admin_org_ids) > 1 and not ws.is_archived,
         }
         if group["is_member"]:
-            members = list(ws.memberships.all())
-            entry.update(members=members, member_count=len(members))
+            entry["member_count"] = len(ws.memberships.all())
         else:
             entry["role"] = brand_role
         group["brands"].append(entry)
+        group["archived_count"] += ws.is_archived
         if group["is_member"] and not ws.is_archived:
             group["brand_count"] += 1
 
@@ -349,8 +400,15 @@ def workspaces_view(request):
     for position, group in enumerate(by_name):
         group["name_position"] = position
     own = [g for g in org_groups if g["is_member"]]
+    active = sum(g["status"] == "active" for g in org_groups)
     context = {
         "org_groups": org_groups,
+        "filter_counts": {
+            "all": len(org_groups),
+            "active": active,
+            "inactive": len(org_groups) - active,
+            "archived": sum(g["archived_count"] for g in org_groups),
+        },
         "totals": {
             "organizations": len(own),
             # Someone in two organizations is one person.
@@ -358,6 +416,12 @@ def workspaces_view(request):
             "brands": sum(g["brand_count"] for g in own),
             "channels": sum(g["channel_count"] for g in own),
         },
+        # Where a brand can be moved to, for the move dialog (json_script).
+        "move_destinations": [
+            {"id": str(m.organization_id), "name": m.organization.name}
+            for m in memberships
+            if m.organization_id in admin_org_ids
+        ],
         "settings_active": "workspaces",
     }
     return render(request, "organizations/workspaces.html", context)
@@ -385,6 +449,55 @@ def rename_view(request):
         raise PermissionDenied("Only an owner or admin of the organization can rename it.")
     _handle_name_update(request, membership.organization)
     return redirect("organizations:workspaces")
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def role_permissions_view(request, organization_id):
+    """Account centre → Organizations → Roles and permissions of one organization.
+
+    What each brand role may do in every brand of the organization. Only an
+    owner or admin of that organization reaches it; anyone else gets a 404,
+    so the page doesn't confirm the organization exists.
+    """
+    from apps.members import services as member_services
+
+    membership = next(
+        (
+            m
+            for m in request.org_memberships
+            if m.organization_id == organization_id
+            and m.org_role in (OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN)
+        ),
+        None,
+    )
+    if membership is None:
+        raise Http404
+    organization = membership.organization
+
+    if request.method == "POST":
+        if request.POST.get("action") == "reset":
+            member_services.reset_role_permissions(organization)
+            messages.success(request, _("The roles are back on the default permissions."))
+        else:
+            member_services.set_role_permissions(
+                organization,
+                {role: request.POST.getlist(f"role_{role}") for role in member_services.ADJUSTABLE_ROLES},
+            )
+            messages.success(request, _("Permissions saved."))
+        return redirect("organizations:role_permissions", organization_id=organization.id)
+
+    return render(
+        request,
+        "organizations/role_permissions.html",
+        {
+            "organization": organization,
+            "roles": WorkspaceMembership.WorkspaceRole.choices,
+            "matrix": member_services.role_permission_matrix(organization),
+            "is_adjusted": bool(organization.role_permissions),
+            "settings_active": "workspaces",
+        },
+    )
 
 
 def _handle_name_update(request, org):

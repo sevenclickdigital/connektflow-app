@@ -132,3 +132,59 @@ def test_an_owner_of_a_brand_in_another_organization_manages_its_team(client, or
     client.post(_url(brand), {"action": "add", "user_id": member.id, "role": ROLE.VIEWER})
 
     assert _role(member, brand) == ROLE.VIEWER
+
+
+@pytest.mark.django_db
+def test_a_pending_invitation_is_listed_worded_around_the_brand_and_can_be_canceled(client, org, brand, mailoutbox):
+    from apps.members.models import Invitation
+
+    manager = _person("manager@a.com", org, brand=brand, role=ROLE.MANAGER)
+    other_brand = Workspace.objects.create(organization=org, name="Other Brand")
+    client.force_login(manager)
+
+    client.post(_url(brand), {"action": "invite", "name": "  Ana   Lima ", "email": "guest@b.com", "role": ROLE.EDITOR})
+
+    invitation = Invitation.objects.get(email="guest@b.com")
+    assert invitation.name == "Ana Lima"
+    assert "Ana Lima" in mailoutbox[-1].body
+    assert invitation.team_name == "Brand"
+    assert "Brand" in mailoutbox[-1].subject and "Agency" not in mailoutbox[-1].subject
+    pending = client.get(_url(brand)).context["pending_invitations"]
+    assert [item["invitation"].id for item in pending] == [invitation.id]
+
+    # Another brand's team page neither lists it nor cancels it.
+    other_manager = _person("other@a.com", org, brand=other_brand, role=ROLE.MANAGER)
+    client.force_login(other_manager)
+    assert client.get(_url(other_brand)).context["pending_invitations"] == []
+    client.post(_url(other_brand), {"action": "revoke_invite", "invitation_id": invitation.id})
+    invitation.refresh_from_db()
+    assert not invitation.is_expired
+
+    client.force_login(manager)
+    assert client.post(_url(brand), {"action": "revoke_invite", "invitation_id": "not-a-uuid"}).status_code == 302
+    client.post(_url(brand), {"action": "revoke_invite", "invitation_id": invitation.id})
+    assert client.get(_url(brand)).context["pending_invitations"] == []
+
+
+@pytest.mark.django_db
+def test_the_invited_name_becomes_the_name_of_an_account_that_has_none(org, brand):
+    from apps.members import services
+    from apps.members.models import Invitation
+
+    manager = _person("manager@a.com", org, brand=brand, role=ROLE.MANAGER)
+    invitation = services.create_invitation(
+        org=org,
+        email="guest@b.com",
+        org_role=OrgMembership.OrgRole.MEMBER,
+        workspace_assignments=[{"workspace_id": str(brand.id), "role": ROLE.EDITOR}],
+        invited_by=manager,
+        name="Ana Lima",
+    )
+    unnamed = User.objects.create_user(email="guest@b.com", password="x", tos_accepted_at=timezone.now())
+    User.objects.filter(pk=unnamed.pk).update(name="")
+    unnamed.refresh_from_db()
+
+    services.accept_invitation(Invitation.objects.get(pk=invitation.pk), unnamed)
+
+    unnamed.refresh_from_db()
+    assert unnamed.name == "Ana Lima"

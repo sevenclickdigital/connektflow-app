@@ -713,12 +713,51 @@ def quote_plan(brands, cycle=WorkspaceSubscription.Cycle.MONTHLY, coupon=None):
     }
 
 
+def quote_brand_addition(plan, brands, next_charge_on, today=None):
+    """What adding brands to an active plan costs now, for the days left in its cycle.
+
+    The plan keeps its one charge date: the brands are open at once, the
+    plan's value rises from the next charge (``next_charge_on``), and the
+    days until then are charged now in proportion. The price of the added
+    brands is the difference between the plan with ``brands`` brands and the
+    plan as it is, so the volume tiers and an every-charge coupon apply as
+    they will on the next charge; the proportion is the days left over the
+    days of the cycle that ends on ``next_charge_on``.
+
+    ``amount_cents`` is 0 when nothing is charged now: no brand is being
+    added, the next charge is today or past, or the proportional value is
+    under the gateway's minimum charge (``MIN_CHARGE_CENTS``), in which case
+    the few days are not charged.
+    """
+    today = today or timezone.localdate()
+    step = relativedelta(years=1) if plan.is_yearly else relativedelta(months=1)
+    cycle_days = (next_charge_on - (next_charge_on - step)).days
+    days_left = max(0, min((next_charge_on - today).days, cycle_days))
+    current = quote_plan(plan.brands, plan.billing_cycle, plan.coupon)
+    target = quote_plan(brands, plan.billing_cycle, plan.coupon)
+    added_cents = max(0, target["charge_cents"] - current["charge_cents"])
+    amount_cents = int((Decimal(added_cents) * days_left / cycle_days).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+    if amount_cents < MIN_CHARGE_CENTS:
+        amount_cents = 0
+    return {
+        "amount_cents": amount_cents,
+        "days_left": days_left,
+        "cycle_days": cycle_days,
+        "next_charge_on": next_charge_on,
+        # What each later charge rises by.
+        "added_charge_cents": added_cents,
+        "new_charge_cents": target["charge_cents"],
+    }
+
+
 # ---------------------------------------------------------------------------
 # Coupons
 # ---------------------------------------------------------------------------
 
-#: Asaas refuses a charge under R$ 5,00, so no coupon takes a charge below it.
-COUPON_MIN_CHARGE_CENTS = 500
+#: Asaas refuses a charge under R$ 5,00.
+MIN_CHARGE_CENTS = 500
+#: So no coupon takes a charge below it.
+COUPON_MIN_CHARGE_CENTS = MIN_CHARGE_CENTS
 COUPON_MAX_PERCENT = 100
 _COUPON_CODE = re.compile(r"^[A-Z0-9_-]{3,32}$")
 
@@ -1188,6 +1227,14 @@ def has_workspace_in_use(user):
     """Whether any brand ``user`` belongs to may be used: paid, comped or on a running trial."""
     subscriptions = WorkspaceSubscription.objects.filter(
         workspace__memberships__user=user, workspace__is_archived=False
+    )
+    return any(subscription.is_active for subscription in subscriptions)
+
+
+def organization_has_brand_in_use(organization):
+    """Whether any brand of ``organization`` may be used: paid, comped or on a running trial."""
+    subscriptions = WorkspaceSubscription.objects.filter(
+        workspace__organization=organization, workspace__is_archived=False
     )
     return any(subscription.is_active for subscription in subscriptions)
 

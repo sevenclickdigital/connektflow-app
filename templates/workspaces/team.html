@@ -8,6 +8,10 @@
         <h1 class="page-title">{% translate "Manage team" %}</h1>
         <p class="page-description">{% blocktranslate with name=workspace.name %}Who works on {{ name }} and what each person can do.{% endblocktranslate %}</p>
     </div>
+    <button type="button" class="btn-brand" x-data @click="$dispatch('open-invite')">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        {% translate "Invite by email" %}
+    </button>
 </div>
 {% endblock %}
 
@@ -57,13 +61,48 @@ level in the brand; set_brand_role enforces the same rule on the server.
     </div>
 </section>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    <section class="flex flex-col">
-        <h2 class="section-title">{% translate "Add from the organization" %}</h2>
-        <form method="POST" class="a-card p-6 flex-1 space-y-4">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="add">
-            {% if addable_members %}
+{% if pending_invitations %}
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Pending Invitations" %} ({{ pending_invitations|length }})</h2>
+    <div class="a-card divide-y divide-neutral-300">
+        {% for item in pending_invitations %}
+        <div class="px-6 py-4 flex flex-wrap items-center gap-3">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-neutral-100 text-neutral-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z"/><polyline points="22 6 12 13 2 6"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-neutral-950 truncate">{{ item.invitation.name|default:item.invitation.email }}</div>
+                <div class="text-xs text-neutral-500 truncate">
+                    {% if item.invitation.name %}{{ item.invitation.email }} · {% endif %}
+                    {% blocktranslate with inviter=item.invitation.invited_by.display_name time=item.invitation.expires_at|timeuntil %}Invited by {{ inviter }} · Expires {{ time }} from now{% endblocktranslate %}
+                </div>
+            </div>
+            {% if item.role %}<span class="pill pill-neutral"><i></i>{% translate item.role %}</span>{% endif %}
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="resend_invite">
+                <input type="hidden" name="invitation_id" value="{{ item.invitation.id }}">
+                <button type="submit" class="btn-ghost py-1.5 px-3 text-xs">{% translate "Resend" %}</button>
+            </form>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="revoke_invite">
+                <input type="hidden" name="invitation_id" value="{{ item.invitation.id }}">
+                <button type="submit" class="btn-ghost py-1.5 px-3 text-xs text-[var(--error-700)]">{% translate "Cancel invitation" %}</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="mb-8">
+    <h2 class="section-title">{% translate "Add from the organization" %}</h2>
+    <form method="POST" class="a-card p-6 space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        {% if addable_members %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label for="add-user" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Person" %}</label>
                 <select id="add-user" name="user_id" class="form-input-styled bb-select cursor-pointer" required>
@@ -76,32 +115,52 @@ level in the brand; set_brand_role enforces the same rule on the server.
                     {% for value, label in assignable %}<option value="{{ value }}" {% if value == "editor" %}selected{% endif %}>{% translate label %}</option>{% endfor %}
                 </select>
             </div>
-            <button type="submit" class="btn-brand">{% translate "Add to the brand" %}</button>
-            {% else %}
-            <p class="text-sm text-neutral-500">{% translate "Everyone in the organization is already in this brand. Invite someone new by email." %}</p>
-            {% endif %}
-        </form>
-    </section>
+        </div>
+        <button type="submit" class="btn-brand">{% translate "Add to the brand" %}</button>
+        {% else %}
+        <p class="text-sm text-neutral-500">{% translate "Everyone in the organization is already in this brand. Invite someone new by email." %}</p>
+        {% endif %}
+    </form>
+</section>
 
-    <section class="flex flex-col">
-        <h2 class="section-title">{% translate "Invite by email" %}</h2>
-        <form method="POST" class="a-card p-6 flex-1 space-y-4">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="invite">
-            <div>
-                <label for="invite-email" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Email" %}</label>
-                <input id="invite-email" type="email" name="email" required class="form-input-styled" placeholder="{% translate 'name@company.com' %}">
-            </div>
-            <div>
-                <label for="invite-role" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Role" %}</label>
-                <select id="invite-role" name="role" class="form-input-styled bb-select cursor-pointer" required>
-                    {% for value, label in assignable %}<option value="{{ value }}" {% if value == "editor" %}selected{% endif %}>{% translate label %}</option>{% endfor %}
-                </select>
-            </div>
-            <p class="text-xs text-neutral-500">{% translate "The person joins the organization as a member, with access only to this brand." %}</p>
-            <button type="submit" class="btn-brand">{% translate "Send invitation" %}</button>
-        </form>
-    </section>
+{% comment %}
+Inviting someone who is not in the organization yet. Opened by the button in
+the page header, which lives in another block, hence the window event.
+{% endcomment %}
+<div x-data="{ open: false }"
+     @open-invite.window="open = true; $nextTick(() => $refs.name.focus())"
+     @keydown.escape.window="open = false">
+    <div x-show="open" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="invite-title">
+        <div class="modal-panel" @click.outside="open = false">
+            <button type="button" class="modal-close" @click="open = false" aria-label="{% translate 'Close' %}">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <h2 id="invite-title" class="modal-title">{% translate "Invite by email" %}</h2>
+            <form method="POST" class="mt-4 space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="invite">
+                <div>
+                    <label for="invite-name" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Name" %}</label>
+                    <input id="invite-name" x-ref="name" type="text" name="name" required maxlength="255" autocomplete="off" class="form-input-styled" placeholder="{% translate 'Name of the person' %}">
+                </div>
+                <div>
+                    <label for="invite-email" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Email" %}</label>
+                    <input id="invite-email" type="email" name="email" required class="form-input-styled" placeholder="{% translate 'name@company.com' %}">
+                </div>
+                <div>
+                    <label for="invite-role" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Role" %}</label>
+                    <select id="invite-role" name="role" class="form-input-styled bb-select cursor-pointer" required>
+                        {% for value, label in assignable %}<option value="{{ value }}" {% if value == "editor" %}selected{% endif %}>{% translate label %}</option>{% endfor %}
+                    </select>
+                </div>
+                <p class="text-xs text-neutral-500">{% translate "The person joins the organization as a member, with access only to this brand." %}</p>
+                <div class="modal-footer">
+                    <button type="button" class="btn-ghost" @click="open = false">{% translate "Cancel" %}</button>
+                    <button type="submit" class="btn-brand">{% translate "Send invitation" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 {% endwith %}
 {% endblock %}

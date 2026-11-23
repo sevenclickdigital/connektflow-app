@@ -156,6 +156,13 @@ def create_organization_on_signup(sender, request, user, **kwargs):
     "My Organization". If invite acceptance succeeds, we clean up that
     default org so the user only belongs to the invited org.
     """
+    # The e-mail sign-up form states the terms under its button, so filling it
+    # in is the acceptance, for someone arriving by an invitation as well.
+    # A social sign-up never saw that form and is sent to the terms page.
+    if not kwargs.get("sociallogin"):
+        user.tos_accepted_at = timezone.now()
+        user.save(update_fields=["tos_accepted_at"])
+
     pending_token = request.session.pop("pending_invite_token", None)
     if pending_token and _join_invited_org(pending_token, user):
         return  # Done - user is now in the invited org only
@@ -175,12 +182,6 @@ def create_organization_on_signup(sender, request, user, **kwargs):
 
     # Try to set the organization timezone from the browser cookie set during signup.
     _set_org_timezone_from_browser(request, user)
-
-    # Email signups see ToS text on the signup form, so auto-accept.
-    # Social signups (Google OAuth) will be redirected to a dedicated ToS page.
-    if not kwargs.get("sociallogin"):
-        user.tos_accepted_at = timezone.now()
-        user.save(update_fields=["tos_accepted_at"])
 
 
 @receiver(user_signed_up)

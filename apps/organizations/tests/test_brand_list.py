@@ -75,3 +75,27 @@ def test_other_members_of_an_outside_brand_are_not_shown(client, org_owner, othe
     assert b"Client Brand" in response.content
     assert b"Stranger Person" not in response.content
     assert _brands(response)["Client Brand"][1]["can_manage"] is False
+
+
+@pytest.mark.django_db
+def test_filter_counts_follow_the_organizations_and_their_archived_brands(client, org_owner, organization, other_org):
+    from django.utils import timezone
+
+    from apps.members.models import OrgMembership
+
+    Workspace.objects.create(organization=organization, name="Old Brand", is_archived=True)
+    OrgMembership.objects.create(user=org_owner, organization=other_org, org_role=OrgMembership.OrgRole.OWNER)
+    other_org.deletion_scheduled_for = timezone.now()
+    other_org.save(update_fields=["deletion_scheduled_for"])
+    client.force_login(org_owner)
+
+    response = client.get(reverse("organizations:workspaces"))
+
+    counts = response.context["filter_counts"]
+    groups = {g["organization"].id: g for g in response.context["org_groups"]}
+    assert counts["all"] == len(groups)
+    assert counts["inactive"] == 1
+    assert counts["active"] == len(groups) - 1
+    assert counts["archived"] == 1
+    assert groups[other_org.id]["status"] == "inactive"
+    assert groups[organization.id]["archived_count"] == 1

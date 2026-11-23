@@ -21,7 +21,9 @@ from apps.billing import services
 from apps.billing.gateways.asaas import AsaasAPIError
 from apps.billing.models import WorkspaceAddon, WorkspaceSubscription
 from apps.billing.tests.test_contracting import StubAsaas
+from apps.composer.models import Post
 from apps.members.models import WorkspaceMembership
+from apps.workspaces.models import Workspace
 
 VALID_CPF = "529.982.247-25"
 
@@ -136,7 +138,6 @@ ACCOUNT_PAGES = [
     "settings_manager:index",
     "notifications:list",
     "api_keys:list",
-    "organizations:workspaces",
     "organizations:cross_workspace_calendar",
     "media_library_org:shared_index",
     "workspaces:list",
@@ -153,6 +154,13 @@ class TestAccountPagesGate:
         response = client.get(reverse(name))
         assert response.status_code == 302
         assert response.headers["Location"] == _url("billing:subscribe_modal", workspace)
+
+    def test_the_organizations_screen_is_open_without_a_brand_in_use(self, required):
+        """Brands are listed, created and given up on there; opening one is what its own lock answers."""
+        client, workspace = _signed_up()
+
+        assert client.get(reverse("organizations:workspaces")).status_code == 200
+        assert client.get(_url("calendar:calendar", workspace)).status_code == 302
 
     def test_a_fragment_of_an_account_page_is_told_to_leave(self, required):
         client, workspace = _signed_up()
@@ -463,3 +471,139 @@ class TestTrialOncePerPerson:
     def test_an_alias_of_the_same_inbox_is_the_same_email(self):
         assert services.normalize_trial_email("Ana.Silva+teste@GoogleMail.com") == "anasilva@gmail.com"
         assert services.normalize_trial_email("ana+2@agenciasol.com.br") == "ana@agenciasol.com.br"
+
+
+def _activated(email="active@example.com"):
+    """An account already in use: its first brand is exempt, and nobody answered the about step."""
+    client, workspace = _signed_up(email)
+    services.grant_courtesy(workspace)
+    return client, workspace
+
+
+def _create_brand(client, organization, name="Second brand"):
+    response = client.post(reverse("workspaces:create"), {"name": name, "organization": str(organization.id)})
+    return response, Workspace.objects.get(organization=organization, name=name)
+
+
+@pytest.mark.django_db
+class TestAnotherBrandInAnActivatedAccount:
+    """An account with a brand in use adds a brand without being set up again,
+    and can give up on it without paying or starting a trial."""
+
+    @pytest.fixture(autouse=True)
+    def _locked_with_trial(self, settings, required):
+        settings.BILLING_TRIAL_DAYS = 7
+
+    def test_the_new_brand_goes_to_its_plan_not_to_the_company_step(self):
+        client, first = _activated()
+
+        response, brand = _create_brand(client, first.organization)
+        assert response.headers["Location"] == _url("billing:subscribe_modal", brand)
+        checkout = client.get(_url("billing:checkout", brand))
+
+        assert checkout.status_code == 200
+        assert checkout.context["in_setup"] is False
+        assert checkout.context["just_created"] is True
+
+    def test_a_new_account_is_still_asked_about_its_business(self):
+        client, workspace = _signed_up()
+
+        response = client.get(_url("billing:checkout", workspace))
+
+        assert response.status_code == 302
+        assert reverse("organizations:about") in response.headers["Location"]
+
+    def test_a_new_account_can_leave_its_checkout_and_keeps_its_brand(self):
+        """Nobody has to sign out to give up: the brand stays, locked, for later."""
+        client, workspace = _signed_up()
+        _answer_about(client, workspace)
+        assert client.get(_url("billing:checkout", workspace)).status_code == 200
+
+        response = client.post(_url("billing:checkout_cancel", workspace))
+
+        assert response.headers["Location"] == reverse("organizations:workspaces")
+        assert Workspace.objects.filter(pk=workspace.pk).exists()
+        assert services.ensure_billing_profile(workspace.organization).trial_started_at is None
+        assert client.get(reverse("organizations:workspaces")).status_code == 200
+
+    def test_cancelling_discards_the_brand_and_starts_no_trial(self):
+        client, first = _activated()
+        _response, brand = _create_brand(client, first.organization)
+
+        response = client.post(_url("billing:checkout_cancel", brand))
+
+        assert response.headers["Location"] == reverse("organizations:workspaces")
+        assert not Workspace.objects.filter(pk=brand.pk).exists()
+        profile = services.ensure_billing_profile(first.organization)
+        assert profile.trial_started_at is None
+        assert client.get(reverse("organizations:workspaces")).status_code == 200
+
+    def test_after_cancelling_home_is_the_brand_in_use(self):
+        client, first = _activated()
+        _response, brand = _create_brand(client, first.organization)
+        client.post(_url("billing:checkout_cancel", brand))
+
+        response = client.get("/")
+
+        assert response.headers["Location"] == _url("workspaces:dashboard", first)
+        assert client.get(_url("workspaces:dashboard", first)).status_code == 200
+
+    def test_the_brand_in_use_opens_straight_away(self):
+        """No company data and no plan in the way of a brand already activated."""
+        client, first = _activated()
+
+        assert client.get(_url("calendar:calendar", first)).status_code == 200
+
+    def test_a_brand_left_unpaid_stays_locked_on_its_own(self):
+        client, first = _activated()
+        _response, brand = _create_brand(client, first.organization)
+
+        assert client.get(_url("calendar:calendar", brand)).status_code == 302
+        assert client.get(_url("calendar:calendar", first)).status_code == 200
+
+    def test_leaving_an_older_brand_s_checkout_keeps_the_brand(self):
+        """Only a brand created just now is given up on by leaving."""
+        client, first = _activated()
+        _response, brand = _create_brand(client, first.organization)
+        session = client.session
+        session.pop("new_brand_id")
+        session.save()
+
+        client.post(_url("billing:checkout_cancel", brand))
+
+        assert Workspace.objects.filter(pk=brand.pk).exists()
+
+    def test_a_brand_with_content_is_never_discarded(self):
+        client, first = _activated()
+        _response, brand = _create_brand(client, first.organization)
+        Post.objects.create(workspace=brand, author=User.objects.get(email="active@example.com"), caption="Kept")
+
+        client.post(_url("billing:checkout_cancel", brand))
+
+        assert Workspace.objects.filter(pk=brand.pk).exists()
+
+    def test_the_only_brand_of_an_organization_is_never_discarded(self):
+        client, first = _activated()
+        _response, brand = _create_brand(client, first.organization)
+        first.delete()
+
+        client.post(_url("billing:checkout_cancel", brand))
+
+        assert Workspace.objects.filter(pk=brand.pk).exists()
+
+    def test_someone_else_cannot_cancel_it(self):
+        client, first = _activated()
+        _response, brand = _create_brand(client, first.organization)
+        stranger, _theirs = _signed_up("stranger@example.com")
+
+        response = stranger.post(_url("billing:checkout_cancel", brand))
+
+        assert response.status_code == 403
+        assert Workspace.objects.filter(pk=brand.pk).exists()
+
+    def test_get_does_not_cancel(self):
+        client, first = _activated()
+        _response, brand = _create_brand(client, first.organization)
+
+        assert client.get(_url("billing:checkout_cancel", brand)).status_code == 405
+        assert Workspace.objects.filter(pk=brand.pk).exists()

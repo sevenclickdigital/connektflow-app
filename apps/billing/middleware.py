@@ -11,7 +11,9 @@ is gated on that brand. The account pages (``ACCOUNT_NAMESPACES``: team,
 organizations, settings, notifications, API keys, shared media, brands)
 are gated on the person: they open once any brand they belong to is in
 use. The contracting and billing pages, the profile, sign-out, the "about
-your business" step, the staff console and the links that arrive from
+your business" step, the organizations screen (the brands are listed,
+created and moved there; each brand's own lock answers when it is
+opened), the staff console and the links that arrive from
 outside (invitations, client portal, connection links, OAuth callbacks)
 stay reachable, so someone who will not pay can still pay or leave.
 """
@@ -35,12 +37,19 @@ ACCOUNT_NAMESPACES = frozenset(
 )
 
 #: Account pages that stay open all the same: the setup step before the
-#: plan, an invitation being accepted, an e-mail unsubscribe link, and the
-#: unread badge every page polls.
+#: plan, the organizations and their brands (where a brand is created, moved
+#: or given up on; opening one is what its own lock answers), an invitation
+#: being accepted, an e-mail unsubscribe link, and the unread badge every
+#: page polls.
 OPEN_ACCOUNT_VIEWS = frozenset(
     {
         ("organizations", "about"),
         ("organizations", "welcome"),
+        ("organizations", "workspaces"),
+        ("organizations", "rename"),
+        ("organizations", "create"),
+        ("organizations", "move_brand"),
+        ("workspaces", "create"),
         ("members", "accept_invite"),
         ("notifications", "unsubscribe"),
         ("notifications", "unread_count"),

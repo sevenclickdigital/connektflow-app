@@ -14,8 +14,9 @@ of a new account. Wide, in two steps on one page:
    brand a new account was created with gets its name here). The cycle sits
    beside the steps; the bar floating at the foot keeps the total and leads on.
 2. The payment: how to pay (card, or Pix Automático: a QR code that pays the
-   first charge and authorizes the renewals) beside the order summary. With an active plan there is no card: the
-   brands are added and charged to the card on file from the next charge.
+   first charge and authorizes the renewals) beside the order summary. With an active plan there is no card form: the
+   days until the plan's next charge are charged to the card on file, or paid on the gateway's page when there is none,
+   and the brands go on the plan once that is paid (contracting.add_plan_brands).
 
 Prices come from the server: #quote-source asks billing:checkout_quote with
 every [data-quote] field each time the choice changes, and the answer fills
@@ -61,6 +62,12 @@ the part that posted. Card fields are passed to Asaas and kept nowhere.
          hx-trigger="quote delay:150ms" hx-include="[data-quote]" hx-target="#quote-bar" hx-swap="innerHTML"></div>
 
     <main class="max-w-6xl mx-auto px-4 sm:px-6 pt-10 pb-32">
+      {% if pending_addition %}
+      <div class="alert-info mb-5 flex flex-wrap items-center justify-between gap-3">
+        <span>{% blocktranslate with amount=pending_addition.amount_cents|brl count brands=pending_addition.brands %}A charge of R$ {{ amount }} is waiting to be paid for the plan to cover {{ brands }} brand.{% plural %}A charge of R$ {{ amount }} is waiting to be paid for the plan to cover {{ brands }} brands.{% endblocktranslate %}</span>
+        {% if pending_addition.invoice_url %}<a href="{{ pending_addition.invoice_url }}" class="btn-soft" rel="noopener">{% translate "Pay now" %}</a>{% endif %}
+      </div>
+      {% endif %}
       {% if messages %}
       <div class="mb-5 space-y-2">
         {% for message in messages %}
@@ -69,7 +76,7 @@ the part that posted. Card fields are passed to Asaas and kept nowhere.
       </div>
       {% endif %}
 
-      {% if plan %}{% translate "Manage your plan" as setup_title %}{% translate "Tick or add the brands to put on the plan. They are charged to the card on file from the next charge." as setup_description %}
+      {% if plan %}{% translate "Manage your plan" as setup_title %}{% translate "Tick or add the brands to put on the plan. The days until the plan's next charge are charged now, and the new total from then on." as setup_description %}
       {% elif trial_expired %}{% translate "Your free trial has ended" as setup_title %}{% translate "Everything you did is kept. Choose the brands and carry on from where you stopped." as setup_description %}
       {% else %}{% translate "Build your plan" as setup_title %}{% translate "Choose the brands you manage and how you want to pay. Every feature is included in each one." as setup_description %}{% endif %}
       {% translate "Finish your order" as payment_title %}{% translate "Fill in the billing details and how you want to pay. Payment is secure and you can cancel whenever you want." as payment_description %}
@@ -259,8 +266,8 @@ the part that posted. Card fields are passed to Asaas and kept nowhere.
           <div class="rounded-xl border border-neutral-300 bg-white p-5 sm:p-6 overflow-hidden">
           <h2 class="-mx-5 sm:-mx-6 -mt-5 sm:-mt-6 px-5 sm:px-6 py-2.5 bg-brand-700 text-white text-base font-semibold mb-3">{% translate "Payment" %}</h2>
           <p class="text-sm text-neutral-700 mt-2">
-            {% if plan.card_last4 %}{% blocktranslate with brand=plan.card_brand|title last4=plan.card_last4 %}Charged to the {{ brand }} card ending in {{ last4 }}, from the next charge.{% endblocktranslate %}
-            {% else %}{% translate "Charged to the card on the plan, from the next charge." %}{% endif %}
+            {% if plan.has_card_on_file %}{% blocktranslate with brand=plan.card_brand|title last4=plan.card_last4 %}The days until the plan's next charge are charged now to the {{ brand }} card ending in {{ last4 }}. From that charge on, the plan's new total.{% endblocktranslate %}
+            {% else %}{% translate "The days until the plan's next charge are paid now, on the payment page you are taken to; the brands go on the plan as soon as it is paid. From that charge on, the plan's new total." %}{% endif %}
           </p>
           </div>
           {% else %}
@@ -516,6 +523,14 @@ the part that posted. Card fields are passed to Asaas and kept nowhere.
           {% include "billing/_checkout_quote.html" %}
         </div>
         <div class="flex items-center justify-between sm:justify-end gap-4">
+          {% comment %}
+          The way out without contracting or starting a trial, on both
+          steps: back to the organizations. It posts the form at the end of
+          the page, because a form cannot sit inside this one.
+          {% endcomment %}
+          <button type="submit" form="checkout-cancel-form" formnovalidate class="text-sm text-neutral-600 hover:text-neutral-900 cursor-pointer">
+            {% if just_created %}{% translate "Cancel" %}{% else %}{% translate "Back to organizations" %}{% endif %}
+          </button>
           {% if trial_available %}
           <button type="button" class="text-sm font-semibold text-brand-700 hover:underline cursor-pointer" @click="next(true)">
             {% blocktranslate count days=trial_days %}Try {{ days }} day free{% plural %}Try {{ days }} days free{% endblocktranslate %}
@@ -542,6 +557,9 @@ the part that posted. Card fields are passed to Asaas and kept nowhere.
           <p id="checkout-error" class="text-sm text-red-700 empty:hidden" role="alert"></p>
         </div>
         <div class="flex items-center gap-4">
+          <button type="submit" form="checkout-cancel-form" formnovalidate class="text-sm text-neutral-600 hover:text-neutral-900 cursor-pointer">
+            {% if just_created %}{% translate "Cancel" %}{% else %}{% translate "Back to organizations" %}{% endif %}
+          </button>
           <button type="submit" class="btn-brand floating-bar-action" x-show="!trial{% if not plan %} && method === 'card'{% endif %}"
                   :disabled="sending || picked === 0">
             <span x-show="!sending">{% if plan %}{% translate "Add to the plan" %}{% else %}{% translate "Pay and activate" %}{% endif %}</span>
@@ -661,5 +679,6 @@ the part that posted. Card fields are passed to Asaas and kept nowhere.
     </div>
 
   </form>
+  <form id="checkout-cancel-form" method="post" action="{% url 'billing:checkout_cancel' workspace_id=workspace.id %}" class="hidden">{% csrf_token %}</form>
 </div>
 {% endblock %}

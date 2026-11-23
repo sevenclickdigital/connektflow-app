@@ -334,6 +334,33 @@ class TestCustomersScreenIdentifiesTheAccount:
 
 
 @pytest.mark.django_db
+class TestCustomersAreListedByOwner:
+    def test_accounts_of_one_owner_sit_together(self, client, operator):
+        """By the owner's e-mail and then by name, with ownerless accounts last."""
+
+        def account(name, owner=None):
+            organization = Organization.objects.create(name=name)
+            if owner is not None:
+                OrgMembership.objects.create(
+                    user=owner, organization=organization, org_role=OrgMembership.OrgRole.OWNER
+                )
+
+        zoe = User.objects.create_user(email="zoe@example.com", password="x")
+        bob = User.objects.create_user(email="Bob@example.com", password="x")
+        # Only the accounts below: not the one each sign-up is given.
+        Organization.objects.all().delete()
+        account("Zebra", zoe)
+        account("Mango", bob)
+        account("Apple", zoe)
+        account("Orphan")
+        client.force_login(operator)
+
+        response = client.get(reverse("billing_staff:staff_console"))
+
+        assert [row["organization"].name for row in response.context["rows"]] == ["Mango", "Apple", "Zebra", "Orphan"]
+
+
+@pytest.mark.django_db
 class TestExemptionLimitIsNotProvisioning:
     """The field was read as granting workspaces. It is a billing ceiling.
 

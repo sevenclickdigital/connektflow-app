@@ -94,3 +94,62 @@ def test_a_logo_is_stored_under_the_extension_of_its_bytes(client, organization,
     brand.refresh_from_db()
     assert brand.icon.name.startswith("workspaces/icons/")
     assert brand.icon.name.endswith(".png")
+
+
+class TestApprovalFlowOnTheGeneralPage:
+    """The approval flow is edited on General and saved by its own view."""
+
+    def _brand(self, role):
+        from django.utils import timezone
+
+        from apps.accounts.models import User
+        from apps.members.models import OrgMembership, WorkspaceMembership
+        from apps.organizations.models import Organization
+        from apps.workspaces.models import Workspace
+
+        org = Organization.objects.create(name="Agency")
+        brand = Workspace.objects.create(organization=org, name="Brand")
+        user = User.objects.create_user(email=f"{role}@a.com", password="x", tos_accepted_at=timezone.now())
+        OrgMembership.objects.create(user=user, organization=org, org_role=OrgMembership.OrgRole.MEMBER)
+        WorkspaceMembership.objects.create(user=user, workspace=brand, workspace_role=role)
+        return brand, user
+
+    def _save_url(self, brand):
+        from django.urls import reverse
+
+        return reverse("workspaces:approvals_settings", kwargs={"workspace_id": brand.id})
+
+    @pytest.mark.django_db
+    def test_a_manager_saves_it_and_lands_on_general(self, client):
+        from django.urls import reverse
+
+        brand, user = self._brand("manager")
+        client.force_login(user)
+        general = reverse("workspaces:settings", kwargs={"workspace_id": brand.id})
+
+        assert b'id="approval-flow"' in client.get(general).content
+        response = client.post(self._save_url(brand), {"approval_workflow_mode": "required_internal"})
+
+        assert response["Location"] == general + "#approval-flow"
+        brand.refresh_from_db()
+        assert brand.approval_workflow_mode == "required_internal"
+
+    @pytest.mark.django_db
+    def test_an_editor_cannot_change_it(self, client):
+        brand, user = self._brand("editor")
+        client.force_login(user)
+
+        assert client.post(self._save_url(brand), {"approval_workflow_mode": "required_internal"}).status_code == 404
+        brand.refresh_from_db()
+        assert brand.approval_workflow_mode != "required_internal"
+
+    @pytest.mark.django_db
+    def test_an_unknown_mode_is_refused(self, client):
+        brand, user = self._brand("manager")
+        client.force_login(user)
+        before = brand.approval_workflow_mode
+
+        client.post(self._save_url(brand), {"approval_workflow_mode": "whatever"})
+
+        brand.refresh_from_db()
+        assert brand.approval_workflow_mode == before

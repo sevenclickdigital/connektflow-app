@@ -52,6 +52,7 @@ CYCLE_YEARLY = "YEARLY"
 # instead of us committing them to one method up front. Asaas treats
 # UNDEFINED as exactly that choice.
 BILLING_TYPE_UNDEFINED = "UNDEFINED"
+BILLING_TYPE_CREDIT_CARD = "CREDIT_CARD"
 
 #: How long a card charge may take before it is given up as unknown.
 CARD_CHARGE_TIMEOUT_SECONDS = 60
@@ -363,6 +364,62 @@ class AsaasClient:
     def update_payment_value(self, payment_id, value_cents):
         """Change the value of one unpaid charge (a first-charge coupon)."""
         return self._request("PUT", f"/payments/{payment_id}", json={"value": str(cents_to_value(value_cents))})
+
+    def create_payment(
+        self,
+        *,
+        customer_id,
+        value_cents,
+        external_reference,
+        description="",
+        card_token="",
+        remote_ip="",
+        due_date=None,
+    ):
+        """Create a one-off charge on an existing customer.
+
+        With ``card_token`` (and the payer's ``remote_ip``) the card is
+        charged on the spot, whatever the due date: the answer carries
+        ``status`` (``CONFIRMED`` when paid), and a refused card is a 400
+        with nothing left at Asaas. Not idempotent, like
+        :meth:`pay_with_card`. Without a token the charge waits for the
+        payer at its ``invoiceUrl``, where they pick how to pay.
+        """
+        due = due_date or timezone.localdate()
+        payload = {
+            "customer": customer_id,
+            "billingType": BILLING_TYPE_CREDIT_CARD if card_token else BILLING_TYPE_UNDEFINED,
+            "value": str(cents_to_value(value_cents)),
+            "dueDate": due.isoformat(),
+            "externalReference": str(external_reference),
+        }
+        if description:
+            payload["description"] = description[:500]
+        timeout = None
+        if card_token:
+            payload["creditCardToken"] = card_token
+            payload["remoteIp"] = remote_ip
+            timeout = max(self.timeout, CARD_CHARGE_TIMEOUT_SECONDS)
+        return self._request("POST", "/payments", json=payload, timeout=timeout)
+
+    def find_payment_by_reference(self, external_reference):
+        """The one-off charge created for this reference, or None.
+
+        The recovery path for a card charge whose answer was lost: the
+        caller cannot tell whether it went through, and must not charge
+        again before asking.
+        """
+        body = self._request(
+            "GET",
+            "/payments",
+            params={"externalReference": str(external_reference), "limit": 1},
+        )
+        data = body.get("data") or []
+        return data[0] if data else None
+
+    def delete_payment(self, payment_id):
+        """Withdraw an unpaid one-off charge, so it can no longer be paid."""
+        return self._request("DELETE", f"/payments/{payment_id}")
 
     def pay_with_card(self, payment_id, *, card, holder, remote_ip):
         """Pay one charge with a card, on the spot.

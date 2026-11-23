@@ -88,6 +88,12 @@ class Organization(models.Model):
     client_count = models.CharField(max_length=16, choices=ClientCount.choices, blank=True, default="", db_default="")
     business_segment = models.CharField(max_length=16, choices=Segment.choices, blank=True, default="", db_default="")
 
+    #: What this organization changed in the brand roles: {role: {permission: bool}},
+    #: only where it differs from ``members.models.BUILTIN_ROLE_PERMISSIONS``.
+    #: Read by ``WorkspaceMembership.effective_permissions``; written by
+    #: ``members.services.set_role_permissions``.
+    role_permissions = models.JSONField(blank=True, null=True)
+
     # Deletion workflow
     deletion_requested_at = models.DateTimeField(blank=True, null=True)
     deletion_scheduled_for = models.DateTimeField(blank=True, null=True)

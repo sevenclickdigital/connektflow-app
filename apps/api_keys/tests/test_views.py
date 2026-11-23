@@ -14,6 +14,7 @@ Covers:
 from __future__ import annotations
 
 import pytest
+from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
@@ -685,3 +686,101 @@ class TestEditKey:
         key.refresh_from_db()
         assert key.permissions == ["create_posts"]
         assert set(key.social_accounts.values_list("id", flat=True)) == {social_account.id}
+
+
+# ---------------------------------------------------------------------------
+# Brand settings → API keys
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestBrandPage:
+    """The page the menus lead to: one brand's keys, issued for that brand."""
+
+    def _url(self, workspace):
+        return reverse("workspaces:api_keys", kwargs={"workspace_id": workspace.id})
+
+    def _key(self, workspace, account, user, name):
+        from apps.api_keys import services
+
+        return services.issue_api_key(
+            workspace=workspace, social_accounts=[account], issued_by=user, name=name, permissions=[]
+        ).api_key
+
+    def test_lists_only_the_keys_of_the_brand(self, admin_client, admin_user, organization, workspace, social_account):
+        from apps.social_accounts.models import SocialAccount
+        from apps.workspaces.models import Workspace
+
+        other = Workspace.objects.create(name="Other Brand", organization=organization)
+        WorkspaceMembership.objects.create(
+            user=admin_user, workspace=other, workspace_role=WorkspaceMembership.WorkspaceRole.OWNER
+        )
+        other_account = SocialAccount.objects.create(
+            workspace=other,
+            platform="linkedin_personal",
+            account_platform_id="li-other",
+            account_name="Other LinkedIn",
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+        self._key(workspace, social_account, admin_user, "Key of this brand")
+        self._key(other, other_account, admin_user, "Key of the other brand")
+
+        response = admin_client.get(self._url(workspace))
+
+        assert response.status_code == 200
+        assert [row["name"] for row in response.context["rows"]] == ["Key of this brand"]
+        # The form comes with the brand's channels, without a brand picker.
+        assert b"LinkedIn UI" in response.content
+        assert b'id="workspace_id"' not in response.content
+
+    def test_issuing_and_revoking_return_to_the_brand_page(self, admin_client, workspace, social_account):
+        from apps.api_keys.models import ApiKey
+
+        response = admin_client.post(
+            reverse("api_keys:issue"),
+            {
+                "name": "Brand key",
+                "workspace_id": str(workspace.id),
+                "from_brand": str(workspace.id),
+                "social_account_ids": [str(social_account.id)],
+            },
+        )
+        assert response["Location"] == self._url(workspace)
+
+        key = ApiKey.objects.get(name="Brand key")
+        response = admin_client.post(reverse("api_keys:revoke", args=[key.id]), {"from_brand": str(workspace.id)})
+        assert response["Location"] == self._url(workspace)
+
+    def test_from_brand_is_not_followed_for_a_brand_the_user_is_not_in(
+        self, admin_client, admin_user, workspace, social_account
+    ):
+        from apps.organizations.models import Organization
+        from apps.workspaces.models import Workspace
+
+        foreign = Workspace.objects.create(name="Foreign", organization=Organization.objects.create(name="Elsewhere"))
+        key = self._key(workspace, social_account, admin_user, "Mine")
+
+        for target in (str(foreign.id), "not-a-uuid"):
+            response = admin_client.post(reverse("api_keys:revoke", args=[key.id]), {"from_brand": target})
+            assert response["Location"] == reverse("api_keys:list")
+
+    def test_a_member_without_the_permission_is_forbidden(self, admin_user, organization, workspace, member_user):
+        OrgMembership.objects.filter(user=member_user).delete()
+        OrgMembership.objects.create(user=member_user, organization=organization, org_role=OrgMembership.OrgRole.MEMBER)
+        WorkspaceMembership.objects.create(
+            user=member_user, workspace=workspace, workspace_role=WorkspaceMembership.WorkspaceRole.MANAGER
+        )
+        client = Client()
+        client.force_login(member_user)
+
+        assert client.get(self._url(workspace)).status_code == 403
+
+    def test_a_guest_of_the_brand_cannot_use_their_own_organization_role(self, workspace, member_user):
+        """An owner elsewhere, only a guest here: the role in their own organization opens nothing."""
+        WorkspaceMembership.objects.create(
+            user=member_user, workspace=workspace, workspace_role=WorkspaceMembership.WorkspaceRole.MANAGER
+        )
+        client = Client()
+        client.force_login(member_user)
+
+        assert client.get(self._url(workspace)).status_code == 403

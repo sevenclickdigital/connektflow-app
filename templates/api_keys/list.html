@@ -1,13 +1,18 @@
-{% extends "layouts/settings.html" %}
+{% extends base_layout %}
 {% load i18n %}
 {% block title %}{% translate "API Keys - Settings" %} - Connekt Flow{% endblock %}
 {% block page_header %}
 <div class="page-header">
     <div class="max-w-2xl">
-        <h1 class="page-title">{% translate "API Keys" %}{% if request.org %} · {{ request.org.name }}{% endif %}</h1>
+        <h1 class="page-title">{% translate "API Keys" %}{% if workspace %} · {{ workspace.name }}{% elif request.org %} · {{ request.org.name }}{% endif %}</h1>
         <p class="page-description">
+            {% if workspace %}
+            {% translate "Used by AI agents and external scripts to act in this brand." %}
+            {% translate "Each key only reaches this brand, limited to the channels and permissions you choose." %}
+            {% else %}
             {% translate "Used by AI agents and external scripts to act in your workspaces." %}
             {% translate "Each key can be scoped to one workspace and an explicit list of social accounts." %}
+            {% endif %}
         </p>
     </div>
     <button type="button" class="btn-brand" @click="$dispatch('open-issue-key')">
@@ -22,7 +27,7 @@
     {% if revoked_count %}
     <div class="flex justify-end mb-3 text-xs">
         {% if show_all %}
-        <a href="{% url 'api_keys:list' %}" style="color: var(--text-tertiary);">{% translate "Hide revoked keys" %}</a>
+        <a href="{{ request.path }}" style="color: var(--text-tertiary);">{% translate "Hide revoked keys" %}</a>
         {% else %}
         <a href="?show=all" style="color: var(--text-tertiary);">{% blocktranslate count counter=revoked_count %}Show {{ counter }} revoked{% plural %}Show {{ counter }} revoked{% endblocktranslate %}</a>
         {% endif %}

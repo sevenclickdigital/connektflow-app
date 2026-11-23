@@ -1,9 +1,9 @@
 {% load i18n %}
 {% comment %}
 One brand in the account centre's brand list.
-``item``: workspace, can_manage, is_member and either members/member_count
+``item``: workspace, can_manage, can_move, can_api_keys, is_member and either member_count
 (a brand of an organization the user belongs to) or role (a brand the user
-was added to in someone else's organization, whose other members are not
+was added to in someone else's organization, whose member count is not
 shown).
 {% endcomment %}
 <div class="flex flex-wrap items-center gap-3">
@@ -32,33 +32,71 @@ shown).
         </div>
     </div>
 
+    {% comment %}
+    Opening the brand is the one action on the row; the rest (its settings
+    pages and moving it) is in the menu beside it. An archived brand only
+    answers its general settings. The menu is positioned from the button
+    with fixed coordinates because the organization's card clips what
+    overflows it; any scroll closes it.
+    {% endcomment %}
     <div class="flex items-center gap-2">
         {% if item.is_member and not item.workspace.is_archived %}
-        <a href="{% url 'calendar:calendar' workspace_id=item.workspace.id %}" class="btn-soft py-1.5 px-3 text-xs">{% translate "Open" %}</a>
-        {% endif %}
-        {% if item.can_manage %}
-        <a href="{% url 'workspaces:settings' workspace_id=item.workspace.id %}" class="btn-ghost py-1.5 px-3 text-xs">
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-            {% translate "Settings" %}
+        <a href="{% url 'calendar:calendar' workspace_id=item.workspace.id %}" class="btn-soft py-1.5 px-3 text-xs">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            {% translate "Open" %}
         </a>
+        {% endif %}
+        {% if item.can_manage or item.can_move or item.can_api_keys %}
+        <div x-data="{ menu: false, menuStyle: '' }">
+            <button type="button" class="btn-ghost py-1.5 px-2" :aria-expanded="menu.toString()"
+                    @click="menu = !menu; if (menu) { const r = $el.getBoundingClientRect(); menuStyle = 'top:' + (r.bottom + 4) + 'px;left:' + Math.max(8, r.right - 224) + 'px'; }"
+                    title="{% translate 'More actions' %}" aria-label="{% translate 'More actions' %}">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+            </button>
+            <div x-show="menu" x-cloak x-transition @click.outside="menu = false" @keydown.escape.window="menu = false"
+                 @scroll.window.capture="menu = false" @resize.window="menu = false" :style="menuStyle"
+                 class="fixed bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 w-56">
+                {% if item.can_manage %}
+                <a href="{% url 'workspaces:settings' workspace_id=item.workspace.id %}" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">
+                    <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                    {% translate "Settings" %}
+                </a>
+                {% if not item.workspace.is_archived %}
+                <a href="{% url 'workspaces:settings' workspace_id=item.workspace.id %}#approval-flow" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">
+                    <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                    {% translate "Approvals" %}
+                </a>
+                <a href="{% url 'client_portal_admin:client_list' workspace_id=item.workspace.id %}" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">
+                    <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                    {% translate "Client Portal" %}
+                </a>
+                <a href="{% url 'workspaces:team' workspace_id=item.workspace.id %}" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">
+                    <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                    {% translate "Manage team" %}
+                </a>
+                {% endif %}
+                {% endif %}
+                {% if item.can_api_keys %}
+                <a href="{% url 'workspaces:api_keys' workspace_id=item.workspace.id %}" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">
+                    <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                    {% translate "API Keys" %}
+                </a>
+                {% endif %}
+                {% comment %}
+                The brand's name and ids go in data attributes, not in the Alpine
+                expression: a stored name would be evaluated there as JavaScript.
+                {% endcomment %}
+                {% if item.can_move %}
+                <button type="button" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer"
+                        data-brand="{{ item.workspace.id }}" data-name="{{ item.workspace.name }}"
+                        data-organization="{{ item.workspace.organization_id }}"
+                        @click="menu = false; $dispatch('open-move-brand', { brand: $el.dataset.brand, name: $el.dataset.name, organization: $el.dataset.organization })">
+                    <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+                    {% translate "Move" %}
+                </button>
+                {% endif %}
+            </div>
+        </div>
         {% endif %}
     </div>
 </div>
-
-{% if not item.role %}
-{% if item.members %}
-<div class="flex items-center flex-wrap gap-2 mt-3">
-    {% for membership in item.members %}
-    <span class="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600"
-          title="{{ membership.user.display_name }} ({{ membership.get_workspace_role_display }})">
-        <span class="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0 bg-neutral-200 text-neutral-500">
-            {{ membership.user.display_name|first|upper }}
-        </span>
-        {{ membership.user.display_name }}
-    </span>
-    {% endfor %}
-</div>
-{% else %}
-<div class="mt-3 text-xs text-neutral-500">{% translate "No members assigned" %}</div>
-{% endif %}
-{% endif %}

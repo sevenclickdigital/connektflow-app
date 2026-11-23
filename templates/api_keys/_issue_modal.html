@@ -37,6 +37,15 @@ reveal modal on top of the freshly-rendered list page.
                                style="border: 1px solid var(--border); color: var(--text-primary); background: var(--surface-0);">
                     </div>
 
+                    {% comment %}
+                    On a brand's page the key is for that brand: no picker, and its
+                    channels and permissions come rendered with the page.
+                    {% endcomment %}
+                    {% if workspace %}
+                    <input type="hidden" name="workspace_id" value="{{ workspace.id }}">
+                    <input type="hidden" name="from_brand" value="{{ workspace.id }}">
+                    <div class="space-y-4">{% include "api_keys/_workspace_options.html" %}</div>
+                    {% else %}
                     <div>
                         <label for="workspace_id" class="block text-sm font-semibold mb-1" style="color: var(--text-primary);">{% translate "Workspace" %}</label>
                         <select id="workspace_id" name="workspace_id" required
@@ -55,6 +64,7 @@ reveal modal on top of the freshly-rendered list page.
 
                     {# Populated by HTMX once a workspace is picked. #}
                     <div id="workspace-options-target" class="space-y-4"></div>
+                    {% endif %}
 
                     <div>
                         <label for="expires_at" class="block text-sm font-semibold mb-1" style="color: var(--text-primary);">

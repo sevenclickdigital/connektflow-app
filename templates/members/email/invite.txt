@@ -1,6 +1,6 @@
 {% extends "emails/base.txt" %}
 {% load i18n %}
-{% block content %}{% translate "Hi there," %}
+{% block content %}{% if invitation.name %}{% blocktranslate with name=invitation.name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}
 
 {% blocktranslate with inviter=invited_by.display_name org=org_name brand=brand_name %}{{ inviter }} has invited you to join {{ org }} as a team member on {{ brand }}.{% endblocktranslate %}
 

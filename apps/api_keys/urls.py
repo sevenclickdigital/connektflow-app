@@ -1,9 +1,9 @@
-"""URL patterns for the org-level API key management UI.
+"""URL patterns of the API key management UI.
 
-Mounted at ``/organizations/api-keys/`` by ``config/urls.py``. Lives at
-org scope (not workspace scope) per the plan — an org admin gets a
-unified view of every key across every workspace, with one issuance
-flow.
+Mounted at ``/organizations/api-keys/`` by ``config/urls.py``: the
+organization-wide list and the endpoints that issue, edit and revoke a key.
+The page the menus lead to is the brand's own list, the same ``list_keys``
+view mounted at ``workspaces:api_keys``.
 """
 
 from __future__ import annotations

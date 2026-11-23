@@ -4,6 +4,8 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.utils.functional import cached_property
+from django.utils.translation import gettext_lazy as _
 
 from apps.common.managers import OrgScopedManager
 
@@ -37,6 +39,11 @@ class OrgMembership(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.organization.name} ({self.org_role})"
+
+    @property
+    def can_manage_api_keys(self):
+        """Whether this role issues and revokes the organization's API keys (read by the menus)."""
+        return has_org_permission(self, "manage_api_keys")
 
 
 class WorkspaceMembership(models.Model):
@@ -83,10 +90,38 @@ class WorkspaceMembership(models.Model):
 
     @property
     def effective_permissions(self):
-        """Return the effective permission dict for this membership."""
+        """Return the effective permission dict for this membership.
+
+        The role's built-in permissions with what the brand's organization
+        changed in that role (``Organization.role_permissions``). The owner
+        role is never adjusted, so a brand always has someone who can do
+        everything in it.
+        """
         if self.custom_role:
             return self.custom_role.permissions
-        return BUILTIN_ROLE_PERMISSIONS.get(self.workspace_role, {})
+        builtin = BUILTIN_ROLE_PERMISSIONS.get(self.workspace_role, {})
+        if self.workspace_role == self.WorkspaceRole.OWNER:
+            return builtin
+        adjusted = (self._organization_role_permissions or {}).get(self.workspace_role)
+        if not adjusted:
+            return builtin
+        return {key: bool(adjusted.get(key, granted)) for key, granted in builtin.items()}
+
+    @cached_property
+    def _organization_role_permissions(self):
+        """The role adjustments of the organization that owns the brand.
+
+        Taken from the workspace when it came loaded with its organization
+        (as the request's membership does); one query otherwise.
+        """
+        workspace = self._state.fields_cache.get("workspace")
+        if workspace is not None and "organization" in workspace._state.fields_cache:
+            return workspace.organization.role_permissions
+        from apps.organizations.models import Organization
+
+        return (
+            Organization.objects.filter(workspaces=self.workspace_id).values_list("role_permissions", flat=True).first()
+        )
 
 
 class CustomRole(models.Model):
@@ -126,6 +161,9 @@ class Invitation(models.Model):
         related_name="invitations",
     )
     email = models.EmailField()
+    # How the inviter called the person: greets them in the e-mail and becomes
+    # their name when the account they accept with has none.
+    name = models.CharField(max_length=255, blank=True, default="", db_default="")
     org_role = models.CharField(
         max_length=20,
         choices=OrgMembership.OrgRole.choices,
@@ -165,6 +203,27 @@ class Invitation(models.Model):
     def is_expired(self):
         return timezone.now() > self.expires_at
 
+    @cached_property
+    def brand(self):
+        """The brand a brand invitation is for, else None.
+
+        An invitation sent from a brand's team page: member of the
+        organization with access to that one brand. It is worded around the
+        brand, which is all the person was invited to work in.
+        """
+        if self.org_role != OrgMembership.OrgRole.MEMBER or len(self.workspace_assignments) != 1:
+            return None
+        from apps.workspaces.models import Workspace
+
+        return Workspace.objects.filter(
+            id=self.workspace_assignments[0]["workspace_id"], organization_id=self.organization_id
+        ).first()
+
+    @property
+    def team_name(self):
+        """What the person is told they are joining: the brand, or the organization."""
+        return self.brand.name if self.brand else self.organization.name
+
     @property
     def is_accepted(self):
         return self.accepted_at is not None
@@ -186,6 +245,23 @@ PERMISSION_KEYS = [
     "delete_media",
     "manage_media",
 ]
+
+#: The name of each permission on the "Roles and permissions" page.
+PERMISSION_LABELS = {
+    "create_posts": _("Create posts"),
+    "edit_others_posts": _("Edit other people's posts"),
+    "approve_posts": _("Approve posts"),
+    "publish_directly": _("Schedule and publish without approval"),
+    "manage_social_accounts": _("Connect and manage channels"),
+    "view_analytics": _("View analytics"),
+    "use_inbox": _("Open the inbox"),
+    "reply_from_inbox": _("Reply from the inbox and manage automations"),
+    "manage_workspace_settings": _("Manage the brand's settings"),
+    "upload_media": _("Upload media"),
+    "edit_media": _("Edit media"),
+    "delete_media": _("Delete media"),
+    "manage_media": _("Organize the media library"),
+}
 
 BUILTIN_ROLE_PERMISSIONS = {
     "owner": {k: True for k in PERMISSION_KEYS},

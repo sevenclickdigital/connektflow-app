@@ -65,8 +65,7 @@ def _require_manage_api_keys(view_func):
 
     Reuses ``request.org_membership`` populated by the existing
     ``apps.members.middleware.RBACMiddleware``, so the URL doesn't have
-    to carry an ``org_id`` and the sidebar link can be a plain
-    ``{% url 'api_keys:list' %}``. Members lacking the permission get a
+    to carry an ``org_id``. Members lacking the permission get a
     403; users with no org membership at all get the same 403 (so the
     page never accidentally leaks that the URL exists).
     """
@@ -86,9 +85,30 @@ def _require_manage_api_keys(view_func):
 # ---------------------------------------------------------------------------
 
 
+def _back(request):
+    """Where a key form returns to: the brand's page it was posted from, else the organization's list.
+
+    ``from_brand`` is a brand id posted by the brand's page. It is only
+    followed for a brand the user is in, which is what that page requires.
+    """
+    brand_id = request.POST.get("from_brand")
+    if brand_id:
+        try:
+            if WorkspaceMembership.objects.filter(user=request.user, workspace_id=brand_id).exists():
+                return redirect("workspaces:api_keys", workspace_id=brand_id)
+        except (ValueError, DjangoValidationError):
+            pass
+    return redirect("api_keys:list")
+
+
 @_require_manage_api_keys
-def list_keys(request):
-    """Render the API-keys list page for the current org.
+def list_keys(request, workspace_id=None):
+    """Render the API-keys list: of one brand, or of the whole current org.
+
+    With ``workspace_id`` (brand settings → API keys, the page the menus
+    lead to) only that brand's keys are listed and a new key is issued for
+    it. Someone who is only a guest of the brand has another organization
+    in use, so the brand must belong to the one whose permission was checked.
 
     Prefetches every relation the list template uses so the page renders
     in a constant number of queries regardless of key count. Status is
@@ -97,9 +117,15 @@ def list_keys(request):
     consistently.
     """
     org = request.org
+    workspace = None
+    if workspace_id is not None:
+        workspace = request.workspace
+        if workspace is None or workspace.organization_id != org.id:
+            raise PermissionDenied("API keys are managed by the organization that owns the brand.")
+    scope = {"workspace": workspace} if workspace else {"workspace__organization": org}
     show_all = request.GET.get("show") == "all"
     qs = (
-        ApiKey.objects.filter(workspace__organization=org)
+        ApiKey.objects.filter(**scope)
         .select_related("workspace", "issued_by")
         .prefetch_related("social_accounts")
         .order_by("-created_at")
@@ -113,14 +139,17 @@ def list_keys(request):
     rows = [_row_context(k, user=request.user, memo=memo) for k in qs]
     # Surface a "Show N revoked" toggle only when there's actually something
     # behind it — avoids a noisy control on an org that's never revoked a key.
-    revoked_count = ApiKey.objects.filter(workspace__organization=org, revoked_at__isnull=False).count()
+    revoked_count = ApiKey.objects.filter(**scope, revoked_at__isnull=False).count()
     # One-time token reveal handed off from ``issue_key`` via the session
     # (Post/Redirect/Get). Pop it so it shows exactly once — a reload of
     # this page finds nothing and the modal stays closed.
     reveal_token = request.session.pop("reveal_token", None)
     reveal_key_name = request.session.pop("reveal_key_name", None)
     context = {
+        **(_workspace_options_context(request.user, workspace) if workspace else {}),
         "settings_active": "api_keys",
+        "workspace": workspace,
+        "base_layout": "layouts/workspace_settings.html" if workspace else "layouts/settings.html",
         "rows": rows,
         "show_all": show_all,
         "revoked_count": revoked_count,
@@ -166,10 +195,12 @@ def _row_context(api_key: ApiKey, *, user, memo: dict) -> dict:
         connected = memo["accounts"].get(workspace.id)
         if connected is None:
             connected = list(
-                SocialAccount.objects.publishable().filter(
+                SocialAccount.objects.publishable()
+                .filter(
                     workspace=workspace,
                     connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-                ).order_by("platform", "account_name")
+                )
+                .order_by("platform", "account_name")
             )
             memo["accounts"][workspace.id] = connected
 
@@ -251,23 +282,26 @@ def workspace_options_partial(request):
         # picked", which is what the cascade UI expects.
         return HttpResponse("")
 
-    # Show all connected accounts; the issue endpoint re-checks the
-    # account → workspace mapping before persisting.
-    accounts = SocialAccount.objects.publishable().filter(
-        workspace=workspace,
-        connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-    ).order_by("platform", "account_name")
+    return render(request, "api_keys/_workspace_options.html", _workspace_options_context(request.user, workspace))
 
-    # Permission catalog scoped to what THIS issuer can grant in THIS
-    # workspace — see ``_grantable_permissions`` for the rule.
-    grantable = _grantable_permissions(request.user, workspace)
 
-    context = {
+def _workspace_options_context(user, workspace) -> dict:
+    """What the issuance form offers for ``workspace``: its connected channels
+    and the permissions ``user`` can grant there (see ``_grantable_permissions``).
+
+    Every connected account is offered; ``issue_key`` re-checks the
+    account → workspace mapping before persisting.
+    """
+    accounts = (
+        SocialAccount.objects.publishable()
+        .filter(workspace=workspace, connection_status=SocialAccount.ConnectionStatus.CONNECTED)
+        .order_by("platform", "account_name")
+    )
+    return {
         "workspace": workspace,
         "accounts": accounts,
-        "grantable_permissions": grantable,
+        "grantable_permissions": _grantable_permissions(user, workspace),
     }
-    return render(request, "api_keys/_workspace_options.html", context)
 
 
 def _grantable_permissions(user, workspace, *, include_hidden: bool = False) -> list[tuple[str, str]]:
@@ -418,7 +452,7 @@ def issue_key(request):
     if errors:
         for e in errors:
             messages.error(request, e)
-        return redirect("api_keys:list")
+        return _back(request)
 
     try:
         issued = services.issue_api_key(
@@ -431,7 +465,7 @@ def issue_key(request):
         )
     except ValueError as exc:
         messages.error(request, str(exc))
-        return redirect("api_keys:list")
+        return _back(request)
 
     # Post/Redirect/Get. Stash the one-time token in the session and
     # redirect to the list, which pops it and renders the reveal modal on
@@ -446,7 +480,7 @@ def issue_key(request):
     # it's still shown exactly once and a later reload sees nothing.
     request.session["reveal_token"] = issued.plaintext_token
     request.session["reveal_key_name"] = issued.api_key.name
-    return redirect("api_keys:list")
+    return _back(request)
 
 
 # ---------------------------------------------------------------------------
@@ -477,7 +511,7 @@ def revoke_key(request, key_id):
         messages.success(request, _("Revoked key “%(name)s”.") % {"name": key.name})
     else:
         messages.info(request, _("Key “%(name)s” was already revoked.") % {"name": key.name})
-    return redirect("api_keys:list")
+    return _back(request)
 
 
 # ---------------------------------------------------------------------------
@@ -506,7 +540,7 @@ def edit_key(request, key_id):
     # Only active keys are editable (mirror the row's Edit button gating).
     if not key.is_active:
         messages.info(request, _("Key “%(name)s” is not active; it can't be edited.") % {"name": key.name})
-        return redirect("api_keys:list")
+        return _back(request)
 
     account_ids = request.POST.getlist("social_account_ids")
     permission_keys = request.POST.getlist("permissions")
@@ -524,7 +558,7 @@ def edit_key(request, key_id):
     if errors:
         for e in errors:
             messages.error(request, e)
-        return redirect("api_keys:list")
+        return _back(request)
 
     try:
         services.update_api_key(
@@ -536,7 +570,7 @@ def edit_key(request, key_id):
         )
     except ValueError as exc:
         messages.error(request, str(exc))
-        return redirect("api_keys:list")
+        return _back(request)
 
     messages.success(request, _("Updated “%(name)s”.") % {"name": key.name})
-    return redirect("api_keys:list")
+    return _back(request)

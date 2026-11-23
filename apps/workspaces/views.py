@@ -5,7 +5,7 @@ from zoneinfo import available_timezones
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.http import Http404
 from django.shortcuts import redirect, render
@@ -20,7 +20,7 @@ from apps.common.periods import parse_period
 from apps.media_library.services import schedule_stored_file_removal, tenant_stored_files
 from apps.members.decorators import require_workspace_role
 from apps.members.models import OrgMembership, WorkspaceMembership
-from apps.workspaces.services import create_brand
+from apps.workspaces.services import NEW_BRAND_SESSION_KEY, create_brand
 
 from . import dashboard
 from .models import Workspace
@@ -70,6 +70,8 @@ def workspace_create(request):
     # Set as current workspace
     request.user.last_workspace_id = workspace.id
     request.user.save(update_fields=["last_workspace_id"])
+    # Until it is contracted, its checkout offers to give up on it (billing.views.checkout_cancel).
+    request.session[NEW_BRAND_SESSION_KEY] = str(workspace.id)
 
     # A new workspace is the billable unit, so the next screen is the
     # contracting page rather than the calendar.
@@ -149,8 +151,6 @@ def workspace_settings(request, workspace_id):
             return redirect("workspaces:settings", workspace_id=workspace.id)
 
         if action == "update_segments" and is_owner_or_manager:
-            from django.core.exceptions import ValidationError
-
             from apps.calendar.services import set_date_segments
 
             try:
@@ -219,6 +219,7 @@ def workspace_settings(request, workspace_id):
             "timezone_is_brazilian": workspace.effective_timezone in dict(BRAZIL_TIMEZONES),
             "all_timezones": sorted(available_timezones()),
             "date_segments": date_segments_for(workspace),
+            "approval_modes": Workspace.ApprovalWorkflowMode,
         },
     )
 
@@ -226,6 +227,11 @@ def workspace_settings(request, workspace_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def approvals_settings(request, workspace_id):
+    """Save the brand's approval flow, which is edited on the General page.
+
+    A GET lands on that section of the General page, so the brand card's
+    "Approvals" shortcut and saved links keep working.
+    """
     try:
         workspace = Workspace.objects.get(id=workspace_id)
     except Workspace.DoesNotExist:
@@ -235,35 +241,32 @@ def approvals_settings(request, workspace_id):
     if not membership:
         raise Http404
 
-    is_owner_or_manager = membership.workspace_role in (
-        WorkspaceMembership.WorkspaceRole.OWNER,
-        WorkspaceMembership.WorkspaceRole.MANAGER,
-    )
-
     if request.method == "POST":
-        if not is_owner_or_manager:
+        if membership.workspace_role not in (
+            WorkspaceMembership.WorkspaceRole.OWNER,
+            WorkspaceMembership.WorkspaceRole.MANAGER,
+        ):
             raise Http404
 
         mode = request.POST.get("approval_workflow_mode", "")
-        valid_modes = Workspace.ApprovalWorkflowMode.values
-        if mode not in valid_modes:
+        if mode not in Workspace.ApprovalWorkflowMode.values:
             messages.error(request, _("Invalid approval workflow mode."))
-            return redirect("workspaces:approvals_settings", workspace_id=workspace.id)
+        else:
+            workspace.approval_workflow_mode = mode
+            workspace.save(update_fields=["approval_workflow_mode", "updated_at"])
+            messages.success(request, _("Approval workflow updated."))
 
-        workspace.approval_workflow_mode = mode
-        workspace.save(update_fields=["approval_workflow_mode", "updated_at"])
-        messages.success(request, _("Approval workflow updated."))
-        return redirect("workspaces:approvals_settings", workspace_id=workspace.id)
+    return redirect(reverse("workspaces:settings", kwargs={"workspace_id": workspace.id}) + "#approval-flow")
 
-    return render(
-        request,
-        "workspaces/approvals_settings.html",
-        {
-            "workspace": workspace,
-            "settings_active": "approvals",
-            "is_owner_or_manager": is_owner_or_manager,
-            "approval_modes": Workspace.ApprovalWorkflowMode,
-        },
+
+def _pending_brand_invitations(workspace):
+    """Invitations of the brand's organization that give access to this brand and still wait for an answer."""
+    from apps.members.models import Invitation
+
+    return Invitation.objects.for_org(workspace.organization_id).filter(
+        accepted_at__isnull=True,
+        expires_at__gt=timezone.now(),
+        workspace_assignments__contains=[{"workspace_id": str(workspace.id)}],
     )
 
 
@@ -293,12 +296,29 @@ def workspace_team(request, workspace_id):
                 member_services.create_invitation(
                     org=org,
                     email=request.POST.get("email", ""),
+                    name=request.POST.get("name", ""),
                     org_role=OrgMembership.OrgRole.MEMBER,
                     workspace_assignments=[{"workspace_id": str(workspace.id), "role": role}],
                     invited_by=request.user,
                     inviter=request.user,
                 )
                 messages.success(request, _("Invitation sent."))
+            elif action in ("resend_invite", "revoke_invite"):
+                try:
+                    invitation = (
+                        _pending_brand_invitations(workspace).filter(id=request.POST.get("invitation_id")).first()
+                    )
+                except (ValueError, ValidationError):
+                    # An id that is not a UUID: answered like one that is not pending.
+                    invitation = None
+                if invitation is None:
+                    raise ValueError(_("This invitation is no longer pending."))
+                if action == "resend_invite":
+                    member_services.resend_invitation(invitation)
+                    messages.success(request, _("Invitation sent."))
+                else:
+                    member_services.revoke_invitation(invitation)
+                    messages.success(request, _("Invitation canceled."))
             else:
                 # The person is looked up inside the brand's organization only,
                 # so an id from another organization can't be acted on.
@@ -331,6 +351,18 @@ def workspace_team(request, workspace_id):
         .order_by("user__name", "user__email")
         if m.user_id not in in_brand
     ]
+    role_labels = dict(WorkspaceMembership.WorkspaceRole.choices)
+    pending = [
+        {
+            "invitation": invitation,
+            "role": next(
+                role_labels.get(a.get("role"), "")
+                for a in invitation.workspace_assignments
+                if a["workspace_id"] == str(workspace.id)
+            ),
+        }
+        for invitation in _pending_brand_invitations(workspace).select_related("invited_by").order_by("-created_at")
+    ]
     return render(
         request,
         "workspaces/team.html",
@@ -338,6 +370,7 @@ def workspace_team(request, workspace_id):
             "workspace": workspace,
             "memberships": memberships,
             "addable_members": addable,
+            "pending_invitations": pending,
             "role_choices": assignable,
             "assignable_values": [value for value, _label in assignable],
             "all_roles": WorkspaceMembership.WorkspaceRole.choices,

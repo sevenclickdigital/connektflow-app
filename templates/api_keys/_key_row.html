@@ -17,7 +17,7 @@
             {% endif %}
         </div>
         <div class="text-xs flex flex-wrap items-center gap-x-3 gap-y-1" style="color: var(--text-tertiary);">
-            <span>{% blocktranslate with workspace=row.workspace_name %}Workspace: <strong style="color: var(--text-secondary);">{{ workspace }}</strong>{% endblocktranslate %}</span>
+            {% if not workspace %}<span>{% blocktranslate with workspace=row.workspace_name %}Workspace: <strong style="color: var(--text-secondary);">{{ workspace }}</strong>{% endblocktranslate %}</span>{% endif %}
             {% if row.last_used_at %}
                 <span>{% blocktranslate with time=row.last_used_at|timesince %}Last used {{ time }} ago{% endblocktranslate %}</span>
             {% else %}
@@ -76,6 +76,7 @@
                      style="background: var(--surface-0); border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.18); max-height: 90vh;">
                     <form method="POST" action="{% url 'api_keys:edit' row.id %}" class="flex flex-col min-h-0">
                         {% csrf_token %}
+                        {% if workspace %}<input type="hidden" name="from_brand" value="{{ workspace.id }}">{% endif %}
                         <div class="flex items-start justify-between px-6 pt-6 pb-4 flex-shrink-0">
                             <div>
                                 <h3 class="text-lg font-semibold" style="color: var(--text-primary);">{% translate "Edit API key" %}</h3>
@@ -234,6 +235,7 @@
                     <form method="POST" action="{% url 'api_keys:revoke' row.id %}"
                           class="flex items-center justify-end gap-3 px-6 pt-5 pb-6">
                         {% csrf_token %}
+                        {% if workspace %}<input type="hidden" name="from_brand" value="{{ workspace.id }}">{% endif %}
                         <button type="button" @click="showRevokeModal = false"
                                 class="btn-neutral px-4 py-2 text-sm font-medium rounded-full cursor-pointer"
                                 style="background: var(--neutral-100); color: var(--text-primary);">

@@ -292,3 +292,33 @@ class TestLoopGuard:
         result = _import_settings(SIGNUP_MODE="open", CUSTOM_SIGNUP_URL="/accounts/signup/")
 
         assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.django_db
+def test_signing_up_through_an_invitation_accepts_the_terms_on_the_form(settings):
+    """The invited person fills the same form, so they are not sent to the terms page afterwards."""
+    from datetime import timedelta
+
+    from allauth.account.signals import user_signed_up
+
+    from apps.members.models import Invitation, OrgMembership
+    from apps.organizations.models import Organization
+
+    org = Organization.objects.create(name="Agency")
+    invitation = Invitation.objects.create(
+        organization=org,
+        email="invited@example.com",
+        org_role=OrgMembership.OrgRole.MEMBER,
+        expires_at=timezone.now() + timedelta(days=7),
+    )
+    user = User.objects.create_user(email="invited@example.com", password="x")
+    assert user.tos_accepted_at is None
+    request = RequestFactory().get("/")
+    SessionMiddleware(lambda r: None).process_request(request)
+    request.session["pending_invite_token"] = invitation.token
+
+    user_signed_up.send(sender=User, request=request, user=user)
+
+    user.refresh_from_db()
+    assert user.tos_accepted_at is not None
+    assert OrgMembership.objects.filter(user=user, organization=org).exists()

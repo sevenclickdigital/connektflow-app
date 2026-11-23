@@ -47,6 +47,12 @@ the plan's new value from the next charge. When the choice is monthly,
 {% if coupon_error %}<p class="text-sm text-red-700 mt-2" role="alert">{{ coupon_error }}</p>{% endif %}
 <div class="mt-4 pt-4 border-t border-neutral-200">
   {% if plan %}
+  {% if addition.amount_cents %}
+  <div class="flex justify-between items-baseline gap-3 mb-2">
+    <span class="text-sm font-semibold text-neutral-950">{% blocktranslate count days=addition.days_left %}Charged now ({{ days }} day){% plural %}Charged now ({{ days }} days){% endblocktranslate %}</span>
+    <span class="text-lg font-bold text-neutral-950 tabular-nums">R$ {{ addition.amount_cents|brl }}</span>
+  </div>
+  {% endif %}
   <div class="flex justify-between items-baseline gap-3">
     <span class="text-sm font-semibold text-neutral-950">{% translate "From the next charge" %}</span>
     <span class="text-2xl font-bold text-brand-700 tabular-nums">R$ {{ quote.charge_cents|brl }}</span>

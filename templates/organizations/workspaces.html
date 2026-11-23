@@ -60,18 +60,31 @@
 </section>
 
 {% comment %}
-Search and order work on the cards already on the page: the list is as
-long as the user's organizations, a handful at most.
+Filter, search and order work on the cards already on the page: the list is
+as long as the user's organizations, a handful at most. "Archived" keeps the
+organizations that have an archived brand and, in them, only those brands.
 {% endcomment %}
-<div x-data="{ q: '', sort: 'recent', matches(text) { return text.includes(this.q.trim().toLowerCase()) } }">
-<div class="mb-6 flex flex-col sm:flex-row gap-3">
+<div x-data="{ q: '', sort: 'recent', status: 'all',
+              matches(text) { return text.includes(this.q.trim().toLowerCase()) },
+              inFilter(data) { return this.status === 'all' || (this.status === 'archived' ? data.archived !== '0' : data.status === this.status) } }">
+<div class="mb-6 flex flex-col lg:flex-row gap-3">
+    <div class="inline-flex items-center self-start p-1 rounded-full bg-white border border-neutral-300 flex-shrink-0 max-w-full overflow-x-auto" role="group" aria-label="{% translate 'Filter' %}">
+        <button type="button" class="px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap cursor-pointer transition-colors" @click="status = 'all'" :aria-pressed="(status === 'all').toString()"
+                :class="status === 'all' ? 'bg-brand-700 text-white' : 'text-neutral-800 hover:bg-neutral-100'">{% translate "All" context "organizations filter" %} ({{ filter_counts.all }})</button>
+        <button type="button" class="px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap cursor-pointer transition-colors" @click="status = 'active'" :aria-pressed="(status === 'active').toString()"
+                :class="status === 'active' ? 'bg-brand-700 text-white' : 'text-neutral-800 hover:bg-neutral-100'">{% translate "Active" context "organizations filter" %} ({{ filter_counts.active }})</button>
+        <button type="button" class="px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap cursor-pointer transition-colors" @click="status = 'inactive'" :aria-pressed="(status === 'inactive').toString()"
+                :class="status === 'inactive' ? 'bg-brand-700 text-white' : 'text-neutral-800 hover:bg-neutral-100'">{% translate "Inactive" context "organizations filter" %} ({{ filter_counts.inactive }})</button>
+        <button type="button" class="px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap cursor-pointer transition-colors" @click="status = 'archived'" :aria-pressed="(status === 'archived').toString()"
+                :class="status === 'archived' ? 'bg-brand-700 text-white' : 'text-neutral-800 hover:bg-neutral-100'">{% translate "Archived" %} ({{ filter_counts.archived }})</button>
+    </div>
     <div class="relative flex-1">
         <svg class="w-4 h-4 text-neutral-500 absolute pointer-events-none" style="left: 0.875rem; top: 50%; transform: translateY(-50%);" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         <label for="org_search" class="sr-only">{% translate "Search organization or brand" %}</label>
         <input type="search" id="org_search" x-model="q" placeholder="{% translate 'Search organization or brand' %}…"
                class="form-input-styled w-full" style="padding-left: 2.5rem;">
     </div>
-    <div class="sm:w-64">
+    <div class="lg:w-64">
         <label for="org_sort" class="sr-only">{% translate "Sort by" %}</label>
         <select id="org_sort" x-model="sort" class="form-input-styled w-full">
             <option value="recent">{% translate "Sort by: most recent" %}</option>
@@ -82,12 +95,17 @@ long as the user's organizations, a handful at most.
 
 <div class="flex flex-col gap-5 mb-8">
 {% for group in org_groups %}
-<section class="a-card overflow-hidden" x-data="{ editing: false }"
+<section class="a-card overflow-hidden" x-data="{ editing: false, collapsed: false, menu: false, menuStyle: '' }"
          data-search="{{ group.organization.name|lower }}{% for item in group.brands %} {{ item.workspace.name|lower }}{% endfor %}"
-         x-show="matches($el.dataset.search)"
+         data-status="{{ group.status }}" data-archived="{{ group.archived_count }}"
+         x-show="matches($el.dataset.search) && inFilter($el.dataset)"
          :style="{ order: sort === 'name' ? {{ group.name_position }} : {{ forloop.counter0 }} }">
     <div class="p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center gap-5">
         <div class="flex items-center gap-4 flex-1 min-w-0">
+            <button type="button" class="text-brand-700 hover:text-brand-800 cursor-pointer flex-shrink-0" :aria-expanded="(!collapsed).toString()"
+                    @click="collapsed = !collapsed" title="{% translate 'Show or hide the brands' %}" aria-label="{% translate 'Show or hide the brands' %}">
+                <svg class="w-5 h-5 transition-transform" :class="collapsed && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+            </button>
             <div class="w-14 h-14 rounded-2xl bg-brand-700 text-white flex items-center justify-center text-xl font-semibold flex-shrink-0">
                 {{ group.organization.name|first|upper }}
             </div>
@@ -159,30 +177,97 @@ long as the user's organizations, a handful at most.
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
                 {% translate "Create workspace" %}
             </button>
-            <button type="button" class="btn-ghost"
-                    @click="editing = true; $nextTick(() => { $refs.name.focus(); $refs.name.select() })">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
-                {% translate "Edit" %}
+            {% comment %}
+            Fixed coordinates taken from the button: the card clips what
+            overflows it. Any scroll closes the menu.
+            {% endcomment %}
+            <button type="button" class="btn-ghost px-2.5" :aria-expanded="menu.toString()"
+                    @click="menu = !menu; if (menu) { const r = $el.getBoundingClientRect(); menuStyle = 'top:' + (r.bottom + 4) + 'px;left:' + Math.max(8, r.right - 224) + 'px'; }"
+                    title="{% translate 'More actions' %}" aria-label="{% translate 'More actions' %}">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
             </button>
+            <div x-show="menu" x-cloak x-transition @click.outside="menu = false" @keydown.escape.window="menu = false"
+                 @scroll.window.capture="menu = false" @resize.window="menu = false" :style="menuStyle"
+                 class="fixed bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 w-56">
+                <button type="button" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer"
+                        @click="menu = false; editing = true; $nextTick(() => { $refs.name.focus(); $refs.name.select() })">
+                    <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                    {% translate "Rename" %}
+                </button>
+                <a href="{% url 'organizations:role_permissions' organization_id=group.organization.id %}"
+                   class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">
+                    <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                    {% translate "Roles and permissions" %}
+                </a>
+            </div>
         </div>
         {% endif %}
     </div>
 
-    {% if group.brands %}
-    <div class="border-t border-neutral-300 divide-y divide-neutral-300 bg-neutral-50">
-        {% for item in group.brands %}
-        <div class="px-5 sm:px-6 py-4 {% if item.workspace.is_archived %}opacity-75{% endif %}">
-            {% include "organizations/partials/workspace_card.html" with item=item %}
+    <div x-show="!collapsed" class="border-t border-neutral-300 bg-neutral-50">
+        <div class="px-5 sm:px-6 py-2.5 text-sm font-semibold text-neutral-950 bg-neutral-100 border-b border-neutral-300">
+            {% translate "Workspaces" %} ({{ group.brands|length }})
         </div>
-        {% endfor %}
+        {% if group.brands %}
+        <div class="divide-y divide-neutral-300">
+            {% for item in group.brands %}
+            <div class="px-5 sm:px-6 py-3 {% if item.workspace.is_archived %}opacity-75{% endif %}"
+                 {% if not item.workspace.is_archived %}x-show="status !== 'archived'"{% endif %}>
+                {% include "organizations/partials/workspace_card.html" with item=item %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="px-6 py-8 text-center text-sm text-neutral-500">{% translate "No workspaces yet." %}</p>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="border-t border-neutral-300 px-6 py-8 text-center bg-neutral-50">
-        <p class="text-sm text-neutral-500">{% translate "No workspaces yet." %}</p>
-    </div>
-    {% endif %}
 </section>
 {% endfor %}
 </div>
 </div>
+
+{% comment %}
+Moving a brand to another organization the person administers. One dialog
+for the page, opened by the "Move" button of a brand's card with the brand in
+the event; the destinations come from the view through json_script, and the
+brand's own organization is left out of the list.
+{% endcomment %}
+{% if move_destinations|length > 1 %}
+{{ move_destinations|json_script:"move-destinations" }}
+<div x-data="{ open: false, brand: '', name: '', origin: '',
+              organizations: JSON.parse(document.getElementById('move-destinations').textContent) }"
+     @open-move-brand.window="brand = $event.detail.brand; name = $event.detail.name; origin = $event.detail.organization; open = true"
+     @keydown.escape.window="open = false">
+    <div x-show="open" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="move-brand-title">
+        <div class="modal-panel" @click.outside="open = false">
+            <button type="button" class="modal-close" @click="open = false" aria-label="{% translate 'Close' %}">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <h2 id="move-brand-title" class="modal-title">{% translate "Move brand to another organization" %}</h2>
+            <p class="text-sm font-semibold text-neutral-950 mt-1" x-text="name"></p>
+            <form method="post" action="{% url 'organizations:move_brand' %}" class="mt-4 space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="brand" :value="brand">
+                <div>
+                    <label for="move-brand-destination" class="block text-sm font-medium text-neutral-800 mb-1">{% translate "Destination organization" %}</label>
+                    <select id="move-brand-destination" name="destination" required class="form-input-styled bb-select w-full cursor-pointer">
+                        <template x-for="organization in organizations.filter(o => o.id !== origin)" :key="organization.id">
+                            <option :value="organization.id" x-text="organization.name"></option>
+                        </template>
+                    </select>
+                </div>
+                <ul class="text-xs text-neutral-600 space-y-1.5 list-disc pl-4">
+                    <li>{% translate "Posts, channels, inbox, automations, media and the people linked to the brand go with it." %}</li>
+                    <li>{% translate "Billing follows the destination: its plan covers the brand if it has one left; otherwise the brand has to be contracted there. An exemption is kept only if the destination has one unused." %}</li>
+                    <li>{% translate "A brand with a subscription of its own, or with extra disk contracted, has to have it cancelled before it can be moved." %}</li>
+                </ul>
+                <div class="modal-footer">
+                    <button type="button" class="btn-ghost" @click="open = false">{% translate "Cancel" %}</button>
+                    <button type="submit" class="btn-brand">{% translate "Move brand" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

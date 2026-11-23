@@ -13,7 +13,14 @@ from apps.common.emails import build_email
 from apps.common.mail import EmailNotSentError, send_or_raise, transactional
 from apps.workspaces.models import Workspace
 
-from .models import Invitation, OrgMembership, WorkspaceMembership
+from .models import (
+    BUILTIN_ROLE_PERMISSIONS,
+    PERMISSION_KEYS,
+    PERMISSION_LABELS,
+    Invitation,
+    OrgMembership,
+    WorkspaceMembership,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +84,7 @@ def _ensure_can_accept(email):
         )
 
 
-def create_invitation(org, email, org_role, workspace_assignments, invited_by, *, inviter=None):
+def create_invitation(org, email, org_role, workspace_assignments, invited_by, *, inviter=None, name=""):
     """Create an invitation and send the invite email.
 
     Args:
@@ -86,6 +93,7 @@ def create_invitation(org, email, org_role, workspace_assignments, invited_by, *
         org_role: "member" or "admin".
         workspace_assignments: list of {"workspace_id": "...", "role": "..."}.
         invited_by: User who is sending the invite.
+        name: How the invitee is called, for the greeting of the e-mail.
 
     Returns:
         The created Invitation.
@@ -169,6 +177,7 @@ def create_invitation(org, email, org_role, workspace_assignments, invited_by, *
     invitation = Invitation.objects.create(
         organization=org,
         email=email,
+        name=" ".join(name.split())[:255],
         org_role=org_role,
         workspace_assignments=workspace_assignments,
         invited_by=invited_by,
@@ -279,6 +288,10 @@ def accept_invitation(invitation, user, *, require_email_match=True):
 
     invitation.accepted_at = timezone.now()
     invitation.save(update_fields=["accepted_at"])
+
+    if invitation.name and not user.name:
+        user.name = invitation.name
+        user.save(update_fields=["name"])
 
     # Set last workspace for dashboard redirect. A workspace the user already
     # works in stays the current one: OAuth MCP grants act in it, and another
@@ -632,13 +645,14 @@ def _send_invite_email(invitation) -> bool:
     context = {
         "invitation": invitation,
         "accept_url": accept_url,
-        "org_name": invitation.organization.name,
+        # The brand for an invitation sent from a brand's team page, else the organization.
+        "org_name": invitation.team_name,
         "invited_by": invitation.invited_by,
         "app_url": app_url,
     }
 
     msg = build_email(
-        subject=_("You've been invited to join %(org)s on Connekt Flow") % {"org": invitation.organization.name},
+        subject=_("You've been invited to join %(org)s on Connekt Flow") % {"org": invitation.team_name},
         template_prefix="members/email/invite",
         context=context,
         to=[invitation.email],
@@ -661,3 +675,74 @@ def _send_invite_email(invitation) -> bool:
         return False
 
     return True
+
+
+# ---------------------------------------------------------------------------
+# Roles and permissions of an organization
+# ---------------------------------------------------------------------------
+
+#: The brand roles an organization may adjust. The owner keeps every permission.
+ADJUSTABLE_ROLES = tuple(
+    role for role in WorkspaceMembership.WorkspaceRole.values if role != WorkspaceMembership.WorkspaceRole.OWNER
+)
+
+
+def role_permissions(org, role) -> dict:
+    """What ``role`` may do in the brands of ``org``: the built-in set with the organization's changes."""
+    builtin = BUILTIN_ROLE_PERMISSIONS[role]
+    adjusted = (org.role_permissions or {}).get(role) or {}
+    if role not in ADJUSTABLE_ROLES:
+        return dict(builtin)
+    return {key: bool(adjusted.get(key, granted)) for key, granted in builtin.items()}
+
+
+def role_permission_matrix(org) -> list[dict]:
+    """The "Roles and permissions" table of ``org``: one row per permission, one cell per role."""
+    roles = WorkspaceMembership.WorkspaceRole.values
+    current = {role: role_permissions(org, role) for role in roles}
+    return [
+        {
+            "key": key,
+            "label": PERMISSION_LABELS[key],
+            "cells": [
+                {
+                    "role": role,
+                    "granted": current[role][key],
+                    "changed": current[role][key] != BUILTIN_ROLE_PERMISSIONS[role][key],
+                    "locked": role not in ADJUSTABLE_ROLES,
+                }
+                for role in roles
+            ],
+        }
+        for key in PERMISSION_KEYS
+    ]
+
+
+def set_role_permissions(org, granted) -> None:
+    """Save what each adjustable role may do in the brands of ``org``.
+
+    ``granted`` maps a role to the permission keys it should hold; a role
+    left out keeps what it had. Only the differences from the built-in set
+    are stored, so a role nobody touched follows the product's defaults.
+    Unknown roles and keys are ignored.
+    """
+    stored = dict(org.role_permissions or {})
+    for role in ADJUSTABLE_ROLES:
+        if role not in granted:
+            continue
+        wanted = set(granted[role])
+        changes = {
+            key: key in wanted for key, default in BUILTIN_ROLE_PERMISSIONS[role].items() if (key in wanted) != default
+        }
+        if changes:
+            stored[role] = changes
+        else:
+            stored.pop(role, None)
+    org.role_permissions = stored or None
+    org.save(update_fields=["role_permissions", "updated_at"])
+
+
+def reset_role_permissions(org) -> None:
+    """Put every role of ``org`` back on the product's defaults."""
+    org.role_permissions = None
+    org.save(update_fields=["role_permissions", "updated_at"])

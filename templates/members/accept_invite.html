@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% blocktranslate with org=invitation.organization.name %}Join {{ org }}{% endblocktranslate %} - Connekt Flow</title>
+    <title>{% blocktranslate with org=invitation.team_name %}Join {{ org }}{% endblocktranslate %} - Connekt Flow</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -85,7 +85,7 @@
     <div class="card">
         <div class="logo">Connekt Flow</div>
 
-        <h1>{% blocktranslate with org=invitation.organization.name %}Join {{ org }}{% endblocktranslate %}</h1>
+        <h1>{% blocktranslate with org=invitation.team_name %}Join {{ org }}{% endblocktranslate %}</h1>
         <p class="subtitle">
             {% blocktranslate with inviter=invitation.invited_by.display_name %}{{ inviter }} invited you to join their team on Connekt Flow.{% endblocktranslate %}
         </p>
@@ -96,12 +96,15 @@
 
         <!-- Details -->
         <div class="info-box">
+            {# A brand invitation is about the brand listed below, not the organization. #}
+            {% if not invitation.brand %}
             <div class="info-label">{% translate "Organization" %}</div>
             <div class="info-value" style="margin-bottom: 12px;">{{ invitation.organization.name }}</div>
 
             <div class="info-label">{% translate "Role" %}</div>
             <div class="info-value" style="margin-bottom: 12px; text-transform: capitalize;">
             {% if invitation.org_role == 'owner' %}{% translate "Owner" %}{% elif invitation.org_role == 'admin' %}{% translate "Admin" %}{% elif invitation.org_role == 'member' %}{% translate "Member" %}{% else %}{{ invitation.org_role }}{% endif %}</div>
+            {% endif %}
 
             {% if ws_display %}
             <div class="info-label">{% translate "Workspaces" %}</div>
@@ -121,7 +124,7 @@
         <form method="POST" action="{{ accept_url }}">
             {% csrf_token %}
             <button type="submit" class="btn btn-primary">
-                {% blocktranslate with org=invitation.organization.name %}Join {{ org }}{% endblocktranslate %}
+                {% blocktranslate with org=invitation.team_name %}Join {{ org }}{% endblocktranslate %}
             </button>
         </form>
         {% else %}

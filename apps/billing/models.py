@@ -38,6 +38,8 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from apps.common.encryption import EncryptedTextField
+
 # ---------------------------------------------------------------------------
 # WorkspaceSubscription, one per Workspace
 # ---------------------------------------------------------------------------
@@ -669,6 +671,11 @@ class OrganizationPlan(models.Model):
     coupon = models.ForeignKey("billing.Coupon", on_delete=models.SET_NULL, null=True, blank=True, related_name="plans")
     card_brand = models.CharField(max_length=32, blank=True, default="")
     card_last4 = models.CharField(max_length=4, blank=True, default="")
+    # The gateway's token of the card the plan was paid with, for the charge
+    # of brands added between two cycles (``contracting.add_plan_brands``).
+    # Only the gateway can turn it into a charge, and only for this customer.
+    # NULL for a plan paid by Pix, or by card before the token was kept.
+    gateway_card_token = EncryptedTextField(null=True, blank=True)
 
     current_period_end = models.DateTimeField(null=True, blank=True)
     canceled_at = models.DateTimeField(null=True, blank=True)
@@ -686,6 +693,11 @@ class OrganizationPlan(models.Model):
         return self.billing_cycle == WorkspaceSubscription.Cycle.YEARLY
 
     @property
+    def has_card_on_file(self):
+        """Whether brands added between two cycles can be charged to the plan's card on the spot."""
+        return bool(self.gateway_card_token)
+
+    @property
     def charge_cents(self):
         """What the gateway charges each cycle."""
         return self.price_cents * 12 if self.is_yearly else self.price_cents
@@ -693,6 +705,47 @@ class OrganizationPlan(models.Model):
     @property
     def is_active(self):
         return self.status == WorkspaceSubscription.Status.ACTIVE
+
+
+class PlanBrandAddition(models.Model):
+    """Brands asked to be added to an active plan, waiting for their proportional charge.
+
+    Adding brands between two cycles is charged for the days left until the
+    plan's next charge. When that charge cannot be taken on the spot (a plan
+    paid by Pix, or by a card whose token was not kept), the request waits
+    here with the one-off charge at the gateway; the webhook that reports it
+    paid applies it (``contracting.apply_brand_addition``). A plan has at
+    most one pending request: a new one replaces it.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        APPLIED = "applied", _("Applied")
+        CANCELED = "canceled", _("Canceled")
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    plan = models.ForeignKey(OrganizationPlan, on_delete=models.CASCADE, related_name="brand_additions")
+    # How many brands the plan covers once this is applied.
+    brands = models.PositiveIntegerField()
+    # The existing brands ticked (ids as strings) and the brands to create.
+    workspace_ids = models.JSONField(default=list, blank=True)
+    new_brand_names = models.JSONField(default=list, blank=True)
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    amount_cents = models.PositiveIntegerField()
+    gateway_payment_id = models.CharField(max_length=255, blank=True, default="", db_index=True)
+    invoice_url = models.CharField(max_length=500, blank=True, default="")
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    settled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "billing_plan_brand_addition"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"PlanBrandAddition({self.plan_id}, {self.brands}, {self.status})"
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,69 @@
+{% extends "layouts/settings.html" %}
+{% load i18n %}
+{% block title %}{% translate "Roles and permissions" %} - {{ organization.name }} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div class="max-w-2xl">
+        <h1 class="page-title">{% translate "Roles and permissions" %} · {{ organization.name }}</h1>
+        <p class="page-description">{% translate "What each role may do in the brands of this organization. A change applies to everyone with that role, in every brand, at once." %}</p>
+    </div>
+    <a href="{% url 'organizations:workspaces' %}" class="btn-ghost">{% translate "Back to organizations" %}</a>
+</div>
+{% endblock %}
+
+{% block content %}
+{% comment %}
+One checkbox per role and permission, posted as role_<role>=<permission>.
+The owner's column is shown ticked and disabled: that role keeps everything,
+and members.services.set_role_permissions ignores it whatever is posted.
+{% endcomment %}
+<form method="POST" id="role-permissions-form">
+    {% csrf_token %}
+    <section class="a-card overflow-hidden mb-4">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 border-b border-neutral-300">
+                        <th class="px-5 py-3 text-left">{% translate "Permission" %}</th>
+                        {% for value, label in roles %}
+                        <th class="px-3 py-3 text-center whitespace-nowrap">{% translate label %}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in matrix %}
+                    <tr class="border-b border-neutral-200 last:border-0">
+                        <th scope="row" class="px-5 py-3 text-left font-medium text-neutral-950">{{ row.label }}</th>
+                        {% for cell in row.cells %}
+                        <td class="px-3 py-3 text-center {% if cell.changed %}bg-brand-50{% endif %}">
+                            <input type="checkbox" name="role_{{ cell.role }}" value="{{ row.key }}"
+                                   class="w-4 h-4 accent-brand-700 {% if cell.locked %}cursor-not-allowed opacity-60{% else %}cursor-pointer{% endif %}"
+                                   aria-label="{{ row.label }}"
+                                   {% if cell.granted %}checked{% endif %} {% if cell.locked %}disabled{% endif %}>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</form>
+
+<div class="flex flex-wrap items-center justify-between gap-3 mb-8">
+    <p class="text-xs text-neutral-500 max-w-xl">
+        {% translate "The owner always keeps every permission. A highlighted cell differs from the default of the role." %}
+    </p>
+    <div class="flex items-center gap-2">
+        {% if is_adjusted %}
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="reset">
+            <button type="submit" class="btn-ghost">{% translate "Restore defaults" %}</button>
+        </form>
+        {% endif %}
+        <button type="submit" form="role-permissions-form" class="btn-brand">{% translate "Save Changes" %}</button>
+    </div>
+</div>
+{% endblock %}

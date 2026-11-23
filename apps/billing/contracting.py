@@ -44,7 +44,7 @@ from django.utils.translation import gettext_lazy as _
 from apps.billing import services
 from apps.billing.gateways import asaas as asaas_gateway
 from apps.billing.gateways.asaas import GATEWAY, AsaasClient, AsaasError
-from apps.billing.models import OrganizationPlan, WorkspaceAddon, WorkspaceSubscription
+from apps.billing.models import OrganizationPlan, PlanBrandAddition, WorkspaceAddon, WorkspaceSubscription
 
 logger = logging.getLogger(__name__)
 
@@ -588,6 +588,9 @@ def purchase_plan(
         except AsaasError:
             # Paid all the same; only the renewals would come as invoices.
             logger.exception("Could not keep the card on plan %s's subscription", plan.pk)
+    # Kept for the proportional charge of brands added later (add_plan_brands).
+    plan.gateway_card_token = token or None
+    plan.save(update_fields=["gateway_card_token", "updated_at"])
     logger.info("Organization %s bought a plan of %s brands", organization.pk, brands)
     chosen = [*workspaces, *_create_brands(organization, new_brand_names, owner)]
     return _activate_plan(plan, card=card_info, coupon_saving_cents=quote["coupon_saving_cents"], workspaces=chosen)
@@ -656,6 +659,7 @@ def start_pix_plan(
     plan.coupon = coupon
     plan.card_brand = ""
     plan.card_last4 = ""
+    plan.gateway_card_token = None
     plan.save()
     _create_brands(organization, new_brand_names, owner)
     logger.info("Organization %s asked to pay a plan of %s brands by Pix", organization.pk, brands)
@@ -682,8 +686,9 @@ def _asaas_datetime(raw):
 def change_plan_brands(plan, brands, *, workspaces=(), new_brand_names=(), owner=None, client=None):
     """Change how many brands an active plan covers, and what it charges.
 
-    The new value applies from the next charge (no pro rata) and the
-    workspaces covered follow at once.
+    The new value applies from the next charge and the workspaces covered
+    follow at once. Nothing is charged here: the days until that charge are
+    what :func:`add_plan_brands` charges before calling this.
     """
     client = client or AsaasClient()
     # A coupon on every charge keeps applying to the new value.
@@ -694,4 +699,204 @@ def change_plan_brands(plan, brands, *, workspaces=(), new_brand_names=(), owner
     plan.save(update_fields=["brands", "price_cents", "updated_at"])
     chosen = [*workspaces, *_create_brands(plan.organization, new_brand_names, owner)]
     services.sync_plan_coverage(plan, chosen)
+    return plan
+
+
+def next_charge_date(plan, client):
+    """The day the plan's subscription charges next, asked from the gateway.
+
+    The charge already generated and still unpaid, if there is one;
+    otherwise the subscription's ``nextDueDate``, which Asaas defines as the
+    due date of the next charge it has yet to generate. None when Asaas
+    reports neither.
+    """
+    pending = _first_unpaid(client, plan.gateway_subscription_id)
+    raw = (pending or {}).get("dueDate") or client.get_subscription(plan.gateway_subscription_id).get("nextDueDate")
+    try:
+        return datetime.date.fromisoformat(str(raw))
+    except ValueError:
+        return None
+
+
+def brand_addition_quote(plan, brands, *, client=None):
+    """What adding brands up to ``brands`` is charged now (``services.quote_brand_addition``).
+
+    A plan whose next charge the gateway does not report is charged nothing
+    now, as when there is nothing to add.
+    """
+    client = client or AsaasClient()
+    next_on = next_charge_date(plan, client) if brands > plan.brands else None
+    if next_on is None:
+        next_on = timezone.localdate()
+    return services.quote_brand_addition(plan, brands, next_on)
+
+
+def _addition_reference(addition):
+    return f"plan-brands:{addition.pk}"
+
+
+def _settle_earlier_addition(plan, client):
+    """Deal with the plan's earlier request to add brands still waiting.
+
+    Asked from the gateway by its reference, so a card charge whose answer
+    was lost is found too. One that turned out paid is applied now instead
+    of charging again, and True is returned; one still unpaid is withdrawn,
+    so it cannot be paid on top of the new request.
+    """
+    for addition in PlanBrandAddition.objects.filter(plan=plan, status=PlanBrandAddition.Status.PENDING):
+        payment = client.find_payment_by_reference(_addition_reference(addition))
+        if payment and payment.get("status") in PAID_PAYMENT_STATUSES:
+            addition.gateway_payment_id = payment.get("id") or addition.gateway_payment_id
+            addition.save(update_fields=["gateway_payment_id"])
+            apply_brand_addition(addition, client=client)
+            return True
+        if payment and payment.get("id"):
+            try:
+                client.delete_payment(payment["id"])
+            except asaas_gateway.AsaasAPIError as exc:
+                if exc.status_code != 404:
+                    raise
+        addition.status = PlanBrandAddition.Status.CANCELED
+        addition.settled_at = timezone.now()
+        addition.save(update_fields=["status", "settled_at"])
+    return False
+
+
+def add_plan_brands(plan, brands, *, workspaces=(), new_brand_names=(), owner=None, remote_ip="", client=None):
+    """Add brands to an active plan, charging the days left until its next charge.
+
+    Returns ``(addition, quote)``: the ``PlanBrandAddition`` when the
+    proportional charge still has to be paid (its ``invoice_url`` is where),
+    or None when the brands are on the plan already, with what was priced
+    (``services.quote_brand_addition``):
+
+    - nothing to charge (see ``services.quote_brand_addition``): the brands
+      are added, the new value applies from the next charge;
+    - a card on file (``gateway_card_token``): it is charged on the spot and
+      the brands are added. ``CardRefusedError`` when it is declined, with
+      nothing changed;
+    - otherwise (a plan paid by Pix, or by a card whose token was not kept):
+      a one-off charge is created and the request waits for it to be paid;
+      the webhook then calls :func:`apply_brand_addition`. An earlier request
+      still waiting is withdrawn first.
+
+    After a transport error on the card charge the request stays pending:
+    nothing is added, and the next call asks the gateway whether that charge
+    went through before charging anything (``_settle_earlier_addition``).
+    """
+    client = client or AsaasClient()
+    applied = {"workspaces": workspaces, "new_brand_names": new_brand_names, "owner": owner, "client": client}
+    if _settle_earlier_addition(plan, client):
+        # The earlier request was paid after all, and is on the plan now.
+        plan.refresh_from_db()
+        if brands <= plan.brands:
+            return None, services.quote_brand_addition(plan, plan.brands, timezone.localdate())
+    quote = brand_addition_quote(plan, brands, client=client)
+    if quote["amount_cents"] == 0:
+        change_plan_brands(plan, brands, **applied)
+        return None, quote
+
+    addition = PlanBrandAddition.objects.create(
+        plan=plan,
+        brands=brands,
+        workspace_ids=[str(getattr(workspace, "pk", workspace)) for workspace in workspaces],
+        new_brand_names=list(new_brand_names),
+        requested_by=owner,
+        amount_cents=quote["amount_cents"],
+    )
+    charge = {
+        "customer_id": plan.gateway_customer_id,
+        "value_cents": quote["amount_cents"],
+        "external_reference": _addition_reference(addition),
+        "description": str(
+            _("Connekt Flow — brands added to the plan of %(name)s, for the days until the next charge")
+            % {"name": plan.organization.name}
+        ),
+    }
+    token = plan.gateway_card_token or ""
+    if not token:
+        payment = client.create_payment(**charge)
+        addition.gateway_payment_id = payment.get("id") or ""
+        addition.invoice_url = _https_url(payment.get("invoiceUrl"))
+        addition.save(update_fields=["gateway_payment_id", "invoice_url"])
+        if not addition.gateway_payment_id or not addition.invoice_url:
+            raise AsaasError("Asaas created the charge for the added brands without an invoice.")
+        return addition, quote
+
+    try:
+        payment = client.create_payment(**charge, card_token=token, remote_ip=remote_ip)
+    except asaas_gateway.AsaasAPIError as exc:
+        if exc.status_code != 400:
+            raise
+        # Declined: Asaas keeps no charge, so nothing is owed.
+        addition.status = PlanBrandAddition.Status.CANCELED
+        addition.settled_at = timezone.now()
+        addition.save(update_fields=["status", "settled_at"])
+        descriptions = [str(e.get("description") or "") for e in exc.errors if isinstance(e, dict)]
+        raise CardRefusedError(" ".join(d for d in descriptions if d) or _("The card was declined.")) from exc
+    addition.gateway_payment_id = payment.get("id") or ""
+    addition.invoice_url = _https_url(payment.get("invoiceUrl"))
+    addition.save(update_fields=["gateway_payment_id", "invoice_url"])
+    if payment.get("status") not in PAID_PAYMENT_STATUSES:
+        # Under the issuer's analysis: the webhook applies it once confirmed.
+        return addition, quote
+    apply_brand_addition(addition, client=client)
+    return None, quote
+
+
+def _https_url(raw):
+    """The gateway's payment page, kept only when it is an https address: people are redirected to it."""
+    return raw if isinstance(raw, str) and raw.startswith("https://") else ""
+
+
+def _organization_owner(organization):
+    """An owner of the organization, to own brands created when whoever asked is gone."""
+    from apps.members.models import OrgMembership
+
+    membership = (
+        OrgMembership.objects.filter(organization=organization, org_role=OrgMembership.OrgRole.OWNER)
+        .select_related("user")
+        .first()
+    )
+    return membership.user if membership else None
+
+
+def apply_brand_addition(addition, *, client=None):
+    """Put the brands of a paid request on its plan. Safe to call twice.
+
+    A plan that already covers as many brands (the request was applied, or
+    overtaken) is left as it is.
+    """
+    from apps.workspaces.models import Workspace
+
+    with transaction.atomic():
+        addition = (
+            PlanBrandAddition.objects.select_for_update(of=("self",))
+            .select_related("plan", "requested_by")
+            .get(pk=addition.pk)
+        )
+        if addition.status == PlanBrandAddition.Status.APPLIED:
+            return addition.plan
+        plan = addition.plan
+        if not plan.is_active:
+            # Paid for a plan since cancelled or overdue: there is no
+            # subscription to raise. Left waiting for someone to look at it.
+            logger.error("Addition %s was paid but plan %s is %s", addition.pk, plan.pk, plan.status)
+            return plan
+        if addition.brands > plan.brands:
+            workspaces = list(
+                Workspace.objects.filter(pk__in=addition.workspace_ids, organization_id=plan.organization_id)
+            )
+            change_plan_brands(
+                plan,
+                addition.brands,
+                workspaces=workspaces,
+                new_brand_names=addition.new_brand_names,
+                owner=addition.requested_by or _organization_owner(plan.organization),
+                client=client,
+            )
+        addition.status = PlanBrandAddition.Status.APPLIED
+        addition.settled_at = timezone.now()
+        addition.save(update_fields=["status", "settled_at"])
+    logger.info("Plan %s now covers %s brands (addition %s paid)", plan.pk, plan.brands, addition.pk)
     return plan

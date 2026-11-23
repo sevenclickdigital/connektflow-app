@@ -41,9 +41,15 @@ from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
 from apps.affiliates import services as affiliate_services
-from apps.billing import services
+from apps.billing import contracting, services
 from apps.billing.gateways.asaas import GATEWAY, AsaasClient, AsaasError
-from apps.billing.models import BillingEvent, OrganizationPlan, WorkspaceAddon, WorkspaceSubscription
+from apps.billing.models import (
+    BillingEvent,
+    OrganizationPlan,
+    PlanBrandAddition,
+    WorkspaceAddon,
+    WorkspaceSubscription,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +177,10 @@ def _apply(event, event_type, payload):
 
     subscription_id = _subscription_id(payload)
     if not subscription_id:
-        # A one-off charge, or a subscription event shaped differently
+        if _apply_brand_addition(event_type, payload):
+            _finish(event, BillingEvent.Status.PROCESSED)
+            return
+        # Another one-off charge, or a subscription event shaped differently
         # than we expect. Kept as an audit row rather than dropped.
         _finish(event, BillingEvent.Status.IGNORED)
         return
@@ -206,6 +215,28 @@ def _apply(event, event_type, payload):
     # precisely because this is the case someone will need to explain.
     logger.warning("Asaas webhook: no local row for subscription %s", subscription_id)
     _finish(event, BillingEvent.Status.IGNORED)
+
+
+def _apply_brand_addition(event_type, payload):
+    """Handle the one-off charge of brands added to a plan. True when the event was one.
+
+    Paid: the brands go on the plan (``contracting.apply_brand_addition``,
+    which does nothing for a request the card charge already applied). Any
+    other event about that charge leaves the request waiting.
+    """
+    payment = payload.get("payment")
+    payment_id = payment.get("id") if isinstance(payment, dict) else ""
+    if not payment_id:
+        return False
+    addition = (
+        PlanBrandAddition.objects.filter(gateway_payment_id=payment_id).select_related("plan__organization").first()
+    )
+    if addition is None:
+        return False
+    if event_type in PAID_EVENTS and addition.status == PlanBrandAddition.Status.PENDING:
+        contracting.apply_brand_addition(addition)
+    affiliate_services.record_payment_event(addition.plan.organization, event_type, payload)
+    return True
 
 
 def _apply_pix_authorization(event, payload):
