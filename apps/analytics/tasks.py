@@ -609,7 +609,7 @@ _POST_NON_CADENCE_METRICS_BY_PLATFORM: dict[str, frozenset[str]] = {
     "youtube": frozenset({"watch_time", "avg_view_pct", "shares"}),
 }
 
-_FOLLOWER_TOTAL_REFRESH_PLATFORMS: frozenset[str] = frozenset({"facebook", "instagram", "instagram_login"})
+_FOLLOWER_TOTAL_REFRESH_PLATFORMS: frozenset[str] = frozenset({"facebook", "instagram", "instagram_login", "threads"})
 
 
 def _needs_empty_follower_count_refresh(account) -> bool:

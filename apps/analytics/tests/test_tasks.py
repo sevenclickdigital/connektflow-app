@@ -1440,6 +1440,7 @@ class TestAFinishedDayIsReadOnceMore:
             account_name="Loja",
             oauth_access_token="token",
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+            follower_count=34,
         )
 
     @staticmethod

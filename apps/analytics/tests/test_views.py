@@ -211,8 +211,10 @@ def test_pages_never_leak_raw_template_tags(owner_client, workspace, platform):
 
 
 @pytest.mark.django_db
-def test_youtube_dashboard_ignores_legacy_account_estimates(owner_client, workspace):
+def test_youtube_dashboard_ignores_legacy_account_estimates(owner_client, workspace, settings):
     """Legacy rows cannot supply native YouTube cards or engagement rates."""
+    # The copy asserted below is translated; the project's default language is pt-br.
+    settings.LANGUAGE_CODE = "en-us"
     account = _account(workspace, "youtube", "Tube")
     today = timezone.now().date()
     for offset in range(14):

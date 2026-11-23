@@ -3,7 +3,7 @@
 from datetime import timedelta
 
 import pytest
-from django.utils import timezone
+from django.utils import timezone, translation
 
 from apps.social_accounts.models import SocialAccount
 
@@ -324,10 +324,11 @@ def test_engagement_rate_built_from_estimated_parts_is_marked_estimated():
 def test_calculated_note_with_only_the_change_chips():
     from apps.analytics.services import calculated_metrics_note
 
-    note = calculated_metrics_note(SocialAccount(platform="bluesky"), cards=[], engagement=None)
+    with translation.override("en"):
+        note = calculated_metrics_note(SocialAccount(platform="bluesky"), cards=[], engagement=None)
 
     assert note == (
-        "Underlying data comes from Bluesky. The % changes vs. the previous period are calculated by "
+        "Underlying data comes from Bluesky. The changes in percent vs. the previous period are calculated by "
         "Connekt Flow, not reported by Bluesky."
     )
 
@@ -338,16 +339,17 @@ def test_calculated_note_names_estimates_and_follower_growth():
 
     estimated = DerivedMetric(value=1.0, delta=0.0, series=[], kind="count", estimated=True)
 
-    note = calculated_metrics_note(
-        SocialAccount(platform="instagram_login"),
-        cards=[{"derived": estimated}],
-        engagement=None,
-        growth=estimated,
-    )
+    with translation.override("en"):
+        note = calculated_metrics_note(
+            SocialAccount(platform="instagram_login"),
+            cards=[{"derived": estimated}],
+            engagement=None,
+            growth=estimated,
+        )
 
     assert note == (
         "Underlying data comes from Instagram. The estimates built from per-post counts, follower growth and "
-        "% changes vs. the previous period are calculated by Connekt Flow, not reported by Instagram."
+        "changes in percent vs. the previous period are calculated by Connekt Flow, not reported by Instagram."
     )
 
 

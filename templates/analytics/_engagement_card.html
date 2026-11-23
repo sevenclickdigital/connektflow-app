@@ -13,7 +13,7 @@
         </div>
         <div>
             {% sparkline engagement.rate.series primary_color 180 40 %}
-            <div class="a-calc-note" style="margin-top: 6px;">{% if engagement.formula %}{{ engagement.formula }}. {% translate "Not reported by" %} {{ platform_name }}.{% else %}{% translate "Not enough data to calculate yet." %}{% endif %}</div>
+            <div class="a-calc-note" style="margin-top: 6px;">{% if engagement.formula %}{% if engagement.parts|length > 1 %}({% endif %}{% for part in engagement.parts %}{% translate part.label %}{% if not forloop.last %} + {% endif %}{% endfor %}{% if engagement.parts|length > 1 %}){% endif %} ÷ {% translate engagement.denominator_label %}. {% translate "Not reported by" %} {{ platform_name }}.{% else %}{% translate "Not enough data to calculate yet." %}{% endif %}</div>
         </div>
     </div>
 

@@ -17,6 +17,7 @@ from typing import Any, NamedTuple
 from django.db import connections
 from django.utils import timezone
 from django.utils.text import get_text_list
+from django.utils.translation import gettext
 
 from apps.composer.models import PlatformPost
 from apps.social_accounts.models import SocialAccount
@@ -426,6 +427,8 @@ def engagement_card(
     Returns a dict with:
       - ``rate``: DerivedMetric for the rate headline + sparkline
       - ``parts``: list of {metric, label, derived} for the 2x2 sub-grid
+      - ``denominator_label``: the catalogue label of what the rate divides by,
+        so the page can write the formula in the reader's language.
       - ``formula``: how we calculated the rate, e.g. "(Likes + Comments) ÷ Views",
         naming the denominator the rate actually used; ``None`` when there was
         nothing to divide by yet. The rate is our metric, not the platform's,
@@ -452,12 +455,12 @@ def engagement_card(
         if m in ENGAGEMENT_PARTS
     ]
     rate.estimated = any(p["derived"].estimated for p in parts) or rate.denominator in bundle["estimated_metrics"]
-    formula = None
+    formula = denominator_label = None
     if rate.denominator is not None:
         denominator_label = "Followers" if rate.denominator == "followers" else _label(rate.denominator)
         numerator = " + ".join(p["label"] for p in parts)
         formula = f"({numerator}) ÷ {denominator_label}" if len(parts) > 1 else f"{numerator} ÷ {denominator_label}"
-    return {"rate": rate, "parts": parts, "formula": formula}
+    return {"rate": rate, "parts": parts, "formula": formula, "denominator_label": denominator_label}
 
 
 def calculated_metrics_note(
@@ -474,7 +477,10 @@ def calculated_metrics_note(
     A disclosure label does not authorize a derived metric.
     """
     if account.platform == "youtube":
-        return "Metrics reported by YouTube. Data may be delayed. Percentage comparisons, when available, are calculated from reported totals."
+        return gettext(
+            "Metrics reported by YouTube. Data may be delayed. Percentage comparisons, when available, "
+            "are calculated from reported totals."
+        )
     shown = [card["derived"] for card in cards]
     if engagement:
         shown += [part["derived"] for part in engagement["parts"]]
@@ -483,16 +489,22 @@ def calculated_metrics_note(
     platform = platform_name(account)
     calculated = []
     if engagement:
-        calculated.append("engagement rate")
+        calculated.append(gettext("engagement rate"))
     if any(d.averaged for d in shown):
-        calculated.append("daily averages")
+        calculated.append(gettext("daily averages"))
     if any(d.estimated for d in shown):
-        calculated.append(f"estimates built from per-{content_noun(account)} counts")
+        calculated.append(
+            gettext("estimates built from per-video counts")
+            if content_noun(account) == "video"
+            else gettext("estimates built from per-post counts")
+        )
     if growth is not None and growth.estimated:
-        calculated.append("follower growth")
-    calculated.append("% changes vs. the previous period")
-    listed = get_text_list(calculated, "and")
-    return f"Underlying data comes from {platform}. The {listed} are calculated by Connekt Flow, not reported by {platform}."
+        calculated.append(gettext("follower growth"))
+    calculated.append(gettext("changes in percent vs. the previous period"))
+    return gettext(
+        "Underlying data comes from %(platform)s. The %(listed)s are calculated by Connekt Flow, "
+        "not reported by %(platform)s."
+    ) % {"platform": platform, "listed": get_text_list(calculated, gettext("and"))}
 
 
 def hero_chart_metrics(account: SocialAccount) -> list[str]:

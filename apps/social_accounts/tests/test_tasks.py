@@ -66,6 +66,18 @@ class TestCheckSocialAccountHealth:
         assert account.last_error == ""
 
     @patch("providers.get_provider")
+    def test_a_profile_without_a_follower_total_keeps_the_stored_one(self, mock_get_provider, connected_account):
+        """Threads reports followers only through insights; its profile read says 0."""
+        SocialAccount.objects.filter(pk=connected_account.pk).update(follower_count=34)
+        mock_provider = MagicMock()
+        mock_provider.get_profile.return_value = _profile(follower_count=0)
+        mock_get_provider.return_value = mock_provider
+
+        check_social_account_health.now(str(connected_account.id))
+
+        assert SocialAccount.objects.get(pk=connected_account.pk).follower_count == 34
+
+    @patch("providers.get_provider")
     def test_instagram_health_check_passes_selected_ig_user_id(self, mock_get_provider, workspace):
         account = SocialAccount.objects.create(
             workspace=workspace,

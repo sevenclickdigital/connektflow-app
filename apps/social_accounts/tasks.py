@@ -121,7 +121,11 @@ def _check_social_account_health(account_id: str):
         # Validate token by fetching profile
         try:
             profile = provider.get_profile(account.oauth_access_token)
-            account.follower_count = profile.follower_count
+            # A profile read that carries no follower total (Threads reports it
+            # only through insights, which the analytics sync reads) must not
+            # reset the one already stored.
+            if profile.follower_count:
+                account.follower_count = profile.follower_count
             # Provider CDNs (TikTok, Meta) return signed avatar URLs that
             # expire; display names and handles can also change on-platform.
             # Guard each write so a transient empty response doesn't wipe
