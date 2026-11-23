@@ -141,7 +141,7 @@ class TestInvitees:
         assert _signup_href(client.get(reverse("account_login"))) == "/accounts/signup/"
         response = client.post(
             reverse("account_signup"),
-            {"email": "invitee@example.com", "password1": "S3cure-pass-for-tests!"},
+            {"full_name": "Caio Reis", "email": "invitee@example.com", "password1": "S3cure-pass-for-tests!"},
         )
 
         assert response.status_code == 302

@@ -311,6 +311,10 @@ SITE_ID = 1
 # django-allauth
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*"]
+# The name is asked at sign-up (accounts.forms.SignupNameForm) and the
+# e-mails greet the person by their first name (accounts.adapters.user_display).
+ACCOUNT_SIGNUP_FORM_CLASS = "apps.accounts.forms.SignupNameForm"
+ACCOUNT_USER_DISPLAY = "apps.accounts.adapters.user_display"
 ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
 # Security notices: password changed/reset/set, email changed or removed, a

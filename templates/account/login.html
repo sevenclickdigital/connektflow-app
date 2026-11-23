@@ -69,6 +69,9 @@
                 <label for="{{ field.id_for_label }}" class="block text-sm font-semibold mb-1.5" style="color: var(--text-primary);">
                     {{ field.label }}
                 </label>
+                {% if field.field.widget.input_type == "password" %}
+                {% include "partials/_password_input.html" with field=field %}
+                {% else %}
                 <input type="{{ field.field.widget.input_type }}"
                        name="{{ field.html_name }}"
                        id="{{ field.id_for_label }}"
@@ -77,6 +80,7 @@
                        {% if field.field.widget.attrs.autocomplete %}autocomplete="{{ field.field.widget.attrs.autocomplete }}"{% endif %}
                        {% if field.field.required %}required{% endif %}
                        class="form-input-styled {% if field.errors %}is-error{% endif %}">
+                {% endif %}
                 {% if field.errors %}
                 <p class="mt-1 text-xs" style="color: var(--error-500);">{{ field.errors.0 }}</p>
                 {% endif %}

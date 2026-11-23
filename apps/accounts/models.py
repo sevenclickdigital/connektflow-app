@@ -77,6 +77,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
     @property
+    def greeting_name(self):
+        """What the e-mails call the person: their first name, else the start of their name or e-mail."""
+        if self.first_name:
+            return self.first_name
+        if self.name.strip():
+            return self.name.split()[0]
+        return self.email.split("@")[0] if self.email else ""
+
+    @property
     def display_name(self):
         if self.name:
             return self.name

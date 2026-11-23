@@ -58,13 +58,7 @@
                     {{ field.label }}
                 </label>
                 {% if field.field.widget.input_type == "password" %}
-                <input type="password"
-                       name="{{ field.html_name }}"
-                       id="{{ field.id_for_label }}"
-                       {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}
-                       {% if field.field.widget.attrs.autocomplete %}autocomplete="{{ field.field.widget.attrs.autocomplete }}"{% endif %}
-                       {% if field.field.required %}required{% endif %}
-                       class="form-input-styled {% if field.errors %}is-error{% endif %}">
+                {% include "partials/_password_input.html" with field=field %}
                 {% else %}
                 <input type="{{ field.field.widget.input_type }}"
                        name="{{ field.html_name }}"

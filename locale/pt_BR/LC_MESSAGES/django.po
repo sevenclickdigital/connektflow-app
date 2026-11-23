@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 13:00+0000\n"
+"POT-Creation-Date: 2026-11-23 13:42+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -70,6 +70,18 @@ msgstr "Informe um CEP com 8 dígitos, como 01310-100."
 #: apps/accounts/forms.py:130
 msgid "Required to complete the address."
 msgstr "Obrigatório para completar o endereço."
+
+#: apps/accounts/forms.py:154
+msgid "Your name"
+msgstr "Seu nome"
+
+#: apps/accounts/forms.py:156
+msgid "e.g. Ana Souza"
+msgstr "ex.: Ana Souza"
+
+#: apps/accounts/forms.py:162
+msgid "Enter your name."
+msgstr "Informe seu nome."
 
 #: apps/accounts/signals.py:36 templates/billing/checkout.html:31
 msgid "My brand"
@@ -401,7 +413,7 @@ msgstr "Saiba mais"
 msgid "Shop now"
 msgstr "Comprar agora"
 
-#: apps/ads/services.py:61 templates/account/login.html:105
+#: apps/ads/services.py:61 templates/account/login.html:109
 #: templates/account/signup.html:4
 msgid "Sign up"
 msgstr "Criar conta"
@@ -7895,7 +7907,7 @@ msgstr "Seu código para redefinir a senha do %(brand)s"
 
 #: templates/account/email/password_reset_key_message.html:3
 #: templates/account/email/password_reset_key_message.html:6
-#: templates/account/password_reset.html:17
+#: templates/account/password_reset.html:13
 msgid "Reset your password"
 msgstr "Redefina sua senha"
 
@@ -8068,19 +8080,19 @@ msgid "This confirmation link has expired or is invalid."
 msgstr "Este link de confirmação expirou ou é inválido."
 
 #: templates/account/email_confirm.html:51
-#: templates/account/password_reset_from_key_done.html:27
+#: templates/account/password_reset_from_key_done.html:20
 msgid "Sign In"
 msgstr "Entrar"
 
 #: templates/account/email_confirm.html:58
-#: templates/account/password_reset_done.html:42
-#: templates/account/password_reset_from_key.html:75
+#: templates/account/password_reset_done.html:35
+#: templates/account/password_reset_from_key.html:63
 #: templates/account/signup_closed.html:33
 #: templates/account/verification_sent.html:42
 msgid "Back to sign in"
 msgstr "Voltar para o login"
 
-#: templates/account/login.html:4 templates/account/login.html:95
+#: templates/account/login.html:4 templates/account/login.html:99
 msgid "Log in"
 msgstr "Entrar"
 
@@ -8099,11 +8111,11 @@ msgstr "Entrar com %(provider)s"
 msgid "or"
 msgstr "ou"
 
-#: templates/account/login.html:90
+#: templates/account/login.html:94
 msgid "Forgot your password?"
 msgstr "Esqueceu sua senha?"
 
-#: templates/account/login.html:104
+#: templates/account/login.html:108
 msgid "Don't have an account?"
 msgstr "Não tem uma conta?"
 
@@ -8194,19 +8206,19 @@ msgstr "Cancelar"
 msgid "Reset Password"
 msgstr "Redefinir senha"
 
-#: templates/account/password_reset.html:20
+#: templates/account/password_reset.html:16
 msgid "Enter your email and we'll send you a reset link"
 msgstr "Informe seu e-mail e enviaremos um link para redefinir a senha"
 
-#: templates/account/password_reset.html:52
+#: templates/account/password_reset.html:45
 msgid "Send Reset Link"
 msgstr "Enviar link de redefinição"
 
-#: templates/account/password_reset.html:60
+#: templates/account/password_reset.html:53
 msgid "Remember your password?"
 msgstr "Lembrou sua senha?"
 
-#: templates/account/password_reset.html:61 templates/account/signup.html:110
+#: templates/account/password_reset.html:54 templates/account/signup.html:104
 msgid "Sign in"
 msgstr "Entrar"
 
@@ -8214,11 +8226,11 @@ msgstr "Entrar"
 msgid "Check Your Email"
 msgstr "Verifique seu e-mail"
 
-#: templates/account/password_reset_done.html:17
+#: templates/account/password_reset_done.html:13
 msgid "Check your email"
 msgstr "Verifique seu e-mail"
 
-#: templates/account/password_reset_done.html:20
+#: templates/account/password_reset_done.html:16
 msgid ""
 "We've sent you a password reset link. If you don't see the email, check your "
 "spam folder."
@@ -8226,11 +8238,11 @@ msgstr ""
 "Enviamos um link para redefinir sua senha. Se não encontrar o e-mail, "
 "verifique a pasta de spam."
 
-#: templates/account/password_reset_done.html:32
+#: templates/account/password_reset_done.html:25
 msgid "Didn't receive the email?"
 msgstr "Não recebeu o e-mail?"
 
-#: templates/account/password_reset_done.html:35
+#: templates/account/password_reset_done.html:28
 #: templates/analytics/_meta_ads_body.html:16
 #: templates/analytics/_shopee_body.html:13
 #: templates/calendar/partials/_board_columns.html:88
@@ -8239,27 +8251,27 @@ msgid "Try again"
 msgstr "Tentar novamente"
 
 #: templates/account/password_reset_from_key.html:4
-#: templates/account/password_reset_from_key.html:66
+#: templates/account/password_reset_from_key.html:54
 msgid "Set New Password"
 msgstr "Definir nova senha"
 
-#: templates/account/password_reset_from_key.html:18
+#: templates/account/password_reset_from_key.html:14
 msgid "Invalid Reset Link"
 msgstr "Link de redefinição inválido"
 
-#: templates/account/password_reset_from_key.html:20
+#: templates/account/password_reset_from_key.html:16
 msgid "Set new password"
 msgstr "Definir nova senha"
 
-#: templates/account/password_reset_from_key.html:25
+#: templates/account/password_reset_from_key.html:21
 msgid "Choose a strong password for your account"
 msgstr "Escolha uma senha forte para sua conta"
 
-#: templates/account/password_reset_from_key.html:34
+#: templates/account/password_reset_from_key.html:27
 msgid "This password reset link is invalid or has expired."
 msgstr "Este link de redefinição de senha é inválido ou expirou."
 
-#: templates/account/password_reset_from_key.html:37
+#: templates/account/password_reset_from_key.html:30
 msgid "Request a New Link"
 msgstr "Solicitar novo link"
 
@@ -8267,11 +8279,11 @@ msgstr "Solicitar novo link"
 msgid "Password Changed"
 msgstr "Senha alterada"
 
-#: templates/account/password_reset_from_key_done.html:17
+#: templates/account/password_reset_from_key_done.html:13
 msgid "Password changed"
 msgstr "Senha alterada"
 
-#: templates/account/password_reset_from_key_done.html:20
+#: templates/account/password_reset_from_key_done.html:16
 msgid "Your password has been updated successfully"
 msgstr "Sua senha foi atualizada com sucesso"
 
@@ -8284,11 +8296,11 @@ msgstr "Crie sua conta"
 msgid "Continue with %(provider)s"
 msgstr "Continuar com %(provider)s"
 
-#: templates/account/signup.html:90
+#: templates/account/signup.html:84
 msgid "Create Account"
 msgstr "Criar conta"
 
-#: templates/account/signup.html:98
+#: templates/account/signup.html:92
 #, python-format
 msgid ""
 "By signing up, you agree to our <a href=\"%(terms_url)s\" class=\"underline "
@@ -8302,7 +8314,7 @@ msgstr ""
 "class=\"underline hover:no-underline\" style=\"color: var(--text-secondary);"
 "\">Política de Privacidade</a>."
 
-#: templates/account/signup.html:109
+#: templates/account/signup.html:103
 msgid "Already have an account?"
 msgstr "Já tem uma conta?"
 
@@ -21863,6 +21875,15 @@ msgstr ""
 #: templates/partials/_channel_picker.html:54
 msgid "Connect a channel to choose where this idea will be published."
 msgstr "Conecte um canal para escolher onde esta ideia será publicada."
+
+#: templates/partials/_password_input.html:20
+#: templates/partials/_password_input.html:21
+msgid "Show password"
+msgstr "Mostrar senha"
+
+#: templates/partials/_password_input.html:20
+msgid "Hide password"
+msgstr "Ocultar senha"
 
 #: templates/partials/_review_banner.html:30
 msgid "Enjoying Connekt Flow?"

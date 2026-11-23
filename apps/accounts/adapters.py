@@ -118,6 +118,11 @@ class AccountAdapter(DefaultAccountAdapter):
         )
 
 
+def user_display(user):
+    """How allauth names the person in its e-mails and pages: their first name (``ACCOUNT_USER_DISPLAY``)."""
+    return getattr(user, "greeting_name", "") or str(user)
+
+
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
     """Custom adapter that syncs Google social logins to OAuthConnection."""
 

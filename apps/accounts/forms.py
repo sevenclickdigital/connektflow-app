@@ -136,3 +136,42 @@ class ProfileForm(forms.ModelForm):
         if commit:
             user.save(update_fields=[*self.Meta.fields, "name", "updated_at"])
         return user
+
+
+class SignupNameForm(forms.Form):
+    """The person's name, asked at sign-up so the first e-mails already greet them by it.
+
+    allauth's sign-up form inherits it (``ACCOUNT_SIGNUP_FORM_CLASS``) and
+    calls ``signup`` once the user is saved, before the welcome e-mail goes
+    out. The name is split as the profile form keeps it: the first word is
+    the first name, the rest the last name, and ``User.name`` the whole.
+    """
+
+    # allauth orders its sign-up fields by this: the name before the e-mail and password.
+    field_order = ["full_name", "email", "password1"]
+
+    full_name = forms.CharField(
+        label=_("Your name"),
+        max_length=255,
+        widget=forms.TextInput(attrs={"autocomplete": "name", "placeholder": _("e.g. Ana Souza")}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The Google sign-up form (allauth's social sign-up) comes with the name the profile gave.
+        sociallogin = getattr(self, "sociallogin", None)
+        if sociallogin is not None and not self.is_bound:
+            user = sociallogin.user
+            self.initial.setdefault("full_name", user.name or f"{user.first_name} {user.last_name}".strip())
+
+    def clean_full_name(self):
+        name = " ".join(self.cleaned_data["full_name"].split())
+        if not name:
+            raise forms.ValidationError(_("Enter your name."))
+        return name
+
+    def signup(self, request, user):
+        name = self.cleaned_data["full_name"]
+        first, _sep, last = name.partition(" ")
+        user.first_name, user.last_name, user.name = first[:150], last[:150], name
+        user.save(update_fields=["first_name", "last_name", "name", "updated_at"])

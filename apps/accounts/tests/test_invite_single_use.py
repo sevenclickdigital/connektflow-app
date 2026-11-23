@@ -95,7 +95,7 @@ class TestSignupFormLosesTheRace:
         with patch("apps.accounts.adapters.signup_allowed", return_value=True):
             response = client.post(
                 reverse("account_signup"),
-                {"email": "second@example.com", "password1": "S3cure-pass-for-tests!"},
+                {"full_name": "Bia Lima", "email": "second@example.com", "password1": "S3cure-pass-for-tests!"},
             )
 
         assert response.status_code == 200
