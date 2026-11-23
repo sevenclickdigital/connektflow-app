@@ -12,7 +12,7 @@ merges ``email_context()`` there, so its templates see the same variables.
 
 Variables every email template can use:
 
-- ``brand_name``, ``app_url``, ``logo_url``
+- ``brand_name``, ``app_url``, ``logo_url``, ``mascot_url`` (Moti waving, beside the logo)
 - ``privacy_url``, ``terms_url``, ``support_email``
 - ``company_name``, ``company_document`` (CNPJ), ``company_address_lines``,
   ``company_service_area``, ``company_phone`` with ``company_phone_digits``
@@ -36,6 +36,8 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 LOGO_PATH = "img/email/connektflow-wordmark-dark.png"
+# PNG, not the site's WebP: Outlook and older mail clients don't show WebP.
+MASCOT_PATH = "img/email/moti-acenando.png"
 
 
 def _app_url() -> str:
@@ -73,6 +75,7 @@ def email_context(**extra) -> dict:
         "brand_name": APP_NAME,
         "app_url": app_url,
         "logo_url": _absolute_static(LOGO_PATH),
+        "mascot_url": _absolute_static(MASCOT_PATH),
         "privacy_url": PRIVACY_POLICY_URL,
         "terms_url": TERMS_OF_SERVICE_URL,
         "support_email": contact_email(),

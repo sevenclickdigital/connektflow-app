@@ -23,6 +23,8 @@
     .cf-h1 { font-size: 21px !important; line-height: 28px !important; }
     .cf-btn { width: 100% !important; }
     .cf-btn a { display: block !important; text-align: center !important; }
+    .cf-mascot { width: 132px !important; max-width: 132px !important; }
+    .cf-mascot-cell { width: 146px !important; padding: 30px 14px 0 0 !important; }
   }
 </style>
 </head>
@@ -38,14 +40,30 @@
     <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E5E7EB;border-radius:12px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td class="cf-pad" style="padding:28px 40px 22px;border-bottom:1px solid #EDE9FE;">
+          <td class="cf-pad" height="86" valign="middle" style="height:86px;padding:0 0 0 40px;">
             <a href="{{ app_url }}" target="_blank" rel="noopener" style="text-decoration:none;">
               <img src="{{ logo_url }}" width="180" height="26" alt="{{ brand_name }}" style="display:block;width:180px;max-width:180px;height:auto;border:0;font-size:18px;font-weight:700;color:#0F172A;">
             </a>
           </td>
+          {% comment %}
+          Moti stands across the divider: this cell spans the header row, the
+          divider row and the spacer row under it, and the divider stops where
+          the cell starts. The three rows add up to the height of the cell
+          (7 + 137 px), so no client has to stretch them.
+          Mail clients drop negative margins and absolute positioning.
+          {% endcomment %}
+          <td rowspan="3" class="cf-mascot-cell" align="right" valign="top" width="204" style="width:204px;padding:7px 14px 0 0;">
+            <img src="{{ mascot_url }}" width="190" height="137" alt="" class="cf-mascot" style="display:block;width:190px;max-width:190px;height:auto;border:0;">
+          </td>
         </tr>
         <tr>
-          <td class="cf-pad" style="padding:32px 40px 36px;font-size:15px;line-height:24px;color:#334155;">
+          <td height="1" bgcolor="#EDE9FE" style="height:1px;background-color:#EDE9FE;font-size:0;line-height:0;">&nbsp;</td>
+        </tr>
+        <tr>
+          <td height="57" style="height:57px;font-size:0;line-height:0;">&nbsp;</td>
+        </tr>
+        <tr>
+          <td colspan="2" class="cf-pad" style="padding:0 40px 36px;font-size:15px;line-height:24px;color:#334155;">
             {% block content %}{% endblock %}
           </td>
         </tr>
