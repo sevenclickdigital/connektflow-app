@@ -335,6 +335,18 @@ class TestTheTeamScreen:
 
         assert not User.objects.filter(pk=support.pk).exists()
 
+    def test_removing_an_account_that_owns_brands_keeps_it_as_a_customer(self, client, superadmin, support, workspace):
+        """Deleting it would leave its organizations with no owner."""
+        _give_membership(support, workspace)
+        client.force_login(superadmin)
+
+        client.post(reverse("accounts_staff:team_remove", kwargs={"user_id": support.pk}))
+
+        support.refresh_from_db()
+        assert not support.is_staff and not support.is_superuser
+        assert OrgMembership.objects.filter(user=support, organization=workspace.organization).exists()
+        assert WorkspaceMembership.objects.filter(user=support, workspace=workspace).exists()
+
     def test_a_customer_cannot_be_removed_through_it(self, client, superadmin, customer):
         client.force_login(superadmin)
 

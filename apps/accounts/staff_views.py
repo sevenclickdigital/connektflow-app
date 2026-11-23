@@ -134,10 +134,17 @@ def team_remove(request, user_id):
     target = _other_operator(request, user_id)
     email = target.email
     try:
-        operators.remove_operator(target)
+        deleted = operators.remove_operator(target)
     except operators.LastSuperadminError:
         messages.error(request, _("The team needs at least one active superadmin."))
         return _back()
-    logger.warning("Operator %s removed the team account %s", request.user.email, email)
-    messages.success(request, _("%(email)s was removed from the team.") % {"email": email})
+    logger.warning("Operator %s removed the team account %s (deleted: %s)", request.user.email, email, deleted)
+    if deleted:
+        messages.success(request, _("%(email)s was removed from the team.") % {"email": email})
+    else:
+        messages.success(
+            request,
+            _("%(email)s left the team and is a customer account again, with its organizations and brands.")
+            % {"email": email},
+        )
     return _back()

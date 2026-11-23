@@ -24,6 +24,7 @@ Two levels, on the flags Django already has: ``is_staff`` is support,
 from __future__ import annotations
 
 from django.db import transaction
+from django.db.models import Exists, OuterRef
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
@@ -63,8 +64,19 @@ def is_customer(user):
 
 
 def operators():
-    """Every team account, superadmins first."""
-    return User.objects.filter(is_staff=True).order_by("-is_superuser", "email")
+    """Every team account, superadmins first.
+
+    ``owns_something`` marks the ones that still belong to an organization or
+    a workspace, which :func:`remove_operator` treats differently.
+    """
+    return (
+        User.objects.filter(is_staff=True)
+        .annotate(
+            owns_something=Exists(OrgMembership.objects.filter(user=OuterRef("pk")))
+            | Exists(WorkspaceMembership.objects.filter(user=OuterRef("pk")))
+        )
+        .order_by("-is_superuser", "email")
+    )
 
 
 def create_operator(email, *, password=None, name="", superuser=False):
@@ -132,7 +144,19 @@ def set_superadmin(user, superadmin):
 
 
 def remove_operator(user):
-    """Delete a team account for good. It owns nothing, so nothing else goes with it."""
+    """Take ``user`` out of the team. Returns True when the account was deleted.
+
+    A team account owns nothing, so it is deleted for good. One that
+    belongs to an organization or a workspace all the same only loses its
+    team flags and stays as the customer it also is: deleting it would
+    leave its organizations with no owner.
+    """
     with transaction.atomic():
         _guard_last_superadmin(user)
+        if is_customer(user):
+            user.is_staff = False
+            user.is_superuser = False
+            user.save(update_fields=["is_staff", "is_superuser", "updated_at"])
+            return False
         user.delete()
+        return True

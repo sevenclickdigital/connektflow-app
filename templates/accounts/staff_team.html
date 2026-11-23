@@ -81,7 +81,7 @@ actions, by the rule the views enforce.
               </form>
               <form method="post" action="{% url 'accounts_staff:team_remove' user_id=member.id %}"
                     data-confirm="{% blocktranslate with email=member.email %}Remove {{ email }} from the team?{% endblocktranslate %}"
-                    data-confirm-body="{% translate "The account is deleted and can no longer sign in. The access log keeps its e-mail." %}"
+                    data-confirm-body="{% if member.owns_something %}{% translate "This account also owns organizations or brands, so it is kept as a customer account and only loses the access to this area." %}{% else %}{% translate "The account is deleted and can no longer sign in. The access log keeps its e-mail." %}{% endif %}"
                     data-confirm-label="{% translate "Remove" %}" data-confirm-tone="danger">
                 {% csrf_token %}
                 <button type="submit" class="btn-danger-soft text-xs">{% translate "Remove" %}</button>
