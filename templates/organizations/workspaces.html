@@ -185,26 +185,18 @@ organizations that have an archived brand and, in them, only those brands.
             <div x-show="menu" x-cloak x-transition @click.outside="menu = false" @keydown.escape.window="menu = false"
                  @scroll.window.capture="menu = false" @resize.window="menu = false" :style="menuStyle"
                  class="fixed bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 w-56">
-                {% comment %}
-                What the modal starts from goes in data attributes, not in the
-                Alpine expression: a stored name would be evaluated there as
-                JavaScript.
-                {% endcomment %}
-                <button type="button" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer"
-                        data-organization="{{ group.organization.id }}" data-name="{{ group.organization.name }}"
-                        data-payer-name="{{ group.payer.name }}" data-tax-id="{{ group.payer.tax_id }}"
-                        data-phone="{{ group.payer.phone }}" data-email="{{ group.payer.email }}"
-                        @click="menu = false; $dispatch('open-edit-organization', { ...$el.dataset })">
+                <a href="{% url 'organizations:manage' organization_id=group.organization.id %}"
+                   class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">
                     <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
                     {% translate "Edit" %}
-                </button>
+                </a>
                 <a href="{% url 'organizations:role_permissions' organization_id=group.organization.id %}"
                    class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">
                     <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
                     {% translate "Roles and permissions" %}
                 </a>
                 {% if group.can_delete %}
-                <a href="{% url 'organizations:delete' organization_id=group.organization.id %}"
+                <a href="{% url 'organizations:manage' organization_id=group.organization.id %}#danger-zone"
                    class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-[var(--error-700)] hover:bg-neutral-50 cursor-pointer border-t border-neutral-200 mt-1 pt-2.5">
                     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                     {% translate "Delete organization" %}
@@ -317,58 +309,4 @@ brand's own organization is left out of the list.
     </div>
 </div>
 {% endif %}
-{% comment %}
-Edit organization: one modal for the page, filled from the button that opened
-it with ``$dispatch('open-edit-organization', { ...$el.dataset })``: organization
-(its id), name, payerName, taxId, phone, email. The organization's name and
-who its invoices are issued to are saved together (organizations:edit). An
-empty document, phone or e-mail keeps the one on file.
-{% endcomment %}
-<div x-data="{ open: false, organization: {} }"
-     @open-edit-organization.window="organization = $event.detail; open = true; $nextTick(() => $refs.name.focus())"
-     @keydown.escape.window="open = false">
-    <div x-show="open" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-organization-title">
-        <div class="modal-panel" @click.outside="open = false">
-            <button type="button" class="modal-close" @click="open = false" aria-label="{% translate 'Close' %}">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            </button>
-            <h2 id="edit-organization-title" class="modal-title">{% translate "Edit organization" %}</h2>
-            <form method="post" action="{% url 'organizations:edit' %}" class="mt-4 space-y-4">
-                {% csrf_token %}
-                <input type="hidden" name="organization" :value="organization.organization">
-                <div>
-                    <label for="edit-organization-name" class="block text-sm font-medium text-neutral-800 mb-1">{% translate "Organization Name" %}</label>
-                    <input type="text" id="edit-organization-name" name="name" x-ref="name" :value="organization.name" required maxlength="100" class="form-input-styled w-full">
-                </div>
-                <div class="pt-4 border-t border-neutral-300">
-                    <h3 class="text-sm font-semibold text-neutral-950">{% translate "Billing data" %}</h3>
-                    <p class="text-xs text-neutral-500 mt-0.5">{% translate "Who the invoices of every brand of this organization are issued to. A change applies to the next invoices." %}</p>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="sm:col-span-2">
-                        <label for="edit-organization-payer" class="block text-sm font-medium text-neutral-800 mb-1">{% translate "Name or company name" %}</label>
-                        <input type="text" id="edit-organization-payer" name="payer_name" :value="organization.payerName" required maxlength="255" class="form-input-styled w-full">
-                    </div>
-                    <div>
-                        <label for="edit-organization-tax-id" class="block text-sm font-medium text-neutral-800 mb-1">{% translate "CPF or CNPJ" %}</label>
-                        <input type="text" id="edit-organization-tax-id" name="tax_id" data-mask="tax-id" inputmode="numeric" autocomplete="off" maxlength="18"
-                               :value="organization.taxId" placeholder="000.000.000-00" class="form-input-styled w-full tabular-nums">
-                    </div>
-                    <div>
-                        <label for="edit-organization-phone" class="block text-sm font-medium text-neutral-800 mb-1">{% translate "Phone with area code" %}</label>
-                        <input type="tel" id="edit-organization-phone" name="phone" data-mask="phone" autocomplete="tel" maxlength="20" :value="organization.phone" placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums">
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label for="edit-organization-email" class="block text-sm font-medium text-neutral-800 mb-1">{% translate "Billing email" %}</label>
-                        <input type="email" id="edit-organization-email" name="billing_email" autocomplete="email" maxlength="254" :value="organization.email" class="form-input-styled w-full">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-ghost" @click="open = false">{% translate "Cancel" %}</button>
-                    <button type="submit" class="btn-brand">{% translate "Save" %}</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 {% endblock %}

@@ -180,13 +180,15 @@ def test_the_payer_document_is_shown_to_who_runs_the_organization_only(client):
     profile.save(update_fields=["tax_id"])
     client.force_login(user)
 
-    # The owner sees and edits it whole, in the organization's modal.
-    assert "529.982.247-25" in client.get(reverse("organizations:workspaces")).content.decode()
+    # The owner sees and edits it whole, on the organization's page.
+    manage = reverse("organizations:manage", kwargs={"organization_id": organization.id})
+    assert "529.982.247-25" in client.get(manage).content.decode()
 
     # A member of the organization, even managing its brand, sees no digit of it.
     OrgMembership.objects.filter(user=user, organization=organization).update(org_role=OrgMembership.OrgRole.MEMBER)
     WorkspaceMembership.objects.filter(user=user, workspace=workspace).update(workspace_role=ROLE.MANAGER)
     assert client.get(reverse("billing_account:overview")).status_code == 403
+    assert client.get(manage).status_code == 404
     page = client.get(reverse("organizations:workspaces")).content.decode()
     assert "529.982.247-25" not in page and "52998224725" not in page and "247-25" not in page
 

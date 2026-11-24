@@ -485,7 +485,7 @@ def test_the_deletion_page_acts_on_the_organization_named_not_the_one_in_use(cli
     user, first = _signed_up(client)
     _response, second = _create_org(client)  # in use
 
-    url = reverse("organizations:delete", kwargs={"organization_id": first.organization_id})
+    url = reverse("organizations:manage", kwargs={"organization_id": first.organization_id})
     assert first.organization.name in client.get(url).content.decode()
     client.post(url, {"action": "delete_organization_now"})
 
@@ -499,9 +499,21 @@ def test_the_deletion_page_acts_on_the_organization_named_not_the_one_in_use(cli
 def test_only_the_owner_deletes_an_organization(client, role):
     user, _own = _signed_up(client)
     organization, _assigned, _other = _someone_elses_organization(user, role)
-    url = reverse("organizations:delete", kwargs={"organization_id": organization.id})
+    url = reverse("organizations:manage", kwargs={"organization_id": organization.id})
 
     response = client.post(url, {"action": "delete_organization_now"})
 
     assert response.status_code == (403 if role == OrgMembership.OrgRole.ADMIN else 404)
     assert Organization.objects.filter(pk=organization.id).exists()
+
+
+@pytest.mark.django_db
+def test_the_organization_page_names_the_brands_that_deleting_takes_away(client):
+    _user, first = _signed_up(client)
+    Workspace.objects.create(organization=first.organization, name="Guardada", is_archived=True)
+
+    response = client.get(reverse("organizations:manage", kwargs={"organization_id": first.organization_id}))
+
+    assert [brand.name for brand in response.context["brands"]] == [first.name, "Guardada"]
+    assert response.context["brands_in_use"] == sum(brand.in_use for brand in response.context["brands"])
+    assert "Guardada" in response.content.decode()

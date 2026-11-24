@@ -1,20 +1,91 @@
 {% extends "layouts/settings.html" %}
 {% load i18n %}
-{% block title %}{% translate "Delete organization" %} - Connekt Flow{% endblock %}
+{% block title %}{% translate "Edit organization" %} - {{ organization.name }} - Connekt Flow{% endblock %}
 
 {% block page_header %}
 <div class="page-header">
     <div>
-        <h1 class="page-title">{% translate "Delete organization" %}</h1>
-        <p class="page-description">{{ organization.name }} · {% translate "Close this account and remove everything in it." %}</p>
+        <h1 class="page-title">{% translate "Edit organization" %}</h1>
+        <p class="page-description">{% blocktranslate with name=organization.name %}Name, billing data and lifecycle of {{ name }}.{% endblocktranslate %}</p>
     </div>
+    <a href="{% url 'organizations:workspaces' %}" class="btn-ghost">{% translate "Back to organizations" %}</a>
 </div>
 {% endblock %}
 
 {% block content %}
-{% if is_owner %}
+{% comment %}
+The organization's name and who its invoices are issued to are saved together
+(organizations:edit). An empty document, phone or e-mail keeps the one on
+file. Same rows as a brand's General page: the setting on the left, its field
+on the right, one save at the foot.
+{% endcomment %}
 <section class="mb-8">
+    <h2 class="section-title">{% translate "Identity" %}</h2>
+    <form method="post" action="{% url 'organizations:edit' %}" class="a-card divide-y divide-neutral-300">
+        {% csrf_token %}
+        <input type="hidden" name="organization" value="{{ organization.id }}">
+        <div class="grid grid-cols-1 md:grid-cols-[18rem_1fr] gap-3 md:gap-8 p-6">
+            <label for="organization-name" class="text-sm font-semibold text-neutral-950 md:pt-2.5">{% translate "Organization Name" %}</label>
+            <input type="text" id="organization-name" name="name" value="{{ organization.name }}" required maxlength="100" class="form-input-styled w-full">
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-[18rem_1fr] gap-3 md:gap-8 p-6">
+            <div>
+                <span class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Billing data" %}</span>
+                <p class="text-xs text-neutral-500">{% translate "Who the invoices of every brand of this organization are issued to. A change applies to the next invoices." %}</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label for="organization-payer" class="block text-sm font-medium text-neutral-800 mb-1">{% translate "Name or company name" %}</label>
+                    <input type="text" id="organization-payer" name="payer_name" value="{{ payer.name }}" required maxlength="255" class="form-input-styled w-full">
+                </div>
+                <div>
+                    <label for="organization-tax-id" class="block text-sm font-medium text-neutral-800 mb-1">{% translate "CPF or CNPJ" %}</label>
+                    <input type="text" id="organization-tax-id" name="tax_id" data-mask="tax-id" inputmode="numeric" autocomplete="off" maxlength="18"
+                           value="{{ payer.tax_id }}" placeholder="000.000.000-00" class="form-input-styled w-full tabular-nums">
+                </div>
+                <div>
+                    <label for="organization-phone" class="block text-sm font-medium text-neutral-800 mb-1">{% translate "Phone with area code" %}</label>
+                    <input type="tel" id="organization-phone" name="phone" data-mask="phone" autocomplete="tel" maxlength="20" value="{{ payer.phone }}" placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums">
+                </div>
+                <div class="sm:col-span-2">
+                    <label for="organization-email" class="block text-sm font-medium text-neutral-800 mb-1">{% translate "Billing email" %}</label>
+                    <input type="email" id="organization-email" name="billing_email" autocomplete="email" maxlength="254" value="{{ payer.email }}" class="form-input-styled w-full">
+                </div>
+            </div>
+        </div>
+        <div class="flex justify-end px-6 py-4 bg-[var(--surface-1)] rounded-b-[var(--radius-lg)]">
+            <button type="submit" class="btn-brand">{% translate "Save Changes" %}</button>
+        </div>
+    </form>
+</section>
+
+{% if is_owner %}
+<section class="mb-8 scroll-mt-6" id="danger-zone">
     <h2 class="section-title">{% translate "Danger zone" %}</h2>
+    {% comment %}
+    What deleting takes away, by name: every brand of the organization stops
+    being accessible, the ones in use included.
+    {% endcomment %}
+    {% if brands %}
+    <div class="mb-4 rounded-lg border border-[var(--warning-500)] bg-[var(--warning-50)] p-4 text-sm text-neutral-800">
+        <div>
+            <p class="font-semibold">
+                {% blocktranslate count n=brands|length %}Deleting this organization makes its brand inaccessible to everyone.{% plural %}Deleting this organization makes its {{ n }} brands inaccessible to everyone.{% endblocktranslate %}
+                {% if brands_in_use %}{% blocktranslate count n=brands_in_use %}{{ n }} of them is in use today.{% plural %}{{ n }} of them are in use today.{% endblocktranslate %}{% endif %}
+            </p>
+            <ul class="mt-2 flex flex-wrap gap-2">
+                {% for brand in brands %}
+                <li class="inline-flex items-center gap-2 text-sm">
+                    <span class="font-medium">{{ brand.name }}</span>
+                    {% if brand.is_archived %}<span class="pill pill-neutral"><i></i>{% translate "Archived" %}</span>
+                    {% elif brand.in_use %}<span class="pill pill-success"><i></i>{% translate "In use" %}</span>
+                    {% else %}<span class="pill pill-warning"><i></i>{% translate "Not in use" %}</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
     {% if organization.is_deletion_pending %}
     <div class="a-card p-6 border-[var(--error-500)] bg-[var(--error-50)]" x-data="{ showImmediateDeleteModal: false }">
         <div class="flex flex-wrap items-start justify-between gap-4">

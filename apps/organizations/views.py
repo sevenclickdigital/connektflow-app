@@ -38,12 +38,16 @@ logger = logging.getLogger(__name__)
 @login_required
 @require_http_methods(["GET", "POST"])
 def settings_view(request, organization_id=None):
-    """Delete an organization (owner), or cancel its pending deletion.
+    """Account centre → Organizations → Edit: one organization's page.
 
-    The organizations page names which one (``organization_id``); without
-    it, the organization in use. Only an owner or admin of that
-    organization reaches the page; anyone else gets a 404.
+    Its name and billing data (saved by ``edit_view``) and, for the owner,
+    the danger zone: delete it, or cancel its pending deletion. The
+    organizations page names which one (``organization_id``); without it,
+    the organization in use. Only an owner or admin of that organization
+    reaches the page; anyone else gets a 404.
     """
+    from apps.billing.views import payer_summary
+
     membership = next(
         (
             m
@@ -57,7 +61,7 @@ def settings_view(request, organization_id=None):
         raise Http404
     org = membership.organization
     is_owner = membership.org_role == OrgMembership.OrgRole.OWNER
-    here = redirect("organizations:delete", organization_id=org.id)
+    here = redirect("organizations:manage", organization_id=org.id)
 
     if request.method == "POST":
         if not is_owner:
@@ -71,11 +75,18 @@ def settings_view(request, organization_id=None):
             _handle_cancel_deletion(request, org)
         return here
 
+    brands = list(Workspace.objects.filter(organization=org).order_by("is_archived", "name"))
+    for brand in brands:
+        brand.in_use = not brand.is_archived and billing_services.is_workspace_active(brand)
     context = {
         "organization": org,
         # Reached from the organizations page, so that is what stays lit in the menu.
         "settings_active": "workspaces",
         "is_owner": is_owner,
+        "payer": payer_summary(org),
+        # What deleting takes away, named in the danger zone.
+        "brands": brands,
+        "brands_in_use": sum(brand.in_use for brand in brands),
     }
     return render(request, "organizations/settings.html", context)
 
@@ -346,9 +357,6 @@ def workspaces_view(request):
     admin_org_ids = {org_id for org_id, role in org_roles.items() if role in org_admin_roles}
     api_key_org_ids = {m.organization_id for m in request.org_memberships if m.can_manage_api_keys}
 
-    from apps.billing import services as billing_services
-    from apps.billing.views import payer_summary
-
     def group_for(organization):
         org_role = org_roles.get(organization.id)
         archived = billing_services.archived_plan(organization) if org_role is not None else None
@@ -362,8 +370,6 @@ def workspaces_view(request):
             "role": org_role,
             "can_edit": org_role in org_admin_roles,
             "can_delete": org_role == OrgMembership.OrgRole.OWNER,
-            # What the "Edit organization" modal starts from; only for who may save it.
-            "payer": payer_summary(organization) if org_role in org_admin_roles else None,
             # What the page's filter reads: an organization waiting to be deleted is the inactive one.
             "status": "inactive" if organization.deletion_scheduled_for else "active",
             "archived_count": 0,
@@ -499,7 +505,7 @@ def rename_view(request):
 @login_required
 @require_POST
 def edit_view(request):
-    """Save the "Edit organization" modal of the organizations page: its name and its billing data.
+    """Save the organization's page: its name and its billing data.
 
     Both or neither: the billing data goes first because the payment
     provider may refuse it, and a refusal must not leave the name changed
@@ -512,11 +518,11 @@ def edit_view(request):
     error = _("Organization name cannot be empty.") if not name else save_payer(organization, request.POST)
     if error:
         messages.error(request, error)
-        return redirect("organizations:workspaces")
-    organization.name = name
-    organization.save(update_fields=["name"])
-    messages.success(request, _("Organization updated."))
-    return redirect("organizations:workspaces")
+    else:
+        organization.name = name
+        organization.save(update_fields=["name"])
+        messages.success(request, _("Organization updated."))
+    return redirect("organizations:manage", organization_id=organization.id)
 
 
 @login_required

@@ -572,8 +572,8 @@ def resume_subscription(request, organization_id):
 def payer_summary(organization):
     """Who the organization's invoices are issued to, as the pages show it.
 
-    For the organization's owner and admins only (the "Edit organization"
-    modal of the organizations page), which is why the document is shown whole.
+    For the organization's owner and admins only (the organization's page,
+    ``organizations:manage``), which is why the document is shown whole.
     """
     profile = getattr(organization, "billing_profile", None)
     return {
