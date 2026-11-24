@@ -421,3 +421,87 @@ def test_the_organizations_page_counts_only_what_is_the_users(client):
     assert by_org[first.organization_id]["brand_count"] == 1
     # One person in two organizations is counted once.
     assert context["totals"] == {"organizations": 2, "members": 2, "brands": 2, "channels": 0}
+
+
+def _someone_elses_organization(member, role=OrgMembership.OrgRole.MEMBER):
+    """An organization of another owner with two brands, ``member`` added to the first only."""
+    owner = User.objects.create_user(email="camila@a.example", password="x", tos_accepted_at=timezone.now())
+    organization = OrgMembership.objects.get(user=owner).organization
+    assigned = WorkspaceMembership.objects.get(user=owner).workspace
+    other = Workspace.objects.create(organization=organization, name="Marca 2")
+    OrgMembership.objects.create(user=member, organization=organization, org_role=role)
+    WorkspaceMembership.objects.create(
+        user=member, workspace=assigned, workspace_role=WorkspaceMembership.WorkspaceRole.MANAGER
+    )
+    return organization, assigned, other
+
+
+def _group(client, organization):
+    groups = client.get(reverse("organizations:workspaces")).context["org_groups"]
+    return next(g for g in groups if g["organization"] == organization)
+
+
+@pytest.mark.django_db
+def test_a_member_sees_only_the_brands_they_were_added_to(client):
+    user, own = _signed_up(client)
+    organization, assigned, other = _someone_elses_organization(user)
+
+    response = client.get(reverse("organizations:workspaces"))
+    groups = response.context["org_groups"]
+
+    theirs = next(g for g in groups if g["organization"] == organization)
+    assert [item["workspace"] for item in theirs["brands"]] == [assigned]
+    assert theirs["brand_count"] == 1
+    assert other.name not in response.content.decode()
+    # What is theirs comes first, and each card says whose it is.
+    assert groups[0]["organization"] == own.organization
+    assert (groups[0]["role"], theirs["role"]) == ("owner", "member")
+    assert theirs["can_delete"] is False
+
+
+@pytest.mark.django_db
+def test_an_admin_of_the_organization_sees_every_brand(client):
+    user, _own = _signed_up(client)
+    organization, assigned, other = _someone_elses_organization(user, OrgMembership.OrgRole.ADMIN)
+
+    brands = [item["workspace"] for item in _group(client, organization)["brands"]]
+
+    assert set(brands) == {assigned, other}
+
+
+@pytest.mark.django_db
+def test_the_last_brand_in_use_is_not_offered_to_be_closed(client):
+    _user, first = _signed_up(client)
+
+    only = _group(client, first.organization)["brands"][0]
+    assert (only["can_close"], only["is_last_active"]) == (True, True)
+
+    Workspace.objects.create(organization=first.organization, name="Outra")
+    assert _group(client, first.organization)["brands"][0]["is_last_active"] is False
+
+
+@pytest.mark.django_db
+def test_the_deletion_page_acts_on_the_organization_named_not_the_one_in_use(client):
+    user, first = _signed_up(client)
+    _response, second = _create_org(client)  # in use
+
+    url = reverse("organizations:delete", kwargs={"organization_id": first.organization_id})
+    assert first.organization.name in client.get(url).content.decode()
+    client.post(url, {"action": "delete_organization_now"})
+
+    assert not Organization.objects.filter(pk=first.organization_id).exists()
+    assert Organization.objects.filter(pk=second.organization_id).exists()
+    assert User.objects.filter(pk=user.pk).exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("role", [OrgMembership.OrgRole.MEMBER, OrgMembership.OrgRole.ADMIN])
+def test_only_the_owner_deletes_an_organization(client, role):
+    user, _own = _signed_up(client)
+    organization, _assigned, _other = _someone_elses_organization(user, role)
+    url = reverse("organizations:delete", kwargs={"organization_id": organization.id})
+
+    response = client.post(url, {"action": "delete_organization_now"})
+
+    assert response.status_code == (403 if role == OrgMembership.OrgRole.ADMIN else 404)
+    assert Organization.objects.filter(pk=organization.id).exists()

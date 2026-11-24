@@ -121,13 +121,21 @@ organizations that have an archived brand and, in them, only those brands.
                     {% else %}
                     <span class="pill pill-neutral"><i></i>{% translate "Guest" %}</span>
                     {% endif %}
+                    {# Whose it is: the user's own, one they administer, or someone else's they work in. #}
+                    {% if group.role == "owner" %}
+                    <span class="pill pill-brand">{% translate "Your organization" %}</span>
+                    {% elif group.role == "admin" %}
+                    <span class="pill pill-info">{% translate "You are an admin" %}</span>
+                    {% elif group.role %}
+                    <span class="pill pill-neutral">{% translate "You are a member" %}</span>
+                    {% endif %}
                 </div>
                 {% if group.is_member %}
                 <div class="flex flex-wrap items-center gap-2 mt-2">
-                    {% if group.owner_name %}
+                    {% if group.owner_name and group.role != "owner" %}
                     <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-700">
                         <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        {{ group.owner_name }}
+                        {% blocktranslate with name=group.owner_name %}Owner: {{ name }}{% endblocktranslate %}
                     </span>
                     {% endif %}
                     <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-700">
@@ -195,6 +203,13 @@ organizations that have an archived brand and, in them, only those brands.
                     <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
                     {% translate "Roles and permissions" %}
                 </a>
+                {% if group.can_delete %}
+                <a href="{% url 'organizations:delete' organization_id=group.organization.id %}"
+                   class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-[var(--error-700)] hover:bg-neutral-50 cursor-pointer border-t border-neutral-200 mt-1 pt-2.5">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                    {% translate "Delete organization" %}
+                </a>
+                {% endif %}
             </div>
         </div>
         {% endif %}
@@ -220,6 +235,42 @@ organizations that have an archived brand and, in them, only those brands.
 </section>
 {% endfor %}
 </div>
+</div>
+
+{% comment %}
+Archiving or deleting a brand: one confirmation for the page, opened by the
+brand's menu with ``$dispatch('open-close-brand', { ...$el.dataset })``: url
+(the brand's settings, which answer both), name and action. The brand's
+settings carry the same two confirmations.
+{% endcomment %}
+<div x-data="{ open: false, brand: {} }"
+     @open-close-brand.window="brand = $event.detail; open = true"
+     @keydown.escape.window="open = false">
+    <div x-show="open" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="close-brand-title">
+        <div class="modal-panel" @click.outside="open = false">
+            <button type="button" class="modal-close" @click="open = false" aria-label="{% translate 'Close' %}">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <h2 id="close-brand-title" class="modal-title">
+                <span x-show="brand.action === 'archive_workspace'">{% translate "Archive this workspace" %}</span>
+                <span x-show="brand.action === 'delete_workspace'">{% translate "Delete this workspace" %}</span>
+            </h2>
+            <p class="text-sm font-semibold text-neutral-950 mt-1" x-text="brand.name"></p>
+            <div class="modal-body mt-3">
+                <p x-show="brand.action === 'archive_workspace'">{% translate "Archiving hides this workspace from the sidebar and prevents new posts. All existing data is preserved and the workspace can be restored at any time." %}</p>
+                <div x-show="brand.action === 'delete_workspace'">
+                    <p>{% translate "Permanently delete this workspace and all of its data. This includes all posts, connected social accounts, media assets, and workspace memberships. This action cannot be undone." %}</p>
+                </div>
+            </div>
+            <form method="post" :action="brand.url" class="modal-footer">
+                {% csrf_token %}
+                <input type="hidden" name="action" :value="brand.action">
+                <button type="button" class="btn-ghost" @click="open = false">{% translate "Cancel" %}</button>
+                <button type="submit" class="btn-ghost text-[var(--warning-700)]" x-show="brand.action === 'archive_workspace'">{% translate "Yes, archive this workspace" %}</button>
+                <button type="submit" class="btn-danger-soft" x-show="brand.action === 'delete_workspace'">{% translate "Yes, delete this workspace" %}</button>
+            </form>
+        </div>
+    </div>
 </div>
 
 {% comment %}

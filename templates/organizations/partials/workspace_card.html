@@ -1,7 +1,7 @@
 {% load i18n %}
 {% comment %}
 One brand in the account centre's brand list.
-``item``: workspace, can_manage, can_move, can_api_keys, is_member and either member_count
+``item``: workspace, can_manage, can_move, can_api_keys, can_close, is_last_active, is_member and either member_count
 (a brand of an organization the user belongs to) or role (a brand the user
 was added to in someone else's organization, whose member count is not
 shown).
@@ -46,7 +46,7 @@ shown).
             {% translate "Open" %}
         </a>
         {% endif %}
-        {% if item.can_manage or item.can_move or item.can_api_keys %}
+        {% if item.can_manage or item.can_move or item.can_api_keys or item.can_close %}
         <div x-data="{ menu: false, menuStyle: '' }">
             <button type="button" class="btn-ghost py-1.5 px-2" :aria-expanded="menu.toString()"
                     @click="menu = !menu; if (menu) { const r = $el.getBoundingClientRect(); menuStyle = 'top:' + (r.bottom + 4) + 'px;left:' + Math.max(8, r.right - 224) + 'px'; }"
@@ -94,6 +94,41 @@ shown).
                     <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
                     {% translate "Move" %}
                 </button>
+                {% endif %}
+                {% comment %}
+                Closing the brand, apart from the rest of the menu. The last brand
+                in use of an organization can be neither archived nor deleted.
+                {% endcomment %}
+                {% if item.can_close %}
+                {% url 'workspaces:settings' workspace_id=item.workspace.id as brand_settings_url %}
+                {% if item.workspace.is_archived %}
+                <form method="post" action="{{ brand_settings_url }}" class="border-t border-neutral-200 mt-1 pt-1">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="unarchive_workspace">
+                    <button type="submit" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">
+                        <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                        {% translate "Restore" %}
+                    </button>
+                </form>
+                {% endif %}
+                {% if not item.is_last_active %}
+                <div class="{% if not item.workspace.is_archived %}border-t border-neutral-200 mt-1 pt-1{% endif %}">
+                    {% if not item.workspace.is_archived %}
+                    <button type="button" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer"
+                            data-url="{{ brand_settings_url }}" data-name="{{ item.workspace.name }}" data-action="archive_workspace"
+                            @click="menu = false; $dispatch('open-close-brand', { ...$el.dataset })">
+                        <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                        {% translate "Archive" %}
+                    </button>
+                    {% endif %}
+                    <button type="button" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-[var(--error-700)] hover:bg-neutral-50 cursor-pointer"
+                            data-url="{{ brand_settings_url }}" data-name="{{ item.workspace.name }}" data-action="delete_workspace"
+                            @click="menu = false; $dispatch('open-close-brand', { ...$el.dataset })">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                        {% translate "Delete" %}
+                    </button>
+                </div>
+                {% endif %}
                 {% endif %}
             </div>
         </div>

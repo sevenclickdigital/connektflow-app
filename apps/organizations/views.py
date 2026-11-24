@@ -1,7 +1,7 @@
 import calendar as cal_mod
 import logging
 import uuid
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date, timedelta
 
 from django.contrib import messages
@@ -36,21 +36,40 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
-@require_org_role(OrgMembership.OrgRole.ADMIN)
 @require_http_methods(["GET", "POST"])
-def settings_view(request):
-    org = request.org
-    is_owner = request.org_membership.org_role == OrgMembership.OrgRole.OWNER
+def settings_view(request, organization_id=None):
+    """Delete an organization (owner), or cancel its pending deletion.
+
+    The organizations page names which one (``organization_id``); without
+    it, the organization in use. Only an owner or admin of that
+    organization reaches the page; anyone else gets a 404.
+    """
+    membership = next(
+        (
+            m
+            for m in request.org_memberships
+            if m.organization_id == (organization_id or (request.org.id if request.org else None))
+            and m.org_role in (OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN)
+        ),
+        None,
+    )
+    if membership is None:
+        raise Http404
+    org = membership.organization
+    is_owner = membership.org_role == OrgMembership.OrgRole.OWNER
+    here = redirect("organizations:delete", organization_id=org.id)
 
     if request.method == "POST":
+        if not is_owner:
+            raise PermissionDenied
         action = request.POST.get("action")
         if action == "delete_organization":
-            return _handle_org_deletion(request, org)
+            _handle_org_deletion(request, org)
         elif action == "delete_organization_now":
             return _handle_immediate_org_deletion(request, org)
         elif action == "cancel_deletion":
             _handle_cancel_deletion(request, org)
-        return redirect("organizations:settings")
+        return here
 
     context = {
         "organization": org,
@@ -310,11 +329,12 @@ def move_brand_view(request):
 def workspaces_view(request):
     """Account centre → Organizations: each one with its brands underneath.
 
-    Lists the organizations the user belongs to, newest first, then those
-    where they were only added to a brand. Read only from the user's own
-    memberships, so nothing they don't belong to can appear. The numbers of
-    an organization (members, connected channels, owner) and the member count of
-    its brands are shown only to someone who belongs to it.
+    Lists the organizations the user owns or administers, newest first,
+    then the others they belong to, then those where they were only added
+    to a brand. Read only from the user's own memberships, so nothing they
+    don't belong to can appear: an owner or admin sees every brand of the
+    organization, anyone else only the brands they were added to, and the
+    organization's brand and channel numbers count just those.
     """
     org = request.org
     org_roles = {m.organization_id: m.org_role for m in request.org_memberships}
@@ -338,7 +358,10 @@ def workspaces_view(request):
             "organization": organization,
             "is_current": organization.id == org.id,
             "is_member": org_role is not None,
+            # owner, admin or member; None for someone only added to a brand.
+            "role": org_role,
             "can_edit": org_role in org_admin_roles,
+            "can_delete": org_role == OrgMembership.OrgRole.OWNER,
             # What the "Edit organization" modal starts from; only for who may save it.
             "payer": payer_summary(organization) if org_role in org_admin_roles else None,
             # What the page's filter reads: an organization waiting to be deleted is the inactive one.
@@ -348,6 +371,7 @@ def workspaces_view(request):
         }
 
     memberships = sorted(request.org_memberships, key=lambda m: m.organization.created_at, reverse=True)
+    memberships.sort(key=lambda m: m.org_role not in org_admin_roles)
     groups = {m.organization_id: group_for(m.organization) for m in memberships}
 
     people = defaultdict(set)
@@ -363,22 +387,23 @@ def workspaces_view(request):
             workspace__is_archived=False,
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,
         )
-        .values_list("workspace__organization_id")
+        .values_list("workspace_id")
         .annotate(total=Count("id"))
     )
     for organization_id, group in groups.items():
         group["member_count"] = len(people[organization_id])
-        group["channel_count"] = channels.get(organization_id, 0)
+        group["channel_count"] = 0
         group["brand_count"] = 0
 
     workspaces = (
-        Workspace.objects.filter(
-            Q(organization_id__in=org_roles.keys()) | Q(id__in=brand_roles.keys(), is_archived=False)
-        )
+        Workspace.objects.filter(Q(organization_id__in=admin_org_ids) | Q(id__in=brand_roles.keys()))
+        .exclude(~Q(organization_id__in=org_roles.keys()), is_archived=True)
         .select_related("organization")
         .prefetch_related("memberships")
         .order_by("organization__name", "is_archived", "name")
     )
+    workspaces = list(workspaces)
+    active_brands = Counter(ws.organization_id for ws in workspaces if not ws.is_archived)
     for ws in workspaces:
         group = groups.get(ws.organization_id)
         if group is None:
@@ -392,6 +417,13 @@ def workspaces_view(request):
             "can_api_keys": brand_role is not None and ws.organization_id in api_key_org_ids and not ws.is_archived,
             # Out of an organization the person administers, when there is another to move it to.
             "can_move": ws.organization_id in admin_org_ids and len(admin_org_ids) > 1 and not ws.is_archived,
+            # Archive, restore and delete are answered by the brand's settings,
+            # which ask for an owner or manager of the brand itself.
+            "can_close": brand_role in managing_roles,
+            # The organization keeps at least one brand in use; only someone
+            # who sees them all knows this is not the last.
+            "is_last_active": not ws.is_archived
+            and (ws.organization_id not in admin_org_ids or active_brands[ws.organization_id] <= 1),
         }
         if group["is_member"]:
             entry["member_count"] = len(ws.memberships.all())
@@ -401,6 +433,7 @@ def workspaces_view(request):
         group["archived_count"] += ws.is_archived
         if group["is_member"] and not ws.is_archived:
             group["brand_count"] += 1
+            group["channel_count"] += channels.get(ws.id, 0)
 
     org_groups = list(groups.values())
     # Position of each card under the "by name" order, applied in the page.
@@ -555,10 +588,7 @@ def _handle_name_update(request, org):
 
 @transaction.atomic
 def _handle_org_deletion(request, org):
-    """Schedule organization deletion for 14 days from now (owner only)."""
-    if request.org_membership.org_role != OrgMembership.OrgRole.OWNER:
-        raise PermissionDenied
-
+    """Schedule organization deletion for 14 days from now. The caller checks the owner."""
     from apps.organizations.tasks import execute_scheduled_org_deletion
     from apps.social_accounts.youtube_compliance import purge_organization
 
@@ -573,20 +603,16 @@ def _handle_org_deletion(request, org):
     execute_scheduled_org_deletion(str(org.id), schedule=grace)
 
     messages.success(request, _("Organization scheduled for deletion in 14 days."))
-    return redirect("organizations:settings")
 
 
 def _handle_immediate_org_deletion(request, org):
-    """Permanently delete an organization right now (owner only).
+    """Permanently delete an organization right now. The caller checks the owner.
 
     When it was the owner's only organization their account goes with it
     (``Organization.hard_delete``): they are logged out and sent to sign-up
     to start fresh. An owner who keeps another organization stays signed
     in and lands on it.
     """
-    if request.org_membership.org_role != OrgMembership.OrgRole.OWNER:
-        raise PermissionDenied
-
     from background_task.models import Task
 
     Task.objects.filter(
@@ -607,14 +633,11 @@ def _handle_immediate_org_deletion(request, org):
 
 
 def _handle_cancel_deletion(request, org):
-    """Cancel a pending organization deletion (owner only).
+    """Cancel a pending organization deletion. The caller checks the owner.
 
     Also removes the queued background-task row so the worker isn't holding
     a no-op scheduled for 14 days out.
     """
-    if request.org_membership.org_role != OrgMembership.OrgRole.OWNER:
-        raise PermissionDenied
-
     from background_task.models import Task
 
     Task.objects.filter(

@@ -12,6 +12,7 @@ urlpatterns = [
     path("create/", views.create_view, name="create"),
     path("move-brand/", views.move_brand_view, name="move_brand"),
     path("<uuid:organization_id>/roles/", views.role_permissions_view, name="role_permissions"),
+    path("<uuid:organization_id>/delete/", views.settings_view, name="delete"),
     path("welcome/", views.welcome_view, name="welcome"),
     path("about/", views.about_view, name="about"),
     path("calendar/", views.cross_workspace_calendar, name="cross_workspace_calendar"),
