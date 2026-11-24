@@ -136,6 +136,7 @@ DEFAULT_CHANNELS: dict[str, dict[str, bool]] = {
     EventType.TASK_ASSIGNED: {Channel.IN_APP: True, Channel.EMAIL: True},
     EventType.TASK_DUE_SOON: {Channel.IN_APP: True, Channel.EMAIL: True},
     EventType.TASK_READY_FOR_REVIEW: {Channel.IN_APP: True, Channel.EMAIL: False},
+    EventType.LIFECYCLE_TIPS: {Channel.IN_APP: False, Channel.EMAIL: True},
 }
 
 # Event types considered non-critical (suppressed during quiet hours).

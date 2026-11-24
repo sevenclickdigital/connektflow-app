@@ -28,4 +28,5 @@ urlpatterns = [
     # System.
     path("platforms/", include("apps.social_accounts.staff_urls")),
     path("team/", include("apps.accounts.staff_urls")),
+    path("emails/", include("apps.email_center.staff_urls")),
 ]

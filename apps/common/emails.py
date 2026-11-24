@@ -115,9 +115,17 @@ def build_email(
     """A text + HTML message from ``template_prefix``, ready to send.
 
     ``headers`` carries the mail class (``apps.common.mail.transactional()``)
-    or the ``List-Unsubscribe`` pair of notification mail.
+    or the ``List-Unsubscribe`` pair of notification mail. When the team has
+    an active Markdown version of this e-mail (``apps.email_center``), its
+    subject and body replace the template's.
     """
-    text_content, html_content = render_email(template_prefix, context)
+    from apps.email_center.rendering import render_system_override
+
+    override = render_system_override(template_prefix, context)
+    if override is not None:
+        subject, text_content, html_content = override
+    else:
+        text_content, html_content = render_email(template_prefix, context)
     msg = EmailMultiAlternatives(
         subject=" ".join(str(subject).split()),
         body=text_content,

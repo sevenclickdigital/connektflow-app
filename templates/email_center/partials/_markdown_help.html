@@ -1,0 +1,32 @@
+{% load i18n %}
+{% comment %}
+The Markdown conventions apps.email_center.markdown_mail understands and the
+variables the e-mail being edited offers. Expects ``variables``: a mapping of
+name to label, or to an object with a ``label``.
+{% endcomment %}
+<div class="a-card p-5 text-sm text-neutral-800 flex flex-col gap-4">
+  <div>
+    <h2 class="text-sm font-semibold text-neutral-950 mb-2">{% translate "How to write" %}</h2>
+    <ul class="flex flex-col gap-1.5 text-xs text-neutral-700">
+      <li><code class="font-mono text-neutral-950"># {% translate "Title" %}</code> — {% translate "first line: the title, beside the mascot" %}</li>
+      <li><code class="font-mono text-neutral-950">**{% translate "bold" %}**</code>, <code class="font-mono text-neutral-950">*{% translate "italic" %}*</code></li>
+      <li><code class="font-mono text-neutral-950">- {% translate "item" %}</code> — {% translate "a list" %}</li>
+      <li><code class="font-mono text-neutral-950">> {% translate "text" %}</code> — {% translate "highlighted box" %}</li>
+      <li><code class="font-mono text-neutral-950">[{% translate "text" %}](https://…)</code> — {% translate "a link" %}</li>
+      <li><code class="font-mono text-neutral-950">[{% translate "button:" %} {% translate "Label" %}]({% templatetag openvariable %} app_url {% templatetag closevariable %})</code> — {% translate "a button, alone in its paragraph" %}</li>
+      <li><code class="font-mono text-neutral-950">[{% translate "button:" %} {% translate "Label" %}](… "{% translate "no link" %}")</code> — {% translate "a button without the “copy this link” line under it" %}</li>
+      <li><code class="font-mono text-neutral-950">&lt;small&gt;{% translate "text" %}&lt;/small&gt;</code> — {% translate "a note in small grey letters, alone in its paragraph" %}</li>
+      <li><code class="font-mono text-neutral-950">> &lt;small&gt;{% translate "text" %}&lt;/small&gt;</code> — {% translate "the compact box of the security notices" %}</li>
+      <li><code class="font-mono text-neutral-950">`{% templatetag openvariable %} code {% templatetag closevariable %}`</code> — {% translate "the large box of sign-in codes, alone in its paragraph" %}</li>
+      <li><code class="font-mono text-neutral-950">| {% translate "Label" %} | {% translate "value" %} |</code> — {% translate "a table: the first row on top, highlighted, then one label and value per row" %}</li>
+    </ul>
+  </div>
+  <div>
+    <h2 class="text-sm font-semibold text-neutral-950 mb-2">{% translate "Variables" %}</h2>
+    <ul class="flex flex-col gap-1.5 text-xs">
+      {% for name, variable in variables.items %}
+      <li class="flex flex-wrap gap-x-2"><code class="font-mono text-brand-800">{% templatetag openvariable %} {{ name }} {% templatetag closevariable %}</code><span class="text-neutral-600">{% firstof variable.label variable %}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>

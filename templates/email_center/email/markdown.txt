@@ -1,0 +1,3 @@
+{% extends "emails/base.txt" %}
+{% block content %}{{ markdown_text }}{% endblock %}
+{% block reason %}{% if reason_text %}{{ reason_text }}{% endif %}{% endblock %}

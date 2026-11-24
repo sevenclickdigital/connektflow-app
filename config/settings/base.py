@@ -82,6 +82,7 @@ LOCAL_APPS = [
     "apps.funnels",
     "apps.publisher",
     "apps.notifications",
+    "apps.email_center",
     "apps.inbox",
     "apps.automations",
     "apps.approvals",

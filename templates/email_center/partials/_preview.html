@@ -1,0 +1,8 @@
+{% load i18n %}
+{% comment %}
+The e-mail being edited, rendered as it would be sent. The iframe is
+sandboxed without scripts; the HTML is already sanitized by
+apps.email_center.markdown_mail.
+{% endcomment %}
+<p class="text-xs text-neutral-600 mb-2"><span class="font-semibold text-neutral-950">{% translate "Subject:" %}</span> {{ subject|default:"—" }}</p>
+<iframe sandbox title="{% translate 'Preview' %}" srcdoc="{{ html|force_escape }}" class="w-full rounded-lg border border-neutral-300 bg-white" style="height: 760px;"></iframe>

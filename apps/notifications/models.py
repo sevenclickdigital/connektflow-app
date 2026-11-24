@@ -28,6 +28,8 @@ class EventType(models.TextChoices):
     TASK_ASSIGNED = "task_assigned", _("Task assigned to you")
     TASK_DUE_SOON = "task_due_soon", _("Task due soon")
     TASK_READY_FOR_REVIEW = "task_ready_for_review", _("Arts delivered for review")
+    # The automatic e-mails the team writes (apps.email_center): e-mail only.
+    LIFECYCLE_TIPS = "lifecycle_tips", _("Tips and reminders")
 
 
 class Channel(models.TextChoices):

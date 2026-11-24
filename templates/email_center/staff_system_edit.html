@@ -1,0 +1,70 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+One system e-mail: its Markdown version (edited on the left, previewed live on
+the right) and the default version from the code, to compare. Saving with
+"Send this version" ticked makes every send of this e-mail use it.
+Superadmins only (apps.email_center.staff_views.system_edit).
+{% endcomment %}
+
+{% block title %}{{ entry.label }} - {% translate "E-mails" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="mb-4 lg:mb-[25px]">
+  <a href="{% url 'email_center_staff:index' %}" class="text-sm font-semibold text-brand-800 hover:text-brand-900">← {% translate "E-mails" %}</a>
+  <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950 mt-2" style="letter-spacing: -0.01em;">{{ entry.label }}</h1>
+  <p class="text-sm text-neutral-600 mt-1">{{ entry.group }} · {% if override.is_active %}{% translate "The edited version is being sent." %}{% else %}{% translate "The default version is being sent." %}{% endif %}</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+  <div class="flex flex-col gap-6 min-w-0">
+    <form id="email-form" method="post" class="a-card p-6 flex flex-col gap-5">
+      {% csrf_token %}
+      <input type="hidden" name="key" value="{{ entry.key }}">
+      {{ form.non_field_errors }}
+      <div>
+        <label for="{{ form.subject.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.subject.label }}</label>
+        {{ form.subject }}
+        {% for error in form.subject.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ form.body_markdown.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.body_markdown.label }}</label>
+        {{ form.body_markdown }}
+        {% for error in form.body_markdown.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="alert-info text-xs">{% translate "The edited version is sent in every language and replaces the parts of the default text that change case by case. Use the variables for what changes." %}</div>
+      <label class="flex items-center gap-2 text-sm text-neutral-950 cursor-pointer">{{ form.is_active }} {{ form.is_active.label }}</label>
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="submit" class="btn-brand">{% translate "Save" %}</button>
+        <button type="button" class="btn-ghost" hx-post="{% url 'email_center_staff:send_test' %}" hx-include="#email-form" hx-swap="none">{% translate "Send a test to me" %}</button>
+      </div>
+    </form>
+    {% if override %}
+    <form method="post" action="{% url 'email_center_staff:system_reset' key=entry.key %}" class="a-card p-5 flex flex-col sm:flex-row sm:items-center gap-3">
+      {% csrf_token %}
+      <p class="flex-1 text-sm text-neutral-700">{% translate "Delete the edited version and go back to the default text." %}</p>
+      <button type="submit" class="btn-ghost text-red-600">{% translate "Restore default" %}</button>
+    </form>
+    {% endif %}
+    {% include "email_center/partials/_markdown_help.html" with variables=variables %}
+  </div>
+
+  <div class="a-card p-5 min-w-0 xl:sticky xl:top-6" x-data="{ tab: 'edited' }">
+    <div class="flex gap-2 mb-4" role="tablist">
+      <button type="button" role="tab" :aria-selected="tab === 'edited'" @click="tab = 'edited'" :class="tab === 'edited' ? 'btn-brand' : 'btn-ghost'">{% translate "Your version" %}</button>
+      <button type="button" role="tab" :aria-selected="tab === 'default'" @click="tab = 'default'" :class="tab === 'default' ? 'btn-brand' : 'btn-ghost'">{% translate "Default version" %}</button>
+    </div>
+    <div x-show="tab === 'edited'" id="preview"
+         hx-post="{% url 'email_center_staff:preview' %}" hx-include="#email-form"
+         hx-trigger="load, input changed delay:600ms from:#email-form">
+      <p class="text-sm text-neutral-600">{% translate "Loading preview…" %}</p>
+    </div>
+    <div x-show="tab === 'default'" x-cloak>
+      <p class="text-xs text-neutral-600 mb-2">{% translate "With sample data." %}</p>
+      <iframe sandbox title="{% translate 'Default version' %}" srcdoc="{{ default_html|force_escape }}" class="w-full rounded-lg border border-neutral-300 bg-white" style="height: 760px;"></iframe>
+    </div>
+  </div>
+</div>
+{% endblock %}

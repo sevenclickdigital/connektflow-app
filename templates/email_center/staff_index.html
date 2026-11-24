@@ -1,0 +1,62 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+The e-mail centre: automatic e-mails the team writes (sent by trigger) and the
+system e-mails, each of which can be rewritten in Markdown. Superadmins only
+(apps.email_center.staff_views).
+{% endcomment %}
+
+{% block title %}{% translate "E-mails" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% translate "E-mails" %}</h1>
+    <p class="page-description">{% translate "Automatic e-mails sent by what each account has done, and the texts of the system e-mails." %}</p>
+  </div>
+  <a href="{% url 'email_center_staff:automated_new' %}" class="btn-brand">{% translate "New automatic e-mail" %}</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="a-card mb-6">
+  <div class="px-5 py-4 border-b border-neutral-300">
+    <h2 class="text-sm font-semibold text-neutral-950">{% translate "Automatic e-mails" %}</h2>
+    <p class="text-xs text-neutral-600 mt-1">{% translate "Sent once to each account owner who matches the trigger. People can turn them off under “Tips and reminders” in their notification preferences." %}</p>
+  </div>
+  {% if automated %}
+  <div class="divide-y divide-neutral-300">
+    {% for email in automated %}
+    <a href="{% url 'email_center_staff:automated_edit' email_id=email.id %}" class="flex flex-col sm:flex-row sm:items-center gap-2 px-5 py-4 hover:bg-neutral-50">
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-neutral-950 truncate">{{ email.name }}</p>
+        <p class="text-xs text-neutral-600 mt-0.5">{% blocktranslate count days=email.delay_days with anchor=email.get_anchor_display %}{{ days }} day after: {{ anchor }}{% plural %}{{ days }} days after: {{ anchor }}{% endblocktranslate %}</p>
+      </div>
+      <span class="text-xs text-neutral-600 tabular-nums">{% blocktranslate count n=email.sent %}{{ n }} sent{% plural %}{{ n }} sent{% endblocktranslate %}</span>
+      {% if email.is_active %}<span class="pill pill-success"><i></i>{% translate "Active" %}</span>{% else %}<span class="pill pill-neutral"><i></i>{% translate "Off" %}</span>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="px-5 py-6 text-sm text-neutral-600">{% translate "No automatic e-mail yet." %}</p>
+  {% endif %}
+</section>
+
+<section class="a-card">
+  <div class="px-5 py-4 border-b border-neutral-300">
+    <h2 class="text-sm font-semibold text-neutral-950">{% translate "System e-mails" %}</h2>
+    <p class="text-xs text-neutral-600 mt-1">{% translate "Sent by the product itself. Without an active Markdown version, the default text is used, with its translations and the parts that change case by case." %}</p>
+  </div>
+  {% for group, items in groups.items %}
+  <div class="px-5 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-neutral-600">{{ group }}</div>
+  <div class="divide-y divide-neutral-300">
+    {% for item in items %}
+    <a href="{% url 'email_center_staff:system_edit' key=item.entry.key %}" class="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50">
+      <span class="flex-1 text-sm text-neutral-950">{{ item.entry.label }}</span>
+      {% if item.override.is_active %}<span class="pill pill-success"><i></i>{% translate "Edited version" %}</span>{% elif item.override %}<span class="pill pill-neutral"><i></i>{% translate "Draft" %}</span>{% else %}<span class="text-xs text-neutral-600">{% translate "Default" %}</span>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

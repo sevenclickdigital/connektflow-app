@@ -348,12 +348,16 @@ People and companies the workspace talks to (sidebar: Engajar → Contatos, for 
 
 ### F-7.1
 - Channels: in-app, email, and webhook (HTTP POST with an HMAC-SHA256 signature).
-- Events (`EventType`): post submitted, approved, changes requested, rejected, published and failed; new inbox message; inbox SLA overdue; client approval requested; team member invited; social account disconnected; comment mention; approval reminder; stalled approval; client hold requested; client connected accounts. `report_generated` and `engagement_alert` are defined but nothing sends them.
+- Events (`EventType`): post submitted, approved, changes requested, rejected, published and failed; new inbox message; inbox SLA overdue; client approval requested; team member invited; social account disconnected; comment mention; approval reminder; stalled approval; client hold requested; client connected accounts; tips and reminders (`lifecycle_tips`, the automatic e-mails of the e-mail centre, e-mail only). `report_generated` and `engagement_alert` are defined but nothing sends them.
 - Per-user preferences for each event and channel, quiet hours (`QuietHours`), digest/batched email, an in-app drawer with an unread count, and unsubscribe links in emails.
 - Delivery attempts are tracked with a retry cap (`NotificationDelivery`).
 - Outgoing email is rate-limited (`EmailSendCounter`). Bounces and complaints add the address to a suppression list (`EmailSuppression`) through the Resend webhook at `/webhooks/resend/` (`apps/common/webhooks.py`).
 
 ---
+
+## E-mail centre (not in spec) — `apps/email_center/`
+- In the administrative area (`/staff/emails/`, superadmins): every system e-mail with a preview of its default text, and a Markdown editor to write a version of it (subject and body, variables listed per e-mail, live preview, test send to oneself, restore default).
+- Automatic e-mails: name, subject and Markdown text, a trigger (N days after sign-up, last sign-in, last connection, last post or last task) and conditions (connected a social account, created a post, created a task, used Radar/Automations/Ads/Contacts/Funnels, how many setup steps are done). Switched on and off; each account owner receives each one once; people can turn them off as "Tips and reminders" in their notification preferences or with the link in the e-mail.
 
 ## Affiliates (not in spec) — `apps/affiliates/`
 

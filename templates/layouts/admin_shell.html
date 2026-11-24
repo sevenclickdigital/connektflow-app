@@ -114,5 +114,11 @@ decorated with ``staff_required`` or ``superadmin_required``
     <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
     <span class="sidebar-nav-label">{% translate "Team" %}</span>
 </a>
+
+<a href="{% url 'email_center_staff:index' %}"
+   class="sidebar-nav-item mb-1 {% if admin_active == 'emails' %}active{% endif %}">
+    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
+    <span class="sidebar-nav-label">{% translate "E-mails" %}</span>
+</a>
 {% endif %}
 {% endblock %}

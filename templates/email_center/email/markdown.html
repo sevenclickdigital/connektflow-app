@@ -1,0 +1,10 @@
+{% extends "emails/base.html" %}
+{% comment %}
+An e-mail the team wrote in Markdown (apps.email_center.markdown_mail): the
+heading and body arrive already escaped and sanitized. The footer's "why you
+got this" is reason_html (taken from a default template) or reason_text.
+{% endcomment %}
+{% block title %}{{ subject }}{% endblock %}
+{% block heading %}{{ markdown_heading|safe }}{% endblock %}
+{% block content %}{{ markdown_html|safe }}{% endblock %}
+{% block reason %}{% if reason_html %}{{ reason_html }}{% elif reason_text %}<p style="margin:0 0 12px;">{{ reason_text }}</p>{% endif %}{% endblock %}

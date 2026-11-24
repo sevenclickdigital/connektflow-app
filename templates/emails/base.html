@@ -97,7 +97,8 @@
         <tr>
           <td colspan="2" class="cf-pad" style="padding:0 40px 36px;font-size:15px;line-height:24px;color:#334155;">
             {% if email_heading %}<div class="cf-h1-mobile" style="display:none;max-height:0;overflow:hidden;mso-hide:all;"><h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{{ email_heading }}</h1></div>{% endif %}
-            {% block content %}{% endblock %}
+            {# The cf-content and cf-reason markers let apps.email_center read a rendered e-mail's body and footer reason. #}
+            <!--cf-content-->{% block content %}{% endblock %}<!--/cf-content-->
           </td>
         </tr>
       </table>
@@ -106,7 +107,7 @@
 
   <tr>
     <td class="cf-pad" align="center" style="padding:24px 40px 8px;font-size:12px;line-height:19px;color:#64748B;text-align:center;">
-      {% block reason %}{% endblock %}
+      <!--cf-reason-->{% block reason %}{% endblock %}<!--/cf-reason-->
       {% if unsubscribe_url %}
       <p style="margin:0 0 12px;">
         <a href="{{ preferences_url }}" target="_blank" rel="noopener" style="color:#7C3AED;text-decoration:underline;">{% translate "Manage notification preferences" %}</a>

@@ -6,6 +6,7 @@ from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.utils import build_absolute_uri
 from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.shortcuts import redirect, render, resolve_url
 
@@ -169,12 +170,24 @@ class AccountAdapter(DefaultAccountAdapter):
             custom = custom_signup_url(request)
             if custom:
                 context = {**context, "signup_url": build_absolute_uri(request, custom)}
-        return super().render_mail(
-            template_prefix,
-            email,
-            {**email_context(), **context},
-            headers={**(headers or {}), **transactional()},
-        )
+        context = {**email_context(), **context}
+        headers = {**(headers or {}), **transactional()}
+
+        from apps.email_center.rendering import render_system_override
+
+        override = render_system_override(template_prefix, context)
+        if override is not None:
+            subject, text, html = override
+            message = EmailMultiAlternatives(
+                subject=self.format_email_subject(subject),
+                body=text,
+                from_email=self.get_from_email(),
+                to=[email] if isinstance(email, str) else email,
+                headers=headers,
+            )
+            message.attach_alternative(html, "text/html")
+            return message
+        return super().render_mail(template_prefix, email, context, headers=headers)
 
 
 def user_display(user):
