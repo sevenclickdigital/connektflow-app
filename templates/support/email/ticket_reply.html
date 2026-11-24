@@ -1,0 +1,15 @@
+{% extends "emails/base.html" %}
+{% load i18n support_tags %}
+{% block title %}{% blocktranslate with number=ticket.pk %}New reply to your ticket #{{ number }}{% endblocktranslate %}{% endblock %}
+{% block preheader %}{{ reply|truncatechars:90 }}{% endblock %}
+{% block heading %}{% blocktranslate with number=ticket.pk %}New reply to your ticket #{{ number }}{% endblocktranslate %}{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with subject=ticket.subject %}Our team answered your ticket “{{ subject }}”:{% endblocktranslate %}</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;background-color:#F5F3FF;border-radius:8px;">
+<tr><td style="padding:16px 18px;font-size:14px;line-height:22px;color:#334155;white-space:pre-line;">{{ reply|message_format }}</td></tr>
+</table>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% translate "Open the ticket to reply or to see the whole conversation." %}</p>
+{% translate "Open the ticket" as cta %}{% include "emails/_button.html" with url=ticket_url label=cta %}
+{% endblock %}
+{% block reason %}<p style="margin:0 0 12px;">{% translate "You're receiving this because you opened a ticket with our support." %}</p>{% endblock %}

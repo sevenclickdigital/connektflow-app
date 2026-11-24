@@ -1,0 +1,30 @@
+{% load i18n support_tags %}
+{% comment %}
+A ticket's or a chat's conversation, oldest first. Expects ``thread`` (its
+messages: TicketMessage or ChatMessage), ``requester`` (the customer, named on
+their messages) and ``staff`` (True or False); a ticket's also ``ticket``, for
+its attachments. With ``staff``, the team's view: team notes shown
+(highlighted) and attachments served by the staff route; the customer's view
+never gets notes in ``thread`` (services.customer_messages).
+{% endcomment %}
+<ol class="space-y-4">
+  {% for message in thread %}
+  <li class="flex {% if message.from_team != staff %}justify-start{% else %}justify-end{% endif %}">
+    <div class="max-w-[85%] sm:max-w-[75%]">
+      <div class="flex items-center gap-2 mb-1 text-xs text-neutral-600 {% if message.from_team == staff %}justify-end{% endif %}">
+        <span class="font-semibold text-neutral-800">{% if message.from_team %}{% if staff %}{{ message.author.display_name|default:_("Team") }}{% else %}{% blocktranslate with name=message.author.greeting_name|default:_("Team") %}{{ name }} · Support{% endblocktranslate %}{% endif %}{% else %}{{ message.author.display_name|default:requester.display_name }}{% endif %}</span>
+        <span>{{ message.created_at|date:"d/m/Y H:i" }}</span>
+        {% if message.is_internal %}<span class="pill pill-warning">{% translate "Team note" %}</span>{% endif %}
+      </div>
+      <div class="message-text rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-line break-words {% if message.is_internal %}border text-neutral-900{% elif message.from_team == staff %}bg-brand-700 text-white{% else %}bg-white border border-neutral-300 text-neutral-900{% endif %}"
+           {% if message.is_internal %}style="background: var(--warning-50); border-color: var(--warning-500);"{% endif %}>{{ message.body|message_format }}</div>
+      {% if message.attachment %}
+      {% if staff %}{% url 'support_staff:ticket_attachment' ticket_id=ticket.pk message_id=message.pk as attachment_url %}{% else %}{% url 'support:ticket_attachment' ticket_id=ticket.pk message_id=message.pk as attachment_url %}{% endif %}
+      <a href="{{ attachment_url }}" target="_blank" rel="noopener" class="mt-2 inline-block">
+        <img src="{{ attachment_url }}" alt="{% translate 'Attached image' %}" class="max-h-48 rounded-xl border border-neutral-300">
+      </a>
+      {% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ol>

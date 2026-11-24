@@ -105,11 +105,14 @@ class OnboardingChecklist(models.Model):
 
 
 class PageHelpVideo(models.Model):
-    """The YouTube video behind a page banner's "See how it works" button.
+    """A page's tutorial: the YouTube video behind its banner's "See how it
+    works" button, and a text that goes with it in the help centre.
 
-    Product-wide, not per workspace: the operator sets one link per page in
-    the administrative area (onboarding.staff_views) and every brand sees it.
-    A page without a row has no video, and its banner shows no button.
+    Product-wide, not per workspace: the operator sets them per page in the
+    administrative area (onboarding.staff_views) and every brand sees them.
+    A page without a row, or with an empty ``video_url``, has no video, and
+    its banner shows no button. The help centre (apps.support) lists every
+    page with a video or a text as a tutorial.
     """
 
     class Page(models.TextChoices):
@@ -131,7 +134,9 @@ class PageHelpVideo(models.Model):
         INSTAGRAM_RESEARCH = "instagram_research", _("Instagram research")
 
     page = models.CharField(max_length=20, choices=Page.choices, unique=True)
-    video_url = models.URLField(max_length=300)
+    video_url = models.URLField(max_length=300, blank=True)
+    # Markdown, shown under the video in the help centre (apps.common.rich_text).
+    tutorial_markdown = models.TextField(blank=True, default="", db_default="")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

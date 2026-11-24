@@ -51,7 +51,8 @@ BILLING = Group("billing", _("Billing"), _("Messages about payments and the data
 AFFILIATES = Group(
     "affiliates", _("Affiliates"), _("Messages to affiliates about their terms and withdrawals."), "gift"
 )
-GROUPS: tuple[Group, ...] = (ACCOUNT, SECURITY, TEAM, BILLING, AFFILIATES)
+SUPPORT = Group("support", _("Support"), _("Replies to tickets and notices of new tickets to the team."), "help")
+GROUPS: tuple[Group, ...] = (ACCOUNT, SECURITY, TEAM, BILLING, AFFILIATES, SUPPORT)
 
 
 @dataclass(frozen=True)
@@ -166,6 +167,8 @@ _AFFILIATE_SAMPLE = {
     "link": "https://app.connektflow.com.br/af/ana/",
     "hold_days": 15,
 }
+
+_TICKET_SAMPLE = SimpleNamespace(pk=128, subject="Não consigo publicar no Instagram")
 
 SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     # Account and sign-in (allauth)
@@ -493,6 +496,48 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
                 amount_cents=15000, pix_key="ana@example.com", affiliate=SimpleNamespace(name="Ana Souza")
             ),
             "deadline": timezone.now() + timedelta(days=5),
+            "review_url": _LINK,
+        },
+    ),
+    # Support
+    SystemEmail(
+        "support/email/ticket_reply",
+        _("Reply to a ticket"),
+        SUPPORT,
+        {
+            "name": _NAME,
+            "ticket_number": Variable(_("Ticket number"), path("ticket.pk")),
+            "ticket_subject": Variable(_("Ticket subject"), path("ticket.subject")),
+            "reply": Variable(_("Text of the reply"), path("reply")),
+            "agent_name": Variable(_("Name of who answered"), path("agent_name")),
+            "ticket_url": Variable(_("Link to the ticket"), path("ticket_url")),
+        },
+        _sample(
+            ticket=_TICKET_SAMPLE,
+            reply="Olá! Reconectamos sua conta. Pode tentar publicar de novo?",
+            agent_name="Carla",
+            ticket_url=_LINK,
+        ),
+    ),
+    SystemEmail(
+        "support/email/ticket_opened_team",
+        _("New ticket (team)"),
+        SUPPORT,
+        {
+            "ticket_number": Variable(_("Ticket number"), path("ticket.pk")),
+            "ticket_subject": Variable(_("Ticket subject"), path("ticket.subject")),
+            "requester_name": Variable(_("Name of who opened it"), path("requester_name")),
+            "requester_email": Variable(_("E-mail of who opened it"), path("requester_email")),
+            "kind": Variable(_("Type of request"), path("kind")),
+            "message": Variable(_("First message"), path("message")),
+            "review_url": Variable(_("Link to the ticket"), path("review_url")),
+        },
+        lambda: {
+            "ticket": _TICKET_SAMPLE,
+            "requester_name": "Ana Souza",
+            "requester_email": "ana@example.com",
+            "kind": "Ajuda para usar a plataforma",
+            "message": "Quando clico em publicar aparece um erro.",
             "review_url": _LINK,
         },
     ),

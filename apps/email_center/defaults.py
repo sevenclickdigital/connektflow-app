@@ -56,6 +56,10 @@ def _subjects():
         % {"amount": "{{ amount }}"},
         "affiliates/email/payout_requested_team": gettext("%(name)s asked for a withdrawal of R$ %(amount)s")
         % {"name": "{{ affiliate_name }}", "amount": "{{ amount }}"},
+        "support/email/ticket_reply": gettext("New reply to your ticket #%(number)s")
+        % {"number": "{{ ticket_number }}"},
+        "support/email/ticket_opened_team": gettext("New ticket #%(number)s: %(subject)s")
+        % {"number": "{{ ticket_number }}", "subject": "{{ ticket_subject }}"},
     }
 
 

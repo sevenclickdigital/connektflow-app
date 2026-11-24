@@ -1,0 +1,48 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+The frequent questions of the help centre, by topic. A question can be kept
+as a draft (not published). Order inside a topic follows ``position``.
+{% endcomment %}
+{% block title %}{% translate "Frequent questions" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% translate "Frequent questions" %}</h1>
+    <p class="page-description">{% translate "The questions and answers customers see in the help centre, grouped by topic." %}</p>
+  </div>
+  <a href="{% url 'support_staff:faq_new' %}" class="btn-brand">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    {% translate "New question" %}
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+{% for topic, entries in topics.items %}
+<section class="mb-6">
+  <h2 class="section-title">{{ topic }}</h2>
+  <div class="a-card divide-y divide-neutral-300">
+    {% for entry in entries %}
+    <div class="flex items-center gap-4 px-5 py-3.5">
+      <span class="text-xs font-mono text-neutral-500 w-6">{{ entry.position }}</span>
+      <a href="{% url 'support_staff:faq_edit' entry_id=entry.pk %}" class="flex-1 min-w-0 text-sm font-semibold text-neutral-950 hover:text-brand-700 truncate">{{ entry.question }}</a>
+      {% if entry.is_published %}<span class="pill pill-success"><i></i>{% translate "Published" %}</span>{% else %}<span class="pill pill-neutral"><i></i>{% translate "Draft" %}</span>{% endif %}
+      <form method="post" action="{% url 'support_staff:faq_delete' entry_id=entry.pk %}"
+            data-confirm="{% translate 'Remove this question?' %}" data-confirm-body="{% translate 'Customers stop seeing it in the help centre.' %}"
+            data-confirm-label="{% translate 'Remove' %}" data-confirm-tone="danger">
+        {% csrf_token %}
+        <button type="submit" class="btn-ghost">{% translate "Remove" %}</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% empty %}
+<div class="a-card px-6 py-10 text-center">
+  <p class="text-sm text-neutral-600">{% translate "No questions yet. Start with the ones customers ask the most." %}</p>
+  <a href="{% url 'support_staff:faq_new' %}" class="btn-outline mt-4">{% translate "New question" %}</a>
+</div>
+{% endfor %}
+{% endblock %}

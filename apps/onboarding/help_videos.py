@@ -1,4 +1,5 @@
-"""The "See how it works" videos of the page banners (PageHelpVideo).
+"""The pages' tutorials (PageHelpVideo): the video of each banner's "See how
+it works" button, and the text the help centre shows with it.
 
 The operator pastes any YouTube link (watch, youtu.be, shorts, live or
 embed); what is stored is that link, and what the banner opens is the
@@ -70,15 +71,55 @@ def video_for_page(page: str) -> dict | None:
 def save_video(page: str, url: str) -> PageHelpVideo | None:
     """Set the page's video from the operator's link; an empty link removes it.
 
-    Raises InvalidVideoLinkError (with a message for the operator) for an unknown
-    page or a link that is not a YouTube video."""
+    The page's tutorial text stays. Returns the row, or None when the page has
+    neither a video nor a text any more. Raises InvalidVideoLinkError (with a
+    message for the operator) for an unknown page or a link that is not a
+    YouTube video."""
+    row = PageHelpVideo.objects.filter(page=page).first()
+    return save_tutorial(page, url, row.tutorial_markdown if row else "")
+
+
+def save_tutorial(page: str, url: str, text: str) -> PageHelpVideo | None:
+    """Set the page's video and tutorial text; with both empty the page has no tutorial.
+
+    Same errors as :func:`save_video`."""
     if page not in PageHelpVideo.Page.values:
         raise InvalidVideoLinkError(_("Unknown page."))
     url = (url or "").strip()
-    if not url:
+    text = (text or "").strip()
+    if url and not youtube_video_id(url):
+        raise InvalidVideoLinkError(_("Paste the link of a YouTube video, like https://www.youtube.com/watch?v=…"))
+    if not url and not text:
         PageHelpVideo.objects.filter(page=page).delete()
         return None
-    if not youtube_video_id(url):
-        raise InvalidVideoLinkError(_("Paste the link of a YouTube video, like https://www.youtube.com/watch?v=…"))
-    row, _created = PageHelpVideo.objects.update_or_create(page=page, defaults={"video_url": url})
+    row, _created = PageHelpVideo.objects.update_or_create(
+        page=page, defaults={"video_url": url, "tutorial_markdown": text}
+    )
     return row
+
+
+def tutorials() -> list[dict]:
+    """Every page with a video or a text, in the menu's order, as the help centre lists them.
+
+    Each: ``page``, ``title`` (the page's name), ``video_id``, ``embed_url``,
+    ``thumbnail_url`` (empty without a video) and ``text`` (Markdown)."""
+    rows = {row.page: row for row in PageHelpVideo.objects.all()}
+    found = []
+    for page, label in PageHelpVideo.Page.choices:
+        row = rows.get(page)
+        if row is None:
+            continue
+        video_id = youtube_video_id(row.video_url)
+        if not video_id and not row.tutorial_markdown:
+            continue
+        found.append(
+            {
+                "page": page,
+                "title": label,
+                "video_id": video_id or "",
+                "embed_url": embed_url(video_id) if video_id else "",
+                "thumbnail_url": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg" if video_id else "",
+                "text": row.tutorial_markdown,
+            }
+        )
+    return found

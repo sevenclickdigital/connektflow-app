@@ -1,0 +1,51 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n common_extras %}
+{% comment %}
+One page's tutorial: the YouTube link (the same one its banner opens) and
+the step-by-step text the help centre shows under the video, in Markdown.
+With both empty, the page has no tutorial. Under the form, the text as
+customers see it.
+{% endcomment %}
+{% block title %}{{ page_label }} - {% translate "Tutorials" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <p class="text-sm text-neutral-600 mb-1"><a href="{% url 'onboarding_staff:help_videos' %}" class="hover:text-brand-700">{% translate "Tutorials" %}</a></p>
+    <h1 class="page-title">{{ page_label }}</h1>
+    <p class="page-description">{% translate "The video and the step-by-step text customers see in the help centre." %}</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid gap-6 lg:grid-cols-2 items-start">
+  <form method="post" class="a-card p-6 space-y-5">
+    {% csrf_token %}
+    <div>
+      <label for="video_url" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "YouTube video" %}</label>
+      <input type="url" id="video_url" name="video_url" value="{{ video_url }}" maxlength="300" placeholder="https://www.youtube.com/watch?v=…" class="form-input-styled w-full">
+      <p class="text-xs text-neutral-600 mt-1">{% translate "Leave it empty for a tutorial with text only; the page's banner then shows no video button." %}</p>
+    </div>
+    <div>
+      <label for="tutorial_markdown" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Step-by-step text" %}</label>
+      <textarea id="tutorial_markdown" name="tutorial_markdown" rows="16" class="form-input-styled w-full font-mono text-sm"
+                placeholder="{% translate 'Explain, step by step, how to use this page.' %}">{{ text }}</textarea>
+      <p class="text-xs text-neutral-600 mt-1">{% translate "Markdown: **bold**, *italic*, lists with - or 1., links with [text](https://…) and titles with ##." %}</p>
+    </div>
+    <div class="flex justify-end gap-2">
+      <a href="{% url 'onboarding_staff:help_videos' %}" class="btn-ghost">{% translate "Back to tutorials" %}</a>
+      <button type="submit" class="btn-brand">{% translate "Save" %}</button>
+    </div>
+  </form>
+
+  <section class="a-card p-6">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">{% translate "As customers see it" %}</h2>
+    {% if text %}
+    <div class="rich-text">{{ text|markdown }}</div>
+    {% else %}
+    <p class="text-sm text-neutral-600">{% translate "No text yet. Save to see it here." %}</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

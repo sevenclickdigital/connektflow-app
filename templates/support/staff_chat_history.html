@@ -1,0 +1,51 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+Every live chat, newest first: all, the agent's own, those that became
+tickets; searched by the customer's name or e-mail. Each opens its
+conversation with the visitor's details (staff_chat_history_detail.html).
+{% endcomment %}
+{% block title %}{% translate "Chat history" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <p class="text-sm text-neutral-600 mb-1"><a href="{% url 'support_staff:chat' %}" class="hover:text-brand-700">{% translate "Live chat" %}</a></p>
+    <h1 class="page-title">{% translate "Chat history" %}</h1>
+    <p class="page-description">{% translate "Every conversation with customers, to read again or follow up." %}</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="get" class="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
+  <input type="hidden" name="filter" value="{{ current }}">
+  <nav class="flex flex-wrap gap-2" aria-label="{% translate 'Filter conversations' %}">
+    <a href="?filter=all" class="chip {% if current == 'all' %}active{% endif %}">{% translate "All" %}</a>
+    <a href="?filter=mine" class="chip {% if current == 'mine' %}active{% endif %}">{% translate "Answered by me" %}</a>
+    <a href="?filter=ticket" class="chip {% if current == 'ticket' %}active{% endif %}">{% translate "Became a ticket" %}</a>
+  </nav>
+  <input type="search" name="q" value="{{ query }}" maxlength="100" placeholder="{% translate 'Customer name or e-mail' %}"
+         aria-label="{% translate 'Search conversations' %}" class="form-input-styled w-full lg:w-72 lg:ml-auto">
+</form>
+
+<div class="a-card overflow-hidden">
+  {% for chat in chats %}
+  <a href="{% url 'support_staff:chat_history_detail' chat_id=chat.pk %}" class="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 px-5 py-3.5 hover:bg-neutral-50 {% if not forloop.first %}border-t border-neutral-300{% endif %}">
+    <span class="text-xs text-neutral-500 md:w-28 flex-shrink-0">{{ chat.created_at|date:"d/m/Y H:i" }}</span>
+    <span class="flex-1 min-w-0">
+      <span class="block text-sm font-semibold text-neutral-950 truncate">{{ chat.visitor.display_name }} <span class="font-normal text-neutral-500">· {{ chat.visitor.email }}</span></span>
+      <span class="block text-xs text-neutral-600 mt-0.5 truncate">{{ chat.question|default:"—" }}</span>
+    </span>
+    <span class="flex flex-wrap items-center gap-2 flex-shrink-0 text-xs text-neutral-600">
+      <span class="w-24 truncate" title="{% translate 'Answered by' %}">{% if chat.agent %}{{ chat.agent.greeting_name }}{% else %}—{% endif %}</span>
+      <span class="pill pill-neutral">{{ chat.message_count }}</span>
+      {% if chat.ticket_id %}<span class="pill pill-info">#{{ chat.ticket_id }}</span>{% endif %}
+      {% include "support/partials/_chat_status_pill.html" %}
+    </span>
+  </a>
+  {% empty %}
+  <div class="px-6 py-10 text-center text-sm text-neutral-600">{% translate "No conversation here." %}</div>
+  {% endfor %}
+</div>
+{% endblock %}

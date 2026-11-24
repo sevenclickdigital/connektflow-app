@@ -1,0 +1,4 @@
+{% comment %}
+A ticket's status as a pill. Expects ``ticket`` (support.Ticket).
+{% endcomment %}
+<span class="pill {% if ticket.status == 'open' %}pill-info{% elif ticket.status == 'in_progress' %}pill-brand{% elif ticket.status == 'waiting_customer' %}pill-warning{% else %}pill-success{% endif %}"><i></i>{{ ticket.get_status_display }}</span>

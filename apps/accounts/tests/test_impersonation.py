@@ -657,3 +657,33 @@ class TestTheCustomerStillDecides:
         )
 
         assert not Organization.objects.filter(pk=org.pk).exists()
+
+
+# ---------------------------------------------------------------------------
+# Landing on a given page (the live chat's "Open this screen")
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestLandingPage:
+    def test_it_opens_the_customers_page_and_comes_back_to_the_console(self, client, operator, customer):
+        client.force_login(operator)
+        page = f"/workspace/{customer.workspace_memberships.get(workspace__name='Client Social').workspace_id}/calendar/?view=week"
+
+        response = client.post(_start_url(customer), {"next": page, "return": "/staff/support/chat/"})
+
+        assert response.status_code == 302 and response["Location"] == page
+        response = client.post(STOP_URL)
+        assert response["Location"] == "/staff/support/chat/"
+        assert client.session.get("impersonation_return_path") is None
+
+    @pytest.mark.parametrize(
+        "target", ["https://evil.example/", "//evil.example/", "/\\evil.example", "/staff/team/", "javascript:alert(1)"]
+    )
+    def test_anything_but_a_product_page_lands_on_the_home(self, client, operator, customer, target):
+        client.force_login(operator)
+
+        response = client.post(_start_url(customer), {"next": target, "return": "https://evil.example/"})
+
+        assert response["Location"] == "/"
+        assert client.post(STOP_URL)["Location"] == reverse("billing_staff:staff_console")

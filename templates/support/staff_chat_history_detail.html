@@ -1,0 +1,71 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+One chat for the team, read only: the messages and, on the side, the
+customer, their device and the pages they went through during it. An open
+chat is answered from the console.
+{% endcomment %}
+{% block title %}{% translate "Chat history" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <p class="text-sm text-neutral-600 mb-1"><a href="{% url 'support_staff:chat' %}" class="hover:text-brand-700">{% translate "Live chat" %}</a> / <a href="{% url 'support_staff:chat_history' %}" class="hover:text-brand-700">{% translate "Chat history" %}</a></p>
+    <h1 class="page-title">{{ chat.visitor.display_name }}</h1>
+    <p class="page-description flex flex-wrap items-center gap-2">
+      {% include "support/partials/_chat_status_pill.html" %}
+      <span>{{ chat.created_at|date:"d/m/Y H:i" }}{% if chat.closed_at %} – {{ chat.closed_at|date:"H:i" }}{% endif %}{% if chat.agent %} · {% blocktranslate with name=chat.agent.display_name %}answered by {{ name }}{% endblocktranslate %}{% endif %}</span>
+    </p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    {% if chat.ticket_id %}<a href="{% url 'support_staff:ticket' ticket_id=chat.ticket_id %}" class="btn-outline">{% blocktranslate with number=chat.ticket_id %}Open ticket #{{ number }}{% endblocktranslate %}</a>{% endif %}
+    {% if chat.status != "closed" %}<a href="{% url 'support_staff:chat' %}" class="btn-brand">{% translate "Answer in the console" %}</a>{% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+  <div class="a-card p-5 sm:p-6 min-w-0">
+    {% include "support/partials/_conversation.html" with staff=True requester=chat.visitor %}
+    {% if not thread %}<p class="text-sm text-neutral-600">{% translate "No messages in this conversation." %}</p>{% endif %}
+  </div>
+
+  <aside class="space-y-4">
+    <div class="a-card p-4">
+      <h2 class="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-2">{% translate "Customer" %}</h2>
+      <p class="text-sm font-semibold text-neutral-950">{{ chat.visitor.display_name }}</p>
+      <p class="text-sm text-neutral-600 break-all">{{ chat.visitor.email }}</p>
+      {% if chat.organization %}
+      <p class="text-sm pt-1"><a href="{% url 'billing_staff:account' org_id=chat.organization_id %}" class="text-brand-700 hover:underline">{{ chat.organization.name }}</a>{% if chat.workspace %}<span class="text-neutral-500"> · {{ chat.workspace.name }}</span>{% endif %}</p>
+      {% endif %}
+    </div>
+
+    <div class="a-card p-4">
+      <h2 class="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-2">{% translate "Device" %}</h2>
+      <dl class="text-sm grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+        <dt class="text-neutral-500">{% translate "Browser" %}</dt><dd class="text-neutral-900">{{ chat.browser|default:"—" }}</dd>
+        <dt class="text-neutral-500">{% translate "System" %}</dt><dd class="text-neutral-900">{{ chat.operating_system|default:"—" }}</dd>
+        <dt class="text-neutral-500">{% translate "Type" %}</dt><dd class="text-neutral-900">{% if chat.device == "mobile" %}{% translate "Mobile phone" %}{% elif chat.device == "tablet" %}{% translate "Tablet" %}{% elif chat.device == "desktop" %}{% translate "Computer" %}{% else %}—{% endif %}</dd>
+        <dt class="text-neutral-500">{% translate "Screen" %}</dt><dd class="text-neutral-900">{{ chat.screen|default:"—" }}</dd>
+        <dt class="text-neutral-500">{% translate "Language" %}</dt><dd class="text-neutral-900">{{ chat.browser_language|default:"—" }}</dd>
+      </dl>
+    </div>
+
+    {% if visits %}
+    <div class="a-card p-4">
+      <h2 class="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-3">{% translate "Pages visited" %}</h2>
+      <ol class="relative border-l border-neutral-300 ml-1 space-y-3">
+        {% for visit in visits %}
+        <li class="pl-4 relative">
+          <span class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-white" style="background: var(--neutral-400);"></span>
+          <p class="text-xs font-medium text-neutral-800 break-words">{{ visit.short_title|default:visit.path }}</p>
+          <p class="text-[11px] text-neutral-500">{{ visit.created_at|date:"H:i" }} · <span class="font-mono break-all">{{ visit.path }}</span></p>
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

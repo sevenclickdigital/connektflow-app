@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% comment %}
+The quick tutorials (``kind`` "videos": the tutorials with a video, as video
+cards) or the user guide ("guides": those with a step-by-step text, as rows),
+each opening the tutorial's page. Under them, the way to the team when the
+answer is not there. Expects ``kind``, ``page_title``, ``page_text`` and ``items``
+(apps.onboarding.help_videos.tutorials).
+{% endcomment %}
+{% block title %}{{ page_title }} - {% translate "Help centre" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <p class="text-sm text-neutral-600 mb-1"><a href="{% url 'support:help' %}" class="hover:text-brand-700">{% translate "Help centre" %}</a></p>
+    <h1 class="page-title">{{ page_title }}</h1>
+    <p class="page-description">{{ page_text }}</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if items %}
+  {% if kind == "videos" %}
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {% for item in items %}
+    <a href="{% url 'support:tutorial' page=item.page %}" class="a-card a-card-hover overflow-hidden flex flex-col">
+      <span class="relative block aspect-video bg-neutral-950">
+        <img src="{{ item.thumbnail_url }}" alt="" loading="lazy" class="w-full h-full object-cover opacity-90">
+        <span class="absolute inset-0 flex items-center justify-center">
+          <span class="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+            <svg class="w-5 h-5 text-brand-700 ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10.5-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg>
+          </span>
+        </span>
+      </span>
+      <span class="p-4 text-sm font-semibold text-neutral-950">{{ item.title }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="grid gap-3 sm:grid-cols-2">
+    {% for item in items %}{% include "support/partials/_tutorial_row.html" %}{% endfor %}
+  </div>
+  {% endif %}
+{% else %}
+<div class="a-card px-6 py-10 text-center text-sm text-neutral-600">{% translate "The tutorials are on their way." %}</div>
+{% endif %}
+
+<div class="a-card mt-10 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+  <div>
+    <p class="text-base font-bold text-neutral-950">{% translate "Didn't find what you were looking for?" %}</p>
+    <p class="text-sm text-neutral-600 mt-1">{% translate "Talk to us in the chat, or open a ticket and we'll answer by e-mail." %}</p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <button type="button" @click="window.dispatchEvent(new CustomEvent('support-chat-open'))" class="btn-outline">{% translate "Talk to the team" %}</button>
+    <a href="{% url 'support:ticket_new' %}" class="btn-brand">{% translate "Open a ticket" %}</a>
+  </div>
+</div>
+{% endblock %}

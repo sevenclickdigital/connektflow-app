@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% comment %}
+The person's own tickets, newest activity first; "New reply" marks one the
+team answered since they last opened it (services.has_news).
+{% endcomment %}
+{% block title %}{% translate "My tickets" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <p class="text-sm text-neutral-600 mb-1"><a href="{% url 'support:help' %}" class="hover:text-brand-700">{% translate "Help centre" %}</a></p>
+    <h1 class="page-title">{% translate "My tickets" %}</h1>
+    <p class="page-description">{% translate "Everything you asked our team, and where each request stands." %}</p>
+  </div>
+  <a href="{% url 'support:ticket_new' %}" class="btn-brand">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    {% translate "Open a ticket" %}
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="a-card overflow-hidden">
+  {% for ticket in tickets %}
+  <a href="{% url 'support:ticket' ticket_id=ticket.pk %}" class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-5 py-4 hover:bg-neutral-50 {% if not forloop.first %}border-t border-neutral-300{% endif %}">
+    <span class="text-xs font-mono text-neutral-500 sm:w-14 flex-shrink-0">#{{ ticket.pk }}</span>
+    <span class="flex-1 min-w-0">
+      <span class="block text-sm font-semibold text-neutral-950 truncate">{{ ticket.subject }}</span>
+      <span class="block text-xs text-neutral-600 mt-0.5">{{ ticket.get_kind_display }} · {% blocktranslate with when=ticket.last_activity_at|timesince %}{{ when }} ago{% endblocktranslate %}</span>
+    </span>
+    <span class="flex items-center gap-2 flex-shrink-0">
+      {% if ticket.has_news %}<span class="pill pill-brand"><i></i>{% translate "New reply" %}</span>{% endif %}
+      {% include "support/partials/_status_pill.html" %}
+    </span>
+  </a>
+  {% empty %}
+  <div class="px-6 py-10 text-center">
+    <p class="text-sm text-neutral-600">{% translate "You haven't opened any ticket yet." %}</p>
+    <a href="{% url 'support:ticket_new' %}" class="btn-outline mt-4">{% translate "Open a ticket" %}</a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

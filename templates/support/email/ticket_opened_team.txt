@@ -1,0 +1,11 @@
+{% extends "emails/base.txt" %}
+{% load i18n %}
+{% block content %}{% blocktranslate with name=requester_name email=requester_email %}{{ name }} ({{ email }}) opened a ticket.{% endblocktranslate %}
+
+{% translate "Subject" %}: {{ ticket.subject }}
+{% translate "Type" %}: {{ kind }}
+
+{{ message }}
+
+{% translate "Open the ticket" %}: {{ review_url }}{% endblock %}
+{% block reason %}{% translate "You're receiving this because you are part of the Connekt Flow team." %}{% endblock %}

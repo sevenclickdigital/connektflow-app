@@ -1,19 +1,21 @@
 {% extends "layouts/admin_shell.html" %}
 {% load i18n %}
 {% comment %}
-Help videos: one YouTube link per page, opened by the "See how it works"
-button of that page's banner (composer/partials/_ideas_hero.html) for every
-brand. Saving an empty link removes the page's video, and the button with it.
+The pages' tutorials: one YouTube link per page, opened by the "See how it
+works" button of that page's banner (composer/partials/_ideas_hero.html) for
+every brand and listed in the help centre (apps.support), where "Write text"
+adds a step-by-step text under the video (staff_tutorial_edit.html). Saving
+an empty link removes the page's video, and the banner's button with it.
 
 Access is is_staff (apps.onboarding.staff_views, through staff_required).
 {% endcomment %}
 
-{% block title %}{% translate "Help videos" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+{% block title %}{% translate "Tutorials" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
 
 {% block page_header %}
 <div class="page-header">
-  <h1 class="page-title">{% translate "Help videos" %}</h1>
-  <p class="page-description">{% translate "The video each page's banner opens in “See how it works”. Paste a YouTube link; leave it empty to hide the button." %}</p>
+  <h1 class="page-title">{% translate "Tutorials" %}</h1>
+  <p class="page-description">{% translate "The video each page's banner opens in “See how it works”, also listed in the help centre. Paste a YouTube link; leave it empty to hide the button. Add a text to go with it under the video." %}</p>
 </div>
 {% endblock %}
 
@@ -27,6 +29,7 @@ Access is is_staff (apps.onboarding.staff_views, through staff_required).
       <label for="video_{{ page.key }}" class="text-sm font-semibold text-neutral-950">{{ page.label }}</label>
       <p class="mt-1">
         {% if page.video_url %}<span class="pill pill-success"><i></i>{% translate "With video" %}</span>{% else %}<span class="text-xs text-neutral-600">{% translate "No video" %}</span>{% endif %}
+        {% if page.has_text %}<span class="pill pill-brand"><i></i>{% translate "With text" %}</span>{% endif %}
       </p>
     </div>
     <input type="url" id="video_{{ page.key }}" name="video_url" value="{{ page.video_url }}" maxlength="300"
@@ -35,6 +38,7 @@ Access is is_staff (apps.onboarding.staff_views, through staff_required).
       {% if page.video_url %}
       <a href="{{ page.video_url }}" target="_blank" rel="noopener noreferrer" class="btn-ghost">{% translate "Open" %}</a>
       {% endif %}
+      <a href="{% url 'onboarding_staff:tutorial_edit' page=page.key %}" class="btn-ghost">{% if page.has_text %}{% translate "Edit text" %}{% else %}{% translate "Write text" %}{% endif %}</a>
       <button type="submit" class="btn-brand">{% translate "Save" %}</button>
     </div>
   </form>

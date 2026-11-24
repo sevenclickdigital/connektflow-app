@@ -1,0 +1,302 @@
+{% load i18n support_tags %}
+{% comment %}
+The live chat: a small button in the bottom-right corner of every page and
+the conversation panel it opens. Drawn only for a customer in their own
+account ({% support_chat %}).
+
+The conversation lives on the server (support.Chat), so it carries on from
+page to page: each page asks for it again and, while a chat is open, polls
+every few seconds (only while the tab is visible) and reports the page it
+is on to the team (``chat/visit/``; never shown back to the visitor). The
+panel's open or closed state is kept for the tab in sessionStorage.
+
+With nobody on the team's console, the first message becomes a ticket
+(services.visitor_writes) and the panel says so. The "support-chat-open"
+window event opens the panel from elsewhere (the help centre). "End" asks
+first and then minimises the panel; past chats are in My conversations
+(support:chats).
+
+Every user-visible text is translated here and handed over in
+#support-chat-strings; messages are escaped and only their formatting marks
+become tags (support/partials/_message_format.html).
+{% endcomment %}
+{% support_chat as chat %}
+{% if chat is not None %}
+<script type="application/json" id="support-chat-strings">{
+  "online": "{% filter escapejs %}{% translate 'Our team is online' %}{% endfilter %}",
+  "offline": "{% filter escapejs %}{% translate 'Our team is offline now' %}{% endfilter %}",
+  "queued": "{% filter escapejs %}{% translate 'You are number %(n)s in the queue' %}{% endfilter %}",
+  "next": "{% filter escapejs %}{% translate 'You are next in the queue' %}{% endfilter %}",
+  "active": "{% filter escapejs %}{% translate '%(name)s is answering you' %}{% endfilter %}",
+  "sendError": "{% filter escapejs %}{% translate 'The message was not sent. Try again.' %}{% endfilter %}",
+  "offlineError": "{% filter escapejs %}{% translate 'No connection to the server. Check your internet and try again.' %}{% endfilter %}",
+  "you": "{% filter escapejs %}{% translate 'You' %}{% endfilter %}",
+  "confirmEnd": "{% filter escapejs %}{% translate 'End this conversation?' %}{% endfilter %}"
+}</script>
+<div x-data="supportChat" data-state-url="{% url 'support:chat_state' %}" data-send-url="{% url 'support:chat_send' %}"
+     data-visit-url="{% url 'support:chat_visit' %}" data-close-url="{% url 'support:chat_close' %}"
+     data-has-chat="{% if chat.status %}1{% endif %}"
+     @support-chat-open.window="openPanel()" @keydown.escape.window="open && (open = false)"
+     class="fixed z-[150] bottom-4 right-4 sm:bottom-5 sm:right-5 flex flex-col items-end gap-3 print:hidden">
+
+  <section x-show="open" x-cloak
+           x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+           x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0 translate-y-2"
+           class="w-[calc(100vw-2rem)] sm:w-[22rem] h-[min(34rem,calc(100vh-7rem))] flex flex-col rounded-2xl border border-neutral-300 bg-white shadow-2xl overflow-hidden origin-bottom-right"
+           role="dialog" aria-label="{% translate 'Chat with support' %}">
+    <header class="px-4 py-3 bg-brand-700 text-white flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <p class="text-sm font-semibold">{% translate "Connekt Flow support" %}</p>
+        <p class="text-xs text-white/80 mt-0.5 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full flex-shrink-0" :style="'background:' + statusDot"></span>
+          <span x-text="statusLine" class="truncate"></span>
+        </p>
+      </div>
+      <div class="flex items-center gap-1 flex-shrink-0">
+        <button type="button" x-show="chat" @click="endChat($el)" class="text-xs font-semibold px-2 py-1 rounded-md hover:bg-white/15"
+                data-confirm-body="{% translate 'You can read it again any time in My conversations, in the help centre.' %}"
+                data-confirm-label="{% translate 'End conversation' %}">{% translate "End" %}</button>
+        <button type="button" @click="open = false" class="p-1.5 rounded-md hover:bg-white/15" title="{% translate 'Minimise' %}" aria-label="{% translate 'Minimise' %}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div x-ref="scroller" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-neutral-50">
+      <div class="rounded-2xl bg-white border border-neutral-300 px-4 py-3 text-sm text-neutral-800">
+        <p class="font-semibold text-neutral-950">{% blocktranslate with name=request.user.greeting_name %}Hi, {{ name }}! How can we help?{% endblocktranslate %}</p>
+        <p class="mt-1 text-neutral-600" x-show="online || chat">{% translate "Write your question and someone from our team will answer you here." %}</p>
+        <p class="mt-1 text-neutral-600" x-show="!online && !chat">{% translate "Leave your message: it becomes a ticket and we answer by e-mail." %}</p>
+        <p class="mt-2 text-xs flex flex-wrap gap-x-3 gap-y-1">
+          <a href="{% url 'support:help' %}" class="text-brand-700 font-semibold hover:underline">{% translate "See tutorials and frequent questions" %}</a>
+          <a href="{% url 'support:chats' %}" class="text-brand-700 font-semibold hover:underline">{% translate "My conversations" %}</a>
+        </p>
+      </div>
+
+      <template x-for="message in messages" :key="message.id">
+        <div class="flex" :class="message.from_team ? 'justify-start' : 'justify-end'">
+          <div class="max-w-[85%]">
+            <p class="text-[11px] text-neutral-500 mb-0.5" :class="!message.from_team && 'text-right'"
+               x-text="(message.from_team ? message.author : strings.you) + ' · ' + message.at"></p>
+            <div class="message-text rounded-2xl px-3.5 py-2 text-sm whitespace-pre-line break-words"
+                 :class="message.from_team ? 'bg-white border border-neutral-300 text-neutral-900' : 'bg-brand-700 text-white'"
+                 x-html="cfMessageFormat.render(message.body)"></div>
+          </div>
+        </div>
+      </template>
+
+      <div x-show="ended" x-cloak class="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-700">
+        <p x-show="!ticket">{% translate "This conversation has ended. Write again whenever you need us." %}</p>
+        <p x-show="ticket">
+          {% translate "We'll carry on with this through a ticket:" %}
+          <a :href="ticket && ticket.url" class="font-semibold text-brand-700 hover:underline" x-text="ticket && ('#' + ticket.number)"></a>
+        </p>
+        <button type="button" x-show="ticket" @click="restart()" class="btn-link mt-2 text-sm">{% translate "Start a new conversation" %}</button>
+      </div>
+    </div>
+
+    <form x-show="!ticket" @submit.prevent="send()" class="border-t border-neutral-300 p-3 flex items-end gap-2 bg-white">
+      <label for="support-chat-input" class="sr-only">{% translate "Message" %}</label>
+      <textarea id="support-chat-input" x-ref="input" x-model="draft" rows="1" maxlength="2000"
+                @keydown="cfMessageFormat.keydown($event, $el)"
+                @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); send() }"
+                @input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 120) + 'px'"
+                placeholder="{% translate 'Write a message' %}"
+                class="flex-1 resize-none rounded-xl border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:border-brand-700 max-h-[120px]"></textarea>
+      <button type="submit" :disabled="sending || !draft.trim()" class="btn-brand !px-3 !py-2 disabled:opacity-50" title="{% translate 'Send' %}" aria-label="{% translate 'Send' %}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+    </form>
+    <p x-show="error" x-cloak x-text="error" class="px-3 pb-2 text-xs" style="color: var(--error-700);"></p>
+  </section>
+
+  <button type="button" @click="open ? (open = false) : openPanel()"
+          class="relative w-12 h-12 rounded-full bg-brand-700 text-white shadow-lg hover:shadow-xl hover:scale-105 transition flex items-center justify-center"
+          :aria-expanded="open" title="{% translate 'Chat with support' %}" aria-label="{% translate 'Chat with support' %}">
+    <svg x-show="!open" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    <svg x-show="open" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    <span x-show="unread && !open" x-cloak x-text="unread"
+          class="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full text-[11px] font-bold flex items-center justify-center text-white" style="background: var(--error-500);"></span>
+  </button>
+</div>
+
+{% include "support/partials/_message_format.html" %}
+<script nonce="{{ request.csp_nonce }}">
+document.addEventListener('alpine:init', function () {
+  Alpine.data('supportChat', function () {
+    var POLL_MS = 3000;
+    var OPEN_KEY = 'cf:support-chat-open';
+    return {
+      strings: JSON.parse(document.getElementById('support-chat-strings').textContent),
+      open: false,
+      online: true,
+      chat: null,
+      messages: [],
+      lastId: 0,
+      unread: 0,
+      draft: '',
+      sending: false,
+      error: '',
+      ended: false,
+      ticket: null,
+      timer: null,
+
+      init: function () {
+        this.open = sessionStorage.getItem(OPEN_KEY) === '1';
+        this.$watch('open', (value) => {
+          sessionStorage.setItem(OPEN_KEY, value ? '1' : '0');
+          if (value) { this.unread = 0; this.scrollDown(); this.$nextTick(() => this.$refs.input.focus()); }
+        });
+        if (this.$root.dataset.hasChat) {
+          this.post(this.$root.dataset.visitUrl, { path: location.pathname + location.search, title: document.title });
+          this.refresh();
+          this.startPolling();
+        } else if (this.open) {
+          this.refresh();
+        }
+        document.addEventListener('visibilitychange', () => { if (!document.hidden && this.chat) this.refresh(); });
+      },
+
+      openPanel: function () {
+        this.open = true;
+        if (!this.chat) this.refresh();
+      },
+
+      get statusDot() {
+        return this.online || this.chat ? 'var(--success-500)' : 'var(--neutral-400)';
+      },
+
+      get statusLine() {
+        if (this.chat && this.chat.status === 'active') return this.strings.active.replace('%(name)s', this.chat.agent);
+        if (this.chat && this.chat.status === 'queued') {
+          return this.chat.position > 1 ? this.strings.queued.replace('%(n)s', this.chat.position) : this.strings.next;
+        }
+        return this.online ? this.strings.online : this.strings.offline;
+      },
+
+      startPolling: function () {
+        if (this.timer) return;
+        this.timer = setInterval(() => { if (!document.hidden) this.refresh(); }, POLL_MS);
+      },
+
+      stopPolling: function () {
+        clearInterval(this.timer);
+        this.timer = null;
+      },
+
+      refresh: function () {
+        return fetch(this.$root.dataset.stateUrl + '?after=' + this.lastId, { headers: { Accept: 'application/json' } })
+          .then((response) => response.ok ? response.json() : null)
+          .then((state) => { if (state) this.apply(state); })
+          .catch(() => {});
+      },
+
+      apply: function (state) {
+        this.online = state.online;
+        if (state.chat) {
+          this.chat = state.chat;
+          this.ended = false;
+          this.addMessages(state.messages);
+          this.startPolling();
+        } else {
+          if (state.ended) {
+            this.addMessages(state.ended.messages || []);
+            if (this.chat || state.ended.ticket) {
+              this.ended = true;
+              this.ticket = state.ended.ticket;
+            }
+          }
+          this.chat = null;
+          this.stopPolling();
+        }
+        if (state.ticket) { this.ended = true; this.ticket = state.ticket; }
+      },
+
+      addMessages: function (list) {
+        var fresh = list.filter((m) => m.id > this.lastId);
+        if (!fresh.length) return;
+        this.messages = this.messages.concat(fresh);
+        this.lastId = fresh[fresh.length - 1].id;
+        if (!this.open) this.unread += fresh.filter((m) => m.from_team).length;
+        this.scrollDown();
+      },
+
+      scrollDown: function () {
+        this.$nextTick(() => { var el = this.$refs.scroller; el.scrollTop = el.scrollHeight; });
+      },
+
+      send: function () {
+        var body = this.draft.trim();
+        if (!body || this.sending) return;
+        if (this.ended && !this.chat) this.restart();
+        this.sending = true;
+        this.error = '';
+        this.post(this.$root.dataset.sendUrl + '?after=' + this.lastId, {
+          body: body, path: location.pathname + location.search, title: document.title,
+          screen: window.innerWidth + 'x' + window.innerHeight, language: navigator.language || '',
+        })
+          .then((response) => response.json()
+            .then((data) => ({ ok: response.ok, data: data }))
+            .catch(() => ({ ok: false, data: {} })))
+          .then((result) => {
+            if (!result.ok) { this.error = result.data.error || this.strings.sendError; return; }
+            this.draft = '';
+            this.$refs.input.style.height = 'auto';
+            if (result.data.ticket) {
+              this.addLocal(body);
+            }
+            this.apply(result.data);
+          })
+          .catch(() => { this.error = navigator.onLine === false ? this.strings.offlineError : this.strings.sendError; })
+          .finally(() => { this.sending = false; });
+      },
+
+      addLocal: function (body) {
+        // The message became a ticket: there is no chat to read it back from.
+        var now = new Date();
+        this.messages = this.messages.concat([{ id: 'local-' + now.getTime(), body: body, from_team: false, author: '',
+          at: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') }]);
+        this.scrollDown();
+      },
+
+      restart: function () {
+        this.messages = [];
+        this.lastId = 0;
+        this.ended = false;
+        this.ticket = null;
+        this.$nextTick(() => this.$refs.input.focus());
+      },
+
+      endChat: function (el) {
+        // Asked first (the app's dialog); once ended, the panel minimises itself.
+        window.dispatchEvent(new CustomEvent('app-confirm', { detail: { el: el, question: this.strings.confirmEnd, proceed: () => {
+          this.post(this.$root.dataset.closeUrl, {}).then(() => {
+            this.chat = null;
+            this.ended = true;
+            this.ticket = null;
+            this.stopPolling();
+            this.open = false;
+          });
+        } } }));
+      },
+
+      csrf: function () {
+        // The page's token, or the cookie's when a page was drawn without the field.
+        var field = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (field) return field.value;
+        var match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+      },
+
+      post: function (url, fields) {
+        return fetch(url, {
+          method: 'POST',
+          body: new URLSearchParams(fields),
+          headers: { 'X-CSRFToken': this.csrf() },
+        });
+      },
+    };
+  });
+});
+</script>
+{% endif %}

@@ -1,0 +1,11 @@
+{% extends "emails/base.txt" %}
+{% load i18n %}
+{% block content %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}
+
+{% blocktranslate with subject=ticket.subject %}Our team answered your ticket “{{ subject }}”:{% endblocktranslate %}
+
+{{ reply }}
+
+{% translate "Open the ticket to reply or to see the whole conversation." %}
+{{ ticket_url }}{% endblock %}
+{% block reason %}{% translate "You're receiving this because you opened a ticket with our support." %}{% endblock %}

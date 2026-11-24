@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% comment %}
+The person's chats with the team, newest first (services.chats_of), each
+opening its conversation. A chat that became a ticket says which.
+{% endcomment %}
+{% block title %}{% translate "My conversations" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <p class="text-sm text-neutral-600 mb-1"><a href="{% url 'support:help' %}" class="hover:text-brand-700">{% translate "Help centre" %}</a></p>
+    <h1 class="page-title">{% translate "My conversations" %}</h1>
+    <p class="page-description">{% translate "Your chats with our team, to read again whenever you need." %}</p>
+  </div>
+  <button type="button" @click="window.dispatchEvent(new CustomEvent('support-chat-open'))" class="btn-brand">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    {% translate "Talk to the team" %}
+  </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="a-card overflow-hidden">
+  {% for chat in chats %}
+  <a href="{% url 'support:chat' chat_id=chat.pk %}" class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-5 py-4 hover:bg-neutral-50 {% if not forloop.first %}border-t border-neutral-300{% endif %}">
+    <span class="text-xs text-neutral-500 sm:w-28 flex-shrink-0">{{ chat.created_at|date:"d/m/Y H:i" }}</span>
+    <span class="flex-1 min-w-0">
+      <span class="block text-sm font-semibold text-neutral-950 truncate">{{ chat.question|default:_("Conversation") }}</span>
+      <span class="block text-xs text-neutral-600 mt-0.5">
+        {% if chat.agent %}{% blocktranslate with name=chat.agent.greeting_name %}With {{ name }}{% endblocktranslate %} · {% endif %}{% blocktranslate count counter=chat.message_count %}{{ counter }} message{% plural %}{{ counter }} messages{% endblocktranslate %}
+      </span>
+    </span>
+    <span class="flex items-center gap-2 flex-shrink-0">
+      {% if chat.ticket_id %}<span class="pill pill-info">{% blocktranslate with number=chat.ticket_id %}Ticket #{{ number }}{% endblocktranslate %}</span>{% endif %}
+      {% include "support/partials/_chat_status_pill.html" %}
+    </span>
+  </a>
+  {% empty %}
+  <div class="px-6 py-10 text-center">
+    <p class="text-sm text-neutral-600">{% translate "You haven't talked to our team in the chat yet." %}</p>
+    <button type="button" @click="window.dispatchEvent(new CustomEvent('support-chat-open'))" class="btn-outline mt-4">{% translate "Talk to the team" %}</button>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

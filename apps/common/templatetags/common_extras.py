@@ -173,3 +173,11 @@ def capture(parser, token):
     nodelist = parser.parse(("endcapture",))
     parser.delete_first_token()
     return _CaptureNode(nodelist, bits[1])
+
+
+@register.filter
+def markdown(value):
+    """``{{ text|markdown }}``: the team's Markdown as safe HTML (``apps.common.rich_text``)."""
+    from apps.common.rich_text import render_markdown
+
+    return render_markdown(value or "")

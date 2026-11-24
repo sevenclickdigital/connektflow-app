@@ -67,6 +67,7 @@ from contextvars import ContextVar
 from django.contrib.auth import get_user_model, login, logout
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext_lazy
 
 from apps.accounts.models import ImpersonationSession
@@ -78,6 +79,10 @@ IMPERSONATOR_SESSION_KEY = "impersonator_user_id"
 # The open ImpersonationSession row, so stop() closes the row start()
 # opened rather than the most recent one for the pair.
 RECORD_SESSION_KEY = "impersonation_record_id"
+
+# Where the operator goes back to when the takeover ends, when it was
+# started from a screen that asked for it (the live chat console).
+RETURN_SESSION_KEY = "impersonation_return_path"
 
 # Django's own backend path. login() needs a backend when the user did
 # not arrive through authenticate(); ModelBackend is first in
@@ -281,6 +286,40 @@ def start(request, target):
     request.session[IMPERSONATOR_SESSION_KEY] = str(operator.pk)
     request.session[RECORD_SESSION_KEY] = str(record.pk)
     return record
+
+
+def _local_path(request, value: str) -> str | None:
+    value = (value or "").strip()
+    if not value.startswith("/") or value.startswith("//") or "\\" in value:
+        return None
+    if not url_has_allowed_host_and_scheme(value, allowed_hosts={request.get_host()}, require_https=False):
+        return None
+    return value
+
+
+def product_path(request, value: str) -> str | None:
+    """``value`` when it is a page of the product the takeover may open, else None.
+
+    A path on this site only (no scheme, host or ``//``), never the
+    administrative area: the operator is inside the customer's account,
+    where ``/staff/`` is closed anyway.
+    """
+    from apps.accounts.operators import STAFF_AREA_PREFIX
+
+    path = _local_path(request, value)
+    if path is None or path.startswith(f"/{STAFF_AREA_PREFIX}"):
+        return None
+    return path
+
+
+def staff_path(request, value: str) -> str | None:
+    """``value`` when it is a screen of the administrative area to come back to, else None."""
+    from apps.accounts.operators import STAFF_AREA_PREFIX
+
+    path = _local_path(request, value)
+    if path is None or not path.startswith(f"/{STAFF_AREA_PREFIX}"):
+        return None
+    return path
 
 
 def stop(request):

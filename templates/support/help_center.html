@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% load i18n static common_extras %}
+{% comment %}
+The help centre. On top, Moti's card (the same gradient as the pages' hero
+cards, composer/partials/_ideas_hero.html) with the search; then the three
+ways in, each to its own page: the quick video tutorials and the user guide
+(support/tutorial_list.html) and opening a ticket; then the frequent
+questions, which end with "I didn't find what I was looking for" and its ways
+to reach the team. A search also lists the tutorials that match
+(apps.onboarding.help_videos.tutorials). The questions are support.FaqEntry. "Talk to the team" opens the chat widget
+(support/partials/_chat_widget.html) with the "support-chat-open" event.
+{% endcomment %}
+{% block title %}{% translate "Help centre" %} - Connekt Flow{% endblock %}
+
+{% block content %}
+{% url 'support:ticket_new' as new_ticket_url %}
+<section class="relative rounded-2xl border border-brand-200/70 overflow-hidden flex items-center gap-6 px-6 sm:px-10 py-8 sm:py-10 mb-8"
+         style="background: linear-gradient(100deg, color-mix(in srgb, var(--brand-50) 45%, white) 0%, var(--brand-50) 45%, var(--brand-100) 100%);">
+  <div class="flex-1 min-w-0">
+    <h1 class="text-3xl sm:text-4xl font-bold text-neutral-950" style="letter-spacing: -0.02em;">{% translate "How can we help?" %}</h1>
+    <p class="mt-2 text-base text-neutral-600 max-w-2xl">{% translate "Find quick answers and tutorials, or open a ticket with our support team." %}</p>
+    <form method="get" class="relative mt-6" role="search">
+      <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="search" name="q" value="{{ query }}" maxlength="100" placeholder="{% translate 'Search the help…' %}"
+             aria-label="{% translate 'Search the help' %}" class="form-input-styled w-full shadow-sm" style="padding-left: 2.875rem; height: 3rem; background: white;">
+    </form>
+    <p class="mt-3 text-sm text-neutral-600">
+      <a href="{% url 'support:tickets' %}" class="inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline">
+        {% translate "My tickets" %}{% if open_tickets %}<span class="pill pill-brand">{{ open_tickets }}</span>{% endif %}
+      </a>
+      <span class="mx-2 text-neutral-300" aria-hidden="true">·</span>
+      <a href="{% url 'support:chats' %}" class="font-semibold text-brand-700 hover:underline">{% translate "My conversations" %}</a>
+    </p>
+  </div>
+  <img src="{% static 'img/moti/moti-acenando.webp' %}" alt="" class="hidden md:block h-52 -my-4 ml-6 lg:ml-16 mr-2 lg:mr-10 flex-shrink-0 drop-shadow-lg">
+</section>
+
+{% if not query %}
+<div class="grid gap-4 sm:grid-cols-3 mb-10">
+  <a href="{% url 'support:tutorials' %}" class="a-card a-card-hover p-5 flex flex-col">
+    <span class="icon-tone-brand w-11 h-11 rounded-xl flex items-center justify-center">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4.5v15a1 1 0 001.5.86l12-7.5a1 1 0 000-1.72l-12-7.5A1 1 0 006 4.5z"/></svg>
+    </span>
+    <span class="mt-4 flex items-center justify-between gap-3">
+      <span>
+        <span class="block text-base font-bold text-neutral-950">{% translate "Quick tutorials" %}</span>
+        <span class="block text-sm text-neutral-600 mt-1">{% translate "Video guides, step by step." %}</span>
+      </span>
+      <svg class="w-5 h-5 text-neutral-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+    </span>
+  </a>
+  <a href="{% url 'support:guides' %}" class="a-card a-card-hover p-5 flex flex-col">
+    <span class="icon-tone-brand w-11 h-11 rounded-xl flex items-center justify-center">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 014 4v13a3 3 0 00-3-3H2zM22 4h-6a4 4 0 00-4 4v13a3 3 0 013-3h7z"/></svg>
+    </span>
+    <span class="mt-4 flex items-center justify-between gap-3">
+      <span>
+        <span class="block text-base font-bold text-neutral-950">{% translate "User guide" %}</span>
+        <span class="block text-sm text-neutral-600 mt-1">{% translate "Learn the main features." %}</span>
+      </span>
+      <svg class="w-5 h-5 text-neutral-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+    </span>
+  </a>
+  <a href="{{ new_ticket_url }}" class="a-card a-card-hover p-5 flex flex-col">
+    <span class="icon-tone-brand w-11 h-11 rounded-xl flex items-center justify-center">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h14a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H5a2 2 0 01-2-2v-3a2 2 0 000-4z"/><path d="M9 10h6M9 14h4"/></svg>
+    </span>
+    <span class="mt-4 flex items-center justify-between gap-3">
+      <span>
+        <span class="block text-base font-bold text-neutral-950">{% translate "Open a ticket" %}</span>
+        <span class="block text-sm text-neutral-600 mt-1">{% translate "Create a ticket with our team." %}</span>
+      </span>
+      <svg class="w-5 h-5 text-neutral-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+    </span>
+  </a>
+</div>
+{% endif %}
+
+{% if query %}
+<section class="mb-10">
+  <h2 class="text-2xl font-bold text-neutral-950 mb-4" style="letter-spacing: -0.01em;">{% translate "Tutorials" %}</h2>
+  {% if tutorials %}
+  <div class="grid gap-3 sm:grid-cols-2">
+    {% for item in tutorials %}{% include "support/partials/_tutorial_row.html" %}{% endfor %}
+  </div>
+  {% else %}
+  <p class="text-sm text-neutral-600">{% translate "No tutorial matches this search." %}</p>
+  {% endif %}
+</section>
+{% endif %}
+
+<section id="faq" class="mb-10 scroll-mt-6">
+  <h2 class="text-2xl font-bold text-neutral-950 mb-4" style="letter-spacing: -0.01em;">{% translate "Main questions" %}</h2>
+  <div class="space-y-3">
+    {% for topic, entries in topics.items %}
+    {% if topics|length > 1 %}<h3 class="pt-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">{{ topic }}</h3>{% endif %}
+    {% for entry in entries %}
+    <details class="group a-card px-5 py-4" {% if query %}open{% endif %}>
+      <summary class="flex items-center justify-between gap-4 cursor-pointer list-none text-sm font-semibold text-neutral-950">
+        {{ entry.question }}
+        <svg class="w-4 h-4 flex-shrink-0 text-neutral-600 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </summary>
+      <div class="rich-text mt-3">{{ entry.answer_markdown|markdown }}</div>
+    </details>
+    {% endfor %}
+    {% empty %}
+    {% if query %}<p class="text-sm text-neutral-600">{% translate "No question matches this search." %}</p>{% endif %}
+    {% endfor %}
+
+    <details class="group a-card px-5 py-4" {% if query and not topics %}open{% endif %}>
+      <summary class="flex items-center justify-between gap-4 cursor-pointer list-none text-sm font-semibold text-neutral-950">
+        {% translate "I didn't find what I was looking for" %}
+        <svg class="w-4 h-4 flex-shrink-0 text-neutral-600 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </summary>
+      <p class="mt-3 text-sm text-neutral-600">{% translate "Talk to us in the chat, or open a ticket and we'll answer by e-mail." %}</p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button type="button" @click="window.dispatchEvent(new CustomEvent('support-chat-open'))" class="btn-outline">{% translate "Talk to the team" %}</button>
+        <a href="{{ new_ticket_url }}" class="btn-brand">{% translate "Open a ticket" %}</a>
+      </div>
+    </details>
+  </div>
+</section>
+{% endblock %}

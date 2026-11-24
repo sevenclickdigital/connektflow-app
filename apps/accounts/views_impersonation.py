@@ -48,7 +48,13 @@ def start_impersonation(request, user_id):
     if not impersonation.may_impersonate(operator, target):
         raise PermissionDenied("You may not impersonate this account.")
 
+    # Optional: the page to open inside the account (the one a customer is on
+    # in the live chat) and the screen to come back to when it ends.
+    landing = impersonation.product_path(request, request.POST.get("next", ""))
+    back = impersonation.staff_path(request, request.POST.get("return", ""))
     impersonation.start(request, target)
+    if back:
+        request.session[impersonation.RETURN_SESSION_KEY] = back
     logger.warning(
         "Impersonation started: %s is now acting as %s",
         operator.email,
@@ -58,7 +64,7 @@ def start_impersonation(request, user_id):
         request,
         _("You are now using %(email)s's account. Everything you do happens as them.") % {"email": target.email},
     )
-    return redirect("/")
+    return redirect(landing or "/")
 
 
 @login_required
@@ -75,6 +81,8 @@ def stop_impersonation(request):
         return redirect("/")
 
     impersonated_email = request.user.email
+    # Read before stop(): logging back in cycles the session.
+    back = request.session.get(impersonation.RETURN_SESSION_KEY)
     operator = impersonation.stop(request)
     if operator is None:
         # The operator's own account went away mid-takeover;
@@ -85,4 +93,4 @@ def stop_impersonation(request):
 
     logger.warning("Impersonation ended: %s stopped acting as %s", operator.email, impersonated_email)
     messages.success(request, _("You are back in your own account."))
-    return redirect("billing_staff:staff_console")
+    return redirect(back or "billing_staff:staff_console")

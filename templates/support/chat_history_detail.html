@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% comment %}
+One of the person's chats: its messages, read only. Nothing of what the team
+sees about the visit (browser, device, pages). Links to the ticket it became.
+{% endcomment %}
+{% block title %}{% translate "Conversation" %} {{ chat.created_at|date:"d/m/Y" }} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <p class="text-sm text-neutral-600 mb-1"><a href="{% url 'support:help' %}" class="hover:text-brand-700">{% translate "Help centre" %}</a> / <a href="{% url 'support:chats' %}" class="hover:text-brand-700">{% translate "My conversations" %}</a></p>
+    <h1 class="page-title">{% blocktranslate with date=chat.created_at|date:"d/m/Y H:i" %}Conversation of {{ date }}{% endblocktranslate %}</h1>
+    <p class="page-description flex flex-wrap items-center gap-2">
+      {% include "support/partials/_chat_status_pill.html" %}
+      {% if chat.agent %}<span>{% blocktranslate with name=chat.agent.greeting_name %}With {{ name }}{% endblocktranslate %}</span>{% endif %}
+    </p>
+  </div>
+  {% if chat.ticket_id %}
+  <a href="{% url 'support:ticket' ticket_id=chat.ticket_id %}" class="btn-outline">{% blocktranslate with number=chat.ticket_id %}Open ticket #{{ number }}{% endblocktranslate %}</a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+  <div class="a-card p-5 sm:p-6">
+    {% include "support/partials/_conversation.html" with staff=False requester=request.user %}
+    {% if not thread %}<p class="text-sm text-neutral-600">{% translate "No messages in this conversation." %}</p>{% endif %}
+  </div>
+  {% if chat.status == "closed" %}
+  <p class="mt-4 text-sm text-neutral-600">
+    {% translate "This conversation has ended." %}
+    <button type="button" @click="window.dispatchEvent(new CustomEvent('support-chat-open'))" class="btn-link">{% translate "Start a new conversation" %}</button>
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

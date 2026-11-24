@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% comment %}
+Opening a ticket: what it is about (support.Ticket.Kind), a subject, the
+message and, optionally, an image. Expects ``form`` (the values typed, kept
+after a refusal) and ``kinds``.
+{% endcomment %}
+{% block title %}{% translate "Open a ticket" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <p class="text-sm text-neutral-600 mb-1"><a href="{% url 'support:help' %}" class="hover:text-brand-700">{% translate "Help centre" %}</a> / <a href="{% url 'support:tickets' %}" class="hover:text-brand-700">{% translate "My tickets" %}</a></p>
+    <h1 class="page-title">{% translate "Open a ticket" %}</h1>
+    <p class="page-description">{% translate "Tell us what you need. We answer here and by e-mail." %}</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="a-card p-6 max-w-3xl space-y-6" x-data="{ kind: '{{ form.kind|escapejs }}' }">
+  {% csrf_token %}
+  <fieldset>
+    <legend class="text-sm font-semibold text-neutral-950 mb-2">{% translate "What is it about?" %}</legend>
+    <div class="grid gap-2 sm:grid-cols-2">
+      {% for value, label in kinds %}
+      <label class="chip justify-start py-3 px-4 text-sm" :class="kind === '{{ value }}' && 'active'">
+        <input type="radio" name="kind" value="{{ value }}" class="sr-only" x-model="kind" {% if form.kind == value %}checked{% endif %}>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </div>
+    <p x-show="kind === 'bug'" x-cloak class="text-xs text-neutral-600 mt-2">{% translate "Tell us what you did, what you expected and what happened instead. A screenshot helps a lot." %}</p>
+  </fieldset>
+
+  <div>
+    <label for="subject" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Subject" %}</label>
+    <input type="text" id="subject" name="subject" value="{{ form.subject }}" maxlength="200" required class="form-input-styled w-full"
+           placeholder="{% translate 'In a few words, what do you need?' %}">
+  </div>
+
+  <div>
+    <label for="body" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Message" %}</label>
+    <textarea id="body" name="body" rows="7" maxlength="4000" required class="form-input-styled w-full"
+              placeholder="{% translate 'Describe it with as much detail as you can.' %}">{{ form.body }}</textarea>
+  </div>
+
+  <div>
+    <label for="attachment" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Image (optional)" %}</label>
+    <input type="file" id="attachment" name="attachment" accept="image/png,image/jpeg,image/webp,image/gif" class="text-sm text-neutral-700">
+    <p class="text-xs text-neutral-600 mt-1">{% translate "PNG, JPEG, WebP or GIF, up to 5 MB." %}</p>
+  </div>
+
+  <div class="flex justify-end gap-2">
+    <a href="{% url 'support:tickets' %}" class="btn-ghost">{% translate "Cancel" %}</a>
+    <button type="submit" class="btn-brand">{% translate "Open ticket" %}</button>
+  </div>
+</form>
+{% endblock %}

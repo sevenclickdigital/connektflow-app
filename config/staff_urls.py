@@ -18,6 +18,7 @@ from django.urls import include, path
 urlpatterns = [
     # Customer service and billing; the bare path is Customers, the area's home.
     path("", include("apps.billing.staff_urls")),
+    path("support/", include("apps.support.staff_urls")),
     path("affiliates/", include("apps.affiliates.staff_urls")),
     # The product's own content.
     path("flow-templates/", include("apps.automations.staff_urls")),

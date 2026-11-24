@@ -1,0 +1,4 @@
+{% comment %}
+A chat's status as a pill. Expects ``chat`` (support.Chat).
+{% endcomment %}
+<span class="pill {% if chat.status == 'queued' %}pill-warning{% elif chat.status == 'active' %}pill-brand{% else %}pill-neutral{% endif %}"><i></i>{{ chat.get_status_display }}</span>

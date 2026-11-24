@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% comment %}
+One of the person's tickets: the conversation (without the team's notes) and
+the reply box. Replying to a resolved ticket reopens it (services.reply).
+{% endcomment %}
+{% block title %}#{{ ticket.pk }} {{ ticket.subject }} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div class="min-w-0">
+    <p class="text-sm text-neutral-600 mb-1"><a href="{% url 'support:help' %}" class="hover:text-brand-700">{% translate "Help centre" %}</a> / <a href="{% url 'support:tickets' %}" class="hover:text-brand-700">{% translate "My tickets" %}</a></p>
+    <h1 class="page-title break-words"><span class="text-neutral-500 font-mono text-xl">#{{ ticket.pk }}</span> {{ ticket.subject }}</h1>
+    <p class="page-description flex flex-wrap items-center gap-2">
+      {% include "support/partials/_status_pill.html" %}
+      <span>{{ ticket.get_kind_display }} · {% blocktranslate with date=ticket.created_at|date:"d/m/Y" %}opened on {{ date }}{% endblocktranslate %}</span>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+  <div class="a-card p-5 sm:p-6 mb-6">
+    {% include "support/partials/_conversation.html" with staff=False requester=ticket.requester %}
+  </div>
+
+  <form method="post" action="{% url 'support:ticket_reply' ticket_id=ticket.pk %}" enctype="multipart/form-data" class="a-card p-5 sm:p-6 space-y-4">
+    {% csrf_token %}
+    <label for="reply" class="block text-sm font-semibold text-neutral-950">{% if ticket.is_resolved %}{% translate "Still need help? Reply to reopen the ticket." %}{% else %}{% translate "Your reply" %}{% endif %}</label>
+    <textarea id="reply" name="body" rows="4" maxlength="4000" required class="form-input-styled w-full"></textarea>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <input type="file" name="attachment" accept="image/png,image/jpeg,image/webp,image/gif" class="text-sm text-neutral-700" aria-label="{% translate 'Image (optional)' %}">
+      <button type="submit" class="btn-brand">{% translate "Send reply" %}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

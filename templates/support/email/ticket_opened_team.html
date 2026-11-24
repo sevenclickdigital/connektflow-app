@@ -1,0 +1,17 @@
+{% extends "emails/base.html" %}
+{% load i18n %}
+{% block title %}{% blocktranslate with number=ticket.pk %}New ticket #{{ number }}{% endblocktranslate %}{% endblock %}
+{% block preheader %}{{ ticket.subject }}{% endblock %}
+{% block heading %}{% blocktranslate with number=ticket.pk %}New ticket #{{ number }}{% endblocktranslate %}{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with name=requester_name email=requester_email %}{{ name }} ({{ email }}) opened a ticket.{% endblocktranslate %}</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;background-color:#F5F3FF;border-radius:8px;">
+<tr><td style="padding:16px 18px;font-size:14px;line-height:22px;color:#334155;">
+<strong style="color:#0F172A;">{% translate "Subject" %}</strong><br>{{ ticket.subject }}<br><br>
+<strong style="color:#0F172A;">{% translate "Type" %}</strong><br>{{ kind }}<br><br>
+<strong style="color:#0F172A;">{% translate "Message" %}</strong><br><span style="white-space:pre-line;">{{ message }}</span>
+</td></tr>
+</table>
+{% translate "Open the ticket" as cta %}{% include "emails/_button.html" with url=review_url label=cta %}
+{% endblock %}
+{% block reason %}<p style="margin:0 0 12px;">{% translate "You're receiving this because you are part of the Connekt Flow team." %}</p>{% endblock %}

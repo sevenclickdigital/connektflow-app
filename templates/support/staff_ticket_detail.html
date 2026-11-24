@@ -1,0 +1,107 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+One ticket for the team: the whole conversation, team notes included; the
+reply box (a public reply e-mails the customer, a note stays with the team)
+and, on the side, the status, who is on it and who the customer is.
+{% endcomment %}
+{% block title %}#{{ ticket.pk }} - {% translate "Tickets" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div class="min-w-0">
+    <p class="text-sm text-neutral-600 mb-1"><a href="{% url 'support_staff:tickets' %}" class="hover:text-brand-700">{% translate "Tickets" %}</a></p>
+    <h1 class="page-title break-words"><span class="text-neutral-500 font-mono text-xl">#{{ ticket.pk }}</span> {{ ticket.subject }}</h1>
+    <p class="page-description flex flex-wrap items-center gap-2">
+      {% include "support/partials/_status_pill.html" %}
+      <span>{{ ticket.get_kind_display }} · {{ ticket.get_source_display }} · {{ ticket.created_at|date:"d/m/Y H:i" }}</span>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% include "support/partials/_message_format.html" %}
+<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+  <div class="space-y-6 min-w-0">
+    <div class="a-card p-5 sm:p-6">
+      {% include "support/partials/_conversation.html" with staff=True requester=ticket.requester %}
+    </div>
+
+    <form method="post" action="{% url 'support_staff:ticket_reply' ticket_id=ticket.pk %}" enctype="multipart/form-data"
+          class="a-card p-5 sm:p-6 space-y-4" x-data="{ internal: false }">
+      {% csrf_token %}
+      <div class="flex gap-2" role="tablist">
+        <button type="button" role="tab" @click="internal = false" :aria-selected="!internal" class="chip" :class="!internal && 'active'">{% translate "Reply to the customer" %}</button>
+        <button type="button" role="tab" @click="internal = true" :aria-selected="internal" class="chip" :class="internal && 'active'">{% translate "Team note" %}</button>
+      </div>
+      <input type="hidden" name="internal" :value="internal ? '1' : ''">
+      {% include "support/partials/_format_toolbar.html" with target="$refs.reply" %}
+      <textarea name="body" rows="5" maxlength="4000" required class="form-input-styled w-full" aria-label="{% translate 'Message' %}"
+                x-ref="reply" @keydown="cfMessageFormat.keydown($event, $el)"
+                :placeholder="internal ? '{% filter escapejs %}{% translate "Only the team sees this note." %}{% endfilter %}' : '{% filter escapejs %}{% translate "The customer gets this reply here and by e-mail." %}{% endfilter %}'"></textarea>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <input type="file" name="attachment" accept="image/png,image/jpeg,image/webp,image/gif" class="text-sm text-neutral-700" aria-label="{% translate 'Image (optional)' %}">
+        <div class="flex items-center gap-2">
+          <select name="status" class="bb-select" aria-label="{% translate 'Status after sending' %}" x-show="!internal">
+            <option value="">{% translate "Status after sending: waiting for the customer" %}</option>
+            <option value="resolved">{% translate "Status after sending: resolved" %}</option>
+            <option value="in_progress">{% translate "Status after sending: in progress" %}</option>
+          </select>
+          <button type="submit" class="btn-brand" x-text="internal ? '{% filter escapejs %}{% translate "Save note" %}{% endfilter %}' : '{% filter escapejs %}{% translate "Send reply" %}{% endfilter %}'"></button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <aside class="space-y-4">
+    <form method="post" action="{% url 'support_staff:ticket_update' ticket_id=ticket.pk %}" class="a-card p-4 space-y-3">
+      {% csrf_token %}
+      <div>
+        <label for="status" class="block text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-1.5">{% translate "Status" %}</label>
+        <select id="status" name="status" class="bb-select w-full">
+          {% for value, label in statuses %}<option value="{{ value }}" {% if ticket.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="assignee" class="block text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-1.5">{% translate "Assigned to" %}</label>
+        <select id="assignee" name="assignee" class="bb-select w-full">
+          <option value="">{% translate "Nobody" %}</option>
+          {% for member in team %}<option value="{{ member.pk }}" {% if ticket.assignee_id == member.pk %}selected{% endif %}>{{ member.display_name }}</option>{% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn-outline w-full justify-center">{% translate "Save" %}</button>
+    </form>
+
+    <div class="a-card p-4 space-y-1">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">{% translate "Customer" %}</h2>
+      <p class="text-sm font-semibold text-neutral-950">{{ ticket.requester.display_name }}</p>
+      <p class="text-sm text-neutral-600 break-all">{{ ticket.requester.email }}</p>
+      {% if ticket.organization %}
+      <p class="text-sm pt-1"><a href="{% url 'billing_staff:account' org_id=ticket.organization_id %}" class="text-brand-700 hover:underline">{{ ticket.organization.name }}</a>{% if ticket.workspace %}<span class="text-neutral-500"> · {{ ticket.workspace.name }}</span>{% endif %}</p>
+      {% endif %}
+    </div>
+
+    {% if chats %}
+    <div class="a-card p-4">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">{% translate "From the chat" %}</h2>
+      {% for chat in chats %}
+      <p class="text-sm text-neutral-700">{{ chat.browser|default:"—" }} · {{ chat.operating_system|default:"—" }}</p>
+      {% if chat.current_path %}<p class="text-xs text-neutral-500 font-mono break-all mt-1">{{ chat.current_path }}</p>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if other_tickets %}
+    <div class="a-card p-4">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">{% translate "Other tickets of this customer" %}</h2>
+      <ul class="space-y-2">
+        {% for other in other_tickets %}
+        <li><a href="{% url 'support_staff:ticket' ticket_id=other.pk %}" class="text-sm text-neutral-800 hover:text-brand-700"><span class="font-mono text-neutral-500">#{{ other.pk }}</span> {{ other.subject }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

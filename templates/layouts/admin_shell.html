@@ -41,6 +41,33 @@ decorated with ``staff_required`` or ``superadmin_required``
     <span class="sidebar-nav-label">{% translate "Access log" %}</span>
 </a>
 
+<div class="sidebar-section-label">{% translate "Support" %}</div>
+
+<a href="{% url 'support_staff:chat' %}"
+   class="sidebar-nav-item mb-1 {% if admin_active == 'support_chat' %}active{% endif %}">
+    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    <span class="sidebar-nav-label">{% translate "Live chat" %}</span>
+    <span class="sidebar-badge" data-support-pulse-badge hidden></span>
+</a>
+
+<a href="{% url 'support_staff:tickets' %}"
+   class="sidebar-nav-item mb-1 {% if admin_active == 'support_tickets' %}active{% endif %}">
+    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    <span class="sidebar-nav-label">{% translate "Tickets" %}</span>
+</a>
+
+<a href="{% url 'support_staff:faq' %}"
+   class="sidebar-nav-item mb-1 {% if admin_active == 'support_faq' %}active{% endif %}">
+    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span class="sidebar-nav-label">{% translate "Frequent questions" %}</span>
+</a>
+
+<a href="{% url 'onboarding_staff:help_videos' %}"
+   class="sidebar-nav-item mb-1 {% if admin_active == 'help_videos' %}active{% endif %}">
+    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg>
+    <span class="sidebar-nav-label">{% translate "Tutorials" %}</span>
+</a>
+
 <div class="sidebar-section-label">{% translate "Product content" %}</div>
 
 <a href="{% url 'automations_staff:template_list' %}"
@@ -65,12 +92,6 @@ decorated with ``staff_required`` or ``superadmin_required``
    class="sidebar-nav-item mb-1 {% if admin_active == 'market_hashtags' %}active{% endif %}">
     <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/></svg>
     <span class="sidebar-nav-label">{% translate "Market hashtags" %}</span>
-</a>
-
-<a href="{% url 'onboarding_staff:help_videos' %}"
-   class="sidebar-nav-item mb-1 {% if admin_active == 'help_videos' %}active{% endif %}">
-    <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg>
-    <span class="sidebar-nav-label">{% translate "Help videos" %}</span>
 </a>
 
 {% if is_superadmin %}
@@ -121,4 +142,7 @@ decorated with ``staff_required`` or ``superadmin_required``
     <span class="sidebar-nav-label">{% translate "E-mails" %}</span>
 </a>
 {% endif %}
+
+{# In the menu, which every screen of the area draws and none overrides: the chat alert of the whole area. #}
+{% include "support/partials/_staff_chat_alert.html" %}
 {% endblock %}

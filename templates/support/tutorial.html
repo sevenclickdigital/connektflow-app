@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load i18n common_extras %}
+{% comment %}
+One page's tutorial: its video (the same one the page's banner opens) and the
+team's text under it. The player is mounted only after the click, so nothing
+loads from YouTube until the person asks for the video.
+{% endcomment %}
+{% block title %}{{ tutorial.title }} - {% translate "Help centre" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <p class="text-sm text-neutral-600 mb-1"><a href="{% url 'support:help' %}" class="hover:text-brand-700">{% translate "Help centre" %}</a> / {% translate "Tutorials" %}</p>
+    <h1 class="page-title">{{ tutorial.title }}</h1>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl">
+  {% if tutorial.embed_url %}
+  <div x-data="{ playing: false }" class="a-card overflow-hidden mb-6">
+    <div class="relative aspect-video bg-neutral-950">
+      <template x-if="playing">
+        <iframe src="{{ tutorial.embed_url }}" title="{{ tutorial.title }}" class="absolute inset-0 w-full h-full block"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      </template>
+      <button type="button" x-show="!playing" @click="playing = true" class="absolute inset-0 w-full h-full group" aria-label="{% translate 'Play the video' %}">
+        <img src="{{ tutorial.thumbnail_url }}" alt="" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity">
+        <span class="absolute inset-0 flex items-center justify-center">
+          <span class="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+            <svg class="w-7 h-7 text-brand-700 ml-1" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10.5-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg>
+          </span>
+        </span>
+      </button>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if tutorial.text %}
+  <article class="a-card p-6 sm:p-8"><div class="rich-text max-w-3xl">{{ tutorial.text|markdown }}</div></article>
+  {% endif %}
+
+  <div class="mt-6 flex flex-wrap items-center gap-3 text-sm text-neutral-600">
+    {% translate "Still have questions?" %}
+    <button type="button" @click="window.dispatchEvent(new CustomEvent('support-chat-open'))" class="btn-link">{% translate "Talk to the team" %}</button>
+    <a href="{% url 'support:ticket_new' %}" class="btn-link">{% translate "Open a ticket" %}</a>
+  </div>
+</div>
+{% endblock %}

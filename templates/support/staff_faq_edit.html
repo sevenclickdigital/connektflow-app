@@ -1,0 +1,54 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n %}
+{% comment %}
+Writing a frequent question: its topic (an existing one or a new one), the
+question, the answer in Markdown and whether customers see it yet.
+{% endcomment %}
+{% block title %}{% if entry.pk %}{% translate "Edit question" %}{% else %}{% translate "New question" %}{% endif %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+  <div>
+    <p class="text-sm text-neutral-600 mb-1"><a href="{% url 'support_staff:faq' %}" class="hover:text-brand-700">{% translate "Frequent questions" %}</a></p>
+    <h1 class="page-title">{% if entry.pk %}{% translate "Edit question" %}{% else %}{% translate "New question" %}{% endif %}</h1>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="a-card p-6 max-w-3xl space-y-5">
+  {% csrf_token %}
+  <div class="grid gap-4 sm:grid-cols-[1fr_8rem]">
+    <div>
+      <label for="topic" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Topic" %}</label>
+      <input id="topic" name="topic" value="{{ entry.topic }}" maxlength="80" required list="faq-topics" class="form-input-styled w-full {% if errors.topic %}is-error{% endif %}"
+             placeholder="{% translate 'For example: Publishing, Billing, Accounts' %}">
+      <datalist id="faq-topics">{% for topic in existing_topics %}<option value="{{ topic }}">{% endfor %}</datalist>
+      {% if errors.topic %}<p class="text-xs mt-1" style="color: var(--error-700);">{{ errors.topic }}</p>{% endif %}
+    </div>
+    <div>
+      <label for="position" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Order" %}</label>
+      <input id="position" name="position" type="number" min="0" value="{{ entry.position }}" class="form-input-styled w-full">
+    </div>
+  </div>
+  <div>
+    <label for="question" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Question" %}</label>
+    <input id="question" name="question" value="{{ entry.question }}" maxlength="200" required class="form-input-styled w-full {% if errors.question %}is-error{% endif %}">
+    {% if errors.question %}<p class="text-xs mt-1" style="color: var(--error-700);">{{ errors.question }}</p>{% endif %}
+  </div>
+  <div>
+    <label for="answer" class="block text-sm font-semibold text-neutral-950 mb-1.5">{% translate "Answer" %}</label>
+    <textarea id="answer" name="answer_markdown" rows="10" required class="form-input-styled w-full font-mono text-sm {% if errors.answer_markdown %}is-error{% endif %}">{{ entry.answer_markdown }}</textarea>
+    <p class="text-xs text-neutral-600 mt-1">{% translate "Markdown: **bold**, *italic*, lists with -, links with [text](https://…) and titles with ##." %}</p>
+    {% if errors.answer_markdown %}<p class="text-xs mt-1" style="color: var(--error-700);">{{ errors.answer_markdown }}</p>{% endif %}
+  </div>
+  <label class="flex items-center gap-2 text-sm text-neutral-800">
+    <input type="checkbox" name="is_published" value="1" {% if entry.is_published %}checked{% endif %} class="rounded border-neutral-300">
+    {% translate "Published: customers see it in the help centre" %}
+  </label>
+  <div class="flex justify-end gap-2">
+    <a href="{% url 'support_staff:faq' %}" class="btn-ghost">{% translate "Cancel" %}</a>
+    <button type="submit" class="btn-brand">{% translate "Save" %}</button>
+  </div>
+</form>
+{% endblock %}

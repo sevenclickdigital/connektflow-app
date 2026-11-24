@@ -1,0 +1,78 @@
+{% load i18n %}
+{% comment %}
+The live chat's alert across the administrative area: every few seconds it
+asks how many chats wait in the queue and how many messages the agent has
+not read (support_staff:chat_pulse), shows the sum on the menu's "Live chat"
+badge and, when either grows, plays a short sound and shows a toast.
+
+The console (support/staff_chat_console.html) marks the page with
+data-support-console and alerts on its own, opening the chat's window.
+
+The sound (window.cfSupportBeep, also used by the console) is made with
+the Web Audio API, no file to load. Browsers only let a page play sound
+after the person interacted with it, so the audio is unlocked on the first
+click or key press.
+{% endcomment %}
+<span hidden id="support-alert-text"
+      data-queued="{% translate 'New chat waiting in the queue' %}"
+      data-unread="{% translate 'New message in your chats' %}"
+      data-action="{% translate 'Open Live chat in the menu to answer.' %}"></span>
+<script nonce="{{ request.csp_nonce }}">
+(function () {
+  var PULSE_MS = 6000;
+  var url = "{% url 'support_staff:chat_pulse' %}";
+  var context = null;
+  function unlock() {
+    if (!context && (window.AudioContext || window.webkitAudioContext)) {
+      context = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (context && context.state === 'suspended') context.resume();
+  }
+  document.addEventListener('click', unlock, { once: false, passive: true });
+  document.addEventListener('keydown', unlock, { once: false, passive: true });
+
+  window.cfSupportBeep = function () {
+    if (!context) return;
+    var now = context.currentTime;
+    [880, 1320].forEach(function (frequency, index) {
+      var oscillator = context.createOscillator();
+      var gain = context.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(0.0001, now + index * 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.25, now + index * 0.16 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.16 + 0.15);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(now + index * 0.16);
+      oscillator.stop(now + index * 0.16 + 0.16);
+    });
+  };
+
+  var last = null;
+  var text = document.getElementById('support-alert-text').dataset;
+  function pulse() {
+    if (document.hidden) return;
+    fetch(url, { headers: { Accept: 'application/json' } })
+      .then(function (response) { return response.ok ? response.json() : null; })
+      .then(function (data) {
+        if (!data) return;
+        var total = data.queued + data.unread;
+        document.querySelectorAll('[data-support-pulse-badge]').forEach(function (badge) {
+          badge.hidden = total === 0;
+          badge.textContent = total;
+        });
+        var onConsole = document.body.hasAttribute('data-support-console');
+        if (last && !onConsole && (data.queued > last.queued || data.unread > last.unread)) {
+          window.cfSupportBeep();
+          document.body.dispatchEvent(new CustomEvent('showToast', { detail: {
+            tone: 'info', title: data.queued > last.queued ? text.queued : text.unread, body: text.action, duration: 6000,
+          } }));
+        }
+        last = data;
+      })
+      .catch(function () {});
+  }
+  pulse();
+  setInterval(pulse, PULSE_MS);
+})();
+</script>

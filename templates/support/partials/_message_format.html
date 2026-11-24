@@ -1,0 +1,75 @@
+{% comment %}
+The support messages' formatting, as in WhatsApp: *bold*, _italic_, ~strike~,
+`code`; web addresses become links. window.cfMessageFormat:
+- render(text): the text escaped, then the marks as those few tags (for x-html);
+- wrap(textarea, mark): puts the mark around the selection, or the cursor,
+  with the browser's undo history (execCommand insertText), adding the space
+  a mark needs where it would stick to a letter;
+- keydown(event, textarea): Ctrl/⌘+B and Ctrl/⌘+I.
+Mirrors the Python filter support_tags.message_format: change both together.
+Included by the chat widget and the team's console and ticket screens; it
+defines itself once.
+{% endcomment %}
+<script nonce="{{ request.csp_nonce }}">
+window.cfMessageFormat = window.cfMessageFormat || (function () {
+  var BEFORE = '(^|[\\s(])';
+  var AFTER = '(?=$|[\\s.,!?;:)])';
+  var STYLES = [
+    [/`([^`\n]+)`/g, '<code>$1</code>'],
+    [new RegExp(BEFORE + '\\*(\\S(?:[^*\\n]*\\S)?)\\*' + AFTER, 'g'), '$1<strong>$2</strong>'],
+    [new RegExp(BEFORE + '_(\\S(?:[^_\\n]*\\S)?)_' + AFTER, 'g'), '$1<em>$2</em>'],
+    [new RegExp(BEFORE + '~(\\S(?:[^~\\n]*\\S)?)~' + AFTER, 'g'), '$1<s>$2</s>'],
+  ];
+  var LINK = /(^|[\s(])(https?:\/\/[^\s<]+[^\s<.,!?;:)])/g;
+
+  function escape(text) {
+    return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+  }
+
+  function render(text) {
+    var html = escape(text);
+    STYLES.forEach(function (style) { html = html.replace(style[0], style[1]); });
+    return html.replace(LINK, '$1<a href="$2" target="_blank" rel="noopener noreferrer" class="underline">$2</a>');
+  }
+
+  function wrap(textarea, mark) {
+    if (!textarea) return;
+    var value = textarea.value;
+    var start = textarea.selectionStart;
+    var end = textarea.selectionEnd;
+    // Spaces caught at the selection's ends stay outside the marks.
+    while (start < end && /\s/.test(value[start])) start++;
+    while (end > start && /\s/.test(value[end - 1])) end--;
+    var selected = value.slice(start, end);
+    // A mark only counts beside a space or punctuation (as in render): add a
+    // space where it would stick to a letter, so "word" + B gives "word *…*".
+    var before = start > 0 ? value[start - 1] : '';
+    var after = end < value.length ? value[end] : '';
+    var prefix = before && !/[\s(]/.test(before) ? ' ' : '';
+    var suffix = after && !/[\s.,!?;:)]/.test(after) ? ' ' : '';
+    var text = prefix + mark + selected + mark + suffix;
+    textarea.focus();
+    textarea.setSelectionRange(start, end);
+    if (!document.execCommand('insertText', false, text)) {
+      textarea.setRangeText(text, start, end, 'end');
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    // Nothing selected: the cursor goes between the marks, ready to type.
+    if (!selected) {
+      var inside = start + prefix.length + mark.length;
+      textarea.setSelectionRange(inside, inside);
+    }
+  }
+
+  function keydown(event, textarea) {
+    if (!(event.ctrlKey || event.metaKey)) return;
+    var mark = { b: '*', i: '_' }[event.key.toLowerCase()];
+    if (!mark) return;
+    event.preventDefault();
+    wrap(textarea, mark);
+  }
+
+  return { render: render, wrap: wrap, keydown: keydown };
+})();
+</script>
