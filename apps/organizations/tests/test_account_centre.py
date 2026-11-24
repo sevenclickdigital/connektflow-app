@@ -46,11 +46,11 @@ def test_a_brand_manager_sets_the_brand_timezone(client):
     client.force_login(user)
     url = reverse("workspaces:settings", kwargs={"workspace_id": workspace.id})
 
-    client.post(url, {"action": "update_timezone", "timezone": "America/Manaus"})
+    client.post(url, {"action": "update_general", "timezone": "America/Manaus"})
     workspace.refresh_from_db()
     assert workspace.timezone == "America/Manaus"
 
-    client.post(url, {"action": "update_timezone", "timezone": "Mars/Olympus"})
+    client.post(url, {"action": "update_general", "timezone": "Mars/Olympus"})
     workspace.refresh_from_db()
     assert workspace.timezone == "America/Manaus"
 
@@ -66,7 +66,7 @@ def test_a_viewer_cannot_set_the_brand_timezone(client):
 
     client.post(
         reverse("workspaces:settings", kwargs={"workspace_id": workspace.id}),
-        {"action": "update_timezone", "timezone": "America/Manaus"},
+        {"action": "update_general", "timezone": "America/Manaus"},
     )
 
     workspace.refresh_from_db()

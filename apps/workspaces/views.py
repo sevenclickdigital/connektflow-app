@@ -140,25 +140,28 @@ def workspace_settings(request, workspace_id):
             )
             return redirect("organizations:workspaces")
 
-        if action == "update_timezone" and is_owner_or_manager:
-            tz = request.POST.get("timezone", "").strip()
-            if tz not in available_timezones():
-                messages.error(request, _("Invalid timezone."))
-            else:
-                workspace.timezone = tz
-                workspace.save(update_fields=["timezone"])
-                messages.success(request, _("Timezone updated."))
-            return redirect("workspaces:settings", workspace_id=workspace.id)
-
-        if action == "update_segments" and is_owner_or_manager:
+        if action == "update_general":
+            # The name, the timezone and the segments are one form with one
+            # save: either all of it is stored or none.
             from apps.calendar.services import set_date_segments
 
+            name = request.POST.get("name", "").strip()
+            tz = request.POST.get("timezone", "").strip()
+            if tz and tz not in available_timezones():
+                messages.error(request, _("Invalid timezone."))
+                return redirect("workspaces:settings", workspace_id=workspace.id)
             try:
-                set_date_segments(workspace, request.POST.getlist("segments"))
+                with transaction.atomic():
+                    set_date_segments(workspace, request.POST.getlist("segments"))
+                    if name:
+                        workspace.name = name
+                    if tz:
+                        workspace.timezone = tz
+                    workspace.save(update_fields=["name", "timezone", "updated_at"])
             except (ValidationError, ValueError):
                 messages.error(request, _("Invalid segment."))
             else:
-                messages.success(request, _("Segments updated."))
+                messages.success(request, _("Workspace settings updated."))
             return redirect("workspaces:settings", workspace_id=workspace.id)
 
         name = request.POST.get("name", "").strip()
@@ -219,7 +222,6 @@ def workspace_settings(request, workspace_id):
             "timezone_is_brazilian": workspace.effective_timezone in dict(BRAZIL_TIMEZONES),
             "all_timezones": sorted(available_timezones()),
             "date_segments": date_segments_for(workspace),
-            "approval_modes": Workspace.ApprovalWorkflowMode,
         },
     )
 
@@ -227,11 +229,7 @@ def workspace_settings(request, workspace_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def approvals_settings(request, workspace_id):
-    """Save the brand's approval flow, which is edited on the General page.
-
-    A GET lands on that section of the General page, so the brand card's
-    "Approvals" shortcut and saved links keep working.
-    """
+    """The brand's approval flow: everyone in the brand sees it, owners and managers change it."""
     try:
         workspace = Workspace.objects.get(id=workspace_id)
     except Workspace.DoesNotExist:
@@ -241,11 +239,13 @@ def approvals_settings(request, workspace_id):
     if not membership:
         raise Http404
 
+    is_owner_or_manager = membership.workspace_role in (
+        WorkspaceMembership.WorkspaceRole.OWNER,
+        WorkspaceMembership.WorkspaceRole.MANAGER,
+    )
+
     if request.method == "POST":
-        if membership.workspace_role not in (
-            WorkspaceMembership.WorkspaceRole.OWNER,
-            WorkspaceMembership.WorkspaceRole.MANAGER,
-        ):
+        if not is_owner_or_manager:
             raise Http404
 
         mode = request.POST.get("approval_workflow_mode", "")
@@ -255,8 +255,18 @@ def approvals_settings(request, workspace_id):
             workspace.approval_workflow_mode = mode
             workspace.save(update_fields=["approval_workflow_mode", "updated_at"])
             messages.success(request, _("Approval workflow updated."))
+        return redirect("workspaces:approvals_settings", workspace_id=workspace.id)
 
-    return redirect(reverse("workspaces:settings", kwargs={"workspace_id": workspace.id}) + "#approval-flow")
+    return render(
+        request,
+        "workspaces/approvals.html",
+        {
+            "workspace": workspace,
+            "settings_active": "approvals",
+            "is_owner_or_manager": is_owner_or_manager,
+            "approval_modes": Workspace.ApprovalWorkflowMode,
+        },
+    )
 
 
 def _pending_brand_invitations(workspace):

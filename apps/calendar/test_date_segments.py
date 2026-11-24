@@ -305,7 +305,7 @@ def test_the_brand_settings_choose_the_segments(client, pizza):
     url = reverse("workspaces:settings", kwargs={"workspace_id": workspace.id})
 
     assert "Pizzarias" in client.get(url).content.decode()
-    client.post(url, {"action": "update_segments", "segments": [str(pizza.id), str(hidden.id)]})
+    client.post(url, {"action": "update_general", "segments": [str(pizza.id), str(hidden.id)]})
 
     # Exactly what was ticked, and only among the segments on offer.
     followed = set(WorkspaceDateSegment.objects.filter(workspace=workspace).values_list("segment__name", flat=True))
@@ -323,7 +323,37 @@ def test_a_viewer_does_not_change_the_segments_of_the_brand(client, pizza):
 
     client.post(
         reverse("workspaces:settings", kwargs={"workspace_id": workspace.id}),
-        {"action": "update_segments", "segments": [str(pizza.id)]},
+        {"action": "update_general", "segments": [str(pizza.id)]},
     )
 
     assert not WorkspaceDateSegment.objects.filter(workspace=workspace).exists()
+
+
+@pytest.mark.django_db
+def test_the_second_shelf_adds_its_segments_and_leaves_an_existing_one_alone():
+    import calendar
+    import importlib
+
+    from django.apps import apps
+
+    migration = importlib.import_module("apps.calendar.migrations.0011_seed_more_date_segments")
+    names = [name for name, _emoji, _dates in migration.SEGMENTS]
+    for _name, _emoji, dates in migration.SEGMENTS:
+        for month, day, title, _icon in dates:
+            assert 1 <= day <= calendar.monthrange(2024, month)[1], title
+
+    # The operator already has one of them, with dates of their own.
+    SpecialDate.objects.filter(segment__name__in=names).delete()
+    DateSegment.objects.filter(name__in=names).delete()
+    mine = DateSegment.objects.create(name="Tecnologia", emoji="🤖")
+    SpecialDate.objects.create(segment=mine, name="Minha data", month=1, day=2)
+
+    migration.seed(apps, None)
+    migration.seed(apps, None)
+
+    assert set(DateSegment.objects.filter(name__in=names).values_list("name", flat=True)) == set(names)
+    mine.refresh_from_db()
+    assert mine.emoji == "🤖"
+    assert list(mine.dates.values_list("name", flat=True)) == ["Minha data"]
+    fashion = DateSegment.objects.get(name="Moda e vestuário")
+    assert fashion.dates.count() == 3

@@ -62,7 +62,7 @@ shown).
                     {% translate "Settings" %}
                 </a>
                 {% if not item.workspace.is_archived %}
-                <a href="{% url 'workspaces:settings' workspace_id=item.workspace.id %}#approval-flow" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">
+                <a href="{% url 'workspaces:approvals_settings' workspace_id=item.workspace.id %}" class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">
                     <svg class="w-4 h-4 text-neutral-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
                     {% translate "Approvals" %}
                 </a>

@@ -96,8 +96,8 @@ def test_a_logo_is_stored_under_the_extension_of_its_bytes(client, organization,
     assert brand.icon.name.endswith(".png")
 
 
-class TestApprovalFlowOnTheGeneralPage:
-    """The approval flow is edited on General and saved by its own view."""
+class TestApprovalFlowPage:
+    """The approval flow has its own page in the brand's settings."""
 
     def _brand(self, role):
         from django.utils import timezone
@@ -120,19 +120,37 @@ class TestApprovalFlowOnTheGeneralPage:
         return reverse("workspaces:approvals_settings", kwargs={"workspace_id": brand.id})
 
     @pytest.mark.django_db
-    def test_a_manager_saves_it_and_lands_on_general(self, client):
+    def test_a_manager_saves_it_and_stays_on_the_page(self, client):
+        brand, user = self._brand("manager")
+        client.force_login(user)
+
+        assert b'name="approval_workflow_mode"' in client.get(self._save_url(brand)).content
+        response = client.post(self._save_url(brand), {"approval_workflow_mode": "required_internal"})
+
+        assert response["Location"] == self._save_url(brand)
+        brand.refresh_from_db()
+        assert brand.approval_workflow_mode == "required_internal"
+
+    @pytest.mark.django_db
+    def test_the_general_page_no_longer_holds_it(self, client):
         from django.urls import reverse
 
         brand, user = self._brand("manager")
         client.force_login(user)
-        general = reverse("workspaces:settings", kwargs={"workspace_id": brand.id})
 
-        assert b'id="approval-flow"' in client.get(general).content
-        response = client.post(self._save_url(brand), {"approval_workflow_mode": "required_internal"})
+        general = client.get(reverse("workspaces:settings", kwargs={"workspace_id": brand.id}))
 
-        assert response["Location"] == general + "#approval-flow"
-        brand.refresh_from_db()
-        assert brand.approval_workflow_mode == "required_internal"
+        assert b'name="approval_workflow_mode"' not in general.content
+
+    @pytest.mark.django_db
+    def test_an_editor_sees_it_read_only(self, client):
+        brand, user = self._brand("editor")
+        client.force_login(user)
+
+        content = client.get(self._save_url(brand)).content
+
+        assert b"disabled" in content
+        assert b'type="submit" class="btn-brand"' not in content
 
     @pytest.mark.django_db
     def test_an_editor_cannot_change_it(self, client):
