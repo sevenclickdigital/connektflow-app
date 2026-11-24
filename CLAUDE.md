@@ -125,7 +125,7 @@ When a hook reports a problem, fix it before moving on. When it asks the reuse q
 
 `.mcp.json` starts `django-ai-boost` (read-only Django introspection, local development settings). Prefer it over guessing or grepping when you need facts about the running project: `list_models` / `database_schema` (fields, nullability, FK names before writing a model, migration or test), `list_urls` / `reverse_url`, `list_migrations`, `get_setting`, `run_check`, `read_recent_logs`. `query_model` reads the local development database.
 
-It is installed only in the local `.venv`, not in `requirements.txt` (it is not a runtime dependency). To reinstall without touching pinned packages (e.g. `cryptography<44`):
+It is installed only in the local `.venv`, not in `requirements.txt` (it is not a runtime dependency). To reinstall without touching pinned packages:
 
 ```bash
 .venv/bin/python -m pip freeze > /tmp/constraints.txt
