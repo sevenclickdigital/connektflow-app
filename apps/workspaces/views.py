@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from apps.accounts.impersonation import no_takeover, refuse_during_takeover
 from apps.analytics.metrics import PLATFORM_PRIMARY
 from apps.common.htmx import toast_response
 from apps.common.periods import parse_period
@@ -100,6 +101,8 @@ def workspace_settings(request, workspace_id):
             raise Http404
 
         action = request.POST.get("action")
+        if action in ("archive_workspace", "delete_workspace"):
+            refuse_during_takeover(request)
 
         if action == "archive_workspace" and is_owner_or_manager:
             with transaction.atomic():
@@ -281,6 +284,7 @@ def _pending_brand_invitations(workspace):
 
 
 @login_required
+@no_takeover
 @require_http_methods(["GET", "POST"])
 def workspace_team(request, workspace_id):
     """Who is in this brand and with which role.

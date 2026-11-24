@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 from django_ratelimit.decorators import ratelimit
 
+from apps.accounts.impersonation import no_takeover
 from apps.members import services as member_services
 from apps.members.decorators import require_workspace_role
 from apps.members.models import Invitation, OrgMembership, WorkspaceMembership
@@ -80,6 +81,7 @@ def client_list(request, workspace_id):
 
 
 @login_required
+@no_takeover
 @require_workspace_role("manager")
 @require_POST
 @ratelimit(key="user", rate="10/m", method="POST", block=True)
@@ -131,6 +133,7 @@ def invite_client(request, workspace_id):
 
 
 @login_required
+@no_takeover
 @require_workspace_role("manager")
 @require_POST
 @ratelimit(key="user", rate="10/m", method="POST", block=True)
@@ -188,6 +191,7 @@ def send_magic_link(request, workspace_id, membership_id):
 
 
 @login_required
+@no_takeover
 @require_workspace_role("manager")
 @require_POST
 def remove_client(request, workspace_id, membership_id):

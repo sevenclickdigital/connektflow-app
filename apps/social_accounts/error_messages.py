@@ -79,6 +79,13 @@ PUBLISH_WORKSPACE_ARCHIVED_MESSAGE = (
     "This workspace was archived when the post was due, so it wasn't published. "
     "Restore the workspace, then publish the post again."
 )
+# Ours, not a platform's: the publisher refuses to act for a brand the
+# subscription lock holds (unpaid, past due or cancelled while "Subscription
+# required" is on).
+PUBLISH_WORKSPACE_LOCKED_MESSAGE = _(
+    "This brand's subscription wasn't active when the post was due, so it wasn't published. "
+    "Activate the subscription, then publish the post again."
+)
 # The platform took the upload and then never finished processing it. Distinct
 # from a rejection: there is nothing to fix and nothing to see on the account.
 PUBLISH_CONFIRM_TIMEOUT_MESSAGE = (

@@ -15,7 +15,6 @@ from django.conf import settings
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from ninja import NinjaAPI
 from ninja.errors import AuthenticationError, HttpError
-from ninja.openapi.docs import Swagger
 
 from apps.api.auth import ApiKeyAuth, McpAuth
 from apps.api.routers.accounts import router as accounts_router
@@ -25,15 +24,6 @@ from apps.api.routers.me import router as me_router
 from apps.api.routers.media import router as media_router
 from apps.api.routers.posts import router as posts_router
 from apps.mcp.transport import router as mcp_router
-
-
-class NoncedSwagger(Swagger):
-    # Ninja loads swagger_cdn.html by absolute path, bypassing Django's
-    # template loader, so a file in templates/ninja/ won't shadow it.
-    # Point at our project override so its inline <script> tags can carry
-    # nonce="{{ request.csp_nonce }}" and satisfy production CSP.
-    template_cdn = str(settings.BASE_DIR / "templates" / "ninja" / "swagger_cdn.html")
-
 
 api = NinjaAPI(
     title="Connekt Flow Agent API",
@@ -84,7 +74,6 @@ api = NinjaAPI(
         "posts are never deletable — they remain as audit records."
     ),
     auth=ApiKeyAuth(),
-    docs=NoncedSwagger(),
     # Trailing slashes are tolerated by the router but we use the
     # explicit-slash form everywhere internally for OpenAPI clarity.
     urls_namespace="agent_api_v1",
@@ -306,6 +295,7 @@ def _slug_for(status: int) -> str:
     return {
         400: "bad_request",
         401: "unauthorized",
+        402: "payment_required",
         403: "forbidden",
         404: "not_found",
         409: "conflict",

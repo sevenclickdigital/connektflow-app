@@ -4,10 +4,10 @@ Social media management platform: compose, schedule, approve, publish, inbox, an
 
 ## Quick facts
 
-- **Stack:** Django 5.1, Python 3.12 in production (the local `.venv` is 3.13 — don't rely on 3.13-only features), PostgreSQL 16, HTMX + Alpine.js (vendored), Tailwind 4 via `django-tailwind` (`theme/`).
+- **Stack:** Django 5.2 LTS, Python 3.12 in production (the local `.venv` is 3.13 — don't rely on 3.13-only features), PostgreSQL 16, HTMX + Alpine.js (vendored), Tailwind 4 via `django-tailwind` (`theme/`).
 - **Background jobs:** `django-background-tasks` rows run by our own worker (`apps/common/worker.py`, `manage.py run_studio_worker`). No Celery, no Redis queue.
 - **Production:** Dokploy only, `docker-compose.dokploy.yml`. There is no Heroku/Railway/Render/Caddy anymore; don't reintroduce their config.
-- **Python env:** the project venv at `.venv/` (pip + `requirements.txt`). Always call tools through it: `.venv/bin/python`, `.venv/bin/pytest`, `.venv/bin/ruff`, `.venv/bin/mypy`.
+- **Python env:** the project venv at `.venv/` (pip + `requirements-dev.txt`, which includes the runtime `requirements.txt`; the production image installs only the latter). Always call tools through it: `.venv/bin/python`, `.venv/bin/pytest`, `.venv/bin/ruff`, `.venv/bin/mypy`.
 - **Default language:** `pt-br` (`en-us` also available). Code, comments, docs and commit messages are English; only user-facing text is Portuguese, through the `.po` catalogue.
 
 ## Documentation — read before changing a subsystem
@@ -116,7 +116,7 @@ When a hook reports a problem, fix it before moving on. When it asks the reuse q
 - `django-safe-migration` (plugin from `vintasoftware/django-ai-plugins`, enabled in `.claude/settings.json`) — writing or reviewing any migration. Use it every time a migration is created, not only when asked.
 
 ## django-safe-migration
-- Django version: 5.1
+- Django version: 5.2
 - Deploy strategy: rolling deploy. On Dokploy the one-shot `migrate` service runs to completion before `app` and `worker` are recreated, so the previous release keeps serving traffic against the new schema while it runs. Every migration must be safe for the old code.
 - Runtime guard: none
 - Migration command: `.venv/bin/python manage.py sqlmigrate <app_label> <migration_name>`

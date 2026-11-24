@@ -357,3 +357,169 @@ class TestNoGrantFromAnImpersonationSession:
         params, _verifier = _authorize_params(browser)
 
         assert browser.get("/oauth/authorize/", params).status_code == 200
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("_clear_auth_rate_limit")
+def test_the_consent_screen_names_where_the_access_goes():
+    """Any registrant can call itself "Claude Desktop"; the redirect host is what the person can check."""
+    from urllib.parse import urlparse
+
+    browser = _logged_in(_account("grant-host@example.com"))
+    params, _verifier = _authorize_params(browser)
+
+    page = browser.get("/oauth/authorize/", params)
+
+    assert f"<strong>{urlparse(CLAUDE_REDIRECT).hostname}</strong>" in page.content.decode()
+
+
+# ---------------------------------------------------------------------------
+# A grant acts on the brand it was approved for, not on whichever brand the
+# person opens afterwards.
+# ---------------------------------------------------------------------------
+
+
+def _second_brand(user, name="Other WS"):
+    """Another brand ``user`` belongs to, in a different organization (a guest seat)."""
+    from apps.members.models import WorkspaceMembership
+    from apps.organizations.models import Organization
+    from apps.workspaces.models import Workspace
+
+    workspace = Workspace.objects.create(name=name, organization=Organization.objects.create(name=f"Org {name}"))
+    WorkspaceMembership.objects.create(
+        user=user, workspace=workspace, workspace_role=WorkspaceMembership.WorkspaceRole.EDITOR
+    )
+    return workspace
+
+
+def _open_brand(user, workspace):
+    user.last_workspace_id = workspace.id
+    user.save(update_fields=["last_workspace_id"])
+
+
+def _acting_workspace_id(access_token):
+    from apps.api.auth import _resolve_oauth_actor
+
+    actor = _resolve_oauth_actor(access_token)
+    return actor.workspace_id if actor is not None else None
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("_clear_auth_rate_limit")
+class TestGrantBoundToTheApprovedBrand:
+    def test_the_token_keeps_acting_on_the_approved_brand_after_another_is_opened(self):
+        owner = _account("bound-owner@example.com")
+        approved = owner.last_workspace_id
+        other = _second_brand(owner)
+        _client_id, access, _refresh = _mint_grant(_logged_in(owner))
+
+        _open_brand(owner, other)
+
+        assert _acting_workspace_id(access) == approved
+
+    def test_the_binding_survives_the_refresh_rotation(self):
+        owner = _account("bound-refresh@example.com")
+        approved = owner.last_workspace_id
+        client_id, _access, refresh = _mint_grant(_logged_in(owner))
+        _open_brand(owner, _second_brand(owner))
+
+        rotated = _SecureClient().post(
+            "/oauth/token/", {"grant_type": "refresh_token", "refresh_token": refresh, "client_id": client_id}
+        )
+
+        assert rotated.status_code == 200
+        assert _acting_workspace_id(rotated.json()["access_token"]) == approved
+
+    def test_the_brand_posted_by_the_consent_screen_is_the_one_bound(self):
+        """Switching brands in another tab after opening the screen does not change what is approved."""
+        from urllib.parse import parse_qs, urlparse
+
+        owner = _account("bound-posted@example.com")
+        shown = owner.last_workspace_id
+        browser = _logged_in(owner)
+        params, verifier = _authorize_params(browser)
+        page = browser.get("/oauth/authorize/", params)
+        assert "Grant WS" in page.content.decode()
+        _open_brand(owner, _second_brand(owner))
+
+        consent = browser.post("/oauth/authorize/", {**params, "workspace": str(shown), "allow": "Authorize"})
+        code = parse_qs(urlparse(consent["Location"]).query)["code"][0]
+        token = _SecureClient().post(
+            "/oauth/token/",
+            {
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": CLAUDE_REDIRECT,
+                "client_id": params["client_id"],
+                "code_verifier": verifier,
+            },
+        )
+
+        assert _acting_workspace_id(token.json()["access_token"]) == shown
+
+    def test_a_brand_the_person_does_not_belong_to_cannot_be_posted(self):
+        from oauth2_provider.models import get_grant_model
+
+        owner = _account("bound-intruder@example.com")
+        stranger = _account("bound-stranger@example.com")
+        browser = _logged_in(owner)
+        params, _verifier = _authorize_params(browser)
+
+        consent = browser.post(
+            "/oauth/authorize/", {**params, "workspace": str(stranger.last_workspace_id), "allow": "Authorize"}
+        )
+
+        assert consent.status_code == 403
+        assert not get_grant_model().objects.filter(user=owner).exists()
+
+    def test_a_revoked_membership_refuses_the_token(self):
+        from apps.members.models import WorkspaceMembership
+
+        owner = _account("bound-revoked@example.com")
+        approved = owner.last_workspace_id
+        _client_id, access, _refresh = _mint_grant(_logged_in(owner))
+        _open_brand(owner, _second_brand(owner))
+
+        WorkspaceMembership.objects.filter(user=owner, workspace_id=approved).delete()
+
+        assert _acting_workspace_id(access) is None
+        assert _bearer_status(access) == 401
+
+    def test_an_archived_brand_refuses_the_token(self):
+        from apps.workspaces.models import Workspace
+
+        owner = _account("bound-archived@example.com")
+        _client_id, access, _refresh = _mint_grant(_logged_in(owner))
+
+        Workspace.objects.filter(pk=owner.last_workspace_id).update(is_archived=True)
+
+        assert _bearer_status(access) == 401
+
+    def test_a_token_issued_before_the_binding_follows_the_open_brand(self):
+        """Tokens minted before deploy have no binding and keep working as they did."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+        from oauth2_provider.models import get_access_token_model, get_application_model
+
+        owner = _account("bound-legacy@example.com")
+        other = _second_brand(owner)
+        application_model = get_application_model()
+        app = application_model.objects.create(
+            name="Legacy",
+            client_type=application_model.CLIENT_PUBLIC,
+            authorization_grant_type=application_model.GRANT_AUTHORIZATION_CODE,
+            redirect_uris=CLAUDE_REDIRECT,
+        )
+        get_access_token_model().objects.create(
+            user=owner,
+            application=app,
+            token="legacy-unbound",
+            scope="mcp",
+            expires=timezone.now() + timedelta(hours=1),
+        )
+        assert _acting_workspace_id("legacy-unbound") == owner.last_workspace_id
+
+        _open_brand(owner, other)
+
+        assert _acting_workspace_id("legacy-unbound") == other.id

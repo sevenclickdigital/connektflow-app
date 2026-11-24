@@ -1,4 +1,5 @@
 import hashlib
+import logging
 
 from django.conf import settings
 from django.contrib import messages
@@ -10,6 +11,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 
 from apps.common.htmx import toast_response
+
+logger = logging.getLogger(__name__)
 
 # Paths that are rate-limited for unauthenticated POST requests (auth flows)
 AUTH_RATE_LIMITED_PATHS = (
@@ -43,13 +46,31 @@ EXEMPT_PATH_PREFIXES = (
 )
 
 
+# allauth's pages that change how the account signs in: its e-mail
+# addresses, its password and the Google account linked to it (a POST to
+# the Google login while signed in links the account). A takeover that
+# changed any of them would keep a way into the account after it ended.
+TAKEOVER_REFUSED_URL_NAMES = frozenset(
+    {
+        "account_email",
+        "account_change_password",
+        "account_set_password",
+        "socialaccount_connections",
+        "google_login",
+    }
+)
+
+
 class ImpersonationGuardMiddleware:
     """Keep a takeover within its limits.
 
     Ends the session once its operator stops being one, and for the rest
     of the request refuses scheduling and publishing: a row that tries to
-    enter the queue raises ``PublishingBlockedError``, which is answered
-    here with a message instead of an error page.
+    enter the queue raises ``PublishingBlockedError``. The customer-only
+    actions (``apps.accounts.impersonation.no_takeover``) raise its parent,
+    ``TakeoverRefusedError``, and allauth's sign-in settings, which have no
+    view of ours to decorate, are refused in ``process_view`` by URL name. Every refusal
+    is answered with a message instead of an error page.
 
     Runs right after ``AuthenticationMiddleware`` so that no later
     middleware or view serves the request as the customer.
@@ -73,17 +94,30 @@ class ImpersonationGuardMiddleware:
         with impersonation.block_publishing():
             return self.get_response(request)
 
-    def process_exception(self, request, exception):
-        from apps.accounts.impersonation import PublishingBlockedError
-
-        if not isinstance(exception, PublishingBlockedError):
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        if request.method in ("GET", "HEAD", "OPTIONS"):
             return None
+        if request.resolver_match.url_name not in TAKEOVER_REFUSED_URL_NAMES:
+            return None
+        from apps.accounts import impersonation
 
-        title = _("Nothing was scheduled or published")
-        body = _("Support access cannot schedule or publish in a customer's name.")
+        if not impersonation.is_impersonating(request):
+            return None
+        return self._refusal(request, impersonation.TakeoverRefusedError())
+
+    def process_exception(self, request, exception):
+        from apps.accounts.impersonation import TakeoverRefusedError
+
+        if not isinstance(exception, TakeoverRefusedError):
+            return None
+        return self._refusal(request, exception)
+
+    @staticmethod
+    def _refusal(request, exception):
+        """A toast for HTMX, otherwise a message and a redirect back to the page it came from."""
         if getattr(request, "htmx", False):
-            return toast_response(tone="error", title=title, body=body)
-        messages.error(request, f"{title}. {body}")
+            return toast_response(tone="error", title=str(exception.title), body=str(exception.body))
+        messages.error(request, f"{exception.title}. {exception.body}")
         back = request.META.get("HTTP_REFERER", "")
         if not url_has_allowed_host_and_scheme(back, allowed_hosts={request.get_host()}):
             back = "/"
@@ -165,7 +199,15 @@ class TosAcceptanceMiddleware:
 
 
 class AuthRateLimitMiddleware:
-    """Rate-limit POST requests to authentication endpoints (login, admin login, signup, password reset)."""
+    """Rate-limit POST requests to authentication endpoints (login, admin login, signup, password reset).
+
+    The address is ``impersonation.client_ip`` (allauth's adapter), so this
+    limit and allauth's own per-IP limits agree on who the client is: the hop
+    our proxy appended, or Cloudflare's CF-Connecting-IP when that hop is a
+    Cloudflare edge. Never the leftmost X-Forwarded-For value, which the
+    client writes itself and could rotate on every attempt to escape the
+    bucket.
+    """
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -173,19 +215,25 @@ class AuthRateLimitMiddleware:
     def __call__(self, request):
         if request.method == "POST" and any(request.path.startswith(p) for p in AUTH_RATE_LIMITED_PATHS):
             ip = self._get_client_ip(request)
-            cache_key = f"auth_ratelimit:{hashlib.md5(ip.encode()).hexdigest()}"
+            cache_key = f"auth_ratelimit:{hashlib.sha256(ip.encode()).hexdigest()}"
 
-            attempts = cache.get(cache_key, 0)
-            if attempts >= AUTH_RATE_LIMIT:
-                return HttpResponse("Too many requests. Please try again later.", status=429)
-
-            cache.set(cache_key, attempts + 1, AUTH_RATE_WINDOW)
+            # add() seeds the window once; incr() is atomic, so parallel
+            # guesses cannot all read the same count and slip through together.
+            cache.add(cache_key, 0, AUTH_RATE_WINDOW)
+            try:
+                attempts = cache.incr(cache_key)
+            except ValueError:
+                cache.set(cache_key, 1, AUTH_RATE_WINDOW)
+                attempts = 1
+            if attempts > AUTH_RATE_LIMIT:
+                if attempts == AUTH_RATE_LIMIT + 1:
+                    logger.warning("Auth rate limit reached for %s on %s", ip, request.path)
+                return HttpResponse(_("Too many attempts. Please wait a minute and try again."), status=429)
 
         return self.get_response(request)
 
     @staticmethod
     def _get_client_ip(request):
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            return x_forwarded_for.split(",")[0].strip()
-        return request.META.get("REMOTE_ADDR", "")
+        from apps.accounts.impersonation import client_ip
+
+        return client_ip(request) or ""

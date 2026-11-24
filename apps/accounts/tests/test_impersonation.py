@@ -13,10 +13,15 @@ The six rules under test, from the brief:
 3. the session really becomes the customer;
 4. stopping restores the operator without a re-login;
 5. the audit trail records both start and end;
-6. the impersonated session does not reach the staff console.
+6. the impersonated session does not reach the staff console;
+7. the customer's own decisions (deleting, paying, inviting, spending on
+   ads, replying, changing how the account signs in) are refused.
 """
 
 from __future__ import annotations
+
+import json
+from unittest import mock
 
 import pytest
 from django.contrib.auth import SESSION_KEY
@@ -26,7 +31,7 @@ from django.utils import timezone
 
 from apps.accounts import impersonation
 from apps.accounts.models import ImpersonationSession, User
-from apps.members.models import OrgMembership, WorkspaceMembership
+from apps.members.models import Invitation, OrgMembership, WorkspaceMembership
 from apps.organizations.models import Organization
 from apps.workspaces.models import Workspace
 
@@ -496,3 +501,159 @@ class TestPrivilegeIsNotSnapshotted:
 
         # Neither the operator nor the customer: the session is gone.
         assert _session_user_id(client) is None
+
+
+# ---------------------------------------------------------------------------
+# 7. The customer's own decisions are refused during a takeover
+# ---------------------------------------------------------------------------
+
+HTMX = {"HTTP_HX_REQUEST": "true"}
+
+
+def _client_org():
+    return Organization.objects.get(name="Client Co")
+
+
+def _client_workspace():
+    return Workspace.objects.get(name="Client Social")
+
+
+def _assert_refusal_toast(response):
+    assert response.status_code == 204
+    toast = json.loads(response["HX-Trigger"])["showToast"]
+    assert toast["tone"] == "error"
+
+
+@pytest.fixture
+def takeover(client, operator, customer):
+    """The operator's browser, inside the customer's account."""
+    client.force_login(operator)
+    client.post(_start_url(customer))
+    assert impersonation.IMPERSONATOR_SESSION_KEY in client.session
+    return client
+
+
+@pytest.mark.django_db
+class TestTakeoverCannotDecideForTheCustomer:
+    def test_organization_is_not_deleted_now(self, takeover, customer):
+        org = _client_org()
+
+        response = takeover.post(
+            reverse("organizations:manage", kwargs={"organization_id": org.pk}),
+            {"action": "delete_organization_now"},
+        )
+
+        assert response.status_code == 302
+        assert Organization.objects.filter(pk=org.pk).exists()
+        assert User.objects.filter(pk=customer.pk).exists()
+        # Still inside the takeover: the refusal did not log anybody out.
+        assert _session_user_id(takeover) == str(customer.pk)
+
+    def test_invitation_is_not_sent(self, takeover):
+        org = _client_org()
+
+        response = takeover.post(
+            reverse("members:invite"),
+            {"organization": str(org.pk), "email": "ops-personal@example.com", "org_role": "admin"},
+            **HTMX,
+        )
+
+        _assert_refusal_toast(response)
+        assert not Invitation.objects.filter(email="ops-personal@example.com").exists()
+
+    def test_checkout_charges_nothing(self, takeover):
+        from apps.billing.models import OrganizationPlan
+
+        workspace = _client_workspace()
+        with mock.patch("apps.billing.views._checkout_order") as order:
+            response = takeover.post(
+                reverse("billing:checkout_pay", kwargs={"workspace_id": workspace.pk}),
+                {"brands": "1", "card_number": "5162306219378829"},
+                **HTMX,
+            )
+
+        _assert_refusal_toast(response)
+        order.assert_not_called()
+        assert not OrganizationPlan.objects.filter(organization=workspace.organization).exists()
+
+    def test_ad_campaign_is_not_activated(self, takeover):
+        workspace = _client_workspace()
+        with mock.patch("apps.ads.services.set_campaign_status") as set_status:
+            response = takeover.post(
+                reverse("ads:campaign_status", kwargs={"workspace_id": workspace.pk, "campaign_id": "123"}),
+                {"status": "ACTIVE"},
+                **HTMX,
+            )
+
+        _assert_refusal_toast(response)
+        set_status.assert_not_called()
+
+    def test_inbox_reply_is_not_sent(self, takeover):
+        import uuid
+
+        from apps.inbox.models import InboxReply
+
+        workspace = _client_workspace()
+        with mock.patch("apps.inbox.services.send_reply") as send:
+            response = takeover.post(
+                reverse("inbox:send_reply", kwargs={"workspace_id": workspace.pk, "message_id": uuid.uuid4()}),
+                {"body": "Hello"},
+                **HTMX,
+            )
+
+        _assert_refusal_toast(response)
+        send.assert_not_called()
+        assert not InboxReply.objects.exists()
+
+    def test_password_is_not_changed_from_the_profile(self, takeover, customer):
+        takeover.post(
+            reverse("accounts:settings"),
+            {"action": "update_password", "new_password1": "Takeover-123!", "new_password2": "Takeover-123!"},
+        )
+
+        customer.refresh_from_db()
+        assert customer.check_password("x")
+
+    def test_allauth_password_change_is_refused(self, takeover, customer):
+        response = takeover.post(
+            reverse("account_change_password"),
+            {"oldpassword": "x", "password1": "Takeover-123!", "password2": "Takeover-123!"},
+        )
+
+        assert response.status_code == 302
+        customer.refresh_from_db()
+        assert customer.check_password("x")
+
+    def test_pages_stay_readable(self, takeover):
+        workspace = _client_workspace()
+
+        assert takeover.get(reverse("workspaces:team", kwargs={"workspace_id": workspace.pk})).status_code == 200
+        assert (
+            takeover.get(reverse("organizations:manage", kwargs={"organization_id": _client_org().pk})).status_code
+            == 200
+        )
+
+
+@pytest.mark.django_db
+class TestTheCustomerStillDecides:
+    def test_owner_invites(self, client, customer):
+        client.force_login(customer)
+
+        response = client.post(
+            reverse("members:invite"),
+            {"organization": str(_client_org().pk), "email": "colleague@example.com", "org_role": "member"},
+        )
+
+        assert response.status_code == 302
+        assert Invitation.objects.filter(email="colleague@example.com").exists()
+
+    def test_owner_deletes_the_organization_now(self, client, customer):
+        org = _client_org()
+        client.force_login(customer)
+
+        client.post(
+            reverse("organizations:manage", kwargs={"organization_id": org.pk}),
+            {"action": "delete_organization_now"},
+        )
+
+        assert not Organization.objects.filter(pk=org.pk).exists()

@@ -14,9 +14,36 @@ from apps.common.emails import build_email
 from apps.common.mail import send_or_raise, transactional
 from apps.members.models import WorkspaceMembership
 
-from .models import MagicLinkToken
+from .middleware import PORTAL_SESSION_KEY, PORTAL_WORKSPACE_KEY
+from .models import MagicLinkToken, _generate_magic_token, hash_magic_token
 
 logger = logging.getLogger(__name__)
+
+# How long a portal session lasts after a magic link is redeemed. The session
+# is confined to /portal/ (``middleware.PortalSessionConfinementMiddleware``),
+# so its length only buys the client fewer links to ask for.
+PORTAL_SESSION_AGE = 30 * 24 * 60 * 60
+
+
+def issue_magic_link_token(user, workspace):
+    """Create a MagicLinkToken and return ``(token, raw_token)``.
+
+    Only the hash is stored. The raw token is returned once, for the e-mailed
+    URL, and cannot be recovered from the database afterwards.
+    """
+    raw_token = _generate_magic_token()
+    token = MagicLinkToken.objects.create(user=user, workspace=workspace, token_hash=hash_magic_token(raw_token))
+    return token, raw_token
+
+
+def _find_token(raw_token):
+    if not raw_token:
+        return None
+    return (
+        MagicLinkToken.objects.select_related("user", "workspace")
+        .filter(token_hash=hash_magic_token(raw_token))
+        .first()
+    )
 
 
 def generate_magic_link(workspace, client_user, created_by):
@@ -60,15 +87,10 @@ def generate_magic_link(workspace, client_user, created_by):
         ).values_list("pk", flat=True)
     )
 
-    # Create new token
-    token = MagicLinkToken.objects.create(
-        user=client_user,
-        workspace=workspace,
-    )
+    token, raw_token = issue_magic_link_token(client_user, workspace)
 
-    # Build magic link URL
     app_url = getattr(settings, "APP_URL", "http://localhost:8000").rstrip("/")
-    magic_url = f"{app_url}/portal/{token.token}/"
+    magic_url = f"{app_url}/portal/{raw_token}/"
 
     # Send email
     context = {
@@ -112,9 +134,8 @@ def peek_magic_link(token_string):
     that prefetch the URL cannot burn the one-time token. Returns the
     MagicLinkToken when it is valid and unused, otherwise None.
     """
-    try:
-        token = MagicLinkToken.objects.select_related("user", "workspace").get(token=token_string)
-    except MagicLinkToken.DoesNotExist:
+    token = _find_token(token_string)
+    if token is None:
         return None
 
     if token.is_expired or token.is_consumed:
@@ -130,9 +151,8 @@ def consume_magic_link(token_string):
         (user, workspace, is_valid) tuple.
         If missing/expired/already consumed: (None, None, False).
     """
-    try:
-        token = MagicLinkToken.objects.select_related("user", "workspace").get(token=token_string)
-    except MagicLinkToken.DoesNotExist:
+    token = _find_token(token_string)
+    if token is None:
         return None, None, False
 
     if token.is_expired:
@@ -159,12 +179,12 @@ def revoke_magic_link(token_id, workspace):
 
 
 def create_portal_session(request, user, workspace):
-    """Create a portal session for the client user.
+    """Log the client in with a session confined to the portal of ``workspace``.
 
-    Logs in the user and sets portal-specific session variables.
+    ``login`` clears any earlier portal flags (``middleware.clear_portal_flags``)
+    before they are set again here.
     """
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-    request.session["is_portal_session"] = True
-    request.session["portal_workspace_id"] = str(workspace.id)
-    # 30-day session
-    request.session.set_expiry(30 * 24 * 60 * 60)
+    request.session[PORTAL_SESSION_KEY] = True
+    request.session[PORTAL_WORKSPACE_KEY] = str(workspace.id)
+    request.session.set_expiry(PORTAL_SESSION_AGE)

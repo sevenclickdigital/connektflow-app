@@ -55,7 +55,15 @@ def test_every_allowed_mime_has_a_canonical_extension():
     ],
 )
 def test_storage_filename_replaces_the_clients_extension(original, expected):
-    assert storage_filename(original, "image/png") == expected
+    prefix, _, name = storage_filename(original, "image/png").partition("-")
+
+    assert name == expected
+    assert len(prefix) == 16
+
+
+def test_storage_filename_cannot_be_guessed_from_the_original_name():
+    """Media is served without a session, so the address is the only lock."""
+    assert storage_filename("logo.png", "image/png") != storage_filename("logo.png", "image/png")
 
 
 def test_storage_filename_cannot_escape_the_upload_directory():

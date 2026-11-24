@@ -21,6 +21,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 from django_ratelimit.decorators import ratelimit
 
+from apps.accounts.impersonation import no_takeover
 from apps.common.emails import build_email
 from apps.common.mail import transactional
 from apps.common.validators import is_safe_url
@@ -162,6 +163,7 @@ def revoke_link(request, workspace_id, link_id):
 @require_permission("manage_social_accounts")
 @require_POST
 @ratelimit(key="user", rate="10/m", method="POST", block=True)
+@no_takeover
 def send_link_email(request, workspace_id, link_id):
     """Send the connection link to a client email."""
     link = get_object_or_404(ConnectionLink.objects.for_workspace(workspace_id), id=link_id)

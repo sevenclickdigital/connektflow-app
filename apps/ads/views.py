@@ -21,6 +21,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from django_ratelimit.decorators import ratelimit
 
+from apps.accounts.impersonation import no_takeover
 from apps.common.htmx import lazy_body_urls, wants_lazy_body
 from apps.common.periods import Period, parse_period
 from apps.members.decorators import require_permission
@@ -273,6 +274,7 @@ def disconnect(request, workspace_id):
 
 
 @login_required
+@no_takeover
 @require_permission("manage_social_accounts")
 @ratelimit(key="user", rate="10/m", method="POST", block=True)
 @require_http_methods(["GET", "POST"])
@@ -386,6 +388,7 @@ def _back_to_campaign(workspace_id, campaign_id):
 
 
 @login_required
+@no_takeover
 @require_permission("manage_social_accounts")
 @ratelimit(key="user", rate="20/m", block=True)
 @require_POST
@@ -410,6 +413,7 @@ def campaign_status(request, workspace_id, campaign_id):
 
 
 @login_required
+@no_takeover
 @require_permission("manage_social_accounts")
 @ratelimit(key="user", rate="20/m", block=True)
 @require_POST
@@ -431,6 +435,7 @@ def campaign_rename(request, workspace_id, campaign_id):
 
 
 @login_required
+@no_takeover
 @require_permission("manage_social_accounts")
 @ratelimit(key="user", rate="20/m", block=True)
 @require_POST

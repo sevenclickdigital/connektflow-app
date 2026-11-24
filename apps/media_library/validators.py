@@ -1,6 +1,7 @@
 """File validation for media library uploads."""
 
 import contextlib
+import secrets
 from pathlib import Path
 
 from django.conf import settings
@@ -78,12 +79,18 @@ def determine_file_type(mime_type):
 
 
 def storage_filename(original_name, sniffed_mime):
-    """The name to store an upload under: the caller's stem, our extension.
+    """The name to store an upload under: a random prefix, the caller's stem, our extension.
 
     ``MediaAsset.filename`` keeps whatever the uploader called it for display;
     this is only the key on disk or in the bucket. Swapping the suffix for the
     one the sniffed bytes justify is what stops an upload from choosing the
     Content-Type it will later be served with — see CANONICAL_EXTENSION.
+
+    The prefix makes the address unguessable: with SERVE_MEDIA the
+    ``media_library/``, ``avatars/`` and ``workspaces/icons/`` trees are served
+    without a session, so ``2026/11/logo.png`` would otherwise be enough to
+    fetch any brand's file. It goes first because storages shorten a name that
+    is too long for the field by cutting the end of the stem.
     """
     extension = CANONICAL_EXTENSION.get(sniffed_mime)
     if not extension:
@@ -101,7 +108,7 @@ def storage_filename(original_name, sniffed_mime):
         # Raised for a name that is empty, or that sanitises down to nothing.
         stem = ""
 
-    return f"{stem or 'upload'}.{extension}"
+    return f"{secrets.token_hex(8)}-{stem or 'upload'}.{extension}"
 
 
 def image_storage_filename(uploaded_file, allowed_mimes=ALLOWED_MIME_TYPES["image"]):

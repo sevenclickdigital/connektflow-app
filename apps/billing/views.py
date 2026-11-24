@@ -58,7 +58,7 @@ from django_ratelimit.decorators import ratelimit
 from apps.accounts import impersonation
 from apps.accounts.address import remember_address
 from apps.accounts.decorators import staff_required, superadmin_required
-from apps.accounts.impersonation import client_ip
+from apps.accounts.impersonation import client_ip, no_takeover
 from apps.accounts.models import ImpersonationSession, User
 from apps.affiliates import services as affiliate_services
 from apps.billing import contracting, services
@@ -461,6 +461,7 @@ def _organization_run_by(request, organization_id):
 
 
 @login_required
+@no_takeover
 @require_http_methods(["GET", "POST"])
 def cancel_subscription(request, organization_id):
     """Account centre → Billing → Cancel subscription: the brands of the plan, ticked to be cancelled.
@@ -523,6 +524,7 @@ def cancel_subscription(request, organization_id):
 
 
 @login_required
+@no_takeover
 @require_POST
 def keep_brand(request, organization_id):
     """Undo the cancellation of one brand that is still in use on a plan that carries on."""
@@ -548,6 +550,7 @@ def keep_brand(request, organization_id):
 
 
 @login_required
+@no_takeover
 @require_POST
 def resume_subscription(request, organization_id):
     """Undo the cancellation of a whole plan that is still in use: it renews again on the card it was paid with."""
@@ -626,6 +629,7 @@ def save_payer(organization, data):
 
 
 @login_required
+@no_takeover
 @require_org_role("admin")
 @require_POST
 def update_payer(request):
@@ -770,6 +774,7 @@ def subscribe_modal(request, workspace_id):
 
 
 @login_required
+@no_takeover
 @require_POST
 def subscribe_confirm(request, workspace_id):
     """Contract the workspace's monthly subscription.
@@ -829,6 +834,7 @@ def subscribe_confirm(request, workspace_id):
 
 
 @login_required
+@no_takeover
 @require_POST
 def start_trial(request, workspace_id):
     """Start the account's free trial on this workspace.
@@ -1332,6 +1338,7 @@ def _checkout_order(request, organization, *, card):
 
 
 @login_required
+@no_takeover
 @require_POST
 @ratelimit(key="user", rate="8/h", method="POST", block=False)
 def checkout_pay(request, workspace_id):
@@ -1394,6 +1401,7 @@ def checkout_pay(request, workspace_id):
 
 
 @login_required
+@no_takeover
 @require_POST
 @ratelimit(key="user", rate="8/h", method="POST", block=False)
 def checkout_pix(request, workspace_id):
@@ -1456,6 +1464,7 @@ def checkout_status(request, workspace_id):
 
 
 @login_required
+@no_takeover
 @require_POST
 def checkout_add_brands(request, workspace_id):
     """Add the brands ticked and created to the organization's active plan."""
@@ -1567,6 +1576,7 @@ def storage_quote(request, workspace_id):
 
 
 @login_required
+@no_takeover
 @require_POST
 def contract_storage(request, workspace_id):
     """Buy extra GB for this workspace.

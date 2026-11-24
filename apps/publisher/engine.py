@@ -32,6 +32,7 @@ from django.db.models import F
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
+from apps.billing import services as billing_services
 from apps.common.db import in_worker_thread, release_idle_connection
 from apps.common.worker import SHUTDOWN_REQUESTED
 from apps.composer.models import PlatformPost
@@ -46,6 +47,7 @@ from apps.social_accounts.error_messages import (
     PUBLISH_RATE_LIMIT_MESSAGE,
     PUBLISH_UNCONFIRMED_MESSAGE,
     PUBLISH_WORKSPACE_ARCHIVED_MESSAGE,
+    PUBLISH_WORKSPACE_LOCKED_MESSAGE,
     STORY_PROGRESS_MESSAGE,
     exhausted_publish_message,
     friendly_first_comment_error,
@@ -682,6 +684,14 @@ class PublishEngine:
             if Workspace.objects.filter(pk=platform_post.post.workspace_id, is_archived=True).exists():
                 raise PublishError(
                     PUBLISH_WORKSPACE_ARCHIVED_MESSAGE,
+                    platform=platform_post.social_account.get_platform_display(),
+                    retryable=False,
+                )
+            # Same for a brand the subscription lock holds: the API and MCP refuse
+            # it, but posts scheduled before the lapse are already in the queue.
+            if billing_services.is_workspace_locked(platform_post.post.workspace_id):
+                raise PublishError(
+                    PUBLISH_WORKSPACE_LOCKED_MESSAGE,
                     platform=platform_post.social_account.get_platform_display(),
                     retryable=False,
                 )

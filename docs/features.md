@@ -72,7 +72,7 @@ X publishes text with up to 4 photos or one video/GIF through the v2 API (`provi
 
 ### F-1.4 Client portal — `apps/client_portal/`
 - Clients are `WorkspaceMembership` rows with the Client role. They are invited from workspace settings → Clients (`urls_admin.py`).
-- Access is passwordless: a magic link (`MagicLinkToken`) is valid for 30 days, and the expired-link page lets the client ask for a new one.
+- Access is passwordless: a magic link (`MagicLinkToken`, stored only as a hash) is valid for 30 days and single use, and the expired-link page lets the client ask for a new one. Redeeming it opens a session confined to `/portal/` (`apps/client_portal/middleware.py`): the client cannot reach workspace screens or other organizations with it until they sign out and sign in normally.
 - Portal pages under `/portal/`: dashboard, approval queue (approve / request changes / reject / **request hold**), published posts, activity. `/portal/reports/` is a placeholder page. Every portal request needs a membership that still grants `approve_posts` (`portal_auth_required`), so a role change ends an open portal session.
 
 ### F-1.5 Platform API credentials — `apps/credentials/`
@@ -287,7 +287,7 @@ People and companies the workspace talks to (sidebar: Engajar → Contatos, for 
 - `SIGNUP_MODE` = `open` | `invite` | `closed`. `CUSTOM_SIGNUP_URL` replaces every "Sign up" link and, in `invite` or `closed` mode, is where blocked signups are sent (`signup_links.py`, `adapters.py`).
 - Auth POSTs, including the Django admin login, are rate-limited per IP: 10 attempts per 60 s (`apps/accounts/middleware.py`). Sessions last 14 days (`SESSION_COOKIE_AGE`).
 - 2FA: the TOTP fields exist on `User`, but there is no setup or enforcement flow yet.
-- **Operator impersonation** (`impersonation.py`, `views_impersonation.py`): staff can sign in as a customer for support. Staff cannot impersonate other staff. Start and stop are POST-only, and every session is recorded in `ImpersonationSession`, which can be viewed in the staff console. A takeover ends on its next request once the operator is deactivated or loses staff status (`ImpersonationGuardMiddleware`), and it can neither approve an OAuth client nor issue an API key. It cannot schedule or publish either: the attempt is refused with a message and the post stays as it was; everything else in the account works, for diagnosis.
+- **Operator impersonation** (`impersonation.py`, `views_impersonation.py`): staff can sign in as a customer for support. Staff cannot impersonate other staff. Start and stop are POST-only, and every session is recorded in `ImpersonationSession`, which can be viewed in the staff console. A takeover ends on its next request once the operator is deactivated or loses staff status (`ImpersonationGuardMiddleware`), and it can neither approve an OAuth client nor issue an API key. It cannot schedule or publish either: the attempt is refused with a message and the post stays as it was; nor can it delete or archive the organization, a brand or the account, pay or change the subscription, invite or change roles, change ads, reply from the inbox, send a client-portal or connection link, or change the account's e-mail, password or Google sign-in. Each refusal shows a message and changes nothing. Every page can still be viewed and settings adjusted, for diagnosis.
 
 ### F-5.2 Branding
 - Per-workspace logo/icon and primary/secondary colours (`Workspace`), plus the organization logo URL. There is no custom domain or email white-labelling.

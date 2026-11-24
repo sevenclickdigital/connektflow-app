@@ -1,4 +1,5 @@
 from .base import *  # noqa: F401, F403
+from .base import env
 
 DEBUG = False
 
@@ -12,6 +13,9 @@ CSRF_COOKIE_SECURE = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_REDIRECT_EXEMPT = [r"^health/$"]
+# Dokploy's Traefik sits in front of every request; without counting it, every
+# visitor would share Traefik's address and one login limit.
+ALLAUTH_TRUSTED_PROXY_COUNT = env.int("ALLAUTH_TRUSTED_PROXY_COUNT", default=1)
 
 # Logging
 LOGGING = {

@@ -602,7 +602,7 @@ class TestPhoto:
         upload = SimpleUploadedFile("carla.html", self._png(), content_type="image/png")
 
         assert clean_photo(upload) == ""
-        assert upload.name == "carla.png"
+        assert upload.name.endswith("-carla.png")
 
     def test_a_file_that_is_not_an_image_is_refused_whatever_it_declares(self):
         from django.core.files.uploadedfile import SimpleUploadedFile

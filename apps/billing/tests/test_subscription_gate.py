@@ -607,3 +607,222 @@ class TestAnotherBrandInAnActivatedAccount:
 
         assert client.get(_url("billing:checkout_cancel", brand)).status_code == 405
         assert Workspace.objects.filter(pk=brand.pk).exists()
+
+
+# ---------------------------------------------------------------------------
+# Routes that act on a brand without opening its pages: API keys, MCP and the
+# publisher. A paid brand next to an unpaid one must not lend it its access.
+# ---------------------------------------------------------------------------
+
+
+class _SecureClient(Client):
+    """The Agent API refuses bearers over plain HTTP."""
+
+    def generic(self, method, path, *args, **kwargs):
+        kwargs["secure"] = True
+        return super().generic(method, path, *args, **kwargs)
+
+
+def _with_status(workspace, status):
+    sub = services.ensure_subscription(workspace)
+    sub.status = status
+    sub.save(update_fields=["status"])
+
+
+@pytest.fixture
+def brands(db):
+    """An owner with a paid brand and a lapsed one, each with a connected account and an API key."""
+    from django.core.cache import cache
+
+    from apps.api_keys import services as key_services
+    from apps.members.models import PERMISSION_KEYS
+    from apps.social_accounts.models import SocialAccount
+
+    cache.clear()
+    owner = User.objects.create_user(
+        email="two-brands@example.com", password="testpass123", tos_accepted_at=timezone.now()
+    )
+    paid = WorkspaceMembership.objects.get(user=owner).workspace
+    lapsed = Workspace.objects.create(name="Lapsed", organization=paid.organization)
+    WorkspaceMembership.objects.create(
+        user=owner, workspace=lapsed, workspace_role=WorkspaceMembership.WorkspaceRole.OWNER
+    )
+    _with_status(paid, "active")
+    _with_status(lapsed, "past_due")
+    accounts, keys = {}, {}
+    for workspace in (paid, lapsed):
+        accounts[workspace.id] = SocialAccount.objects.create(
+            workspace=workspace,
+            platform="facebook",
+            account_platform_id=f"page-{workspace.id}",
+            account_name="Page",
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+        keys[workspace.id] = key_services.issue_api_key(
+            workspace=workspace,
+            social_accounts=[accounts[workspace.id]],
+            issued_by=owner,
+            name="key",
+            permissions=list(PERMISSION_KEYS),
+        ).plaintext_token
+    yield owner, paid, lapsed, accounts, keys
+    cache.clear()
+
+
+def _api_schedule(token, account):
+    import json
+    from datetime import timedelta
+
+    return _SecureClient().post(
+        "/api/v1/posts/",
+        data=json.dumps(
+            {
+                "social_account_id": str(account.id),
+                "caption": "through the API",
+                "action": "schedule",
+                "scheduled_at": (timezone.now() + timedelta(days=1)).isoformat(),
+            }
+        ),
+        content_type="application/json",
+        HTTP_AUTHORIZATION=f"Bearer {token}",
+    )
+
+
+def _mcp_ping(token):
+    import json
+
+    return _SecureClient().post(
+        "/api/v1/mcp/",
+        data=json.dumps({"jsonrpc": "2.0", "method": "ping", "id": 1}),
+        content_type="application/json",
+        HTTP_AUTHORIZATION=f"Bearer {token}",
+    )
+
+
+def _oauth_token(user):
+    """A valid MCP OAuth token of ``user`` with no brand binding: it acts on the brand they have open."""
+    from datetime import timedelta
+
+    from oauth2_provider.models import get_access_token_model, get_application_model
+
+    application_model = get_application_model()
+    app = application_model.objects.create(
+        name="Claude",
+        client_type=application_model.CLIENT_PUBLIC,
+        authorization_grant_type=application_model.GRANT_AUTHORIZATION_CODE,
+        redirect_uris="https://claude.ai/api/mcp/auth_callback",
+    )
+    get_access_token_model().objects.create(
+        user=user, application=app, token=f"oauth-{user.pk}", scope="mcp", expires=timezone.now() + timedelta(hours=1)
+    )
+    return f"oauth-{user.pk}"
+
+
+def _due_platform_post(workspace, account, author):
+    from datetime import timedelta
+
+    from apps.composer.models import PlatformPost
+
+    post = Post.objects.create(workspace=workspace, caption="scheduled before the lapse", author=author)
+    return PlatformPost.objects.create(
+        post=post,
+        social_account=account,
+        status=PlatformPost.Status.PUBLISHING,
+        scheduled_at=timezone.now() - timedelta(minutes=1),
+    )
+
+
+class TestGateBeyondThePages:
+    def test_an_api_key_of_a_lapsed_brand_is_refused_with_402(self, required, brands):
+        _owner, _paid, lapsed, accounts, keys = brands
+
+        response = _api_schedule(keys[lapsed.id], accounts[lapsed.id])
+
+        assert response.status_code == 402
+        assert response.json()["error"] == "payment_required"
+        assert not Post.objects.filter(workspace=lapsed).exists()
+
+    def test_an_api_key_of_a_paid_brand_still_schedules(self, required, brands):
+        _owner, paid, _lapsed, accounts, keys = brands
+
+        response = _api_schedule(keys[paid.id], accounts[paid.id])
+
+        assert response.status_code in (200, 201)
+        assert Post.objects.filter(workspace=paid).count() == 1
+
+    def test_without_the_lock_a_lapsed_brand_keeps_its_api(self, brands):
+        _owner, _paid, lapsed, accounts, keys = brands
+
+        assert _api_schedule(keys[lapsed.id], accounts[lapsed.id]).status_code in (200, 201)
+
+    def test_mcp_with_an_api_key_follows_the_brand(self, required, brands):
+        _owner, paid, lapsed, _accounts, keys = brands
+
+        assert _mcp_ping(keys[lapsed.id]).status_code == 402
+        assert _mcp_ping(keys[paid.id]).status_code == 200
+
+    def test_mcp_with_oauth_follows_the_brand(self, required, brands):
+        owner, paid, lapsed, _accounts, _keys = brands
+        token = _oauth_token(owner)
+
+        owner.last_workspace_id = lapsed.id
+        owner.save(update_fields=["last_workspace_id"])
+        refused = _mcp_ping(token)
+        owner.last_workspace_id = paid.id
+        owner.save(update_fields=["last_workspace_id"])
+        allowed = _mcp_ping(token)
+
+        assert refused.status_code == 402
+        assert "WWW-Authenticate" not in refused.headers
+        assert allowed.status_code == 200
+
+    def test_a_key_is_not_issued_for_a_lapsed_brand(self, required, brands):
+        from apps.api_keys.models import ApiKey
+
+        owner, _paid, lapsed, accounts, _keys = brands
+        client = Client()
+        client.force_login(owner)
+
+        client.post(
+            reverse("api_keys:issue"),
+            {
+                "name": "new",
+                "workspace_id": str(lapsed.id),
+                "social_account_ids": [str(accounts[lapsed.id].id)],
+                "permissions": ["create_posts"],
+            },
+        )
+
+        assert ApiKey.objects.filter(workspace=lapsed).count() == 1
+
+    def test_a_due_post_of_a_lapsed_brand_fails_visibly_without_reaching_the_platform(self, required, brands):
+        from apps.composer.models import PlatformPost
+        from apps.notifications.models import EventType, Notification
+        from apps.publisher.engine import PublishEngine
+        from apps.social_accounts.error_messages import PUBLISH_WORKSPACE_LOCKED_MESSAGE
+
+        owner, _paid, lapsed, accounts, _keys = brands
+        platform_post = _due_platform_post(lapsed, accounts[lapsed.id], owner)
+
+        with mock.patch("apps.publisher.engine._provider_and_access_token") as reach_platform:
+            result = PublishEngine()._publish_platform_post(platform_post)
+
+        reach_platform.assert_not_called()
+        assert result["success"] is False
+        platform_post.refresh_from_db()
+        assert platform_post.status == PlatformPost.Status.FAILED
+        assert platform_post.publish_error == PUBLISH_WORKSPACE_LOCKED_MESSAGE
+        assert Notification.objects.filter(user=owner, event_type=EventType.POST_FAILED).exists()
+
+    def test_a_due_post_of_a_paid_brand_still_reaches_the_platform(self, required, brands):
+        from apps.publisher.engine import PublishEngine
+        from providers.exceptions import PublishError
+
+        owner, paid, _lapsed, accounts, _keys = brands
+        platform_post = _due_platform_post(paid, accounts[paid.id], owner)
+        refused = PublishError("The platform said no.", platform="Facebook", retryable=False)
+
+        with mock.patch("apps.publisher.engine._provider_and_access_token", side_effect=refused) as reach_platform:
+            PublishEngine()._publish_platform_post(platform_post)
+
+        reach_platform.assert_called_once()

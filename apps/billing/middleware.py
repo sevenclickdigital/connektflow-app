@@ -71,12 +71,9 @@ class SubscriptionGateMiddleware:
         workspace = getattr(request, "workspace", None)
         if workspace is None:
             return None
-        # Read after the cheap checks: it is the plan screen's setting (cached), not a constant.
-        if not services.subscription_required():
-            return None
         if request.resolver_match.namespace in OPEN_NAMESPACES:
             return None
-        if services.is_workspace_active(workspace):
+        if not services.is_workspace_locked(workspace):
             return None
 
         return _to_contracting(request, workspace)

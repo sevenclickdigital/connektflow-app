@@ -17,6 +17,7 @@ from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 from django.views.decorators.http import require_http_methods, require_POST
 
+from apps.accounts.impersonation import no_takeover, refuse_during_takeover
 from apps.accounts.models import User
 from apps.accounts.signals import create_organization_with_brand
 from apps.accounts.signup_links import custom_signup_url, signup_allowed
@@ -68,6 +69,8 @@ def settings_view(request, organization_id=None):
         if not is_owner:
             raise PermissionDenied
         action = request.POST.get("action")
+        if action in ("delete_organization", "delete_organization_now"):
+            refuse_during_takeover(request)
         if action == "delete_organization":
             _handle_org_deletion(request, org)
         elif action == "delete_organization_now":
@@ -527,6 +530,7 @@ def edit_view(request):
 
 
 @login_required
+@no_takeover
 @require_http_methods(["GET", "POST"])
 def role_permissions_view(request, organization_id):
     """Account centre → Organizations → Roles and permissions of one organization.

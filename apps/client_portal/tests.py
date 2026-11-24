@@ -7,8 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.client_portal.models import MagicLinkToken
-from apps.client_portal.services import consume_magic_link, peek_magic_link
+from apps.client_portal.services import consume_magic_link, issue_magic_link_token, peek_magic_link
 from apps.composer.models import PlatformPost, Post
 from apps.members.models import WorkspaceMembership
 from apps.organizations.models import Organization
@@ -30,7 +29,7 @@ class MagicLinkTestBase(TestCase):
             workspace=self.workspace,
             workspace_role=WorkspaceMembership.WorkspaceRole.CLIENT,
         )
-        self.token = MagicLinkToken.objects.create(user=self.client_user, workspace=self.workspace)
+        self.token, self.raw_token = issue_magic_link_token(self.client_user, self.workspace)
 
     def _expire(self, token):
         token.expires_at = timezone.now() - timedelta(days=1)
@@ -39,21 +38,21 @@ class MagicLinkTestBase(TestCase):
 
 class PeekMagicLinkTests(MagicLinkTestBase):
     def test_peek_returns_token_for_fresh_token(self):
-        self.assertEqual(peek_magic_link(self.token.token), self.token)
+        self.assertEqual(peek_magic_link(self.raw_token), self.token)
 
     def test_peek_does_not_consume_token(self):
-        peek_magic_link(self.token.token)
+        peek_magic_link(self.raw_token)
         self.token.refresh_from_db()
         self.assertFalse(self.token.is_consumed)
 
     def test_peek_returns_none_for_expired_token(self):
         self._expire(self.token)
-        self.assertIsNone(peek_magic_link(self.token.token))
+        self.assertIsNone(peek_magic_link(self.raw_token))
 
     def test_peek_returns_none_for_consumed_token(self):
         self.token.is_consumed = True
         self.token.save(update_fields=["is_consumed"])
-        self.assertIsNone(peek_magic_link(self.token.token))
+        self.assertIsNone(peek_magic_link(self.raw_token))
 
     def test_peek_returns_none_for_unknown_token(self):
         self.assertIsNone(peek_magic_link("does-not-exist"))
@@ -61,7 +60,7 @@ class PeekMagicLinkTests(MagicLinkTestBase):
 
 class ConsumeMagicLinkTests(MagicLinkTestBase):
     def test_consume_first_use_succeeds_and_marks_consumed(self):
-        user, workspace, is_valid = consume_magic_link(self.token.token)
+        user, workspace, is_valid = consume_magic_link(self.raw_token)
         self.assertTrue(is_valid)
         self.assertEqual(user, self.client_user)
         self.assertEqual(workspace, self.workspace)
@@ -70,12 +69,12 @@ class ConsumeMagicLinkTests(MagicLinkTestBase):
         self.assertIsNotNone(self.token.last_used_at)
 
     def test_consume_second_use_is_rejected(self):
-        consume_magic_link(self.token.token)
-        self.assertEqual(consume_magic_link(self.token.token), (None, None, False))
+        consume_magic_link(self.raw_token)
+        self.assertEqual(consume_magic_link(self.raw_token), (None, None, False))
 
     def test_consume_expired_token_is_rejected(self):
         self._expire(self.token)
-        self.assertEqual(consume_magic_link(self.token.token), (None, None, False))
+        self.assertEqual(consume_magic_link(self.raw_token), (None, None, False))
 
     def test_consume_unknown_token_is_rejected(self):
         self.assertEqual(consume_magic_link("does-not-exist"), (None, None, False))
@@ -83,7 +82,7 @@ class ConsumeMagicLinkTests(MagicLinkTestBase):
 
 class MagicLinkEntryViewTests(MagicLinkTestBase):
     def _entry_url(self, token=None):
-        return reverse("client_portal:magic_link_entry", kwargs={"token": token or self.token.token})
+        return reverse("client_portal:magic_link_entry", kwargs={"token": token or self.raw_token})
 
     def test_get_renders_confirmation_without_consuming(self):
         response = self.client.get(self._entry_url())

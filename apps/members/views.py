@@ -9,6 +9,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 from django_ratelimit.decorators import ratelimit
 
+from apps.accounts.impersonation import no_takeover
 from apps.common.htmx import toast_response
 from apps.workspaces.models import Workspace
 
@@ -140,6 +141,7 @@ def member_list(request):
 
 
 @login_required
+@no_takeover
 @require_POST
 @ratelimit(key="user", rate="10/m", method="POST", block=True)
 def invite_member(request):
@@ -216,6 +218,7 @@ def invite_member(request):
 
 
 @login_required
+@no_takeover
 @require_org_role("admin")
 @require_POST
 @ratelimit(key="user", rate="10/m", method="POST", block=True)
@@ -240,6 +243,7 @@ def resend_invite(request, invitation_id):
 
 
 @login_required
+@no_takeover
 @require_org_role("admin")
 @require_POST
 def revoke_invite(request, invitation_id):
@@ -321,6 +325,7 @@ def accept_invite(request, token):
 
 
 @login_required
+@no_takeover
 @require_org_role("admin")
 @require_POST
 def update_member_role(request, membership_id):
@@ -370,6 +375,7 @@ def update_member_role(request, membership_id):
 
 
 @login_required
+@no_takeover
 @require_org_role("admin")
 @require_POST
 def remove_member(request, membership_id):
@@ -395,6 +401,7 @@ def remove_member(request, membership_id):
 
 
 @login_required
+@no_takeover
 @require_org_role("admin")
 def manage_workspaces(request, membership_id):
     """GET: show workspace assignment form. POST: update assignments."""

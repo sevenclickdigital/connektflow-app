@@ -82,6 +82,10 @@ def account_settings(request):
     profile_form = ProfileForm(instance=user)
     if request.method == "POST":
         action = request.POST.get("action", "")
+        if action in ("update_password", "delete_account"):
+            # A takeover that set the password would keep a way in after it
+            # ended; deleting the account is the customer's decision alone.
+            impersonation.refuse_during_takeover(request)
 
         if action == "update_photo":
             _handle_photo_update(request, user)

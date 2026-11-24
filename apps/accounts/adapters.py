@@ -1,3 +1,6 @@
+import functools
+import ipaddress
+
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
@@ -61,6 +64,19 @@ def create_account_under_invitation(request, save):
     return user
 
 
+@functools.lru_cache(maxsize=4)
+def _networks(ranges):
+    return tuple(ipaddress.ip_network(r) for r in ranges)
+
+
+def _from_cloudflare(ip):
+    try:
+        address = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return any(address in network for network in _networks(tuple(settings.CLOUDFLARE_IP_RANGES)))
+
+
 class AccountAdapter(DefaultAccountAdapter):
     """Marks allauth's own mail as transactional and applies ``SIGNUP_MODE``.
 
@@ -88,6 +104,24 @@ class AccountAdapter(DefaultAccountAdapter):
     ``save_user`` makes the invite that allowed an invite-mode signup single-use
     (``create_account_under_invitation``).
     """
+
+    def get_client_ip(self, request):
+        """The visitor's address, as every limit and record in the app sees it.
+
+        allauth takes the hop our proxy (Traefik) appended to X-Forwarded-For.
+        In production that hop is a Cloudflare edge, shared by everyone near
+        it, so when it is one the visitor comes from CF-Connecting-IP instead.
+        From any other peer that header is the client's own text and is
+        ignored.
+        """
+        peer = super().get_client_ip(request)
+        if _from_cloudflare(peer):
+            forwarded = request.headers.get("CF-Connecting-IP", "").strip()
+            try:
+                return str(ipaddress.ip_address(forwarded))
+            except ValueError:
+                pass
+        return peer
 
     def is_open_for_signup(self, request):
         if signup_allowed(request):

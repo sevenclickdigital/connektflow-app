@@ -53,6 +53,9 @@ THIRD_PARTY_APPS = [
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
     "django_htmx",
+    # Only for its bundled Swagger UI assets: with the app installed, ninja
+    # serves /api/v1/docs from static files instead of a CDN.
+    "ninja",
     "tailwind",
     "csp",
     # OAuth 2.1 Authorization Server backing the MCP connector flow.
@@ -114,6 +117,9 @@ MIDDLEWARE = [
     # Directly after authentication: a takeover whose operator was deactivated
     # or demoted must end before anything serves the request as the customer.
     "apps.accounts.middleware.ImpersonationGuardMiddleware",
+    # Before anything that acts on the URL: a session opened by a magic link
+    # only reaches /portal/.
+    "apps.client_portal.middleware.PortalSessionConfinementMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "apps.accounts.middleware.AuthRateLimitMiddleware",
     "apps.accounts.middleware.TosAcceptanceMiddleware",
@@ -222,10 +228,54 @@ AUTH_USER_MODEL = "accounts.User"
 # nginx, etc.
 BB_TRUSTED_PROXIES = tuple(p.strip() for p in env.list("BB_TRUSTED_PROXIES", default=[]) if p.strip())
 
+# How many proxies in front of the app append to X-Forwarded-For. allauth's
+# per-IP limits and AuthRateLimitMiddleware take the address that many hops
+# from the right, the one the nearest proxy wrote; anything further left is
+# whatever the client sent. 0 means no proxy: the socket peer is the client.
+ALLAUTH_TRUSTED_PROXY_COUNT = env.int("ALLAUTH_TRUSTED_PROXY_COUNT", default=0)
+
+# Cloudflare's published edge ranges (https://www.cloudflare.com/ips). When the
+# hop above is one of them, the visitor is the CF-Connecting-IP header that
+# Cloudflare writes (apps.accounts.adapters.AccountAdapter.get_client_ip). From
+# any other peer the header is ignored, so reaching the server's own address
+# around Cloudflare cannot pick the IP the limits see.
+CLOUDFLARE_IP_RANGES = (
+    "173.245.48.0/20",
+    "103.21.244.0/22",
+    "103.22.200.0/22",
+    "103.31.4.0/22",
+    "141.101.64.0/18",
+    "108.162.192.0/18",
+    "190.93.240.0/20",
+    "188.114.96.0/20",
+    "197.234.240.0/22",
+    "198.41.128.0/17",
+    "162.158.0.0/15",
+    "104.16.0.0/13",
+    "104.24.0.0/14",
+    "172.64.0.0/13",
+    "131.0.72.0/22",
+    "2400:cb00::/32",
+    "2606:4700::/32",
+    "2803:f800::/32",
+    "2405:b500::/32",
+    "2405:8100::/32",
+    "2a06:98c0::/29",
+    "2c0f:f248::/32",
+)
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# How long a "reset your password" link works. Django's default is three days,
+# far longer than anyone needs to click an e-mail, and the link is a full
+# account takeover for whoever holds it until then.
+PASSWORD_RESET_TIMEOUT = 60 * 60
 
 # Password hashing - bcrypt with cost factor 12
 PASSWORD_HASHERS = [
@@ -502,11 +552,11 @@ TAILWIND_APP_NAME = "theme"
 # CSP - Alpine.js standard build requires unsafe-eval for inline expression
 # evaluation. Styles use unsafe-inline because Tailwind utility classes are inline.
 CSP_DEFAULT_SRC = ("'self'",)
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", "https://cdn.jsdelivr.net")
-CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net")
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'")
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
 CSP_IMG_SRC = ("'self'", "data:", "blob:", "https:")
 CSP_FONT_SRC = ("'self'",)
-CSP_CONNECT_SRC = ("'self'", "https://cdn.jsdelivr.net")
+CSP_CONNECT_SRC = ("'self'",)
 CSP_MEDIA_SRC = ("'self'", "blob:", "https:")
 # The page banners' "See how it works" videos play in YouTube's privacy-enhanced
 # player (apps.onboarding.help_videos.embed_url); nothing else is framed.
@@ -526,6 +576,13 @@ CSP_FORM_ACTION = (
     "https://www.tiktok.com",
 )
 CSP_INCLUDE_NONCE_IN = ["script-src"]
+# default-src does not cover these three. base-uri stops an injected <base>
+# from redirecting every relative script and form; object-src closes plugin
+# content; frame-ancestors matches X-Frame-Options: DENY, which browsers that
+# read CSP ignore in its favour.
+CSP_BASE_URI = ("'self'",)
+CSP_OBJECT_SRC = ("'none'",)
+CSP_FRAME_ANCESTORS = ("'none'",)
 
 # Allow media/images from the storage domain in CSP
 if STORAGE_BACKEND.lower() == "s3":
@@ -969,7 +1026,23 @@ OAUTH2_PROVIDER = {
     "REQUEST_APPROVAL_PROMPT": "auto",
     # Claude's OAuth callback is always https; reject non-TLS redirect URIs.
     "ALLOWED_REDIRECT_URI_SCHEMES": ["https"],
+    # RFC 9700 (OAuth 2.0 Security BCP). Dynamic registration only creates
+    # authorization-code clients and MCP bearers are read from the header, so
+    # these close paths nobody uses. Hashed token storage and refresh-token
+    # replay protection stay off: the first changes how existing tokens are
+    # stored, the second revokes a client's whole session when it races its
+    # own refresh.
+    "COMPLIANT_BCP_RFC9700_IMPLICIT_GRANT": True,
+    "COMPLIANT_BCP_RFC9700_PASSWORD_GRANT": True,
+    "COMPLIANT_BCP_RFC9700_PKCE_METHOD": True,
+    "COMPLIANT_BCP_RFC9700_ACCESS_TOKEN_TRANSPORT": True,
+    "COMPLIANT_BCP_RFC9700_AUTHZ_RESPONSE_ISS": True,
 }
+# The toolkit's own models, named so a migration that points at them
+# (apps.oauth_server's workspace binding) can resolve their swappable setting.
+OAUTH2_PROVIDER_GRANT_MODEL = "oauth2_provider.Grant"
+OAUTH2_PROVIDER_ACCESS_TOKEN_MODEL = "oauth2_provider.AccessToken"
+OAUTH2_PROVIDER_REFRESH_TOKEN_MODEL = "oauth2_provider.RefreshToken"
 
 
 # ---------------------------------------------------------------------------

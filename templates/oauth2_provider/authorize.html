@@ -13,6 +13,9 @@
         {% if not error %}
             <h1>{% blocktrans with name=application.name|default:_("This application") %}Authorize {{ name }}?{% endblocktrans %}</h1>
             <p>{% blocktrans with name=application.name|default:_("This application") %}{{ name }} wants to connect to your Connekt Flow workspace with the following permissions:{% endblocktrans %}</p>
+            {% if redirect_host %}
+                <p>{% blocktranslate %}The access will be sent to <strong>{{ redirect_host }}</strong>. The app chose its own name, so only authorize if you started this connection yourself and recognise this address.{% endblocktranslate %}</p>
+            {% endif %}
 
             <form id="authorizationForm" method="post">
                 {% csrf_token %}
@@ -24,6 +27,11 @@
                 {% for field in form %}
                     {% if field.is_hidden %}{{ field }}{% endif %}
                 {% endfor %}
+                {% if consent_workspace %}
+                    {# The brand shown here is the one approved, even if another tab switches brands meanwhile. #}
+                    <input type="hidden" name="workspace" value="{{ consent_workspace.id }}">
+                    <p>{% blocktranslate with name=consent_workspace.name %}The access is limited to the brand <strong>{{ name }}</strong>. To connect another brand, open it in Connekt Flow and connect again.{% endblocktranslate %}</p>
+                {% endif %}
 
                 <ul class="bb-scopes">
                     {% for scope in scopes_descriptions %}

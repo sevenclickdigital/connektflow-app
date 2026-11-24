@@ -1226,6 +1226,17 @@ def is_workspace_active(workspace):
     return bool(sub and sub.is_active)
 
 
+def is_workspace_locked(workspace):
+    """True when the subscription lock keeps ``workspace`` from being used.
+
+    The lock in one question, for the routes that act on a brand without
+    opening its pages (API keys, MCP, the publisher): "Subscription
+    required" is on and the brand is neither paid, comped nor on a trial.
+    Accepts a Workspace or its id.
+    """
+    return subscription_required() and not is_workspace_active(workspace)
+
+
 def has_workspace_in_use(user):
     """Whether any brand ``user`` belongs to may be used: paid, comped or on a running trial."""
     subscriptions = WorkspaceSubscription.objects.filter(

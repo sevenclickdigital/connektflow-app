@@ -37,6 +37,7 @@ from django.views.decorators.http import require_http_methods
 from apps.accounts import impersonation
 from apps.api_keys import services
 from apps.api_keys.models import ApiKey
+from apps.billing.services import is_workspace_locked
 from apps.members.models import (
     PERMISSION_KEYS,
     WorkspaceMembership,
@@ -438,6 +439,10 @@ def issue_key(request):
             # corresponding catch in ``workspace_options_partial`` for
             # the full rationale.
             errors.append("Selected workspace is not in this organisation.")
+    if workspace is not None and is_workspace_locked(workspace):
+        # The API would refuse the key with a 402 on its first call.
+        errors.append(_("This brand's subscription is not active, so it can't have API keys. Activate it first."))
+        workspace = None
 
     accounts: list[SocialAccount] = []
     if workspace is not None:

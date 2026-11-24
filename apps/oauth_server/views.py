@@ -22,6 +22,7 @@ from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
@@ -30,7 +31,9 @@ from oauth2_provider.models import get_application_model
 
 from apps.accounts import impersonation
 
+from . import services
 from .metadata import authorization_server_metadata, protected_resource_metadata
+from .validator import CONSENT_WORKSPACE_ATTR
 
 LOG = logging.getLogger(__name__)
 
@@ -59,6 +62,44 @@ class AuthorizationView(oauth2_views.AuthorizationView):
         if impersonation.is_impersonating(request):
             raise PermissionDenied("Apps cannot be connected during an impersonation session.")
         return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        """Add ``redirect_host``: where the access will actually go.
+
+        Registration is open and ``client_name`` is whatever the registrant
+        typed, so "Claude Desktop" on the screen proves nothing. The host the
+        code is sent to is the one fact the person can check.
+
+        Also ``consent_workspace``: the brand the grant will be bound to.
+        """
+        context = super().get_context_data(**kwargs)
+        redirect_uri = context.get("redirect_uri")
+        form = context.get("form")
+        if not redirect_uri and form is not None and "redirect_uri" in form.fields:
+            redirect_uri = form["redirect_uri"].value()
+        context["redirect_host"] = urlparse(redirect_uri or "").hostname or ""
+        membership = services.current_membership(self.request.user)
+        context["consent_workspace"] = membership.workspace if membership is not None else None
+        return context
+
+    def create_authorization_response(self, request, scopes, credentials, allow):
+        """Bind the grant to the brand being approved (``apps.oauth_server.models``).
+
+        The consent form posts the brand it showed, so switching brands in
+        another tab between opening the screen and approving cannot change
+        what was approved. The automatic re-approval of a client that already
+        holds a valid token has no form and binds the brand open now.
+        """
+        if allow:
+            posted = request.POST.get("workspace") if request.method == "POST" else None
+            membership = services.current_membership(request.user, workspace_id=posted or None)
+            if posted and membership is None:
+                raise PermissionDenied(
+                    gettext("That brand is no longer available to you. Start the connection again from the app.")
+                )
+            if membership is not None:
+                credentials[CONSENT_WORKSPACE_ATTR] = membership.workspace_id
+        return super().create_authorization_response(request, scopes, credentials, allow)
 
 
 def _dcr_error(error: str, description: str, status: int = 400) -> JsonResponse:

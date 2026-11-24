@@ -16,6 +16,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext_lazy
 from django.views.decorators.http import require_GET, require_POST
 
+from apps.accounts.impersonation import no_takeover
 from apps.composer.emoji import emoji_catalogue
 from apps.contacts.models import ChannelKind
 from apps.contacts.services import (
@@ -693,6 +694,7 @@ def _get_workspace_reply(workspace, reply_id):
 
 
 @login_required
+@no_takeover
 @require_permission("reply_from_inbox")
 @require_POST
 def send_reply(request, workspace_id, message_id):
@@ -774,6 +776,7 @@ def message_thread(request, workspace_id, message_id):
 
 
 @login_required
+@no_takeover
 @require_permission("reply_from_inbox")
 @require_POST
 def react_message(request, workspace_id, message_id):
@@ -832,6 +835,7 @@ def save_reply_draft(request, workspace_id, message_id):
 
 
 @login_required
+@no_takeover
 @require_permission("reply_from_inbox")
 @require_POST
 def send_reply_draft(request, workspace_id, reply_id):

@@ -41,18 +41,21 @@ REVOCATION_CACHE_TTL = 30  # seconds
 # ---------------------------------------------------------------------------
 
 
-def _derive_hmac_pepper() -> bytes:
+API_KEY_HMAC_INFO = b"brightbean-api-key-hmac"
+
+
+def _derive_hmac_pepper(info: bytes = API_KEY_HMAC_INFO) -> bytes:
     """Derive a 256-bit HMAC pepper from SECRET_KEY via HKDF.
 
-    Distinct ``info`` bytes from the field-encryption key derivation in
-    ``apps.common.encryption`` so a compromise of one secret never reveals
-    the other.
+    ``info`` separates the peppers of different token kinds, and all of them
+    from the field-encryption key derivation in ``apps.common.encryption``, so
+    a compromise of one secret never reveals another.
     """
     secret = settings.SECRET_KEY.encode("utf-8")
     salt = getattr(settings, "ENCRYPTION_KEY_SALT", None)
     if not salt:
         raise ValueError(
-            "ENCRYPTION_KEY_SALT must be set for ApiKey HMAC peppering. "
+            "ENCRYPTION_KEY_SALT must be set for token HMAC peppering. "
             "Generate a random value and add it to your environment."
         )
     if isinstance(salt, str):
@@ -61,8 +64,22 @@ def _derive_hmac_pepper() -> bytes:
         algorithm=SHA256(),
         length=32,
         salt=salt,
-        info=b"brightbean-api-key-hmac",
+        info=info,
     ).derive(secret)
+
+
+def peppered_hmac(value: str, *, info: bytes) -> str:
+    """Hex HMAC-SHA256 of ``value`` under the pepper derived for ``info``.
+
+    The at-rest form of a bearer secret: deterministic, so the stored hash can
+    be looked up by equality, and useless without ``SECRET_KEY`` and
+    ``ENCRYPTION_KEY_SALT``. Rotating either invalidates every stored hash.
+    """
+    return hmac.new(
+        _derive_hmac_pepper(info),
+        value.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
 
 
 # ---------------------------------------------------------------------------
@@ -79,11 +96,7 @@ class ParsedToken:
 
 
 def _hmac_hex(random_part: str) -> str:
-    return hmac.new(
-        _derive_hmac_pepper(),
-        random_part.encode("utf-8"),
-        hashlib.sha256,
-    ).hexdigest()
+    return peppered_hmac(random_part, info=API_KEY_HMAC_INFO)
 
 
 def _make_lookup(random_part: str) -> str:

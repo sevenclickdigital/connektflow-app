@@ -15,3 +15,15 @@ useDefault = true
 [allowlist]
 description = "Project allowlist: ignore LinkedInProvider class-name imports"
 regexes = ['''LinkedInProvider''']
+
+# False positive: placeholder passwords typed into forms and create_user()
+# calls in the test suite. Both conditions must hold, so a real token pasted
+# into a test, or a password line anywhere else, is still reported.
+[[rules]]
+id = "generic-api-key"
+[[rules.allowlists]]
+description = "Placeholder passwords in tests"
+condition = "AND"
+paths = ['''^apps/[^/]+/tests/''']
+regexTarget = "line"
+regexes = ['''(?i)passw(or)?d(1|2|_confirm)?["']?\s*[:=]''']

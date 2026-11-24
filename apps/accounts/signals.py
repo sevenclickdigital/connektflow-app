@@ -7,6 +7,7 @@ from allauth.account.signals import (
     password_set,
     user_signed_up,
 )
+from django.contrib.auth.signals import user_logged_in, user_login_failed
 from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -259,6 +260,38 @@ def revoke_oauth_tokens_on_new_password(sender, request, user, **kwargs):
     from apps.oauth_server.services import revoke_user_tokens
 
     revoke_user_tokens(user)
+
+
+def _request_ip(request):
+    from apps.accounts.impersonation import client_ip
+
+    return (client_ip(request) if request is not None else None) or "-"
+
+
+def _masked_login(value):
+    """``ana.souza@example.com`` -> ``an***@example.com``: enough to spot one
+    address being hammered without writing the address into the logs."""
+    local, _, domain = str(value or "").partition("@")
+    return f"{local[:2]}***@{domain}" if domain else f"{local[:2]}***"
+
+
+@receiver(user_login_failed)
+def log_failed_login(sender, credentials, request=None, **kwargs):
+    """Leave a trace of every wrong password, so a guessing run shows up in the logs."""
+    login = credentials.get("email") or credentials.get("username") or credentials.get("login")
+    logger.warning(
+        "Failed login for %s from %s on %s",
+        _masked_login(login),
+        _request_ip(request),
+        getattr(request, "path", "-"),
+    )
+
+
+@receiver(user_logged_in)
+def log_team_login(sender, request, user, **kwargs):
+    """Team accounts reach every customer, so each of their sign-ins is recorded."""
+    if user.is_staff:
+        logger.info("Team account %s signed in from %s", user.pk, _request_ip(request))
 
 
 @receiver(post_save, sender="accounts.User")

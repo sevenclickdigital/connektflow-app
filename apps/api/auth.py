@@ -13,6 +13,8 @@ Defense-in-depth checks on every request:
 * Key not revoked, not expired
 * Issuer is still an active user with a ``WorkspaceMembership`` in the key's
   workspace
+* The workspace is not archived (401) nor held by the subscription lock
+  (402, ``billing.services.is_workspace_locked``)
 * Per-request permission intersection of (key.permissions) ∩
   (issuer's current effective workspace permissions) — silently shrinks
   the key's grants if the issuer is demoted, with no scheduled job
@@ -33,11 +35,14 @@ from typing import Any
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpRequest
+from ninja.errors import HttpError
 from ninja.security import HttpBearer
 
 from apps.api.limits import is_failed_auth_ip_blocked, record_failed_auth
 from apps.api_keys.models import ApiKey
 from apps.api_keys.services import TOKEN_PREFIX, touch_last_used, verify_token
+from apps.billing.services import is_workspace_locked
+from apps.oauth_server.services import token_membership
 from apps.workspaces.models import Workspace
 
 LOG = logging.getLogger(__name__)
@@ -162,6 +167,7 @@ class ApiKeyAuth(HttpBearer):
         if Workspace.objects.filter(pk=api_key.workspace_id, is_archived=True).exists():
             LOG.info("Bearer auth rejected: the workspace of API key %s is archived.", api_key.pk)
             return None
+        _refuse_locked_workspace(api_key.workspace_id, actor=f"API key {api_key.pk}")
 
         # Resolve effective permissions and attach the membership shim.
         effective = _resolve_effective_permissions(api_key)
@@ -188,6 +194,22 @@ class ApiKeyAuth(HttpBearer):
         return api_key
 
 
+#: Body of the 402 a brand held by the subscription lock gets. Not counted as
+#: a failed authentication: the credential is genuine and works again once the
+#: brand is paid, so the caller must be told why rather than handed a 401.
+LOCKED_WORKSPACE_DETAIL = (
+    "This workspace's subscription is not active, so the API is unavailable for it. "
+    "Activate the subscription in Connekt Flow to use it again."
+)
+
+
+def _refuse_locked_workspace(workspace_id: Any, *, actor: str) -> None:
+    """Raise a 402 when the subscription lock holds ``workspace_id`` (``billing.services.is_workspace_locked``)."""
+    if is_workspace_locked(workspace_id):
+        LOG.info("Bearer auth refused: the workspace of %s has no active subscription.", actor)
+        raise HttpError(402, LOCKED_WORKSPACE_DETAIL)
+
+
 def _client_ip(request: HttpRequest) -> str | None:
     """Delegate to the canonical, proxy-trust-aware implementation in limits.
 
@@ -208,8 +230,9 @@ def _client_ip(request: HttpRequest) -> str | None:
 # bb_studio_ key: an OAuth 2.1 access token issued by the Connekt Flow
 # Authorization Server (apps.oauth_server), which is what Claude Desktop's
 # native connector flow obtains. OAuth authenticates a *person* rather than a
-# minted credential, so we map the token's user to their active workspace and
-# expose an ApiKey-shaped shim — the MCP handlers, throttle, and audit log all
+# minted credential, so we map the token to the workspace it was approved for
+# (``apps.oauth_server.services.token_membership``) and expose an ApiKey-shaped
+# shim — the MCP handlers, throttle, and audit log all
 # read an ``ApiKey``-like object off the request and run unchanged.
 
 _MCP_OAUTH_SCOPE = "mcp"
@@ -265,27 +288,6 @@ class OAuthMcpActor:
         self.effective_permissions = membership.effective_permissions
 
 
-def _resolve_active_membership(user: Any):
-    """Pick the workspace an OAuth caller operates in.
-
-    Mirrors the dashboard's "current workspace" notion (see
-    ``apps.members.middleware.RBACMiddleware``): the user's
-    ``last_workspace_id`` when they still have a non-archived membership
-    there, else their earliest-joined non-archived membership. Returns None
-    when the user has no usable workspace — the caller refuses the auth.
-    """
-    from apps.members.models import WorkspaceMembership
-
-    base = WorkspaceMembership.objects.select_related("workspace", "custom_role").filter(
-        user=user, workspace__is_archived=False
-    )
-    if getattr(user, "last_workspace_id", None):
-        current = base.filter(workspace_id=user.last_workspace_id).first()
-        if current is not None:
-            return current
-    return base.order_by("added_at").first()
-
-
 def _resolve_oauth_actor(token: str) -> OAuthMcpActor | None:
     """Resolve a non-bb_studio_ bearer as a django-oauth-toolkit access token.
 
@@ -331,12 +333,14 @@ def _resolve_oauth_actor(token: str) -> OAuthMcpActor | None:
             tok.scope,
         )
         return None
-    membership = _resolve_active_membership(tok.user)
+    membership = token_membership(tok)
     if membership is None:
         # WARNING: a valid, scoped, unexpired token whose user maps to no
-        # workspace is the genuinely anomalous case operators want to see.
+        # workspace (membership revoked, brand archived) is the case
+        # operators want to see.
         LOG.warning(
-            "Bearer auth rejected: user %s has a valid OAuth token but no active (non-archived) workspace membership.",
+            "Bearer auth rejected: OAuth token %s of user %s maps to no workspace the user can still use.",
+            tok.pk,
             tok.user_id,
         )
         return None
@@ -349,8 +353,10 @@ class McpAuth(ApiKeyAuth):
     A ``bb_studio_`` token reuses the parent ``ApiKeyAuth`` path verbatim —
     same IP throttle, HTTPS guard, permission intersection, and audit. Any
     other bearer is resolved as an OAuth access token issued by the Connekt Flow
-    Studio Authorization Server (apps.oauth_server) and mapped to the user's
-    active workspace via an ``OAuthMcpActor`` shim.
+    Studio Authorization Server (apps.oauth_server) and mapped to the
+    workspace it was approved for via an ``OAuthMcpActor`` shim.
+
+    Both paths refuse a workspace the subscription lock holds with a 402.
     """
 
     def authenticate(self, request: HttpRequest, token: str):  # type: ignore[override]
@@ -368,6 +374,7 @@ class McpAuth(ApiKeyAuth):
             # _resolve_oauth_actor has already logged the specific reason.
             record_failed_auth(request)
             return None
+        _refuse_locked_workspace(actor.workspace_id, actor=f"OAuth user {actor.issued_by_id}")
 
         request.api_key = actor  # type: ignore[attr-defined]
         request.workspace = actor.workspace  # type: ignore[attr-defined]

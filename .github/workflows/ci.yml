@@ -62,7 +62,7 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: mypy
         run: mypy apps/ config/ providers/ tests/ --ignore-missing-imports
@@ -93,7 +93,7 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       # Uses the PostgreSQL preinstalled on the runner instead of a service
       # container. Anonymous image pulls kept failing before any test ran:

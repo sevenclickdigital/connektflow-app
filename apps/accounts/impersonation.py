@@ -22,6 +22,13 @@ decorator:
   makes ``PlatformPost.save`` refuse a row entering ``scheduled`` — the
   one state every way of publishing goes through — with
   :class:`PublishingBlockedError`.
+- **A takeover cannot take decisions that are the customer's.** Deleting
+  or archiving, paying, changing who has access, changing how the account
+  signs in, and speaking to third parties (inbox replies, ads, portal
+  links) are refused by :func:`refuse_during_takeover` or the
+  :func:`no_takeover` view decorator. Both raise
+  :class:`TakeoverRefusedError`, which ``ImpersonationGuardMiddleware``
+  answers with a toast (HTMX) or a message and a redirect back.
 - **Every takeover is recorded**, start and end, in
   ``ImpersonationSession``.
 
@@ -53,12 +60,14 @@ instead of carrying a snapshot of the privilege around.
 
 from __future__ import annotations
 
+import functools
 from contextlib import contextmanager
 from contextvars import ContextVar
 
 from django.contrib.auth import get_user_model, login, logout
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
+from django.utils.translation import gettext_lazy
 
 from apps.accounts.models import ImpersonationSession
 
@@ -82,8 +91,25 @@ _BACKEND = "django.contrib.auth.backends.ModelBackend"
 _publishing_blocked: ContextVar[bool] = ContextVar("impersonation_publishing_blocked", default=False)
 
 
-class PublishingBlockedError(PermissionDenied):
+class TakeoverRefusedError(PermissionDenied):
+    """A takeover tried an action that only the customer may take.
+
+    ``title`` and ``body`` are what ``ImpersonationGuardMiddleware`` shows
+    the operator instead of an error page.
+    """
+
+    title = gettext_lazy("Not allowed during support access")
+    body = gettext_lazy(
+        "Support access can look at the account and adjust its settings, but cannot delete, pay, "
+        "change who has access or send messages in the customer's name."
+    )
+
+
+class PublishingBlockedError(TakeoverRefusedError):
     """A takeover tried to schedule or publish a post."""
+
+    title = gettext_lazy("Nothing was scheduled or published")
+    body = gettext_lazy("Support access cannot schedule or publish in a customer's name.")
 
 
 @contextmanager
@@ -105,6 +131,36 @@ def is_impersonating(request):
     """True when this session is an operator wearing a customer's account."""
     session = getattr(request, "session", None)
     return bool(session and session.get(IMPERSONATOR_SESSION_KEY))
+
+
+def refuse_during_takeover(request):
+    """Raise :class:`TakeoverRefusedError` when this request is a takeover.
+
+    For a view that refuses only some of its actions (one ``action`` of a
+    settings form); a view whose every change is refused uses
+    :func:`no_takeover`.
+    """
+    if is_impersonating(request):
+        raise TakeoverRefusedError("This action is not allowed during an impersonation session.")
+
+
+_SAFE_METHODS = ("GET", "HEAD", "OPTIONS")
+
+
+def no_takeover(view_func):
+    """Refuse the view's changes during a takeover; reading it stays open.
+
+    Only unsafe methods are refused, so a page that shows a form on GET and
+    acts on POST can still be looked at while diagnosing.
+    """
+
+    @functools.wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if request.method not in _SAFE_METHODS:
+            refuse_during_takeover(request)
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
 
 
 def real_user(request):
@@ -265,12 +321,15 @@ def stop(request):
 
 
 def client_ip(request):
-    """The visitor's IP: the first X-Forwarded-For hop behind the proxy, else the socket peer.
+    """The visitor's IP, or None when it cannot be told.
 
-    For records and for the payment gateway's antifraud, not for limits:
-    the header is whatever the client sent (see apps.api.limits._client_ip).
+    The one place the app derives it (``AccountAdapter.get_client_ip``), so
+    records, the payment gateway's antifraud and the rate limits agree on who
+    the client is.
     """
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded:
-        return forwarded.split(",")[0].strip() or None
-    return request.META.get("REMOTE_ADDR") or None
+    from allauth.account.adapter import get_adapter
+
+    try:
+        return get_adapter(request).get_client_ip(request)
+    except PermissionDenied:
+        return None

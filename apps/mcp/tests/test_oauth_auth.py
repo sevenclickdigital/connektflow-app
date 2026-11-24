@@ -233,8 +233,9 @@ class TestMcpOAuthSuccess:
         assert not ApiKeyAuditLog.objects.filter(actor_user=user).exists()
 
     def test_oauth_usage_follows_the_workspace_switch(self):
-        """An OAuth caller acts in the workspace they last opened, which can
-        change within the hour. Each workspace keeps its own counter row.
+        """A token with no brand binding (issued before grants were bound) acts
+        in the workspace its user last opened, which can change within the
+        hour. Each workspace keeps its own counter row.
         """
         from apps.api_keys.models import ApiKeyUsageHourly
         from apps.workspaces.models import Workspace
