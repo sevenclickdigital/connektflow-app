@@ -63,6 +63,7 @@
                 <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {% include "components/_form_field.html" with field=profile_form.first_name %}
                     {% include "components/_form_field.html" with field=profile_form.last_name %}
+                    {% include "components/_form_field.html" with field=profile_form.language %}
                     <div>
                         <p class="text-sm font-semibold text-neutral-950 mb-2">{% translate "Email" %}</p>
                         <p class="text-sm text-neutral-600 break-all py-2">{{ user.email }}</p>

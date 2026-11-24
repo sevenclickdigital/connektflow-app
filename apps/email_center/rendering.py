@@ -3,8 +3,8 @@
 ``render_system_override`` is called by the two places every system e-mail
 goes through (``apps.common.emails.build_email`` and
 ``apps.accounts.adapters.AccountAdapter.render_mail``): when the team has an
-active Markdown version of that e-mail, it is used instead of the code
-template. A version that fails to render is logged and the code template is
+active Markdown version of that e-mail in the language it is being sent in,
+it is used instead of the code template. A version that fails to render is logged and the code template is
 used, so an edit can never stop a sign-in code or a security notice from
 going out.
 """
@@ -68,11 +68,13 @@ def render_message(
 
 
 def render_system_override(key: str, context: dict):
-    """``(subject, text, html)`` of the active Markdown version of system e-mail ``key``, else None."""
+    """``(subject, text, html)`` of the active Markdown version of system e-mail ``key`` in the active language, else None."""
     entry = catalog.get(key)
     if entry is None:
         return None
-    override = SystemEmailOverride.objects.filter(key=key, is_active=True).first()
+    from .defaults import language_of_send
+
+    override = SystemEmailOverride.objects.filter(key=key, language=language_of_send(), is_active=True).first()
     if override is None:
         return None
     try:

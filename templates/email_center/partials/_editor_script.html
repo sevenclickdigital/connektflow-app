@@ -1,0 +1,128 @@
+{% comment %}
+The Alpine components of the e-mail editor (email_center/partials/_editor.html
+and _editor_header.html). Included once per page, however many editors it has.
+{% endcomment %}
+<script nonce="{{ request.csp_nonce }}">
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('markdownEditor', () => ({
+      heights: [],
+      guide: false,
+      more: false,
+      field: null,
+      width: 0,
+
+      init() {
+        this.field = this.$refs.body;
+        this.measure();
+        // Wider or narrower text wraps differently: measure again.
+        new ResizeObserver(() => {
+          if (this.$refs.body.clientWidth !== this.width) this.measure();
+        }).observe(this.$refs.body);
+        if (document.fonts) document.fonts.ready.then(() => this.measure());
+      },
+
+      // The variables go where the cursor last was: the subject or the text.
+      remember(target) {
+        if (target === this.$refs.body || (target.name || '').startsWith('subject')) this.field = target;
+      },
+
+      // Grows the textarea to its text and gives each line number the
+      // height its line takes once wrapped.
+      measure() {
+        const area = this.$refs.body;
+        const mirror = this.$refs.mirror;
+        this.width = area.clientWidth;
+        area.style.height = 'auto';
+        area.style.height = area.scrollHeight + 'px';
+        mirror.style.width = this.width + 'px';
+        mirror.replaceChildren(...area.value.split('\n').map((line) => {
+          const row = document.createElement('div');
+          row.textContent = line || '\u200b';
+          return row;
+        }));
+        this.heights = Array.from(mirror.children, (row) => row.offsetHeight);
+      },
+
+      // Replaces start..end of ``field`` through the browser's own typing,
+      // so Ctrl+Z undoes it and the preview hears the change.
+      replace(field, start, end, text, selectStart, selectEnd) {
+        field.focus();
+        field.setSelectionRange(start, end);
+        if (!document.execCommand('insertText', false, text)) {
+          field.setRangeText(text, start, end, 'end');
+          field.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        field.setSelectionRange(selectStart, selectEnd);
+      },
+
+      insertVariable(name) {
+        const field = this.field || this.$refs.body;
+        const token = '{' + '{ ' + name + ' }' + '}';
+        const start = field.selectionStart;
+        this.replace(field, start, field.selectionEnd, token, start + token.length, start + token.length);
+      },
+
+      wrap(mark) {
+        const area = this.$refs.body;
+        const start = area.selectionStart;
+        const end = area.selectionEnd;
+        const inner = area.value.slice(start, end) || this.$root.dataset.text;
+        this.replace(area, start, end, mark + inner + mark, start + mark.length, start + mark.length + inner.length);
+      },
+
+      link() {
+        const area = this.$refs.body;
+        const start = area.selectionStart;
+        const end = area.selectionEnd;
+        const label = area.value.slice(start, end) || this.$root.dataset.text;
+        const url = 'https://';
+        const urlStart = start + label.length + 3;
+        this.replace(area, start, end, '[' + label + '](' + url + ')', urlStart, urlStart + url.length);
+      },
+
+      // Puts (or, when every selected line has it, takes off) a line mark:
+      // the title, a list, a numbered list or the highlighted box.
+      lines(kind) {
+        const marks = {
+          heading: { test: /^# /, add: () => '# ' },
+          bullet: { test: /^[-*] /, add: () => '- ' },
+          number: { test: /^\d+\. /, add: (index) => (index + 1) + '. ' },
+          quote: { test: /^> ?/, add: () => '> ' },
+        };
+        const any = /^(#{1,6} |[-*] |\d+\. |> ?)/;
+        const area = this.$refs.body;
+        const value = area.value;
+        const start = value.lastIndexOf('\n', area.selectionStart - 1) + 1;
+        let end = value.indexOf('\n', area.selectionEnd);
+        if (end === -1) end = value.length;
+        let rows = value.slice(start, end).split('\n');
+        const mark = marks[kind];
+        if (rows.every((row) => mark.test.test(row))) {
+          rows = rows.map((row) => row.replace(mark.test, ''));
+        } else {
+          rows = rows.map((row, index) => mark.add(index) + (row.replace(any, '') || (kind === 'heading' ? this.$root.dataset.title : '')));
+        }
+        const text = rows.join('\n');
+        this.replace(area, start, end, text, start, start + text.length);
+      },
+    }));
+    // A system e-mail's form: each language's version is its own page, so
+    // leaving it with unsaved changes asks first (email_center/partials/_editor_header.html).
+    Alpine.data('versionForm', () => ({
+      dirty: false,
+      leave(event) {
+        if (!this.dirty) return;
+        event.preventDefault();
+        const href = event.currentTarget.href;
+        const data = event.currentTarget.closest('[data-leave]').dataset;
+        window.dispatchEvent(new CustomEvent('app-confirm', {
+          detail: {
+            el: { dataset: { confirmBody: data.leaveBody, confirmLabel: data.leaveLabel, confirmTone: 'danger' } },
+            question: data.leave,
+            proceed: () => { window.location.href = href; },
+          },
+        }));
+      },
+    }));
+  });
+</script>

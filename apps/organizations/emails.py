@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 
-from apps.common.emails import build_email
+from apps.common.emails import build_email, in_language_of
 from apps.common.mail import EmailNotSentError, send_or_raise, transactional
 
 logger = logging.getLogger(__name__)
@@ -52,26 +52,27 @@ def send_deletion_scheduled(organization, user, *, removed_youtube=()):
     )
     app_url = getattr(settings, "APP_URL", "http://localhost:8000").rstrip("/")
     restore_url = f"{app_url}{reverse('organizations:manage', kwargs={'organization_id': organization.pk})}#danger-zone"
-    message = build_email(
-        subject=_("The organization %(name)s will be deleted on %(date)s")
-        % {
-            "name": organization.name,
-            "date": date_format(timezone.localtime(organization.deletion_scheduled_for), "SHORT_DATE_FORMAT"),
-        },
-        template_prefix="organizations/email/deletion_scheduled",
-        context={
-            "greeting_name": user.greeting_name,
-            "organization": organization,
-            "deletion_at": organization.deletion_scheduled_for,
-            "restore_url": restore_url,
-            "brand_names": shown_brands,
-            "more_brands": len(brand_names) - len(shown_brands),
-            "removed_youtube": list(removed_youtube),
-            "remaining_networks": remaining_networks,
-        },
-        to=[user.email],
-        headers=transactional(),
-    )
+    with in_language_of(user):
+        message = build_email(
+            subject=_("The organization %(name)s will be deleted on %(date)s")
+            % {
+                "name": organization.name,
+                "date": date_format(timezone.localtime(organization.deletion_scheduled_for), "SHORT_DATE_FORMAT"),
+            },
+            template_prefix="organizations/email/deletion_scheduled",
+            context={
+                "greeting_name": user.greeting_name,
+                "organization": organization,
+                "deletion_at": organization.deletion_scheduled_for,
+                "restore_url": restore_url,
+                "brand_names": shown_brands,
+                "more_brands": len(brand_names) - len(shown_brands),
+                "removed_youtube": list(removed_youtube),
+                "remaining_networks": remaining_networks,
+            },
+            to=[user.email],
+            headers=transactional(),
+        )
 
     def _send():
         try:

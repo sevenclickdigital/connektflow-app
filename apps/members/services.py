@@ -9,7 +9,7 @@ from django.db.models import F, Q
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-from apps.common.emails import build_email
+from apps.common.emails import build_email, in_language_of
 from apps.common.mail import EmailNotSentError, send_or_raise, transactional
 from apps.workspaces.models import Workspace
 
@@ -654,22 +654,25 @@ def _send_invite_email(invitation) -> bool:
         "inviter_name": invitation.invited_by.display_name if invitation.invited_by else _("Someone on the team"),
         "app_url": app_url,
     }
-    if brand:
-        subject = _("Invitation to the brand %(name)s on Connekt Flow") % {"name": brand.name}
-    else:
-        subject = _("Invitation to the organization %(name)s on Connekt Flow") % {"name": invitation.organization.name}
+    with in_language_of(invitation.email):
+        if brand:
+            subject = _("Invitation to the brand %(name)s on Connekt Flow") % {"name": brand.name}
+        else:
+            subject = _("Invitation to the organization %(name)s on Connekt Flow") % {
+                "name": invitation.organization.name
+            }
 
-    msg = build_email(
-        subject=subject,
-        template_prefix="members/email/invite",
-        context=context,
-        to=[invitation.email],
-        # Someone is waiting on this to get into the product, so it is exempt
-        # from the per-recipient cap (never the global one). The invite flood in
-        # the Resend log is held back by the resend cooldown and the per-org
-        # daily cap, not by the notification cap.
-        headers=transactional(),
-    )
+        msg = build_email(
+            subject=subject,
+            template_prefix="members/email/invite",
+            context=context,
+            to=[invitation.email],
+            # Someone is waiting on this to get into the product, so it is exempt
+            # from the per-recipient cap (never the global one). The invite flood in
+            # the Resend log is held back by the resend cooldown and the per-org
+            # daily cap, not by the notification cap.
+            headers=transactional(),
+        )
 
     try:
         send_or_raise(msg)

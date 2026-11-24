@@ -82,3 +82,52 @@ def test_an_edited_version_keeps_the_default_footer_reason():
     html = _invite().alternatives[0][0]
 
     assert "ana@example.com" in html.split("<!--cf-reason-->")[1].split("<!--/cf-reason-->")[0]
+
+
+@pytest.mark.django_db
+def test_a_version_is_used_only_in_its_own_language():
+    SystemEmailOverride.objects.create(
+        key=INVITE, language="pt-br", subject="Venha para {{ organization_name }}", body_markdown="Oi", is_active=True
+    )
+
+    with translation.override("en-us"):
+        message = build_email(subject="Original", template_prefix=INVITE, context=INVITE_CONTEXT, to=["a@example.com"])
+
+    assert message.subject == "Original"
+
+
+@pytest.mark.django_db
+def test_the_english_version_goes_to_english_sends():
+    SystemEmailOverride.objects.create(
+        key=INVITE, language="en-us", subject="Join {{ organization_name }}", body_markdown="Hi", is_active=True
+    )
+
+    with translation.override("en-us"):
+        message = build_email(subject="Original", template_prefix=INVITE, context=INVITE_CONTEXT, to=["a@example.com"])
+
+    assert message.subject == "Join CAMILA AP"
+    assert _invite().subject == "Original"
+
+
+@pytest.mark.django_db
+def test_a_system_email_goes_out_in_the_language_of_the_recipients_profile(django_user_model):
+    django_user_model.objects.create_user(email="ana@example.com", password="x-Strong-pass-123", language="en-us")
+
+    message = _invite()  # built while the sender's page is in Portuguese
+
+    assert "Invitation to the organization CAMILA AP" in message.alternatives[0][0]
+    assert "Robison invited you" in message.body
+
+
+@pytest.mark.django_db
+def test_allauth_mail_goes_out_in_the_recipients_language(rf, user):
+    user.language = "en-us"
+    user.save(update_fields=["language"])
+    request = rf.get("/")
+    request.user = user
+
+    with translation.override("pt-br"):
+        message = AccountAdapter(request).render_mail("account/email/password_changed", user.email, {"user": user})
+
+    assert "password" in message.subject.lower()
+    assert "senha" not in message.subject.lower()

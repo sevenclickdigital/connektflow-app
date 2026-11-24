@@ -11,10 +11,9 @@ import logging
 from django.conf import settings
 from django.db import transaction
 from django.urls import reverse
-from django.utils import translation
 from django.utils.translation import gettext as _
 
-from apps.common.emails import build_email
+from apps.common.emails import build_email, in_language_of
 from apps.common.mail import EmailNotSentError, send_or_raise, transactional
 from apps.members.models import OrgMembership
 
@@ -45,8 +44,9 @@ def send_payment_confirmed(organization, *, plan=None, workspace=None):
     Goes to the organization's billing address, else to its owner, after
     the transaction commits, so a payment that rolls back congratulates
     nobody. A failure to send is logged and never undoes the payment.
-    Written in the product's default language: the gateway's webhook, which
-    is where most payments are confirmed, carries no language of the person.
+    Written in the language of the owner's profile: the gateway's webhook,
+    which is where most payments are confirmed, carries no language of the
+    person.
     """
     owner, recipient = _payer(organization)
     if not recipient:
@@ -54,7 +54,7 @@ def send_payment_confirmed(organization, *, plan=None, workspace=None):
 
     def _send():
         app_url = getattr(settings, "APP_URL", "http://localhost:8000").rstrip("/")
-        with translation.override(settings.LANGUAGE_CODE):
+        with in_language_of(owner.user if owner else recipient):
             message = build_email(
                 subject=_("Payment confirmed: your plan is active"),
                 template_prefix="billing/email/payment_confirmed",
@@ -89,7 +89,7 @@ def send_archive_removal_warning(organization, removal_at):
     if not recipient:
         return False
     app_url = getattr(settings, "APP_URL", "http://localhost:8000").rstrip("/")
-    with translation.override(settings.LANGUAGE_CODE):
+    with in_language_of(owner.user if owner else recipient):
         message = build_email(
             subject=_("Your data on %(name)s will be removed soon") % {"name": organization.name},
             template_prefix="billing/email/archive_removal_warning",

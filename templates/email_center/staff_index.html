@@ -42,7 +42,10 @@ Superadmins only (apps.email_center.staff_views).
         <span class="w-10 h-10 rounded-xl icon-tone-brand flex items-center justify-center shrink-0">{% include "email_center/partials/_icon.html" with name="mail" %}</span>
         <div class="min-w-0">
           <a href="{% url 'email_center_staff:automated_edit' email_id=email.id %}" class="block text-sm font-semibold text-neutral-950 truncate after:absolute after:inset-0">{{ email.name }}</a>
-          <p class="text-xs text-neutral-600 truncate">{{ email.subject }}</p>
+          <p class="flex items-center gap-1.5 min-w-0 text-xs text-neutral-600">
+            {% for short in email.written_languages %}<span class="shrink-0 rounded bg-neutral-100 px-1 font-mono text-[10px] font-semibold text-neutral-700">{{ short }}</span>{% endfor %}
+            <span class="truncate">{{ email.default_text.subject }}</span>
+          </p>
         </div>
       </div>
       <div class="col-start-1 md:col-start-auto flex items-center gap-3 min-w-0 pl-13 md:pl-0">
@@ -128,20 +131,28 @@ Superadmins only (apps.email_center.staff_views).
         <div class="relative flex items-center gap-3 px-5 py-2.5 hover:bg-neutral-50" data-search="{{ row.entry.label|lower }}" x-show="matches($el)">
           <span class="w-9 h-9 rounded-lg icon-tone-brand flex items-center justify-center shrink-0">{% include "email_center/partials/_icon.html" with name="mail" size=16 %}</span>
           <a href="{% url 'email_center_staff:system_edit' key=row.entry.key %}" class="flex-1 min-w-0 text-sm font-medium text-neutral-950 truncate after:absolute after:inset-0">{{ row.entry.label }}</a>
-          {% if row.override.is_active %}<span class="pill pill-success"><i></i>{% translate "Edited version" %}</span>{% elif row.override %}<span class="pill pill-neutral"><i></i>{% translate "Draft" %}</span>{% else %}<span class="pill pill-neutral">{% translate "Default" %}</span>{% endif %}
+          <span class="flex items-center gap-1.5 shrink-0">
+            {% for version in row.versions %}
+            {% if version.row.status == "active" %}{% translate "In use" as state %}{% elif version.row.status == "draft" %}{% translate "Draft" as state %}{% else %}{% translate "Default" as state %}{% endif %}
+            <span class="pill {% if version.row.status == "active" %}pill-success{% elif version.row.status == "draft" %}pill-brand{% else %}pill-neutral{% endif %}" title="{{ version.name }}: {{ state }}"><span class="font-mono">{{ version.short }}</span> {{ state }}</span>
+            {% endfor %}
+          </span>
           <div class="relative z-10" x-data="{ menu: false }" @click.outside="menu = false" @keydown.escape="menu = false">
             <button type="button" class="w-8 h-8 rounded-lg border border-neutral-300 bg-white flex items-center justify-center text-neutral-800 hover:bg-neutral-50" @click="menu = !menu" :aria-expanded="menu" aria-label="{% translate 'Actions' %}">{% include "email_center/partials/_icon.html" with name="dots" size=16 %}</button>
-            <div x-show="menu" x-cloak x-transition.opacity class="absolute right-0 z-20 mt-1 w-48 rounded-xl border border-neutral-300 bg-white p-1 shadow-lg">
-              <a href="{% url 'email_center_staff:system_edit' key=row.entry.key %}" class="block rounded-lg px-3 py-2 text-sm text-neutral-950 hover:bg-neutral-50">{% translate "Edit" %}</a>
-              {% if row.override %}
+            <div x-show="menu" x-cloak x-transition.opacity class="absolute right-0 z-20 mt-1 w-64 rounded-xl border border-neutral-300 bg-white p-1 shadow-lg">
+              {% for version in row.versions %}
+              <a href="{% url 'email_center_staff:system_edit' key=row.entry.key %}?lang={{ version.code }}" class="block rounded-lg px-3 py-2 text-sm text-neutral-950 hover:bg-neutral-50">{% blocktranslate with language=version.name %}Edit · {{ language }}{% endblocktranslate %}</a>
+              {% endfor %}
+              {% for version in row.versions %}{% if version.row and version.row.status != "default" %}
               <form method="post" action="{% url 'email_center_staff:system_reset' key=row.entry.key %}"
                     data-confirm="{% translate 'Restore the default version?' %}"
-                    data-confirm-body="{% translate 'Delete the edited version and go back to the default text.' %}"
+                    data-confirm-body="{% blocktranslate with language=version.name %}The {{ language }} version goes back to the default text and stops being sent.{% endblocktranslate %}"
                     data-confirm-label="{% translate 'Restore default' %}" data-confirm-tone="danger">
                 {% csrf_token %}
-                <button type="submit" class="w-full text-left rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-neutral-50">{% translate "Restore default" %}</button>
+                <input type="hidden" name="language" value="{{ version.code }}">
+                <button type="submit" class="w-full text-left rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-neutral-50">{% blocktranslate with language=version.name %}Restore default · {{ language }}{% endblocktranslate %}</button>
               </form>
-              {% endif %}
+              {% endif %}{% endfor %}
             </div>
           </div>
         </div>

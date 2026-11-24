@@ -13,15 +13,20 @@ when something applies) come out as they render for the sample.
 
 from __future__ import annotations
 
+import logging
 import re
 from html.parser import HTMLParser
 
+from django.conf import settings
 from django.template.loader import render_to_string
+from django.utils import translation
 from django.utils.translation import gettext
 
-from apps.common.emails import email_context, render_email
+from apps.common.emails import email_context, render_email, supported_language
 
 from . import catalog
+
+logger = logging.getLogger(__name__)
 
 _CONTENT_RE = re.compile(r"<!--cf-content-->(.*?)<!--/cf-content-->", re.S)
 _HEADING_RE = re.compile(r'<h1 class="cf-h1 cf-h1-desktop"[^>]*>(.*?)</h1>', re.S)
@@ -226,3 +231,55 @@ def default_version(entry: catalog.SystemEmail) -> tuple[str, str]:
     else:
         subject = _subjects().get(entry.key, "")
     return _as_variables(subject, values), _as_variables(markdown, values)
+
+
+def language_codes() -> list[str]:
+    """The languages every system e-mail has a version in: ``settings.LANGUAGES``, in that order."""
+    return [code for code, _name in settings.LANGUAGES]
+
+
+def language_of_send() -> str:
+    """The ``settings.LANGUAGES`` code of the language active now (the one an e-mail is being built in)."""
+    return supported_language(translation.get_language())
+
+
+def default_in(entry: catalog.SystemEmail, language: str) -> tuple[str, str]:
+    """``(subject, markdown)`` of ``entry``'s code template in ``language``."""
+    with translation.override(language):
+        return default_version(entry)
+
+
+def ensure_versions(keys: list[str] | None = None) -> None:
+    """Store the code template's text as the version of each e-mail (of ``keys``, else all) in each language.
+
+    Only the missing (e-mail, language) rows are created, switched off, so
+    nothing changes in what is sent and a text the team edited is never
+    replaced. A language added to ``settings.LANGUAGES`` gets its versions the
+    next time this runs.
+    """
+    from .models import SystemEmailOverride
+
+    entries = [entry for entry in catalog.SYSTEM_EMAILS if keys is None or entry.key in keys]
+    existing = set(
+        SystemEmailOverride.objects.filter(key__in=[entry.key for entry in entries]).values_list("key", "language")
+    )
+    missing = []
+    for entry in entries:
+        for language in language_codes():
+            if (entry.key, language) in existing:
+                continue
+            try:
+                subject, body = default_in(entry, language)
+            except Exception:  # noqa: BLE001 — one template that fails to convert must not hide the others
+                logger.exception("Default text of %s (%s) could not be converted", entry.key, language)
+                continue
+            missing.append(
+                SystemEmailOverride(
+                    key=entry.key,
+                    language=language,
+                    subject=subject[:200],
+                    body_markdown=body,
+                    is_default_text=True,
+                )
+            )
+    SystemEmailOverride.objects.bulk_create(missing, ignore_conflicts=True)

@@ -102,6 +102,9 @@ def test_a_storm_does_not_wait(user):
 
 @pytest.mark.django_db
 def test_long_lists_are_truncated(user):
+    # Written in the language of the person's profile.
+    user.language = "en-us"
+    user.save(update_fields=["language"])
     fail(user, BATCH_MAX_ITEMS + 7)
     send_batched_email_digests()
     assert "and 7 more" in mail.outbox[0].body

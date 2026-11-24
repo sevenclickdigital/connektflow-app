@@ -10,6 +10,11 @@ outbound budget keeps deciding what leaves.
 allauth renders its own mail (``apps.accounts.adapters.AccountAdapter``) and
 merges ``email_context()`` there, so its templates see the same variables.
 
+Each person receives e-mail in the language of their profile
+(``User.language``). The subject is usually written by the caller, so the
+caller builds the message inside ``in_language_of(recipient)``;
+``build_email`` and allauth's ``render_mail`` switch to it as well.
+
 Variables every email template can use:
 
 - ``brand_name``, ``app_url``, ``logo_url``, ``mascot_url`` (Moti waving, beside the logo)
@@ -26,12 +31,13 @@ from __future__ import annotations
 
 import logging
 import re
+from contextlib import contextmanager
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.templatetags.static import static
-from django.utils import timezone
+from django.utils import timezone, translation
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +101,36 @@ def email_context(**extra) -> dict:
     return context
 
 
+def supported_language(code: str | None) -> str:
+    """``code`` as one of ``settings.LANGUAGES`` (``en`` becomes ``en-us``), else the product's default."""
+    try:
+        return translation.get_supported_language_variant(code or settings.LANGUAGE_CODE)
+    except LookupError:
+        return settings.LANGUAGE_CODE
+
+
+def language_of(recipient) -> str:
+    """The language to write to ``recipient`` (a user or an e-mail address) in.
+
+    A person with an account gets the language of their profile; an address
+    with no account (someone invited, a client of a brand) gets the language
+    active now, the one of whoever made the e-mail go.
+    """
+    from django.contrib.auth import get_user_model
+
+    language = getattr(recipient, "language", None)
+    if language is None and isinstance(recipient, str) and recipient:
+        language = get_user_model().objects.filter(email__iexact=recipient).values_list("language", flat=True).first()
+    return supported_language(language or translation.get_language())
+
+
+@contextmanager
+def in_language_of(recipient):
+    """Run the block (subject, body) in ``recipient``'s language (``language_of``)."""
+    with translation.override(language_of(recipient)):
+        yield
+
+
 def render_email(template_prefix: str, context: dict) -> tuple[str, str]:
     """Render ``<prefix>.txt`` and ``<prefix>.html`` with the brand context."""
     full = email_context(**context)
@@ -115,17 +151,20 @@ def build_email(
     """A text + HTML message from ``template_prefix``, ready to send.
 
     ``headers`` carries the mail class (``apps.common.mail.transactional()``)
-    or the ``List-Unsubscribe`` pair of notification mail. When the team has
-    an active Markdown version of this e-mail (``apps.email_center``), its
-    subject and body replace the template's.
+    or the ``List-Unsubscribe`` pair of notification mail. The body is
+    rendered in the recipient's language (``language_of``); a message to
+    several people stays in the language active now. When the team has an
+    active Markdown version of this e-mail in that language
+    (``apps.email_center``), its subject and body replace the template's.
     """
     from apps.email_center.rendering import render_system_override
 
-    override = render_system_override(template_prefix, context)
-    if override is not None:
-        subject, text_content, html_content = override
-    else:
-        text_content, html_content = render_email(template_prefix, context)
+    with in_language_of(to[0] if len(to) == 1 else ""):
+        override = render_system_override(template_prefix, context)
+        if override is not None:
+            subject, text_content, html_content = override
+        else:
+            text_content, html_content = render_email(template_prefix, context)
     msg = EmailMultiAlternatives(
         subject=" ".join(str(subject).split()),
         body=text_content,

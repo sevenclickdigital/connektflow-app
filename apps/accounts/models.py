@@ -42,6 +42,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     address_neighborhood = models.CharField(max_length=120, blank=True, default="", db_default="")
     address_city = models.CharField(max_length=120, blank=True, default="", db_default="")
     address_state = models.CharField(max_length=2, blank=True, default="", db_default="")
+    # The language of the e-mails the person receives (a code of
+    # settings.LANGUAGES): the one of the page they signed up on, changed in
+    # the profile.
+    language = models.CharField(max_length=10, default="pt-br", db_default="pt-br")
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 

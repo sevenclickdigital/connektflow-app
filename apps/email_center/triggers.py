@@ -227,19 +227,29 @@ def values_for(user, activity: Activity) -> dict[str, str]:
 
 
 def build_message(email: AutomatedEmail, user, activity: Activity):
-    """The ready-to-send message of ``email`` for ``user``, with the one-click unsubscribe."""
+    """The ready-to-send message of ``email`` for ``user``, with the one-click unsubscribe.
+
+    Written in the language of the person's profile, or in the default
+    language when the e-mail has no text in theirs: the whole message (text,
+    footer, dates) follows the text's language, so nothing comes out half in
+    one language and half in another.
+    """
     from django.core.mail import EmailMultiAlternatives
 
+    from apps.common.emails import supported_language
     from apps.notifications.models import EventType
     from apps.notifications.unsubscribe import notification_email_parts
 
     from .rendering import render_message
 
+    content = email.text_for(supported_language(user.language))
+    if content is None:
+        raise ValueError(f"Automatic e-mail {email.pk} has no text")
     headers, unsubscribe_context = notification_email_parts(user.id, EventType.LIFECYCLE_TIPS)
-    with translation.override(settings.LANGUAGE_CODE):
+    with translation.override(content.language):
         subject, text, html = render_message(
-            subject=email.subject,
-            body_markdown=email.body_markdown,
+            subject=content.subject,
+            body_markdown=content.body_markdown,
             values=values_for(user, activity),
             context=unsubscribe_context,
             reason_text=gettext("You're receiving this because you have an account on Connekt Flow."),
@@ -290,7 +300,7 @@ def send_one(email: AutomatedEmail, user, activity: Activity) -> bool:
 def send_due(now: datetime | None = None) -> int:
     """Send every automatic e-mail that is due. Returns how many went out."""
     now = now or timezone.now()
-    emails = list(AutomatedEmail.objects.filter(is_active=True))
+    emails = list(AutomatedEmail.objects.filter(is_active=True).prefetch_related("texts"))
     if not emails:
         return 0
     sent_pairs = set(

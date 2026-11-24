@@ -22,7 +22,7 @@ from django.conf import settings
 from django.db.models import Count, F, Min, Q
 from django.utils import timezone
 
-from apps.common.emails import build_email
+from apps.common.emails import build_email, in_language_of
 from apps.common.mail import EmailNotSentError, send_or_raise
 from apps.settings_manager.defaults import APP_DEFAULTS
 
@@ -365,13 +365,14 @@ def _dispatch_email(delivery: NotificationDelivery) -> None:
     user = notification.user
 
     headers, links = notification_email_parts(user.pk, notification.event_type)
-    msg = build_email(
-        subject=notification.title,
-        template_prefix="notifications/email/notification",
-        context={"notification": notification, "user": user, **links},
-        to=[user.email],
-        headers=headers,
-    )
+    with in_language_of(user):
+        msg = build_email(
+            subject=notification.title,
+            template_prefix="notifications/email/notification",
+            context={"notification": notification, "user": user, **links},
+            to=[user.email],
+            headers=headers,
+        )
     send_or_raise(msg)
 
 
@@ -750,24 +751,25 @@ def _send_one_digest(user_id, event_type: str | None, *, now, unclaimed) -> bool
 
 def _send_digest_email(user, event_type: str | None, notifications: list) -> None:
     """One email standing in for every notification in the batch."""
-    total = len(notifications)
-    heading = _digest_heading(event_type, total)
-    shown = notifications[:BATCH_MAX_ITEMS]
+    with in_language_of(user):
+        total = len(notifications)
+        heading = _digest_heading(event_type, total)
+        shown = notifications[:BATCH_MAX_ITEMS]
 
-    headers, links = notification_email_parts(user.pk, event_type)
-    msg = build_email(
-        subject=heading,
-        template_prefix="notifications/email/digest",
-        context={
-            "heading": heading,
-            "notifications": shown,
-            "total": total,
-            "overflow": total - len(shown),
-            "user": user,
-            "date": timezone.now(),
-            **links,
-        },
-        to=[user.email],
-        headers=headers,
-    )
+        headers, links = notification_email_parts(user.pk, event_type)
+        msg = build_email(
+            subject=heading,
+            template_prefix="notifications/email/digest",
+            context={
+                "heading": heading,
+                "notifications": shown,
+                "total": total,
+                "overflow": total - len(shown),
+                "user": user,
+                "date": timezone.now(),
+                **links,
+            },
+            to=[user.email],
+            headers=headers,
+        )
     send_or_raise(msg)

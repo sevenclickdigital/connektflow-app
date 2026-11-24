@@ -1,9 +1,11 @@
 {% extends "layouts/admin_shell.html" %}
 {% load i18n %}
 {% comment %}
-One system e-mail: its Markdown version (edited on the left, previewed live on
-the right) and the default version from the code, to compare. Saving with
-"Send this version" ticked makes every send of this e-mail use it.
+One system e-mail in one language (``language``, switched at the top of the
+editor): its Markdown version, edited on the left and previewed live on the
+right, and the default version from the code in that language, to compare.
+Saving with "Send this version" ticked makes every send of this e-mail in
+that language use it.
 Superadmins only (apps.email_center.staff_views.system_edit).
 {% endcomment %}
 
@@ -16,17 +18,19 @@ Superadmins only (apps.email_center.staff_views.system_edit).
     <h1 class="page-title">{{ entry.label }}</h1>
     <p class="page-description">{% translate "Edit the e-mail's text in Markdown and see the preview as you type." %}</p>
   </div>
-  {% if override.is_active %}<span class="pill pill-success"><i></i>{% translate "Edited version" %}</span>{% elif override %}<span class="pill pill-neutral"><i></i>{% translate "Draft" %}</span>{% else %}<span class="pill pill-neutral"><i></i>{% translate "Default" %}</span>{% endif %}
+  {% if override.status == "active" %}<span class="pill pill-success"><i></i>{% translate "In use" %}</span>{% elif override.status == "draft" %}<span class="pill pill-neutral"><i></i>{% translate "Draft" %}</span>{% else %}<span class="pill pill-neutral"><i></i>{% translate "Default" %}</span>{% endif %}
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,8fr)_minmax(0,7fr)] gap-6 items-start">
-  <form id="email-form" method="post" class="a-card p-6 flex flex-col gap-5 min-w-0">
+  <form id="email-form" method="post" class="a-card p-6 flex flex-col gap-5 min-w-0" x-data="versionForm" @input="dirty = true" @change="dirty = true">
     {% csrf_token %}
     <input type="hidden" name="key" value="{{ entry.key }}">
+    <input type="hidden" name="language" value="{{ language }}">
     {{ form.non_field_errors }}
-    {% include "email_center/partials/_editor.html" %}
+    {% include "email_center/partials/_editor_header.html" with languages=languages language=language %}
+    {% include "email_center/partials/_editor.html" with subject_field=form.subject body_field=form.body_markdown %}
 
     <div class="flex items-center gap-2">
       <label class="flex items-center gap-2 text-sm text-neutral-950 cursor-pointer">{{ form.is_active }} {{ form.is_active.label }}</label>
@@ -34,7 +38,7 @@ Superadmins only (apps.email_center.staff_views.system_edit).
         <button type="button" class="text-neutral-500 hover:text-neutral-800" @click="open = !open" @focus="open = true" @blur="open = false" aria-label="{% translate 'More information' %}">
           <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         </button>
-        <span x-show="open" x-cloak x-transition.opacity role="tooltip" class="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-72 rounded-lg bg-neutral-950 px-3 py-2 text-xs text-white shadow-lg z-20">{% translate "The edited version is sent in every language and replaces the parts of the default text that change case by case. Use the variables for what changes." %}</span>
+        <span x-show="open" x-cloak x-transition.opacity role="tooltip" class="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-72 rounded-lg bg-neutral-950 px-3 py-2 text-xs text-white shadow-lg z-20">{% translate "This version is sent only in this language, and replaces the parts of the default text that change case by case. Use the variables for what changes." %}</span>
       </span>
     </div>
 
@@ -47,20 +51,22 @@ Superadmins only (apps.email_center.staff_views.system_edit).
         <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         {% translate "Send a test to me" %}
       </button>
-      {% if override %}
+      {% if override and override.status != "default" %}
       <button type="submit" form="reset-form" class="btn-ghost text-red-600 sm:ml-auto">{% translate "Restore default" %}</button>
       {% endif %}
     </div>
   </form>
-  {% if override %}
+  {% if override and override.status != "default" %}
   <form id="reset-form" method="post" action="{% url 'email_center_staff:system_reset' key=entry.key %}" class="hidden"
         data-confirm="{% translate 'Restore the default version?' %}"
-        data-confirm-body="{% translate 'Delete the edited version and go back to the default text.' %}"
+        data-confirm-body="{% translate 'This version goes back to the default text and stops being sent.' %}"
         data-confirm-label="{% translate 'Restore default' %}" data-confirm-tone="danger">
     {% csrf_token %}
+    <input type="hidden" name="language" value="{{ language }}">
   </form>
   {% endif %}
 
   {% include "email_center/partials/_preview_card.html" with default_html=default_html default_subject=default_subject %}
 </div>
+{% include "email_center/partials/_editor_script.html" %}
 {% endblock %}

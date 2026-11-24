@@ -1,31 +1,22 @@
 {% load i18n %}
 {% comment %}
-The writing part of an e-mail form, inside the page's card: the card's title,
-an optional extra field (``name_field``: the automatic e-mail's name), the
-subject, the variables (as many chips as fit on one row, and all of them
-with their meaning under "More variables"; a click inserts ``{{ name }}``
-where the cursor last was, in the subject or the text), the formatting buttons, and the Markdown text with line
-numbers. Expects ``form`` (with ``subject`` and ``body_markdown``) and
-``variables``: a list of ``(name, label)`` pairs. The textarea grows with its
-text, so the page scrolls as a whole; the numbers follow wrapped lines by
-measuring each line in a hidden copy of the text.
+One language's subject and text of an e-mail form: the subject, the
+variables (as many chips as fit on one row, and all of them with their
+meaning under "More variables"; a click inserts ``{{ name }}`` where the
+cursor last was, in the subject or the text), the formatting buttons, and the
+Markdown text with line numbers. Expects ``subject_field`` and ``body_field``
+(bound fields) and ``variables``: a list of ``(name, label)`` pairs. The
+title and the language switch above it are email_center/partials/_editor_header.html;
+the page includes email_center/partials/_editor_script.html once. The
+textarea grows with its text, so the page scrolls as a whole; the numbers
+follow wrapped lines by measuring each line in a hidden copy of the text.
 {% endcomment %}
 <div x-data="markdownEditor" @focusin="remember($event.target)"
      data-text="{% translate 'text' %}" data-title="{% translate 'Title' %}" class="flex flex-col gap-5">
-  <h2 class="text-base font-semibold text-neutral-950">{% translate "E-mail content" %}</h2>
-
-  {% if name_field %}
   <div>
-    <label for="{{ name_field.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ name_field.label }}</label>
-    {{ name_field }}
-    {% for error in name_field.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-  </div>
-  {% endif %}
-
-  <div>
-    <label for="{{ form.subject.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.subject.label }} *</label>
-    {{ form.subject }}
-    {% for error in form.subject.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+    <label for="{{ subject_field.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ subject_field.label }}{% if subject_field.field.required %} *{% endif %}</label>
+    {{ subject_field }}
+    {% for error in subject_field.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
   </div>
 
   <div class="flex items-center gap-2 rounded-xl border border-neutral-300 p-2">
@@ -89,18 +80,18 @@ measuring each line in a hidden copy of the text.
       </button>
     </div>
 
-    <label for="{{ form.body_markdown.id_for_label }}" class="sr-only">{{ form.body_markdown.label }}</label>
-    <div class="relative flex rounded-xl border-[1.5px] border-neutral-300 bg-white overflow-hidden focus-within:border-brand-700{% if form.body_markdown.errors %} border-red-500{% endif %}">
+    <label for="{{ body_field.id_for_label }}" class="sr-only">{{ body_field.label }}</label>
+    <div class="relative flex rounded-xl border-[1.5px] border-neutral-300 bg-white overflow-hidden focus-within:border-brand-700{% if body_field.errors %} border-red-500{% endif %}">
       <div class="w-11 shrink-0 bg-neutral-50 border-r border-neutral-300 py-3 pr-2.5 text-right font-mono text-xs leading-6 text-neutral-500 select-none" aria-hidden="true">
         <template x-for="(height, index) in heights" :key="index"><div :style="{ height: height + 'px' }" x-text="index + 1"></div></template>
       </div>
-      <textarea name="{{ form.body_markdown.html_name }}" id="{{ form.body_markdown.id_for_label }}" x-ref="body" @input="measure()"
+      <textarea name="{{ body_field.html_name }}" id="{{ body_field.id_for_label }}" x-ref="body" @input="measure()"
                 rows="18" required spellcheck="true"
                 class="flex-1 min-w-0 block px-4 py-3 bg-transparent border-0 outline-none resize-none overflow-hidden font-mono text-sm leading-6 text-neutral-950">
-{{ form.body_markdown.value|default_if_none:"" }}</textarea>
+{{ body_field.value|default_if_none:"" }}</textarea>
       <div x-ref="mirror" class="absolute top-0 left-0 invisible pointer-events-none px-4 font-mono text-sm leading-6 whitespace-pre-wrap break-words" aria-hidden="true"></div>
     </div>
-    {% for error in form.body_markdown.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+    {% for error in body_field.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
   </div>
 
   <div x-show="guide" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="markdown-guide-title"
@@ -119,110 +110,3 @@ measuring each line in a hidden copy of the text.
     </div>
   </div>
 </div>
-
-<script nonce="{{ request.csp_nonce }}">
-  document.addEventListener('alpine:init', () => {
-    Alpine.data('markdownEditor', () => ({
-      heights: [],
-      guide: false,
-      more: false,
-      field: null,
-      width: 0,
-
-      init() {
-        this.field = this.$refs.body;
-        this.measure();
-        // Wider or narrower text wraps differently: measure again.
-        new ResizeObserver(() => {
-          if (this.$refs.body.clientWidth !== this.width) this.measure();
-        }).observe(this.$refs.body);
-        if (document.fonts) document.fonts.ready.then(() => this.measure());
-      },
-
-      // The variables go where the cursor last was: the subject or the text.
-      remember(target) {
-        if (target === this.$refs.body || target.name === 'subject') this.field = target;
-      },
-
-      // Grows the textarea to its text and gives each line number the
-      // height its line takes once wrapped.
-      measure() {
-        const area = this.$refs.body;
-        const mirror = this.$refs.mirror;
-        this.width = area.clientWidth;
-        area.style.height = 'auto';
-        area.style.height = area.scrollHeight + 'px';
-        mirror.style.width = this.width + 'px';
-        mirror.replaceChildren(...area.value.split('\n').map((line) => {
-          const row = document.createElement('div');
-          row.textContent = line || '\u200b';
-          return row;
-        }));
-        this.heights = Array.from(mirror.children, (row) => row.offsetHeight);
-      },
-
-      // Replaces start..end of ``field`` through the browser's own typing,
-      // so Ctrl+Z undoes it and the preview hears the change.
-      replace(field, start, end, text, selectStart, selectEnd) {
-        field.focus();
-        field.setSelectionRange(start, end);
-        if (!document.execCommand('insertText', false, text)) {
-          field.setRangeText(text, start, end, 'end');
-          field.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        field.setSelectionRange(selectStart, selectEnd);
-      },
-
-      insertVariable(name) {
-        const field = this.field || this.$refs.body;
-        const token = '{' + '{ ' + name + ' }' + '}';
-        const start = field.selectionStart;
-        this.replace(field, start, field.selectionEnd, token, start + token.length, start + token.length);
-      },
-
-      wrap(mark) {
-        const area = this.$refs.body;
-        const start = area.selectionStart;
-        const end = area.selectionEnd;
-        const inner = area.value.slice(start, end) || this.$root.dataset.text;
-        this.replace(area, start, end, mark + inner + mark, start + mark.length, start + mark.length + inner.length);
-      },
-
-      link() {
-        const area = this.$refs.body;
-        const start = area.selectionStart;
-        const end = area.selectionEnd;
-        const label = area.value.slice(start, end) || this.$root.dataset.text;
-        const url = 'https://';
-        const urlStart = start + label.length + 3;
-        this.replace(area, start, end, '[' + label + '](' + url + ')', urlStart, urlStart + url.length);
-      },
-
-      // Puts (or, when every selected line has it, takes off) a line mark:
-      // the title, a list, a numbered list or the highlighted box.
-      lines(kind) {
-        const marks = {
-          heading: { test: /^# /, add: () => '# ' },
-          bullet: { test: /^[-*] /, add: () => '- ' },
-          number: { test: /^\d+\. /, add: (index) => (index + 1) + '. ' },
-          quote: { test: /^> ?/, add: () => '> ' },
-        };
-        const any = /^(#{1,6} |[-*] |\d+\. |> ?)/;
-        const area = this.$refs.body;
-        const value = area.value;
-        const start = value.lastIndexOf('\n', area.selectionStart - 1) + 1;
-        let end = value.indexOf('\n', area.selectionEnd);
-        if (end === -1) end = value.length;
-        let rows = value.slice(start, end).split('\n');
-        const mark = marks[kind];
-        if (rows.every((row) => mark.test.test(row))) {
-          rows = rows.map((row) => row.replace(mark.test, ''));
-        } else {
-          rows = rows.map((row, index) => mark.add(index) + (row.replace(any, '') || (kind === 'heading' ? this.$root.dataset.title : '')));
-        }
-        const text = rows.join('\n');
-        this.replace(area, start, end, text, start, start + text.length);
-      },
-    }));
-  });
-</script>

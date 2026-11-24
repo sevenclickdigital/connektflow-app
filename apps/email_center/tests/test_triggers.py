@@ -8,7 +8,7 @@ from django.core import mail
 from django.utils import timezone
 
 from apps.contacts.models import Contact
-from apps.email_center.models import AutomatedEmail, AutomatedEmailSend, Presence
+from apps.email_center.models import AutomatedEmail, AutomatedEmailSend, AutomatedEmailText, Presence
 from apps.email_center.triggers import send_due
 from apps.notifications.models import Channel, EventType, NotificationPreference
 from apps.social_accounts.models import SocialAccount
@@ -26,17 +26,19 @@ def owner(org_owner, organization):
     return org_owner
 
 
-def _email(**fields):
+def _email(
+    subject="{{ name }}, conecte suas redes", body="# Falta pouco\n\n[botão: Conectar]({{ connect_url }})", **fields
+):
     defaults = {
         "name": "Conecte suas redes",
-        "subject": "{{ name }}, conecte suas redes",
-        "body_markdown": "# Falta pouco\n\n[botão: Conectar]({{ connect_url }})",
         "is_active": True,
         "activated_at": NOW - timedelta(days=30),
         "anchor": AutomatedEmail.Anchor.SIGNUP,
         "delay_days": 3,
     }
-    return AutomatedEmail.objects.create(**{**defaults, **fields})
+    email = AutomatedEmail.objects.create(**{**defaults, **fields})
+    AutomatedEmailText.objects.create(automated_email=email, language="pt-br", subject=subject, body_markdown=body)
+    return email
 
 
 @pytest.mark.django_db
@@ -132,3 +134,34 @@ def test_a_failed_send_is_tried_again(owner, monkeypatch):
 
     monkeypatch.undo()
     assert send_due(NOW) == 1
+
+
+@pytest.mark.django_db
+def test_each_person_gets_the_text_in_their_language(owner):
+    email = _email()
+    AutomatedEmailText.objects.create(
+        automated_email=email,
+        language="en-us",
+        subject="{{ name }}, connect your accounts",
+        body_markdown="# Almost there",
+    )
+    owner.language = "en-us"
+    owner.save(update_fields=["language"])
+
+    send_due(NOW)
+
+    assert mail.outbox[0].subject.endswith("connect your accounts")
+    assert "Almost there" in mail.outbox[0].alternatives[0][0]
+    assert "You're receiving this" in mail.outbox[0].body  # the footer follows the text's language
+
+
+@pytest.mark.django_db
+def test_a_language_without_its_own_text_gets_the_default_one(owner):
+    _email()
+    owner.language = "en-us"
+    owner.save(update_fields=["language"])
+
+    send_due(NOW)
+
+    assert mail.outbox[0].subject.endswith("conecte suas redes")
+    assert "Você está recebendo" in mail.outbox[0].body

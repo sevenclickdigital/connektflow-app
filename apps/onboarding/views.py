@@ -22,7 +22,7 @@ from django.views.decorators.http import require_GET, require_POST
 from django_ratelimit.decorators import ratelimit
 
 from apps.accounts.impersonation import no_takeover
-from apps.common.emails import build_email
+from apps.common.emails import build_email, in_language_of
 from apps.common.mail import transactional
 from apps.common.validators import is_safe_url
 from apps.credentials.models import PlatformCredential
@@ -187,13 +187,14 @@ def send_link_email(request, workspace_id, link_id):
         "expires_at": link.expires_at,
     }
 
-    msg = build_email(
-        subject=_("%(org)s - Connect your social accounts") % {"org": org.name},
-        template_prefix="onboarding/email/connection_link",
-        context=context,
-        to=[email],
-        headers=transactional(),
-    )
+    with in_language_of(email):
+        msg = build_email(
+            subject=_("%(org)s - Connect your social accounts") % {"org": org.name},
+            template_prefix="onboarding/email/connection_link",
+            context=context,
+            to=[email],
+            headers=transactional(),
+        )
     # send() returns the number accepted, and the outbound budget drops a
     # message by returning 0 rather than raising. Telling someone the link was
     # sent when it was not is how they end up waiting for an email that is never

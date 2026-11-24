@@ -12,7 +12,7 @@ from django.shortcuts import redirect, render, resolve_url
 
 from apps.accounts.models import OAuthConnection
 from apps.accounts.signup_links import custom_signup_url, mark_invite_lapsed, signup_allowed
-from apps.common.emails import email_context
+from apps.common.emails import email_context, in_language_of, supported_language
 from apps.common.mail import transactional
 
 
@@ -133,6 +133,7 @@ class AccountAdapter(DefaultAccountAdapter):
         return False
 
     def save_user(self, request, user, form, commit=True):
+        _set_signup_language(request, user)
         if not commit:
             return super().save_user(request, user, form, commit=False)
         return create_account_under_invitation(
@@ -165,6 +166,11 @@ class AccountAdapter(DefaultAccountAdapter):
         return super().post_login(request, user, signup=signup, redirect_url=redirect_url, **kwargs)
 
     def render_mail(self, template_prefix, email, context, headers=None):
+        """allauth's mail, in the recipient's language (``apps.common.emails.language_of``)."""
+        with in_language_of(email if isinstance(email, str) else ""):
+            return self._render_mail(template_prefix, email, context, headers)
+
+    def _render_mail(self, template_prefix, email, context, headers=None):
         if "signup_url" in context:
             request = context.get("request")
             custom = custom_signup_url(request)
@@ -190,6 +196,12 @@ class AccountAdapter(DefaultAccountAdapter):
         return super().render_mail(template_prefix, email, context, headers=headers)
 
 
+def _set_signup_language(request, user) -> None:
+    """A new account receives its e-mails in the language of the page it signed up on."""
+    if user._state.adding:
+        user.language = supported_language(getattr(request, "LANGUAGE_CODE", None))
+
+
 def user_display(user):
     """How allauth names the person in its e-mails and pages: their first name (``ACCOUNT_USER_DISPLAY``)."""
     return getattr(user, "greeting_name", "") or str(user)
@@ -210,6 +222,7 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
 
     def save_user(self, request, sociallogin, form=None):
         """Create OAuthConnection after saving a new social signup."""
+        _set_signup_language(request, sociallogin.user)
         user = create_account_under_invitation(
             request, lambda: super(SocialAccountAdapter, self).save_user(request, sociallogin, form)
         )

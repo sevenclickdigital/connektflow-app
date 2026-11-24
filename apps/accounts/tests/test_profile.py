@@ -17,7 +17,7 @@ ADDRESS = {
 
 
 def _post(client, **data):
-    return client.post(reverse("accounts:settings"), {"action": "update_profile", **data})
+    return client.post(reverse("accounts:settings"), {"action": "update_profile", "language": "pt-br", **data})
 
 
 @pytest.mark.django_db
@@ -135,3 +135,36 @@ def test_a_photo_that_is_not_an_image_is_refused(client, user, settings, tmp_pat
 
     user.refresh_from_db()
     assert not user.avatar
+
+
+@pytest.mark.django_db
+def test_the_profile_sets_the_language_of_the_emails(client, user):
+    client.force_login(user)
+
+    _post(client, first_name="Ana", language="en-us")
+
+    user.refresh_from_db()
+    assert user.language == "en-us"
+
+
+@pytest.mark.django_db
+def test_an_unknown_language_is_refused(client, user):
+    client.force_login(user)
+
+    response = _post(client, first_name="Ana", language="xx")
+
+    assert response.status_code == 200
+    assert "language" in response.context["profile_form"].errors
+
+
+def test_a_new_account_takes_the_language_of_the_signup_page(rf):
+    from apps.accounts.adapters import _set_signup_language
+    from apps.accounts.models import User
+
+    request = rf.get("/")
+    request.LANGUAGE_CODE = "en"
+    user = User(email="new@example.com")
+
+    _set_signup_language(request, user)
+
+    assert user.language == "en-us"

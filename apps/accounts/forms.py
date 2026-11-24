@@ -1,6 +1,7 @@
 """Forms for the account centre (profile)."""
 
 from django import forms
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from .address import cep_digits
@@ -51,19 +52,24 @@ ADDRESS_REQUIRED = (
 
 
 class ProfileForm(forms.ModelForm):
-    """Name and postal address of the person behind the account.
+    """Name, e-mail language and postal address of the person behind the account.
 
     Saving also writes ``User.name`` (first + last name), which is what the
     rest of the product shows.
     """
 
     address_state = forms.ChoiceField(choices=STATE_CHOICES, required=False, label=_("State"))
+    language = forms.ChoiceField(
+        label=_("E-mail language"),
+        help_text=_("The e-mails we send you arrive in this language."),
+    )
 
     class Meta:
         model = User
         fields = [
             "first_name",
             "last_name",
+            "language",
             "address_postal_code",
             "address_street",
             "address_number",
@@ -86,6 +92,7 @@ class ProfileForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["first_name"].required = True
+        self.fields["language"].choices = [(code, _(name)) for code, name in settings.LANGUAGES]
         autocomplete = {
             "first_name": "given-name",
             "last_name": "family-name",
@@ -97,7 +104,11 @@ class ProfileForm(forms.ModelForm):
             "address_state": "address-level1",
         }
         for name, field in self.fields.items():
-            css = "form-input-styled bb-select cursor-pointer" if name == "address_state" else "form-input-styled"
+            css = (
+                "form-input-styled bb-select cursor-pointer"
+                if name in ("address_state", "language")
+                else "form-input-styled"
+            )
             field.widget.attrs.update({"class": css, "autocomplete": autocomplete.get(name, "off")})
         # data-mask: the shared masks in base.html keep it as 00000-000.
         self.fields["address_postal_code"].widget.attrs.update(

@@ -3,9 +3,66 @@
 The Markdown conventions apps.email_center.markdown_mail understands and the
 variables the e-mail being edited offers, shown in the editor's guide window
 (email_center/partials/_editor.html). Expects ``variables``: a list of
-``(name, label)`` pairs.
+``(name, label)`` pairs. Under "Write it with an AI agent", a prompt to paste
+into a chat assistant: it has the agent ask what the e-mail is for, lists
+these conventions and this e-mail's variables, and asks for the subject and
+text in Portuguese and in English, ready to paste into the editor's tabs.
+The prompt is plain text inside a <pre>, so its lines start at the margin.
 {% endcomment %}
 <div class="text-sm text-neutral-800 flex flex-col gap-5">
+  <div class="rounded-xl border border-neutral-300" x-data="{ open: false, copied: false, selected: false }">
+    <button type="button" class="w-full flex items-center gap-3 px-4 py-3 text-left" @click="open = !open" :aria-expanded="open">
+      <span class="w-8 h-8 rounded-lg icon-tone-brand flex items-center justify-center shrink-0" aria-hidden="true">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/></svg>
+      </span>
+      <span class="flex-1 min-w-0">
+        <span class="block text-sm font-semibold text-neutral-950">{% translate "Write it with an AI agent" %}</span>
+        <span class="block text-xs text-neutral-600">{% translate "Copy this prompt into ChatGPT, Claude or another assistant: it asks what you want and gives you the text in Portuguese and in English." %}</span>
+      </span>
+      <svg class="shrink-0 text-neutral-600 transition-transform" :class="open ? 'rotate-180' : ''" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div x-show="open" x-cloak class="border-t border-neutral-300 p-4 flex flex-col gap-3">
+      <pre x-ref="prompt" class="max-h-72 overflow-y-auto whitespace-pre-wrap rounded-lg bg-neutral-50 p-3 font-mono text-xs leading-5 text-neutral-800">{% translate "You are going to help me write an e-mail for Connekt Flow, a social media management platform. The e-mail is written in Markdown with a few conventions of its own, listed below." %}
+
+{% translate "Before writing, ask me these questions one at a time and wait for each answer:" %}
+1. {% translate "Who is the e-mail for, and at what moment do they receive it?" %}
+2. {% translate "What is it for: what should the person do or understand after reading it?" %}
+3. {% translate "Which action should the button lead to, and to which link? Use one of the variables below when it fits." %}
+4. {% translate "Which tone do you want (warm, direct, formal)?" %}
+5. {% translate "Is there anything that must appear (a deadline, an amount, steps)?" %}
+
+{% translate "Formatting rules:" %}
+- # {% translate "Title" %} — {% translate "the first line is the title" %}
+- **{% translate "bold" %}**, *{% translate "italic" %}*
+- - {% translate "item" %} — {% translate "a list" %}; 1. {% translate "item" %} — {% translate "a numbered list" %}
+- > {% translate "text" %} — {% translate "a highlighted box (consecutive lines starting with > are the same box)" %}
+- [{% translate "text" %}](https://…) — {% translate "a link" %}
+- [{% translate "button:" %} {% translate "Label" %}]({% templatetag openvariable %} app_url {% templatetag closevariable %}) — {% translate "the button, alone in its paragraph; one per e-mail, two at most" %}
+- &lt;small&gt;{% translate "text" %}&lt;/small&gt; {% translate "right under a button" %} — {% translate "the “if the button doesn't work, copy this link” line" %}
+- &lt;small&gt;{% translate "text" %}&lt;/small&gt; — {% translate "a note in small grey letters, alone in its paragraph" %}
+- `{% translate "code" %}` — {% translate "the large box of codes, alone in its paragraph" %}
+- | {% translate "Label" %} | {% translate "value" %} | — {% translate "a table: the first row on top, highlighted, then one label and value per row" %}
+- {% translate "No other HTML than the small tag, and no images. Short paragraphs, separated by a blank line." %}
+
+{% translate "Variables: use only these, written exactly like this. They are replaced by each person's data when the e-mail is sent." %}
+{% for name, label in variables %}- {% templatetag openvariable %} {{ name }} {% templatetag closevariable %} — {{ label }}
+{% endfor %}
+{% translate "Deliver, once we agree on the content:" %}
+1. {% translate "The subject in Portuguese (up to 80 characters)." %}
+2. {% translate "The text in Portuguese, in a markdown code block." %}
+3. {% translate "The subject in English." %}
+4. {% translate "The text in English, in a markdown code block, with the same structure, buttons and variables. In English the button is written [button: Label](link)." %}</pre>
+      <div class="flex items-center justify-end gap-2">
+        <span x-show="copied" x-cloak class="text-xs text-neutral-600">{% translate "Copied." %}</span>
+        <span x-show="selected" x-cloak class="text-xs text-neutral-600">{% translate "Text selected: press Ctrl+C (⌘C on a Mac) to copy." %}</span>
+        {% comment %}When the browser refuses the clipboard, the prompt is selected for the person to copy.{% endcomment %}
+        <button type="button" class="btn-brand"
+                @click="navigator.clipboard.writeText($refs.prompt.innerText)
+                          .then(() => { selected = false; copied = true; setTimeout(() => copied = false, 2500); })
+                          .catch(() => { const range = document.createRange(); range.selectNodeContents($refs.prompt); const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range); selected = true; })">{% translate "Copy prompt" %}</button>
+      </div>
+    </div>
+  </div>
   <div>
     <h2 class="text-sm font-semibold text-neutral-950 mb-2">{% translate "How to write" %}</h2>
     <ul class="flex flex-col gap-1.5 text-xs text-neutral-700">

@@ -1,9 +1,10 @@
 {% extends "layouts/admin_shell.html" %}
 {% load i18n %}
 {% comment %}
-One automatic e-mail: its text in Markdown (previewed live), its trigger (a
-starting point and a number of days) and its conditions on what the account
-has done. Who receives it and when is apps.email_center.triggers.
+One automatic e-mail: its text in Markdown in each language (a tab per
+language, all saved together; the preview follows the open tab), its trigger
+(a starting point and a number of days) and its conditions on what the
+account has done. Who receives it and when is apps.email_center.triggers.
 Superadmins only (apps.email_center.staff_views.automated_edit).
 {% endcomment %}
 
@@ -23,11 +24,30 @@ Superadmins only (apps.email_center.staff_views.automated_edit).
 {% block content %}
 <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,8fr)_minmax(0,7fr)] gap-6 items-start">
   <div class="flex flex-col gap-6 min-w-0">
-    <form id="email-form" method="post" class="flex flex-col gap-6">
+    <form id="email-form" method="post" class="flex flex-col gap-6"
+          x-data="{ lang: '{{ start_language }}',
+                    switchTo(code) {
+                      this.lang = code;
+                      const input = this.$root.querySelector('input[name=language]');
+                      input.value = code;
+                      input.dispatchEvent(new Event('input', { bubbles: true }));
+                    } }">
       {% csrf_token %}
+      <input type="hidden" name="language" value="{{ start_language }}">
       {{ form.non_field_errors }}
-      <section class="a-card p-6 min-w-0">
-        {% include "email_center/partials/_editor.html" with name_field=form.name %}
+      <section class="a-card p-6 min-w-0 flex flex-col gap-5">
+        {% include "email_center/partials/_editor_header.html" with languages=panes %}
+        <div>
+          <label for="{{ form.name.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.name.label }}</label>
+          {{ form.name }}
+          {% for error in form.name.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
+        </div>
+        {% for pane in panes %}
+        <div x-show="lang === '{{ pane.code }}'" {% if pane.code != start_language %}x-cloak{% endif %}>
+          {% if pane.code != default_language %}<p class="alert-info text-xs mb-5">{% blocktranslate with language=default_language_name %}Optional. Left empty, people who read in this language receive the {{ language }} text.{% endblocktranslate %}</p>{% endif %}
+          {% include "email_center/partials/_editor.html" with subject_field=pane.subject body_field=pane.body %}
+        </div>
+        {% endfor %}
       </section>
 
       <section class="a-card p-6 flex flex-col gap-5">
@@ -88,4 +108,5 @@ Superadmins only (apps.email_center.staff_views.automated_edit).
 
   {% include "email_center/partials/_preview_card.html" %}
 </div>
+{% include "email_center/partials/_editor_script.html" %}
 {% endblock %}

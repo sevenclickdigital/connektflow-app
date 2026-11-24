@@ -10,7 +10,7 @@ from django.contrib.auth import login
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-from apps.common.emails import build_email
+from apps.common.emails import build_email, in_language_of
 from apps.common.mail import send_or_raise, transactional
 from apps.members.models import WorkspaceMembership
 
@@ -101,15 +101,16 @@ def generate_magic_link(workspace, client_user, created_by):
         "app_url": app_url,
     }
 
-    msg = build_email(
-        subject=_("%(workspace)s - Posts ready for your review") % {"workspace": workspace.name},
-        template_prefix="client_portal/email/magic_link",
-        context=context,
-        to=[client_user.email],
-        # A login link a manager just asked us to send: the recipient is waiting
-        # for it, so the per-recipient notification cap must not eat it.
-        headers=transactional(),
-    )
+    with in_language_of(client_user.email):
+        msg = build_email(
+            subject=_("%(workspace)s - Posts ready for your review") % {"workspace": workspace.name},
+            template_prefix="client_portal/email/magic_link",
+            context=context,
+            to=[client_user.email],
+            # A login link a manager just asked us to send: the recipient is waiting
+            # for it, so the per-recipient notification cap must not eat it.
+            headers=transactional(),
+        )
 
     try:
         send_or_raise(msg)

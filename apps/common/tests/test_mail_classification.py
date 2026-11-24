@@ -55,7 +55,9 @@ def account(db):
 @pytest.mark.django_db
 @budgeted(EMAIL_RECIPIENT_HOURLY_LIMIT=3)
 def test_a_password_reset_reaches_a_recipient_whose_allowance_is_spent(client, account, settings):
-    settings.LANGUAGE_CODE = "en-us"  # asserts the English wording
+    # Asserts the English wording: the reset goes out in the language of the person's profile.
+    account.language = "en-us"
+    account.save(update_fields=["language"])
     burn_the_hourly_allowance(account.email, 5)
     assert len(mail.outbox) == 3, "the cap should have stopped the rest"
     mail.outbox.clear()

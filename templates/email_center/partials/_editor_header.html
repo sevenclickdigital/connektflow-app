@@ -1,0 +1,38 @@
+{% load i18n %}
+{% comment %}
+The title of an e-mail form's text card and its language switch. Expects
+``languages``: each with ``code``, ``name`` and ``short``, and either
+- ``url`` (a system e-mail: each language's version is its own page; the
+  current one is ``language``, and leaving with unsaved changes asks first,
+  through the ``versionForm`` component on the form), or
+- no ``url`` (an automatic e-mail: every language is in the same form; the
+  switch sets ``lang`` on the form's Alpine component, and a language with an
+  error is marked).
+{% endcomment %}
+<div class="flex flex-wrap items-center justify-between gap-3"
+     data-leave="{% translate 'Switch language without saving?' %}"
+     data-leave-body="{% translate 'The changes made to this version are lost.' %}"
+     data-leave-label="{% translate 'Switch' %}">
+  <h2 class="text-base font-semibold text-neutral-950">{% translate "E-mail content" %}</h2>
+  {% if languages %}
+  <nav class="flex rounded-xl border border-neutral-300 p-1 gap-1" aria-label="{% translate 'Language of the version' %}">
+    {% for item in languages %}
+    {% if item.url %}
+    <a href="{{ item.url }}" @click="leave($event)" title="{{ item.name }}"
+       class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold {% if item.code == language %}icon-tone-brand{% else %}text-neutral-700 hover:bg-neutral-50{% endif %}"
+       {% if item.code == language %}aria-current="true"{% endif %}>
+      <span class="font-mono">{{ item.short }}</span><span class="hidden sm:inline">{{ item.name }}</span>
+    </a>
+    {% else %}
+    <button type="button" @click="switchTo('{{ item.code }}')" title="{{ item.name }}"
+            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold"
+            :class="lang === '{{ item.code }}' ? 'icon-tone-brand' : 'text-neutral-700 hover:bg-neutral-50'"
+            :aria-pressed="lang === '{{ item.code }}'">
+      <span class="font-mono">{{ item.short }}</span><span class="hidden sm:inline">{{ item.name }}</span>
+      {% if item.has_errors %}<span class="w-1.5 h-1.5 rounded-full bg-red-500" aria-label="{% translate 'Has errors' %}"></span>{% endif %}
+    </button>
+    {% endif %}
+    {% endfor %}
+  </nav>
+  {% endif %}
+</div>

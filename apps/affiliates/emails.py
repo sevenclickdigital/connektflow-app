@@ -4,7 +4,8 @@ Built like the rest of our mail (``apps.common.emails.build_email``) and
 classed as transactional: it answers something the team did to the person's
 account. Each is sent at once and answered with its outcome, so the
 operator's screen can say when the person was not told, and written in the
-product's default language, which may not be the operator's.
+language of the affiliate's profile, which may not be the operator's. The
+team's notice goes out in the product's default language.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ from django.utils.translation import gettext as _
 
 from apps.affiliates import services
 from apps.billing.templatetags.billing_extras import brl
-from apps.common.emails import build_email
+from apps.common.emails import build_email, in_language_of
 from apps.common.mail import EmailNotSentError, send_or_raise, transactional
 
 logger = logging.getLogger(__name__)
@@ -100,7 +101,7 @@ def _send(affiliate, template, subject, *, attachment=None, **extra) -> bool:
     if user is None or not user.email:
         return False
     app_url = getattr(settings, "APP_URL", "http://localhost:8000").rstrip("/")
-    with translation.override(settings.LANGUAGE_CODE):
+    with in_language_of(user):
         message = build_email(
             subject=subject(),
             template_prefix=f"affiliates/email/{template}",
