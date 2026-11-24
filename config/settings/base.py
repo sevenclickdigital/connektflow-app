@@ -328,7 +328,9 @@ ACCOUNT_USER_DISPLAY = "apps.accounts.adapters.user_display"
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
 ACCOUNT_EMAIL_VERIFICATION_BY_CODE_FORMAT = {"numeric": True, "length": 6, "dashed": False}
-ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND = True
+# How many new codes one verification may ask for; they are a minute apart
+# (apps.accounts.views_signup.RESEND_COOLDOWN).
+ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND = 5
 ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_CHANGE = True
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
 # Security notices: password changed/reset/set, email changed or removed, a
@@ -486,10 +488,6 @@ LEGAL_COMPANY_ADDRESS = env(
     default="Rua Santo Antônio, 1460 · Sala 405 | Barreiros, São José/SC · CEP 88117-351",
 )
 LEGAL_COMPANY_PHONE = env("LEGAL_COMPANY_PHONE", default="+55 (48) 9 8456-8572")
-LEGAL_COMPANY_SERVICE_AREA = env(
-    "LEGAL_COMPANY_SERVICE_AREA",
-    default="Atendimento presencial na Grande Florianópolis e virtual em todo o Brasil.",
-)
 LEGAL_CONTACT_EMAIL = env("LEGAL_CONTACT_EMAIL", default="")
 
 # Invitations. The cooldown and the send cap live on the Invitation row so they

@@ -124,3 +124,17 @@ class TestOrgDeletionRedirect:
 
         assert response.status_code == 302
         assert response.url == CUSTOM
+
+
+@pytest.mark.django_db
+def test_a_wrong_password_is_told_on_the_login_page(client):
+    from django.core.cache import cache
+
+    cache.clear()
+    User.objects.create_user(email="camila@a.example", password="a-certa-42", tos_accepted_at=timezone.now())
+
+    response = client.post(reverse("account_login"), {"login": "camila@a.example", "password": "errada"})
+
+    assert response.status_code == 200
+    error = response.context["form"].non_field_errors()[0]
+    assert error and error in response.content.decode()

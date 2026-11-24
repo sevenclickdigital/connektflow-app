@@ -26,6 +26,7 @@ from apps.common.validators import clean_display_name
 from apps.composer.models import PlatformPost, Post, Tag
 from apps.members.decorators import require_org_role
 from apps.members.models import OrgMembership, WorkspaceMembership
+from apps.organizations import emails
 from apps.organizations.forms import AboutBusinessForm
 from apps.organizations.models import Organization
 from apps.social_accounts.models import SocialAccount
@@ -607,6 +608,7 @@ def _handle_org_deletion(request, org):
     purge_organization(org)
 
     execute_scheduled_org_deletion(str(org.id), schedule=grace)
+    emails.send_deletion_scheduled(org, request.user)
 
     messages.success(request, _("Organization scheduled for deletion in 14 days."))
 

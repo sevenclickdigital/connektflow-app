@@ -11,8 +11,7 @@
 {% translate "Terms of Service" %}: {{ terms_url }}
 
 {% blocktranslate with brand=brand_name company=company_name %}{{ brand }} is a brand of the {{ company }} group{% endblocktranslate %}{% if company_document %}
-CNPJ {{ company_document }}{% endif %}{% if company_service_area %}
-{{ company_service_area }}{% endif %}
+CNPJ {{ company_document }}{% endif %}
 {% if company_address_lines %}
 {% translate "Address" %}{% for line in company_address_lines %}
 {{ line }}{% endfor %}

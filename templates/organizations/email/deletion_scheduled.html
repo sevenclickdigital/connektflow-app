@@ -1,0 +1,13 @@
+{% extends "emails/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Your organization will be deleted" %}{% endblock %}
+{% block preheader %}{% blocktranslate with date=deletion_at|date:"SHORT_DATE_FORMAT" %}You can cancel the deletion until {{ date }}.{% endblocktranslate %}{% endblock %}
+{% block content %}
+<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Your organization will be deleted" %}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with name=organization.name date=deletion_at|date:"SHORT_DATE_FORMAT" %}You asked to delete <strong style="color:#0F172A;">{{ name }}</strong>. Nothing else has been removed yet: on <strong style="color:#0F172A;">{{ date }}</strong> the organization, its brands, posts, media and team are deleted for good.{% endblocktranslate %}</p>
+<p style="margin:0 0 20px;font-size:15px;line-height:24px;color:#334155;">{% translate "Changed your mind? Until that day you can cancel the deletion and keep everything. YouTube connections were already removed and have to be connected again." %}</p>
+{% translate "Cancel the deletion" as cta %}{% include "emails/_button.html" with url=restore_url label=cta %}
+<p style="margin:24px 0 0;font-size:13px;line-height:20px;color:#64748B;">{% translate "If you do want it deleted, there is nothing to do." %}</p>
+{% endblock %}
+{% block reason %}<p style="margin:0 0 12px;">{% blocktranslate with name=organization.name %}You're receiving this because you asked to delete {{ name }}.{% endblocktranslate %}</p>{% endblock %}

@@ -350,7 +350,23 @@ Access is ``is_staff`` (apps/accounts/decorators.py).
               </button>
               <div class="px-5 pt-4 pb-3 pr-12 border-b border-neutral-100">
                 <h2 id="account-{{ row.organization.id }}" class="modal-title truncate">{{ row.organization.name }}</h2>
-                {% if row.owner %}<p class="text-xs text-neutral-600 break-all">{{ row.owner.user.email }}</p>{% endif %}
+                {% comment %}
+                The address goes in a data attribute, not in the Alpine expression,
+                and is copied to be pasted in the confirmation of the delete panel.
+                {% endcomment %}
+                {% if row.owner %}
+                <p class="flex flex-wrap items-center gap-2 text-xs text-neutral-600">
+                  <span class="break-all">{{ row.owner.user.email }}</span>
+                  <button type="button" x-data="{ copied: false }" data-email="{{ row.owner.user.email }}"
+                        @click="navigator.clipboard.writeText($el.dataset.email).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
+                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-normal text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950 cursor-pointer flex-shrink-0"
+                        :title="copied ? $el.dataset.copied : $el.dataset.copy" data-copy="{% translate 'Copy' %}" data-copied="{% translate 'Copied' %}">
+                  <svg x-show="!copied" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  <svg x-show="copied" x-cloak width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span x-text="copied ? $el.parentElement.dataset.copied : $el.parentElement.dataset.copy">{% translate "Copy" %}</span>
+                </button>
+                </p>
+                {% endif %}
               </div>
               {% if is_superadmin %}
               <div class="flex gap-1 px-5 pt-2 border-b border-neutral-100" x-show="panel === 'edit' || panel === 'courtesy'">

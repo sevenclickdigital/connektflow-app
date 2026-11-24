@@ -517,3 +517,21 @@ def test_the_organization_page_names_the_brands_that_deleting_takes_away(client)
     assert [brand.name for brand in response.context["brands"]] == [first.name, "Guardada"]
     assert response.context["brands_in_use"] == sum(brand.in_use for brand in response.context["brands"])
     assert "Guardada" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_asking_to_delete_an_organization_mails_the_way_back(client, mailoutbox, django_capture_on_commit_callbacks):
+    user, first = _signed_up(client)
+    manage = reverse("organizations:manage", kwargs={"organization_id": first.organization_id})
+
+    with django_capture_on_commit_callbacks(execute=True):
+        client.post(manage, {"action": "delete_organization"})
+
+    notice = next(m for m in mailoutbox if manage in m.body)
+    assert notice.to == [user.email]
+    assert first.organization.name in notice.subject
+    assert f"{manage}#danger-zone" in notice.body
+    # The link's page is where the deletion is cancelled, and nothing was deleted.
+    client.post(manage, {"action": "cancel_deletion"})
+    first.organization.refresh_from_db()
+    assert first.organization.deletion_scheduled_for is None

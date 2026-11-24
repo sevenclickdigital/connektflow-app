@@ -26,6 +26,12 @@
     .cf-mascot { width: 132px !important; max-width: 132px !important; }
     .cf-mascot-cell { width: 146px !important; padding: 30px 14px 0 0 !important; }
   }
+  @media only screen and (max-width: 480px) {
+    .cf-mascot { width: 104px !important; max-width: 104px !important; }
+    .cf-mascot-cell { width: 104px !important; padding: 10px 0 0 0 !important; }
+    .cf-logo-cell { padding-left: 10px !important; }
+    .cf-header-gap { height: 16px !important; }
+  }
 </style>
 </head>
 <body style="margin:0;padding:0;width:100%;background-color:#F5F3FF;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0F172A;">
@@ -40,16 +46,23 @@
     <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E5E7EB;border-radius:12px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td class="cf-pad" height="86" valign="middle" style="height:86px;padding:0 0 0 40px;">
+          <td class="cf-pad cf-logo-cell" height="86" valign="middle" style="height:86px;padding:0 0 0 40px;">
             <a href="{{ app_url }}" target="_blank" rel="noopener" style="text-decoration:none;">
-              <img src="{{ logo_url }}" width="180" height="26" alt="{{ brand_name }}" style="display:block;width:180px;max-width:180px;height:auto;border:0;font-size:18px;font-weight:700;color:#0F172A;">
+              <img src="{{ logo_url }}" width="240" height="34" alt="{{ brand_name }}" class="cf-logo" style="display:block;width:100%;max-width:240px;height:auto;border:0;font-size:18px;font-weight:700;color:#0F172A;">
             </a>
           </td>
+          {% comment %}
+          The logo fills what the mascot's cell leaves, up to 240 px: a fixed
+          width here made the header wider than a phone and pushed the mascot
+          and the text off the screen.
+          {% endcomment %}
           {% comment %}
           Moti stands across the divider: this cell spans the header row, the
           divider row and the spacer row under it, and the divider stops where
           the cell starts. The three rows add up to the height of the cell
           (7 + 137 px), so no client has to stretch them.
+          On a phone the mascot is small enough to end above the divider,
+          so the spacer row under it shrinks to a plain gap.
           Mail clients drop negative margins and absolute positioning.
           {% endcomment %}
           <td rowspan="3" class="cf-mascot-cell" align="right" valign="top" width="204" style="width:204px;padding:7px 14px 0 0;">
@@ -60,7 +73,7 @@
           <td height="1" bgcolor="#EDE9FE" style="height:1px;background-color:#EDE9FE;font-size:0;line-height:0;">&nbsp;</td>
         </tr>
         <tr>
-          <td height="57" style="height:57px;font-size:0;line-height:0;">&nbsp;</td>
+          <td height="57" class="cf-header-gap" style="height:57px;font-size:0;line-height:0;">&nbsp;</td>
         </tr>
         <tr>
           <td colspan="2" class="cf-pad" style="padding:0 40px 36px;font-size:15px;line-height:24px;color:#334155;">
@@ -98,7 +111,6 @@
             <p style="margin:0 0 10px;">
               <strong style="color:#334155;">{% blocktranslate with brand=brand_name company=company_name %}{{ brand }} is a brand of the {{ company }} group{% endblocktranslate %}</strong>
               {% if company_document %}<br>CNPJ {{ company_document }}{% endif %}
-              {% if company_service_area %}<br>{{ company_service_area }}{% endif %}
             </p>
             {% if company_address_lines %}
             <p style="margin:0 0 10px;">

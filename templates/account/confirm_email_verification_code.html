@@ -90,13 +90,31 @@ while its allowance lasts (``can_resend``, ``can_change``).
         <p class="text-xs mt-5" style="color: var(--text-tertiary);">
             {% translate "If you don't see it, check your spam folder." %}
         </p>
+        {% comment %}
+        A new code replaces the one before, so the server keeps a pause between
+        two codes (``resend_wait``, in seconds, handed over in a data
+        attribute). While it runs the page counts it down, so the person knows
+        when another can be asked for; then the button takes its place. Once
+        every code allowed was sent, the way on is to sign in again.
+        {% endcomment %}
         {% if can_resend %}
-        <form method="post" action="{{ action_url }}" class="mt-2">
+        <form method="post" action="{{ action_url }}" class="mt-2" data-wait="{{ resend_wait }}"
+              x-data="{ wait: 0 }"
+              x-init="wait = Number($el.dataset.wait); if (wait) { const timer = setInterval(() => { if (--wait <= 0) clearInterval(timer) }, 1000) }">
             {% csrf_token %}
             {{ redirect_field }}
             <input type="hidden" name="action" value="resend">
-            <button type="submit" class="text-sm font-semibold hover:underline cursor-pointer" style="color: var(--primary);">{% translate "Send a new code" %}</button>
+            <p x-show="wait > 0" {% if not resend_wait %}x-cloak{% endif %} class="text-sm" style="color: var(--text-secondary);" role="timer">
+                {% translate "You can ask for a new code in" %}
+                <span class="font-semibold tabular-nums" style="color: var(--text-primary);"><span x-text="wait">{{ resend_wait }}</span>s</span>
+            </p>
+            <button type="submit" x-show="wait <= 0" {% if resend_wait %}x-cloak{% endif %}
+                    class="text-sm font-semibold hover:underline cursor-pointer" style="color: var(--primary);">{% translate "Send a new code" %}</button>
         </form>
+        {% else %}
+        <p class="text-xs mt-2" style="color: var(--text-tertiary);">
+            {% translate "Every code allowed was already sent. To get a new one, go back to sign in and enter again." %}
+        </p>
         {% endif %}
 
         {% if can_change %}

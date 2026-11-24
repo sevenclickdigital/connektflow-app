@@ -1,7 +1,12 @@
 from django.urls import path
 
 from . import views, views_impersonation
-from .views_signup import InviteClaimSocialSignupView, InvitePrefillSignupView, SignupLinkLoginView
+from .views_signup import (
+    InviteClaimSocialSignupView,
+    InvitePrefillSignupView,
+    SignupLinkLoginView,
+    VerificationCodeView,
+)
 
 app_name = "accounts"
 
@@ -9,6 +14,7 @@ urlpatterns = [
     path("login/", SignupLinkLoginView.as_view(), name="account_login"),
     path("signup/", InvitePrefillSignupView.as_view(), name="account_signup"),
     path("3rdparty/signup/", InviteClaimSocialSignupView.as_view(), name="socialaccount_signup"),
+    path("confirm-email/", VerificationCodeView.as_view(), name="account_email_verification_sent"),
     path("accept-terms/", views.accept_terms, name="accept_terms"),
     path("popup-done/", views.login_popup_done, name="login_popup_done"),
     path("settings/", views.account_settings, name="settings"),

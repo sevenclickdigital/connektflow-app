@@ -158,3 +158,28 @@ def test_a_team_account_is_created_verified(client):
     assert response.status_code == 302
     assert response["Location"] != reverse(CODE_PAGE)
     assert mail.outbox == []
+
+
+@pytest.mark.django_db
+def test_a_new_code_waits_a_minute_after_the_last_one(client, monkeypatch):
+    from apps.accounts import views_signup
+
+    _sign_up(client)
+    first = _code_sent_to(FORM["email"])
+    sent = len(mail.outbox)
+    page = client.get(reverse(CODE_PAGE))
+    assert 0 < page.context["resend_wait"] <= views_signup.RESEND_COOLDOWN
+
+    # Asked again at once: nothing is sent and the code in hand still counts.
+    client.post(reverse(CODE_PAGE), {"action": "resend"})
+    assert len(mail.outbox) == sent
+    assert _code_sent_to(FORM["email"]) == first
+
+    # A minute later a new one goes out, and the wait starts over.
+    later = views_signup.time.time() + views_signup.RESEND_COOLDOWN + 1
+    monkeypatch.setattr(views_signup.time, "time", lambda: later)
+    cache.clear()
+    client.post(reverse(CODE_PAGE), {"action": "resend"})
+    assert len(mail.outbox) == sent + 1
+    assert client.get(reverse(CODE_PAGE)).context["resend_wait"] == views_signup.RESEND_COOLDOWN
+    assert client.post(reverse(CODE_PAGE), {"code": _code_sent_to(FORM["email"])}).status_code == 302

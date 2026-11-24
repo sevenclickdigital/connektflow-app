@@ -50,6 +50,13 @@
         {% url 'account_signup' as signup_action_url %}
         <form method="post" action="{{ signup_action_url }}">
             {% csrf_token %}
+            {% comment %}
+            Errors of the form as a whole, not of one field: a wrong e-mail or
+            password, too many attempts.
+            {% endcomment %}
+            {% if form.non_field_errors %}
+            <div class="alert-error mb-5" role="alert">{{ form.non_field_errors.0 }}</div>
+            {% endif %}
             {{ redirect_field }}
 
             {% for field in form %}
