@@ -2,8 +2,8 @@
 {% load i18n billing_extras %}
 {% block title %}{% translate "Your withdrawal is in your account" %}{% endblock %}
 {% block preheader %}{% blocktranslate with amount=payout.amount_cents|brl %}R$ {{ amount }} sent by Pix. The receipt is attached.{% endblocktranslate %}{% endblock %}
+{% block heading %}{% translate "Your withdrawal is in your account" %}{% endblock %}
 {% block content %}
-<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Your withdrawal is in your account" %}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with amount=payout.amount_cents|brl %}Good news: we sent <strong style="color:#0F172A;">R$ {{ amount }}</strong> by Pix to the key you gave us. Thank you for bringing new customers to {{ brand_name }}, this money is the result of your work.{% endblocktranslate %}</p>
 {% translate "Paid on" as date_label %}{% include "affiliates/email/_payout_rows.html" with amount=payout.amount_cents|brl pix_key=payout.pix_key date=payout.resolved_at|date:"d/m/Y" note=payout.note %}

@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% blocktranslate with org=invitation.team_name %}Join {{ org }}{% endblocktranslate %} - Connekt Flow</title>
+    <title>{% if invitation.brand %}{% blocktranslate with name=invitation.brand.name %}Invitation to the brand {{ name }}{% endblocktranslate %}{% else %}{% blocktranslate with name=invitation.organization.name %}Invitation to the organization {{ name }}{% endblocktranslate %}{% endif %} - Connekt Flow</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -85,7 +85,7 @@
     <div class="card">
         <div class="logo">Connekt Flow</div>
 
-        <h1>{% blocktranslate with org=invitation.team_name %}Join {{ org }}{% endblocktranslate %}</h1>
+        <h1>{% if invitation.brand %}{% blocktranslate with name=invitation.brand.name %}Invitation to the brand {{ name }}{% endblocktranslate %}{% else %}{% blocktranslate with name=invitation.organization.name %}Invitation to the organization {{ name }}{% endblocktranslate %}{% endif %}</h1>
         <p class="subtitle">
             {% blocktranslate with inviter=invitation.invited_by.display_name %}{{ inviter }} invited you to join their team on Connekt Flow.{% endblocktranslate %}
         </p>
@@ -124,7 +124,7 @@
         <form method="POST" action="{{ accept_url }}">
             {% csrf_token %}
             <button type="submit" class="btn btn-primary">
-                {% blocktranslate with org=invitation.team_name %}Join {{ org }}{% endblocktranslate %}
+                {% translate "Accept invitation" %}
             </button>
         </form>
         {% else %}

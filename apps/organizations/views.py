@@ -609,10 +609,10 @@ def _handle_org_deletion(request, org):
     org.deletion_requested_at = django_tz.now()
     org.deletion_scheduled_for = django_tz.now() + grace
     org.save(update_fields=["deletion_requested_at", "deletion_scheduled_for"])
-    purge_organization(org)
+    removed_youtube = purge_organization(org)
 
     execute_scheduled_org_deletion(str(org.id), schedule=grace)
-    emails.send_deletion_scheduled(org, request.user)
+    emails.send_deletion_scheduled(org, request.user, removed_youtube=removed_youtube)
 
     messages.success(request, _("Organization scheduled for deletion in 14 days."))
 

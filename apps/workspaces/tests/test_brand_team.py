@@ -147,7 +147,7 @@ def test_a_pending_invitation_is_listed_worded_around_the_brand_and_can_be_cance
     invitation = Invitation.objects.get(email="guest@b.com")
     assert invitation.name == "Ana Lima"
     assert "Ana Lima" in mailoutbox[-1].body
-    assert invitation.team_name == "Brand"
+    assert invitation.brand.name == "Brand"
     assert "Brand" in mailoutbox[-1].subject and "Agency" not in mailoutbox[-1].subject
     pending = client.get(_url(brand)).context["pending_invitations"]
     assert [item["invitation"].id for item in pending] == [invitation.id]

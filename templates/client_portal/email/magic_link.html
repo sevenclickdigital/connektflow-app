@@ -2,8 +2,8 @@
 {% load i18n %}
 {% block title %}{% blocktranslate with workspace=workspace.name %}{{ workspace }} - Posts ready for your review{% endblocktranslate %}{% endblock %}
 {% block preheader %}{% blocktranslate with sender=created_by.display_name %}{{ sender }} has shared content for your review.{% endblocktranslate %}{% endblock %}
+{% block heading %}{% translate "Posts ready for your review" %}{% endblock %}
 {% block content %}
-<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Posts ready for your review" %}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with name=client_user.display_name %}Hi {{ name }},{% endblocktranslate %}</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with sender=created_by.display_name workspace=workspace.name %}{{ sender }} has shared content for your review in <strong style="color:#0F172A;">{{ workspace }}</strong>.{% endblocktranslate %} {% translate "Open your portal to approve the scheduled posts or leave feedback." %}</p>
 {% translate "Review posts" as cta %}{% include "emails/_button.html" with url=magic_url label=cta %}

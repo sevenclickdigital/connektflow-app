@@ -2,8 +2,8 @@
 {% load i18n %}
 {% block title %}{{ notification.title }}{% endblock %}
 {% block preheader %}{{ notification.body|truncatewords:24 }}{% endblock %}
+{% block heading %}{{ notification.title }}{% endblock %}
 {% block content %}
-<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{{ notification.title }}</h1>
 {% if notification.body %}<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{{ notification.body|linebreaksbr }}</p>{% endif %}
 {% if notification.data.action_url %}{% translate "View details" as cta %}{% include "emails/_button.html" with url=notification.data.action_url label=cta %}{% else %}{% blocktranslate with brand=brand_name asvar cta %}Open {{ brand }}{% endblocktranslate %}{% include "emails/_button.html" with url=app_url label=cta no_fallback=True %}{% endif %}
 {% endblock %}

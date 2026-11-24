@@ -143,8 +143,17 @@ def purge_connection(account, *, check_generation=False):
 
 
 def purge_organization(organization):
-    for account in SocialAccount.objects.filter(platform="youtube", workspace__organization=organization):
+    """Purge every YouTube connection of ``organization``; return the channel names removed.
+
+    The rows are deleted, so the names are kept here for the deletion notice.
+    """
+    removed = []
+    for account in SocialAccount.objects.filter(platform="youtube", workspace__organization=organization).order_by(
+        "account_name"
+    ):
+        removed.append(account.display_label)
         purge_connection(account)
+    return removed
 
 
 class ChannelNotAuthorizedError(APIError):

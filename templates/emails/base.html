@@ -1,4 +1,4 @@
-{% load i18n %}{% get_current_language as LANGUAGE_CODE %}<!DOCTYPE html>
+{% load i18n common_extras %}{% get_current_language as LANGUAGE_CODE %}{% capture email_heading %}{% block heading %}{% endblock %}{% endcapture %}<!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
 <meta charset="utf-8">
@@ -31,6 +31,9 @@
     .cf-mascot-cell { width: 104px !important; padding: 10px 0 0 0 !important; }
     .cf-logo-cell { padding-left: 10px !important; }
     .cf-header-gap { height: 16px !important; }
+    .cf-heading-cell { padding: 0 !important; }
+    .cf-h1-desktop { display: none !important; }
+    .cf-h1-mobile { display: block !important; max-height: none !important; overflow: visible !important; }
   }
 </style>
 </head>
@@ -72,11 +75,28 @@
         <tr>
           <td height="1" bgcolor="#EDE9FE" style="height:1px;background-color:#EDE9FE;font-size:0;line-height:0;">&nbsp;</td>
         </tr>
+        {% comment %}
+          The heading sits in the gap beside Moti, so the text starts right
+          under the divider and the heading's width is whatever the mascot's
+          cell leaves: a long one wraps instead of running under the mascot.
+          On a phone the mascot ends above the divider, so this copy hides and
+          the one at the top of the content shows, full width. A client that
+          ignores the media query keeps the wide layout, which still reads.
+          27 px of height plus the 30 px of padding make the 57 px the mascot
+          needs beside this row; a longer heading grows it.
+        {% endcomment %}
         <tr>
+          {% if email_heading %}
+          <td height="27" valign="top" class="cf-pad cf-header-gap cf-heading-cell" style="height:27px;padding:14px 16px 16px 40px;">
+            <h1 class="cf-h1 cf-h1-desktop" style="margin:0;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{{ email_heading }}</h1>
+          </td>
+          {% else %}
           <td height="57" class="cf-header-gap" style="height:57px;font-size:0;line-height:0;">&nbsp;</td>
+          {% endif %}
         </tr>
         <tr>
           <td colspan="2" class="cf-pad" style="padding:0 40px 36px;font-size:15px;line-height:24px;color:#334155;">
+            {% if email_heading %}<div class="cf-h1-mobile" style="display:none;max-height:0;overflow:hidden;mso-hide:all;"><h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{{ email_heading }}</h1></div>{% endif %}
             {% block content %}{% endblock %}
           </td>
         </tr>

@@ -143,3 +143,33 @@ def period_picker(context, period, choices, *, short=False, all_label="", hx_tar
         "start_key": period.keys[1],
         "end_key": period.keys[2],
     }
+
+
+class _CaptureNode(template.Node):
+    def __init__(self, nodelist, name):
+        self.nodelist = nodelist
+        self.name = name
+
+    def render(self, context):
+        # The nodelist renders with autoescaping as usual, so the result is
+        # already safe markup; marking it keeps a later {{ name }} from
+        # escaping it a second time.
+        context[self.name] = mark_safe(self.nodelist.render(context).strip())
+        return ""
+
+
+@register.tag
+def capture(parser, token):
+    """``{% capture name %}…{% endcapture %}``: render once, use ``{{ name }}`` anywhere after.
+
+    For markup a layout needs in two places, which a ``{% block %}`` cannot
+    be (the e-mail heading, shown beside the mascot on wide screens and above
+    the text on phones). Empty or whitespace-only content leaves ``name`` as
+    an empty string, so ``{% if name %}`` tells whether it was given.
+    """
+    bits = token.split_contents()
+    if len(bits) != 2:
+        raise template.TemplateSyntaxError("'capture' takes one argument: the variable name")
+    nodelist = parser.parse(("endcapture",))
+    parser.delete_first_token()
+    return _CaptureNode(nodelist, bits[1])

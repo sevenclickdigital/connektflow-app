@@ -220,11 +220,6 @@ class Invitation(models.Model):
         ).first()
 
     @property
-    def team_name(self):
-        """What the person is told they are joining: the brand, or the organization."""
-        return self.brand.name if self.brand else self.organization.name
-
-    @property
     def is_accepted(self):
         return self.accepted_at is not None
 

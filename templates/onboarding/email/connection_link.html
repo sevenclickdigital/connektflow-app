@@ -2,8 +2,8 @@
 {% load i18n %}
 {% block title %}{% translate "Connect your social accounts" %}{% endblock %}
 {% block preheader %}{% blocktranslate with org=org_name workspace=workspace_name %}{{ org }} has invited you to connect your accounts to {{ workspace }}.{% endblocktranslate %}{% endblock %}
+{% block heading %}{% translate "Connect your social accounts" %}{% endblock %}
 {% block content %}
-<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Connect your social accounts" %}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with org=org_name workspace=workspace_name %}{{ org }} has invited you to connect your accounts to <strong style="color:#0F172A;">{{ workspace }}</strong>.{% endblocktranslate %}</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 0;">
   <tr>

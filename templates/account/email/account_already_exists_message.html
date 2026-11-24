@@ -2,8 +2,8 @@
 {% load i18n %}
 {% block title %}{% translate "You already have an account" %}{% endblock %}
 {% block preheader %}{% translate "There is already an account with this email address." %}{% endblock %}
+{% block heading %}{% translate "You already have an account" %}{% endblock %}
 {% block content %}
-<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "You already have an account" %}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate %}Someone, possibly you, tried to sign up with the email {{ email }}, but an account with this address already exists.{% endblocktranslate %}</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% translate "If you forgot your password, you can choose a new one." %}</p>
 {% translate "Reset my password" as cta %}{% include "emails/_button.html" with url=password_reset_url label=cta %}

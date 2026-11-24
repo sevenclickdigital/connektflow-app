@@ -2,11 +2,18 @@
 {% load i18n %}
 {% block content %}{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}
 
-{% blocktranslate with name=organization.name date=deletion_at|date:"SHORT_DATE_FORMAT" %}You asked to delete {{ name }}. Nothing else has been removed yet: on {{ date }} the organization, its brands, posts, media and team are deleted for good.{% endblocktranslate %}
-
-{% translate "Changed your mind? Until that day you can cancel the deletion and keep everything. YouTube connections were already removed and have to be connected again." %}
+{% blocktranslate with name=organization.name date=deletion_at|date:"SHORT_DATE_FORMAT" %}You asked to delete the organization {{ name }}. Nothing in it has been deleted yet: on {{ date }} it is deleted for good, together with:{% endblocktranslate %}
+{% if brand_names %}- {% translate "its brands:" %} {{ brand_names|join:", " }}{% if more_brands %} {% blocktranslate count n=more_brands %}and {{ n }} more{% plural %}and {{ n }} more{% endblocktranslate %}{% endif %}
+{% endif %}- {% translate "the posts, scheduled or published, and the media library;" %}
+- {% translate "the team's access and the connected social accounts." %}
+{% if removed_youtube %}
+{% blocktranslate with channels=removed_youtube|join:", " count n=removed_youtube|length %}As Google requires, the YouTube channel {{ channels }} was disconnected right away. If you cancel the deletion, connect it again.{% plural %}As Google requires, the YouTube channels {{ channels }} were disconnected right away. If you cancel the deletion, connect them again.{% endblocktranslate %}
+{% endif %}{% if remaining_networks %}
+{% blocktranslate with networks=remaining_networks|join:", " %}Until then the other connected accounts ({{ networks }}) keep working, and scheduled posts still go out.{% endblocktranslate %}
+{% endif %}
+{% translate "Changed your mind? Until that day you can cancel the deletion and keep everything." %}
 
 {% translate "Cancel the deletion" %}: {{ restore_url }}
 
 {% translate "If you do want it deleted, there is nothing to do." %}{% endblock %}
-{% block reason %}{% blocktranslate with name=organization.name %}You're receiving this because you asked to delete {{ name }}.{% endblocktranslate %}{% endblock %}
+{% block reason %}{% blocktranslate with name=organization.name %}You're receiving this because you asked to delete the organization {{ name }}.{% endblocktranslate %}{% endblock %}

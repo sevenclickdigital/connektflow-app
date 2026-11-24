@@ -8,4 +8,6 @@
 2. {% translate "Create and schedule your first post on the calendar." %}
 3. {% translate "Answer comments and messages from the inbox." %}
 
-{{ app_url }}{% endblock %}
+{% translate "Start now" %}: {{ app_url }}
+
+{% blocktranslate with email=support_email %}Need a hand? Write to us at {{ email }}, we're happy to help.{% endblocktranslate %}{% endblock %}

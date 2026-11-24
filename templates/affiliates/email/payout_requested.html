@@ -2,8 +2,8 @@
 {% load i18n billing_extras %}
 {% block title %}{% translate "We received your withdrawal request" %}{% endblock %}
 {% block preheader %}{% blocktranslate with date=deadline|date:"d/m/Y" %}The Pix is made by {{ date }}.{% endblocktranslate %}{% endblock %}
+{% block heading %}{% translate "We received your withdrawal request" %}{% endblock %}
 {% block content %}
-<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "We received your withdrawal request" %}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with days=payout_days %}Your request is with our team. We transfer the amount below to your Pix key within {{ days }} days and, as soon as it is done, send you another e-mail with the receipt.{% endblocktranslate %}</p>
 {% translate "Deposit by" as date_label %}{% include "affiliates/email/_payout_rows.html" with amount=payout.amount_cents|brl pix_key=payout.pix_key date=deadline|date:"d/m/Y" %}

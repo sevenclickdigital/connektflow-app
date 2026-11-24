@@ -1,13 +1,20 @@
 {% extends "emails/base.html" %}
 {% load i18n %}
-{% block title %}{% translate "Your organization will be deleted" %}{% endblock %}
+{% block title %}{% blocktranslate with name=organization.name %}The organization {{ name }} will be deleted{% endblocktranslate %}{% endblock %}
 {% block preheader %}{% blocktranslate with date=deletion_at|date:"SHORT_DATE_FORMAT" %}You can cancel the deletion until {{ date }}.{% endblocktranslate %}{% endblock %}
+{% block heading %}{% blocktranslate with name=organization.name %}The organization {{ name }} will be deleted{% endblocktranslate %}{% endblock %}
 {% block content %}
-<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Your organization will be deleted" %}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}</p>
-<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with name=organization.name date=deletion_at|date:"SHORT_DATE_FORMAT" %}You asked to delete <strong style="color:#0F172A;">{{ name }}</strong>. Nothing else has been removed yet: on <strong style="color:#0F172A;">{{ date }}</strong> the organization, its brands, posts, media and team are deleted for good.{% endblocktranslate %}</p>
-<p style="margin:0 0 20px;font-size:15px;line-height:24px;color:#334155;">{% translate "Changed your mind? Until that day you can cancel the deletion and keep everything. YouTube connections were already removed and have to be connected again." %}</p>
+<p style="margin:0 0 12px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with name=organization.name date=deletion_at|date:"SHORT_DATE_FORMAT" %}You asked to delete the organization <strong style="color:#0F172A;">{{ name }}</strong>. Nothing in it has been deleted yet: on <strong style="color:#0F172A;">{{ date }}</strong> it is deleted for good, together with:{% endblocktranslate %}</p>
+<ul style="margin:0 0 16px;padding:0 0 0 20px;font-size:15px;line-height:24px;color:#334155;">
+  {% if brand_names %}<li style="margin:0 0 4px;">{% translate "its brands:" %} <strong style="color:#0F172A;">{{ brand_names|join:", " }}</strong>{% if more_brands %} {% blocktranslate count n=more_brands %}and {{ n }} more{% plural %}and {{ n }} more{% endblocktranslate %}{% endif %}</li>{% endif %}
+  <li style="margin:0 0 4px;">{% translate "the posts, scheduled or published, and the media library;" %}</li>
+  <li style="margin:0;">{% translate "the team's access and the connected social accounts." %}</li>
+</ul>
+{% if removed_youtube %}<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with channels=removed_youtube|join:", " count n=removed_youtube|length %}As Google requires, the YouTube channel <strong style="color:#0F172A;">{{ channels }}</strong> was disconnected right away. If you cancel the deletion, connect it again.{% plural %}As Google requires, the YouTube channels <strong style="color:#0F172A;">{{ channels }}</strong> were disconnected right away. If you cancel the deletion, connect them again.{% endblocktranslate %}</p>{% endif %}
+{% if remaining_networks %}<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with networks=remaining_networks|join:", " %}Until then the other connected accounts (<strong style="color:#0F172A;">{{ networks }}</strong>) keep working, and scheduled posts still go out.{% endblocktranslate %}</p>{% endif %}
+<p style="margin:0 0 20px;font-size:15px;line-height:24px;color:#334155;">{% translate "Changed your mind? Until that day you can cancel the deletion and keep everything." %}</p>
 {% translate "Cancel the deletion" as cta %}{% include "emails/_button.html" with url=restore_url label=cta %}
 <p style="margin:24px 0 0;font-size:13px;line-height:20px;color:#64748B;">{% translate "If you do want it deleted, there is nothing to do." %}</p>
 {% endblock %}
-{% block reason %}<p style="margin:0 0 12px;">{% blocktranslate with name=organization.name %}You're receiving this because you asked to delete {{ name }}.{% endblocktranslate %}</p>{% endblock %}
+{% block reason %}<p style="margin:0 0 12px;">{% blocktranslate with name=organization.name %}You're receiving this because you asked to delete the organization {{ name }}.{% endblocktranslate %}</p>{% endblock %}

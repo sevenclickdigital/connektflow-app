@@ -2,8 +2,8 @@
 {% load i18n billing_extras %}
 {% block title %}{% translate "New withdrawal to pay" %}{% endblock %}
 {% block preheader %}{% blocktranslate with date=deadline|date:"d/m/Y" %}Transfer it by {{ date }}.{% endblocktranslate %}{% endblock %}
+{% block heading %}{% translate "New withdrawal to pay" %}{% endblock %}
 {% block content %}
-<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "New withdrawal to pay" %}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with name=payout.affiliate.name %}The affiliate {{ name }} asked for a withdrawal.{% endblocktranslate %}</p>
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;background-color:#F5F3FF;border-radius:8px;">
 <tr><td style="padding:16px 18px;font-size:14px;line-height:24px;color:#334155;">

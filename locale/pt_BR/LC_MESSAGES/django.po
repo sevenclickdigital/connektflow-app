@@ -3684,7 +3684,7 @@ msgstr "Movida para “%(column)s”."
 #: templates/client_portal/email/magic_link.html:3
 #, python-format
 msgid "%(workspace)s - Posts ready for your review"
-msgstr "%(workspace)s - Publicações prontas para sua revisão"
+msgstr "Marca %(workspace)s: publicações prontas para sua revisão"
 
 #: apps/common/periods.py:71
 msgid "all time"
@@ -16301,8 +16301,8 @@ msgid ""
 "%(sender)s has shared content for your review in <strong "
 "style=\"color:#0F172A;\">%(workspace)s</strong>."
 msgstr ""
-"%(sender)s compartilhou conteúdo para sua revisão em <strong "
-"style=\"color:#0F172A;\">%(workspace)s</strong>."
+"%(sender)s compartilhou conteúdo da marca <strong style=\"color:#0F172A;\">"
+"%(workspace)s</strong> para sua revisão."
 
 #: templates/client_portal/email/magic_link.html:8
 msgid "Open your portal to approve the scheduled posts or leave feedback."
@@ -16326,12 +16326,12 @@ msgstr ""
 #: templates/client_portal/email/magic_link.txt:11
 #, python-format
 msgid "You're receiving this because you're a client of %(workspace)s."
-msgstr "Você está recebendo esta mensagem porque é cliente de %(workspace)s."
+msgstr "Você está recebendo esta mensagem porque é cliente da marca %(workspace)s."
 
 #: templates/client_portal/email/magic_link.txt:5
 #, python-format
 msgid "%(sender)s has shared content for your review in %(workspace)s."
-msgstr "%(sender)s compartilhou conteúdo para sua revisão em %(workspace)s."
+msgstr "%(sender)s compartilhou conteúdo da marca %(workspace)s para sua revisão."
 
 #: templates/client_portal/email/magic_link.txt:7
 msgid ""
@@ -26457,7 +26457,7 @@ msgstr "Enviar convite"
 
 #, python-format
 msgid "Your data on %(name)s will be removed soon"
-msgstr "Seus dados em %(name)s serão removidos em breve"
+msgstr "Os dados da organização %(name)s serão removidos em breve"
 
 msgid "Your data will be removed soon"
 msgstr "Seus dados serão removidos em breve"
@@ -26468,11 +26468,11 @@ msgstr "Retome sua assinatura até %(date)s para manter tudo."
 
 #, python-format
 msgid "The subscription of <strong style=\"color:#0F172A;\">%(name)s</strong> on %(brand)s ended and we have kept everything since: brands, posts, media and connected accounts. On <strong style=\"color:#0F172A;\">%(date)s</strong> the organization and all of its data are removed for good."
-msgstr "A assinatura de <strong style=\"color:#0F172A;\">%(name)s</strong> no %(brand)s terminou e desde então guardamos tudo: marcas, posts, mídia e contas conectadas. Em <strong style=\"color:#0F172A;\">%(date)s</strong> a organização e todos os seus dados serão removidos de forma definitiva."
+msgstr "A assinatura da organização <strong style=\"color:#0F172A;\">%(name)s</strong> no %(brand)s terminou e desde então guardamos tudo: marcas, posts, mídia e contas conectadas. Em <strong style=\"color:#0F172A;\">%(date)s</strong> a organização e todos os seus dados serão removidos de forma definitiva."
 
 #, python-format
 msgid "The subscription of %(name)s on %(brand)s ended and we have kept everything since: brands, posts, media and connected accounts. On %(date)s the organization and all of its data are removed for good."
-msgstr "A assinatura de %(name)s no %(brand)s terminou e desde então guardamos tudo: marcas, posts, mídia e contas conectadas. Em %(date)s a organização e todos os seus dados serão removidos de forma definitiva."
+msgstr "A assinatura da organização %(name)s no %(brand)s terminou e desde então guardamos tudo: marcas, posts, mídia e contas conectadas. Em %(date)s a organização e todos os seus dados serão removidos de forma definitiva."
 
 msgid "To keep everything, resume the subscription before that day. It all comes back as you left it."
 msgstr "Para manter tudo, retome a assinatura antes desse dia. Tudo volta como você deixou."
@@ -26485,7 +26485,7 @@ msgstr "Se você não precisa mais desses dados, não é preciso fazer nada."
 
 #, python-format
 msgid "You're receiving this because you are responsible for the billing of %(name)s."
-msgstr "Você está recebendo este e-mail porque é responsável pela cobrança de %(name)s."
+msgstr "Você está recebendo este e-mail porque é responsável pela cobrança da organização %(name)s."
 
 msgid "This subscription has no cancellation to undo."
 msgstr "Esta assinatura não tem cancelamento para desfazer."
@@ -27362,3 +27362,244 @@ msgid ""
 msgstr ""
 "O acesso fica restrito à marca <strong>%(name)s</strong>. Para conectar outra "
 "marca, abra-a no Connekt Flow e conecte novamente."
+
+#: apps/organizations/emails.py
+#, python-format
+msgid "The organization %(name)s will be deleted on %(date)s"
+msgstr "A organização %(name)s será excluída em %(date)s"
+
+#: templates/organizations/email/deletion_scheduled.html
+#, python-format
+msgid "The organization %(name)s will be deleted"
+msgstr "A organização %(name)s será excluída"
+
+#: templates/organizations/email/deletion_scheduled.html
+#, python-format
+msgid ""
+"You asked to delete the organization <strong style=\"color:#0F172A;\">"
+"%(name)s</strong>. Nothing in it has been deleted yet: on <strong style="
+"\"color:#0F172A;\">%(date)s</strong> it is deleted for good, together with:"
+msgstr ""
+"Você pediu a exclusão da organização <strong style=\"color:#0F172A;\">"
+"%(name)s</strong>. Nada nela foi excluído ainda: em <strong style=\"color:"
+"#0F172A;\">%(date)s</strong> ela é excluída definitivamente, junto com:"
+
+#: templates/organizations/email/deletion_scheduled.txt
+#, python-format
+msgid ""
+"You asked to delete the organization %(name)s. Nothing in it has been "
+"deleted yet: on %(date)s it is deleted for good, together with:"
+msgstr ""
+"Você pediu a exclusão da organização %(name)s. Nada nela foi excluído ainda: "
+"em %(date)s ela é excluída definitivamente, junto com:"
+
+#: templates/organizations/email/deletion_scheduled.html
+msgid "its brands:"
+msgstr "suas marcas:"
+
+#: templates/organizations/email/deletion_scheduled.html
+#, python-format
+msgid "and %(n)s more"
+msgid_plural "and %(n)s more"
+msgstr[0] "e mais %(n)s"
+msgstr[1] "e mais %(n)s"
+
+#: templates/organizations/email/deletion_scheduled.html
+msgid "the posts, scheduled or published, and the media library;"
+msgstr "as publicações, agendadas ou publicadas, e a biblioteca de mídia;"
+
+#: templates/organizations/email/deletion_scheduled.html
+msgid "the team's access and the connected social accounts."
+msgstr "o acesso da equipe e as contas sociais conectadas."
+
+#: templates/organizations/email/deletion_scheduled.html
+#, python-format
+msgid ""
+"As Google requires, the YouTube channel <strong style=\"color:#0F172A;\">"
+"%(channels)s</strong> was disconnected right away. If you cancel the "
+"deletion, connect it again."
+msgid_plural ""
+"As Google requires, the YouTube channels <strong style=\"color:#0F172A;\">"
+"%(channels)s</strong> were disconnected right away. If you cancel the "
+"deletion, connect them again."
+msgstr[0] ""
+"Por exigência do Google, o canal do YouTube <strong style=\"color:#0F172A;"
+"\">%(channels)s</strong> foi desconectado na hora. Se cancelar a exclusão, "
+"conecte-o de novo."
+msgstr[1] ""
+"Por exigência do Google, os canais do YouTube <strong style=\"color:#0F172A;"
+"\">%(channels)s</strong> foram desconectados na hora. Se cancelar a "
+"exclusão, conecte-os de novo."
+
+#: templates/organizations/email/deletion_scheduled.txt
+#, python-format
+msgid ""
+"As Google requires, the YouTube channel %(channels)s was disconnected right "
+"away. If you cancel the deletion, connect it again."
+msgid_plural ""
+"As Google requires, the YouTube channels %(channels)s were disconnected "
+"right away. If you cancel the deletion, connect them again."
+msgstr[0] ""
+"Por exigência do Google, o canal do YouTube %(channels)s foi desconectado na "
+"hora. Se cancelar a exclusão, conecte-o de novo."
+msgstr[1] ""
+"Por exigência do Google, os canais do YouTube %(channels)s foram "
+"desconectados na hora. Se cancelar a exclusão, conecte-os de novo."
+
+#: templates/organizations/email/deletion_scheduled.html
+#, python-format
+msgid ""
+"Until then the other connected accounts (<strong style=\"color:#0F172A;\">"
+"%(networks)s</strong>) keep working, and scheduled posts still go out."
+msgstr ""
+"Até lá, as outras contas conectadas (<strong style=\"color:#0F172A;\">"
+"%(networks)s</strong>) continuam funcionando e os posts agendados continuam "
+"sendo publicados."
+
+#: templates/organizations/email/deletion_scheduled.txt
+#, python-format
+msgid ""
+"Until then the other connected accounts (%(networks)s) keep working, and "
+"scheduled posts still go out."
+msgstr ""
+"Até lá, as outras contas conectadas (%(networks)s) continuam funcionando e "
+"os posts agendados continuam sendo publicados."
+
+#: templates/organizations/email/deletion_scheduled.html
+msgid ""
+"Changed your mind? Until that day you can cancel the deletion and keep "
+"everything."
+msgstr ""
+"Mudou de ideia? Até esse dia você pode cancelar a exclusão e manter tudo."
+
+#: templates/organizations/email/deletion_scheduled.html
+#, python-format
+msgid ""
+"You're receiving this because you asked to delete the organization "
+"%(name)s."
+msgstr ""
+"Você está recebendo este e-mail porque pediu a exclusão da organização "
+"%(name)s."
+
+#: templates/account/email/welcome_message.html
+msgid "We're glad you're here!"
+msgstr "Que bom ter você por aqui!"
+
+#: templates/account/email/welcome_message.html
+msgid "Your account is ready. Shall we get your social media going?"
+msgstr "Sua conta está pronta. Vamos colocar suas redes para funcionar?"
+
+#: templates/account/email/welcome_message.html
+msgid "Start now"
+msgstr "Começar agora"
+
+#: templates/account/email/welcome_message.html
+#, python-format
+msgid ""
+"Need a hand? Write to us at <a href=\"mailto:%(email)s\" style=\"color:"
+"#7C3AED;text-decoration:underline;\">%(email)s</a>, we're happy to help."
+msgstr ""
+"Precisa de uma mão? Escreva para <a href=\"mailto:%(email)s\" style=\"color:"
+"#7C3AED;text-decoration:underline;\">%(email)s</a>, a gente adora ajudar."
+
+#: templates/account/email/welcome_message.txt
+#, python-format
+msgid "Need a hand? Write to us at %(email)s, we're happy to help."
+msgstr "Precisa de uma mão? Escreva para %(email)s, a gente adora ajudar."
+
+#: apps/members/services.py
+msgid "Someone on the team"
+msgstr "Alguém da equipe"
+
+#: apps/members/services.py
+#, python-format
+msgid "Invitation to the brand %(name)s on Connekt Flow"
+msgstr "Convite para a marca %(name)s no Connekt Flow"
+
+#: apps/members/services.py
+#, python-format
+msgid "Invitation to the organization %(name)s on Connekt Flow"
+msgstr "Convite para a organização %(name)s no Connekt Flow"
+
+#: templates/members/email/invite.html templates/members/accept_invite.html
+#, python-format
+msgid "Invitation to the brand %(name)s"
+msgstr "Convite para a marca %(name)s"
+
+#: templates/members/email/invite.html templates/members/accept_invite.html
+#, python-format
+msgid "Invitation to the organization %(name)s"
+msgstr "Convite para a organização %(name)s"
+
+#: templates/members/email/invite.html
+#, python-format
+msgid "%(inviter)s invited you to the brand %(name)s."
+msgstr "%(inviter)s convidou você para a marca %(name)s."
+
+#: templates/members/email/invite.html
+#, python-format
+msgid "%(inviter)s invited you to the organization %(name)s."
+msgstr "%(inviter)s convidou você para a organização %(name)s."
+
+#: templates/members/email/invite.html
+#, python-format
+msgid ""
+"%(inviter)s invited you to work on the brand <strong style=\"color:#0F172A;"
+"\">%(name)s</strong>, of the organization %(org)s, on Connekt Flow. Accept "
+"the invitation to plan, approve and publish content together with the team."
+msgstr ""
+"%(inviter)s convidou você para trabalhar na marca <strong style=\"color:"
+"#0F172A;\">%(name)s</strong>, da organização %(org)s, no Connekt Flow. "
+"Aceite o convite para planejar, aprovar e publicar conteúdo junto com a "
+"equipe."
+
+#: templates/members/email/invite.html
+#, python-format
+msgid ""
+"%(inviter)s invited you to join the organization <strong style=\"color:"
+"#0F172A;\">%(name)s</strong> on Connekt Flow. Accept the invitation to "
+"plan, approve and publish content together with the team."
+msgstr ""
+"%(inviter)s convidou você para fazer parte da organização <strong style="
+"\"color:#0F172A;\">%(name)s</strong> no Connekt Flow. Aceite o convite para "
+"planejar, aprovar e publicar conteúdo junto com a equipe."
+
+#: templates/members/email/invite.txt
+#, python-format
+msgid ""
+"%(inviter)s invited you to work on the brand %(name)s, of the organization "
+"%(org)s, on Connekt Flow. Accept the invitation to plan, approve and publish "
+"content together with the team."
+msgstr ""
+"%(inviter)s convidou você para trabalhar na marca %(name)s, da organização "
+"%(org)s, no Connekt Flow. Aceite o convite para planejar, aprovar e publicar "
+"conteúdo junto com a equipe."
+
+#: templates/members/email/invite.txt
+#, python-format
+msgid ""
+"%(inviter)s invited you to join the organization %(name)s on Connekt Flow. "
+"Accept the invitation to plan, approve and publish content together with "
+"the team."
+msgstr ""
+"%(inviter)s convidou você para fazer parte da organização %(name)s no "
+"Connekt Flow. Aceite o convite para planejar, aprovar e publicar conteúdo "
+"junto com a equipe."
+
+#: templates/members/email/invite.html
+#, python-format
+msgid ""
+"You're receiving this because someone invited %(email)s to the brand "
+"%(name)s. If you weren't expecting it, you can ignore this email."
+msgstr ""
+"Você está recebendo este e-mail porque alguém convidou %(email)s para a "
+"marca %(name)s. Se não esperava por ele, pode ignorá-lo."
+
+#: templates/members/email/invite.html
+#, python-format
+msgid ""
+"You're receiving this because someone invited %(email)s to the organization "
+"%(name)s. If you weren't expecting it, you can ignore this email."
+msgstr ""
+"Você está recebendo este e-mail porque alguém convidou %(email)s para a "
+"organização %(name)s. Se não esperava por ele, pode ignorá-lo."

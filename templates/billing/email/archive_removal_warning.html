@@ -2,8 +2,8 @@
 {% load i18n %}
 {% block title %}{% translate "Your data will be removed soon" %}{% endblock %}
 {% block preheader %}{% blocktranslate with date=removal_at|date:"SHORT_DATE_FORMAT" %}Resume your subscription until {{ date }} to keep everything.{% endblocktranslate %}{% endblock %}
+{% block heading %}{% translate "Your data will be removed soon" %}{% endblock %}
 {% block content %}
-<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Your data will be removed soon" %}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with name=organization.name brand=brand_name date=removal_at|date:"SHORT_DATE_FORMAT" %}The subscription of <strong style="color:#0F172A;">{{ name }}</strong> on {{ brand }} ended and we have kept everything since: brands, posts, media and connected accounts. On <strong style="color:#0F172A;">{{ date }}</strong> the organization and all of its data are removed for good.{% endblocktranslate %}</p>
 <p style="margin:0 0 20px;font-size:15px;line-height:24px;color:#334155;">{% translate "To keep everything, resume the subscription before that day. It all comes back as you left it." %}</p>

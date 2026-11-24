@@ -2,8 +2,8 @@
 {% load i18n billing_extras %}
 {% block title %}{% translate "You are now an affiliate" %}{% endblock %}
 {% block preheader %}{% translate "Your link, what you earn and how you are paid." %}{% endblock %}
+{% block heading %}{% translate "You are now an affiliate" %}{% endblock %}
 {% block content %}
-<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "You are now an affiliate" %}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with brand=brand_name %}Your account was added to the {{ brand }} affiliate programme. You earn a share of what the customers you bring pay.{% endblocktranslate %}</p>
 {% include "affiliates/email/_terms.html" %}

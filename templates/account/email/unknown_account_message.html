@@ -2,8 +2,8 @@
 {% load i18n %}
 {% block title %}{% translate "We couldn't find your account" %}{% endblock %}
 {% block preheader %}{% translate "There is no account with this email address." %}{% endblock %}
+{% block heading %}{% translate "We couldn't find your account" %}{% endblock %}
 {% block content %}
-<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "We couldn't find your account" %}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate %}Someone, possibly you, tried to access an account with the email {{ email }}, but there is no account with this address.{% endblocktranslate %}</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% translate "If it was you, you may have signed up with another email. You can also create an account now." %}</p>
 {% if signup_url %}{% translate "Create an account" as cta %}{% include "emails/_button.html" with url=signup_url label=cta %}{% endif %}

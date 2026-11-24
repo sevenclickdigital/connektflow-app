@@ -2,10 +2,10 @@
 {% load i18n %}
 {% block content %}{% if invitation.name %}{% blocktranslate with name=invitation.name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}
 
-{% blocktranslate with inviter=invited_by.display_name org=org_name brand=brand_name %}{{ inviter }} has invited you to join {{ org }} as a team member on {{ brand }}.{% endblocktranslate %}
+{% if brand %}{% blocktranslate with inviter=inviter_name name=brand.name org=organization_name %}{{ inviter }} invited you to work on the brand {{ name }}, of the organization {{ org }}, on Connekt Flow. Accept the invitation to plan, approve and publish content together with the team.{% endblocktranslate %}{% else %}{% blocktranslate with inviter=inviter_name name=organization_name %}{{ inviter }} invited you to join the organization {{ name }} on Connekt Flow. Accept the invitation to plan, approve and publish content together with the team.{% endblocktranslate %}{% endif %}
 
 {% translate "Accept the invitation by visiting the link below:" %}
 {{ accept_url }}
 
 {% translate "This invitation expires in 7 days. If it expires, ask your team admin for a new one." %}{% endblock %}
-{% block reason %}{% blocktranslate with org=org_name email=invitation.email %}You're receiving this because someone invited {{ email }} to {{ org }}. If you weren't expecting it, you can ignore this email.{% endblocktranslate %}{% endblock %}
+{% block reason %}{% if brand %}{% blocktranslate with name=brand.name email=invitation.email %}You're receiving this because someone invited {{ email }} to the brand {{ name }}. If you weren't expecting it, you can ignore this email.{% endblocktranslate %}{% else %}{% blocktranslate with name=organization_name email=invitation.email %}You're receiving this because someone invited {{ email }} to the organization {{ name }}. If you weren't expecting it, you can ignore this email.{% endblocktranslate %}{% endif %}{% endblock %}

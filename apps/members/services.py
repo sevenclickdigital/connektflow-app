@@ -642,17 +642,25 @@ def _send_invite_email(invitation) -> bool:
     app_url = getattr(settings, "APP_URL", "http://localhost:8000").rstrip("/")
     accept_url = f"{app_url}/members/invite/{invitation.token}/accept/"
 
+    brand = invitation.brand
     context = {
         "invitation": invitation,
         "accept_url": accept_url,
-        # The brand for an invitation sent from a brand's team page, else the organization.
-        "org_name": invitation.team_name,
-        "invited_by": invitation.invited_by,
+        # Set for an invitation sent from a brand's team page: the e-mail names
+        # the brand, and the organization it belongs to, instead of only the
+        # organization.
+        "brand": brand,
+        "organization_name": invitation.organization.name,
+        "inviter_name": invitation.invited_by.display_name if invitation.invited_by else _("Someone on the team"),
         "app_url": app_url,
     }
+    if brand:
+        subject = _("Invitation to the brand %(name)s on Connekt Flow") % {"name": brand.name}
+    else:
+        subject = _("Invitation to the organization %(name)s on Connekt Flow") % {"name": invitation.organization.name}
 
     msg = build_email(
-        subject=_("You've been invited to join %(org)s on Connekt Flow") % {"org": invitation.team_name},
+        subject=subject,
         template_prefix="members/email/invite",
         context=context,
         to=[invitation.email],
