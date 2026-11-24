@@ -1,0 +1,12 @@
+{% extends "emails/base.txt" %}
+{% load i18n billing_extras %}
+{% block content %}{% blocktranslate with name=payout.affiliate.name %}The affiliate {{ name }} asked for a withdrawal.{% endblocktranslate %}
+
+{% translate "Withdrawal amount" %}: R$ {{ payout.amount_cents|brl }}
+{% translate "Pix key" %}: {{ payout.pix_key }}
+{% translate "Deposit by" %}: {{ deadline|date:"d/m/Y" }}
+
+{% translate "After the transfer, attach the receipt on the Affiliates screen and mark the withdrawal as paid; the affiliate gets the receipt by e-mail." %}
+
+{% translate "Open Affiliates" %}: {{ review_url }}{% endblock %}
+{% block reason %}{% translate "You're receiving this because you are a superadmin of the affiliate programme." %}{% endblock %}

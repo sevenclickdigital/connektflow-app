@@ -319,6 +319,143 @@ class TestCourtesyExpiry:
 
 
 # ---------------------------------------------------------------------------
+# The exemption of one brand
+# ---------------------------------------------------------------------------
+
+
+def _exempt(client, workspace, **data):
+    return client.post(
+        reverse("billing_staff:toggle_courtesy", kwargs={"target_workspace_id": workspace.id}),
+        {"action": "grant", **data},
+    )
+
+
+@pytest.mark.django_db
+class TestBrandExemption:
+    def test_a_brand_is_exempted_until_a_date_for_a_reason(self, client, operator, workspace):
+        until = timezone.localdate() + datetime.timedelta(days=30)
+        client.force_login(operator)
+
+        response = _exempt(client, workspace, courtesy_expires_on=until.isoformat(), note="Partner")
+
+        assert response.url == reverse("billing_staff:staff_console")
+        sub = WorkspaceSubscription.objects.get(workspace=workspace)
+        assert sub.status == WorkspaceSubscription.Status.COURTESY
+        assert sub.courtesy_expires_on == until
+        assert sub.courtesy_note == "Partner"
+        assert sub.courtesy_granted_at is not None
+
+    def test_only_the_brand_asked_for_is_exempted(self, client, operator, org, workspace):
+        sibling = Workspace.objects.create(organization=org, name="Sibling")
+        client.force_login(operator)
+
+        _exempt(client, workspace, note="Partner")
+
+        assert services.ensure_subscription(sibling).status == WorkspaceSubscription.Status.PENDING
+
+    def test_no_date_means_no_end_date(self, client, operator, workspace):
+        client.force_login(operator)
+
+        _exempt(client, workspace, note="Internal")
+
+        sub = WorkspaceSubscription.objects.get(workspace=workspace)
+        assert sub.status == WorkspaceSubscription.Status.COURTESY and sub.courtesy_expires_on is None
+
+    @pytest.mark.parametrize("raw", ["2020-01-01", "not-a-date", "2026-02-31"])
+    def test_a_past_or_invalid_date_exempts_nothing(self, client, operator, workspace, raw):
+        client.force_login(operator)
+
+        _exempt(client, workspace, courtesy_expires_on=raw, note="Partner")
+
+        assert services.ensure_subscription(workspace).status == WorkspaceSubscription.Status.PENDING
+
+    def test_saving_again_replaces_the_date_and_keeps_when_it_began(self, client, operator, workspace):
+        client.force_login(operator)
+        _exempt(client, workspace, note="Partner")
+        began = WorkspaceSubscription.objects.get(workspace=workspace).courtesy_granted_at
+        until = timezone.localdate() + datetime.timedelta(days=7)
+
+        _exempt(client, workspace, courtesy_expires_on=until.isoformat(), note="Partner, one more week")
+
+        sub = WorkspaceSubscription.objects.get(workspace=workspace)
+        assert sub.courtesy_expires_on == until and sub.courtesy_note == "Partner, one more week"
+        assert sub.courtesy_granted_at == began
+
+    def test_charging_again_clears_the_exemption(self, client, operator, workspace):
+        services.grant_courtesy(workspace, note="Partner", expires_on=timezone.localdate())
+        client.force_login(operator)
+
+        client.post(
+            reverse("billing_staff:toggle_courtesy", kwargs={"target_workspace_id": workspace.id}),
+            {"action": "revoke"},
+        )
+
+        sub = WorkspaceSubscription.objects.get(workspace=workspace)
+        assert sub.status == WorkspaceSubscription.Status.PENDING
+        assert sub.courtesy_expires_on is None and sub.courtesy_granted_at is None and sub.courtesy_note == ""
+
+    def test_from_the_account_page_it_returns_there(self, client, operator, org, workspace):
+        client.force_login(operator)
+
+        response = _exempt(client, workspace, note="Partner", back="account")
+
+        assert response.url == reverse("billing_staff:account", kwargs={"org_id": org.id}) + "?tab=brands"
+
+    def test_an_operator_who_is_not_superadmin_exempts_nothing(self, client, other_operator, workspace):
+        client.force_login(other_operator)
+
+        response = _exempt(client, workspace, note="Partner")
+
+        assert response.status_code in (302, 403)
+        assert services.ensure_subscription(workspace).status == WorkspaceSubscription.Status.PENDING
+
+    def test_each_brand_lapses_by_its_own_date(self, org, workspace):
+        sibling = Workspace.objects.create(organization=org, name="Sibling")
+        today = timezone.localdate()
+        services.grant_courtesy(workspace, expires_on=today - datetime.timedelta(days=1))
+        services.grant_courtesy(sibling, expires_on=today + datetime.timedelta(days=1))
+
+        assert services.expire_due_courtesies() == 1
+
+        assert services.ensure_subscription(workspace).status == WorkspaceSubscription.Status.PENDING
+        assert WorkspaceSubscription.objects.get(workspace=sibling).status == WorkspaceSubscription.Status.COURTESY
+
+    def test_a_brand_extended_past_its_accounts_old_date_stays_exempt(self, org, workspace):
+        """The brand's date is the one that counts, not the one the account once had."""
+        today = timezone.localdate()
+        services.grant_account_courtesy(org, quota=1, expires_on=today - datetime.timedelta(days=1))
+        services.grant_courtesy(workspace, expires_on=today + datetime.timedelta(days=30))
+
+        assert services.expire_due_courtesies() == 0
+
+        assert WorkspaceSubscription.objects.get(workspace=workspace).status == WorkspaceSubscription.Status.COURTESY
+
+    def test_the_migration_gives_exempt_brands_their_accounts_date(self, org, workspace):
+        import importlib
+
+        from django.apps import apps as global_apps
+
+        migration = importlib.import_module("apps.billing.migrations.0017_copy_courtesy_deadlines_to_brands")
+        until = timezone.localdate() + datetime.timedelta(days=12)
+        charged = Workspace.objects.create(organization=org, name="Charged")
+        own_date = Workspace.objects.create(organization=org, name="Own date")
+        services.grant_courtesy(workspace)
+        services.grant_courtesy(own_date, expires_on=until + datetime.timedelta(days=5))
+        services.ensure_subscription(charged)
+        profile = services.ensure_billing_profile(org)
+        profile.courtesy_expires_on = until
+        profile.save(update_fields=["courtesy_expires_on"])
+
+        migration.copy_account_deadlines(global_apps, None)
+
+        assert WorkspaceSubscription.objects.get(workspace=workspace).courtesy_expires_on == until
+        assert WorkspaceSubscription.objects.get(workspace=own_date).courtesy_expires_on == until + datetime.timedelta(
+            days=5
+        )
+        assert WorkspaceSubscription.objects.get(workspace=charged).courtesy_expires_on is None
+
+
+# ---------------------------------------------------------------------------
 # b) Password reset
 # ---------------------------------------------------------------------------
 

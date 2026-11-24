@@ -1,0 +1,25 @@
+{% load i18n %}
+{% comment %}
+The "Edit affiliate" window of one row of the staff Affiliates screen, shown
+while the row's Alpine state ``editing`` is true (set by "Edit" in the row's menu).
+Expects: affiliate, periods, coupons.
+{% endcomment %}
+<div x-show="editing" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-affiliate-title-{{ affiliate.id }}"
+     @keydown.escape.window="editing = false">
+  <div class="modal-panel is-lg" @click.outside="editing = false">
+    <button type="button" class="modal-close" @click="editing = false" aria-label="{% translate 'Close' %}">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <h2 id="edit-affiliate-title-{{ affiliate.id }}" class="modal-title">{% translate "Edit affiliate" %}</h2>
+    <p class="text-xs text-neutral-600 mt-1">{% if affiliate.user %}{{ affiliate.user.email }}{% else %}{% translate "The account of this affiliate was deleted." %}{% endif %}</p>
+
+    <form method="post" action="{% url 'affiliates_staff:edit' affiliate_id=affiliate.id %}" class="mt-4 grid grid-cols-1 sm:grid-cols-6 gap-4" data-mode="{{ affiliate.commission_mode }}" x-data="{ mode: $el.dataset.mode }">
+      {% csrf_token %}
+      {% include "affiliates/_affiliate_fields.html" with prefix=affiliate.id col="sm:col-span-3" %}
+      <div class="sm:col-span-6 modal-footer">
+        <button type="button" class="btn-soft px-4 py-2.5 text-sm font-semibold" @click="editing = false">{% translate "Cancel" %}</button>
+        <button type="submit" class="btn-brand px-4 py-2.5 text-sm font-semibold">{% translate "Save" %}</button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -57,9 +57,8 @@ def move_brand(workspace, destination):
       (:class:`BrandMoveError`): the charge would keep going to the
       organization it left. A brand covered by the
       organization's plan gives its place back, and the destination's plan
-      covers it if it has a brand left. An exempt brand stays exempt only when
-      the destination has an exemption unused, so moving is not a way around
-      an exemption's limit or end date; otherwise it arrives ``pending``.
+      covers it if it has a brand left. An exempt brand stays exempt: the
+      exemption, with its reason and end date, is the brand's own.
     - **Custom roles** are the organization's, so each person falls back to
       the standard role they also hold in the brand.
     - **Pending invitations** of the organization stop naming the brand.
@@ -103,7 +102,6 @@ def move_brand(workspace, destination):
                 )
             )
 
-        was_exempt = subscription.status == status.COURTESY
         origin_plan = subscription.plan
         if origin_plan is not None:
             subscription.plan = None
@@ -117,13 +115,6 @@ def move_brand(workspace, destination):
         WorkspaceMembership.objects.filter(workspace=workspace, custom_role__isnull=False).update(custom_role=None)
         _drop_from_pending_invitations(origin_id, workspace)
 
-        if was_exempt:
-            # Counted after the move, so the brand itself is one of the used ones.
-            profile = billing_services.ensure_billing_profile(destination)
-            if profile.courtesy_workspaces_used > profile.courtesy_workspace_quota:
-                subscription.status = status.PENDING
-                subscription.courtesy_note = ""
-                subscription.save(update_fields=["status", "courtesy_note", "updated_at"])
         if origin_plan is not None:
             billing_services.sync_plan_coverage(origin_plan)
         destination_plan = billing_services.plan_for(destination)

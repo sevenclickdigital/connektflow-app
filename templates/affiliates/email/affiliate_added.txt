@@ -1,0 +1,19 @@
+{% extends "emails/base.txt" %}
+{% load i18n billing_extras %}
+{% block content %}{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}
+
+{% blocktranslate with brand=brand_name %}Your account was added to the {{ brand }} affiliate programme. You earn a share of what the customers you bring pay.{% endblocktranslate %}
+
+{% include "affiliates/email/_terms.txt" %}
+
+{% translate "How to share your link" %}
+- {% translate "Send it to your customers and contacts" %}: {% translate "By WhatsApp, e-mail or in a conversation: a recommendation from someone they know is what converts best." %}
+- {% translate "Share it on your social networks" %}: {% translate "Put the link in your bio, in posts and in stories, showing how you use the product from day to day." %}
+- {% translate "Go live or record videos" %}: {% translate "Explain the product, show the screens and answer questions, with the link in the description or in the comments." %}
+- {% translate "Run ads" %}: {% translate "You can advertise on Instagram, Facebook, Google or wherever your audience is, pointing the ad to your link." %}
+- {% translate "Write about it" %}: {% translate "An article, a newsletter or a tutorial with the link keeps bringing people long after it is published." %}
+
+{% translate "Whoever signs up within 30 days of opening your link counts as yours, even if they only subscribe later." %}
+
+{% translate "Open the affiliate panel" %}: {{ panel_url }}{% endblock %}
+{% block reason %}{% blocktranslate with brand=brand_name %}You're receiving this because your account was made an affiliate of {{ brand }}.{% endblocktranslate %}{% endblock %}

@@ -1,0 +1,17 @@
+{% load i18n %}
+{% comment %}
+The rows of a withdrawal's details in the payout e-mails: a label on the left
+and its value on the right, the amount first and larger.
+Expects: amount (formatted), pix_key, date_label, date and, optionally, note.
+{% endcomment %}
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 24px;border:1px solid #E9E5FB;border-radius:10px;border-collapse:separate;">
+<tr><td colspan="2" style="padding:18px 20px 14px;background-color:#F5F3FF;border-radius:10px 10px 0 0;">
+<span style="display:block;font-size:12px;line-height:18px;color:#6D28D9;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">{% translate "Withdrawal amount" %}</span>
+<span style="display:block;font-size:28px;line-height:36px;font-weight:700;color:#0F172A;">R$ {{ amount }}</span>
+</td></tr>
+<tr><td style="padding:12px 20px;border-top:1px solid #E9E5FB;font-size:14px;line-height:20px;color:#64748B;">{% translate "Pix key" %}</td>
+<td align="right" style="padding:12px 20px;border-top:1px solid #E9E5FB;font-size:14px;line-height:20px;color:#0F172A;font-weight:600;word-break:break-all;">{{ pix_key }}</td></tr>
+<tr><td style="padding:12px 20px;border-top:1px solid #E9E5FB;font-size:14px;line-height:20px;color:#64748B;">{{ date_label }}</td>
+<td align="right" style="padding:12px 20px;border-top:1px solid #E9E5FB;font-size:14px;line-height:20px;color:#0F172A;font-weight:600;">{{ date }}</td></tr>
+{% if note %}<tr><td colspan="2" style="padding:12px 20px;border-top:1px solid #E9E5FB;font-size:14px;line-height:20px;color:#334155;"><span style="color:#64748B;">{% translate "Note from our team" %}:</span> {{ note }}</td></tr>{% endif %}
+</table>

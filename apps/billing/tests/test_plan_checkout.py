@@ -319,6 +319,21 @@ def test_paying_at_checkout_opens_the_brands_chosen_and_keeps_no_card(client, ow
     assert ticked.name == "Sol Café"
     plan = OrganizationPlan.objects.get(organization=org)
     assert "5162306219378829" not in str(list(OrganizationPlan.objects.filter(pk=plan.pk).values()))
+    # The card's address, and nothing else of it, fills the payer's empty profile.
+    owner.refresh_from_db()
+    assert (owner.address_postal_code, owner.address_number) == ("89010-000", "10")
+
+
+def test_the_checkout_opens_with_the_address_of_the_profile(client, owner_of):
+    org, (workspace,) = _org_with_workspaces(1)
+    owner = owner_of(org)
+    owner.address_postal_code, owner.address_number = "88115-544", "1189"
+    owner.save(update_fields=["address_postal_code", "address_number"])
+    client.force_login(owner)
+
+    page = client.get(reverse("billing:checkout", kwargs={"workspace_id": workspace.id})).content.decode()
+
+    assert 'value="88115-544"' in page and 'value="1189"' in page
 
 
 @override_settings(RATELIMIT_ENABLE=False)

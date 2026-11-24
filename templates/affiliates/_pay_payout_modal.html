@@ -1,0 +1,52 @@
+{% load i18n billing_extras %}
+{% comment %}
+The window that resolves one requested withdrawal on the staff Affiliates
+screen, opened by the ``open-payout`` window event carrying the payout's id
+(from the banner and from the row's menu). Paying needs the receipt; the
+affiliate gets it by e-mail. Expects: payout (with ``deadline``, ``overdue``).
+{% endcomment %}
+<div x-data="{ open: false, copied: false }" data-payout="{{ payout.id }}"
+     @open-payout.window="if ($event.detail === $el.dataset.payout) open = true"
+     @keydown.escape.window="open = false">
+  <div x-show="open" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pay-title-{{ payout.id }}">
+    <div class="modal-panel is-lg" @click.outside="open = false">
+      <button type="button" class="modal-close" @click="open = false" aria-label="{% translate 'Close' %}">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <h2 id="pay-title-{{ payout.id }}" class="modal-title">{% blocktranslate with name=payout.affiliate.name %}Pay the withdrawal of {{ name }}{% endblocktranslate %}</h2>
+      <dl class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg bg-neutral-50 p-4 text-sm">
+        <div><dt class="text-xs text-neutral-600">{% translate "Withdrawal amount" %}</dt><dd class="text-lg font-semibold text-neutral-950 tabular-nums">R$ {{ payout.amount_cents|brl }}</dd></div>
+        <div><dt class="text-xs text-neutral-600">{% translate "Deposit by" %}</dt><dd class="font-semibold {% if payout.overdue %}text-[var(--error-700)]{% else %}text-neutral-950{% endif %}">{{ payout.deadline|date:"d/m/Y" }}</dd></div>
+        <div class="sm:col-span-2">
+          <dt class="text-xs text-neutral-600">{% translate "Pix key" %}</dt>
+          <dd class="flex items-center gap-2">
+            <span x-ref="pix" class="font-semibold text-neutral-950 break-all">{{ payout.pix_key }}</span>
+            <button type="button" class="text-xs font-semibold text-brand-700 hover:underline cursor-pointer flex-shrink-0" @click="navigator.clipboard.writeText($refs.pix.textContent); copied = true; setTimeout(() => copied = false, 2000)">
+              <span x-show="!copied">{% translate "Copy" %}</span><span x-show="copied" x-cloak>{% translate "Copied" %}</span>
+            </button>
+          </dd>
+        </div>
+        <div class="sm:col-span-2 text-xs text-neutral-600">{% translate "Requested on" %} {{ payout.requested_at|date:"d/m/Y" }}{% if payout.affiliate.user %} · {{ payout.affiliate.user.email }}{% endif %}</div>
+      </dl>
+      <form method="post" action="{% url 'affiliates_staff:resolve_payout' payout_id=payout.id %}" enctype="multipart/form-data" class="mt-4 space-y-4">
+        {% csrf_token %}
+        <div>
+          <label for="receipt-{{ payout.id }}" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Receipt of the transfer" %}</label>
+          <input type="file" id="receipt-{{ payout.id }}" name="receipt" accept="image/jpeg,image/png,image/webp,application/pdf" class="form-input-styled w-full text-sm">
+          <p class="text-xs text-neutral-600 mt-1.5">{% translate "The print or PDF of the Pix, up to 5 MB. It is sent to the affiliate by e-mail. Needed to mark as paid." %}</p>
+        </div>
+        <div>
+          <label for="note-{{ payout.id }}" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Note for the affiliate (optional)" %}</label>
+          <input type="text" id="note-{{ payout.id }}" name="note" maxlength="255" class="form-input-styled w-full">
+        </div>
+        <div class="modal-footer justify-between">
+          <button type="submit" name="action" value="rejected" formnovalidate class="btn-danger-soft">{% translate "Reject" %}</button>
+          <div class="flex gap-2">
+            <button type="button" class="btn-soft" @click="open = false">{% translate "Cancel" %}</button>
+            <button type="submit" name="action" value="paid" class="btn-brand">{% translate "Mark as paid" %}</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

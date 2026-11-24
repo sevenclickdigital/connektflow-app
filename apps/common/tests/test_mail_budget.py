@@ -242,3 +242,55 @@ def test_a_broken_counter_table_still_lets_a_password_reset_through():
         assert send(subject="Password Reset Email", headers=transactional()) == 1
 
     assert len(mail.outbox) == 1
+
+
+@pytest.mark.django_db
+def test_what_is_sent_and_what_is_stopped_goes_in_the_history_without_its_content():
+    from apps.common.models import EmailLog
+
+    EmailSuppression.objects.create(address="dead@example.com", reason=EmailSuppression.Reason.BOUNCED)
+    with budgeted():
+        send(to="Ana@Example.com", subject="Your code", headers=transactional())
+        send(to="dead@example.com", subject="Weekly digest")
+
+    sent = EmailLog.objects.get(recipient="ana@example.com")
+    assert (sent.subject, sent.status, sent.email_class) == ("Your code", "sent", "transactional")
+    stopped = EmailLog.objects.get(recipient="dead@example.com")
+    assert (stopped.status, stopped.detail, stopped.email_class) == (
+        "dropped",
+        "recipient suppressed",
+        CLASS_NOTIFICATION,
+    )
+    # Addressee, subject and outcome only: no column holds what the mail said.
+    assert "body" not in str(list(EmailLog.objects.values()))
+
+
+@pytest.mark.django_db
+def test_a_refusal_of_the_mail_server_is_recorded_and_still_raised(monkeypatch):
+    from django.core.mail.backends.locmem import EmailBackend
+
+    from apps.common.models import EmailLog
+
+    def refuse(self, messages):
+        raise ConnectionError("smtp down")
+
+    monkeypatch.setattr(EmailBackend, "send_messages", refuse)
+    with budgeted(), pytest.raises(ConnectionError):
+        send(to="ana@example.com")
+
+    assert EmailLog.objects.get(recipient="ana@example.com").status == "failed"
+
+
+@pytest.mark.django_db
+def test_the_history_is_forgotten_after_its_retention():
+    from datetime import timedelta
+
+    from apps.common.mail import EMAIL_LOG_RETENTION_DAYS, purge_old_email_logs
+    from apps.common.models import EmailLog
+
+    old = EmailLog.objects.create(recipient="a@example.com", subject="Old", status="sent")
+    EmailLog.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=EMAIL_LOG_RETENTION_DAYS + 1))
+    EmailLog.objects.create(recipient="a@example.com", subject="Recent", status="sent")
+
+    assert purge_old_email_logs() == 1
+    assert list(EmailLog.objects.values_list("subject", flat=True)) == ["Recent"]

@@ -1,0 +1,18 @@
+{% extends "emails/base.html" %}
+{% load i18n billing_extras %}
+{% block title %}{% translate "We received your withdrawal request" %}{% endblock %}
+{% block preheader %}{% blocktranslate with date=deadline|date:"d/m/Y" %}The Pix is made by {{ date }}.{% endblocktranslate %}{% endblock %}
+{% block content %}
+<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "We received your withdrawal request" %}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with days=payout_days %}Your request is with our team. We transfer the amount below to your Pix key within {{ days }} days and, as soon as it is done, send you another e-mail with the receipt.{% endblocktranslate %}</p>
+{% translate "Deposit by" as date_label %}{% include "affiliates/email/_payout_rows.html" with amount=payout.amount_cents|brl pix_key=payout.pix_key date=deadline|date:"d/m/Y" %}
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;">
+<tr><td style="padding:14px 16px;background-color:#F8FAFC;border-radius:8px;font-size:14px;line-height:22px;color:#334155;">
+<strong style="color:#0F172A;">{% translate "Is the Pix key right?" %}</strong><br>
+{% blocktranslate %}If you need to change it, write to {{ support_email }} before the deposit, telling us the right key.{% endblocktranslate %}
+</td></tr>
+</table>
+{% translate "See my withdrawals" as cta %}{% include "emails/_button.html" with url=withdrawals_url label=cta no_fallback=True %}
+{% endblock %}
+{% block reason %}<p style="margin:0 0 12px;">{% blocktranslate %}You're receiving this because you are an affiliate of {{ brand_name }} and asked for this withdrawal.{% endblocktranslate %}</p>{% endblock %}

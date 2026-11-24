@@ -56,6 +56,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from django_ratelimit.decorators import ratelimit
 
 from apps.accounts import impersonation
+from apps.accounts.address import remember_address
 from apps.accounts.decorators import staff_required, superadmin_required
 from apps.accounts.impersonation import client_ip
 from apps.accounts.models import ImpersonationSession, User
@@ -74,6 +75,7 @@ from apps.billing.models import (
 from apps.billing.storage_usage import storage_status
 from apps.billing.templatetags.billing_extras import brl
 from apps.billing.webhooks import PAID_EVENTS, UNPAID_EVENTS
+from apps.common.mail import EMAIL_LOG_RETENTION_DAYS
 from apps.common.validators import clean_display_name
 from apps.members.decorators import require_org_role
 from apps.members.models import OrgMembership, WorkspaceMembership
@@ -1311,6 +1313,9 @@ def _checkout_order(request, organization, *, card):
         card_data, address, error = _parse_card(request.POST)
         if error:
             return None, _checkout_error(request, error)
+        # The card is kept nowhere; its address fills an empty profile, so the
+        # next checkout opens with it.
+        remember_address(request.user, address["postalCode"], address["addressNumber"])
     if (tax_id, phone) != (profile.tax_id, profile.phone):
         services.set_payer_identity(organization, tax_id=tax_id, phone=phone)
     _apply_names(request, organization, rows)
@@ -1655,27 +1660,9 @@ def contract_storage(request, workspace_id):
 # careful to say. The first half is what ``billing.ProductPrice`` fixes.
 
 
-@staff_required
-@require_GET
-def staff_console(request):
-    """Customers: every account, its brands and the people in each brand.
-
-    One group of rows per **organization** (the account is what gets
-    charged, exempted and edited): the account's line with its owner's
-    e-mail, status, brands, disk and monthly charge; unfolded, each brand
-    with its own status, disk and charge, and under it the users linked to
-    that brand with their role there. A user linked to several brands shows
-    under each of them. Members of the organization linked to no brand are
-    listed in a group of their own so nobody drops off the screen. Accounts
-    come ordered by their owner's e-mail, then by name.
-
-    ``people`` is each account's distinct users, for the per-person details
-    and deletion panels. ``may_impersonate`` and ``may_deactivate`` are
-    decided here by the same rules the POSTs enforce, so the page never
-    offers an action that would answer 403 — notably not on another
-    operator's account.
-    """
-    organizations = (
+def _accounts_queryset():
+    """Every account with what its row on the customers screen reads, prefetched."""
+    return (
         Organization.objects.all()
         .prefetch_related(
             Prefetch(
@@ -1697,6 +1684,13 @@ def staff_console(request):
         .order_by("name")
     )
 
+
+def _person_entries(request):
+    """The function that describes one user of an account for the team's screens.
+
+    ``may_impersonate`` and ``may_deactivate`` are decided here by the same
+    rules the POSTs enforce, once per user.
+    """
     operator = impersonation.real_user(request)
     flags: dict = {}
 
@@ -1712,59 +1706,84 @@ def staff_console(request):
             "may_deactivate": may_deactivate,
         }
 
-    rows = []
-    for organization in organizations:
-        profile = services.ensure_billing_profile(organization)
-        org_roles = {m.user_id: m.org_role for m in organization.memberships.all()}
-        people: dict = {}
-        workspace_rows = []
-        for workspace in organization.workspaces.all():
-            users = []
-            for membership in workspace.memberships.all():
-                entry = person(membership.user, membership.workspace_role, org_roles.get(membership.user_id, ""))
-                users.append(entry)
-                people.setdefault(membership.user_id, {**entry, "brands": []})["brands"].append(
-                    (workspace.name, membership.workspace_role)
-                )
-            workspace_rows.append(
-                {
-                    "workspace": workspace,
-                    "subscription": services.ensure_subscription(workspace),
-                    "storage": storage_status(workspace),
-                    "monthly_total_cents": services.workspace_monthly_total_cents(workspace),
-                    "users": users,
-                }
+    return person
+
+
+def _account_row(organization, person):
+    """One account as the team's screens show it: its brands, people, owner, status, disk and charge."""
+    profile = services.ensure_billing_profile(organization)
+    org_roles = {m.user_id: m.org_role for m in organization.memberships.all()}
+    people: dict = {}
+    workspace_rows = []
+    for workspace in organization.workspaces.all():
+        users = []
+        for membership in workspace.memberships.all():
+            entry = person(membership.user, membership.workspace_role, org_roles.get(membership.user_id, ""))
+            users.append(entry)
+            people.setdefault(membership.user_id, {**entry, "brands": []})["brands"].append(
+                (workspace.name, membership.workspace_role)
             )
-        without_brand = [
-            person(m.user, m.org_role, m.org_role) for m in organization.memberships.all() if m.user_id not in people
-        ]
-        for entry in without_brand:
-            people[entry["user"].pk] = {**entry, "brands": []}
-        for user_id, entry in people.items():
-            entry["org_role"] = org_roles.get(user_id, "")
-        owner_membership = next(
-            (m for m in organization.memberships.all() if m.org_role == OrgMembership.OrgRole.OWNER),
-            next(iter(organization.memberships.all()), None),
-        )
-        owner = people.get(owner_membership.user_id) if owner_membership else None
-        rows.append(
+        workspace_rows.append(
             {
-                "organization": organization,
-                "profile": profile,
-                "workspaces": workspace_rows,
-                "workspace_count": len(workspace_rows),
-                "monthly_total_cents": sum(w["monthly_total_cents"] for w in workspace_rows),
-                "courtesy_exceeded": services.courtesy_quota_exceeded(organization),
-                "owner": owner,
-                "people": list(people.values()),
-                "without_brand": without_brand,
-                "is_team_account": bool(owner and owner["user"].is_staff),
-                "status": _account_status(workspace_rows),
-                "storage_used_bytes": sum(w["storage"].used_bytes for w in workspace_rows),
-                "storage_limit_bytes": sum(w["storage"].limit_bytes for w in workspace_rows),
-                "storage_percent": _storage_percent(workspace_rows),
+                "workspace": workspace,
+                "subscription": services.ensure_subscription(workspace),
+                "storage": storage_status(workspace),
+                "monthly_total_cents": services.workspace_monthly_total_cents(workspace),
+                "users": users,
             }
         )
+    without_brand = [
+        person(m.user, m.org_role, m.org_role) for m in organization.memberships.all() if m.user_id not in people
+    ]
+    for entry in without_brand:
+        people[entry["user"].pk] = {**entry, "brands": []}
+    for user_id, entry in people.items():
+        entry["org_role"] = org_roles.get(user_id, "")
+    owner_membership = next(
+        (m for m in organization.memberships.all() if m.org_role == OrgMembership.OrgRole.OWNER),
+        next(iter(organization.memberships.all()), None),
+    )
+    owner = people.get(owner_membership.user_id) if owner_membership else None
+    return {
+        "organization": organization,
+        "profile": profile,
+        "workspaces": workspace_rows,
+        "workspace_count": len(workspace_rows),
+        "monthly_total_cents": sum(w["monthly_total_cents"] for w in workspace_rows),
+        "courtesy_exceeded": services.courtesy_quota_exceeded(organization),
+        "owner": owner,
+        "people": list(people.values()),
+        "without_brand": without_brand,
+        "is_team_account": bool(owner and owner["user"].is_staff),
+        "status": _account_status(workspace_rows),
+        "storage_used_bytes": sum(w["storage"].used_bytes for w in workspace_rows),
+        "storage_limit_bytes": sum(w["storage"].limit_bytes for w in workspace_rows),
+        "storage_percent": _storage_percent(workspace_rows),
+    }
+
+
+@staff_required
+@require_GET
+def staff_console(request):
+    """Customers: every account, its brands and the people in each brand.
+
+    One group of rows per **organization** (the account is what gets
+    charged and edited; an exemption from charges is each brand's own): the account's line with its owner's
+    e-mail, status, brands, disk and monthly charge; unfolded, each brand
+    with its own status, disk and charge, and under it the users linked to
+    that brand with their role there. A user linked to several brands shows
+    under each of them. Members of the organization linked to no brand are
+    listed in a group of their own so nobody drops off the screen. Accounts
+    come ordered by their owner's e-mail, then by name.
+
+    ``people`` is each account's distinct users, for the per-person details
+    and deletion panels. ``may_impersonate`` and ``may_deactivate`` are
+    decided here by the same rules the POSTs enforce, so the page never
+    offers an action that would answer 403 — notably not on another
+    operator's account.
+    """
+    person = _person_entries(request)
+    rows = [_account_row(organization, person) for organization in _accounts_queryset()]
 
     # By the owner's e-mail, then by name: the accounts of one person sit
     # together, which is how support looks for them. Accounts with no member
@@ -1787,6 +1806,61 @@ def staff_console(request):
             "admin_active": "accounts",
         },
     )
+
+
+#: Tabs of one account's page; anything else in ``?tab=`` opens the first.
+ACCOUNT_TABS = ("details", "brands", "people", "payments", "emails")
+#: How many of an account's sent e-mails its page lists, newest first.
+ACCOUNT_EMAIL_HISTORY_LIMIT = 200
+
+
+def _account_url(org_id, tab=""):
+    """An account's page in the administrative area, on ``tab`` when given."""
+    url = reverse("billing_staff:account", kwargs={"org_id": org_id})
+    return f"{url}?tab={tab}" if tab else url
+
+
+@staff_required
+@require_GET
+def staff_account(request, org_id):
+    """One account's page: a summary on top, then its details, brands, people, payments and sent e-mails.
+
+    The summary and the tab counts are read on every tab; each tab loads
+    only what it shows. The payments are the charges the provider reported
+    (``_payment_history``). The e-mails are read from ``common.EmailLog`` by
+    address: those of the account's people and its billing address. It is a
+    history of what was sent and whether it left, subject and addressee only.
+    """
+    from apps.common.models import EmailLog
+
+    organization = get_object_or_404(_accounts_queryset(), id=org_id)
+    row = _account_row(organization, _person_entries(request))
+    tab = request.GET.get("tab", "")
+    if tab not in ACCOUNT_TABS:
+        tab = ACCOUNT_TABS[0]
+
+    last_logins = [entry["user"].last_login for entry in row["people"] if entry["user"].last_login]
+    context = {
+        "row": row,
+        "tab": tab,
+        "admin_active": "accounts",
+        "exempt_count": sum(1 for ws in row["workspaces"] if ws["subscription"].is_courtesy),
+        "last_sign_in": max(last_logins, default=None),
+    }
+    if tab == "details":
+        context["plan"] = services.plan_for(organization)
+        context["payer"] = payer_summary(organization)
+    elif tab == "payments":
+        context["payments"] = _payment_history([organization])
+        context["payment_history_limit"] = PAYMENT_HISTORY_LIMIT
+    elif tab == "emails":
+        addresses = {entry["user"].email.lower() for entry in row["people"] if entry["user"].email}
+        if organization.billing_email:
+            addresses.add(organization.billing_email.lower())
+        context["emails"] = list(EmailLog.objects.filter(recipient__in=addresses)[:ACCOUNT_EMAIL_HISTORY_LIMIT])
+        context["email_history_limit"] = ACCOUNT_EMAIL_HISTORY_LIMIT
+        context["email_retention_days"] = EMAIL_LOG_RETENTION_DAYS
+    return render(request, "billing/staff_account.html", context)
 
 
 # Order the account-level status cell resolves in: the most urgent state
@@ -2360,14 +2434,37 @@ def staff_impersonation_log(request):
     )
 
 
+def _courtesy_deadline(request):
+    """The posted end date of an exemption: ``(date or None, error message or "")``.
+
+    Empty means no end date. A date already past is refused instead of
+    "fixed": it would be granted and swept away by the next expiry run,
+    which looks to the operator like the form silently did nothing.
+    """
+    raw_date = request.POST.get("courtesy_expires_on", "").strip()
+    if not raw_date:
+        return None, ""
+    try:
+        expires_on = parse_date(raw_date)
+    except ValueError:
+        expires_on = None
+    if expires_on is None:
+        return None, _("Enter the end date as a valid date, or leave it empty for no end date.")
+    if expires_on < timezone.localdate():
+        return None, _("The end date is in the past. Choose today or a later date.")
+    return expires_on, ""
+
+
 @superadmin_required
 @require_POST
 def staff_toggle_courtesy(request, target_workspace_id):
-    """Grant or revoke a workspace's billing exemption.
+    """Exempt one brand from charges, until a date and for a stated reason, or charge it again.
 
     The action is explicit in the POST (``grant``/``revoke``) rather than
     inferred from current status, so a double-submitted form is
-    idempotent instead of flipping the comp back off.
+    idempotent instead of flipping the comp back off. Granting to a brand
+    already exempt replaces its end date and reason. ``back=account``
+    returns to the account's page, where the form also lives.
 
     The kwarg is ``target_workspace_id`` because
     ``apps.members.middleware`` rejects any request whose URL carries a
@@ -2376,37 +2473,44 @@ def staff_toggle_courtesy(request, target_workspace_id):
     """
     workspace = get_object_or_404(Workspace.objects.select_related("organization"), id=target_workspace_id)
     action = request.POST.get("action")
+    if request.POST.get("back") == "account":
+        back = _account_url(workspace.organization_id, "brands")
+    else:
+        back = reverse("billing_staff:staff_console")
 
     if action == "grant":
+        expires_on, error = _courtesy_deadline(request)
+        if error:
+            messages.error(request, error)
+            return redirect(back)
         services.grant_courtesy(
             workspace,
             note=request.POST.get("note", "").strip()[:255],
             granted_by=request.user,
+            expires_on=expires_on,
         )
-        # Worded as "will not be charged", matching the button that was
-        # pressed. "Is now a courtesy" was read as something handed to
-        # the customer rather than a line removed from their invoice.
-        messages.success(
-            request,
-            _('Workspace "%(name)s" is now exempt and will not be charged.') % {"name": workspace.name},
-        )
-        if services.courtesy_quota_exceeded(workspace.organization):
-            messages.warning(
+        if expires_on is None:
+            messages.success(
                 request,
-                _('Account "%(org)s" now has more exempt workspaces than its limit allows.')
-                % {"org": workspace.organization.name},
+                _('Brand "%(name)s" is exempt from charges, with no end date.') % {"name": workspace.name},
+            )
+        else:
+            messages.success(
+                request,
+                _('Brand "%(name)s" is exempt from charges until %(date)s, after which it is charged again.')
+                % {"name": workspace.name, "date": date_format(expires_on, "SHORT_DATE_FORMAT")},
             )
     elif action == "revoke":
         services.revoke_courtesy(workspace)
         messages.success(
             request,
-            _('Workspace "%(name)s" will be charged again. It needs a subscription to stay active.')
+            _('Brand "%(name)s" will be charged again. It needs a subscription to stay active.')
             % {"name": workspace.name},
         )
     else:
         messages.error(request, _("Unknown action."))
 
-    return redirect("billing_staff:staff_console")
+    return redirect(back)
 
 
 @superadmin_required
@@ -2492,21 +2596,12 @@ def staff_grant_courtesy(request, org_id):
         quota = -1
     if quota < 0:
         messages.error(request, _("The number of exempt workspaces must be zero or a positive whole number."))
-        return redirect("billing_staff:staff_console")
+        return redirect(_account_url(org_id, "brands"))
 
-    raw_date = request.POST.get("courtesy_expires_on", "").strip()
-    expires_on = None
-    if raw_date:
-        expires_on = parse_date(raw_date)
-        if expires_on is None:
-            messages.error(request, _("Enter the end date as a valid date, or leave it empty for no end date."))
-            return redirect("billing_staff:staff_console")
-        # A deadline already past would be granted and swept away by the
-        # next expiry run, which looks to the operator like the form
-        # silently did nothing. Refused instead of "fixed".
-        if expires_on < timezone.localdate():
-            messages.error(request, _("The end date is in the past. Choose today or a later date."))
-            return redirect("billing_staff:staff_console")
+    expires_on, error = _courtesy_deadline(request)
+    if error:
+        messages.error(request, error)
+        return redirect(_account_url(org_id, "brands"))
 
     services.grant_account_courtesy(
         organization,
@@ -2531,7 +2626,7 @@ def staff_grant_courtesy(request, org_id):
             )
             % {"org": organization.name, "quota": quota, "date": date_format(expires_on, "SHORT_DATE_FORMAT")},
         )
-    return redirect("billing_staff:staff_console")
+    return redirect(_account_url(org_id, "brands"))
 
 
 @superadmin_required
@@ -2551,7 +2646,7 @@ def staff_revoke_courtesy(request, org_id):
         _('Account "%(org)s" is billed again. Each workspace needs a subscription to stay active.')
         % {"org": organization.name},
     )
-    return redirect("billing_staff:staff_console")
+    return redirect(_account_url(org_id, "brands"))
 
 
 @superadmin_required
@@ -2572,7 +2667,7 @@ def staff_edit_account(request, org_id):
     org_name = request.POST.get("organization_name", "").strip()
     if not org_name:
         messages.error(request, _("The account needs a name."))
-        return redirect("billing_staff:staff_console")
+        return redirect(_account_url(org_id))
 
     user = None
     raw_user_id = request.POST.get("user_id", "").strip()
@@ -2591,19 +2686,19 @@ def staff_edit_account(request, org_id):
         email = request.POST.get("email", "").strip().lower()
         if not email:
             messages.error(request, _("The account owner needs an e-mail address."))
-            return redirect("billing_staff:staff_console")
+            return redirect(_account_url(org_id))
         try:
             validate_email(email)
         except ValidationError:
             messages.error(request, _("That is not a valid e-mail address."))
-            return redirect("billing_staff:staff_console")
+            return redirect(_account_url(org_id))
 
         if email != user.email and User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
             messages.error(
                 request,
                 _("Another account already uses %(email)s. Nothing was changed.") % {"email": email},
             )
-            return redirect("billing_staff:staff_console")
+            return redirect(_account_url(org_id))
 
         user.email = email
         user.name = request.POST.get("name", "").strip()[:255]
@@ -2615,7 +2710,7 @@ def staff_edit_account(request, org_id):
     messages.success(request, _('Account "%(org)s" updated.') % {"org": organization.name})
     if user is not None:
         logger.info("Operator %s edited account %s / user %s", request.user.email, organization.pk, user.pk)
-    return redirect("billing_staff:staff_console")
+    return redirect(_account_url(org_id))
 
 
 @staff_required

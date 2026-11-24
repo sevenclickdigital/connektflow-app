@@ -18,3 +18,20 @@ def clear_expired_sessions():
     """Delete expired Django sessions (wraps the ``clearsessions`` command)."""
     call_command("clearsessions")
     logger.info("Cleared expired sessions")
+
+
+@background(schedule=0)
+def complete_address_from_cep(user_id):
+    """Fill the rest of a profile's address from its CEP (``address.complete_address``).
+
+    Queued when the checkout's card form leaves a CEP in an empty profile.
+    Safe to run again: it only fills what is still empty, and a profile the
+    person has completed since is left alone. A failure of the lookup
+    service is raised, so the task is tried again.
+    """
+    from . import address
+    from .models import User
+
+    user = User.objects.filter(pk=user_id).first()
+    if user is not None:
+        address.complete_address(user)

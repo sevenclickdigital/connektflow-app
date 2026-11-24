@@ -91,3 +91,39 @@ class TestCepLookup:
 
 def test_the_cep_field_is_masked():
     assert ProfileForm().fields["address_postal_code"].widget.attrs["data-mask"] == "cep"
+
+
+@pytest.mark.django_db
+class TestAddressFromTheCheckout:
+    """The CEP and number typed for the card become the address of a profile that has none."""
+
+    def test_an_empty_profile_keeps_them_and_a_task_fills_the_rest(self, user):
+        from background_task.models import Task
+
+        assert address.remember_address(user, "88115544", " 1189 ") is True
+
+        user.refresh_from_db()
+        assert (user.address_postal_code, user.address_number, user.address_city) == ("88115-544", "1189", "")
+        assert Task.objects.filter(task_name="apps.accounts.tasks.complete_address_from_cep").count() == 1
+
+        with _viacep({"logradouro": "Rua A", "bairro": "Centro", "localidade": "São José", "uf": "SC"}):
+            assert address.complete_address(user) is True
+            assert address.complete_address(user) is False
+
+        user.refresh_from_db()
+        assert (user.address_street, user.address_neighborhood) == ("Rua A", "Centro")
+        assert (user.address_city, user.address_state, user.address_number) == ("São José", "SC", "1189")
+
+    def test_an_address_the_person_wrote_is_never_replaced(self, user):
+        user.address_postal_code = "01310-100"
+        user.address_number = "10"
+        user.save()
+
+        assert address.remember_address(user, "88115544", "1189") is False
+
+        user.refresh_from_db()
+        assert (user.address_postal_code, user.address_number) == ("01310-100", "10")
+
+    @pytest.mark.parametrize(("cep", "number"), [("123", "10"), ("88115544", "")])
+    def test_something_that_is_not_an_address_is_not_kept(self, user, cep, number):
+        assert address.remember_address(user, cep, number) is False

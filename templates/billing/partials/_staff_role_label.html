@@ -1,0 +1,3 @@
+{% load i18n %}{% comment %}
+The name of ``role``, a role in an organization or in a brand.
+{% endcomment %}{% if role == "owner" %}{% translate "Owner" %}{% elif role == "admin" %}{% translate "Admin" %}{% elif role == "manager" %}{% translate "Manager" %}{% elif role == "editor" %}{% translate "Editor" %}{% elif role == "contributor" %}{% translate "Contributor" %}{% elif role == "client" %}{% translate "Client" %}{% elif role == "viewer" %}{% translate "Viewer" %}{% elif role %}{% translate "Member" %}{% else %}—{% endif %}

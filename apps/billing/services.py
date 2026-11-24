@@ -1277,19 +1277,30 @@ def ensure_subscription(workspace):
     return sub
 
 
-def grant_courtesy(workspace, note="", granted_by=None):
-    """Mark a workspace exempt from billing.
+def grant_courtesy(workspace, note="", granted_by=None, expires_on=None):
+    """Mark a workspace exempt from billing, until ``expires_on`` when given.
 
-    Does not consult the organization's courtesy quota: the quota is an
-    admin-facing budget, and an admin overriding their own budget for one
-    workspace is a decision, not an error. :func:`courtesy_quota_exceeded`
-    is there for the UI to surface it.
+    The exemption is the brand's: its reason and its last day sit on the
+    brand's own row, and granting it again (a renewal, a corrected date)
+    replaces both. ``expires_on`` None means no end date.
     """
     sub = ensure_subscription(workspace)
+    if sub.status != WorkspaceSubscription.Status.COURTESY or sub.courtesy_granted_at is None:
+        sub.courtesy_granted_at = timezone.now()
     sub.status = WorkspaceSubscription.Status.COURTESY
     sub.courtesy_note = note
+    sub.courtesy_expires_on = expires_on
     sub.canceled_at = None
-    sub.save(update_fields=["status", "courtesy_note", "canceled_at", "updated_at"])
+    sub.save(
+        update_fields=[
+            "status",
+            "courtesy_note",
+            "courtesy_expires_on",
+            "courtesy_granted_at",
+            "canceled_at",
+            "updated_at",
+        ]
+    )
     if granted_by is not None:
         profile = ensure_billing_profile(workspace.organization)
         if profile.courtesy_granted_at is None:
@@ -1310,7 +1321,9 @@ def revoke_courtesy(workspace):
     if sub.status == WorkspaceSubscription.Status.COURTESY:
         sub.status = WorkspaceSubscription.Status.PENDING
         sub.courtesy_note = ""
-        sub.save(update_fields=["status", "courtesy_note", "updated_at"])
+        sub.courtesy_expires_on = None
+        sub.courtesy_granted_at = None
+        sub.save(update_fields=["status", "courtesy_note", "courtesy_expires_on", "courtesy_granted_at", "updated_at"])
     return sub
 
 
@@ -1378,15 +1391,14 @@ def grant_account_courtesy(organization, *, quota, expires_on=None, note="", gra
     for workspace in workspaces[: max(quota, 0)]:
         sub = ensure_subscription(workspace)
         if sub.status != WorkspaceSubscription.Status.COURTESY:
-            grant_courtesy(workspace, note=note)
+            grant_courtesy(workspace, note=note, expires_on=expires_on)
     return profile
 
 
 def revoke_account_courtesy(organization):
     """Close an account's exemption and bill every workspace again.
 
-    Used both by the operator pressing "charge this account again" and by
-    the expiry job. Zeroes the budget and clears the deadline so the
+    Zeroes the budget and clears the deadline so the
     account does not sit at "0 workspaces free until the 30th", which
     reads as a comp that is still live.
 
@@ -1568,8 +1580,23 @@ def remove_expired_archives(*, now=None):
     return warned, removed
 
 
+def due_courtesy_subscriptions(*, today=None):
+    """Exempt brands whose last free day has passed.
+
+    ``courtesy_expires_on < today`` (strict): a brand exempt "until the
+    30th" goes unbilled all through the 30th.
+    """
+    if today is None:
+        today = timezone.localdate()
+    return WorkspaceSubscription.objects.filter(
+        status=WorkspaceSubscription.Status.COURTESY,
+        courtesy_expires_on__isnull=False,
+        courtesy_expires_on__lt=today,
+    ).select_related("workspace")
+
+
 def expire_due_courtesies(*, today=None):
-    """Put every lapsed account back on the invoice. Returns how many.
+    """Put every brand whose exemption lapsed back on the invoice. Returns how many.
 
     What expiring means, exactly, and the whole reason this is a separate
     function rather than a line in the job: it flips billing state and
@@ -1578,14 +1605,17 @@ def expire_due_courtesies(*, today=None):
     money — they have not done anything wrong, and waking up to a dead
     account would be the one failure mode worse than an unpaid invoice.
 
-    Each account is committed on its own so one bad row cannot roll back
-    the rest of the sweep.
+    Each brand goes by its own date and is committed on its own, so one bad
+    row cannot roll back the rest of the sweep. An account-level budget
+    whose date passed is closed too, without touching the brands: theirs
+    are the dates that count.
     """
     expired = 0
-    for profile in due_courtesy_profiles(today=today):
+    for subscription in due_courtesy_subscriptions(today=today):
         with transaction.atomic():
-            revoke_account_courtesy(profile.organization)
+            revoke_courtesy(subscription.workspace)
         expired += 1
+    due_courtesy_profiles(today=today).update(courtesy_workspace_quota=0, courtesy_expires_on=None)
     return expired
 
 

@@ -1,6 +1,6 @@
 """Partners who bring customers in and earn a share of what those customers pay.
 
-- ``Affiliate``: a partner, created by an operator and off until switched on.
+- ``Affiliate``: a partner, created by an operator, who can switch it off.
   Their link is ``/af/<slug>/``; an optional ``billing.Coupon`` is filled in at
   the checkout of the accounts they bring.
 - ``AffiliateClickDay``: how many times the link was opened, per day.
@@ -8,7 +8,8 @@
   read at sign-up) or by paying with the affiliate's coupon. One per
   organization, for good.
 - ``Commission``: the affiliate's share of one payment received from a
-  referred organization, keyed by the gateway's payment id. Written by the
+  referred organization (every payment of a period, or only the first one,
+  by ``Affiliate.commission_mode``), keyed by the gateway's payment id. Written by the
   Asaas webhook (``services.record_payment_event``).
 - ``Payout``: a withdrawal the affiliate asked for, holding the commissions
   it pays.
@@ -33,6 +34,13 @@ class Affiliate(models.Model):
         YEAR = 12, _("12 months")
         TWO_YEARS = 24, _("24 months")
 
+    #: What a referred account earns the affiliate.
+    class Mode(models.TextChoices):
+        # A share of every payment, during ``commission_months``.
+        RECURRING = "recurring", _("Monthly, on every payment")
+        # A share of the account's first payment and nothing after it.
+        ONCE = "once", _("Once per account")
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     # NULL once the person's account is deleted: what they earned and were
     # paid stays on record under ``name``.
@@ -47,6 +55,10 @@ class Affiliate(models.Model):
     # The last part of the link, lower case.
     slug = models.CharField(max_length=40, unique=True)
     is_active = models.BooleanField(default=False)
+    # db_default keeps inserts from the release still running during a deploy working.
+    commission_mode = models.CharField(
+        max_length=10, choices=Mode.choices, default=Mode.RECURRING, db_default=Mode.RECURRING
+    )
     commission_percent = models.PositiveSmallIntegerField(default=20)
     commission_months = models.PositiveSmallIntegerField(choices=Period.choices, default=Period.YEAR)
     # The least the affiliate can ask to withdraw.
@@ -100,8 +112,9 @@ class Referral(models.Model):
     )
     source = models.CharField(max_length=8, choices=Source.choices, default=Source.LINK)
     created_at = models.DateTimeField(auto_now_add=True)
-    # Set by the first payment received; payments up to ``commission_until``
-    # (inclusive) earn commission.
+    # ``first_paid_at`` is set by the first payment received. For a monthly
+    # affiliate, payments up to ``commission_until`` (inclusive) earn
+    # commission; it stays empty under an affiliate paid once per account.
     first_paid_at = models.DateTimeField(null=True, blank=True)
     commission_until = models.DateField(null=True, blank=True)
 
@@ -122,6 +135,10 @@ class Payout(models.Model):
     # Where the affiliate asked to be paid.
     pix_key = models.CharField(max_length=140)
     note = models.CharField(max_length=255, blank=True, default="")
+    # The proof of the Pix transfer (an image or a PDF), sent to the affiliate
+    # when the payout is marked paid. Private: served only by the views that
+    # check who asks (``affiliate_payouts/`` is not in PUBLIC_MEDIA_PREFIXES).
+    receipt = models.FileField(upload_to="affiliate_payouts/%Y/%m/", blank=True, default="", db_default="")
     requested_at = models.DateTimeField(auto_now_add=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
     resolved_by = models.ForeignKey(

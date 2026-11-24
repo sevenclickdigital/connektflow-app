@@ -12,6 +12,7 @@ def sidebar_context(request):
         sidebar_unread_inbox_count: unread inbox messages, for the badge
         sidebar_has_ads: whether the workspace has Meta Ads connected, for the Ads entry
         is_affiliate: whether the user is a switched-on affiliate, for the account menu
+        open_affiliate_payouts: withdrawals waiting to be paid, for a superadmin's menu badge
     """
     if not hasattr(request, "user") or not request.user.is_authenticated:
         return {}
@@ -103,9 +104,16 @@ def sidebar_context(request):
     from apps.affiliates.models import Affiliate
 
     is_affiliate = not is_operator and Affiliate.objects.filter(user=request.user, is_active=True).exists()
+    # The administrative menu's badge: withdrawals a superadmin still has to pay.
+    open_affiliate_payouts = 0
+    if is_operator and request.user.is_superuser:
+        from apps.affiliates.models import Payout
+
+        open_affiliate_payouts = Payout.objects.filter(status=Payout.Status.REQUESTED).count()
 
     return {
         "is_affiliate": is_affiliate,
+        "open_affiliate_payouts": open_affiliate_payouts,
         "sidebar_workspaces": sidebar_workspaces,
         "sidebar_org_groups": sidebar_org_groups,
         "can_create_organization": bool(getattr(request, "org_memberships", [])),

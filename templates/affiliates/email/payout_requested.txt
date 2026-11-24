@@ -1,0 +1,14 @@
+{% extends "emails/base.txt" %}
+{% load i18n billing_extras %}
+{% block content %}{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}
+
+{% blocktranslate with days=payout_days %}Your request is with our team. We transfer the amount below to your Pix key within {{ days }} days and, as soon as it is done, send you another e-mail with the receipt.{% endblocktranslate %}
+
+{% translate "Withdrawal amount" %}: R$ {{ payout.amount_cents|brl }}
+{% translate "Pix key" %}: {{ payout.pix_key }}
+{% translate "Deposit by" %}: {{ deadline|date:"d/m/Y" }}
+
+{% translate "Is the Pix key right?" %} {% blocktranslate %}If you need to change it, write to {{ support_email }} before the deposit, telling us the right key.{% endblocktranslate %}
+
+{% translate "See my withdrawals" %}: {{ withdrawals_url }}{% endblock %}
+{% block reason %}{% blocktranslate %}You're receiving this because you are an affiliate of {{ brand_name }} and asked for this withdrawal.{% endblocktranslate %}{% endblock %}

@@ -1,0 +1,109 @@
+{% load i18n billing_extras %}
+{% comment %}
+An account's details, in two columns: what it pays for, who its invoices are
+issued to and what it answered about its business; beside them, for a
+superadmin, the form that corrects its name and its owner's name and e-mail.
+``row``: the account as ``billing.views._account_row`` builds it. ``plan``:
+its ``OrganizationPlan`` or None. ``payer``: ``billing.views.payer_summary``.
+{% endcomment %}
+<div class="space-y-4">
+  <dl class="rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+    <dt class="col-span-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">{% translate "Subscription" %}</dt>
+    {% if plan %}
+    <dt class="text-neutral-600">{% translate "Plan" %}</dt>
+    <dd class="text-neutral-900">{% if plan.is_yearly %}{% translate "Yearly plan" %}{% else %}{% translate "Monthly plan" %}{% endif %} · {% blocktranslate count counter=plan.brands %}{{ counter }} brand{% plural %}{{ counter }} brands{% endblocktranslate %}</dd>
+    <dt class="text-neutral-600">{% translate "Status" %}</dt>
+    <dd>{% include "billing/partials/_staff_status_pill.html" with status=plan.status %}</dd>
+    <dt class="text-neutral-600">{% translate "Each charge" %}</dt>
+    <dd class="text-neutral-900 tabular-nums">R$ {{ plan.charge_cents|brl }}</dd>
+    {% if plan.cancels_on %}
+    <dt class="text-neutral-600">{% translate "Cancelled, in use until" %}</dt>
+    <dd class="text-neutral-900 tabular-nums">{{ plan.cancels_on|date:"SHORT_DATE_FORMAT" }}</dd>
+    {% elif plan.current_period_end %}
+    <dt class="text-neutral-600">{% translate "Paid until" %}</dt>
+    <dd class="text-neutral-900 tabular-nums">{{ plan.current_period_end|date:"SHORT_DATE_FORMAT" }}</dd>
+    {% endif %}
+    <dt class="text-neutral-600">{% translate "Paid with" %}</dt>
+    <dd class="text-neutral-900">{% if plan.card_last4 %}{% blocktranslate with brand=plan.card_brand|title digits=plan.card_last4 %}{{ brand }} card ending in {{ digits }}{% endblocktranslate %}{% elif plan.gateway_authorization_id %}Pix{% else %}—{% endif %}</dd>
+    <dt class="text-neutral-600">{% translate "Since" %}</dt>
+    <dd class="text-neutral-900 tabular-nums">{{ plan.created_at|date:"SHORT_DATE_FORMAT" }}</dd>
+    {% else %}
+    <dd class="col-span-2 text-neutral-600">{% translate "No plan contracted." %}</dd>
+    {% endif %}
+    {% if row.profile.trial_started_at %}
+    <dt class="text-neutral-600">{% translate "Free trial" %}</dt>
+    <dd class="text-neutral-900 tabular-nums">{% blocktranslate with date=row.profile.trial_started_at|date:"SHORT_DATE_FORMAT" %}started on {{ date }}{% endblocktranslate %}</dd>
+    {% endif %}
+  </dl>
+
+  <dl class="rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+    <dt class="col-span-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">{% translate "Invoices issued to" %}</dt>
+    <dt class="text-neutral-600">{% translate "Name" %}</dt><dd class="text-neutral-900">{{ payer.name }}</dd>
+    <dt class="text-neutral-600">{% translate "Document" %}</dt><dd class="text-neutral-900 tabular-nums">{{ payer.tax_id|default:"—" }}</dd>
+    <dt class="text-neutral-600">{% translate "Phone" %}</dt><dd class="text-neutral-900 tabular-nums">{{ payer.phone|default:"—" }}</dd>
+    <dt class="text-neutral-600">{% translate "Billing email" %}</dt><dd class="text-neutral-900 break-all">{{ payer.email|default:"—" }}</dd>
+    {% if row.profile.gateway_customer_id %}
+    <dt class="text-neutral-600">{% translate "Customer at the payment provider" %}</dt><dd class="text-neutral-900 break-all">{{ row.profile.gateway_customer_id }}</dd>
+    {% endif %}
+  </dl>
+
+  <dl class="rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+    <dt class="col-span-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">{% translate "About the business" %}</dt>
+    {% if row.organization.about_answered_at %}
+    <dt class="text-neutral-600">{% translate "Activity" %}</dt><dd class="text-neutral-900">{{ row.organization.get_business_activity_display|default:"—" }}</dd>
+    <dt class="text-neutral-600">{% translate "Team size" %}</dt><dd class="text-neutral-900">{{ row.organization.get_team_size_display|default:"—" }}</dd>
+    <dt class="text-neutral-600">{% translate "Found us through" %}</dt><dd class="text-neutral-900">{{ row.organization.get_referral_source_display|default:"—" }}{% if row.organization.referral_source_other %}: {{ row.organization.referral_source_other }}{% endif %}</dd>
+    <dt class="text-neutral-600">{% translate "Goals" %}</dt><dd class="text-neutral-900">{{ row.organization.goal_labels|join:", "|default:"—" }}</dd>
+    {% if row.organization.client_count %}<dt class="text-neutral-600">{% translate "Clients served" %}</dt><dd class="text-neutral-900">{{ row.organization.get_client_count_display }}</dd>{% endif %}
+    {% if row.organization.business_segment %}<dt class="text-neutral-600">{% translate "Segment" %}</dt><dd class="text-neutral-900">{{ row.organization.get_business_segment_display }}</dd>{% endif %}
+    {% else %}
+    <dd class="col-span-2 text-neutral-600">{% translate "Not answered." %}</dd>
+    {% endif %}
+  </dl>
+</div>
+<div>
+{% if is_superadmin %}
+<form method="post" action="{% url 'billing_staff:edit_account' org_id=row.organization.id %}"
+      class="space-y-3">
+  {% csrf_token %}
+  <div>
+    <label for="orgname-{{ row.organization.id }}" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">
+      {% translate "Account name" %}
+    </label>
+    <input type="text" id="orgname-{{ row.organization.id }}" name="organization_name"
+           maxlength="100" required value="{{ row.organization.name }}"
+           class="form-input-styled w-full">
+  </div>
+  {% if row.owner %}
+  {# The owner's own fields travel with the org name in #}
+  {# one submit: support is correcting one mistake, not #}
+  {# filling two forms. #}
+  <input type="hidden" name="user_id" value="{{ row.owner.user.id }}">
+  <div>
+    <label for="username-{{ row.organization.id }}" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">
+      {% translate "Owner's name" %}
+    </label>
+    <input type="text" id="username-{{ row.organization.id }}" name="name" maxlength="255"
+           value="{{ row.owner.user.name }}"
+           class="form-input-styled w-full">
+  </div>
+  <div>
+    <label for="useremail-{{ row.organization.id }}" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">
+      {% translate "Owner's e-mail" %}
+    </label>
+    <input type="email" id="useremail-{{ row.organization.id }}" name="email" required
+           value="{{ row.owner.user.email }}"
+           class="form-input-styled w-full">
+    <p class="text-[11px] text-neutral-600 mt-1">
+      {% translate "This is the address they sign in with. If another account already uses it, nothing is changed." %}
+    </p>
+  </div>
+  {% endif %}
+  <button type="submit"
+          class="px-3 py-2 text-xs font-semibold text-white rounded-lg transition-colors cursor-pointer"
+          style="background: var(--primary);">
+    {% translate "Save changes" %}
+  </button>
+</form>
+{% endif %}
+</div>

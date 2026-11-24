@@ -1,0 +1,21 @@
+{% extends "emails/base.html" %}
+{% load i18n billing_extras %}
+{% block title %}{% translate "You are now an affiliate" %}{% endblock %}
+{% block preheader %}{% translate "Your link, what you earn and how you are paid." %}{% endblock %}
+{% block content %}
+<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "You are now an affiliate" %}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with brand=brand_name %}Your account was added to the {{ brand }} affiliate programme. You earn a share of what the customers you bring pay.{% endblocktranslate %}</p>
+{% include "affiliates/email/_terms.html" %}
+<h2 style="margin:8px 0 12px;font-size:16px;line-height:24px;font-weight:700;color:#0F172A;">{% translate "How to share your link" %}</h2>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 16px;">
+<tr><td style="padding:0 0 12px;font-size:14px;line-height:22px;color:#334155;"><strong style="color:#0F172A;">{% translate "Send it to your customers and contacts" %}</strong><br>{% translate "By WhatsApp, e-mail or in a conversation: a recommendation from someone they know is what converts best." %}</td></tr>
+<tr><td style="padding:0 0 12px;font-size:14px;line-height:22px;color:#334155;"><strong style="color:#0F172A;">{% translate "Share it on your social networks" %}</strong><br>{% translate "Put the link in your bio, in posts and in stories, showing how you use the product from day to day." %}</td></tr>
+<tr><td style="padding:0 0 12px;font-size:14px;line-height:22px;color:#334155;"><strong style="color:#0F172A;">{% translate "Go live or record videos" %}</strong><br>{% translate "Explain the product, show the screens and answer questions, with the link in the description or in the comments." %}</td></tr>
+<tr><td style="padding:0 0 12px;font-size:14px;line-height:22px;color:#334155;"><strong style="color:#0F172A;">{% translate "Run ads" %}</strong><br>{% translate "You can advertise on Instagram, Facebook, Google or wherever your audience is, pointing the ad to your link." %}</td></tr>
+<tr><td style="padding:0 0 12px;font-size:14px;line-height:22px;color:#334155;"><strong style="color:#0F172A;">{% translate "Write about it" %}</strong><br>{% translate "An article, a newsletter or a tutorial with the link keeps bringing people long after it is published." %}</td></tr>
+</table>
+<p style="margin:0 0 16px;font-size:14px;line-height:22px;color:#334155;">{% translate "Whoever signs up within 30 days of opening your link counts as yours, even if they only subscribe later." %}</p>
+{% translate "Open the affiliate panel" as cta %}{% include "emails/_button.html" with url=panel_url label=cta %}
+{% endblock %}
+{% block reason %}<p style="margin:0 0 12px;">{% blocktranslate with brand=brand_name %}You're receiving this because your account was made an affiliate of {{ brand }}.{% endblocktranslate %}</p>{% endblock %}

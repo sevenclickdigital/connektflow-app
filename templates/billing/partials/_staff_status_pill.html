@@ -1,0 +1,3 @@
+{% load i18n %}{% comment %}
+The pill of a subscription ``status``, of a brand or of a whole account.
+{% endcomment %}{% if status == 'active' %}<span class="pill pill-success">{% translate "Active" %}</span>{% elif status == 'courtesy' %}<span class="pill pill-info">{% translate "Exempt" %}</span>{% elif status == 'past_due' %}<span class="pill pill-warning">{% translate "Past due" %}</span>{% elif status == 'canceled' %}<span class="pill pill-neutral">{% translate "Canceled" %}</span>{% elif status %}<span class="pill pill-neutral">{% translate "No plan" %}</span>{% else %}<span class="text-neutral-500">—</span>{% endif %}

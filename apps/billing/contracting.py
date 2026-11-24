@@ -41,6 +41,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from apps.affiliates import services as affiliate_services
 from apps.billing import emails, services
 from apps.billing.gateways import asaas as asaas_gateway
 from apps.billing.gateways.asaas import GATEWAY, AsaasClient, AsaasError
@@ -989,6 +990,8 @@ def _record_card_charge(organization, payment):
     type, the payment as Asaas returned it, and an id of our own
     (``checkout:<payment id>``) that no event of the gateway carries. When the
     webhook does arrive the history shows the charge once, by its payment id.
+    The affiliate's commission on the charge is written here too, keyed by the
+    payment id, so the webhook does not write it twice.
     Never fails the purchase: the charge is already made.
     """
     payment_id = payment.get("id") if isinstance(payment, dict) else ""
@@ -1013,6 +1016,12 @@ def _record_card_charge(organization, payment):
         )
     except Exception:
         logger.exception("Could not log the card charge %s of organization %s", payment_id, organization.pk)
+    # The affiliate who brought the account earns on this charge now, for the
+    # same reason; the webhook, when it comes, finds the commission written.
+    try:
+        affiliate_services.record_payment_event(organization, "PAYMENT_CONFIRMED", {"payment": payment})
+    except Exception:
+        logger.exception("Could not write the commission of charge %s of organization %s", payment_id, organization.pk)
 
 
 def _https_url(raw):

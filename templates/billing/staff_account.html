@@ -1,0 +1,281 @@
+{% extends "layouts/admin_shell.html" %}
+{% load i18n billing_extras %}
+{% comment %}
+One account's page in the administrative area, reached from its "…" menu on
+the customers screen. On top, what the account is today: status, brands,
+people, disk, monthly charge and how long it has been a customer. Below, the
+tabs (links, ``?tab=``, each loading only what it shows): details, brands
+(where a superadmin exempts a brand from charges, in a modal), people,
+payments and the e-mails sent to it. ``row`` is the account as
+``billing.views._account_row`` builds it.
+
+Access is ``is_staff`` (apps/accounts/decorators.py).
+{% endcomment %}
+
+{% block title %}{{ row.organization.name }} - {% translate "Customers" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="mb-4 lg:mb-[25px] flex flex-wrap items-end justify-between gap-3">
+  <div class="min-w-0">
+    <a href="{% url 'billing_staff:staff_console' %}" class="inline-flex items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-950 mb-2">
+      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      {% translate "Customers" %}
+    </a>
+    <div class="flex flex-wrap items-center gap-2">
+      <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950 truncate" style="letter-spacing: -0.01em;">{{ row.organization.name }}</h1>
+      {% if row.is_team_account %}<span class="pill pill-brand">{% translate "Team" %}</span>{% endif %}
+      {% if row.organization.business_activity %}<span class="pill pill-neutral">{{ row.organization.get_business_activity_display }}</span>{% endif %}
+    </div>
+    {% comment %}
+    The address goes in a data attribute, not in the Alpine expression.
+    {% endcomment %}
+    {% if row.owner %}
+    <p class="flex flex-wrap items-center gap-2 text-sm text-neutral-600 mt-1">
+      {% if row.owner.user.name %}<span class="text-neutral-800">{{ row.owner.user.name }}</span><span aria-hidden="true">·</span>{% endif %}
+      <span class="break-all">{{ row.owner.user.email }}</span>
+      <button type="button" x-data="{ copied: false }" data-email="{{ row.owner.user.email }}"
+              data-copy="{% translate 'Copy' %}" data-copied="{% translate 'Copied' %}"
+              @click="navigator.clipboard.writeText($el.dataset.email).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
+              class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950 cursor-pointer">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        <span x-text="copied ? $el.parentElement.dataset.copied : $el.parentElement.dataset.copy">{% translate "Copy" %}</span>
+      </button>
+    </p>
+    {% endif %}
+  </div>
+  {% if row.owner and row.owner.may_impersonate %}
+  <form method="post" action="{% url 'accounts:start_impersonation' user_id=row.owner.user.id %}">{% csrf_token %}
+    <button type="submit" class="btn-soft text-sm">{% translate "Sign in as the owner" %}</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+{% url 'billing_staff:account' org_id=row.organization.id as account_url %}
+{% if row.organization.is_deletion_pending %}
+<div class="alert-error mb-4">
+  {% blocktranslate with date=row.organization.deletion_scheduled_for|date:"SHORT_DATE_FORMAT" %}The owner asked to delete this organization. It is erased on {{ date }} unless they restore it.{% endblocktranslate %}
+</div>
+{% endif %}
+
+<dl class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-4">
+  <div class="rounded-xl border border-neutral-300 bg-white px-4 py-3">
+    <dt class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Status" %}</dt>
+    <dd class="mt-1.5">{% include "billing/partials/_staff_status_pill.html" with status=row.status %}</dd>
+  </div>
+  <div class="rounded-xl border border-neutral-300 bg-white px-4 py-3">
+    <dt class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Brands" %}</dt>
+    <dd class="mt-1 text-xl font-semibold text-neutral-950 tabular-nums">{{ row.workspace_count }}</dd>
+    {% if exempt_count %}<dd class="text-xs text-neutral-600">{% blocktranslate count counter=exempt_count %}{{ counter }} exempt{% plural %}{{ counter }} exempt{% endblocktranslate %}</dd>{% endif %}
+  </div>
+  <div class="rounded-xl border border-neutral-300 bg-white px-4 py-3">
+    <dt class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "People" %}</dt>
+    <dd class="mt-1 text-xl font-semibold text-neutral-950 tabular-nums">{{ row.people|length }}</dd>
+    <dd class="text-xs text-neutral-600">{% if last_sign_in %}{% blocktranslate with when=last_sign_in|timesince %}last sign-in {{ when }} ago{% endblocktranslate %}{% else %}{% translate "nobody signed in yet" %}{% endif %}</dd>
+  </div>
+  <div class="rounded-xl border border-neutral-300 bg-white px-4 py-3">
+    <dt class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Disk" %}</dt>
+    {% if row.storage_limit_bytes %}
+    <dd class="mt-1 text-xl font-semibold tabular-nums {% if row.storage_percent >= 100 %}text-red-600{% elif row.storage_percent >= 90 %}text-amber-600{% else %}text-neutral-950{% endif %}">{{ row.storage_percent|meter_percent }}%</dd>
+    <dd class="text-xs text-neutral-600 whitespace-nowrap">{% blocktranslate with used=row.storage_used_bytes|gb limit=row.storage_limit_bytes|gb %}{{ used }} / {{ limit }} GB{% endblocktranslate %}</dd>
+    <dd class="mt-1.5 h-1.5 w-full rounded-full bg-neutral-100 overflow-hidden"><div class="h-full rounded-full {% if row.storage_percent >= 100 %}bg-red-500{% elif row.storage_percent >= 90 %}bg-amber-500{% else %}bg-neutral-400{% endif %}" style="width: {{ row.storage_percent|meter_percent }}%"></div></dd>
+    {% else %}<dd class="mt-1 text-xl font-semibold text-neutral-500">—</dd>{% endif %}
+  </div>
+  <div class="rounded-xl border border-neutral-300 bg-white px-4 py-3">
+    <dt class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Monthly" %}</dt>
+    <dd class="mt-1 text-xl font-semibold text-neutral-950 tabular-nums whitespace-nowrap">R$ {{ row.monthly_total_cents|brl }}</dd>
+  </div>
+  <div class="rounded-xl border border-neutral-300 bg-white px-4 py-3">
+    <dt class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Customer since" %}</dt>
+    <dd class="mt-1 text-xl font-semibold text-neutral-950 tabular-nums">{{ row.organization.created_at|date:"SHORT_DATE_FORMAT" }}</dd>
+    <dd class="text-xs text-neutral-600">{% blocktranslate with time=row.organization.created_at|timesince %}{{ time }} ago{% endblocktranslate %}</dd>
+  </div>
+</dl>
+
+<section class="rounded-xl border border-neutral-300 bg-white" x-data="{ open: false, brand: '' }">
+  <nav class="flex gap-1 px-5 pt-2 border-b border-neutral-200 overflow-x-auto" aria-label="{% translate 'Account sections' %}">
+    <a href="{{ account_url }}" {% if tab == "details" %}aria-current="page"{% endif %}
+       class="px-3 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'details' %}border-brand-700 text-neutral-950{% else %}border-transparent text-neutral-600 hover:text-neutral-800{% endif %}">{% translate "Details" %}</a>
+    <a href="{{ account_url }}?tab=brands" {% if tab == "brands" %}aria-current="page"{% endif %}
+       class="px-3 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'brands' %}border-brand-700 text-neutral-950{% else %}border-transparent text-neutral-600 hover:text-neutral-800{% endif %}">{% translate "Brands" %} <span class="ml-1 text-xs font-normal text-neutral-500 tabular-nums">{{ row.workspace_count }}</span></a>
+    <a href="{{ account_url }}?tab=people" {% if tab == "people" %}aria-current="page"{% endif %}
+       class="px-3 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'people' %}border-brand-700 text-neutral-950{% else %}border-transparent text-neutral-600 hover:text-neutral-800{% endif %}">{% translate "People" %} <span class="ml-1 text-xs font-normal text-neutral-500 tabular-nums">{{ row.people|length }}</span></a>
+    <a href="{{ account_url }}?tab=payments" {% if tab == "payments" %}aria-current="page"{% endif %}
+       class="px-3 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'payments' %}border-brand-700 text-neutral-950{% else %}border-transparent text-neutral-600 hover:text-neutral-800{% endif %}">{% translate "Payments" %}</a>
+    <a href="{{ account_url }}?tab=emails" {% if tab == "emails" %}aria-current="page"{% endif %}
+       class="px-3 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'emails' %}border-brand-700 text-neutral-950{% else %}border-transparent text-neutral-600 hover:text-neutral-800{% endif %}">{% translate "Sent e-mails" %}</a>
+  </nav>
+
+  {% if tab == "emails" %}
+  {% if emails %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500 border-b border-neutral-200">
+          <th class="px-5 py-2.5 whitespace-nowrap">{% translate "Date" %}</th>
+          <th class="px-3 py-2.5">{% translate "Recipient" %}</th>
+          <th class="px-3 py-2.5">{% translate "Subject" %}</th>
+          <th class="px-3 py-2.5">{% translate "Type" %}</th>
+          <th class="px-5 py-2.5">{% translate "Status" %}</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        {% for email in emails %}
+        <tr>
+          <td class="px-5 py-2.5 text-neutral-700 whitespace-nowrap tabular-nums">{{ email.created_at|date:"SHORT_DATETIME_FORMAT" }}</td>
+          <td class="px-3 py-2.5 text-neutral-700 whitespace-nowrap">{{ email.recipient }}</td>
+          <td class="px-3 py-2.5 text-neutral-950">{{ email.subject|default:"—" }}</td>
+          <td class="px-3 py-2.5 text-neutral-600 whitespace-nowrap">{% if email.email_class == "transactional" %}{% translate "Transactional" %}{% else %}{% translate "Notification" %}{% endif %}</td>
+          <td class="px-5 py-2.5 whitespace-nowrap">
+            {% if email.status == "sent" %}
+            <span class="pill pill-success"><i></i>{% translate "Sent" context "an e-mail" %}</span>
+            {% elif email.status == "dropped" %}
+            <span class="pill pill-warning" title="{{ email.detail }}"><i></i>{% translate "Not sent" %}</span>
+            {% else %}
+            <span class="pill pill-error" title="{{ email.detail }}"><i></i>{% translate "Refused by the mail server" %}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="px-5 py-10 text-center text-sm text-neutral-600">{% translate "No e-mail recorded for this account yet. The history holds what was sent since it started being kept." %}</p>
+  {% endif %}
+  <p class="px-5 py-3 border-t border-neutral-200 text-xs text-neutral-500">
+    {% blocktranslate with limit=email_history_limit days=email_retention_days %}The latest {{ limit }} e-mails to the people of this account and to its billing address, kept for {{ days }} days. Only the addressee, the subject and the outcome are recorded, never the content.{% endblocktranslate %}
+  </p>
+  {% elif tab == "brands" %}
+  {% if row.workspaces %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500 border-b border-neutral-200">
+          <th class="px-5 py-2.5">{% translate "Brand" %}</th>
+          <th class="px-3 py-2.5">{% translate "Status" %}</th>
+          <th class="px-3 py-2.5">{% translate "Exemption" %}</th>
+          <th class="px-3 py-2.5 text-right">{% translate "People" %}</th>
+          <th class="px-3 py-2.5">{% translate "Disk" %}</th>
+          <th class="px-3 py-2.5 text-right">{% translate "Monthly" %}</th>
+          {% if is_superadmin %}<th class="px-5 py-2.5"></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        {% for ws in row.workspaces %}
+        <tr class="align-middle">
+          <td class="px-5 py-3">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="font-medium text-neutral-950">{{ ws.workspace.name }}</span>
+              {% if ws.workspace.is_archived %}<span class="pill pill-neutral">{% translate "Archived" %}</span>{% endif %}
+            </div>
+            <div class="text-xs text-neutral-500">{% blocktranslate with date=ws.workspace.created_at|date:"SHORT_DATE_FORMAT" %}created on {{ date }}{% endblocktranslate %}</div>
+          </td>
+          <td class="px-3 py-3 whitespace-nowrap">
+            {% include "billing/partials/_staff_status_pill.html" with status=ws.subscription.status %}
+            {% if ws.subscription.in_trial %}<div class="text-[11px] text-neutral-600 mt-1">{% blocktranslate with date=ws.subscription.trial_ends_at|date:"SHORT_DATE_FORMAT" %}free trial until {{ date }}{% endblocktranslate %}</div>{% endif %}
+          </td>
+          <td class="px-3 py-3 text-neutral-700 max-w-[18rem]">
+            {% if ws.subscription.is_courtesy %}
+            <div class="whitespace-nowrap">{% if ws.subscription.courtesy_expires_on %}{% blocktranslate with date=ws.subscription.courtesy_expires_on|date:"SHORT_DATE_FORMAT" %}until {{ date }}{% endblocktranslate %}{% else %}{% translate "no end date" %}{% endif %}</div>
+            {% if ws.subscription.courtesy_note %}<div class="text-xs text-neutral-500 truncate" title="{{ ws.subscription.courtesy_note }}">{{ ws.subscription.courtesy_note }}</div>{% endif %}
+            {% else %}<span class="text-neutral-400">—</span>{% endif %}
+          </td>
+          <td class="px-3 py-3 text-right tabular-nums text-neutral-800">{{ ws.users|length }}</td>
+          <td class="px-3 py-3 min-w-[8rem]">
+            {% if ws.storage.limit_bytes %}
+            <div class="flex items-baseline justify-between gap-2 text-[11px] mb-1 whitespace-nowrap">
+              <span class="text-neutral-600">{% blocktranslate with used=ws.storage.used_bytes|gb limit=ws.storage.limit_bytes|gb %}{{ used }} / {{ limit }} GB{% endblocktranslate %}</span>
+              <span class="tabular-nums font-semibold {% if ws.storage.percent_used >= 100 %}text-red-600{% elif ws.storage.percent_used >= 90 %}text-amber-600{% else %}text-neutral-500{% endif %}">{{ ws.storage.percent_used|meter_percent }}%</span>
+            </div>
+            <div class="h-1.5 w-full rounded-full bg-neutral-100 overflow-hidden">
+              <div class="h-full rounded-full {% if ws.storage.percent_used >= 100 %}bg-red-500{% elif ws.storage.percent_used >= 90 %}bg-amber-500{% else %}bg-neutral-400{% endif %}" style="width: {{ ws.storage.percent_used|meter_percent }}%"></div>
+            </div>
+            {% else %}<span class="text-xs text-neutral-500">—</span>{% endif %}
+          </td>
+          <td class="px-3 py-3 text-right tabular-nums font-medium text-neutral-950 whitespace-nowrap">R$ {{ ws.monthly_total_cents|brl }}</td>
+          {% if is_superadmin %}
+          <td class="px-5 py-3 text-right whitespace-nowrap">
+            <button type="button" data-brand="{{ ws.workspace.id }}" @click="brand = $el.dataset.brand; open = true" class="btn-soft py-1.5 px-3 text-xs">{% if ws.subscription.is_courtesy %}{% translate "Edit exemption" %}{% else %}{% translate "Exempt from charges" %}{% endif %}</button>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="px-5 py-10 text-center text-sm text-neutral-600">{% translate "This account has no brand." %}</p>
+  {% endif %}
+  {% if is_superadmin %}
+  <template x-teleport="body">
+    <div x-show="open" x-cloak @keydown.escape.window="open = false" class="modal-overlay">
+      <div class="modal-panel" @click.outside="open = false" role="dialog" aria-modal="true">
+        <button type="button" class="modal-close" @click="open = false" aria-label="{% translate 'Close' %}">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        {% for ws in row.workspaces %}
+        <div data-brand="{{ ws.workspace.id }}" x-show="brand === $el.dataset.brand" x-cloak class="pr-6">
+          {% include "billing/partials/_staff_brand_courtesy_form.html" with back="account" %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </template>
+  {% endif %}
+  {% elif tab == "people" %}
+  {% if row.people %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500 border-b border-neutral-200">
+          <th class="px-5 py-2.5">{% translate "Name" %}</th>
+          <th class="px-3 py-2.5">{% translate "E-mail" %}</th>
+          <th class="px-3 py-2.5">{% translate "In the account" %}</th>
+          <th class="px-3 py-2.5">{% translate "Brands" %}</th>
+          <th class="px-3 py-2.5">{% translate "Last sign-in" %}</th>
+          <th class="px-5 py-2.5"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        {% for p in row.people %}
+        <tr class="align-top">
+          <td class="px-5 py-3 text-neutral-950 whitespace-nowrap">{{ p.user.name|default:"—" }}</td>
+          <td class="px-3 py-3 text-neutral-700 whitespace-nowrap">{{ p.user.email }}{% if not p.user.is_active %} <span class="pill pill-error">{% translate "Sign-in disabled" %}</span>{% endif %}</td>
+          <td class="px-3 py-3 text-neutral-700 whitespace-nowrap">{% include "billing/partials/_staff_role_label.html" with role=p.org_role %}</td>
+          <td class="px-3 py-3 text-neutral-700">{% for name, role in p.brands %}<div class="whitespace-nowrap">{{ name }} · <span class="text-neutral-500">{% include "billing/partials/_staff_role_label.html" with role=role %}</span></div>{% empty %}<span class="text-neutral-400">—</span>{% endfor %}</td>
+          <td class="px-3 py-3 text-neutral-700 whitespace-nowrap tabular-nums">{% if p.user.last_login %}{{ p.user.last_login|date:"SHORT_DATETIME_FORMAT" }}{% else %}{% translate "Never" %}{% endif %}</td>
+          <td class="px-5 py-3 text-right whitespace-nowrap">
+            {% if p.may_impersonate %}
+            <form method="post" action="{% url 'accounts:start_impersonation' user_id=p.user.id %}">{% csrf_token %}
+              <button type="submit" class="btn-soft py-1.5 px-3 text-xs">{% translate "Sign in as" %}</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="px-5 py-10 text-center text-sm text-neutral-600">{% translate "No members" %}</p>
+  {% endif %}
+  {% elif tab == "payments" %}
+  {% if payments %}
+  <div class="divide-y divide-neutral-100">
+    {% include "billing/partials/_payment_rows.html" %}
+  </div>
+  {% else %}
+  <p class="px-5 py-10 text-center text-sm text-neutral-600">{% translate "No payment reported by the payment provider for this account yet." %}</p>
+  {% endif %}
+  <p class="px-5 py-3 border-t border-neutral-200 text-xs text-neutral-500">
+    {% blocktranslate with limit=payment_history_limit %}The latest {{ limit }} charges the payment provider reported, each in its current state.{% endblocktranslate %}
+  </p>
+  {% else %}
+  <div class="px-5 py-5 grid gap-6 lg:grid-cols-2">
+    {% include "billing/partials/_staff_account_details.html" %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

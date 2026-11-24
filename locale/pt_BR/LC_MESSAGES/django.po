@@ -13776,8 +13776,8 @@ msgstr "Ir para o calendário"
 
 #: templates/billing/email/payment_confirmed.html:3
 #: templates/billing/email/payment_confirmed.html:6
-msgid "Payment confirmed. Welcome aboard!"
-msgstr "Pagamento confirmado. Que bom ter você aqui!"
+msgid "Payment confirmed."
+msgstr "Pagamento confirmado."
 
 #: templates/billing/email/payment_confirmed.html:4
 msgid "Your plan is active and everything is ready for your first post."
@@ -13802,11 +13802,11 @@ msgstr "Olá,"
 #: templates/billing/email/payment_confirmed.html:8
 #, python-format
 msgid ""
-"Congratulations! We received your payment and <strong style=\"color:#0F172A;"
+"We received your payment and <strong style=\"color:#0F172A;"
 "\">%(paid_for)s</strong> is active on %(brand)s. Everything is ready for you "
 "to plan, approve and publish."
 msgstr ""
-"Parabéns! Recebemos o seu pagamento e <strong style=\"color:#0F172A;"
+"Recebemos o seu pagamento e <strong style=\"color:#0F172A;"
 "\">%(paid_for)s</strong> está com tudo liberado no %(brand)s. Está tudo "
 "pronto para você planejar, aprovar e publicar."
 
@@ -13853,10 +13853,10 @@ msgstr ""
 #: templates/billing/email/payment_confirmed.txt:5
 #, python-format
 msgid ""
-"Congratulations! We received your payment and %(paid_for)s is active on "
+"We received your payment and %(paid_for)s is active on "
 "%(brand)s. Everything is ready for you to plan, approve and publish."
 msgstr ""
-"Parabéns! Recebemos o seu pagamento e %(paid_for)s está com tudo liberado no "
+"Recebemos o seu pagamento e %(paid_for)s está com tudo liberado no "
 "%(brand)s. Está tudo pronto para você planejar, aprovar e publicar."
 
 #: templates/billing/email/payment_confirmed.txt:14
@@ -26606,3 +26606,694 @@ msgstr "Você poderá pedir um novo código em"
 #: templates/account/confirm_email_verification_code.html
 msgid "Every code allowed was already sent. To get a new one, go back to sign in and enter again."
 msgstr "Todos os códigos permitidos já foram enviados. Para receber um novo, volte para o login e entre de novo."
+
+#: templates/billing/staff_account.html
+msgid "Sent e-mails"
+msgstr "E-mails enviados"
+
+#: templates/billing/staff_account.html
+msgid "Account sections"
+msgstr "Seções da conta"
+
+#: templates/billing/staff_account.html
+msgid "Recipient"
+msgstr "Destinatário"
+
+#: templates/billing/staff_account.html
+msgid "Subject"
+msgstr "Assunto"
+
+#: templates/billing/staff_account.html
+msgid "Transactional"
+msgstr "Transacional"
+
+#: templates/billing/staff_account.html
+msgid "Notification"
+msgstr "Notificação"
+
+#: templates/billing/staff_account.html
+msgctxt "an e-mail"
+msgid "Sent"
+msgstr "Enviado"
+
+#: templates/billing/staff_account.html
+msgid "Not sent"
+msgstr "Não enviado"
+
+#: templates/billing/staff_account.html
+msgid "Refused by the mail server"
+msgstr "Recusado pelo servidor de e-mail"
+
+#: templates/billing/staff_account.html
+msgid "No e-mail recorded for this account yet. The history holds what was sent since it started being kept."
+msgstr "Nenhum e-mail registrado para esta conta ainda. O histórico guarda o que foi enviado desde que começou a ser mantido."
+
+#: templates/billing/staff_account.html
+#, python-format
+msgid "The latest %(limit)s e-mails to the people of this account and to its billing address, kept for %(days)s days. Only the addressee, the subject and the outcome are recorded, never the content."
+msgstr "Os últimos %(limit)s e-mails para as pessoas desta conta e para o e-mail de cobrança dela, guardados por %(days)s dias. Só o destinatário, o assunto e o resultado são registrados, nunca o conteúdo."
+
+#: apps/affiliates/models.py
+msgid "Monthly, on every payment"
+msgstr "Mensal, em cada pagamento"
+
+#: apps/affiliates/models.py templates/affiliates/_affiliate_fields.html
+msgid "Once per account"
+msgstr "Uma vez por conta"
+
+#: apps/affiliates/services.py
+msgid "Choose how the commission is paid."
+msgstr "Escolha como a comissão é paga."
+
+#: apps/affiliates/services.py
+msgid "Choose the account that becomes an affiliate."
+msgstr "Escolha a conta que vai ser afiliada."
+
+#: templates/affiliates/_affiliate_fields.html
+msgid "How the commission is paid"
+msgstr "Como a comissão é paga"
+
+#: templates/affiliates/_affiliate_fields.html
+msgid "A share of every payment each account makes, during the period chosen."
+msgstr "Uma parte de cada pagamento que a conta fizer, durante o período escolhido."
+
+#: templates/affiliates/_affiliate_fields.html
+msgid "A share of the first payment of each account, on any plan, and nothing after it."
+msgstr "Uma parte do primeiro pagamento de cada conta, em qualquer plano, e nada depois dele."
+
+#: templates/affiliates/_new_affiliate_modal.html
+msgid "Choose the account of the person, who needs one in Connekt Flow first. The affiliate is created switched off."
+msgstr "Escolha a conta da pessoa, que precisa ter uma no Connekt Flow antes. O afiliado é criado desativado."
+
+#: templates/affiliates/_new_affiliate_modal.html
+msgid "Search by name or e-mail"
+msgstr "Buscar por nome ou e-mail"
+
+#: templates/affiliates/_new_affiliate_modal.html
+msgid "No account with this name or e-mail."
+msgstr "Nenhuma conta com esse nome ou e-mail."
+
+#: templates/affiliates/_new_affiliate_modal.html
+msgid "Every account is already an affiliate, or nobody signed up yet."
+msgstr "Todas as contas já são afiliadas, ou ninguém se cadastrou ainda."
+
+#: templates/affiliates/staff_affiliates.html
+msgid "once per account"
+msgstr "uma vez por conta"
+
+#: templates/affiliates/staff_affiliates.html
+msgid "No affiliate yet. Create the first one with New affiliate."
+msgstr "Nenhum afiliado ainda. Crie o primeiro em Novo afiliado."
+
+#: templates/affiliates/panel.html
+#, python-format
+msgid "You earn %(percent)s%% of the first payment of every account you brought, whatever plan it chooses."
+msgstr "Você ganha %(percent)s%% do primeiro pagamento de cada conta que você trouxe, seja qual for o plano escolhido."
+
+#: apps/affiliates/emails.py templates/affiliates/email/affiliate_added.html
+msgid "You are now an affiliate"
+msgstr "Você agora é um afiliado"
+
+#: apps/affiliates/staff_views.py
+#, python-format
+msgid "The e-mail telling %(name)s about it could not be sent. Let them know yourself."
+msgstr "O e-mail avisando %(name)s não pôde ser enviado. Avise a pessoa você mesmo."
+
+#: templates/affiliates/email/affiliate_added.html
+msgid "Your link, what you earn and how you are paid."
+msgstr "Seu link, quanto você ganha e como recebe."
+
+#: templates/affiliates/email/
+#, python-format
+msgid "Your account was added to the %(brand)s affiliate programme. You earn a share of what the customers you bring pay."
+msgstr "Sua conta foi incluída no programa de afiliados do %(brand)s. Você ganha uma parte do que os clientes que você trouxer pagarem."
+
+#: templates/affiliates/email/
+msgid "What you earn"
+msgstr "Quanto você ganha"
+
+#: templates/affiliates/email/
+#, python-format
+msgid "%(percent)s%% of the first payment of every account you bring, whatever plan it chooses."
+msgstr "%(percent)s%% do primeiro pagamento de cada conta que você trouxer, seja qual for o plano escolhido."
+
+#: templates/affiliates/email/
+#, python-format
+msgid "%(percent)s%% of every payment an account you bring makes, during the %(months)s months after its first payment."
+msgstr "%(percent)s%% de cada pagamento feito por uma conta que você trouxer, durante os %(months)s meses seguintes ao primeiro pagamento dela."
+
+#: templates/affiliates/email/
+msgid "How you are paid"
+msgstr "Como você recebe"
+
+#: templates/affiliates/email/
+#, python-format
+msgid "You are paid by Pix. Once your balance reaches R$ %(amount)s, you can ask for the withdrawal on your panel."
+msgstr "O pagamento é feito por Pix. Quando seu saldo chegar a R$ %(amount)s, você já pode pedir o saque no seu painel."
+
+#: templates/affiliates/email/
+msgid "Open the affiliate panel"
+msgstr "Abrir o painel de afiliado"
+
+#: templates/affiliates/email/
+msgid "Your registration is waiting to be switched on by our team. Until then the link does not count visits and the panel stays closed."
+msgstr "Seu cadastro está aguardando a ativação pela nossa equipe. Até lá, o link não conta visitas e o painel fica fechado."
+
+#: templates/affiliates/email/
+#, python-format
+msgid "You're receiving this because your account was made an affiliate of %(brand)s."
+msgstr "Você está recebendo este e-mail porque sua conta foi cadastrada como afiliada do %(brand)s."
+
+msgid "Brand"
+msgstr "Marca"
+
+msgid "Cancelled, in use until"
+msgstr "Cancelada, em uso até"
+
+msgid "Charge this brand again"
+msgstr "Voltar a cobrar esta marca"
+
+msgid "Customer at the payment provider"
+msgstr "Cliente no provedor de pagamento"
+
+msgid "Customer since"
+msgstr "Cliente desde"
+
+msgid "Each charge"
+msgstr "Cada cobrança"
+
+msgid "Edit exemption"
+msgstr "Editar isenção"
+
+#, python-format
+msgid "Exempt %(name)s from charges"
+msgstr "Isentar %(name)s de cobrança"
+
+#, python-format
+msgid "Exemption of %(name)s"
+msgstr "Isenção de %(name)s"
+
+msgid "Invoices issued to"
+msgstr "Faturas emitidas para"
+
+msgid "No payment reported by the payment provider for this account yet."
+msgstr "O provedor de pagamento ainda não informou nenhum pagamento desta conta."
+
+msgid "No plan contracted."
+msgstr "Nenhum plano contratado."
+
+msgid "Paid until"
+msgstr "Pago até"
+
+msgid "Paid with"
+msgstr "Pago com"
+
+msgid "Save exemption"
+msgstr "Salvar isenção"
+
+msgid "Sign in as the owner"
+msgstr "Entrar como o dono"
+
+msgid "Since"
+msgstr "Desde"
+
+msgid "The brand is not charged until the end date. The day after, it is charged again automatically: nothing is deleted and nobody loses access. Leave the date empty for no end date."
+msgstr "A marca não é cobrada até a data final. No dia seguinte, volta a ser cobrada automaticamente: nada é apagado e ninguém perde o acesso. Deixe a data vazia para não ter data final."
+
+#, python-format
+msgid "The latest %(limit)s charges the payment provider reported, each in its current state."
+msgstr "As últimas %(limit)s cobranças informadas pelo provedor de pagamento, cada uma no estado atual."
+
+#, python-format
+msgid "The owner asked to delete this organization. It is erased on %(date)s unless they restore it."
+msgstr "O dono pediu a exclusão desta organização. Ela é apagada em %(date)s, a menos que ele a restaure."
+
+msgid "This account has no brand."
+msgstr "Esta conta não tem nenhuma marca."
+
+#, python-format
+msgid "created on %(date)s"
+msgstr "criada em %(date)s"
+
+#, python-format
+msgid "free trial until %(date)s"
+msgstr "teste grátis até %(date)s"
+
+#, python-format
+msgid "last sign-in %(when)s ago"
+msgstr "último acesso há %(when)s"
+
+msgid "no end date"
+msgstr "sem data final"
+
+msgid "nobody signed in yet"
+msgstr "ninguém acessou ainda"
+
+#, python-format
+msgid "started on %(date)s"
+msgstr "iniciado em %(date)s"
+
+#, python-format
+msgid "Brand \"%(name)s\" is exempt from charges, with no end date."
+msgstr "A marca \"%(name)s\" está isenta de cobrança, sem data final."
+
+#, python-format
+msgid "Brand \"%(name)s\" is exempt from charges until %(date)s, after which it is charged again."
+msgstr "A marca \"%(name)s\" está isenta de cobrança até %(date)s; depois disso volta a ser cobrada."
+
+#, python-format
+msgid "Brand \"%(name)s\" will be charged again. It needs a subscription to stay active."
+msgstr "A marca \"%(name)s\" voltará a ser cobrada. Ela precisa de uma assinatura para continuar ativa."
+
+#, python-format
+msgid "%(counter)s exempt"
+msgid_plural "%(counter)s exempt"
+msgstr[0] "%(counter)s isenta"
+msgstr[1] "%(counter)s isentas"
+
+msgid "To end the exemption today:"
+msgstr "Para encerrar a isenção hoje:"
+
+#: apps/affiliates/emails.py templates/affiliates/email/terms_changed.html
+msgid "Your affiliate terms have changed"
+msgstr "As condições da sua afiliação mudaram"
+
+#: templates/affiliates/email/terms_changed.html
+msgid "What you earn from now on and how you are paid."
+msgstr "Quanto você ganha daqui para frente e como recebe."
+
+#: templates/affiliates/email/
+#, python-format
+msgid "Our team updated the terms of your affiliation on %(brand)s. These are the ones in force from now on:"
+msgstr "Nossa equipe atualizou as condições da sua afiliação no %(brand)s. Estas são as que valem a partir de agora:"
+
+#: templates/affiliates/email/
+msgid "They apply to the payments received from now on. What you have already earned stays as it is."
+msgstr "Elas valem para os pagamentos recebidos a partir de agora. O que você já ganhou continua como está."
+
+#: templates/affiliates/email/
+#, python-format
+msgid "You're receiving this because your account is an affiliate of %(brand)s."
+msgstr "Você está recebendo este e-mail porque sua conta é afiliada do %(brand)s."
+
+#: templates/affiliates/email/
+msgid "How to share your link"
+msgstr "Como divulgar o seu link"
+
+#: templates/affiliates/email/
+msgid "Whoever signs up within 30 days of opening your link counts as yours, even if they only subscribe later."
+msgstr "Quem se cadastrar em até 30 dias depois de abrir o seu link conta como seu, mesmo que só assine depois."
+
+#: templates/affiliates/email/
+msgid "Send it to your customers and contacts"
+msgstr "Envie para seus clientes e contatos"
+
+#: templates/affiliates/email/
+msgid "Share it on your social networks"
+msgstr "Divulgue nas suas redes sociais"
+
+#: templates/affiliates/email/
+msgid "Go live or record videos"
+msgstr "Faça lives ou grave vídeos"
+
+#: templates/affiliates/email/
+msgid "Run ads"
+msgstr "Faça anúncios"
+
+#: templates/affiliates/email/
+msgid "Write about it"
+msgstr "Escreva sobre ele"
+
+#: templates/affiliates/email/
+msgid "By WhatsApp, e-mail or in a conversation: a recommendation from someone they know is what converts best."
+msgstr "Por WhatsApp, e-mail ou numa conversa: a indicação de alguém conhecido é a que mais converte."
+
+#: templates/affiliates/email/
+msgid "Put the link in your bio, in posts and in stories, showing how you use the product from day to day."
+msgstr "Coloque o link na bio, em posts e em stories, mostrando como você usa o produto no dia a dia."
+
+#: templates/affiliates/email/
+msgid "Explain the product, show the screens and answer questions, with the link in the description or in the comments."
+msgstr "Explique o produto, mostre as telas e tire dúvidas, com o link na descrição ou nos comentários."
+
+#: templates/affiliates/email/
+msgid "You can advertise on Instagram, Facebook, Google or wherever your audience is, pointing the ad to your link."
+msgstr "Você pode anunciar no Instagram, no Facebook, no Google ou onde seu público estiver, apontando o anúncio para o seu link."
+
+#: templates/affiliates/email/
+msgid "An article, a newsletter or a tutorial with the link keeps bringing people long after it is published."
+msgstr "Um artigo, uma newsletter ou um tutorial com o link continua trazendo gente muito tempo depois de publicado."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Edit affiliate"
+msgstr "Editar afiliado"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "The account of this affiliate was deleted."
+msgstr "A conta deste afiliado foi excluída."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Delete this affiliate?"
+msgstr "Excluir este afiliado?"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "The link stops working, the panel closes and the accounts brought by it stop counting as theirs. An affiliate that already earned a commission or asked for a withdrawal cannot be deleted: switch it off instead."
+msgstr "O link para de funcionar, o painel fecha e as contas trazidas por ele deixam de contar como dele. Um afiliado que já ganhou comissão ou pediu saque não pode ser excluído: desative-o."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Delete affiliate"
+msgstr "Excluir afiliado"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "This affiliate already has commissions or withdrawals on record. Switch it off instead of deleting."
+msgstr "Este afiliado já tem comissões ou saques registrados. Desative-o em vez de excluir."
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "Affiliate %(name)s deleted."
+msgstr "Afiliado %(name)s excluído."
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "Affiliate %(name)s created. The link and the panel are already open."
+msgstr "Afiliado %(name)s criado. O link e o painel já estão liberados."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Choose the account of the person, who needs one in Connekt Flow first. The link and the panel open as soon as the affiliate is created."
+msgstr "Escolha a conta da pessoa, que precisa ter uma no Connekt Flow antes. O link e o painel são liberados assim que o afiliado é criado."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Partners who bring customers by a link or a coupon and earn a share of what those customers pay. A new affiliate starts switched on; switched off, its link and panel close and it earns nothing."
+msgstr "Parceiros que trazem clientes por um link ou um cupom e ganham uma parte do que esses clientes pagam. Um afiliado novo já começa ativo; desativado, o link e o painel fecham e ele não ganha nada."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Not paying yet"
+msgstr "Ainda sem pagamento"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "No account for this filter."
+msgstr "Nenhuma conta para este filtro."
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "Each commission enters the balance %(days)s days after the payment it came from."
+msgstr "Cada comissão entra no saldo %(days)s dias depois do pagamento que a gerou."
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "Being released"
+msgstr "Em liberação"
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "A commission is counted when the payment is received and enters the balance %(days)s days later, the time a customer has to ask for the money back. A charge that is overdue earns nothing until it is paid, and a refunded payment takes its commission back."
+msgstr "A comissão é contada quando o pagamento é recebido e entra no saldo %(days)s dias depois, o prazo que o cliente tem para pedir o dinheiro de volta. Uma cobrança em atraso não gera nada até ser paga, e um pagamento estornado leva a comissão de volta."
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "Released on %(date)s"
+msgstr "Libera em %(date)s"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Attach the receipt of the transfer to mark the withdrawal as paid."
+msgstr "Anexe o comprovante da transferência para marcar o saque como pago."
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "Withdrawal of R$ %(amount)s requested"
+msgstr "Saque de R$ %(amount)s solicitado"
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "Your withdrawal of R$ %(amount)s was paid"
+msgstr "Seu saque de R$ %(amount)s foi pago"
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "%(name)s asked for a withdrawal of R$ %(amount)s"
+msgstr "%(name)s solicitou um saque de R$ %(amount)s"
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "Withdrawal requested. We will pay it to the Pix key you entered within %(days)s days."
+msgstr "Saque solicitado. Vamos pagar na chave Pix informada em até %(days)s dias."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "The receipt must be a JPEG, PNG, WebP or PDF of up to 5 MB."
+msgstr "O comprovante precisa ser JPEG, PNG, WebP ou PDF de até 5 MB."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Withdrawal marked as paid. The affiliate got the receipt by e-mail."
+msgstr "Saque marcado como pago. O afiliado recebeu o comprovante por e-mail."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Withdrawal marked as paid, but the e-mail with the receipt could not be sent. Let the affiliate know yourself."
+msgstr "Saque marcado como pago, mas o e-mail com o comprovante não pôde ser enviado. Avise o afiliado você mesmo."
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "Transfer to the Pix key within %(days)s days of the request, then attach the receipt and mark it paid: the affiliate gets it by e-mail. Rejecting puts the amount back in the affiliate's balance."
+msgstr "Transfira para a chave Pix em até %(days)s dias após o pedido, depois anexe o comprovante e marque como pago: o afiliado recebe o comprovante por e-mail. Rejeitar devolve o valor ao saldo do afiliado."
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "Pay by %(date)s"
+msgstr "Pagar até %(date)s"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Receipt of the transfer"
+msgstr "Comprovante da transferência"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Receipt"
+msgstr "Comprovante"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Withdrawal requested"
+msgstr "Saque solicitado"
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "We will transfer it by %(date)s."
+msgstr "Vamos transferir até %(date)s."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "We received your withdrawal request. These are its details:"
+msgstr "Recebemos o seu pedido de saque. Estes são os dados dele:"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Pix key for the deposit"
+msgstr "Chave Pix para o depósito"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Deposit by"
+msgstr "Depósito até"
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "The transfer is made within %(days)s days of the request. As soon as it is done you get another e-mail with the receipt."
+msgstr "A transferência é feita em até %(days)s dias após o pedido. Assim que for feita, você recebe outro e-mail com o comprovante."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "If the Pix key is wrong, reply to our support before the deposit."
+msgstr "Se a chave Pix estiver errada, fale com o nosso suporte antes do depósito."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "You're receiving this because you asked for a withdrawal on your affiliate panel."
+msgstr "Você está recebendo este e-mail porque pediu um saque no seu painel de afiliado."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Withdrawal paid"
+msgstr "Saque pago"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "The receipt of the transfer is attached."
+msgstr "O comprovante da transferência está em anexo."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "We made the transfer of your withdrawal. The receipt is attached to this e-mail."
+msgstr "Fizemos a transferência do seu saque. O comprovante está anexado a este e-mail."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Note from our team"
+msgstr "Observação da nossa equipe"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "You're receiving this because a withdrawal you asked for was paid."
+msgstr "Você está recebendo este e-mail porque um saque que você pediu foi pago."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "New withdrawal to pay"
+msgstr "Novo saque a pagar"
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "Transfer it by %(date)s."
+msgstr "Transfira até %(date)s."
+
+#: apps/affiliates/ templates/affiliates/
+#, python-format
+msgid "The affiliate %(name)s asked for a withdrawal."
+msgstr "O afiliado %(name)s solicitou um saque."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "After the transfer, attach the receipt on the Affiliates screen and mark the withdrawal as paid; the affiliate gets the receipt by e-mail."
+msgstr "Depois da transferência, anexe o comprovante na tela de Afiliados e marque o saque como pago; o afiliado recebe o comprovante por e-mail."
+
+#: apps/affiliates/ templates/affiliates/
+msgid "Open Affiliates"
+msgstr "Abrir Afiliados"
+
+#: apps/affiliates/ templates/affiliates/
+msgid "You're receiving this because you are a superadmin of the affiliate programme."
+msgstr "Você está recebendo este e-mail porque é superadmin do programa de afiliados."
+
+#: templates/affiliates/email/
+msgid "Withdrawal amount"
+msgstr "Valor do saque"
+
+#: templates/affiliates/panel.html
+msgid "Sections"
+msgstr "Seções"
+
+#: templates/affiliates/panel.html
+msgid "No commission in this period yet."
+msgstr "Nenhuma comissão neste período ainda."
+
+#: templates/affiliates/panel.html
+#, python-format
+msgid "Your balance can be withdrawn. Ask for it and we transfer it to your Pix key within %(days)s days."
+msgstr "Seu saldo já pode ser sacado. Peça o saque e transferimos para a sua chave Pix em até %(days)s dias."
+
+#: templates/affiliates/panel.html
+msgid "How the balance works"
+msgstr "Como o saldo funciona"
+
+#: templates/affiliates/panel.html
+msgid "You have not asked for a withdrawal yet."
+msgstr "Você ainda não pediu nenhum saque."
+
+#: templates/affiliates/panel.html
+#, python-format
+msgid "The whole available balance is withdrawn. We transfer it to the Pix key below within %(days)s days and e-mail you the receipt."
+msgstr "Todo o saldo disponível é sacado. Transferimos para a chave Pix abaixo em até %(days)s dias e enviamos o comprovante por e-mail."
+
+#: templates/affiliates/panel.html
+msgid "Request withdrawal"
+msgstr "Solicitar saque"
+
+#: templates/affiliates/panel.html
+#, python-format
+msgid "Page %(page)s of %(total)s"
+msgstr "Página %(page)s de %(total)s"
+
+#: templates/affiliates/
+#, python-format
+msgid "Overdue since %(date)s"
+msgstr "Atrasado desde %(date)s"
+
+#: templates/affiliates/
+msgid "Pay"
+msgstr "Pagar"
+
+#: templates/affiliates/
+msgid "Withdrawal to pay"
+msgstr "Saque a pagar"
+
+#: templates/affiliates/
+msgid "Pay withdrawal"
+msgstr "Pagar saque"
+
+#: templates/affiliates/
+#, python-format
+msgid "Pay the withdrawal of %(name)s"
+msgstr "Pagar o saque de %(name)s"
+
+#: templates/affiliates/
+msgid "The print or PDF of the Pix, up to 5 MB. It is sent to the affiliate by e-mail. Needed to mark as paid."
+msgstr "O print ou PDF do Pix, de até 5 MB. Ele é enviado ao afiliado por e-mail. Obrigatório para marcar como pago."
+
+#: templates/affiliates/
+#, python-format
+msgid "<strong class=\"text-neutral-950\">%(name)s</strong> asked for R$ %(amount)s"
+msgstr "<strong class=\"text-neutral-950\">%(name)s</strong> pediu R$ %(amount)s"
+
+#: templates/affiliates/staff_affiliates.html
+#, python-format
+msgid "%(counter)s withdrawal waiting to be paid"
+msgid_plural "%(counter)s withdrawals waiting to be paid"
+msgstr[0] "%(counter)s saque aguardando pagamento"
+msgstr[1] "%(counter)s saques aguardando pagamento"
+
+#: templates/affiliates/email/
+#, python-format
+msgid "We received your withdrawal request of R$ %(amount)s"
+msgstr "Recebemos seu pedido de saque de R$ %(amount)s"
+
+#: templates/affiliates/email/
+#, python-format
+msgid "Your withdrawal of R$ %(amount)s is in your account"
+msgstr "Seu saque de R$ %(amount)s já está na sua conta"
+
+#: templates/affiliates/email/
+msgid "Your withdrawal is in your account"
+msgstr "Seu saque já está na sua conta"
+
+#: templates/affiliates/email/
+#, python-format
+msgid "R$ %(amount)s sent by Pix. The receipt is attached."
+msgstr "R$ %(amount)s enviados por Pix. O comprovante está em anexo."
+
+#: templates/affiliates/email/
+#, python-format
+msgid "Good news: we sent <strong style=\"color:#0F172A;\">R$ %(amount)s</strong> by Pix to the key you gave us. Thank you for bringing new customers to %(brand_name)s, this money is the result of your work."
+msgstr "Boa notícia: enviamos <strong style=\"color:#0F172A;\">R$ %(amount)s</strong> por Pix para a chave que você informou. Obrigado por trazer novos clientes para o %(brand_name)s: esse dinheiro é resultado do seu trabalho."
+
+#: templates/affiliates/email/
+#, python-format
+msgid "Good news: we sent R$ %(amount)s by Pix to the key you gave us. Thank you for bringing new customers to %(brand_name)s, this money is the result of your work."
+msgstr "Boa notícia: enviamos R$ %(amount)s por Pix para a chave que você informou. Obrigado por trazer novos clientes para o %(brand_name)s: esse dinheiro é resultado do seu trabalho."
+
+#: templates/affiliates/email/
+msgid "Receipt attached"
+msgstr "Comprovante em anexo"
+
+#: templates/affiliates/email/
+msgid "The receipt of the transfer is attached to this e-mail and also stays on your panel, in the Withdrawals tab. Depending on your bank, the money can take a few minutes to show up in your statement."
+msgstr "O comprovante da transferência está anexado a este e-mail e também fica no seu painel, na aba Saques. Dependendo do seu banco, o valor pode levar alguns minutos para aparecer no extrato."
+
+#: templates/affiliates/email/
+msgid "Your next commissions keep coming in as the accounts you brought pay. Keep sharing your link to grow your balance."
+msgstr "Suas próximas comissões continuam entrando conforme as contas que você indicou pagam. Continue divulgando o seu link para aumentar o seu saldo."
+
+#: templates/affiliates/email/
+msgid "See my withdrawals"
+msgstr "Ver meus saques"
+
+#: templates/affiliates/email/
+#, python-format
+msgid "You're receiving this because you are an affiliate of %(brand_name)s and asked for this withdrawal."
+msgstr "Você recebeu este e-mail porque é afiliado do %(brand_name)s e pediu este saque."
+
+#: templates/affiliates/email/
+msgid "We received your withdrawal request"
+msgstr "Recebemos seu pedido de saque"
+
+#: templates/affiliates/email/
+#, python-format
+msgid "The Pix is made by %(date)s."
+msgstr "O Pix é feito até %(date)s."
+
+#: templates/affiliates/email/
+#, python-format
+msgid "Your request is with our team. We transfer the amount below to your Pix key within %(days)s days and, as soon as it is done, send you another e-mail with the receipt."
+msgstr "Seu pedido já está com a nossa equipe. Transferimos o valor abaixo para a sua chave Pix em até %(days)s dias e, assim que for feito, enviamos outro e-mail com o comprovante."
+
+#: templates/affiliates/email/
+msgid "Is the Pix key right?"
+msgstr "A chave Pix está certa?"
+
+#: templates/affiliates/email/
+#, python-format
+msgid "If you need to change it, write to %(support_email)s before the deposit, telling us the right key."
+msgstr "Se precisar trocar, escreva para %(support_email)s antes do depósito, informando a chave correta."

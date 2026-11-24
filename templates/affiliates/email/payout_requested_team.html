@@ -1,0 +1,18 @@
+{% extends "emails/base.html" %}
+{% load i18n billing_extras %}
+{% block title %}{% translate "New withdrawal to pay" %}{% endblock %}
+{% block preheader %}{% blocktranslate with date=deadline|date:"d/m/Y" %}Transfer it by {{ date }}.{% endblocktranslate %}{% endblock %}
+{% block content %}
+<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "New withdrawal to pay" %}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with name=payout.affiliate.name %}The affiliate {{ name }} asked for a withdrawal.{% endblocktranslate %}</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;background-color:#F5F3FF;border-radius:8px;">
+<tr><td style="padding:16px 18px;font-size:14px;line-height:24px;color:#334155;">
+<strong style="color:#0F172A;">{% translate "Withdrawal amount" %}</strong><br>R$ {{ payout.amount_cents|brl }}<br><br>
+<strong style="color:#0F172A;">{% translate "Pix key" %}</strong><br><span style="word-break:break-all;">{{ payout.pix_key }}</span><br><br>
+<strong style="color:#0F172A;">{% translate "Deposit by" %}</strong><br>{{ deadline|date:"d/m/Y" }}
+</td></tr>
+</table>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% translate "After the transfer, attach the receipt on the Affiliates screen and mark the withdrawal as paid; the affiliate gets the receipt by e-mail." %}</p>
+{% translate "Open Affiliates" as cta %}{% include "emails/_button.html" with url=review_url label=cta %}
+{% endblock %}
+{% block reason %}<p style="margin:0 0 12px;">{% translate "You're receiving this because you are a superadmin of the affiliate programme." %}</p>{% endblock %}

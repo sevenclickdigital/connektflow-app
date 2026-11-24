@@ -1,19 +1,25 @@
 {% extends "layouts/settings.html" %}
-{% load i18n billing_extras %}
+{% load i18n billing_extras common_extras %}
 {% comment %}
 The affiliate's own panel (apps.affiliates.views.panel): their link and
 coupon, what the link brought, what they earned and the withdrawals they
-asked for. Only a switched-on affiliate reaches it.
+asked for. Under the numbers, three tabs (``tab``): the accounts brought,
+narrowed by status; the commissions; and the withdrawals, with the balance
+and the window that asks for one. The period picker bounds the numbers and
+the first two tabs (the balance and the withdrawals are always whole). Each
+tab's list comes a page at a time (``page_obj``). Only a switched-on
+affiliate reaches it.
 {% endcomment %}
 
 {% block title %}{% translate "Affiliate panel" %} - Connekt Flow{% endblock %}
 
 {% block page_header %}
 <div class="page-header">
-  <div>
+  <div class="flex-1 min-w-64">
     <h1 class="page-title">{% translate "Affiliate panel" %}</h1>
-    <p class="page-description">{% blocktranslate with percent=affiliate.commission_percent months=affiliate.commission_months %}You earn {{ percent }}% of every payment an account you brought makes, during the {{ months }} months after its first payment.{% endblocktranslate %}</p>
+    <p class="page-description">{% if affiliate.commission_mode == "once" %}{% blocktranslate with percent=affiliate.commission_percent %}You earn {{ percent }}% of the first payment of every account you brought, whatever plan it chooses.{% endblocktranslate %}{% else %}{% blocktranslate with percent=affiliate.commission_percent months=affiliate.commission_months %}You earn {{ percent }}% of every payment an account you brought makes, during the {{ months }} months after its first payment.{% endblocktranslate %}{% endif %}</p>
   </div>
+  {% translate "All time" as all_time %}{% period_picker period period_choices all_label=all_time %}
 </div>
 {% endblock %}
 
@@ -36,7 +42,7 @@ asked for. Only a switched-on affiliate reaches it.
     </p>
   </section>
 
-  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+  <section class="grid grid-cols-2 lg:grid-cols-5 gap-3">
     <div class="a-card p-4">
       <p class="text-xs text-neutral-600">{% translate "Link visits" %}</p>
       <p class="text-2xl font-semibold text-neutral-950 tabular-nums mt-1">{{ numbers.clicks }}</p>
@@ -44,6 +50,10 @@ asked for. Only a switched-on affiliate reaches it.
     <div class="a-card p-4">
       <p class="text-xs text-neutral-600">{% translate "Sign-ups" %}</p>
       <p class="text-2xl font-semibold text-neutral-950 tabular-nums mt-1">{{ numbers.signups }}</p>
+    </div>
+    <div class="a-card p-4">
+      <p class="text-xs text-neutral-600">{% translate "Not paying yet" %}</p>
+      <p class="text-2xl font-semibold text-neutral-950 tabular-nums mt-1">{{ numbers.pending }}</p>
     </div>
     <div class="a-card p-4">
       <p class="text-xs text-neutral-600">{% translate "Paying accounts" %}</p>
@@ -55,83 +65,39 @@ asked for. Only a switched-on affiliate reaches it.
     </div>
   </section>
 
-  <section class="a-card p-5">
-    <h2 class="text-base font-semibold text-neutral-950">{% translate "Withdrawal" %}</h2>
-    <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 text-sm">
-      <div>
-        <dt class="text-neutral-600">{% translate "Available to withdraw" %}</dt>
-        <dd class="text-xl font-semibold text-neutral-950 tabular-nums">R$ {{ numbers.available_cents|brl }}</dd>
-      </div>
-      <div>
-        <dt class="text-neutral-600">{% translate "Requested, waiting for payment" %}</dt>
-        <dd class="text-xl font-semibold text-neutral-950 tabular-nums">R$ {{ numbers.requested_cents|brl }}</dd>
-      </div>
-      <div>
-        <dt class="text-neutral-600">{% translate "Already paid to you" %}</dt>
-        <dd class="text-xl font-semibold text-neutral-950 tabular-nums">R$ {{ numbers.paid_cents|brl }}</dd>
-      </div>
-    </dl>
-    {% if numbers.can_request %}
-    <form method="post" action="{% url 'affiliates:request_payout' %}" class="mt-5 flex flex-col sm:flex-row gap-2 sm:items-end">
-      {% csrf_token %}
-      <div class="flex-1">
-        <label for="pix_key" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Pix key to receive the payment" %}</label>
-        <input type="text" id="pix_key" name="pix_key" required maxlength="140" autocomplete="off" class="form-input-styled w-full">
-      </div>
-      <button type="submit" class="btn-brand px-5 py-2.5 text-sm font-semibold">{% blocktranslate with amount=numbers.available_cents|brl %}Request R$ {{ amount }}{% endblocktranslate %}</button>
-    </form>
-    {% elif numbers.requested_cents %}
-    <p class="text-sm text-neutral-600 mt-4">{% translate "Your withdrawal is waiting to be paid. You can ask for another one after it." %}</p>
-    {% else %}
-    <p class="text-sm text-neutral-600 mt-4">{% blocktranslate with amount=affiliate.min_payout_cents|brl %}You can ask for a withdrawal once the balance reaches R$ {{ amount }}.{% endblocktranslate %}</p>
-    {% endif %}
-    <p class="text-xs text-neutral-600 mt-3">{% translate "A commission enters the balance when the payment is received. A charge that is overdue earns nothing until it is paid, and a refunded payment takes its commission back." %}</p>
-  </section>
-
-  {% if payouts %}
-  <section class="a-card overflow-hidden">
-    <h2 class="px-5 py-4 text-base font-semibold text-neutral-950 border-b border-neutral-100">{% translate "Withdrawals" %}</h2>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-neutral-100 bg-neutral-50">
-            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Requested on" %}</th>
-            <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Amount" %}</th>
-            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Status" %}</th>
-            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Note" %}</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-neutral-100">
-          {% for payout in payouts %}
-          <tr>
-            <td class="px-4 py-3 text-neutral-700">{{ payout.requested_at|date:"d/m/Y" }}</td>
-            <td class="px-4 py-3 text-right tabular-nums">R$ {{ payout.amount_cents|brl }}</td>
-            <td class="px-4 py-3">{% include "affiliates/_payout_status.html" %}</td>
-            <td class="px-4 py-3 text-neutral-700">{{ payout.note|default:"—" }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <nav class="a-pill-group" aria-label="{% translate 'Sections' %}">
+      <a href="?{{ period.query }}&tab=accounts" class="{% if tab == 'accounts' %}active{% endif %}" {% if tab == 'accounts' %}aria-current="page"{% endif %}>{% translate "Accounts you brought" %}</a>
+      <a href="?{{ period.query }}&tab=commissions" class="{% if tab == 'commissions' %}active{% endif %}" {% if tab == 'commissions' %}aria-current="page"{% endif %}>{% translate "Commissions" %}</a>
+      <a href="?{{ period.query }}&tab=withdrawals" class="{% if tab == 'withdrawals' %}active{% endif %}" {% if tab == 'withdrawals' %}aria-current="page"{% endif %}>{% translate "Withdrawals" %}{% if numbers.can_request %} <span class="inline-block w-1.5 h-1.5 rounded-full bg-brand-700 align-middle" aria-hidden="true"></span>{% endif %}</a>
+    </nav>
+    {% if tab == "accounts" %}
+    <div class="a-pill-group" role="group" aria-label="{% translate 'Status' %}">
+      <a href="?{{ period.query }}&tab=accounts" class="{% if not status %}active{% endif %}">{% translate "All" %}</a>
+      <a href="?{{ period.query }}&tab=accounts&status=pending" class="{% if status == 'pending' %}active{% endif %}">{% translate "Not paying yet" %}</a>
+      <a href="?{{ period.query }}&tab=accounts&status=paying" class="{% if status == 'paying' %}active{% endif %}">{% translate "Paying" %}</a>
     </div>
-  </section>
-  {% endif %}
+    {% elif tab == "withdrawals" and numbers.can_request %}
+    <button type="button" class="btn-brand" x-data @click="$dispatch('open-payout-request')">{% blocktranslate with amount=numbers.available_cents|brl %}Request R$ {{ amount }}{% endblocktranslate %}</button>
+    {% endif %}
+  </div>
 
+  {% if tab == "accounts" %}
   <section class="a-card overflow-hidden">
-    <h2 class="px-5 py-4 text-base font-semibold text-neutral-950 border-b border-neutral-100">{% translate "Accounts you brought" %}</h2>
-    {% if referrals %}
+    {% if page_obj.object_list %}
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-neutral-100 bg-neutral-50">
-            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Account" %}</th>
-            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Signed up on" %}</th>
-            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Status" %}</th>
-            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Commission until" %}</th>
-            <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "You earned" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-left">{% translate "Account" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-left">{% translate "Signed up on" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-left">{% translate "Status" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-left">{% translate "Commission until" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-right">{% translate "You earned" %}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-neutral-100">
-          {% for referral in referrals %}
+          {% for referral in page_obj %}
           <tr>
             <td class="px-4 py-3 font-semibold text-neutral-950">{{ referral.organization.name }}</td>
             <td class="px-4 py-3 text-neutral-700">{{ referral.created_at|date:"d/m/Y" }}</td>
@@ -144,25 +110,25 @@ asked for. Only a switched-on affiliate reaches it.
       </table>
     </div>
     {% else %}
-    <p class="px-5 py-8 text-sm text-center text-neutral-600">{% translate "Nobody signed up by your link yet. Share it to start." %}</p>
+    <p class="px-5 py-8 text-sm text-center text-neutral-600">{% if status or not period.everything %}{% translate "No account for this filter." %}{% else %}{% translate "Nobody signed up by your link yet. Share it to start." %}{% endif %}</p>
     {% endif %}
   </section>
 
-  {% if commissions %}
+  {% elif tab == "commissions" %}
   <section class="a-card overflow-hidden">
-    <h2 class="px-5 py-4 text-base font-semibold text-neutral-950 border-b border-neutral-100">{% translate "Commissions" %}</h2>
+    {% if page_obj.object_list %}
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-neutral-100 bg-neutral-50">
-            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Paid on" %}</th>
-            <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Account" %}</th>
-            <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Payment" %}</th>
-            <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "Commission" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-left">{% translate "Paid on" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-left">{% translate "Account" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-right">{% translate "Payment" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-right">{% translate "Commission" %}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-neutral-100">
-          {% for commission in commissions %}
+          {% for commission in page_obj %}
           <tr>
             <td class="px-4 py-3 text-neutral-700">{{ commission.paid_at|date:"d/m/Y" }}</td>
             <td class="px-4 py-3 text-neutral-700">{{ commission.referral.organization.name|default:"—" }}</td>
@@ -170,14 +136,114 @@ asked for. Only a switched-on affiliate reaches it.
             <td class="px-4 py-3 text-right tabular-nums">
               {% if commission.status == "reversed" %}<span class="pill pill-neutral">{% translate "Refunded" %}</span>
               {% elif commission.amount_cents < 0 %}<span class="text-red-700">−R$ {{ commission.amount_cents|cut:"-"|brl }}</span> <span class="pill pill-neutral">{% translate "Refunded" %}</span>
-              {% else %}R$ {{ commission.amount_cents|brl }} · {{ commission.percent }}%{% endif %}
+              {% else %}R$ {{ commission.amount_cents|brl }} · {{ commission.percent }}%{% if commission.released_on %} <span class="pill pill-warning">{% blocktranslate with date=commission.released_on|date:"d/m" %}Released on {{ date }}{% endblocktranslate %}</span>{% endif %}{% endif %}
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-center text-neutral-600">{% translate "No commission in this period yet." %}</p>
+    {% endif %}
   </section>
+
+  {% else %}
+  <section class="a-card p-5">
+    <dl class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+      <div>
+        <dt class="text-neutral-600">{% translate "Available to withdraw" %}</dt>
+        <dd class="text-xl font-semibold text-neutral-950 tabular-nums">R$ {{ numbers.available_cents|brl }}</dd>
+      </div>
+      <div>
+        <dt class="text-neutral-600">{% translate "Being released" %}</dt>
+        <dd class="text-xl font-semibold text-neutral-950 tabular-nums">R$ {{ numbers.held_cents|brl }}</dd>
+      </div>
+      <div>
+        <dt class="text-neutral-600">{% translate "Requested, waiting for payment" %}</dt>
+        <dd class="text-xl font-semibold text-neutral-950 tabular-nums">R$ {{ numbers.requested_cents|brl }}</dd>
+      </div>
+      <div>
+        <dt class="text-neutral-600">{% translate "Already paid to you" %}</dt>
+        <dd class="text-xl font-semibold text-neutral-950 tabular-nums">R$ {{ numbers.paid_cents|brl }}</dd>
+      </div>
+    </dl>
+    <p class="text-sm text-neutral-600 mt-4">
+      {% if numbers.can_request %}{% blocktranslate with days=payout_days %}Your balance can be withdrawn. Ask for it and we transfer it to your Pix key within {{ days }} days.{% endblocktranslate %}
+      {% elif numbers.requested_cents %}{% translate "Your withdrawal is waiting to be paid. You can ask for another one after it." %}
+      {% else %}{% blocktranslate with amount=affiliate.min_payout_cents|brl %}You can ask for a withdrawal once the balance reaches R$ {{ amount }}.{% endblocktranslate %}{% endif %}
+    </p>
+    <details class="mt-3 text-xs text-neutral-600">
+      <summary class="cursor-pointer font-semibold text-neutral-700">{% translate "How the balance works" %}</summary>
+      <p class="mt-2">{% blocktranslate with days=hold_days %}A commission is counted when the payment is received and enters the balance {{ days }} days later, the time a customer has to ask for the money back. A charge that is overdue earns nothing until it is paid, and a refunded payment takes its commission back.{% endblocktranslate %}</p>
+    </details>
+  </section>
+
+  <section class="a-card overflow-hidden">
+    {% if page_obj.object_list %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-neutral-100 bg-neutral-50">
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-left">{% translate "Requested on" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-right">{% translate "Withdrawal amount" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-left">{% translate "Pix key" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-left">{% translate "Status" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-left">{% translate "Note" %}</th>
+            <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 text-left">{% translate "Receipt" %}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-neutral-100">
+          {% for payout in page_obj %}
+          <tr>
+            <td class="px-4 py-3 text-neutral-700">{{ payout.requested_at|date:"d/m/Y" }}</td>
+            <td class="px-4 py-3 text-right tabular-nums">R$ {{ payout.amount_cents|brl }}</td>
+            <td class="px-4 py-3 text-neutral-700 break-all">{{ payout.pix_key }}</td>
+            <td class="px-4 py-3">{% include "affiliates/_payout_status.html" %}</td>
+            <td class="px-4 py-3 text-neutral-700">{{ payout.note|default:"—" }}</td>
+            <td class="px-4 py-3">{% if payout.receipt %}<a href="{% url 'affiliates:payout_receipt' payout_id=payout.id %}" target="_blank" rel="noopener" class="text-xs font-semibold text-brand-700 hover:underline">{% translate "View" %}</a>{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-center text-neutral-600">{% translate "You have not asked for a withdrawal yet." %}</p>
+    {% endif %}
+  </section>
+
+  {% if numbers.can_request %}
+  <div x-data="{ open: false }" @open-payout-request.window="open = true; $nextTick(() => $refs.pix.focus())" @keydown.escape.window="open = false">
+    <div x-show="open" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="payout-request-title">
+      <div class="modal-panel" @click.outside="open = false">
+        <button type="button" class="modal-close" @click="open = false" aria-label="{% translate 'Close' %}">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <h2 id="payout-request-title" class="modal-title">{% blocktranslate with amount=numbers.available_cents|brl %}Request R$ {{ amount }}{% endblocktranslate %}</h2>
+        <p class="text-sm text-neutral-600 mt-1">{% blocktranslate with days=payout_days %}The whole available balance is withdrawn. We transfer it to the Pix key below within {{ days }} days and e-mail you the receipt.{% endblocktranslate %}</p>
+        <form method="post" action="{% url 'affiliates:request_payout' %}" class="mt-4">
+          {% csrf_token %}
+          <label for="pix_key" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Pix key to receive the payment" %}</label>
+          <input type="text" id="pix_key" x-ref="pix" name="pix_key" required maxlength="140" autocomplete="off" class="form-input-styled w-full">
+          <div class="modal-footer">
+            <button type="button" class="btn-soft" @click="open = false">{% translate "Cancel" %}</button>
+            <button type="submit" class="btn-brand">{% translate "Request withdrawal" %}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  {% if page_obj.has_other_pages %}
+  <div class="flex items-center justify-between">
+    <p class="text-xs text-neutral-500">{% blocktranslate with page=page_obj.number total=page_obj.paginator.num_pages %}Page {{ page }} of {{ total }}{% endblocktranslate %}</p>
+    <div class="flex items-center gap-2">
+      {% if page_obj.has_previous %}<a href="?{{ period.query }}&tab={{ tab }}{% if status %}&status={{ status }}{% endif %}&page={{ page_obj.previous_page_number }}" class="btn-soft text-sm">{% translate "Previous" %}</a>{% endif %}
+      {% if page_obj.has_next %}<a href="?{{ period.query }}&tab={{ tab }}{% if status %}&status={{ status }}{% endif %}&page={{ page_obj.next_page_number }}" class="btn-soft text-sm">{% translate "Next" %}</a>{% endif %}
+    </div>
+  </div>
   {% endif %}
 </div>
 {% endblock %}

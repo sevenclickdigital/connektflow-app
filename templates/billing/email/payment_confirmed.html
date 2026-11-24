@@ -1,11 +1,11 @@
 {% extends "emails/base.html" %}
 {% load i18n billing_extras %}
-{% block title %}{% translate "Payment confirmed. Welcome aboard!" %}{% endblock %}
+{% block title %}{% translate "Payment confirmed." %}{% endblock %}
 {% block preheader %}{% translate "Your plan is active and everything is ready for your first post." %}{% endblock %}
 {% block content %}
-<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Payment confirmed. Welcome aboard!" %}</h1>
+<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Payment confirmed." %}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}</p>
-<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with brand=brand_name %}Congratulations! We received your payment and <strong style="color:#0F172A;">{{ paid_for }}</strong> is active on {{ brand }}. Everything is ready for you to plan, approve and publish.{% endblocktranslate %}</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with brand=brand_name %}We received your payment and <strong style="color:#0F172A;">{{ paid_for }}</strong> is active on {{ brand }}. Everything is ready for you to plan, approve and publish.{% endblocktranslate %}</p>
 {% if plan %}
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;background-color:#F5F3FF;border-radius:8px;">
 <tr><td style="padding:16px 18px;font-size:14px;line-height:24px;color:#334155;">

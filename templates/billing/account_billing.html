@@ -172,37 +172,7 @@ each with its state and the one action it needs.
     <h2 class="section-title">{% translate "Payments" %}</h2>
     {% if payments %}
     <div class="a-card divide-y divide-neutral-300">
-        {% for payment in payments %}
-        <div class="px-6 py-3.5 flex flex-wrap items-center gap-4">
-            {% comment %}
-            What was paid on the first line; under it whose it is, how many
-            brands the plan has, how it was paid and when.
-            {% endcomment %}
-            <div class="flex-1 min-w-0">
-                <div class="text-sm font-semibold text-neutral-950 truncate">
-                    {% if payment.kind == 'plan' %}{% if payment.plan.is_yearly %}{% translate "Yearly plan" %}{% else %}{% translate "Monthly plan" %}{% endif %}
-                    {% elif payment.kind == 'addition' %}{% translate "Brands added to the plan" %}
-                    {% elif payment.kind == 'addon' %}{% translate "Extra storage" %}{% if payment.workspace %} · {{ payment.workspace.name }}{% endif %}
-                    {% elif payment.workspace %}{% translate "Brand subscription" %} · {{ payment.workspace.name }}
-                    {% else %}{% translate "Subscription" %}{% endif %}{% if payment.workspace.is_archived %} · {% translate "Archived" %}{% endif %}
-                </div>
-                <div class="text-xs text-neutral-500 truncate">
-                    {% if payment.organization %}{{ payment.organization.name }} · {% endif %}{% if payment.kind == 'plan' %}{% blocktranslate count counter=payment.plan.brands %}{{ counter }} brand{% plural %}{{ counter }} brands{% endblocktranslate %} · {% endif %}{% if payment.method == 'card' %}{% if payment.kind == 'plan' and payment.plan.card_last4 %}{% blocktranslate with brand=payment.plan.card_brand|title digits=payment.plan.card_last4 %}{{ brand }} card ending in {{ digits }}{% endblocktranslate %}{% else %}{% translate "Credit card" %}{% endif %} · {% elif payment.method == 'pix' %}Pix · {% elif payment.method == 'boleto' %}{% translate "Boleto" %} · {% endif %}<span class="tabular-nums">{{ payment.date|date:"d/m/Y H:i" }}</span>
-                </div>
-            </div>
-            <span class="pill {% if payment.outcome == 'paid' %}pill-success{% elif payment.outcome == 'overdue' %}pill-warning{% else %}pill-neutral{% endif %}">
-                <i></i>{% if payment.outcome == 'paid' %}{% translate "Paid" %}{% elif payment.outcome == 'overdue' %}{% translate "Overdue" %}{% else %}{% translate "Reversed" %}{% endif %}
-            </span>
-            <div class="w-28 text-right text-sm font-semibold text-neutral-950 tabular-nums">
-                {% if payment.amount_cents is not None %}R$ {{ payment.amount_cents|brl }}{% else %}—{% endif %}
-            </div>
-            <div class="w-28 flex justify-end">
-                {% if payment.invoice_url %}
-                <a href="{{ payment.invoice_url }}" target="_blank" rel="noopener" class="btn-soft py-1.5 px-3 text-xs">{% translate "See invoice" %}</a>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
+        {% include "billing/partials/_payment_rows.html" %}
     </div>
     {% else %}
     <div class="a-card px-6 py-10 text-center text-sm text-neutral-500">{% translate "No payment yet. They appear here as soon as the first invoice is paid." %}</div>

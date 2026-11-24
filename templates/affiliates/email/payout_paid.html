@@ -1,0 +1,19 @@
+{% extends "emails/base.html" %}
+{% load i18n billing_extras %}
+{% block title %}{% translate "Your withdrawal is in your account" %}{% endblock %}
+{% block preheader %}{% blocktranslate with amount=payout.amount_cents|brl %}R$ {{ amount }} sent by Pix. The receipt is attached.{% endblocktranslate %}{% endblock %}
+{% block content %}
+<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Your withdrawal is in your account" %}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with amount=payout.amount_cents|brl %}Good news: we sent <strong style="color:#0F172A;">R$ {{ amount }}</strong> by Pix to the key you gave us. Thank you for bringing new customers to {{ brand_name }}, this money is the result of your work.{% endblocktranslate %}</p>
+{% translate "Paid on" as date_label %}{% include "affiliates/email/_payout_rows.html" with amount=payout.amount_cents|brl pix_key=payout.pix_key date=payout.resolved_at|date:"d/m/Y" note=payout.note %}
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;">
+<tr><td style="padding:14px 16px;background-color:#F8FAFC;border-radius:8px;font-size:14px;line-height:22px;color:#334155;">
+<strong style="color:#0F172A;">{% translate "Receipt attached" %}</strong><br>
+{% translate "The receipt of the transfer is attached to this e-mail and also stays on your panel, in the Withdrawals tab. Depending on your bank, the money can take a few minutes to show up in your statement." %}
+</td></tr>
+</table>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% translate "Your next commissions keep coming in as the accounts you brought pay. Keep sharing your link to grow your balance." %}</p>
+{% translate "See my withdrawals" as cta %}{% include "emails/_button.html" with url=withdrawals_url label=cta no_fallback=True %}
+{% endblock %}
+{% block reason %}<p style="margin:0 0 12px;">{% blocktranslate %}You're receiving this because you are an affiliate of {{ brand_name }} and asked for this withdrawal.{% endblocktranslate %}</p>{% endblock %}

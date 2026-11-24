@@ -2,7 +2,7 @@
 {% load i18n billing_extras %}
 {% block content %}{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}
 
-{% blocktranslate with brand=brand_name %}Congratulations! We received your payment and {{ paid_for }} is active on {{ brand }}. Everything is ready for you to plan, approve and publish.{% endblocktranslate %}
+{% blocktranslate with brand=brand_name %}We received your payment and {{ paid_for }} is active on {{ brand }}. Everything is ready for you to plan, approve and publish.{% endblocktranslate %}
 {% if plan %}
 {% translate "Your plan" %}
 {% blocktranslate count counter=plan.brands %}{{ counter }} brand{% plural %}{{ counter }} brands{% endblocktranslate %}

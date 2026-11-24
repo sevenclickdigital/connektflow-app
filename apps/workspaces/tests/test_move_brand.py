@@ -267,23 +267,16 @@ class TestBillingFollowsTheDestination:
         moved = WorkspaceSubscription.objects.get(workspace=brand)
         assert moved.plan is None and moved.status == STATUS.PENDING
 
-    def test_an_exemption_is_kept_when_the_destination_has_one_unused(self, brand, destination):
-        billing_services.grant_courtesy(brand)
-        profile = billing_services.ensure_billing_profile(destination)
-        profile.courtesy_workspace_quota = 1
-        profile.save(update_fields=["courtesy_workspace_quota"])
+    def test_an_exemption_goes_with_the_brand_with_its_end_date(self, brand, destination):
+        """The exemption is the brand's own, so its deadline still applies after the move."""
+        until = timezone.localdate() + timedelta(days=10)
+        billing_services.grant_courtesy(brand, note="Partner", expires_on=until)
 
         services.move_brand(brand, destination)
 
-        assert WorkspaceSubscription.objects.get(workspace=brand).status == STATUS.COURTESY
-
-    def test_an_exemption_is_not_carried_into_an_organization_with_none_left(self, brand, destination):
-        """Moving is not a way around an exemption's limit or end date."""
-        billing_services.grant_courtesy(brand)
-
-        services.move_brand(brand, destination)
-
-        assert WorkspaceSubscription.objects.get(workspace=brand).status == STATUS.PENDING
+        moved = WorkspaceSubscription.objects.get(workspace=brand)
+        assert moved.status == STATUS.COURTESY
+        assert moved.courtesy_expires_on == until and moved.courtesy_note == "Partner"
 
 
 @pytest.mark.django_db

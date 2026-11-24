@@ -75,3 +75,34 @@ class EmailSuppression(models.Model):
 
     def __str__(self) -> str:
         return f"{self.address} ({self.reason})"
+
+
+class EmailLog(models.Model):
+    """One message handed to the outbound backend, per addressee: what the team sees as an account's sent e-mails.
+
+    Written by ``apps.common.mail.BudgetedEmailBackend``, the one point every
+    message passes through, whether it left or was stopped. It keeps who it
+    was for, the subject and the outcome, never the body: a body carries
+    sign-in codes and password reset links, and a history the team can read
+    must not hold them. Rows are dropped after ``mail.EMAIL_LOG_RETENTION_DAYS``.
+    """
+
+    class Status(models.TextChoices):
+        SENT = "sent", "Sent"
+        DROPPED = "dropped", "Stopped before sending"
+        FAILED = "failed", "The mail server refused it"
+
+    recipient = models.EmailField()
+    subject = models.CharField(max_length=255, blank=True, default="")
+    email_class = models.CharField(max_length=20, blank=True, default="")
+    status = models.CharField(max_length=10, choices=Status.choices)
+    detail = models.CharField(max_length=120, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "common_email_log"
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["recipient", "-created_at"], name="email_log_recipient_idx")]
+
+    def __str__(self) -> str:
+        return f"{self.recipient}: {self.subject} ({self.status})"

@@ -1,0 +1,8 @@
+{% load i18n billing_extras %}{% translate "Your link" %}
+{{ link }}
+
+{% translate "What you earn" %}
+{% if affiliate.commission_mode == "once" %}{% blocktranslate with percent=affiliate.commission_percent %}{{ percent }}% of the first payment of every account you bring, whatever plan it chooses.{% endblocktranslate %}{% else %}{% blocktranslate with percent=affiliate.commission_percent months=affiliate.commission_months %}{{ percent }}% of every payment an account you bring makes, during the {{ months }} months after its first payment.{% endblocktranslate %}{% endif %}
+
+{% translate "How you are paid" %}
+{% blocktranslate with amount=affiliate.min_payout_cents|brl %}You are paid by Pix. Once your balance reaches R$ {{ amount }}, you can ask for the withdrawal on your panel.{% endblocktranslate %} {% blocktranslate with days=hold_days %}Each commission enters the balance {{ days }} days after the payment it came from.{% endblocktranslate %}

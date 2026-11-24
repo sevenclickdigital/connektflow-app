@@ -1,0 +1,90 @@
+{% load i18n %}
+{% comment %}
+The "New affiliate" window of the staff Affiliates screen, opened by the
+``open-new-affiliate`` window event. The operator picks one of ``accounts``
+(services.accounts_to_choose, handed over as JSON), which fills the name and
+suggests the link name, then sets the commission.
+Expects: accounts, periods, coupons.
+{% endcomment %}
+{{ accounts|json_script:"affiliate-accounts" }}
+<div x-data="affiliateAccountPicker()"
+     @open-new-affiliate.window="open = true; $nextTick(() => $refs.search && $refs.search.focus())"
+     @keydown.escape.window="open = false">
+  <div x-show="open" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="new-affiliate-title">
+    <div class="modal-panel is-lg" @click.outside="open = false">
+      <button type="button" class="modal-close" @click="open = false" aria-label="{% translate 'Close' %}">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <h2 id="new-affiliate-title" class="modal-title">{% translate "New affiliate" %}</h2>
+      <p class="text-xs text-neutral-600 mt-1">{% translate "Choose the account of the person, who needs one in Connekt Flow first. The link and the panel open as soon as the affiliate is created." %}</p>
+
+      <form method="post" action="{% url 'affiliates_staff:create' %}" class="mt-4 grid grid-cols-1 sm:grid-cols-6 gap-4">
+        {% csrf_token %}
+        <input type="hidden" name="user" :value="picked ? picked.id : ''">
+        <div class="sm:col-span-6">
+          <label for="affiliate-account-search" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Account" %}</label>
+          <template x-if="picked">
+            <div class="flex items-center gap-3 rounded-lg border border-neutral-300 px-3 py-2">
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold text-neutral-950 truncate" x-text="picked.name"></p>
+                <p class="text-xs text-neutral-600 truncate" x-text="picked.email"></p>
+              </div>
+              <button type="button" class="text-xs font-semibold text-brand-700 hover:underline cursor-pointer" @click="clear()">{% translate "Change" %}</button>
+            </div>
+          </template>
+          <div x-show="!picked">
+            <input type="search" id="affiliate-account-search" x-ref="search" x-model="q" autocomplete="off" placeholder="{% translate 'Search by name or e-mail' %}" class="form-input-styled w-full">
+            <ul class="mt-2 max-h-56 overflow-y-auto rounded-lg border border-neutral-300 divide-y divide-neutral-100" x-show="matches.length">
+              <template x-for="account in matches" :key="account.id">
+                <li>
+                  <button type="button" class="w-full text-left px-3 py-2 hover:bg-neutral-50 cursor-pointer" @click="pick(account)">
+                    <span class="block text-sm font-semibold text-neutral-950 truncate" x-text="account.name"></span>
+                    <span class="block text-xs text-neutral-600 truncate" x-text="account.email"></span>
+                  </button>
+                </li>
+              </template>
+            </ul>
+            <p class="text-xs text-neutral-600 mt-2" x-show="!matches.length">
+              {% if accounts %}{% translate "No account with this name or e-mail." %}{% else %}{% translate "Every account is already an affiliate, or nobody signed up yet." %}{% endif %}
+            </p>
+          </div>
+        </div>
+        <template x-if="picked">
+          <div class="sm:col-span-6 grid grid-cols-1 sm:grid-cols-6 gap-4">
+            {% include "affiliates/_affiliate_fields.html" with prefix="new" col="sm:col-span-3" %}
+          </div>
+        </template>
+        <div class="sm:col-span-6 modal-footer">
+          <button type="button" class="btn-soft px-4 py-2.5 text-sm font-semibold" @click="open = false">{% translate "Cancel" %}</button>
+          <button type="submit" class="btn-brand px-4 py-2.5 text-sm font-semibold" :disabled="!picked">{% translate "Create affiliate" %}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script nonce="{{ request.csp_nonce }}">
+  function affiliateAccountPicker() {
+    return {
+      open: false,
+      q: '',
+      picked: null,
+      mode: 'recurring',
+      accounts: JSON.parse(document.getElementById('affiliate-accounts').textContent),
+      get matches() {
+        const q = this.q.trim().toLowerCase();
+        return this.accounts.filter((account) => !q || account.name.toLowerCase().includes(q) || account.email.toLowerCase().includes(q));
+      },
+      pick(account) {
+        this.picked = account;
+        this.$nextTick(() => {
+          document.getElementById('name-new').value = account.name;
+          document.getElementById('slug-new').value = account.slug;
+        });
+      },
+      clear() {
+        this.picked = null;
+        this.$nextTick(() => this.$refs.search.focus());
+      },
+    };
+  }
+</script>

@@ -2,34 +2,56 @@
 {% comment %}
 The fields shared by "New affiliate" and a row's "Edit" on the staff
 Affiliates screen. ``prefix`` keeps the ids apart; ``affiliate`` is the one
-being edited, absent on the new form.
+being edited, absent on the new form; ``col`` is the width of a field in the
+form's six-column grid (a third of it when absent). The form around it holds
+the Alpine state ``mode`` (the commission mode chosen), which shows the
+period only for the monthly commission.
 {% endcomment %}
-<div class="sm:col-span-2">
+<div class="{{ col|default:'sm:col-span-2' }}">
   <label for="name-{{ prefix }}" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Name" %}</label>
   <input type="text" id="name-{{ prefix }}" name="name" required maxlength="100" value="{{ affiliate.name|default:'' }}" class="form-input-styled w-full">
 </div>
-<div class="sm:col-span-2">
+<div class="{{ col|default:'sm:col-span-2' }}">
   <label for="slug-{{ prefix }}" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Link name" %}</label>
   <div class="flex items-center gap-1.5">
     <span class="text-sm text-neutral-600">/af/</span>
     <input type="text" id="slug-{{ prefix }}" name="slug" required minlength="3" maxlength="40" pattern="[a-z0-9]+(-[a-z0-9]+)*" value="{{ affiliate.slug|default:'' }}" placeholder="{% translate 'e.g. ana-souza' %}" class="form-input-styled w-full lowercase">
   </div>
 </div>
-<div class="sm:col-span-2">
+<fieldset class="sm:col-span-6">
+  <legend class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "How the commission is paid" %}</legend>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <label class="flex gap-3 rounded-lg border p-3 cursor-pointer bg-white" :class="mode === 'recurring' ? 'border-brand-700 ring-1 ring-brand-700' : 'border-neutral-300'">
+      <input type="radio" name="commission_mode" value="recurring" x-model="mode" class="mt-0.5 accent-brand-700">
+      <span>
+        <span class="block text-sm font-semibold text-neutral-950">{% translate "Monthly" %}</span>
+        <span class="block text-xs text-neutral-600 mt-0.5">{% translate "A share of every payment each account makes, during the period chosen." %}</span>
+      </span>
+    </label>
+    <label class="flex gap-3 rounded-lg border p-3 cursor-pointer bg-white" :class="mode === 'once' ? 'border-brand-700 ring-1 ring-brand-700' : 'border-neutral-300'">
+      <input type="radio" name="commission_mode" value="once" x-model="mode" class="mt-0.5 accent-brand-700">
+      <span>
+        <span class="block text-sm font-semibold text-neutral-950">{% translate "Once per account" %}</span>
+        <span class="block text-xs text-neutral-600 mt-0.5">{% translate "A share of the first payment of each account, on any plan, and nothing after it." %}</span>
+      </span>
+    </label>
+  </div>
+</fieldset>
+<div class="{{ col|default:'sm:col-span-2' }}">
   <label for="percent-{{ prefix }}" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Commission (%)" %}</label>
   <input type="number" id="percent-{{ prefix }}" name="commission_percent" required min="1" max="100" step="1" value="{{ affiliate.commission_percent|default:20 }}" class="form-input-styled w-full tabular-nums">
 </div>
-<div class="sm:col-span-2">
+<div class="{{ col|default:'sm:col-span-2' }}" x-show="mode === 'recurring'">
   <label for="months-{{ prefix }}" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Earns on each customer for" %}</label>
   <select id="months-{{ prefix }}" name="commission_months" class="form-input-styled bb-select cursor-pointer w-full">
     {% for value, label in periods %}<option value="{{ value }}" {% if affiliate.commission_months == value or not affiliate and value == 12 %}selected{% endif %}>{{ label }}</option>{% endfor %}
   </select>
 </div>
-<div class="sm:col-span-2">
+<div class="{{ col|default:'sm:col-span-2' }}">
   <label for="min-{{ prefix }}" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Minimum withdrawal in R$" %}</label>
   <input type="text" id="min-{{ prefix }}" name="min_payout" required inputmode="decimal" value="{{ affiliate.min_payout_cents|default:5000|brl }}" class="form-input-styled w-full tabular-nums">
 </div>
-<div class="sm:col-span-2">
+<div class="{{ col|default:'sm:col-span-2' }}">
   <label for="coupon-{{ prefix }}" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Coupon filled in at checkout (optional)" %}</label>
   <select id="coupon-{{ prefix }}" name="coupon" class="form-input-styled bb-select cursor-pointer w-full">
     <option value="">{% translate "No coupon" %}</option>
@@ -37,7 +59,7 @@ being edited, absent on the new form.
     {% for coupon in coupons %}<option value="{{ coupon.code }}" {% if affiliate.coupon_id == coupon.id %}selected{% endif %}>{{ coupon.code }}</option>{% endfor %}
   </select>
 </div>
-<div class="sm:col-span-4">
+<div class="sm:col-span-6">
   <label for="note-{{ prefix }}" class="block text-xs font-semibold text-neutral-700 mb-1">{% translate "Note (only the team sees it)" %}</label>
   <input type="text" id="note-{{ prefix }}" name="note" maxlength="255" value="{{ affiliate.note|default:'' }}" class="form-input-styled w-full">
 </div>

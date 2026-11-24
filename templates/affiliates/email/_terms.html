@@ -1,0 +1,15 @@
+{% load i18n billing_extras %}
+{% comment %}
+The box of the affiliate's link and terms, shared by the affiliate e-mails.
+Expects: affiliate, link.
+{% endcomment %}
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;background-color:#F5F3FF;border-radius:8px;">
+<tr><td style="padding:16px 18px;font-size:14px;line-height:24px;color:#334155;">
+<strong style="color:#0F172A;">{% translate "Your link" %}</strong><br>
+<a href="{{ link }}" style="color:#6D28D9;word-break:break-all;">{{ link }}</a><br><br>
+<strong style="color:#0F172A;">{% translate "What you earn" %}</strong><br>
+{% if affiliate.commission_mode == "once" %}{% blocktranslate with percent=affiliate.commission_percent %}{{ percent }}% of the first payment of every account you bring, whatever plan it chooses.{% endblocktranslate %}{% else %}{% blocktranslate with percent=affiliate.commission_percent months=affiliate.commission_months %}{{ percent }}% of every payment an account you bring makes, during the {{ months }} months after its first payment.{% endblocktranslate %}{% endif %}<br><br>
+<strong style="color:#0F172A;">{% translate "How you are paid" %}</strong><br>
+{% blocktranslate with amount=affiliate.min_payout_cents|brl %}You are paid by Pix. Once your balance reaches R$ {{ amount }}, you can ask for the withdrawal on your panel.{% endblocktranslate %} {% blocktranslate with days=hold_days %}Each commission enters the balance {{ days }} days after the payment it came from.{% endblocktranslate %}
+</td></tr>
+</table>

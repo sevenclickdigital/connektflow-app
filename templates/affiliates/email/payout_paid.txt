@@ -1,0 +1,17 @@
+{% extends "emails/base.txt" %}
+{% load i18n billing_extras %}
+{% block content %}{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}
+
+{% blocktranslate with amount=payout.amount_cents|brl %}Good news: we sent R$ {{ amount }} by Pix to the key you gave us. Thank you for bringing new customers to {{ brand_name }}, this money is the result of your work.{% endblocktranslate %}
+
+{% translate "Withdrawal amount" %}: R$ {{ payout.amount_cents|brl }}
+{% translate "Pix key" %}: {{ payout.pix_key }}
+{% translate "Paid on" %}: {{ payout.resolved_at|date:"d/m/Y" }}{% if payout.note %}
+{% translate "Note from our team" %}: {{ payout.note }}{% endif %}
+
+{% translate "The receipt of the transfer is attached to this e-mail and also stays on your panel, in the Withdrawals tab. Depending on your bank, the money can take a few minutes to show up in your statement." %}
+
+{% translate "Your next commissions keep coming in as the accounts you brought pay. Keep sharing your link to grow your balance." %}
+
+{% translate "See my withdrawals" %}: {{ withdrawals_url }}{% endblock %}
+{% block reason %}{% blocktranslate %}You're receiving this because you are an affiliate of {{ brand_name }} and asked for this withdrawal.{% endblocktranslate %}{% endblock %}

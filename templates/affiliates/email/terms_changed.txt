@@ -1,0 +1,11 @@
+{% extends "emails/base.txt" %}
+{% load i18n %}
+{% block content %}{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}
+
+{% blocktranslate with brand=brand_name %}Our team updated the terms of your affiliation on {{ brand }}. These are the ones in force from now on:{% endblocktranslate %}
+
+{% include "affiliates/email/_terms.txt" %}
+{% translate "They apply to the payments received from now on. What you have already earned stays as it is." %}{% if affiliate.is_active %}
+
+{% translate "Open the affiliate panel" %}: {{ panel_url }}{% endif %}{% endblock %}
+{% block reason %}{% blocktranslate with brand=brand_name %}You're receiving this because your account is an affiliate of {{ brand }}.{% endblocktranslate %}{% endblock %}

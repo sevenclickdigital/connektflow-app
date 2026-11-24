@@ -9,8 +9,9 @@ organization, its owner's e-mail, status, brands, disk, monthly charge;
 each brand with its own status, disk and charge. Each brand unfolds in turn,
 by its own count, into the users linked to it and their role there; a user
 linked to several brands appears under each. Organization members linked to no brand sit in a "No brand"
-group. Every line has a "…" menu: the account's (its details, exemption and
-its owner's actions), a brand's (exempt or charge it) or a person's.
+group. Every line has a "…" menu: the account's (links to its page — details,
+sent e-mails — and its owner's actions), a brand's (its exemption from
+charges, which is the brand's own and opens in the modal) or a person's.
 
 Menus are teleported to <body> and placed under their button, so the
 table's horizontal scroll does not clip them; their position is bound as an
@@ -69,7 +70,7 @@ Access is ``is_staff`` (apps/accounts/decorators.py).
              {% if row.is_team_account %}data-team{% endif %}
              x-show="(!onlyCustomers || !$el.hasAttribute('data-team')) && (!q || $el.dataset.search.includes(q.trim().toLowerCase()))"
              x-data="{
-               expanded: false, openBrands: [], open: false, panel: 'edit', person: '',
+               expanded: false, openBrands: [], open: false, panel: 'person', person: '',
                toggleBrand(key) { this.openBrands = this.openBrands.includes(key) ? this.openBrands.filter(k => k !== key) : [...this.openBrands, key]; },
                menuFor: '', menuX: 0, menuY: 0, menuUp: false,
                toggleMenu(key, event) {
@@ -107,7 +108,6 @@ Access is ``is_staff`` (apps/accounts/decorators.py).
           <td class="px-3 py-3"></td>
           <td class="px-3 py-3">
             {% if row.status == 'active' %}<span class="pill pill-success">{% translate "Active" %}</span>{% elif row.status == 'courtesy' %}<span class="pill pill-info">{% translate "Exempt" %}</span>{% elif row.status == 'past_due' %}<span class="pill pill-warning">{% translate "Past due" %}</span>{% elif row.status == 'canceled' %}<span class="pill pill-neutral">{% translate "Canceled" %}</span>{% elif row.status %}<span class="pill pill-neutral">{% translate "No plan" %}</span>{% endif %}
-            {% if row.profile.courtesy_expires_on %}<div class="text-[11px] text-neutral-600 mt-1">{% blocktranslate with date=row.profile.courtesy_expires_on|date:"SHORT_DATE_FORMAT" %}until {{ date }}{% endblocktranslate %}</div>{% endif %}
           </td>
           <td class="px-3 py-3 text-right tabular-nums text-neutral-800">{{ row.workspace_count }}</td>
           <td class="px-3 py-3 min-w-[8rem]">
@@ -132,10 +132,8 @@ Access is ``is_staff`` (apps/accounts/decorators.py).
               <div x-show="menuFor === 'account'" x-cloak role="menu"
                    :style="{ top: menuY + 'px', left: menuX + 'px' }" :class="menuUp && '-translate-y-full'"
                    class="fixed -translate-x-full z-50 w-64 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-lg text-left">
-                <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100" @click="openModal('edit')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>{% translate "Account details" %}</button>
-                {% if is_superadmin %}
-                <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100" @click="openModal('courtesy')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M17 6l3 3M15 8l2 2"/></svg>{% translate "Manage exemption" %}</button>
-                {% endif %}
+                <a href="{% url 'billing_staff:account' org_id=row.organization.id %}" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>{% translate "Account details" %}</a>
+                <a href="{% url 'billing_staff:account' org_id=row.organization.id %}?tab=emails" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>{% translate "Sent e-mails" %}</a>
                 {% if row.owner %}{% with p=row.owner %}
                 <div class="my-1 border-t border-neutral-100"></div>
                 <p class="px-2.5 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{% translate "Account owner" %}</p>
@@ -185,7 +183,8 @@ Access is ``is_staff`` (apps/accounts/decorators.py).
               {% if ws.workspace.is_archived %}<span class="pill pill-neutral">{% translate "Archived" %}</span>{% endif %}
             </div>
           </td>
-          <td class="px-3 py-2.5">{% if ws.subscription.status == 'active' %}<span class="pill pill-success">{% translate "Active" %}</span>{% elif ws.subscription.status == 'courtesy' %}<span class="pill pill-info">{% translate "Exempt" %}</span>{% elif ws.subscription.status == 'past_due' %}<span class="pill pill-warning">{% translate "Past due" %}</span>{% elif ws.subscription.status == 'canceled' %}<span class="pill pill-neutral">{% translate "Canceled" %}</span>{% elif ws.subscription.status %}<span class="pill pill-neutral">{% translate "No plan" %}</span>{% endif %}</td>
+          <td class="px-3 py-2.5">{% if ws.subscription.status == 'active' %}<span class="pill pill-success">{% translate "Active" %}</span>{% elif ws.subscription.status == 'courtesy' %}<span class="pill pill-info">{% translate "Exempt" %}</span>{% elif ws.subscription.status == 'past_due' %}<span class="pill pill-warning">{% translate "Past due" %}</span>{% elif ws.subscription.status == 'canceled' %}<span class="pill pill-neutral">{% translate "Canceled" %}</span>{% elif ws.subscription.status %}<span class="pill pill-neutral">{% translate "No plan" %}</span>{% endif %}
+            {% if ws.subscription.is_courtesy and ws.subscription.courtesy_expires_on %}<div class="text-[11px] text-neutral-600 mt-1">{% blocktranslate with date=ws.subscription.courtesy_expires_on|date:"SHORT_DATE_FORMAT" %}until {{ date }}{% endblocktranslate %}</div>{% endif %}</td>
           <td></td>
           <td class="px-3 py-2.5 min-w-[8rem]">
             {% if ws.storage.limit_bytes %}
@@ -210,15 +209,13 @@ Access is ``is_staff`` (apps/accounts/decorators.py).
               <div x-show="menuFor === 'ws-{{ ws.workspace.id }}'" x-cloak role="menu"
                    :style="{ top: menuY + 'px', left: menuX + 'px' }" :class="menuUp && '-translate-y-full'"
                    class="fixed -translate-x-full z-50 w-64 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-lg text-left">
+                <button type="button" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100" @click="openModal('courtesy', '{{ ws.workspace.id }}')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>{% if ws.subscription.is_courtesy %}{% translate "Edit exemption" %}{% else %}{% translate "Exempt from charges" %}{% endif %}</button>
+                {% if ws.subscription.is_courtesy %}
                 <form method="post" action="{% url 'billing_staff:toggle_courtesy' target_workspace_id=ws.workspace.id %}">{% csrf_token %}
-                  {% if ws.subscription.is_courtesy %}
                   <input type="hidden" name="action" value="revoke">
                   <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>{% translate "Charge this brand" %}</button>
-                  {% else %}
-                  <input type="hidden" name="action" value="grant">
-                  <button type="submit" class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left cursor-pointer text-neutral-800 hover:bg-neutral-100"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>{% translate "Exempt from charges" %}</button>
-                  {% endif %}
                 </form>
+                {% endif %}
               </div>
             </template>
             {% endif %}
@@ -337,9 +334,10 @@ Access is ``is_staff`` (apps/accounts/decorators.py).
         {% endif %}
 
         {% comment %}
-        The account's modal: its details or its exemption, as tabs; or one
-        person's details; or the deletion of one person, which asks for the
-        e-mail typed back.
+        The account's modal: one person's details, the deletion of one
+        person, which asks for the e-mail typed back, or one brand's exemption
+        (``person`` then holds the brand's id). The account's own details and
+        sent e-mails are a page (billing_staff:account).
         {% endcomment %}
         <tr class="hidden"><td>
         <template x-teleport="body">
@@ -368,142 +366,11 @@ Access is ``is_staff`` (apps/accounts/decorators.py).
                 </p>
                 {% endif %}
               </div>
-              {% if is_superadmin %}
-              <div class="flex gap-1 px-5 pt-2 border-b border-neutral-100" x-show="panel === 'edit' || panel === 'courtesy'">
-                <button type="button" @click="panel = 'edit'" :class="panel === 'edit' ? 'border-brand-700 text-neutral-950' : 'border-transparent text-neutral-600 hover:text-neutral-800'" class="px-2.5 py-2 text-xs font-semibold border-b-2 cursor-pointer whitespace-nowrap">{% translate "Edit account" %}</button>
-                <button type="button" @click="panel = 'courtesy'" :class="panel === 'courtesy' ? 'border-brand-700 text-neutral-950' : 'border-transparent text-neutral-600 hover:text-neutral-800'" class="px-2.5 py-2 text-xs font-semibold border-b-2 cursor-pointer whitespace-nowrap">{% translate "Exemption" %}</button>
+              {% if is_superadmin %}{% for ws in row.workspaces %}
+              <div x-show="panel === 'courtesy' && person === '{{ ws.workspace.id }}'" x-cloak class="px-5 py-4">
+                {% include "billing/partials/_staff_brand_courtesy_form.html" %}
               </div>
-
-<div x-show="panel === 'courtesy'" x-cloak class="px-5 py-4 space-y-4">
-                    <form method="post" action="{% url 'billing_staff:grant_courtesy' org_id=row.organization.id %}"
-                          class="space-y-3">
-                      {% csrf_token %}
-                      <div class="flex flex-wrap gap-3">
-                        <div>
-                          <label for="quota-{{ row.organization.id }}" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">
-                            {% translate "Workspaces exempt from charges" %}
-                          </label>
-                          <input type="number" id="quota-{{ row.organization.id }}" name="courtesy_workspace_quota"
-                                 min="0" step="1" value="{{ row.profile.courtesy_workspace_quota }}"
-                                 class="form-input-styled w-24 tabular-nums">
-                        </div>
-                        <div>
-                          <label for="until-{{ row.organization.id }}" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">
-                            {% translate "Exempt until" %}
-                          </label>
-                          <input type="date" id="until-{{ row.organization.id }}" name="courtesy_expires_on"
-                                 value="{{ row.profile.courtesy_expires_on|date:'Y-m-d' }}"
-                                 class="form-input-styled">
-                        </div>
-                      </div>
-                      <div>
-                        <label for="note-{{ row.organization.id }}" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">
-                          {% translate "Reason for the exemption" %}
-                        </label>
-                        <input type="text" id="note-{{ row.organization.id }}" name="courtesy_note" maxlength="255"
-                               value="{{ row.profile.courtesy_note }}"
-                               placeholder="{% translate 'Partner, beta tester, internal account…' %}"
-                               class="form-input-styled w-full">
-                      </div>
-                      <p class="text-[11px] text-neutral-600">
-                        {% translate "How many of this account's existing workspaces go unbilled, and until when. On that date the account is billed again automatically — nothing is deleted and nobody loses access. Leave the date empty for no end date." %}
-                      </p>
-                      <button type="submit"
-                              class="px-3 py-2 text-xs font-semibold text-white rounded-lg transition-colors cursor-pointer"
-                              style="background: var(--primary);">
-                        {% translate "Release access" %}
-                      </button>
-                    </form>
-
-                    {% if row.profile.courtesy_workspace_quota %}
-                    <div class="pt-3 border-t border-neutral-100 space-y-2">
-                      {% if row.profile.courtesy_expires_on %}
-                      <p class="text-[11px] text-neutral-600">
-                        {% blocktranslate with used=row.profile.courtesy_workspaces_used quota=row.profile.courtesy_workspace_quota date=row.profile.courtesy_expires_on|date:"SHORT_DATE_FORMAT" %}{{ used }} of {{ quota }} workspaces exempt, until {{ date }}.{% endblocktranslate %}
-                      </p>
-                      {% else %}
-                      <p class="text-[11px] text-neutral-600">
-                        {% blocktranslate with used=row.profile.courtesy_workspaces_used quota=row.profile.courtesy_workspace_quota %}{{ used }} of {{ quota }} workspaces exempt, with no end date.{% endblocktranslate %}
-                      </p>
-                      {% endif %}
-                      {# Ending it now, so undoing a mistaken grant does not #}
-                      {# mean typing a date in the past. #}
-                      <form method="post" action="{% url 'billing_staff:revoke_courtesy' org_id=row.organization.id %}">
-                        {% csrf_token %}
-                        <button type="submit"
-                                class="px-3 py-1.5 text-xs font-semibold text-neutral-700 bg-white border border-neutral-400 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer">
-                          {% translate "Charge this account again now" %}
-                        </button>
-                      </form>
-                    </div>
-                    {% endif %}
-
-                    {% if row.courtesy_exceeded %}
-                    <p class="text-[11px] text-amber-700">
-                      {% translate "More workspaces are exempt than the limit allows. The existing exemptions were kept." %}
-                    </p>
-                    {% endif %}
-                  </div>
-              {% endif %}
-<div x-show="panel === 'edit'" x-cloak class="px-5 py-4">
-                    <dl class="mb-4 rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                      <dt class="col-span-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">{% translate "About the business" %}</dt>
-                      {% if row.organization.about_answered_at %}
-                      <dt class="text-neutral-600">{% translate "Activity" %}</dt><dd class="text-neutral-900">{{ row.organization.get_business_activity_display|default:"—" }}</dd>
-                      <dt class="text-neutral-600">{% translate "Team size" %}</dt><dd class="text-neutral-900">{{ row.organization.get_team_size_display|default:"—" }}</dd>
-                      <dt class="text-neutral-600">{% translate "Found us through" %}</dt><dd class="text-neutral-900">{{ row.organization.get_referral_source_display|default:"—" }}{% if row.organization.referral_source_other %}: {{ row.organization.referral_source_other }}{% endif %}</dd>
-                      <dt class="text-neutral-600">{% translate "Goals" %}</dt><dd class="text-neutral-900">{{ row.organization.goal_labels|join:", "|default:"—" }}</dd>
-                      {% if row.organization.client_count %}<dt class="text-neutral-600">{% translate "Clients served" %}</dt><dd class="text-neutral-900">{{ row.organization.get_client_count_display }}</dd>{% endif %}
-                      {% if row.organization.business_segment %}<dt class="text-neutral-600">{% translate "Segment" %}</dt><dd class="text-neutral-900">{{ row.organization.get_business_segment_display }}</dd>{% endif %}
-                      {% else %}
-                      <dd class="col-span-2 text-neutral-600">{% translate "Not answered." %}</dd>
-                      {% endif %}
-                    </dl>
-                    {% if is_superadmin %}
-                    <form method="post" action="{% url 'billing_staff:edit_account' org_id=row.organization.id %}"
-                          class="space-y-3">
-                      {% csrf_token %}
-                      <div>
-                        <label for="orgname-{{ row.organization.id }}" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">
-                          {% translate "Account name" %}
-                        </label>
-                        <input type="text" id="orgname-{{ row.organization.id }}" name="organization_name"
-                               maxlength="100" required value="{{ row.organization.name }}"
-                               class="form-input-styled w-full">
-                      </div>
-                      {% if row.owner %}
-                      {# The owner's own fields travel with the org name in #}
-                      {# one submit: support is correcting one mistake, not #}
-                      {# filling two forms. #}
-                      <input type="hidden" name="user_id" value="{{ row.owner.user.id }}">
-                      <div>
-                        <label for="username-{{ row.organization.id }}" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">
-                          {% translate "Owner's name" %}
-                        </label>
-                        <input type="text" id="username-{{ row.organization.id }}" name="name" maxlength="255"
-                               value="{{ row.owner.user.name }}"
-                               class="form-input-styled w-full">
-                      </div>
-                      <div>
-                        <label for="useremail-{{ row.organization.id }}" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">
-                          {% translate "Owner's e-mail" %}
-                        </label>
-                        <input type="email" id="useremail-{{ row.organization.id }}" name="email" required
-                               value="{{ row.owner.user.email }}"
-                               class="form-input-styled w-full">
-                        <p class="text-[11px] text-neutral-600 mt-1">
-                          {% translate "This is the address they sign in with. If another account already uses it, nothing is changed." %}
-                        </p>
-                      </div>
-                      {% endif %}
-                      <button type="submit"
-                              class="px-3 py-2 text-xs font-semibold text-white rounded-lg transition-colors cursor-pointer"
-                              style="background: var(--primary);">
-                        {% translate "Save changes" %}
-                      </button>
-                    </form>
-                    {% endif %}
-                  </div>
+              {% endfor %}{% endif %}
               {% for p in row.people %}
               <div x-show="panel === 'person' && person === '{{ p.user.id }}'" x-cloak class="px-5 py-4">
                 <dl class="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">

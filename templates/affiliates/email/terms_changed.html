@@ -1,0 +1,15 @@
+{% extends "emails/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Your affiliate terms have changed" %}{% endblock %}
+{% block preheader %}{% translate "What you earn from now on and how you are paid." %}{% endblock %}
+{% block content %}
+<h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Your affiliate terms have changed" %}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with brand=brand_name %}Our team updated the terms of your affiliation on {{ brand }}. These are the ones in force from now on:{% endblocktranslate %}</p>
+{% include "affiliates/email/_terms.html" %}
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% translate "They apply to the payments received from now on. What you have already earned stays as it is." %}</p>
+{% if affiliate.is_active %}
+{% translate "Open the affiliate panel" as cta %}{% include "emails/_button.html" with url=panel_url label=cta %}
+{% endif %}
+{% endblock %}
+{% block reason %}<p style="margin:0 0 12px;">{% blocktranslate with brand=brand_name %}You're receiving this because your account is an affiliate of {{ brand }}.{% endblocktranslate %}</p>{% endblock %}

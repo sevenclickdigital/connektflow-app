@@ -1,0 +1,44 @@
+{% load i18n %}
+{% comment %}
+One brand's exemption from charges (superadmin): until when and why, and,
+for a brand already exempt, the button that charges it again. ``ws``: the
+brand's entry of ``billing.views._account_row``. ``back``: "account" to
+return to the account's page instead of the customers screen. The cancel
+button closes the modal it sits in (``open``).
+{% endcomment %}
+<p class="text-sm font-semibold text-neutral-950">
+  {% if ws.subscription.is_courtesy %}{% blocktranslate with name=ws.workspace.name %}Exemption of {{ name }}{% endblocktranslate %}{% else %}{% blocktranslate with name=ws.workspace.name %}Exempt {{ name }} from charges{% endblocktranslate %}{% endif %}
+</p>
+<p class="text-xs text-neutral-600 mt-1">
+  {% translate "The brand is not charged until the end date. The day after, it is charged again automatically: nothing is deleted and nobody loses access. Leave the date empty for no end date." %}
+</p>
+<form method="post" action="{% url 'billing_staff:toggle_courtesy' target_workspace_id=ws.workspace.id %}" class="mt-4 space-y-3">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="grant">
+  {% if back %}<input type="hidden" name="back" value="{{ back }}">{% endif %}
+  <div>
+    <label for="until-{{ ws.workspace.id }}" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">{% translate "Exempt until" %}</label>
+    <input type="date" id="until-{{ ws.workspace.id }}" name="courtesy_expires_on" min="{% now 'Y-m-d' %}"
+           value="{{ ws.subscription.courtesy_expires_on|date:'Y-m-d' }}" class="form-input-styled">
+  </div>
+  <div>
+    <label for="note-{{ ws.workspace.id }}" class="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-1">{% translate "Reason for the exemption" %}</label>
+    <input type="text" id="note-{{ ws.workspace.id }}" name="note" maxlength="255" required
+           value="{{ ws.subscription.courtesy_note }}"
+           placeholder="{% translate 'Partner, beta tester, internal account…' %}" class="form-input-styled w-full">
+  </div>
+  <div class="flex items-center justify-end gap-2 pt-1">
+    <button type="button" @click="open = false" class="btn-ghost text-xs">{% translate "Cancel" %}</button>
+    <button type="submit" class="px-3 py-2 text-xs font-semibold text-white rounded-lg transition-colors cursor-pointer" style="background: var(--primary);">{% if ws.subscription.is_courtesy %}{% translate "Save exemption" %}{% else %}{% translate "Exempt from charges" %}{% endif %}</button>
+  </div>
+</form>
+{% if ws.subscription.is_courtesy %}
+<form method="post" action="{% url 'billing_staff:toggle_courtesy' target_workspace_id=ws.workspace.id %}"
+      class="mt-4 pt-3 border-t border-neutral-200 flex flex-wrap items-center justify-between gap-2">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="revoke">
+  {% if back %}<input type="hidden" name="back" value="{{ back }}">{% endif %}
+  <p class="text-xs text-neutral-600">{% translate "To end the exemption today:" %}</p>
+  <button type="submit" class="btn-ghost text-xs">{% translate "Charge this brand again" %}</button>
+</form>
+{% endif %}

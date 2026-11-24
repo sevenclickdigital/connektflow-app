@@ -17,6 +17,10 @@ Four things can stop a message, checked in this order:
 3. The per-recipient hourly/daily cap, for ``notification``-class mail only.
 4. The global daily cap, which nothing bypasses.
 
+Whatever happens to a message is written to ``EmailLog`` (addressee, subject
+and outcome, never the body), which is the history the team reads on an
+account's page.
+
 The class comes from an ``X-ConnektFlow-Email-Class`` header (see
 ``transactional()``). ``transactional`` mail — password reset, an invitation, a
 magic link — skips the per-recipient cap but never the global one, so a storm of
@@ -40,6 +44,9 @@ logger = logging.getLogger(__name__)
 EMAIL_CLASS_HEADER = "X-ConnektFlow-Email-Class"
 CLASS_TRANSACTIONAL = "transactional"
 CLASS_NOTIFICATION = "notification"
+
+#: How long the history of sent mail (``EmailLog``) is kept.
+EMAIL_LOG_RETENTION_DAYS = 180
 
 
 class BudgetExceededError(Exception):
@@ -186,9 +193,18 @@ class BudgetedEmailBackend(BaseEmailBackend):
         if not email_messages:
             return 0
 
-        allowed = [m for m in email_messages if self._allow(m)]
+        allowed = []
+        for message in email_messages:
+            refusal = self._refusal(message)
+            if refusal:
+                _log(message, "dropped", refusal)
+            else:
+                allowed.append(message)
         if not allowed:
             return 0
+
+        # Read before the routing header is stripped below.
+        classes = {id(m): (m.extra_headers or {}).get(EMAIL_CLASS_HEADER, CLASS_NOTIFICATION) for m in allowed}
 
         # Strip the routing header only from the messages that survived. Doing
         # it during the decision would mean a dropped message came back
@@ -198,9 +214,21 @@ class BudgetedEmailBackend(BaseEmailBackend):
             if message.extra_headers:
                 message.extra_headers.pop(EMAIL_CLASS_HEADER, None)
 
-        return self._inner().send_messages(allowed) or 0
+        try:
+            sent = self._inner().send_messages(allowed) or 0
+        except Exception as exc:
+            for message in allowed:
+                _log(message, "failed", type(exc).__name__, email_class=classes[id(message)])
+            raise
+        # A backend counts what it accepted without saying which; when it took
+        # them all, each one is known to have left.
+        outcome = ("sent", "") if sent >= len(allowed) else ("failed", "not accepted by the mail server")
+        for message in allowed:
+            _log(message, *outcome, email_class=classes[id(message)])
+        return sent
 
-    def _allow(self, message) -> bool:
+    def _refusal(self, message) -> str:
+        """Why this message must not be sent, or "" when it may."""
         # recipients() is to + cc + bcc. Suppression has to cover all of them —
         # a bounced address is bounced wherever it appears — but the
         # per-recipient cap is about the person the message is addressed to, so
@@ -212,14 +240,14 @@ class BudgetedEmailBackend(BaseEmailBackend):
 
         if not getattr(settings, "EMAIL_SENDING_ENABLED", True):
             logger.warning("Email dropped (sending disabled): %r to %s", subject, recipients)
-            return False
+            return "sending disabled"
 
         if not recipients:
-            return False
+            return "no recipient"
 
         if _is_suppressed(recipients):
             logger.warning("Email dropped (recipient suppressed): %r to %s", subject, recipients)
-            return False
+            return "recipient suppressed"
 
         now = timezone.now()
         hourly = _limit("EMAIL_RECIPIENT_HOURLY_LIMIT", 6)
@@ -247,9 +275,48 @@ class BudgetedEmailBackend(BaseEmailBackend):
         except BudgetExceededError as exc:
             log = logger.error if "global" in str(exc) else logger.warning
             log("Email dropped (%s): %r to %s — class=%s", exc, subject, recipients, klass)
-            return False
+            return str(exc)
 
-        return True
+        return ""
+
+
+def _log(message, status: str, detail: str = "", *, email_class: str = "") -> None:
+    """Write one ``EmailLog`` row per addressee. Never raises: the history must not stop the mail.
+
+    The savepoint keeps a failed insert from poisoning a transaction the
+    caller may be in.
+    """
+    from .models import EmailLog
+
+    klass = email_class or (getattr(message, "extra_headers", None) or {}).get(EMAIL_CLASS_HEADER, CLASS_NOTIFICATION)
+    subject = (getattr(message, "subject", "") or "")[:255]
+    rows = [
+        EmailLog(
+            recipient=address.strip().lower()[:254],
+            subject=subject,
+            email_class=klass,
+            status=status,
+            detail=detail[:120],
+        )
+        for address in (getattr(message, "to", None) or [])
+        if address and address.strip()
+    ]
+    if not rows:
+        return
+    try:
+        with transaction.atomic():
+            EmailLog.objects.bulk_create(rows)
+    except DatabaseError:
+        logger.exception("Could not record %d sent e-mail(s) in the history", len(rows))
+
+
+def purge_old_email_logs(older_than_days: int = EMAIL_LOG_RETENTION_DAYS) -> int:
+    """Drop the history of sent mail past its retention. Returns the number deleted."""
+    from .models import EmailLog
+
+    cutoff = timezone.now() - timedelta(days=older_than_days)
+    deleted, _ = EmailLog.objects.filter(created_at__lt=cutoff).delete()
+    return deleted
 
 
 def purge_expired_counters(older_than_days: int = 7) -> int:

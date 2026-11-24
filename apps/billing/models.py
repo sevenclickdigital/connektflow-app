@@ -158,6 +158,11 @@ class WorkspaceSubscription(models.Model):
     # Why a workspace was comped. Free text and admin-facing only; the
     # billing logic cares about status alone.
     courtesy_note = models.CharField(max_length=255, blank=True, default="")
+    # The last day this brand goes unbilled; the day after,
+    # ``services.expire_due_courtesies`` returns it to ``pending``. NULL = no
+    # end date. A date, like the account-level deadline it follows the rules of.
+    courtesy_expires_on = models.DateField(null=True, blank=True)
+    courtesy_granted_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -510,13 +515,10 @@ class OrganizationBillingProfile(models.Model):
     ``courtesy``, so an admin moves the comp between workspaces by
     flipping statuses and never has to keep two tables in agreement.
 
-    ``courtesy_expires_on`` is the deadline on that comp. It sits on the
-    account rather than on each ``WorkspaceSubscription`` for the same
-    reason the quota does: the operator grants "this account is free
-    until the 30th", one decision, and the expiry job then has one date
-    to read instead of having to agree with N per-workspace copies of
-    it. NULL means open-ended, which is what every row granted before
-    this field existed means — see the field's own comment.
+    ``courtesy_expires_on`` is the deadline that budget was granted with.
+    Each exempt brand carries its own (``WorkspaceSubscription
+    .courtesy_expires_on``), which is the one the expiry job reads; this one
+    only says when the budget itself closes. NULL means open-ended.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

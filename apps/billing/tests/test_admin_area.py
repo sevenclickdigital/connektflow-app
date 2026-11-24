@@ -816,3 +816,86 @@ class TestOperatorCannotFallIntoTheProduct:
 
         request.user = customer
         assert impersonation.is_operator(request) is False
+
+
+# ---------------------------------------------------------------------------
+# One account's page
+# ---------------------------------------------------------------------------
+
+
+def _account(org, tab=""):
+    url = reverse("billing_staff:account", kwargs={"org_id": org.id})
+    return f"{url}?tab={tab}" if tab else url
+
+
+def test_the_account_page_is_for_the_team_only(client, operator, customer, org):
+    client.force_login(customer)
+    assert client.get(_account(org)).status_code in (302, 403)
+
+    client.force_login(operator)
+    response = client.get(_account(org))
+    assert response.status_code == 200
+    assert response.context["row"]["organization"] == org
+    assert response.context["tab"] == "details"
+
+
+def test_an_unknown_tab_opens_the_details(client, operator, customer, org):
+    client.force_login(operator)
+    assert client.get(_account(org, "x' onload='1")).context["tab"] == "details"
+
+
+@pytest.mark.parametrize("tab", ["brands", "people", "payments"])
+def test_each_tab_of_the_account_page_opens(client, operator, customer, org, workspace, tab):
+    client.force_login(operator)
+
+    response = client.get(_account(org, tab))
+
+    assert response.status_code == 200 and response.context["tab"] == tab
+
+
+def test_the_brands_tab_offers_each_brands_exemption_to_a_superadmin(client, operator, customer, org, workspace):
+    client.force_login(operator)
+
+    body = client.get(_account(org, "brands")).content.decode()
+
+    assert reverse("billing_staff:toggle_courtesy", kwargs={"target_workspace_id": workspace.id}) in body
+    assert reverse("billing_staff:grant_courtesy", kwargs={"org_id": org.id}) not in body
+
+
+def test_the_customers_screen_offers_no_exemption_of_the_whole_account(client, operator, customer, org, workspace):
+    client.force_login(operator)
+
+    body = client.get(reverse("billing_staff:staff_console")).content.decode()
+
+    assert reverse("billing_staff:toggle_courtesy", kwargs={"target_workspace_id": workspace.id}) in body
+    assert reverse("billing_staff:grant_courtesy", kwargs={"org_id": org.id}) not in body
+    assert "tab=courtesy" not in body
+
+
+def test_the_sent_emails_tab_lists_only_what_went_to_this_account(client, operator, customer, org):
+    from apps.common.models import EmailLog
+
+    org.billing_email = "Finance@Acme.example"
+    org.save(update_fields=["billing_email"])
+    EmailLog.objects.create(recipient="client@example.com", subject="Confirm your email", status="sent")
+    EmailLog.objects.create(recipient="finance@acme.example", subject="Payment confirmed", status="sent")
+    EmailLog.objects.create(recipient="someone@else.example", subject="Not theirs", status="sent")
+    client.force_login(operator)
+
+    response = client.get(_account(org, "emails"))
+
+    assert response.context["tab"] == "emails"
+    assert {e.subject for e in response.context["emails"]} == {"Confirm your email", "Payment confirmed"}
+
+
+def test_correcting_an_account_returns_to_its_page(client, operator, customer, org):
+    client.force_login(operator)
+
+    response = client.post(
+        reverse("billing_staff:edit_account", kwargs={"org_id": org.id}),
+        {"organization_name": "Acme Renamed", "user_id": str(customer.id), "name": "Client", "email": customer.email},
+    )
+
+    assert response.url == _account(org)
+    org.refresh_from_db()
+    assert org.name == "Acme Renamed"

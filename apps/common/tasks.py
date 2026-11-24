@@ -12,20 +12,23 @@ COUNTER_PURGE_INTERVAL_SECONDS = 24 * 60 * 60
 
 @background(schedule=0)
 def purge_email_counters():
-    """Drop email budget buckets whose period is long past.
+    """Drop email budget buckets whose period is long past, and the sent-mail history past its retention.
 
     One row per recipient per hour accumulates quickly and nothing else ever
     deletes them. Exceptions are swallowed deliberately: django-background-tasks
     backs a raising task off exponentially and deletes it after 25 attempts, and
     losing the schedule over a housekeeping failure is worse than the rows.
     """
-    from .mail import purge_expired_counters
+    from .mail import purge_expired_counters, purge_old_email_logs
 
     try:
         deleted = purge_expired_counters()
+        forgotten = purge_old_email_logs()
     except Exception:
         logger.exception("Email counter purge failed")
         return
 
     if deleted:
         logger.info("Purged %d expired email counter row(s)", deleted)
+    if forgotten:
+        logger.info("Purged %d row(s) of the sent e-mail history past its retention", forgotten)
