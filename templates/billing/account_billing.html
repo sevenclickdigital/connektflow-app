@@ -1,10 +1,10 @@
 {% extends "layouts/settings.html" %}
 {% load i18n billing_extras %}
 {% comment %}
-Account centre → Billing: the whole account at a glance. How many brands
-are active, on trial or stopped, what the active ones cost, each brand with
-the one action it needs, the charges the payment provider reported and the
-payer's data. Each brand's own page (workspace_billing.html) keeps the
+Account centre → Billing, for who owns or administers an organization: each
+of those organizations with its numbers and its brands, then the charges
+the payment provider reported for them. Who the invoices are issued to is edited with the
+organization, on the organizations page. Each brand's own page (workspace_billing.html) keeps the
 detail: storage, add-ons, contracting.
 {% endcomment %}
 {% block title %}{% translate "Billing" %} - Connekt Flow{% endblock %}
@@ -12,93 +12,111 @@ detail: storage, add-ons, contracting.
 {% block page_header %}
 <div class="page-header">
     <div>
-        <h1 class="page-title">{% translate "Billing" %}{% if request.org %} · {{ request.org.name }}{% endif %}</h1>
-        <p class="page-description">{% translate "The organization pays; each of its brands is contracted on its own." %}</p>
+        <h1 class="page-title">{% translate "Billing" %}</h1>
+        <p class="page-description">{% translate "Each organization pays for its own brands. Here are the ones you own or administer, with their brands and payments." %}</p>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-{% if request.org %}
 {% comment %}
-Who is who on this page, said once at the top: the organization is the
-payer, the brands are what is paid for. Without it the two were easy to
-take for each other.
+One card per organization, two side by side on a wide screen when there is
+more than one: its name with three numbers beside it (how many of its brands
+are in use, when the next charge is due, what the active brands cost a
+month; they drop below the name when the card is narrow) and its brands,
+each with its state and the one action it needs.
 {% endcomment %}
-<section class="mb-8">
-    <div class="a-card p-5 flex flex-wrap items-center gap-4">
-        <div class="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
-            <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1"/></svg>
+<div class="grid grid-cols-1 {% if groups|length > 1 %}xl:grid-cols-2{% endif %} gap-5 items-start mb-8">
+{% for group in groups %}
+<section class="a-card overflow-hidden min-w-0">
+    <div class="p-5 sm:p-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+        <div class="flex items-center gap-4 min-w-0">
+            <div class="w-12 h-12 rounded-2xl bg-brand-700 text-white flex items-center justify-center text-lg font-semibold flex-shrink-0">{{ group.organization.name|first|upper }}</div>
+            <h2 class="text-lg font-semibold text-neutral-950 truncate">{{ group.organization.name }}</h2>
+            {% if group.plan_cancels_on %}
+            <span class="pill pill-warning"><i></i>{% blocktranslate with date=group.plan_cancels_on|date:"SHORT_DATE_FORMAT" %}Cancelled · in use until {{ date }}{% endblocktranslate %}</span>
+            {% elif group.archived_until %}
+            <span class="pill pill-neutral"><i></i>{% translate "Archived" context "organization" %}</span>
+            {% endif %}
         </div>
-        <div class="flex-1 min-w-0">
-            <div class="text-xs font-semibold uppercase tracking-wide text-neutral-500">{% translate "Organization" %}</div>
-            <div class="text-base font-semibold text-neutral-950 truncate">{{ request.org.name }}</div>
-            <p class="text-xs text-neutral-600 mt-0.5">{% translate "The invoices of the brands below are issued to this organization. To see another organization, open one of its brands." %}</p>
+        <div class="flex items-center gap-6">
+            <div>
+                <div class="text-xs text-neutral-600">{% translate "Active brands" %}</div>
+                <div class="text-base font-semibold text-neutral-950 tabular-nums">{% blocktranslate with active=group.counts.active total=group.counts.all %}{{ active }} of {{ total }}{% endblocktranslate %}</div>
+            </div>
+            <div>
+                <div class="text-xs text-neutral-600">{% translate "Next due date" %}</div>
+                <div class="text-base font-semibold text-neutral-950 tabular-nums">{% if group.plan.next_due %}{{ group.plan.next_due|date:"d/m/Y" }}{% else %}—{% endif %}</div>
+            </div>
+            <div>
+                <div class="text-xs text-neutral-600">{% translate "Recurring amount" %}</div>
+                <div class="text-base font-semibold text-brand-700 tabular-nums">R$ {{ group.plan.recurring_cents|brl }} <span class="text-xs font-normal text-neutral-600">{% translate "/month" %}</span></div>
+            </div>
+            {% comment %}
+            The card's menu: cancelling the subscription, offered while the
+            plan has a brand not yet cancelled. Positioned from the button
+            with fixed coordinates because the card clips what overflows it.
+            {% endcomment %}
+            {% if group.cancellable %}
+            <div x-data="{ menu: false, menuStyle: '' }">
+                <button type="button" class="btn-ghost py-1.5 px-2" :aria-expanded="menu.toString()"
+                        @click="menu = !menu; if (menu) { const r = $el.getBoundingClientRect(); menuStyle = 'top:' + (r.bottom + 4) + 'px;left:' + Math.max(8, r.right - 224) + 'px'; }"
+                        title="{% translate 'More actions' %}" aria-label="{% translate 'More actions' %}">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+                </button>
+                <div x-show="menu" x-cloak x-transition @click.outside="menu = false" @keydown.escape.window="menu = false"
+                     @scroll.window.capture="menu = false" @resize.window="menu = false" :style="menuStyle"
+                     class="fixed bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 w-56">
+                    <a href="{% url 'billing_account:cancel' organization_id=group.organization.id %}"
+                       class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-red-700 hover:bg-red-50 cursor-pointer">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        {% translate "Cancel subscription" %}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
-</section>
-{% endif %}
-
-<section class="mb-8">
-    <h2 class="section-title">{% translate "Brands of this organization" %}</h2>
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="a-card p-5">
-            <div class="text-sm text-neutral-600">{% translate "All brands" %}</div>
-            <div class="text-3xl font-semibold text-neutral-950 tabular-nums mt-1">{{ counts.all }}</div>
-        </div>
-        <div class="a-card p-5">
-            <div class="text-sm text-neutral-600">{% translate "Active brands" %}</div>
-            <div class="text-3xl font-semibold text-neutral-950 tabular-nums mt-1">{{ counts.active }}</div>
-        </div>
-        <div class="a-card p-5">
-            <div class="text-sm text-neutral-600">{% translate "Inactive brands" %}</div>
-            <div class="text-3xl font-semibold text-neutral-950 tabular-nums mt-1">{{ counts.inactive }}</div>
-        </div>
-        <div class="a-card p-5">
-            <div class="text-sm text-neutral-600">{% translate "Brands on trial" %}</div>
-            <div class="text-3xl font-semibold text-neutral-950 tabular-nums mt-1">{{ counts.trial }}</div>
-        </div>
+    {% comment %}
+    The way back, under the card's head: an archived organization resumes
+    on the checkout, with everything it had; a plan cancelled and still in
+    use has its cancellation undone here when its card was kept.
+    {% endcomment %}
+    {% if group.archived_until %}
+    <div class="border-t border-neutral-300 px-5 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-neutral-700 flex-1 min-w-0">{% blocktranslate with date=group.archived_until|date:"SHORT_DATE_FORMAT" %}The subscription ended and this organization is archived. Its brands, posts, media and connected accounts are kept until <strong>{{ date }}</strong>; resume the subscription before that day and everything comes back as you left it.{% endblocktranslate %}</p>
+        {% if group.resume_brand %}
+        <a href="{% url 'billing:checkout' workspace_id=group.resume_brand.id %}" class="btn-brand">{% translate "Resume subscription" %}</a>
+        {% endif %}
     </div>
-</section>
-
-<section class="mb-8">
-    <h2 class="section-title">{% translate "Plan of the organization" %}</h2>
-    <div class="a-card grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-neutral-300">
-        <div class="p-5">
-            <div class="text-sm text-neutral-600">{% translate "Paid brands" %}</div>
-            <div class="text-lg font-semibold text-neutral-950 tabular-nums mt-1">{{ plan.brands }}</div>
-        </div>
-        <div class="p-5">
-            <div class="text-sm text-neutral-600">{% translate "Next due date" %}</div>
-            <div class="text-lg font-semibold text-neutral-950 tabular-nums mt-1">{% if plan.next_due %}{{ plan.next_due|date:"d/m/Y" }}{% else %}—{% endif %}</div>
-        </div>
-        <div class="p-5">
-            <div class="text-sm text-neutral-600">{% translate "Recurring amount" %}</div>
-            <div class="text-lg font-semibold text-brand-700 tabular-nums mt-1">R$ {{ plan.recurring_cents|brl }} <span class="text-sm font-normal text-neutral-600">{% translate "/month" %}</span></div>
-        </div>
+    {% elif group.resumable %}
+    <div class="border-t border-neutral-300 px-5 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-neutral-700 flex-1 min-w-0">{% blocktranslate with date=group.plan_cancels_on|date:"SHORT_DATE_FORMAT" %}Changed your mind? Undo the cancellation and the subscription renews on {{ date }} with the card it was paid with. Nothing is charged now.{% endblocktranslate %}</p>
+        <form method="post" action="{% url 'billing_account:resume' organization_id=group.organization.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-soft">{% translate "Undo cancellation" %}</button>
+        </form>
     </div>
-    <p class="text-xs text-neutral-500 mt-2">{% translate "Each brand has its own invoice, paid by Pix, boleto or card. A yearly brand counts here by its monthly equivalent." %}</p>
-</section>
-
-<section class="mb-8">
-    <h2 class="section-title">{% translate "Subscription of each brand" %}</h2>
-    {% if rows %}
-    <div class="a-card divide-y divide-neutral-300">
-        {% for row in rows %}
+    {% endif %}
+    {% if group.rows %}
+    <div class="border-t border-neutral-300 bg-neutral-50 divide-y divide-neutral-300">
+        {% for row in group.rows %}
         {% with sub=row.subscription %}
-        <div class="px-6 py-4 flex flex-wrap items-center gap-4">
+        <div class="px-5 sm:px-6 py-4 flex flex-wrap items-center gap-3">
             <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold bg-brand-100 text-brand-800">{{ row.workspace.name|first|upper }}</div>
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-semibold text-neutral-950 truncate">{{ row.workspace.name }}</div>
                 <div class="text-xs text-neutral-500 truncate">
-                    {% if row.workspace.organization_id != request.org.id %}
-                    {% blocktranslate with name=row.workspace.organization.name %}Brand of another organization: {{ name }}{% endblocktranslate %}
+                    {% if row.cancels_on %}
+                    {% blocktranslate with date=row.cancels_on|date:"SHORT_DATE_FORMAT" %}Cancelled: in use until {{ date }}, then not charged again{% endblocktranslate %}
                     {% elif sub.in_trial %}
                     {% blocktranslate with date=sub.trial_ends_at|date:"d/m/Y" %}Free trial until {{ date }}{% endblocktranslate %}
                     {% elif sub.trial_expired %}
                     {% translate "Free trial ended" %}
                     {% elif sub.status == 'active' and sub.current_period_end %}
                     {% blocktranslate with date=sub.current_period_end|date:"d/m/Y" %}Paid until {{ date }}{% endblocktranslate %}
+                    {% elif sub.status == 'active' %}
+                    {% translate "Paid" %}
                     {% elif sub.status == 'courtesy' %}
                     {% translate "Not charged" %}
                     {% else %}
@@ -106,19 +124,31 @@ take for each other.
                     {% endif %}
                 </div>
             </div>
-            {% if row.state == 'trial' %}
+            {% if row.cancels_on %}
+            <span class="pill pill-warning"><i></i>{% translate "Cancelled" context "brand" %}</span>
+            {% elif row.state == 'trial' %}
             <span class="pill pill-info"><i></i>{% translate "On trial" %}</span>
             {% else %}
             <span class="pill {% if sub.status == 'active' %}pill-success{% elif sub.status == 'courtesy' %}pill-brand{% elif sub.status == 'past_due' %}pill-warning{% else %}pill-neutral{% endif %}">
                 <i></i>{% if sub %}{{ sub.get_status_display }}{% else %}{% translate "Pending" %}{% endif %}
             </span>
             {% endif %}
-            <div class="w-32 text-right">
+            {% if row.on_plan %}
+            <div class="text-xs text-neutral-500 text-right">{% translate "Included in the plan" %}</div>
+            {% else %}
+            <div class="text-right">
                 <div class="text-sm font-semibold text-neutral-950 tabular-nums">R$ {{ row.monthly_total_cents|brl }}</div>
                 <div class="text-xs text-neutral-500">{% if sub.is_yearly %}{% translate "per month, paid yearly" %}{% else %}{% translate "per month" %}{% endif %}</div>
             </div>
-            <div class="w-40 flex justify-end">
-                {% if not row.can_open %}
+            {% endif %}
+            <div class="flex justify-end">
+                {% if row.cancels_on and not group.plan_cancels_on %}
+                <form method="post" action="{% url 'billing_account:keep_brand' organization_id=group.organization.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="brand" value="{{ row.workspace.id }}">
+                    <button type="submit" class="btn-soft py-1.5 px-3 text-xs">{% translate "Keep on the plan" %}</button>
+                </form>
+                {% elif not row.can_open %}
                 {% elif row.awaiting_payment %}
                 <a href="{% url 'billing:pay_invoice' workspace_id=row.workspace.id %}" target="_blank" rel="noopener" class="btn-brand py-1.5 px-3 text-xs">{% translate "Pay invoice" %}</a>
                 {% elif row.state == 'active' %}
@@ -132,9 +162,11 @@ take for each other.
         {% endfor %}
     </div>
     {% else %}
-    <div class="a-card px-6 py-12 text-center text-sm text-neutral-500">{% translate "You don't manage the billing of any brand." %}</div>
+    <div class="border-t border-neutral-300 bg-neutral-50 px-6 py-8 text-center text-sm text-neutral-500">{% translate "This organization has no brand yet." %}</div>
     {% endif %}
 </section>
+{% endfor %}
+</div>
 
 <section class="mb-8">
     <h2 class="section-title">{% translate "Payments" %}</h2>
@@ -142,11 +174,21 @@ take for each other.
     <div class="a-card divide-y divide-neutral-300">
         {% for payment in payments %}
         <div class="px-6 py-3.5 flex flex-wrap items-center gap-4">
+            {% comment %}
+            What was paid on the first line; under it whose it is, how many
+            brands the plan has, how it was paid and when.
+            {% endcomment %}
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-semibold text-neutral-950 truncate">
-                    {{ payment.workspace.name }}{% if payment.is_addon %} · {% translate "extra storage" %}{% endif %}
+                    {% if payment.kind == 'plan' %}{% if payment.plan.is_yearly %}{% translate "Yearly plan" %}{% else %}{% translate "Monthly plan" %}{% endif %}
+                    {% elif payment.kind == 'addition' %}{% translate "Brands added to the plan" %}
+                    {% elif payment.kind == 'addon' %}{% translate "Extra storage" %}{% if payment.workspace %} · {{ payment.workspace.name }}{% endif %}
+                    {% elif payment.workspace %}{% translate "Brand subscription" %} · {{ payment.workspace.name }}
+                    {% else %}{% translate "Subscription" %}{% endif %}{% if payment.workspace.is_archived %} · {% translate "Archived" %}{% endif %}
                 </div>
-                <div class="text-xs text-neutral-500 tabular-nums">{{ payment.date|date:"d/m/Y H:i" }}</div>
+                <div class="text-xs text-neutral-500 truncate">
+                    {% if payment.organization %}{{ payment.organization.name }} · {% endif %}{% if payment.kind == 'plan' %}{% blocktranslate count counter=payment.plan.brands %}{{ counter }} brand{% plural %}{{ counter }} brands{% endblocktranslate %} · {% endif %}{% if payment.method == 'card' %}{% if payment.kind == 'plan' and payment.plan.card_last4 %}{% blocktranslate with brand=payment.plan.card_brand|title digits=payment.plan.card_last4 %}{{ brand }} card ending in {{ digits }}{% endblocktranslate %}{% else %}{% translate "Credit card" %}{% endif %} · {% elif payment.method == 'pix' %}Pix · {% elif payment.method == 'boleto' %}{% translate "Boleto" %} · {% endif %}<span class="tabular-nums">{{ payment.date|date:"d/m/Y H:i" }}</span>
+                </div>
             </div>
             <span class="pill {% if payment.outcome == 'paid' %}pill-success{% elif payment.outcome == 'overdue' %}pill-warning{% else %}pill-neutral{% endif %}">
                 <i></i>{% if payment.outcome == 'paid' %}{% translate "Paid" %}{% elif payment.outcome == 'overdue' %}{% translate "Overdue" %}{% else %}{% translate "Reversed" %}{% endif %}
@@ -166,71 +208,4 @@ take for each other.
     <div class="a-card px-6 py-10 text-center text-sm text-neutral-500">{% translate "No payment yet. They appear here as soon as the first invoice is paid." %}</div>
     {% endif %}
 </section>
-
-{% if payer %}
-<section class="mb-8" x-data="{ editing: false }">
-    <div class="flex items-center justify-between gap-4">
-        <h2 class="section-title">{% translate "Billing data of the organization" %}</h2>
-        <button type="button" class="btn-soft py-1.5 px-3 text-xs mb-3" @click="editing = true" x-show="!editing">{% translate "Edit data" %}</button>
-    </div>
-
-    <div x-show="!editing">
-        <div class="a-card grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-neutral-300">
-            <div class="p-5 min-w-0">
-                <div class="text-sm text-neutral-600">{% translate "Name or company name" %}</div>
-                <div class="text-sm font-semibold text-neutral-950 truncate mt-1">{{ payer.name }}</div>
-            </div>
-            <div class="p-5 min-w-0">
-                <div class="text-sm text-neutral-600">{% translate "CPF or CNPJ" %}</div>
-                <div class="text-sm font-semibold text-neutral-950 tabular-nums mt-1">{% if payer.tax_id_ending %}{% blocktranslate with digits=payer.tax_id_ending %}ending in {{ digits }}{% endblocktranslate %}{% else %}—{% endif %}</div>
-            </div>
-            <div class="p-5 min-w-0">
-                <div class="text-sm text-neutral-600">{% translate "Phone" %}</div>
-                <div class="text-sm font-semibold text-neutral-950 tabular-nums mt-1">{{ payer.phone|default:"—" }}</div>
-            </div>
-            <div class="p-5 min-w-0">
-                <div class="text-sm text-neutral-600">{% translate "Billing email" %}</div>
-                <div class="text-sm font-semibold text-neutral-950 truncate mt-1">{{ payer.email|default:"—" }}</div>
-            </div>
-        </div>
-        <p class="text-xs text-neutral-500 mt-2">{% translate "Who the invoices of every brand of this account are issued to." %}</p>
-    </div>
-
-    {% comment %}
-    The document on file is never written into the page: the field starts
-    empty and an empty field keeps it (apps.billing.contracting.update_payer).
-    {% endcomment %}
-    <form method="post" action="{% url 'billing_account:update_payer' %}" class="a-card p-6" x-show="editing" x-cloak>
-        {% csrf_token %}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label for="payer_name" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Name or company name" %}</label>
-                <input type="text" id="payer_name" name="payer_name" required maxlength="255" value="{{ payer.name }}" class="form-input-styled w-full">
-            </div>
-            <div>
-                <label for="payer_tax_id" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "CPF or CNPJ" %}</label>
-                <input type="text" id="payer_tax_id" name="tax_id" data-mask="tax-id" inputmode="numeric" autocomplete="off" maxlength="18"
-                       placeholder="{% if payer.tax_id_ending %}{% blocktranslate with digits=payer.tax_id_ending %}ending in {{ digits }}{% endblocktranslate %}{% else %}000.000.000-00{% endif %}"
-                       class="form-input-styled w-full tabular-nums">
-                {% if payer.tax_id_ending %}
-                <p class="text-xs text-neutral-500 mt-1.5">{% translate "Leave it empty to keep the current document. Type a CPF or a CNPJ to change it." %}</p>
-                {% endif %}
-            </div>
-            <div>
-                <label for="payer_phone" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Phone with area code" %}</label>
-                <input type="tel" id="payer_phone" name="phone" data-mask="phone" autocomplete="tel" maxlength="20" value="{{ payer.phone }}" placeholder="(11) 99999-9999" class="form-input-styled w-full tabular-nums">
-            </div>
-            <div>
-                <label for="payer_email" class="block text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">{% translate "Billing email" %}</label>
-                <input type="email" id="payer_email" name="billing_email" autocomplete="email" maxlength="254" value="{{ payer.email }}" class="form-input-styled w-full">
-            </div>
-        </div>
-        <div class="flex items-center gap-2 mt-5">
-            <button type="submit" class="btn-brand">{% translate "Save" %}</button>
-            <button type="button" class="btn-soft" @click="editing = false">{% translate "Cancel" %}</button>
-        </div>
-        <p class="text-xs text-neutral-500 mt-3">{% translate "The change applies to the next invoices. Invoices already issued keep the data they were issued with." %}</p>
-    </form>
-</section>
-{% endif %}
 {% endblock %}

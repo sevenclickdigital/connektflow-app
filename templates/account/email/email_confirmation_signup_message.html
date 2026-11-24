@@ -1,11 +1,16 @@
 {% extends "account/email/base_message.html" %}
 {% load i18n account %}
 {% block title %}{% translate "Confirm your email address" %}{% endblock %}
-{% block preheader %}{% translate "One click to confirm your email address." %}{% endblock %}
+{% block preheader %}{% if code %}{% translate "Your verification code is inside." %}{% else %}{% translate "One click to confirm your email address." %}{% endif %}{% endblock %}
 {% block content %}{% user_display user as user_display %}
 <h1 class="cf-h1" style="margin:0 0 16px;font-size:22px;line-height:30px;font-weight:700;color:#0F172A;">{% translate "Confirm your email address" %}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate %}Hi {{ user_display }},{% endblocktranslate %}</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% blocktranslate with brand=brand_name %}Thanks for signing up for {{ brand }}. Confirm your email address to activate your account.{% endblocktranslate %}</p>
+{% if code %}
+<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#334155;">{% translate "Type this code on the page where you are creating your account or signing in:" %}</p>
+<p style="margin:8px 0 0;padding:18px;background-color:#F5F3FF;border-radius:8px;text-align:center;font-size:28px;line-height:34px;font-weight:700;letter-spacing:6px;color:#0F172A;font-family:SFMono-Regular,Menlo,Consolas,monospace;">{{ code }}</p>
+{% else %}
 {% translate "Confirm email" as cta %}{% include "emails/_button.html" with url=activate_url label=cta %}
+{% endif %}
 <p style="margin:24px 0 0;font-size:13px;line-height:20px;color:#64748B;">{% translate "If you didn't sign up, you can safely ignore this email." %}</p>
 {% endblock %}

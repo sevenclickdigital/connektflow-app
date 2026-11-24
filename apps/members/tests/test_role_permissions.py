@@ -124,3 +124,24 @@ def test_only_an_owner_or_admin_of_that_organization_reaches_the_page(client, or
         assert client.post(_url(org), {"role_viewer": ["create_posts"]}).status_code == 404
     org.refresh_from_db()
     assert org.role_permissions is None
+
+
+@pytest.mark.django_db
+def test_the_menu_only_offers_what_the_role_may_open(client, org, brand):
+    # A link to a page the role cannot open ends on the "forbidden" page.
+    editor = _person("editor@a.com", org, brand, ROLE.EDITOR)
+    client.force_login(editor)
+    calendar = reverse("calendar:calendar", kwargs={"workspace_id": brand.id})
+    inbox = reverse("inbox:feed", kwargs={"workspace_id": brand.id})
+    ideas = reverse("composer:create_landing", kwargs={"workspace_id": brand.id})
+
+    page = client.get(calendar).content.decode()
+    assert f'href="{inbox}"' in page
+    assert f'href="{ideas}"' in page
+
+    wanted = {k for k, v in BUILTIN_ROLE_PERMISSIONS["editor"].items() if v} - {"use_inbox", "create_posts"}
+    services.set_role_permissions(org, {"editor": wanted})
+
+    page = client.get(calendar).content.decode()
+    assert f'href="{inbox}"' not in page
+    assert f'href="{ideas}"' not in page

@@ -1,7 +1,11 @@
 """The "about your business" step a new account answers once, before its plan,
 and the checkout's billing details worded after it."""
 
+import re
+
 import pytest
+from django.core import mail
+from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
 
@@ -227,3 +231,23 @@ def test_a_new_account_can_go_back_and_change_its_answers(client):
     subscription.status = WorkspaceSubscription.Status.ACTIVE
     subscription.save(update_fields=["status"])
     assert client.get(_about_url(workspace)).headers["Location"] == reverse("dashboard")
+
+
+@pytest.mark.django_db
+def test_signing_up_from_another_page_still_starts_with_the_setup(client):
+    # Signed out on the organizations screen, then "create an account": the
+    # login page carries that screen as ``next``, and the gate leaves it open.
+    cache.clear()
+    organizations = reverse("organizations:workspaces")
+    client.post(
+        f"{reverse('account_signup')}?next={organizations}",
+        {"full_name": "Camila Souza", "email": "camila@mac.example", "password1": "Uma-senha-forte-42"},
+    )
+    code = re.search(r"^(\d{6})$", mail.outbox[-1].body, re.MULTILINE).group(1)
+
+    response = client.post(reverse("account_email_verification_sent"), {"code": code})
+
+    assert response.status_code == 302
+    assert response["Location"] == reverse("dashboard")
+    workspace = WorkspaceMembership.objects.get(user__email="camila@mac.example").workspace
+    assert client.get(response["Location"], follow=True).redirect_chain[-1][0] == _about_url(workspace)

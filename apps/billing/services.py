@@ -12,6 +12,7 @@ bytes.
 from __future__ import annotations
 
 import datetime
+import logging
 import re
 import uuid
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
@@ -36,6 +37,8 @@ from apps.billing.models import (
     WorkspaceSubscription,
 )
 from apps.contacts.forms import is_valid_cnpj, is_valid_cpf
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Price list
@@ -1419,6 +1422,150 @@ def due_courtesy_profiles(*, today=None):
         courtesy_expires_on__lt=today,
         courtesy_workspace_quota__gt=0,
     ).select_related("organization")
+
+
+def plan_brands_after_cancellations(plan):
+    """How many brands the plan charges for from its next charge: its brands less the ones cancelled and still in use."""
+    leaving = WorkspaceSubscription.objects.filter(plan=plan, cancels_on__isnull=False).count()
+    return max(0, plan.brands - leaving)
+
+
+def end_cancelled_subscriptions(*, today=None):
+    """Close what the customer cancelled and whose paid period has ended. Returns how many brands were closed.
+
+    A cancellation keeps the brand in use until the end of the period
+    already paid for (``cancels_on``); this is what ends it on that day.
+    A plan cancelled whole becomes ``canceled`` and its brands follow. A
+    brand cancelled on a plan that carries on leaves the plan, which then
+    covers one brand fewer at the value the gateway was already given when
+    the cancellation was made. No gateway call here. Each plan is committed
+    on its own so one bad row cannot hold back the rest.
+    """
+    today = today or timezone.localdate()
+    closed = 0
+    status = WorkspaceSubscription.Status
+    for plan in OrganizationPlan.objects.filter(status=status.ACTIVE, cancels_on__lte=today):
+        with transaction.atomic():
+            plan.status = status.CANCELED
+            plan.canceled_at = timezone.now()
+            # Cleared with the close: the same row is contracted again later,
+            # and a date left here would end that new plan on its first sweep.
+            plan.cancels_on = None
+            plan.save(update_fields=["status", "canceled_at", "cancels_on", "updated_at"])
+            rows = WorkspaceSubscription.objects.filter(plan=plan)
+            closed += rows.count()
+            rows.update(cancels_on=None, canceled_at=timezone.now())
+            sync_plan_coverage(plan)
+
+    due = WorkspaceSubscription.objects.filter(
+        cancels_on__lte=today, plan__status=status.ACTIVE, plan__cancels_on__isnull=True
+    ).select_related("plan")
+    by_plan = {}
+    for row in due:
+        by_plan.setdefault(row.plan_id, (row.plan, []))[1].append(row)
+    for plan, rows in by_plan.values():
+        with transaction.atomic():
+            for row in rows:
+                row.plan = None
+                row.status = status.CANCELED
+                row.canceled_at = timezone.now()
+                row.cancels_on = None
+                row.save(update_fields=["plan", "status", "canceled_at", "cancels_on", "updated_at"])
+            plan.brands = max(1, plan.brands - len(rows))
+            plan.price_cents = quote_plan(plan.brands, plan.billing_cycle, plan.coupon)["monthly_cents"]
+            plan.save(update_fields=["brands", "price_cents", "updated_at"])
+            closed += len(rows)
+    return closed
+
+
+# ---------------------------------------------------------------------------
+# Archive: an organization whose plan ended keeps its data for a while
+# ---------------------------------------------------------------------------
+
+#: How long an organization is kept after its plan ended, and how long
+#: before its removal the owner is told.
+ARCHIVE_RETENTION = relativedelta(months=6)
+ARCHIVE_WARNING = datetime.timedelta(days=30)
+
+#: What a plan reads once it has ended: ``canceled``, or ``pending`` after a
+#: checkout that did not pay. ``canceled_at`` stays set until it is paid again.
+_ENDED_PLAN_STATUSES = (WorkspaceSubscription.Status.CANCELED, WorkspaceSubscription.Status.PENDING)
+
+
+def archived_plan(organization):
+    """The organization's plan when the organization is archived, else None.
+
+    Archived: its plan has ended (cancelled by the customer, or by the
+    gateway for lack of payment) and none of its brands is in use or being
+    charged. Its data is all there and contracting a plan brings it back;
+    it is removed ``ARCHIVE_RETENTION`` after the plan ended
+    (:func:`archive_removal_at`).
+    """
+    plan = OrganizationPlan.objects.filter(
+        organization=organization, status__in=_ENDED_PLAN_STATUSES, canceled_at__isnull=False
+    ).first()
+    if plan is None or organization_has_brand_in_use(organization):
+        return None
+    owing = WorkspaceSubscription.objects.filter(
+        workspace__organization=organization, status=WorkspaceSubscription.Status.PAST_DUE
+    )
+    return None if owing.exists() else plan
+
+
+def _removal_warning(plan):
+    """When the owner was warned about this archive's removal; None when not yet."""
+    warned = plan.removal_warned_at
+    return warned if warned and warned >= plan.canceled_at else None
+
+
+def archive_removal_at(plan, *, now=None):
+    """When an archived organization is removed: the retention after its plan ended.
+
+    Never sooner than ``ARCHIVE_WARNING`` after the owner was warned, nor,
+    while they have not been, than that long from now: a plan that ended
+    long ago still gets its full notice.
+    """
+    notice_from = _removal_warning(plan) or now or timezone.now()
+    return max(plan.canceled_at + ARCHIVE_RETENTION, notice_from + ARCHIVE_WARNING)
+
+
+def remove_expired_archives(*, now=None):
+    """Warn the archives close to their removal and remove the ones past it. Returns ``(warned, removed)``.
+
+    An archive is warned once, ``ARCHIVE_WARNING`` before its removal, and
+    removed only after that notice has run in full: a warning that could
+    not be sent postpones the removal. An organization brought back, or
+    one its owner already asked to delete, is left alone. Removing is
+    ``Organization.hard_delete``. Each organization stands on its own, so
+    one failure does not hold back the rest.
+    """
+    from apps.billing import emails
+
+    now = now or timezone.now()
+    warned = removed = 0
+    plans = OrganizationPlan.objects.filter(
+        status__in=_ENDED_PLAN_STATUSES,
+        canceled_at__lte=now + ARCHIVE_WARNING - ARCHIVE_RETENTION,
+        organization__deletion_requested_at__isnull=True,
+    ).select_related("organization")
+    for plan in plans:
+        organization = plan.organization
+        if archived_plan(organization) is None:
+            continue
+        removal_at = archive_removal_at(plan, now=now)
+        if _removal_warning(plan) is None:
+            if emails.send_archive_removal_warning(organization, removal_at):
+                plan.removal_warned_at = now
+                plan.save(update_fields=["removal_warned_at", "updated_at"])
+                warned += 1
+        elif now >= removal_at:
+            try:
+                organization.hard_delete()
+            except Exception:
+                logger.exception("Could not remove archived organization %s", organization.pk)
+            else:
+                removed += 1
+    return warned, removed
 
 
 def expire_due_courtesies(*, today=None):

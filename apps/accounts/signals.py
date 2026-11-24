@@ -1,6 +1,12 @@
 import logging
 
-from allauth.account.signals import password_changed, password_reset, password_set, user_signed_up
+from allauth.account.signals import (
+    email_confirmed,
+    password_changed,
+    password_reset,
+    password_set,
+    user_signed_up,
+)
 from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -141,6 +147,13 @@ def _join_invited_org(token, user):
         if org.is_unnamed and not org.memberships.exists():
             Workspace.objects.filter(organization=org).delete()
             org.delete()
+
+    # The invitation was delivered to this address, so signing up with it
+    # through the link is the proof the verification code would ask for.
+    if invitation.email.lower() == user.email.lower():
+        from allauth.account.models import EmailAddress
+
+        EmailAddress.objects.filter(user=user, email__iexact=user.email).update(verified=True)
     return True
 
 
@@ -184,14 +197,13 @@ def create_organization_on_signup(sender, request, user, **kwargs):
     _set_org_timezone_from_browser(request, user)
 
 
-@receiver(user_signed_up)
-def send_welcome_email(sender, request, user, **kwargs):
-    """Welcome a new account by email, once the signup has committed.
+def _send_welcome_email(request, user):
+    """Queue the welcome email for after the commit.
 
     Sent through allauth's adapter so it gets the same layout, brand context and
     mail class as the rest of the account mail (``account/email/welcome_*``).
-    After the commit, so a signup that rolls back does not greet anyone, and a
-    failed send is logged without touching the account that was just created.
+    After the commit, so a request that rolls back does not greet anyone, and a
+    failed send is logged without touching the account.
     """
     from allauth.account.adapter import get_adapter
 
@@ -205,6 +217,32 @@ def send_welcome_email(sender, request, user, **kwargs):
             logger.exception("Could not send the welcome email to user %s", user.pk)
 
     transaction.on_commit(_send)
+
+
+@receiver(user_signed_up)
+def welcome_an_account_that_arrives_verified(sender, request, user, **kwargs):
+    """Welcome at sign-up whoever has nothing left to prove: a Google sign-up, or an invitee on the invited address.
+
+    Everyone else is welcomed when they type the verification code
+    (``welcome_once_the_address_is_confirmed``), so the welcome never reaches
+    an address nobody confirmed. Registered after
+    ``create_organization_on_signup``, which is what marks an invitee's address.
+    """
+    from allauth.account.models import EmailAddress
+
+    if EmailAddress.objects.filter(user=user, verified=True).exists():
+        _send_welcome_email(request, user)
+
+
+@receiver(email_confirmed)
+def welcome_once_the_address_is_confirmed(sender, request, email_address, **kwargs):
+    """Welcome a new account when it confirms its address, which is its first verified one."""
+    from allauth.account.models import EmailAddress
+
+    user = email_address.user
+    if EmailAddress.objects.filter(user=user, verified=True).exclude(pk=email_address.pk).exists():
+        return
+    _send_welcome_email(request, user)
 
 
 @receiver(password_changed)

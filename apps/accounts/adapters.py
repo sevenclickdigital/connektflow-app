@@ -4,7 +4,7 @@ from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.utils import build_absolute_uri
 from django.conf import settings
 from django.db import transaction
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, resolve_url
 
 from apps.accounts.models import OAuthConnection
 from apps.accounts.signup_links import custom_signup_url, mark_invite_lapsed, signup_allowed
@@ -103,6 +103,31 @@ class AccountAdapter(DefaultAccountAdapter):
         return create_account_under_invitation(
             request, lambda: super(AccountAdapter, self).save_user(request, user, form)
         )
+
+    def post_login(self, request, user, *, signup, redirect_url, **kwargs):
+        """Send a new account to its setup steps, whatever page it signed up from.
+
+        A ``next`` carried from the login page (someone signed out on an account
+        page, then created an account) would otherwise win over the home
+        redirect and land the new account on a page the subscription gate
+        leaves open, skipping the "about your business" step. Someone who
+        signed up from an invitation owns no organization to set up and keeps
+        their destination.
+        """
+        from apps.members.models import OrgMembership
+        from apps.organizations.models import Organization
+
+        if (
+            signup
+            and OrgMembership.objects.filter(
+                user=user,
+                org_role=OrgMembership.OrgRole.OWNER,
+                organization__name=Organization.DEFAULT_NAME,
+                organization__about_answered_at__isnull=True,
+            ).exists()
+        ):
+            redirect_url = resolve_url(settings.LOGIN_REDIRECT_URL)
+        return super().post_login(request, user, signup=signup, redirect_url=redirect_url, **kwargs)
 
     def render_mail(self, template_prefix, email, context, headers=None):
         if "signup_url" in context:

@@ -256,7 +256,7 @@ PERMISSION_LABELS = {
     "view_analytics": _("View analytics"),
     "use_inbox": _("Open the inbox"),
     "reply_from_inbox": _("Reply from the inbox and manage automations"),
-    "manage_workspace_settings": _("Manage the brand's settings"),
+    "manage_workspace_settings": _("Manage saved replies, the inbox SLA and funnels"),
     "upload_media": _("Upload media"),
     "edit_media": _("Edit media"),
     "delete_media": _("Delete media"),

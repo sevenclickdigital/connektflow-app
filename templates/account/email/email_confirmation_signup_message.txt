@@ -4,6 +4,8 @@
 
 {% blocktranslate with brand=brand_name %}Thanks for signing up for {{ brand }}. Confirm your email address to activate your account.{% endblocktranslate %}
 
-{{ activate_url }}
+{% if code %}{% translate "Type this code on the page where you are creating your account or signing in:" %}
+
+{{ code }}{% else %}{{ activate_url }}{% endif %}
 
 {% translate "If you didn't sign up, you can safely ignore this email." %}{% endblock %}

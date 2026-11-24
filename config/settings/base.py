@@ -318,7 +318,18 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*"]
 # e-mails greet the person by their first name (accounts.adapters.user_display).
 ACCOUNT_SIGNUP_FORM_CLASS = "apps.accounts.forms.SignupNameForm"
 ACCOUNT_USER_DISPLAY = "apps.accounts.adapters.user_display"
-ACCOUNT_EMAIL_VERIFICATION = "none"
+# A new account proves its address before anything else: a code of six digits
+# sent by e-mail and typed on the page that follows the sign-up form
+# (account/confirm_email_verification_code.html), where it can also ask for
+# another code or correct a mistyped address. An unverified account that
+# signs in is asked the same. Google sign-ins arrive verified by Google, and
+# an invitee whose address is the invited one by the invitation itself
+# (apps.accounts.signals).
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_FORMAT = {"numeric": True, "length": 6, "dashed": False}
+ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND = True
+ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_CHANGE = True
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
 # Security notices: password changed/reset/set, email changed or removed, a
 # social login connected. Sent from account/email/*_message.html.

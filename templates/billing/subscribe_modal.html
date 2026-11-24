@@ -225,7 +225,7 @@ base.html's app_shell: the logo and the card, nothing else.
       {% endif %}
       {% else %}
       <p class="mt-5 text-xs text-neutral-600">
-        {% translate "Only a workspace owner or manager, or an organization admin, can contract a subscription. Ask one of them to activate this workspace." %}
+        {% translate "Only the owner or an admin of the organization can contract a subscription. Ask one of them to activate this workspace." %}
       </p>
       {% endif %}
 
@@ -236,7 +236,7 @@ base.html's app_shell: the logo and the card, nothing else.
           {% translate "Back to the workspace" %}
         </a>
         {% elif subscription_required %}
-        <a href="{% url 'billing_account:overview' %}"
+        <a href="{% url 'organizations:workspaces' %}"
            class="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">
           {% translate "See my other brands" %}
         </a>

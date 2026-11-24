@@ -158,6 +158,8 @@ Status belongs to `PlatformPost`, which is one row per post, account and format 
 | `sweep_idempotency` / `sweep_api_usage` | hourly / daily | `apps/api/apps.py` |
 | `purge_automation_logs` | daily (90-day retention) | `apps/automations/apps.py` |
 | `expire_courtesies` | daily | `apps/billing/apps.py` |
+| `end_cancelled_subscriptions` | daily | `apps/billing/apps.py` |
+| `remove_expired_archives` | daily | `apps/billing/apps.py` |
 | `purge_email_counters` | daily | `apps/common/apps.py` |
 | `clear_expired_sessions` | daily | `apps/accounts/apps.py` |
 | `send_task_due_reminders` | hourly | `apps/tasks/apps.py` |
@@ -304,7 +306,7 @@ STORAGE_BACKEND=s3     →  storages.backends.s3boto3.S3Boto3Storage (S3_* env v
 |---------|----------------|
 | Passwords | `BCryptSHA256PasswordHasher` (PBKDF2 fallback), min length 8 |
 | Sessions | DB-backed, HTTP-only, SameSite=Lax, 14-day sliding window. Secure cookies and HSTS in production (`production.py`). |
-| Login | django-allauth: email + Google (`GOOGLE_AUTH_*`). `SIGNUP_MODE=open\|invite\|closed`, `CUSTOM_SIGNUP_URL`. |
+| Login | django-allauth: email + Google (`GOOGLE_AUTH_*`). `SIGNUP_MODE=open\|invite\|closed`, `CUSTOM_SIGNUP_URL`. A new e-mail account confirms its address with a six-digit code before it is signed in (`ACCOUNT_EMAIL_VERIFICATION = "mandatory"`, by code). |
 | 2FA | Not implemented. `User` has encrypted `totp_*` fields, but no flow uses them. |
 | Magic links | `MagicLinkToken`: `secrets.token_urlsafe(48)`, stored as is (not hashed), 30-day expiry |
 | API keys | HMAC-SHA256 of the secret, lookup prefix, scoped per workspace (§13) |

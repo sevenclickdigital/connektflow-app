@@ -44,15 +44,15 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
-from django.db.models import Count, Prefetch, Q, Sum
-from django.http import HttpResponse
+from django.db.models import Count, Prefetch, Sum
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from django_ratelimit.decorators import ratelimit
 
 from apps.accounts import impersonation
@@ -65,6 +65,7 @@ from apps.billing.gateways.asaas import AsaasAPIError, AsaasClient, AsaasError, 
 from apps.billing.models import (
     BillingEvent,
     Coupon,
+    OrganizationPlan,
     PlanBrandAddition,
     ProductPrice,
     WorkspaceAddon,
@@ -127,24 +128,19 @@ def _get_workspace(request, workspace_id):
 
 
 def _can_manage_billing(request, workspace):
-    """Whether this member may spend the organization's money.
+    """Whether this member may spend the organization's money: its owner or an admin.
 
-    Owner or manager of the workspace, or an owner/admin of the org.
-    Contributors and clients can see the storage meter (they hit the 90%
-    warning too) but must not be able to contract a charge.
+    Asked of the brand's own organization, not of ``request.org``, which for
+    someone invited to a brand is an organization of their own. Anyone else,
+    a brand's manager included, sees the storage meter and the state of the
+    brand but contracts and pays nothing: the charge goes out in the
+    organization's name.
     """
-    membership = WorkspaceMembership.objects.filter(user=request.user, workspace=workspace).first()
-    if membership and membership.workspace_role in (
-        WorkspaceMembership.WorkspaceRole.OWNER,
-        WorkspaceMembership.WorkspaceRole.MANAGER,
-    ):
-        return True
-    org_membership = getattr(request, "org_membership", None)
-    return bool(
-        org_membership
-        and org_membership.organization_id == workspace.organization_id
-        and org_membership.org_role in ("owner", "admin")
-    )
+    return OrgMembership.objects.filter(
+        user=request.user,
+        organization_id=workspace.organization_id,
+        org_role__in=(OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN),
+    ).exists()
 
 
 def _require_manage_billing(request, workspace):
@@ -218,6 +214,15 @@ def _display_phone(digits):
     if len(digits) not in (10, 11):
         return digits
     return f"({digits[:2]}) {digits[2:-4]}-{digits[-4:]}"
+
+
+def _display_tax_id(digits):
+    """Stored document digits as people write them: 000.000.000-00 or 00.000.000/0000-00."""
+    if len(digits) == 11:
+        return f"{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}"
+    if len(digits) == 14:
+        return f"{digits[:2]}.{digits[2:5]}.{digits[5:8]}/{digits[8:12]}-{digits[12:]}"
+    return digits
 
 
 def _gateway_refusal(exc):
@@ -309,37 +314,41 @@ def workspace_billing(request, workspace_id):
 @login_required
 @require_GET
 def account_billing(request):
-    """Account centre → Billing: every brand whose billing this user manages.
+    """Account centre → Billing: every organization the user owns or administers, each with its brands.
 
-    Brands of the organization in use when they are its owner/admin, plus
-    brands they own or manage there or in organizations they are only a
-    guest of. Brands of their other organizations are left to that
-    organization's own page. Read
-    only: rows are not created here, so a brand with no subscription row yet
-    shows as pending, which is what it is.
+    One block per organization (newest first, as on the organizations
+    page): how many of its brands are in use, the next due date, what the
+    active ones cost a month, and each brand with the one action it needs.
+    The payments of all of them follow, newest first. Someone who runs no
+    organization (invited to a brand, whatever their role there) has no
+    billing page: 403. Read only: rows are not created here, so a brand with
+    no subscription row yet shows as pending, which is what it is.
     """
-    admin_org_ids = OrgMembership.objects.filter(
-        user=request.user, org_role__in=(OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN)
-    ).values_list("organization_id", flat=True)
-    managed_ids = WorkspaceMembership.objects.filter(
-        user=request.user,
-        workspace_role__in=(WorkspaceMembership.WorkspaceRole.OWNER, WorkspaceMembership.WorkspaceRole.MANAGER),
-    ).values_list("workspace_id", flat=True)
-    # The user's other organizations have this same page of their own, reached
-    # by opening one of their brands; mixing their brands in here would put
-    # them under the wrong organization's name and payer.
-    current_org_id = request.org.id if request.org else None
-    other_org_ids = [m.organization_id for m in request.org_memberships if m.organization_id != current_org_id]
-    workspaces = (
-        Workspace.objects.filter(is_archived=False)
-        .filter(Q(organization_id__in=admin_org_ids) | Q(id__in=managed_ids))
-        .exclude(organization_id__in=other_org_ids)
-        .select_related("organization", "billing_subscription")
-        .order_by("organization__name", "name")
+    organizations = sorted(
+        (
+            m.organization
+            for m in request.org_memberships
+            if m.org_role in (OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN)
+        ),
+        key=lambda organization: organization.created_at,
+        reverse=True,
     )
+    if not organizations:
+        raise PermissionDenied("Billing belongs to an organization's owner and admins.")
+    workspaces = (
+        Workspace.objects.filter(is_archived=False, organization__in=organizations)
+        .select_related("billing_subscription")
+        .order_by("name")
+    )
+    plans = {
+        plan.organization_id: plan
+        for plan in OrganizationPlan.objects.filter(
+            organization__in=organizations, status=WorkspaceSubscription.Status.ACTIVE
+        )
+    }
     member_of = set(WorkspaceMembership.objects.filter(user=request.user).values_list("workspace_id", flat=True))
     list_price_cents = services.workspace_price_cents()
-    rows = []
+    rows_by_organization = {organization.id: [] for organization in organizations}
     for ws in workspaces:
         sub = getattr(ws, "billing_subscription", None)
         if sub is not None and sub.is_settled:
@@ -348,11 +357,16 @@ def account_billing(request):
             state = "trial"
         else:
             state = "inactive"
-        rows.append(
+        rows_by_organization[ws.organization_id].append(
             {
                 "workspace": ws,
                 "subscription": sub,
                 "state": state,
+                # Paid by the organization's plan: it has no charge of its own,
+                # so the row shows no price (the plan's is on the card's header).
+                "on_plan": bool(sub and sub.plan_id and sub.status == WorkspaceSubscription.Status.ACTIVE),
+                # Cancelled by the customer and in use until this day (None otherwise).
+                "cancels_on": sub.cancels_on if sub and sub.plan_id else None,
                 # A brand never contracted has no price of its own yet: it
                 # would be contracted at today's list price.
                 "monthly_total_cents": (
@@ -368,91 +382,257 @@ def account_billing(request):
             }
         )
 
-    paying = [r for r in rows if r["subscription"] and r["subscription"].status == WorkspaceSubscription.Status.ACTIVE]
-    due_dates = [r["subscription"].current_period_end for r in paying if r["subscription"].current_period_end]
-    # Only where the user runs the organization: the payer's data is the
-    # organization's, not a brand manager's.
-    payer = None
-    if request.org_membership and request.org_membership.org_role in (
-        OrgMembership.OrgRole.OWNER,
-        OrgMembership.OrgRole.ADMIN,
-    ):
-        profile = getattr(request.org, "billing_profile", None)
-        payer = {
-            "organization": request.org,
-            "name": (profile.payer_name if profile else "") or request.org.name,
-            "tax_id_ending": profile.tax_id[-4:] if profile and profile.tax_id else "",
-            "phone": _display_phone(profile.phone) if profile else "",
-            "email": request.org.billing_email,
-        }
+    groups = []
+    for organization in organizations:
+        rows = rows_by_organization[organization.id]
+        plan = plans.get(organization.id)
+        archived = services.archived_plan(organization) if plan is None else None
+        paying = [
+            r for r in rows if r["subscription"] and r["subscription"].status == WorkspaceSubscription.Status.ACTIVE
+        ]
+        # A brand on the plan costs what the plan charges for it, discounts
+        # included, not its list price: the plan's amount counts once, plus
+        # the add-ons of the brands it covers; a brand paying on its own
+        # counts by its own subscription.
+        on_their_own = [r for r in paying if not r["on_plan"]]
+        recurring_cents = sum(r["monthly_total_cents"] for r in on_their_own)
+        due_dates = [r["subscription"].current_period_end for r in on_their_own if r["subscription"].current_period_end]
+        staying = [r for r in paying if r["on_plan"] and not r["cancels_on"]]
+        if plan is not None and not plan.cancels_on:
+            # What the next charge is: the plan without the brands cancelled.
+            plan_cents = (
+                plan.price_cents
+                if len(staying) == sum(1 for r in paying if r["on_plan"])
+                else services.quote_plan(
+                    services.plan_brands_after_cancellations(plan), plan.billing_cycle, plan.coupon
+                )["monthly_cents"]
+            )
+            recurring_cents += plan_cents + sum(services.addons_monthly_cents(r["workspace"].id) for r in staying)
+            if plan.current_period_end:
+                due_dates.append(plan.current_period_end)
+        groups.append(
+            {
+                "organization": organization,
+                # Whether "Cancel subscription" is offered: a plan in use with a brand not yet cancelled.
+                "cancellable": plan is not None and not plan.cancels_on and bool(staying),
+                # The day a plan cancelled whole ends (None otherwise).
+                "plan_cancels_on": plan.cancels_on if plan is not None else None,
+                # Whether that cancellation can still be undone here (contracting.resume_plan).
+                "resumable": plan is not None and bool(plan.cancels_on) and plan.has_card_on_file,
+                # Archived: the day its data is removed, and where the subscription is resumed.
+                "archived_until": services.archive_removal_at(archived) if archived else None,
+                "resume_brand": next((r["workspace"] for r in rows if r["can_open"]), None) if archived else None,
+                "rows": rows,
+                "counts": {
+                    "all": len(rows),
+                    "active": sum(1 for r in rows if r["state"] == "active"),
+                    "inactive": sum(1 for r in rows if r["state"] == "inactive"),
+                    "trial": sum(1 for r in rows if r["state"] == "trial"),
+                },
+                "plan": {
+                    "brands": len(paying),
+                    "next_due": min(due_dates) if due_dates else None,
+                    "recurring_cents": recurring_cents,
+                },
+            }
+        )
     return render(
         request,
         "billing/account_billing.html",
         {
+            "groups": groups,
+            "payments": _payment_history(organizations),
+            "settings_active": "billing",
+        },
+    )
+
+
+def _organization_run_by(request, organization_id):
+    """The organization of the URL when the user owns or administers it; 404 otherwise."""
+    for membership in request.org_memberships:
+        if membership.organization_id == organization_id and membership.org_role in (
+            OrgMembership.OrgRole.OWNER,
+            OrgMembership.OrgRole.ADMIN,
+        ):
+            return membership.organization
+    raise Http404
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def cancel_subscription(request, organization_id):
+    """Account centre → Billing → Cancel subscription: the brands of the plan, ticked to be cancelled.
+
+    A cancelled brand stays in use until the plan's next charge, the end of
+    the period already paid for, and is not charged again; ticking every
+    brand cancels the subscription whole (``contracting.cancel_plan_brands``).
+    Only an owner or admin of the organization reaches it.
+    """
+    organization = _organization_run_by(request, organization_id)
+    plan = _active_plan(organization)
+    rows = (
+        list(
+            WorkspaceSubscription.objects.filter(plan=plan, cancels_on__isnull=True)
+            .select_related("workspace")
+            .order_by("workspace__name")
+        )
+        if plan is not None and not plan.cancels_on
+        else []
+    )
+    if not rows:
+        messages.info(request, _("This organization has no subscription to cancel."))
+        return redirect("billing_account:overview")
+
+    if request.method == "POST":
+        wanted = set(request.POST.getlist("brands"))
+        chosen = [row.workspace for row in rows if str(row.workspace_id) in wanted]
+        try:
+            ends_on = contracting.cancel_plan_brands(plan, chosen)
+        except contracting.NothingToCancelError:
+            messages.error(request, _("Tick the brands to cancel."))
+            return redirect("billing_account:cancel", organization_id=organization.id)
+        except AsaasError as exc:
+            logger.exception("Could not cancel brands of plan %s", plan.pk)
+            messages.error(
+                request,
+                _gateway_refusal(exc)
+                or _("We could not reach the payment provider, so nothing was cancelled. Please try again."),
+            )
+            return redirect("billing_account:cancel", organization_id=organization.id)
+        cache.delete(_next_charge_cache_key(plan))
+        messages.success(
+            request,
+            _("Cancelled. The brands stay in use until %(date)s and are not charged again.")
+            % {"date": date_format(ends_on, "SHORT_DATE_FORMAT")},
+        )
+        return redirect("billing_account:overview")
+
+    return render(
+        request,
+        "billing/cancel_subscription.html",
+        {
+            "organization": organization,
+            "plan": plan,
             "rows": rows,
-            "counts": {
-                "all": len(rows),
-                "active": sum(1 for r in rows if r["state"] == "active"),
-                "inactive": sum(1 for r in rows if r["state"] == "inactive"),
-                "trial": sum(1 for r in rows if r["state"] == "trial"),
-            },
-            "plan": {
-                "brands": len(paying),
-                "next_due": min(due_dates) if due_dates else None,
-                "recurring_cents": sum(r["monthly_total_cents"] for r in paying),
-            },
-            "payments": _payment_history([r["workspace"].id for r in rows]),
-            "payer": payer,
+            "ends_on": _plan_next_charge(plan),
             "settings_active": "billing",
         },
     )
 
 
 @login_required
-@require_org_role("admin")
 @require_POST
-def update_payer(request):
-    """Change who the organization's invoices are issued to.
+def keep_brand(request, organization_id):
+    """Undo the cancellation of one brand that is still in use on a plan that carries on."""
+    organization = _organization_run_by(request, organization_id)
+    plan = _active_plan(organization)
+    workspace = Workspace.objects.filter(organization=organization, id=request.POST.get("brand") or None).first()
+    try:
+        if plan is None or workspace is None:
+            raise contracting.NothingToCancelError
+        contracting.keep_plan_brand(plan, workspace)
+    except contracting.NothingToCancelError:
+        messages.error(request, _("This brand has no cancellation to undo."))
+    except AsaasError as exc:
+        logger.exception("Could not keep a brand on plan %s", plan.pk)
+        messages.error(
+            request,
+            _gateway_refusal(exc) or _("We could not reach the payment provider. Please try again."),
+        )
+    else:
+        cache.delete(_next_charge_cache_key(plan))
+        messages.success(request, _("The brand stays on the plan."))
+    return redirect("billing_account:overview")
 
-    Name, CPF or CNPJ, phone and billing email. The document field may be
-    left empty to keep the one on file, which is never sent back to the
-    page to be resubmitted.
+
+@login_required
+@require_POST
+def resume_subscription(request, organization_id):
+    """Undo the cancellation of a whole plan that is still in use: it renews again on the card it was paid with."""
+    organization = _organization_run_by(request, organization_id)
+    plan = _active_plan(organization)
+    try:
+        if plan is None:
+            raise contracting.NothingToCancelError
+        contracting.resume_plan(plan, remote_ip=client_ip(request) or "")
+    except contracting.NothingToCancelError:
+        messages.error(request, _("This subscription has no cancellation to undo."))
+    except AsaasError as exc:
+        logger.exception("Could not resume plan %s", plan.pk)
+        messages.error(
+            request,
+            _gateway_refusal(exc) or _("We could not reach the payment provider. Please try again."),
+        )
+    else:
+        cache.delete(_next_charge_cache_key(plan))
+        messages.success(request, _("Cancellation undone. Your subscription renews as before."))
+    return redirect("billing_account:overview")
+
+
+def payer_summary(organization):
+    """Who the organization's invoices are issued to, as the pages show it.
+
+    For the organization's owner and admins only (the "Edit organization"
+    modal of the organizations page), which is why the document is shown whole.
     """
-    name = (request.POST.get("payer_name") or "").strip()[:255]
-    raw_tax_id = (request.POST.get("tax_id") or "").strip()
-    raw_phone = (request.POST.get("phone") or "").strip()
-    email = (request.POST.get("billing_email") or "").strip()
+    profile = getattr(organization, "billing_profile", None)
+    return {
+        "organization": organization,
+        "name": (profile.payer_name if profile else "") or organization.name,
+        "tax_id": _display_tax_id(profile.tax_id) if profile and profile.tax_id else "",
+        "phone": _display_phone(profile.phone) if profile else "",
+        "email": organization.billing_email,
+    }
+
+
+def save_payer(organization, data):
+    """Change who the organization's invoices are issued to, from a posted form.
+
+    Name, CPF or CNPJ, phone and billing email (``payer_name``, ``tax_id``,
+    ``phone``, ``billing_email``). An empty document, phone or e-mail keeps
+    the one on file. Returns "" when saved, else what to tell the person; on a
+    refusal nothing is changed. The caller has checked that the user runs
+    the organization.
+    """
+    name = (data.get("payer_name") or "").strip()[:255]
+    raw_tax_id = (data.get("tax_id") or "").strip()
+    raw_phone = (data.get("phone") or "").strip()
+    email = (data.get("billing_email") or "").strip()
 
     tax_id = services.valid_tax_id(raw_tax_id)
     phone = services.valid_phone(raw_phone)
-    error = None
     if not name:
-        error = _("Enter the name or company name the invoices should carry.")
-    elif raw_tax_id and not tax_id:
-        error = _("Enter a valid CPF or CNPJ for the invoice.")
-    elif raw_phone and not phone:
-        error = _("Enter a phone with area code.")
-    elif email:
+        return _("Enter the name or company name the invoices should carry.")
+    if raw_tax_id and not tax_id:
+        return _("Enter a valid CPF or CNPJ for the invoice.")
+    if raw_phone and not phone:
+        return _("Enter a phone with area code.")
+    if email:
         try:
             validate_email(email)
         except ValidationError:
-            error = _("Enter a valid billing email.")
-    if error:
-        messages.error(request, error)
-        return redirect("billing_account:overview")
+            return _("Enter a valid billing email.")
 
     try:
-        contracting.update_payer(request.org, name=name, tax_id=tax_id, phone=phone, email=email)
+        contracting.update_payer(organization, name=name, tax_id=tax_id, phone=phone, email=email)
     except AsaasError as exc:
-        logger.exception("Asaas refused the payer data of organization %s", request.org.pk)
-        messages.error(
-            request,
-            _gateway_refusal(exc)
-            or _("We could not reach the payment provider, so nothing was changed. Please try again in a moment."),
+        logger.exception("Asaas refused the payer data of organization %s", organization.pk)
+        return _gateway_refusal(exc) or _(
+            "We could not reach the payment provider, so nothing was changed. Please try again in a moment."
         )
-        return redirect("billing_account:overview")
+    return ""
 
-    messages.success(request, _("Billing data updated. The next invoices will carry it."))
+
+@login_required
+@require_org_role("admin")
+@require_POST
+def update_payer(request):
+    """Change the billing data of the organization in use (see ``save_payer``)."""
+    error = save_payer(request.org, request.POST)
+    if error:
+        messages.error(request, error)
+    else:
+        messages.success(request, _("Billing data updated. The next invoices will carry it."))
     return redirect("billing_account:overview")
 
 
@@ -460,32 +640,61 @@ def update_payer(request):
 PAYMENT_HISTORY_LIMIT = 12
 
 
-def _payment_history(workspace_ids):
-    """The latest charges Asaas reported for these workspaces, newest first.
+def _payment_history(organizations):
+    """The latest charges Asaas reported for these organizations, newest first.
 
     Read from the webhook log, so it shows what the provider said happened
-    and nothing we assumed. A charge sends several events along its life
+    and nothing we assumed. Every charge of an organization is here: its
+    plan, a brand contracted on its own, an add-on, brands added to the
+    plan, and those of a brand since archived or deleted or a subscription
+    since canceled. A charge sends several events along its life
     (confirmed, then received; overdue, then confirmed): only the newest
     event of each charge is kept, which is its current state.
     """
     events = (
         BillingEvent.objects.filter(
-            Q(subscription__workspace_id__in=workspace_ids) | Q(addon__workspace_id__in=workspace_ids),
+            organization__in=organizations,
             status=BillingEvent.Status.PROCESSED,
             event_type__in=PAID_EVENTS | UNPAID_EVENTS,
         )
-        .select_related("subscription__workspace", "addon__workspace")
+        .select_related("organization", "subscription__workspace", "addon__workspace")
         .order_by("-created_at")[: PAYMENT_HISTORY_LIMIT * 4]
     )
+    # What a charge with no brand behind it paid for: the organization's plan
+    # (by the gateway subscription it names) or brands added to it (by its
+    # payment). The plan's brands, cycle and card are the plan's as it is now.
+    plans = {
+        plan.gateway_subscription_id: plan
+        for plan in OrganizationPlan.objects.filter(organization__in=organizations).exclude(gateway_subscription_id="")
+    }
+    additions = set(
+        PlanBrandAddition.objects.filter(plan__organization__in=organizations)
+        .exclude(gateway_payment_id="")
+        .values_list("gateway_payment_id", flat=True)
+    )
+    methods = {"CREDIT_CARD": "card", "PIX": "pix", "BOLETO": "boleto"}
     seen = set()
     history = []
     for event in events:
         payment = event.payload.get("payment") if isinstance(event.payload, dict) else None
-        payment_id = payment.get("id") if isinstance(payment, dict) else None
+        payment = payment if isinstance(payment, dict) else {}
+        payment_id = payment.get("id")
         if payment_id in seen:
             continue
         seen.add(payment_id)
-        invoice_url = payment.get("invoiceUrl") if isinstance(payment, dict) else ""
+        plan = plans.get(payment.get("subscription")) if isinstance(payment.get("subscription"), str) else None
+        if event.addon_id:
+            kind = "addon"
+        elif event.subscription_id:
+            kind = "brand"
+        elif plan is not None:
+            kind = "plan"
+        elif isinstance(payment_id, str) and payment_id in additions:
+            kind = "addition"
+        else:
+            kind = "other"
+        billing_type = payment.get("billingType")
+        invoice_url = payment.get("invoiceUrl")
         if event.event_type in PAID_EVENTS:
             outcome = "paid"
         elif event.event_type == "PAYMENT_OVERDUE":
@@ -495,8 +704,21 @@ def _payment_history(workspace_ids):
         history.append(
             {
                 "date": event.created_at,
-                "workspace": event.subscription.workspace if event.subscription else event.addon.workspace,
-                "is_addon": event.addon_id is not None,
+                "organization": event.organization,
+                # None for a charge of the plan, or of a brand that no longer exists.
+                "workspace": (
+                    event.subscription.workspace
+                    if event.subscription
+                    else event.addon.workspace
+                    if event.addon
+                    else None
+                ),
+                # plan, addition (brands added to the plan), brand, addon or other.
+                "kind": kind,
+                # The plan a "plan" charge belongs to, for its cycle, brands and card.
+                "plan": plan,
+                # card, pix, boleto or "" when the gateway did not say.
+                "method": methods.get(billing_type, "") if isinstance(billing_type, str) else "",
                 "amount_cents": _event_amount_cents(event.payload),
                 "outcome": outcome,
                 "invoice_url": invoice_url
@@ -751,6 +973,12 @@ def _brand_addition_quote(plan, brands):
     """
     if brands <= plan.brands:
         return None
+    next_on = _plan_next_charge(plan)
+    return services.quote_brand_addition(plan, brands, next_on) if next_on else None
+
+
+def _plan_next_charge(plan):
+    """The day the plan charges next, asked from the gateway once and kept for a few minutes; None when it does not answer."""
     key = _next_charge_cache_key(plan)
     next_on = cache.get(key)
     if next_on is None:
@@ -759,10 +987,9 @@ def _brand_addition_quote(plan, brands):
         except AsaasError:
             logger.warning("Could not ask the next charge of plan %s", plan.pk, exc_info=True)
             return None
-        if next_on is None:
-            return None
-        cache.set(key, next_on, NEXT_CHARGE_CACHE_SECONDS)
-    return services.quote_brand_addition(plan, brands, next_on)
+        if next_on is not None:
+            cache.set(key, next_on, NEXT_CHARGE_CACHE_SECONDS)
+    return next_on
 
 
 def _checkout_brands(plan, workspaces, names):
@@ -1233,6 +1460,17 @@ def checkout_add_brands(request, workspace_id):
     plan = _active_plan(organization)
     if plan is None:
         return redirect("billing:checkout", workspace_id=workspace.id)
+    if plan.cancels_on or services.plan_brands_after_cancellations(plan) != plan.brands:
+        # The gateway already charges for the plan without the cancelled
+        # brands (or no longer charges at all): adding on top of that would
+        # price the next charge wrong.
+        return _checkout_error(
+            request,
+            _(
+                "This plan has a cancellation waiting for the end of the paid period. "
+                "Keep the cancelled brands, or wait for that date, before adding brands."
+            ),
+        )
     rows = _brand_rows(request, organization, plan)
     workspaces, names = _chosen(request.POST, rows)
     brands = _checkout_brands(plan, workspaces, names)

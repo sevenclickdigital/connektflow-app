@@ -1,0 +1,17 @@
+{% load i18n billing_extras %}
+{% comment %}
+Brands added to an active plan: what is paid today, which is only the added
+brands for the days until the plan's next charge
+(services.quote_brand_addition), or that nothing is, when the value is under
+the gateway's minimum. At the foot of the checkout's brands (#quote-today),
+apart from the plan's future total in the foot bar, so the two are not read
+as one sum. Rendered with the page and again, out of band, with every quote
+(_checkout_quote.html).
+{% endcomment %}
+{% if addition %}
+{% if addition.amount_cents %}
+{% blocktranslate with amount=addition.amount_cents|brl date=addition.next_charge_on|date:"SHORT_DATE_FORMAT" count days=addition.days_left %}<strong>Today you pay only R$ {{ amount }}</strong>, for the brands being added, for the {{ days }} day until {{ date }}. The brands already on the plan are not charged again.{% plural %}<strong>Today you pay only R$ {{ amount }}</strong>, for the brands being added, for the {{ days }} days until {{ date }}. The brands already on the plan are not charged again.{% endblocktranslate %}
+{% else %}
+{% blocktranslate with date=addition.next_charge_on|date:"SHORT_DATE_FORMAT" %}Nothing is charged today: the new total starts on {{ date }}.{% endblocktranslate %}
+{% endif %}
+{% endif %}

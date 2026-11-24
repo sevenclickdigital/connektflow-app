@@ -34,3 +34,35 @@ def expire_courtesies():
     if expired:
         logger.warning("Courtesy expired for %d account(s); they are billable again", expired)
     return expired
+
+
+@background(schedule=0)
+def end_cancelled_subscriptions():
+    """Close the plans and brands the customer cancelled, on the day their paid period ends.
+
+    Daily, like the courtesy sweep and for the same reason: the deadline is
+    a date (``cancels_on``). See ``services.end_cancelled_subscriptions``;
+    running it twice changes nothing the second time.
+    """
+    from apps.billing import services
+
+    closed = services.end_cancelled_subscriptions()
+    if closed:
+        logger.warning("%d cancelled brand(s) reached the end of their paid period and were closed", closed)
+    return closed
+
+
+@background(schedule=0)
+def remove_expired_archives():
+    """Warn the archived organizations close to their removal, and remove the ones whose notice has run.
+
+    Daily: the retention is counted in months. See
+    ``services.remove_expired_archives``; a second run the same day finds
+    the warned ones warned and the removed ones gone.
+    """
+    from apps.billing import services
+
+    warned, removed = services.remove_expired_archives()
+    if warned or removed:
+        logger.warning("Archived organizations: %d warned of their removal, %d removed", warned, removed)
+    return warned, removed

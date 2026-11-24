@@ -42,6 +42,8 @@ class RBACMiddleware:
         request.org = None
         request.org_membership = None
         request.org_memberships = []
+        # Owner or admin of at least one organization: who the account menu offers Billing to.
+        request.runs_an_organization = False
         request.workspace = None
         request.workspace_membership = None
 
@@ -55,6 +57,10 @@ class RBACMiddleware:
         if hasattr(request, "user") and request.user.is_authenticated:
             request.org_memberships = list(
                 OrgMembership.objects.filter(user=request.user).select_related("organization").order_by("invited_at")
+            )
+            request.runs_an_organization = any(
+                m.org_role in (OrgMembership.OrgRole.OWNER, OrgMembership.OrgRole.ADMIN)
+                for m in request.org_memberships
             )
 
             # Fall back to last_workspace_id so global pages

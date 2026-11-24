@@ -4,8 +4,9 @@ The figures of the checkout's order summary: the plan and its cycle, the
 list price, what each discount takes off and the total of the first charge
 (with its monthly equivalent on yearly, and the renewal value when a
 first-charge coupon lowers it). Rendered with the page and again with every
-quote (_checkout_quote.html, out of band). With an active ``plan`` it shows
-the plan's new value from the next charge. When the choice is monthly,
+quote (_checkout_quote.html, out of band). With an active ``plan`` the list
+is the plan as it will be from its next charge, and the total is what is
+paid today for the brands being added. When the choice is monthly,
 ``yearly_quote`` offers the yearly plan.
 {% endcomment %}
 {% if quote %}
@@ -22,7 +23,10 @@ the plan's new value from the next charge. When the choice is monthly,
   </div>
   <span class="pill pill-success">{% if quote.cycle == "yearly" %}{% translate "Yearly" %}{% else %}{% translate "Monthly" %}{% endif %}</span>
 </div>
-<dl class="mt-4 pt-4 border-t border-neutral-200 space-y-2 text-sm">
+{% if plan and addition %}
+<p class="mt-4 pt-4 border-t border-neutral-200 text-xs font-semibold uppercase tracking-wide text-neutral-500">{% blocktranslate with date=addition.next_charge_on|date:"SHORT_DATE_FORMAT" %}How the plan will be from {{ date }}{% endblocktranslate %}</p>
+{% endif %}
+<dl class="{% if plan and addition %}mt-2{% else %}mt-4 pt-4 border-t border-neutral-200{% endif %} space-y-2 text-sm">
   <div class="flex justify-between gap-3">
     <dt class="text-neutral-800">{% blocktranslate count brands=quote.brands %}{{ brands }} brand{% plural %}{{ brands }} brands{% endblocktranslate %}</dt>
     <dd class="tabular-nums text-neutral-950">R$ {{ quote.list_charge_cents|brl }}</dd>
@@ -47,15 +51,21 @@ the plan's new value from the next charge. When the choice is monthly,
 {% if coupon_error %}<p class="text-sm text-red-700 mt-2" role="alert">{{ coupon_error }}</p>{% endif %}
 <div class="mt-4 pt-4 border-t border-neutral-200">
   {% if plan %}
-  {% if addition.amount_cents %}
-  <div class="flex justify-between items-baseline gap-3 mb-2">
-    <span class="text-sm font-semibold text-neutral-950">{% blocktranslate count days=addition.days_left %}Charged now ({{ days }} day){% plural %}Charged now ({{ days }} days){% endblocktranslate %}</span>
-    <span class="text-lg font-bold text-neutral-950 tabular-nums">R$ {{ addition.amount_cents|brl }}</span>
-  </div>
-  {% endif %}
+  {% comment %}
+  Brands added to an active plan. What is paid today is the figure that
+  stands out; the plan's new value is said smaller and with its date, so it
+  is not taken for today's charge or added to it.
+  {% endcomment %}
   <div class="flex justify-between items-baseline gap-3">
-    <span class="text-sm font-semibold text-neutral-950">{% translate "From the next charge" %}</span>
-    <span class="text-2xl font-bold text-brand-700 tabular-nums">R$ {{ quote.charge_cents|brl }}</span>
+    <span class="text-lg font-bold text-neutral-950">{% translate "To pay today" %}</span>
+    <span class="text-3xl font-extrabold text-brand-700 tabular-nums" style="letter-spacing: -0.02em;">R$ {{ addition.amount_cents|default:0|brl }}</span>
+  </div>
+  {% if addition.amount_cents %}
+  <p class="text-xs text-neutral-600 mt-1 text-right">{% blocktranslate with date=addition.next_charge_on|date:"SHORT_DATE_FORMAT" count days=addition.days_left %}Only the brands being added, for the {{ days }} day until {{ date }}.{% plural %}Only the brands being added, for the {{ days }} days until {{ date }}.{% endblocktranslate %}</p>
+  {% endif %}
+  <div class="flex justify-between items-baseline gap-3 mt-4 pt-3 border-t border-neutral-200 text-sm text-neutral-600">
+    <span>{% if addition %}{% blocktranslate with date=addition.next_charge_on|date:"SHORT_DATE_FORMAT" %}Plan from {{ date }}{% endblocktranslate %}{% else %}{% translate "From the next charge" %}{% endif %}</span>
+    <span class="tabular-nums font-semibold text-neutral-800">R$ {{ quote.charge_cents|brl }}{% if quote.cycle == "yearly" %}{% translate "/year" %}{% else %}{% translate "/month" %}{% endif %}</span>
   </div>
   {% else %}
   <div class="flex justify-between items-baseline gap-3">

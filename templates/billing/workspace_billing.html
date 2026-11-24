@@ -12,10 +12,12 @@ there, and the overview links each brand to this page.
 {% block title %}{% translate "Billing" %} - {{ workspace.name }} - Connekt Flow{% endblock %}
 
 {% block page_header %}
+{% if can_manage_billing %}
 <a href="{% url 'billing_account:overview' %}" class="inline-flex items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-950 mb-3">
   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
   {% translate "All brands" %}
 </a>
+{% endif %}
 <div class="page-header">
   <div>
     <h1 class="page-title">{% translate "Billing" %} · {{ workspace.name }}</h1>

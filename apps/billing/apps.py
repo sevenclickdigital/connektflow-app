@@ -20,11 +20,27 @@ class BillingConfig(AppConfig):
 
     @staticmethod
     def _register_tasks(sender, **kwargs):
-        from apps.billing.tasks import COURTESY_EXPIRY_INTERVAL_SECONDS, expire_courtesies
+        from apps.billing.tasks import (
+            COURTESY_EXPIRY_INTERVAL_SECONDS,
+            end_cancelled_subscriptions,
+            expire_courtesies,
+            remove_expired_archives,
+        )
         from apps.common.background import register_recurring_task
 
         register_recurring_task(
             expire_courtesies,
             repeat=COURTESY_EXPIRY_INTERVAL_SECONDS,
             verbose_name="expire_courtesies",
+        )
+        # The same daily cadence: its deadline is a date too.
+        register_recurring_task(
+            end_cancelled_subscriptions,
+            repeat=COURTESY_EXPIRY_INTERVAL_SECONDS,
+            verbose_name="end_cancelled_subscriptions",
+        )
+        register_recurring_task(
+            remove_expired_archives,
+            repeat=COURTESY_EXPIRY_INTERVAL_SECONDS,
+            verbose_name="remove_expired_archives",
         )

@@ -90,16 +90,23 @@ def create_operator(email, *, password=None, name="", superuser=False):
 
     The terms are pre-accepted because ``TosAcceptanceMiddleware`` would
     otherwise hold the account on the customer-facing terms page, and an
-    operator is added by the product's own team, not by signing up.
+    operator is added by the product's own team, not by signing up. The
+    address counts as verified for the same reason, so signing in does not
+    ask for the code a new customer account types.
     """
-    return User.objects.create_user(
-        email=email,
-        password=password or get_random_string(GENERATED_PASSWORD_LENGTH),
-        name=name,
-        is_staff=True,
-        is_superuser=superuser,
-        tos_accepted_at=timezone.now(),
-    )
+    from allauth.account.models import EmailAddress
+
+    with transaction.atomic():
+        user = User.objects.create_user(
+            email=email,
+            password=password or get_random_string(GENERATED_PASSWORD_LENGTH),
+            name=name,
+            is_staff=True,
+            is_superuser=superuser,
+            tos_accepted_at=timezone.now(),
+        )
+        EmailAddress.objects.create(user=user, email=user.email.lower(), primary=True, verified=True)
+    return user
 
 
 def promote(user, *, superuser=False):

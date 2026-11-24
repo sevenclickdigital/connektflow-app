@@ -41,10 +41,16 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from apps.billing import services
+from apps.billing import emails, services
 from apps.billing.gateways import asaas as asaas_gateway
 from apps.billing.gateways.asaas import GATEWAY, AsaasClient, AsaasError
-from apps.billing.models import OrganizationPlan, PlanBrandAddition, WorkspaceAddon, WorkspaceSubscription
+from apps.billing.models import (
+    BillingEvent,
+    OrganizationPlan,
+    PlanBrandAddition,
+    WorkspaceAddon,
+    WorkspaceSubscription,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -425,6 +431,7 @@ def _activate_plan(plan, *, card=None, coupon_saving_cents=0, workspaces=()):
 
     ``workspaces`` are the brands chosen at checkout, covered before any other.
     """
+    newly_active = not plan.is_active
     plan.status = WorkspaceSubscription.Status.ACTIVE
     plan.canceled_at = None
     fields = ["status", "canceled_at", "updated_at"]
@@ -436,6 +443,8 @@ def _activate_plan(plan, *, card=None, coupon_saving_cents=0, workspaces=()):
     if plan.coupon_id:
         services.redeem_coupon(plan.coupon, plan.organization, discount_cents=coupon_saving_cents)
     services.sync_plan_coverage(plan, workspaces)
+    if newly_active:
+        emails.send_payment_confirmed(plan.organization, plan=plan)
     return plan
 
 
@@ -580,6 +589,8 @@ def purchase_plan(
             raise CardChallengeRequiredError(challenge)
         raise CardRefusedError(_("The card was not charged. Try again or use another card."))
 
+    # The charge as first listed, completed by what paying it returned.
+    _record_card_charge(organization, {**payment, **paid})
     card_info = paid.get("creditCard") or {}
     token = card_info.get("creditCardToken") or ""
     if token:
@@ -699,6 +710,130 @@ def change_plan_brands(plan, brands, *, workspaces=(), new_brand_names=(), owner
     plan.save(update_fields=["brands", "price_cents", "updated_at"])
     chosen = [*workspaces, *_create_brands(plan.organization, new_brand_names, owner)]
     services.sync_plan_coverage(plan, chosen)
+    return plan
+
+
+class NothingToCancelError(Exception):
+    """None of the brands asked is on the plan and still to be cancelled."""
+
+
+def cancel_plan_brands(plan, workspaces, *, client=None):
+    """Cancel the brands the customer chose on their plan. Returns the day they stay in use until.
+
+    Nothing is refunded and nothing stops at once: the brands stay in use
+    until the plan's next charge, the end of the period already paid for
+    (``cancels_on``), and ``services.end_cancelled_subscriptions`` closes
+    them on that day. What changes now is what the gateway will charge:
+
+    - some brands stay: the subscription's value drops to the plan without
+      the cancelled ones, so the next charge already comes without them;
+    - no brand stays: the subscription (and a Pix Automático authorization)
+      is cancelled at the gateway, so nothing is charged again, and the plan
+      itself is marked to end on that day.
+
+    Raises ``NothingToCancelError`` when no brand asked is on the plan, and
+    ``AsaasError`` when the gateway refuses, in which case nothing is marked.
+    """
+    client = client or AsaasClient()
+    wanted = {getattr(workspace, "pk", workspace) for workspace in workspaces}
+    on_plan = list(WorkspaceSubscription.objects.filter(plan=plan, cancels_on__isnull=True))
+    chosen = [row for row in on_plan if row.workspace_id in wanted]
+    if not plan.is_active or plan.cancels_on or not chosen:
+        raise NothingToCancelError
+    ends_on = next_charge_date(plan, client) or timezone.localdate()
+
+    if len(chosen) == len(on_plan):
+        for cancel, remote_id in (
+            (client.cancel_subscription, plan.gateway_subscription_id),
+            (client.cancel_pix_automatic_authorization, plan.gateway_authorization_id),
+        ):
+            if not remote_id:
+                continue
+            try:
+                cancel(remote_id)
+            except asaas_gateway.AsaasAPIError as exc:
+                # Already gone at Asaas: the state we were asking for.
+                if exc.status_code != 404:
+                    raise
+        whole = True
+    else:
+        remaining = services.plan_brands_after_cancellations(plan) - len(chosen)
+        quote = services.quote_plan(remaining, plan.billing_cycle, plan.coupon)
+        client.update_subscription_value(plan.gateway_subscription_id, quote["charge_cents"])
+        whole = False
+
+    with transaction.atomic():
+        if whole:
+            plan.cancels_on = ends_on
+            plan.save(update_fields=["cancels_on", "updated_at"])
+            chosen = list(WorkspaceSubscription.objects.filter(plan=plan))
+        for row in chosen:
+            row.cancels_on = ends_on
+            row.save(update_fields=["cancels_on", "updated_at"])
+    logger.info("Plan %s: %s brand(s) cancelled, in use until %s", plan.pk, len(chosen), ends_on)
+    return ends_on
+
+
+def keep_plan_brand(plan, workspace, *, client=None):
+    """Undo the cancellation of one brand on a plan that carries on: the next charge includes it again.
+
+    Not for a plan cancelled whole: its gateway subscription no longer
+    exists, so it is contracted again once it ends. Raises
+    ``NothingToCancelError`` when the brand is not waiting to leave the plan.
+    """
+    client = client or AsaasClient()
+    row = WorkspaceSubscription.objects.filter(plan=plan, workspace=workspace, cancels_on__isnull=False).first()
+    if row is None or plan.cancels_on or not plan.is_active:
+        raise NothingToCancelError
+    brands = services.plan_brands_after_cancellations(plan) + 1
+    quote = services.quote_plan(brands, plan.billing_cycle, plan.coupon)
+    client.update_subscription_value(plan.gateway_subscription_id, quote["charge_cents"])
+    row.cancels_on = None
+    row.save(update_fields=["cancels_on", "updated_at"])
+    return row
+
+
+def resume_plan(plan, *, remote_ip="", client=None):
+    """Undo the cancellation of a whole plan while its paid period still runs: it renews again.
+
+    Cancelling it removed the gateway subscription, so a new one is created
+    with its first charge on the day the plan was to end (``cancels_on``)
+    and the card the plan was paid with. Nothing is charged now. Only for a
+    plan with that card's token kept: a Pix Automático authorization cannot
+    be made again without the payer, who contracts anew once the plan ends.
+
+    Raises ``NothingToCancelError`` when the plan is not one cancelled whole
+    and still in use with a card on file, and ``AsaasError`` when the
+    gateway refuses, in which case the plan stays cancelled.
+    """
+    if not plan.is_active or not plan.cancels_on or not plan.has_card_on_file:
+        raise NothingToCancelError
+    client = client or AsaasClient()
+    quote = services.quote_plan(plan.brands, plan.billing_cycle, plan.coupon)
+    remote = client.create_subscription(
+        customer_id=plan.gateway_customer_id,
+        value_cents=quote["charge_cents"],
+        cycle=asaas_gateway.CYCLE_YEARLY if plan.is_yearly else asaas_gateway.CYCLE_MONTHLY,
+        external_reference=f"plan:{plan.pk}",
+        description=_plan_description(plan.organization, plan.brands),
+        next_due_date=max(plan.cancels_on, timezone.localdate()),
+    )
+    subscription_id = remote.get("id") or ""
+    if not subscription_id:
+        raise AsaasError("Asaas returned a subscription without an id.")
+    try:
+        client.set_subscription_card(subscription_id, card_token=plan.gateway_card_token, remote_ip=remote_ip)
+    except AsaasError:
+        # Without the card the renewal would come as an invoice nobody asked for.
+        client.cancel_subscription(subscription_id)
+        raise
+
+    with transaction.atomic():
+        plan.gateway_subscription_id = subscription_id
+        plan.cancels_on = None
+        plan.save(update_fields=["gateway_subscription_id", "cancels_on", "updated_at"])
+        WorkspaceSubscription.objects.filter(plan=plan).update(cancels_on=None, updated_at=timezone.now())
+    logger.info("Plan %s: cancellation undone, renews on subscription %s", plan.pk, subscription_id)
     return plan
 
 
@@ -840,8 +975,44 @@ def add_plan_brands(plan, brands, *, workspaces=(), new_brand_names=(), owner=No
     if payment.get("status") not in PAID_PAYMENT_STATUSES:
         # Under the issuer's analysis: the webhook applies it once confirmed.
         return addition, quote
+    _record_card_charge(addition.plan.organization, payment)
     apply_brand_addition(addition, client=client)
     return None, quote
+
+
+def _record_card_charge(organization, payment):
+    """Log a charge the card paid on the spot, so the payment history has it at once.
+
+    The history is read from the gateway's events (``BillingEvent``), and the
+    webhook that confirms this charge may take a while or, on a machine the
+    gateway cannot reach, never come. The row stands in for that event: same
+    type, the payment as Asaas returned it, and an id of our own
+    (``checkout:<payment id>``) that no event of the gateway carries. When the
+    webhook does arrive the history shows the charge once, by its payment id.
+    Never fails the purchase: the charge is already made.
+    """
+    payment_id = payment.get("id") if isinstance(payment, dict) else ""
+    if not payment_id:
+        return
+    try:
+        BillingEvent.objects.get_or_create(
+            gateway_event_id=f"checkout:{payment_id}",
+            defaults={
+                "gateway": GATEWAY,
+                "event_type": "PAYMENT_CONFIRMED",
+                "status": BillingEvent.Status.PROCESSED,
+                "organization": organization,
+                "processed_at": timezone.now(),
+                "payload": {
+                    "payment": {
+                        key: payment.get(key)
+                        for key in ("id", "value", "invoiceUrl", "subscription", "dueDate", "billingType")
+                    }
+                },
+            },
+        )
+    except Exception:
+        logger.exception("Could not log the card charge %s of organization %s", payment_id, organization.pk)
 
 
 def _https_url(raw):

@@ -585,9 +585,13 @@
                     {% if request.workspace_membership and request.workspace_membership.workspace_role != "client" %}
                     <a href="{% url 'tasks:board' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'tasks' %}active{% endif %}">{% translate "Task management" context "menu" %}</a>
                     {% endif %}
+                    {% if request.workspace_membership.effective_permissions.create_posts %}
                     <a href="{% url 'composer:create_landing' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'composer' and url_name != 'compose' %}active{% endif %}">{% translate "Idea hub" %}</a>
+                    {% endif %}
                     </div>
                 </div>
+                {% comment %}Inbox, automations and contacts all open with the same permission, so the group goes with it.{% endcomment %}
+                {% if request.workspace_membership.effective_permissions.use_inbox %}
                 <div class="mb-0.5" x-data="{ open: {% if app == 'inbox' or app == 'funnels' or app == 'automations' or app == 'contacts' %}true{% else %}localStorage.getItem('nav:engage') === 'open'{% endif %} }"
                      x-effect="localStorage.setItem('nav:engage', open ? 'open' : 'closed')">
                     <button type="button" class="sidebar-nav-item sidebar-nav-group-toggle {% if app == 'inbox' or app == 'funnels' or app == 'automations' or app == 'contacts' %}has-active{% endif %}"
@@ -603,6 +607,7 @@
                     <a href="{% url 'contacts:list' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'contacts' %}active{% endif %}">{% translate "Contacts" context "menu" %}</a>
                     </div>
                 </div>
+                {% endif %}
                 {% if analytics_enabled_platforms and request.workspace_membership.effective_permissions.view_analytics %}
                 <a href="{% url 'analytics:index' workspace_id=request.workspace.id %}" class="mb-0.5 sidebar-nav-item {% if app == 'analytics' %}active{% endif %}">
                     <svg class="flex-shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>

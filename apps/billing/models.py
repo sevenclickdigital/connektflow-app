@@ -140,6 +140,11 @@ class WorkspaceSubscription(models.Model):
     trial_ends_at = models.DateTimeField(null=True, blank=True)
 
     canceled_at = models.DateTimeField(null=True, blank=True)
+    # Set when the customer cancels this brand on the organization's plan:
+    # the brand stays in use until this day, the plan's next charge, which
+    # no longer includes it; then ``services.end_cancelled_subscriptions``
+    # takes it off the plan.
+    cancels_on = models.DateField(null=True, blank=True)
     # The organization plan covering this workspace, if any. While set, the
     # row's status follows the plan's and the workspace has no gateway
     # subscription of its own.
@@ -447,6 +452,19 @@ class BillingEvent(models.Model):
         related_name="billing_events",
     )
 
+    # Whose money the event is about, whatever it paid for: the plan, a
+    # brand on its own, an add-on, brands added to the plan. The payment
+    # history of the organization is read from here, so it survives a brand
+    # being archived or deleted and a subscription being canceled.
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="billing_events",
+        db_index=False,
+    )
+
     status = models.CharField(
         max_length=16,
         choices=Status.choices,
@@ -461,6 +479,7 @@ class BillingEvent(models.Model):
     class Meta:
         db_table = "billing_event"
         ordering = ["-created_at"]
+        indexes = [models.Index(fields=["organization", "-created_at"], name="billing_event_org_created")]
 
     def __str__(self):
         return f"BillingEvent({self.gateway_event_id}, {self.status})"
@@ -679,6 +698,16 @@ class OrganizationPlan(models.Model):
 
     current_period_end = models.DateTimeField(null=True, blank=True)
     canceled_at = models.DateTimeField(null=True, blank=True)
+    # Set when the customer cancels the whole subscription: it no longer
+    # renews (the gateway subscription is gone) and the plan stays active
+    # until this day, the end of the period already paid for, when
+    # ``services.end_cancelled_subscriptions`` closes it.
+    cancels_on = models.DateField(null=True, blank=True)
+    # When the owner was told that the organization, archived since
+    # ``canceled_at``, is about to be removed. It counts only when later
+    # than ``canceled_at``; nothing is removed without it
+    # (``services.remove_expired_archives``).
+    removal_warned_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

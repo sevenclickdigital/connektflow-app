@@ -1,0 +1,15 @@
+{% extends "emails/base.txt" %}
+{% load i18n billing_extras %}
+{% block content %}{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}
+
+{% blocktranslate with brand=brand_name %}Congratulations! We received your payment and {{ paid_for }} is active on {{ brand }}. Everything is ready for you to plan, approve and publish.{% endblocktranslate %}
+{% if plan %}
+{% translate "Your plan" %}
+{% blocktranslate count counter=plan.brands %}{{ counter }} brand{% plural %}{{ counter }} brands{% endblocktranslate %}
+{% if plan.is_yearly %}{% blocktranslate with amount=plan.charge_cents|brl %}R$ {{ amount }} per year{% endblocktranslate %}{% else %}{% blocktranslate with amount=plan.charge_cents|brl %}R$ {{ amount }} per month{% endblocktranslate %}{% endif %}{% if plan.current_period_end %}
+{% blocktranslate with date=plan.current_period_end|date:"SHORT_DATE_FORMAT" %}Next charge on {{ date }}{% endblocktranslate %}{% endif %}
+{% endif %}
+{{ app_url }}
+
+{% blocktranslate %}Your charges and your plan are on the Billing page: {{ billing_url }}{% endblocktranslate %}{% endblock %}
+{% block reason %}{% blocktranslate %}You're receiving this because a payment was confirmed for {{ paid_for }}.{% endblocktranslate %}{% endblock %}

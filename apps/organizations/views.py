@@ -326,13 +326,21 @@ def workspaces_view(request):
     admin_org_ids = {org_id for org_id, role in org_roles.items() if role in org_admin_roles}
     api_key_org_ids = {m.organization_id for m in request.org_memberships if m.can_manage_api_keys}
 
+    from apps.billing import services as billing_services
+    from apps.billing.views import payer_summary
+
     def group_for(organization):
         org_role = org_roles.get(organization.id)
+        archived = billing_services.archived_plan(organization) if org_role is not None else None
         return {
+            # Archived (its plan ended): the day its data is removed, else None.
+            "archived_until": billing_services.archive_removal_at(archived) if archived else None,
             "organization": organization,
             "is_current": organization.id == org.id,
             "is_member": org_role is not None,
             "can_edit": org_role in org_admin_roles,
+            # What the "Edit organization" modal starts from; only for who may save it.
+            "payer": payer_summary(organization) if org_role in org_admin_roles else None,
             # What the page's filter reads: an organization waiting to be deleted is the inactive one.
             "status": "inactive" if organization.deletion_scheduled_for else "active",
             "archived_count": 0,
@@ -427,13 +435,10 @@ def workspaces_view(request):
     return render(request, "organizations/workspaces.html", context)
 
 
-@login_required
-@require_POST
-def rename_view(request):
-    """Rename one of the user's organizations, from the organizations page.
+def _administered_organization(request):
+    """The organization named in the form, when the user owns or administers it; 403 otherwise.
 
-    The organization comes in the form, since the page lists several; only
-    one the user owns or administers is accepted.
+    The organizations page lists several, so the form says which one.
     """
     wanted = request.POST.get("organization", "")
     membership = next(
@@ -446,8 +451,38 @@ def rename_view(request):
         None,
     )
     if membership is None:
-        raise PermissionDenied("Only an owner or admin of the organization can rename it.")
-    _handle_name_update(request, membership.organization)
+        raise PermissionDenied("Only an owner or admin of the organization can change it.")
+    return membership.organization
+
+
+@login_required
+@require_POST
+def rename_view(request):
+    """Rename one of the user's organizations."""
+    _handle_name_update(request, _administered_organization(request))
+    return redirect("organizations:workspaces")
+
+
+@login_required
+@require_POST
+def edit_view(request):
+    """Save the "Edit organization" modal of the organizations page: its name and its billing data.
+
+    Both or neither: the billing data goes first because the payment
+    provider may refuse it, and a refusal must not leave the name changed
+    under a message that says nothing was.
+    """
+    from apps.billing.views import save_payer
+
+    organization = _administered_organization(request)
+    name = clean_display_name(request.POST.get("name", ""))
+    error = _("Organization name cannot be empty.") if not name else save_payer(organization, request.POST)
+    if error:
+        messages.error(request, error)
+        return redirect("organizations:workspaces")
+    organization.name = name
+    organization.save(update_fields=["name"])
+    messages.success(request, _("Organization updated."))
     return redirect("organizations:workspaces")
 
 

@@ -41,7 +41,7 @@ from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
 from apps.affiliates import services as affiliate_services
-from apps.billing import contracting, services
+from apps.billing import contracting, emails, services
 from apps.billing.gateways.asaas import GATEWAY, AsaasClient, AsaasError
 from apps.billing.models import (
     BillingEvent,
@@ -177,7 +177,9 @@ def _apply(event, event_type, payload):
 
     subscription_id = _subscription_id(payload)
     if not subscription_id:
-        if _apply_brand_addition(event_type, payload):
+        organization = _apply_brand_addition(event_type, payload)
+        if organization is not None:
+            event.organization = organization
             _finish(event, BillingEvent.Status.PROCESSED)
             return
         # Another one-off charge, or a subscription event shaped differently
@@ -189,6 +191,7 @@ def _apply(event, event_type, payload):
     if plan is not None:
         _apply_to_plan(plan, target, payload)
         affiliate_services.record_payment_event(plan.organization, event_type, payload)
+        event.organization = plan.organization
         _finish(event, BillingEvent.Status.PROCESSED)
         return
 
@@ -199,6 +202,7 @@ def _apply(event, event_type, payload):
         _apply_to_subscription(sub, target, payload)
         affiliate_services.record_payment_event(sub.workspace.organization, event_type, payload)
         event.subscription = sub
+        event.organization = sub.workspace.organization
         _finish(event, BillingEvent.Status.PROCESSED)
         return
 
@@ -207,6 +211,7 @@ def _apply(event, event_type, payload):
         _apply_to_addon(addon, target, payload)
         affiliate_services.record_payment_event(addon.workspace.organization, event_type, payload)
         event.addon = addon
+        event.organization = addon.workspace.organization
         _finish(event, BillingEvent.Status.PROCESSED)
         return
 
@@ -218,7 +223,7 @@ def _apply(event, event_type, payload):
 
 
 def _apply_brand_addition(event_type, payload):
-    """Handle the one-off charge of brands added to a plan. True when the event was one.
+    """Handle the one-off charge of brands added to a plan; its organization when the event was one, else None.
 
     Paid: the brands go on the plan (``contracting.apply_brand_addition``,
     which does nothing for a request the card charge already applied). Any
@@ -227,16 +232,16 @@ def _apply_brand_addition(event_type, payload):
     payment = payload.get("payment")
     payment_id = payment.get("id") if isinstance(payment, dict) else ""
     if not payment_id:
-        return False
+        return None
     addition = (
         PlanBrandAddition.objects.filter(gateway_payment_id=payment_id).select_related("plan__organization").first()
     )
     if addition is None:
-        return False
+        return None
     if event_type in PAID_EVENTS and addition.status == PlanBrandAddition.Status.PENDING:
         contracting.apply_brand_addition(addition)
     affiliate_services.record_payment_event(addition.plan.organization, event_type, payload)
-    return True
+    return addition.plan.organization
 
 
 def _apply_pix_authorization(event, payload):
@@ -255,6 +260,7 @@ def _apply_pix_authorization(event, payload):
         plan.gateway_subscription_id = subscription_id
         plan.save(update_fields=["gateway_subscription_id", "updated_at"])
     _apply_to_plan(plan, WorkspaceSubscription.Status.ACTIVE, payload)
+    event.organization = plan.organization
     _finish(event, BillingEvent.Status.PROCESSED)
 
 
@@ -282,6 +288,7 @@ def _apply_to_subscription(sub, target, payload):
     if sub.is_courtesy:
         return
 
+    newly_active = target == WorkspaceSubscription.Status.ACTIVE and sub.status != target
     fields = ["status", "updated_at"]
     sub.status = target
 
@@ -300,10 +307,19 @@ def _apply_to_subscription(sub, target, payload):
         fields.append("canceled_at")
 
     sub.save(update_fields=fields)
+    if newly_active:
+        emails.send_payment_confirmed(sub.workspace.organization, workspace=sub.workspace)
 
 
 def _apply_to_plan(plan, target, payload):
     """Move an organization plan to ``target``; the workspaces it covers follow."""
+    if plan.cancels_on and plan.is_active and target != WorkspaceSubscription.Status.ACTIVE:
+        # The customer cancelled: Asaas now reports the subscription and its
+        # pending charges deleted, which is what was asked. The plan stays
+        # in use until the end of the period paid for
+        # (services.end_cancelled_subscriptions closes it then).
+        return
+    newly_active = target == WorkspaceSubscription.Status.ACTIVE and not plan.is_active
     fields = ["status", "updated_at"]
     plan.status = target
     if target == WorkspaceSubscription.Status.ACTIVE:
@@ -322,6 +338,8 @@ def _apply_to_plan(plan, target, payload):
         # A plan paid after an issuer challenge or a lost answer: its coupon is used now.
         services.redeem_coupon(plan.coupon, plan.organization, discount_cents=0)
     services.sync_plan_coverage(plan)
+    if newly_active:
+        emails.send_payment_confirmed(plan.organization, plan=plan)
 
 
 def _apply_to_addon(addon, target, payload):
@@ -401,4 +419,4 @@ def _finish(event, status):
     """Close out the event row with its outcome."""
     event.status = status
     event.processed_at = timezone.now()
-    event.save(update_fields=["status", "processed_at", "subscription", "addon"])
+    event.save(update_fields=["status", "processed_at", "subscription", "addon", "organization"])

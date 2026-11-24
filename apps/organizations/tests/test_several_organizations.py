@@ -167,16 +167,17 @@ def test_an_organization_needs_both_names(client):
 
 
 @pytest.mark.django_db
-def test_the_billing_page_shows_the_brands_of_the_organization_in_use_only(client):
+def test_the_billing_page_shows_each_organization_with_its_own_brands(client):
     _user, first = _signed_up(client)
-    _response, second = _create_org(client)  # in use
+    _response, second = _create_org(client)
 
-    names = {row["workspace"].name for row in client.get(reverse("billing_account:overview")).context["rows"]}
-    assert names == {second.name}
+    groups = client.get(reverse("billing_account:overview")).context["groups"]
 
-    client.get(reverse("calendar:calendar", kwargs={"workspace_id": first.id}))
-    names = {row["workspace"].name for row in client.get(reverse("billing_account:overview")).context["rows"]}
-    assert names == {first.name}
+    # Newest first, as on the organizations page, and never one organization's brand under another.
+    assert [(g["organization"], [r["workspace"] for r in g["rows"]]) for g in groups] == [
+        (second.organization, [second]),
+        (first.organization, [first]),
+    ]
 
 
 @pytest.mark.django_db

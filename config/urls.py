@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path
+from django.views.generic import RedirectView
 from django.views.static import serve
 
 from apps.accounts.operators import STAFF_AREA_PREFIX
@@ -46,6 +47,8 @@ urlpatterns = [
     path("settings/", include("apps.settings_manager.urls")),
     path("social-accounts/", include("apps.social_accounts.urls")),
     path("ads/", include("apps.ads.callback_urls")),
+    # A brand address cut down to its first part goes home, which picks the brand.
+    path("workspace/", RedirectView.as_view(pattern_name="dashboard")),
     # Content Pipeline (Stream A)
     path("workspace/<uuid:workspace_id>/", include("apps.composer.urls")),
     path("workspace/<uuid:workspace_id>/calendar/", include("apps.calendar.urls")),

@@ -1,0 +1,12 @@
+{% extends "emails/base.txt" %}
+{% load i18n %}
+{% block content %}{% if greeting_name %}{% blocktranslate with name=greeting_name %}Hi {{ name }},{% endblocktranslate %}{% else %}{% translate "Hi there," %}{% endif %}
+
+{% blocktranslate with name=organization.name brand=brand_name date=removal_at|date:"SHORT_DATE_FORMAT" %}The subscription of {{ name }} on {{ brand }} ended and we have kept everything since: brands, posts, media and connected accounts. On {{ date }} the organization and all of its data are removed for good.{% endblocktranslate %}
+
+{% translate "To keep everything, resume the subscription before that day. It all comes back as you left it." %}
+
+{% translate "Resume subscription" %}: {{ billing_url }}
+
+{% translate "If you no longer need this data, there is nothing to do." %}{% endblock %}
+{% block reason %}{% blocktranslate with name=organization.name %}You're receiving this because you are responsible for the billing of {{ name }}.{% endblocktranslate %}{% endblock %}

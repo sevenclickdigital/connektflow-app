@@ -1,0 +1,57 @@
+{% extends "layouts/settings.html" %}
+{% load i18n billing_extras %}
+{% comment %}
+Account centre → Billing → Cancel subscription: the brands on the
+organization's plan, ticked to be cancelled. A cancelled brand stays in use
+until the end of the period already paid for (``ends_on``, the plan's next
+charge) and is not charged again; ticking all of them cancels the
+subscription whole, and the organization is then archived when the period
+ends (services.archived_plan). Nothing is refunded.
+{% endcomment %}
+{% block title %}{% translate "Cancel subscription" %} - {{ organization.name }} - Connekt Flow{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "Cancel subscription" %} · {{ organization.name }}</h1>
+        <p class="page-description">{% translate "Tick the brands you no longer want to pay for. Each one stays in use until the end of the period already paid, and is not charged again." %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="post" x-data="{ chosen: [], total: {{ rows|length }} }">
+    {% csrf_token %}
+    <section class="mb-4">
+        <h2 class="section-title">{% translate "Brands on the plan" %} ({{ rows|length }})</h2>
+        <div class="a-card overflow-hidden divide-y divide-neutral-300">
+            {% for row in rows %}
+            <label class="px-5 sm:px-6 py-4 flex items-center gap-4 cursor-pointer hover:bg-neutral-50">
+                <input type="checkbox" name="brands" value="{{ row.workspace.id }}" x-model="chosen" class="w-4 h-4 accent-brand-700 cursor-pointer">
+                <span class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold bg-brand-100 text-brand-800">{{ row.workspace.name|first|upper }}</span>
+                <span class="flex-1 min-w-0 text-sm font-semibold text-neutral-950 truncate">{{ row.workspace.name }}</span>
+                <span class="pill pill-success"><i></i>{% translate "Active" %}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </section>
+
+    <div class="alert-info mb-6" role="note">
+        <p class="text-sm">
+            {% if ends_on %}
+            {% blocktranslate with date=ends_on|date:"SHORT_DATE_FORMAT" %}The brands you cancel stay in use until <strong>{{ date }}</strong>. From that day they are locked and the plan no longer charges for them. Nothing already paid is refunded.{% endblocktranslate %}
+            {% else %}
+            {% translate "The brands you cancel stay in use until the plan's next charge. From that day they are locked and the plan no longer charges for them. Nothing already paid is refunded." %}
+            {% endif %}
+        </p>
+        <p class="text-sm mt-2" x-show="chosen.length === total" x-cloak>
+            {% translate "You ticked every brand: the whole subscription is cancelled and does not renew. When it ends, the organization is archived: everything is kept for 6 months, and resuming the subscription in that time brings it all back as you left it. After that, the organization and its data are removed." %}
+        </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+        <button type="submit" class="btn-danger-soft disabled:opacity-50 disabled:cursor-not-allowed" :disabled="chosen.length === 0">{% translate "Cancel the ticked brands" %}</button>
+        <a href="{% url 'billing_account:overview' %}" class="btn-ghost">{% translate "Keep everything" %}</a>
+    </div>
+</form>
+{% endblock %}
