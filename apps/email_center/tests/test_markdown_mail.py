@@ -65,3 +65,22 @@ def test_the_layout_blocks_match_the_default_templates():
     assert result.html.rstrip().endswith(
         '<p style="margin:0;font-size:15px;line-height:24px;color:#334155;">Depois do botão.</p>'
     )
+
+
+def test_the_line_under_a_button_is_the_team_s_text():
+    result = render(
+        "[botão: Ir]({{ url }})\n\n<small>Não abriu? Use:\n[{{ url }}]({{ url }})</small>",
+        {"url": "https://a.example/x"},
+    )
+
+    assert 'class="cf-btn-fallback"' in result.html and "Não abriu? Use:" in result.html
+    assert "word-break:break-all" in result.html
+    assert "Se o botão não funcionar" not in result.html
+    assert result.text.endswith("Não abriu? Use:\nhttps://a.example/x")
+
+
+def test_a_button_alone_adds_no_line_of_its_own():
+    result = render("[botão: Ir](https://a.example/x)", {})
+
+    assert 'class="cf-btn"' in result.html
+    assert "cf-btn-fallback" not in result.html

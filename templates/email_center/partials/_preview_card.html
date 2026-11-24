@@ -1,0 +1,48 @@
+{% load i18n %}
+{% comment %}
+The preview column of an e-mail form: the e-mail being edited, refreshed as
+the form in #email-form changes (email_center_staff:preview), at a computer's
+or a phone's width. With ``default_html`` (a system e-mail) a second tab shows
+the default version with sample data, its subject in ``default_subject``.
+{% endcomment %}
+<div class="a-card p-5 min-w-0 xl:sticky xl:top-6" x-data="{ tab: 'edited', device: 'desktop' }">
+  <div class="flex items-center gap-3 mb-4">
+    <span class="w-10 h-10 rounded-xl icon-tone-brand flex items-center justify-center shrink-0" aria-hidden="true">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    </span>
+    <h2 class="flex-1 text-base font-semibold text-neutral-950">{% translate "E-mail preview" %}</h2>
+    <div class="flex rounded-xl border border-neutral-300 p-1 gap-1" role="group" aria-label="{% translate 'Screen size' %}">
+      <button type="button" class="w-9 h-8 rounded-lg flex items-center justify-center" @click="device = 'desktop'"
+              :class="device === 'desktop' ? 'icon-tone-brand' : 'text-neutral-600 btn-icon-hover'" :aria-pressed="device === 'desktop'"
+              aria-label="{% translate 'Computer' %}" title="{% translate 'Computer' %}">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </button>
+      <button type="button" class="w-9 h-8 rounded-lg flex items-center justify-center" @click="device = 'mobile'"
+              :class="device === 'mobile' ? 'icon-tone-brand' : 'text-neutral-600 btn-icon-hover'" :aria-pressed="device === 'mobile'"
+              aria-label="{% translate 'Mobile' %}" title="{% translate 'Mobile' %}">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  {% if default_html %}
+  <div class="flex gap-2 mb-4" role="tablist">
+    <button type="button" role="tab" :aria-selected="tab === 'edited'" @click="tab = 'edited'" :class="tab === 'edited' ? 'btn-brand' : 'btn-outline'">{% translate "Your version" %}</button>
+    <button type="button" role="tab" :aria-selected="tab === 'default'" @click="tab = 'default'" :class="tab === 'default' ? 'btn-brand' : 'btn-outline'">{% translate "Default version" %}</button>
+  </div>
+  {% endif %}
+
+  <div class="mx-auto transition-[max-width] duration-200" :class="device === 'mobile' ? 'max-w-[390px]' : 'max-w-full'">
+    <div x-show="tab === 'edited'" id="preview"
+         hx-post="{% url 'email_center_staff:preview' %}" hx-include="#email-form"
+         hx-trigger="load, input changed delay:600ms from:#email-form">
+      <p class="text-sm text-neutral-600">{% translate "Loading preview…" %}</p>
+    </div>
+    {% if default_html %}
+    <div x-show="tab === 'default'" x-cloak>
+      <p class="text-xs text-neutral-600 mb-2"><span class="font-semibold text-neutral-950">{% translate "Subject:" %}</span> {{ default_subject|default:"—" }} <span class="text-neutral-500">· {% translate "With sample data." %}</span></p>
+      <iframe sandbox title="{% translate 'Default version' %}" srcdoc="{{ default_html|force_escape }}" class="w-full rounded-xl border border-neutral-300 bg-white" style="height: 760px;"></iframe>
+    </div>
+    {% endif %}
+  </div>
+</div>

@@ -11,8 +11,9 @@ Laravel's Markdown mail:
 - ``<small>…</small>`` alone in a paragraph is a note in small grey letters,
   and ``` `…` ``` alone is the large box of sign-in codes;
 - a Markdown table is the withdrawal card (its header row on top);
-- a button link titled ``"sem link"`` / ``"no link"`` drops the "copy this
-  link" line under it.
+- a ``<small>…</small>`` paragraph right under a button is the "if the button
+  doesn't work, copy this link" line, in that line's small print. The button
+  adds nothing of its own: every word under it is the team's to change.
 
 Each block is emitted with the markup the default templates use, so an
 edited e-mail looks like the one it replaces.
@@ -41,9 +42,8 @@ _TOKEN = "cfvar{}z"
 _TOKEN_RE = re.compile(r"cfvar(\d+)z")
 _BUTTON_PREFIX = r"(?:bot[aã]o|button)\s*:\s*"
 _BUTTON_RE = re.compile(r"<p[^>]*>\s*<a ([^>]*)>\s*" + _BUTTON_PREFIX + r"(.*?)</a>\s*</p>", re.I | re.S)
+# A title on a button's link (``[button: X](url "…")``) changes nothing; the plain text drops it.
 _TEXT_BUTTON_TITLE_RE = re.compile(r'(\]\([^)\s]+)\s+"[^"]*"\)')
-# A link title that drops the "copy this link" line under a button.
-_NO_FALLBACK_TITLES = {"sem link", "no link"}
 _AFTER_BUTTON = "<!--cf-after-button-->"
 _TEXT_BUTTON_RE = re.compile(r"\[\s*" + _BUTTON_PREFIX + r"([^\]]+)\]\(([^)\s]+)\)", re.I)
 _TEXT_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
@@ -105,6 +105,11 @@ _DETAILS = (
     'line-height:21px;color:#475569;">{inner}</td></tr></table>'
 )
 _NOTE = '<p style="margin:0 0 16px;font-size:13px;line-height:20px;color:#64748B;">{inner}</p>'
+# The note right under a button: the "copy this link" line of emails/_button.html.
+_FALLBACK = (
+    '<p class="cf-btn-fallback" style="margin:18px 0 0;font-size:12px;line-height:18px;color:#64748B;">{inner}</p>'
+)
+_FALLBACK_LINK = 'style="color:#7C3AED;word-break:break-all;text-decoration:underline;"'
 _CODE = (
     '<p style="margin:8px 0 24px;padding:18px;background-color:#F5F3FF;border-radius:8px;text-align:center;'
     "font-size:28px;line-height:34px;font-weight:700;letter-spacing:6px;color:#0F172A;"
@@ -165,7 +170,8 @@ def _plain_text(body: str, values: dict[str, str]) -> str:
     text = _TEXT_BUTTON_RE.sub(lambda m: f"{m.group(1).strip()}: {m.group(2)}", text)
     text = re.sub(r"</?small>", "", text)
     text = re.sub(r"`([^`]+)`", r"\1", text)
-    text = _TEXT_LINK_RE.sub(lambda m: f"{m.group(1)} ({m.group(2)})", text)
+    # A link whose text is its own address ("copy this link") is written once.
+    text = _TEXT_LINK_RE.sub(lambda m: m.group(2) if m.group(1) == m.group(2) else f"{m.group(1)} ({m.group(2)})", text)
     text = re.sub(r"^#{1,6}\s+", "", text, flags=re.M)
     text = re.sub(r"^>\s?", "", text, flags=re.M)
     return re.sub(r"\*\*(.+?)\*\*|__(.+?)__", lambda m: m.group(1) or m.group(2), text).strip()
@@ -184,8 +190,6 @@ def _style(fragment: str) -> str:
 def _button(match: re.Match) -> str:
     attrs = match.group(1)
     href = re.search(r'href="([^"]*)"', attrs)
-    title = re.search(r'title="([^"]*)"', attrs)
-    no_fallback = title is not None and html.unescape(title.group(1)).strip().lower() in _NO_FALLBACK_TITLES
     # Both parts are already escaped by the sanitizer; marked safe so the
     # button template does not escape them a second time.
     button = render_to_string(
@@ -193,10 +197,15 @@ def _button(match: re.Match) -> str:
         {
             "url": mark_safe(href.group(1) if href else ""),
             "label": mark_safe(match.group(2)),
-            "no_fallback": no_fallback,
+            "no_fallback": True,
         },
     )
     return button + _AFTER_BUTTON
+
+
+def _fallback(match: re.Match) -> str:
+    inner = re.sub(r'<a ([^>]*?)style="[^"]*"', r"<a \1" + _FALLBACK_LINK, match.group(1))
+    return _FALLBACK.format(inner=inner) + _AFTER_BUTTON
 
 
 def _panel(match: re.Match) -> str:
@@ -247,6 +256,12 @@ def _blocks(fragment: str) -> str:
         flags=re.S,
     )
     fragment = _BUTTON_RE.sub(_button, fragment)
+    fragment = re.sub(
+        re.escape(_AFTER_BUTTON) + r"\s*" + re.escape(_NOTE).replace(r"\{inner\}", "(.*?)"),
+        _fallback,
+        fragment,
+        flags=re.S,
+    )
     # A box right before a button sits close to it, as in the welcome e-mail.
     fragment = re.sub(
         r'(style=")' + re.escape(_PANEL_MARGIN) + r'(">(?:(?!</table>).)*</table>\s*<table[^>]*class="cf-btn")',

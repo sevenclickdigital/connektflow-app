@@ -16,7 +16,7 @@ from apps.accounts.decorators import superadmin_required
 from apps.common.emails import email_context, render_email
 from apps.common.htmx import toast_response
 
-from . import catalog, defaults, triggers
+from . import catalog, defaults, markdown_mail, triggers
 from .forms import AutomatedEmailForm, SystemEmailForm
 from .models import AutomatedEmail, SystemEmailOverride
 from .rendering import default_reason, render_message
@@ -47,18 +47,37 @@ def _automated_sample(user) -> dict[str, str]:
     return values
 
 
+def _variable_list(variables: dict) -> list[tuple[str, str]]:
+    """``(name, label)`` of each variable, for the editor's chips and guide."""
+    return [(name, str(getattr(variable, "label", variable))) for name, variable in variables.items()]
+
+
 @superadmin_required
 @require_GET
 def index(request):
     overrides = {row.key: row for row in SystemEmailOverride.objects.all()}
-    groups: dict[str, list] = {}
-    for entry in catalog.SYSTEM_EMAILS:
-        groups.setdefault(str(entry.group), []).append({"entry": entry, "override": overrides.get(entry.key)})
-    automated = AutomatedEmail.objects.annotate(sent=Count("sends")).order_by("-is_active", "name")
+    groups = [
+        {
+            "group": group,
+            "items": [
+                {"entry": entry, "override": overrides.get(entry.key)}
+                for entry in catalog.SYSTEM_EMAILS
+                if entry.group is group
+            ],
+        }
+        for group in catalog.GROUPS
+    ]
+    automated = list(AutomatedEmail.objects.annotate(sent=Count("sends")).order_by("-is_active", "name"))
     return render(
         request,
         "email_center/staff_index.html",
-        {"admin_active": "emails", "groups": groups, "automated": automated},
+        {
+            "admin_active": "emails",
+            "groups": [group for group in groups if group["items"]],
+            "system_count": len(catalog.SYSTEM_EMAILS),
+            "automated": automated,
+            "active_count": sum(email.is_active for email in automated),
+        },
     )
 
 
@@ -67,11 +86,9 @@ def index(request):
 def system_edit(request, key):
     entry = _entry_or_404(key)
     override = SystemEmailOverride.objects.filter(key=key).first()
-    initial = None
-    if override is None:
-        # Start from what is being sent today, converted to Markdown.
-        subject, body = defaults.default_version(entry)
-        initial = {"subject": subject, "body_markdown": body}
+    default_subject, default_body = defaults.default_version(entry)
+    # Without an edited version, start from what is being sent today, converted to Markdown.
+    initial = None if override else {"subject": default_subject, "body_markdown": default_body}
     form = SystemEmailForm(request.POST or None, instance=override, initial=initial, entry=entry)
     if request.method == "POST" and form.is_valid():
         row = form.save(commit=False)
@@ -83,7 +100,10 @@ def system_edit(request, key):
         )
         return redirect("email_center_staff:system_edit", key=key)
 
-    _text, default_html = render_email(defaults.code_template(key), entry.sample())
+    # The default version as sent today, with the sample data, to compare.
+    sample = entry.sample()
+    _text, default_html = render_email(defaults.code_template(key), sample)
+    sample_values = catalog.resolve(entry, email_context(**sample))
     return render(
         request,
         "email_center/staff_system_edit.html",
@@ -92,8 +112,10 @@ def system_edit(request, key):
             "entry": entry,
             "override": override,
             "form": form,
-            "variables": catalog.all_variables(entry),
+            # The e-mail's own variables first: they are the ones it is about.
+            "variables": _variable_list({**entry.variables, **catalog.COMMON_VARIABLES}),
             "default_html": default_html,
+            "default_subject": markdown_mail.substitute_text(default_subject, sample_values),
         },
     )
 
@@ -129,11 +151,26 @@ def automated_edit(request, email_id=None):
             "admin_active": "emails",
             "email": email,
             "form": form,
-            "variables": triggers.VARIABLES,
+            "variables": _variable_list(triggers.VARIABLES),
             "setup_steps": triggers.SETUP_STEPS,
             "sent_count": email.sends.count() if email else 0,
         },
     )
+
+
+@superadmin_required
+@require_POST
+def automated_toggle(request, email_id):
+    email = get_object_or_404(AutomatedEmail, pk=email_id)
+    was_active = email.is_active
+    email.is_active = not was_active
+    email.start_clock_if_switched_on(was_active)
+    email.updated_by = request.user
+    email.save(update_fields=["is_active", "activated_at", "updated_by", "updated_at"])
+    messages.success(
+        request, _("Automatic e-mail switched on.") if email.is_active else _("Automatic e-mail switched off.")
+    )
+    return redirect("email_center_staff:index")
 
 
 @superadmin_required

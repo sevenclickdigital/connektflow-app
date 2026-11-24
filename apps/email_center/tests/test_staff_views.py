@@ -119,3 +119,30 @@ def test_the_editor_starts_from_the_default_text(superadmin):
     form = response.context["form"]
     assert "{{ organization_name }}" in form.initial["subject"]
     assert "[botão: Cancelar a exclusão]({{ restore_url }})" in form.initial["body_markdown"]
+
+
+@pytest.mark.django_db
+def test_the_list_switches_an_automatic_email_on_and_off(superadmin):
+    email = AutomatedEmail.objects.create(name="A", subject="s", body_markdown="b")
+    url = reverse("email_center_staff:automated_toggle", kwargs={"email_id": email.id})
+
+    assert superadmin.post(url).status_code == 302
+    email.refresh_from_db()
+    assert email.is_active and email.activated_at is not None
+
+    superadmin.post(url)
+    email.refresh_from_db()
+    assert not email.is_active
+
+
+@pytest.mark.django_db
+def test_support_staff_cannot_switch_an_automatic_email():
+    email = AutomatedEmail.objects.create(name="A", subject="s", body_markdown="b")
+    client = Client()
+    client.force_login(create_operator("support@example.com"))
+
+    response = client.post(reverse("email_center_staff:automated_toggle", kwargs={"email_id": email.id}))
+
+    assert response.status_code == 403
+    email.refresh_from_db()
+    assert not email.is_active

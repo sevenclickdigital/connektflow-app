@@ -356,7 +356,7 @@ People and companies the workspace talks to (sidebar: Engajar → Contatos, for 
 ---
 
 ## E-mail centre (not in spec) — `apps/email_center/`
-- In the administrative area (`/staff/emails/`, superadmins): every system e-mail with a preview of its default text, and a Markdown editor to write a version of it (subject and body, variables listed per e-mail, live preview, test send to oneself, restore default).
+- In the administrative area (`/staff/emails/`, superadmins): the automatic e-mails as a table (trigger, status, sends), then every system e-mail in its group (`catalog.GROUPS`: collapsible, filtered by group or searched by name), each with a preview of its default text, and a Markdown editor to write a version of it (subject and body; the e-mail's variables as chips that insert at the cursor; formatting buttons, line numbers and a Markdown guide; a live preview at computer or phone width beside the default version; test send to oneself; restore default). The editor and the preview are shared with the automatic e-mails (`templates/email_center/partials/_editor.html`, `_preview_card.html`).
 - Automatic e-mails: name, subject and Markdown text, a trigger (N days after sign-up, last sign-in, last connection, last post or last task) and conditions (connected a social account, created a post, created a task, used Radar/Automations/Ads/Contacts/Funnels, how many setup steps are done). Switched on and off; each account owner receives each one once; people can turn them off as "Tips and reminders" in their notification preferences or with the link in the e-mail.
 
 ## Affiliates (not in spec) — `apps/affiliates/`

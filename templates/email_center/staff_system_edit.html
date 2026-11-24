@@ -10,61 +10,57 @@ Superadmins only (apps.email_center.staff_views.system_edit).
 {% block title %}{{ entry.label }} - {% translate "E-mails" %} - Connekt Flow{% endblock %}
 
 {% block page_header %}
-<div class="mb-4 lg:mb-[25px]">
-  <a href="{% url 'email_center_staff:index' %}" class="text-sm font-semibold text-brand-800 hover:text-brand-900">← {% translate "E-mails" %}</a>
-  <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950 mt-2" style="letter-spacing: -0.01em;">{{ entry.label }}</h1>
-  <p class="text-sm text-neutral-600 mt-1">{{ entry.group }} · {% if override.is_active %}{% translate "The edited version is being sent." %}{% else %}{% translate "The default version is being sent." %}{% endif %}</p>
+<a href="{% url 'email_center_staff:index' %}" class="inline-block text-sm font-semibold text-brand-800 hover:text-brand-900 mb-3">← {% translate "E-mails" %}</a>
+<div class="page-header">
+  <div class="min-w-0">
+    <h1 class="page-title">{{ entry.label }}</h1>
+    <p class="page-description">{% translate "Edit the e-mail's text in Markdown and see the preview as you type." %}</p>
+  </div>
+  {% if override.is_active %}<span class="pill pill-success"><i></i>{% translate "Edited version" %}</span>{% elif override %}<span class="pill pill-neutral"><i></i>{% translate "Draft" %}</span>{% else %}<span class="pill pill-neutral"><i></i>{% translate "Default" %}</span>{% endif %}
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-  <div class="flex flex-col gap-6 min-w-0">
-    <form id="email-form" method="post" class="a-card p-6 flex flex-col gap-5">
-      {% csrf_token %}
-      <input type="hidden" name="key" value="{{ entry.key }}">
-      {{ form.non_field_errors }}
-      <div>
-        <label for="{{ form.subject.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.subject.label }}</label>
-        {{ form.subject }}
-        {% for error in form.subject.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-      </div>
-      <div>
-        <label for="{{ form.body_markdown.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ form.body_markdown.label }}</label>
-        {{ form.body_markdown }}
-        {% for error in form.body_markdown.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-      </div>
-      <div class="alert-info text-xs">{% translate "The edited version is sent in every language and replaces the parts of the default text that change case by case. Use the variables for what changes." %}</div>
-      <label class="flex items-center gap-2 text-sm text-neutral-950 cursor-pointer">{{ form.is_active }} {{ form.is_active.label }}</label>
-      <div class="flex flex-wrap items-center gap-2">
-        <button type="submit" class="btn-brand">{% translate "Save" %}</button>
-        <button type="button" class="btn-ghost" hx-post="{% url 'email_center_staff:send_test' %}" hx-include="#email-form" hx-swap="none">{% translate "Send a test to me" %}</button>
-      </div>
-    </form>
-    {% if override %}
-    <form method="post" action="{% url 'email_center_staff:system_reset' key=entry.key %}" class="a-card p-5 flex flex-col sm:flex-row sm:items-center gap-3">
-      {% csrf_token %}
-      <p class="flex-1 text-sm text-neutral-700">{% translate "Delete the edited version and go back to the default text." %}</p>
-      <button type="submit" class="btn-ghost text-red-600">{% translate "Restore default" %}</button>
-    </form>
-    {% endif %}
-    {% include "email_center/partials/_markdown_help.html" with variables=variables %}
-  </div>
+<div class="grid grid-cols-1 xl:grid-cols-[minmax(0,8fr)_minmax(0,7fr)] gap-6 items-start">
+  <form id="email-form" method="post" class="a-card p-6 flex flex-col gap-5 min-w-0">
+    {% csrf_token %}
+    <input type="hidden" name="key" value="{{ entry.key }}">
+    {{ form.non_field_errors }}
+    {% include "email_center/partials/_editor.html" %}
 
-  <div class="a-card p-5 min-w-0 xl:sticky xl:top-6" x-data="{ tab: 'edited' }">
-    <div class="flex gap-2 mb-4" role="tablist">
-      <button type="button" role="tab" :aria-selected="tab === 'edited'" @click="tab = 'edited'" :class="tab === 'edited' ? 'btn-brand' : 'btn-ghost'">{% translate "Your version" %}</button>
-      <button type="button" role="tab" :aria-selected="tab === 'default'" @click="tab = 'default'" :class="tab === 'default' ? 'btn-brand' : 'btn-ghost'">{% translate "Default version" %}</button>
+    <div class="flex items-center gap-2">
+      <label class="flex items-center gap-2 text-sm text-neutral-950 cursor-pointer">{{ form.is_active }} {{ form.is_active.label }}</label>
+      <span class="relative inline-flex" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+        <button type="button" class="text-neutral-500 hover:text-neutral-800" @click="open = !open" @focus="open = true" @blur="open = false" aria-label="{% translate 'More information' %}">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </button>
+        <span x-show="open" x-cloak x-transition.opacity role="tooltip" class="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-72 rounded-lg bg-neutral-950 px-3 py-2 text-xs text-white shadow-lg z-20">{% translate "The edited version is sent in every language and replaces the parts of the default text that change case by case. Use the variables for what changes." %}</span>
+      </span>
     </div>
-    <div x-show="tab === 'edited'" id="preview"
-         hx-post="{% url 'email_center_staff:preview' %}" hx-include="#email-form"
-         hx-trigger="load, input changed delay:600ms from:#email-form">
-      <p class="text-sm text-neutral-600">{% translate "Loading preview…" %}</p>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="submit" class="btn-brand">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        {% translate "Save" %}
+      </button>
+      <button type="button" class="btn-outline" hx-post="{% url 'email_center_staff:send_test' %}" hx-include="#email-form" hx-swap="none">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        {% translate "Send a test to me" %}
+      </button>
+      {% if override %}
+      <button type="submit" form="reset-form" class="btn-ghost text-red-600 sm:ml-auto">{% translate "Restore default" %}</button>
+      {% endif %}
     </div>
-    <div x-show="tab === 'default'" x-cloak>
-      <p class="text-xs text-neutral-600 mb-2">{% translate "With sample data." %}</p>
-      <iframe sandbox title="{% translate 'Default version' %}" srcdoc="{{ default_html|force_escape }}" class="w-full rounded-lg border border-neutral-300 bg-white" style="height: 760px;"></iframe>
-    </div>
-  </div>
+  </form>
+  {% if override %}
+  <form id="reset-form" method="post" action="{% url 'email_center_staff:system_reset' key=entry.key %}" class="hidden"
+        data-confirm="{% translate 'Restore the default version?' %}"
+        data-confirm-body="{% translate 'Delete the edited version and go back to the default text.' %}"
+        data-confirm-label="{% translate 'Restore default' %}" data-confirm-tone="danger">
+    {% csrf_token %}
+  </form>
+  {% endif %}
+
+  {% include "email_center/partials/_preview_card.html" with default_html=default_html default_subject=default_subject %}
 </div>
 {% endblock %}

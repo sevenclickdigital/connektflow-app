@@ -18,5 +18,6 @@ urlpatterns = [
     path("system/<path:key>/", staff_views.system_edit, name="system_edit"),
     path("automatic/new/", staff_views.automated_edit, name="automated_new"),
     path("automatic/<uuid:email_id>/", staff_views.automated_edit, name="automated_edit"),
+    path("automatic/<uuid:email_id>/toggle/", staff_views.automated_toggle, name="automated_toggle"),
     path("automatic/<uuid:email_id>/delete/", staff_views.automated_delete, name="automated_delete"),
 ]

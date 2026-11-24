@@ -10,27 +10,24 @@ Superadmins only (apps.email_center.staff_views.automated_edit).
 {% block title %}{% if email %}{{ email.name }}{% else %}{% translate "New automatic e-mail" %}{% endif %} - {% translate "E-mails" %} - Connekt Flow{% endblock %}
 
 {% block page_header %}
-<div class="mb-4 lg:mb-[25px]">
-  <a href="{% url 'email_center_staff:index' %}" class="text-sm font-semibold text-brand-800 hover:text-brand-900">← {% translate "E-mails" %}</a>
-  <h1 class="text-xl sm:text-2xl font-semibold text-neutral-950 mt-2" style="letter-spacing: -0.01em;">{% if email %}{{ email.name }}{% else %}{% translate "New automatic e-mail" %}{% endif %}</h1>
-  {% if email %}<p class="text-sm text-neutral-600 mt-1">{% blocktranslate count n=sent_count %}Sent to {{ n }} person so far.{% plural %}Sent to {{ n }} people so far.{% endblocktranslate %}</p>{% endif %}
+<a href="{% url 'email_center_staff:index' %}" class="inline-block text-sm font-semibold text-brand-800 hover:text-brand-900 mb-3">← {% translate "E-mails" %}</a>
+<div class="page-header">
+  <div class="min-w-0">
+    <h1 class="page-title">{% if email %}{{ email.name }}{% else %}{% translate "New automatic e-mail" %}{% endif %}</h1>
+    <p class="page-description">{% if email %}{% blocktranslate count n=sent_count %}Sent to {{ n }} person so far.{% plural %}Sent to {{ n }} people so far.{% endblocktranslate %}{% else %}{% translate "Edit the e-mail's text in Markdown and see the preview as you type." %}{% endif %}</p>
+  </div>
+  {% if email %}{% if email.is_active %}<span class="pill pill-success"><i></i>{% translate "Active" %}</span>{% else %}<span class="pill pill-neutral"><i></i>{% translate "Off" %}</span>{% endif %}{% endif %}
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+<div class="grid grid-cols-1 xl:grid-cols-[minmax(0,8fr)_minmax(0,7fr)] gap-6 items-start">
   <div class="flex flex-col gap-6 min-w-0">
     <form id="email-form" method="post" class="flex flex-col gap-6">
       {% csrf_token %}
       {{ form.non_field_errors }}
-      <section class="a-card p-6 flex flex-col gap-5">
-        {% for field in form %}{% if field.name == "name" or field.name == "subject" or field.name == "body_markdown" %}
-        <div>
-          <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-neutral-950 mb-1.5">{{ field.label }}</label>
-          {{ field }}
-          {% for error in field.errors %}<p class="text-xs text-red-600 mt-1">{{ error }}</p>{% endfor %}
-        </div>
-        {% endif %}{% endfor %}
+      <section class="a-card p-6 min-w-0">
+        {% include "email_center/partials/_editor.html" with name_field=form.name %}
       </section>
 
       <section class="a-card p-6 flex flex-col gap-5">
@@ -64,28 +61,31 @@ Superadmins only (apps.email_center.staff_views.automated_edit).
         <label class="flex items-center gap-2 text-sm font-semibold text-neutral-950 cursor-pointer">{{ form.is_active }} {{ form.is_active.label }}</label>
       </section>
 
-      <div class="flex flex-wrap items-center gap-2">
-        <button type="submit" class="btn-brand">{% translate "Save" %}</button>
-        <button type="button" class="btn-ghost" hx-post="{% url 'email_center_staff:send_test' %}" hx-include="#email-form" hx-swap="none">{% translate "Send a test to me" %}</button>
+      <div class="flex flex-wrap items-center gap-3">
+        <button type="submit" class="btn-brand">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          {% translate "Save" %}
+        </button>
+        <button type="button" class="btn-outline" hx-post="{% url 'email_center_staff:send_test' %}" hx-include="#email-form" hx-swap="none">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          {% translate "Send a test to me" %}
+        </button>
+        {% if email %}
+        <button type="submit" form="delete-form" class="btn-ghost text-red-600 sm:ml-auto">{% translate "Delete" %}</button>
+        {% endif %}
       </div>
     </form>
 
     {% if email %}
-    <form method="post" action="{% url 'email_center_staff:automated_delete' email_id=email.id %}" class="a-card p-5 flex flex-col sm:flex-row sm:items-center gap-3">
+    <form id="delete-form" method="post" action="{% url 'email_center_staff:automated_delete' email_id=email.id %}" class="hidden"
+          data-confirm="{% translate 'Delete this automatic e-mail?' %}"
+          data-confirm-body="{% translate 'Delete this automatic e-mail and its record of who received it.' %}"
+          data-confirm-label="{% translate 'Delete' %}" data-confirm-tone="danger">
       {% csrf_token %}
-      <p class="flex-1 text-sm text-neutral-700">{% translate "Delete this automatic e-mail and its record of who received it." %}</p>
-      <button type="submit" class="btn-ghost text-red-600">{% translate "Delete" %}</button>
     </form>
     {% endif %}
-    {% include "email_center/partials/_markdown_help.html" with variables=variables %}
   </div>
 
-  <div class="a-card p-5 min-w-0 xl:sticky xl:top-6">
-    <h2 class="text-sm font-semibold text-neutral-950 mb-3">{% translate "Preview" %}</h2>
-    <div id="preview" hx-post="{% url 'email_center_staff:preview' %}" hx-include="#email-form"
-         hx-trigger="load, input changed delay:600ms from:#email-form">
-      <p class="text-sm text-neutral-600">{% translate "Loading preview…" %}</p>
-    </div>
-  </div>
+  {% include "email_center/partials/_preview_card.html" %}
 </div>
 {% endblock %}

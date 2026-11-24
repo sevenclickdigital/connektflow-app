@@ -24,7 +24,11 @@ def test_the_default_keeps_the_layout_pieces():
     assert body.startswith("# Sua senha foi alterada")
     assert "> <small>**De onde veio a alteração**" in body  # the compact box of the security notices
     assert "[botão: Redefinir minha senha]({{ reset_password_url }})" in body
-    assert "Se o botão não funcionar" not in body  # the button adds its own fallback line
+    # The "copy this link" line is written out under the button, so it can be changed.
+    assert (
+        "<small>Se o botão não funcionar, copie e cole este link no seu navegador:\n"
+        "[{{ reset_password_url }}]({{ reset_password_url }})</small>"
+    ) in body
 
 
 def test_the_default_renders_back_into_the_layout():

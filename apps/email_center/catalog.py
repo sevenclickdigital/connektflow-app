@@ -33,10 +33,32 @@ class Variable:
 
 
 @dataclass(frozen=True)
+class Group:
+    """A section of the e-mail list: ``icon`` names the drawing the list shows for it."""
+
+    slug: str
+    label: str | Promise
+    description: str | Promise
+    icon: str
+
+
+ACCOUNT = Group("account", _("Account"), _("Messages about signing up, signing in and managing the account."), "mail")
+SECURITY = Group(
+    "security", _("Security notices"), _("Notices about changes and security actions on the account."), "shield"
+)
+TEAM = Group("team", _("Team and organization"), _("Messages about invitations and managing organizations."), "users")
+BILLING = Group("billing", _("Billing"), _("Messages about payments and the data of unpaid brands."), "card")
+AFFILIATES = Group(
+    "affiliates", _("Affiliates"), _("Messages to affiliates about their terms and withdrawals."), "gift"
+)
+GROUPS: tuple[Group, ...] = (ACCOUNT, SECURITY, TEAM, BILLING, AFFILIATES)
+
+
+@dataclass(frozen=True)
 class SystemEmail:
     key: str
     label: str | Promise
-    group: str | Promise
+    group: Group
     variables: dict[str, Variable] = field(default_factory=dict)
     sample: Callable[[], dict] = dict
 
@@ -118,6 +140,18 @@ def _sample(**extra):
     return lambda: {"user": _USER, "greeting_name": "Ana", **extra}
 
 
+class _SampleProvider(SimpleNamespace):
+    """Shown as its name, like allauth's provider objects are."""
+
+    def __str__(self):
+        return self.name
+
+
+# Where a change came from, in the security notices' samples: every value is
+# filled so the default text keeps each one as its variable.
+_CHANGE_SAMPLE = {"timestamp": timezone.now(), "ip": "177.20.33.10", "user_agent": "Chrome"}
+
+
 _AFFILIATE_TERMS = {
     "affiliate_link": Variable(_("Affiliate link"), path("link")),
     "commission_percent": Variable(_("Commission (%)"), path("affiliate.commission_percent")),
@@ -138,14 +172,14 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "account/email/welcome",
         _("Welcome"),
-        _("Account"),
+        ACCOUNT,
         {"name": _ALLAUTH_NAME, "email": Variable(_("E-mail of the person"), path("user.email"))},
         _sample(),
     ),
     SystemEmail(
         "account/email/email_confirmation_signup",
         _("Confirm the e-mail at sign-up"),
-        _("Account"),
+        ACCOUNT,
         {
             "name": _ALLAUTH_NAME,
             "code": Variable(_("Confirmation code"), path("code")),
@@ -156,7 +190,7 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "account/email/email_confirmation",
         _("Confirm a new e-mail"),
-        _("Account"),
+        ACCOUNT,
         {
             "name": _ALLAUTH_NAME,
             "code": Variable(_("Confirmation code"), path("code")),
@@ -167,28 +201,28 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "account/email/login_code",
         _("Sign-in code"),
-        _("Account"),
+        ACCOUNT,
         {"code": Variable(_("Sign-in code"), path("code"))},
         _sample(code="482913"),
     ),
     SystemEmail(
         "account/email/password_reset_key",
         _("Reset password link"),
-        _("Account"),
+        ACCOUNT,
         {"name": _ALLAUTH_NAME, "reset_url": Variable(_("Link to choose a new password"), path("password_reset_url"))},
         _sample(password_reset_url=_LINK),
     ),
     SystemEmail(
         "account/email/password_reset_code",
         _("Reset password code"),
-        _("Account"),
+        ACCOUNT,
         {"code": Variable(_("Reset code"), path("code"))},
         _sample(code="482913"),
     ),
     SystemEmail(
         "account/email/unknown_account",
         _("No account with this e-mail"),
-        _("Account"),
+        ACCOUNT,
         {
             "email": Variable(_("E-mail typed"), path("email")),
             "signup_url": Variable(_("Sign-up link"), path("signup_url")),
@@ -198,7 +232,7 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "account/email/account_already_exists",
         _("Account already exists"),
-        _("Account"),
+        ACCOUNT,
         {
             "email": Variable(_("E-mail typed"), path("email")),
             "reset_url": Variable(_("Link to reset the password"), path("password_reset_url")),
@@ -208,68 +242,68 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "account/email/password_changed",
         _("Password changed"),
-        _("Security notices"),
+        SECURITY,
         {"name": _ALLAUTH_NAME, **_CHANGE_ORIGIN},
-        _sample(timestamp=timezone.now(), ip="177.20.33.10", user_agent="Chrome"),
+        _sample(**_CHANGE_SAMPLE),
     ),
     SystemEmail(
         "account/email/password_set",
         _("Password set"),
-        _("Security notices"),
+        SECURITY,
         {"name": _ALLAUTH_NAME, **_CHANGE_ORIGIN},
-        _sample(timestamp=timezone.now(), ip="177.20.33.10", user_agent="Chrome"),
+        _sample(**_CHANGE_SAMPLE),
     ),
     SystemEmail(
         "account/email/password_reset",
         _("Password reset"),
-        _("Security notices"),
+        SECURITY,
         {"name": _ALLAUTH_NAME, **_CHANGE_ORIGIN},
-        _sample(timestamp=timezone.now(), ip="177.20.33.10", user_agent="Chrome"),
+        _sample(**_CHANGE_SAMPLE),
     ),
     SystemEmail(
         "account/email/email_changed",
         _("E-mail changed"),
-        _("Security notices"),
+        SECURITY,
         {
             "old_email": Variable(_("Previous e-mail"), path("from_email")),
             "new_email": Variable(_("New e-mail"), path("to_email")),
             **_CHANGE_ORIGIN,
         },
-        _sample(from_email="antigo@example.com", to_email="novo@example.com", timestamp=timezone.now()),
+        _sample(from_email="antigo@example.com", to_email="novo@example.com", **_CHANGE_SAMPLE),
     ),
     SystemEmail(
         "account/email/email_confirm",
         _("E-mail confirmed"),
-        _("Security notices"),
+        SECURITY,
         dict(_CHANGE_ORIGIN),
-        _sample(timestamp=timezone.now()),
+        _sample(**_CHANGE_SAMPLE),
     ),
     SystemEmail(
         "account/email/email_deleted",
         _("E-mail removed"),
-        _("Security notices"),
+        SECURITY,
         {"removed_email": Variable(_("Removed e-mail"), path("deleted_email")), **_CHANGE_ORIGIN},
-        _sample(deleted_email="antigo@example.com", timestamp=timezone.now()),
+        _sample(deleted_email="antigo@example.com", **_CHANGE_SAMPLE),
     ),
     SystemEmail(
         "socialaccount/email/account_connected",
         _("Google sign-in connected"),
-        _("Security notices"),
+        SECURITY,
         {"provider": Variable(_("Sign-in provider"), path("provider.name")), **_CHANGE_ORIGIN},
-        _sample(provider=SimpleNamespace(name="Google"), timestamp=timezone.now()),
+        _sample(provider=_SampleProvider(name="Google"), **_CHANGE_SAMPLE),
     ),
     SystemEmail(
         "socialaccount/email/account_disconnected",
         _("Google sign-in disconnected"),
-        _("Security notices"),
+        SECURITY,
         {"provider": Variable(_("Sign-in provider"), path("provider.name")), **_CHANGE_ORIGIN},
-        _sample(provider=SimpleNamespace(name="Google"), timestamp=timezone.now()),
+        _sample(provider=_SampleProvider(name="Google"), **_CHANGE_SAMPLE),
     ),
     # Team and organization
     SystemEmail(
         "members/email/invite",
         _("Team invitation"),
-        _("Team and organization"),
+        TEAM,
         {
             "name": Variable(_("Name of the person invited"), path("invitation.name")),
             "email": Variable(_("E-mail invited"), path("invitation.email")),
@@ -289,7 +323,7 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "organizations/email/deletion_scheduled",
         _("Organization deletion scheduled"),
-        _("Team and organization"),
+        TEAM,
         {
             "name": _NAME,
             "organization_name": Variable(_("Organization"), path("organization.name")),
@@ -311,7 +345,7 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "onboarding/email/connection_link",
         _("Link to connect accounts"),
-        _("Team and organization"),
+        TEAM,
         {
             "organization_name": Variable(_("Organization"), path("org_name")),
             "brand": Variable(_("Brand"), path("workspace_name")),
@@ -328,7 +362,7 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "client_portal/email/magic_link",
         _("Client portal link"),
-        _("Team and organization"),
+        TEAM,
         {
             "client_name": Variable(_("Client name"), path("client_user.display_name")),
             "sender_name": Variable(_("Who shared"), path("created_by.display_name")),
@@ -345,7 +379,7 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "notifications/email/notification",
         _("Notification"),
-        _("Team and organization"),
+        TEAM,
         {
             "title": Variable(_("Notification title"), path("notification.title")),
             "body": Variable(_("Notification text"), path("notification.body")),
@@ -362,7 +396,7 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "billing/email/payment_confirmed",
         _("Payment confirmed"),
-        _("Billing"),
+        BILLING,
         {
             "name": _NAME,
             "amount": Variable(_("Amount charged"), brl("plan.charge_cents")),
@@ -380,7 +414,7 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "billing/email/archive_removal_warning",
         _("Data removal warning"),
-        _("Billing"),
+        BILLING,
         {
             "name": _NAME,
             "organization_name": Variable(_("Organization"), path("organization.name")),
@@ -397,21 +431,21 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "affiliates/email/affiliate_added",
         _("New affiliate"),
-        _("Affiliates"),
+        AFFILIATES,
         {"name": _NAME, "panel_url": Variable(_("Affiliate panel"), path("panel_url")), **_AFFILIATE_TERMS},
         _sample(panel_url=_LINK, **_AFFILIATE_SAMPLE),
     ),
     SystemEmail(
         "affiliates/email/terms_changed",
         _("Affiliate terms changed"),
-        _("Affiliates"),
+        AFFILIATES,
         {"name": _NAME, "panel_url": Variable(_("Affiliate panel"), path("panel_url")), **_AFFILIATE_TERMS},
         _sample(panel_url=_LINK, **_AFFILIATE_SAMPLE),
     ),
     SystemEmail(
         "affiliates/email/payout_requested",
         _("Withdrawal requested"),
-        _("Affiliates"),
+        AFFILIATES,
         {
             "name": _NAME,
             "amount": Variable(_("Amount"), brl("payout.amount_cents")),
@@ -430,7 +464,7 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "affiliates/email/payout_paid",
         _("Withdrawal paid"),
-        _("Affiliates"),
+        AFFILIATES,
         {
             "name": _NAME,
             "amount": Variable(_("Amount"), brl("payout.amount_cents")),
@@ -446,7 +480,7 @@ SYSTEM_EMAILS: tuple[SystemEmail, ...] = (
     SystemEmail(
         "affiliates/email/payout_requested_team",
         _("Withdrawal to pay (team)"),
-        _("Affiliates"),
+        AFFILIATES,
         {
             "affiliate_name": Variable(_("Affiliate"), path("payout.affiliate.name")),
             "amount": Variable(_("Amount"), brl("payout.amount_cents")),

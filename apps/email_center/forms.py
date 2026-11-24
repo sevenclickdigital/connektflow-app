@@ -1,5 +1,4 @@
 from django import forms
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from . import catalog, markdown_mail, triggers
@@ -112,10 +111,7 @@ class AutomatedEmailForm(forms.ModelForm):
 
     def save(self, commit=True):
         email = super().save(commit=False)
-        # Switching on (again) restarts the clock: without include_overdue,
-        # only people whose day comes from now on receive it.
-        if email.is_active and ("is_active" in self.changed_data or email.activated_at is None):
-            email.activated_at = timezone.now()
+        email.start_clock_if_switched_on(was_active="is_active" not in self.changed_data and email.is_active)
         if commit:
             email.save()
         return email

@@ -3,7 +3,8 @@
 The code template is rendered with the e-mail's sample context, the body
 between the layout's ``cf-content`` markers is turned into Markdown (the same
 conventions ``markdown_mail`` reads back: the heading line, ``**bold**``,
-lists, ``>`` panels and the ``[button: Label](url)`` button), and each sample
+lists, ``>`` panels, the ``[button: Label](url)`` button and the
+``<small>`` line under it), and each sample
 value is put back as the variable it came from. Reading the template itself,
 rather than keeping a second copy of every text, means the starting point is
 always what is being sent today. Parts that depend on the case (shown only
@@ -125,19 +126,6 @@ def _all(node, tag):
             yield from _all(child, tag)
 
 
-def _has_fallback(button) -> bool:
-    """Whether the "copy this link" line follows ``button`` (``no_fallback`` drops it)."""
-    siblings = button.parent.children if button.parent else []
-    after = siblings[siblings.index(button) + 1 :]
-    for node in after:
-        if isinstance(node, str):
-            if node.strip():
-                return False
-            continue
-        return "cf-btn-fallback" in (node.attrs.get("class") or "")
-    return False
-
-
 def _is_panel(node) -> bool:
     """A cell with a background of its own: the layout's boxes (steps, codes, plan details)."""
     style = (node.attrs.get("style") or "").replace(" ", "").lower()
@@ -157,13 +145,13 @@ def _render(node) -> str:
     if "hidden" in node.attrs or tag in {"style", "script", "head"}:
         return ""
     if "cf-btn-fallback" in (node.attrs.get("class") or ""):
-        return ""
+        # The "copy this link" line: written out, so it can be changed or removed.
+        return f"\n\n<small>{_inline(node).strip()}</small>\n\n"
     if tag == "table" and "cf-btn" in (node.attrs.get("class") or ""):
         link = _find(node, "a")
         label = re.sub(r"\s+", " ", _text(link)).strip() if link else ""
         href = link.attrs.get("href", "") if link else ""
-        title = "" if _has_fallback(node) else f' "{gettext("no link")}"'
-        return f"\n\n[{gettext('button:')} {label}]({href}{title})\n\n"
+        return f"\n\n[{gettext('button:')} {label}]({href})\n\n"
     style = (node.attrs.get("style") or "").replace(" ", "").lower()
     if tag == "table" and "border:1pxsolid#e9e5fb" in style:
         return _card_markdown(node)

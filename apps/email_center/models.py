@@ -8,6 +8,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 
@@ -93,6 +94,12 @@ class AutomatedEmail(models.Model):
 
     def __str__(self):
         return self.name
+
+    def start_clock_if_switched_on(self, was_active: bool) -> None:
+        """Switching on (again) restarts the clock: without ``include_overdue``,
+        only people whose day comes from now on receive it."""
+        if self.is_active and (not was_active or self.activated_at is None):
+            self.activated_at = timezone.now()
 
 
 class AutomatedEmailSend(models.Model):
