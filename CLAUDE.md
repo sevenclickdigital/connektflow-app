@@ -64,7 +64,7 @@ When the code and a doc disagree, the code is right — fix the doc in the same 
 
 ### Background tasks
 - Tasks are `@background(...)` functions in `apps/<app>/tasks.py`; recurring ones are registered in the app's `AppConfig.ready()` via `post_migrate` → `register_recurring_task` (`apps/common/background.py`).
-- Tasks must be idempotent and take ids, not model instances. Publishing runs in its own lane; everything else shares the general lane — a slow task blocks the others.
+- Tasks must be idempotent and take ids, not model instances. Each kind of work has its own lane (`LANE_TASK_NAMES` in `apps/common/worker.py`: publishing, realtime, inbox, sync, email, media, general); a slow task only blocks its own lane, and a new task lands in `general` until you add it to the right set. In production each lane runs in its own container (`worker-<lane>`, `--scope <lane>`), the media one (FFmpeg/Pillow, `MEDIA_TASK_NAMES`) under a CPU and memory cap.
 - Skill: `worker-tasks`.
 
 ## Testing

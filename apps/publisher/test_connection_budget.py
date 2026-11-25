@@ -8,8 +8,8 @@ thread-local, so each of those threads held its own.
 
 The fix is one platform pool shared across groups, sized to the budget. These
 tests pin that: the ceiling holds no matter how many groups are running, the
-knobs that set it are readable at call time, and the arithmetic still fits the
-smallest plan the project claims to support.
+knobs that set it are readable at call time, and the arithmetic fits the
+connections the deployment requires (``MIN_DATABASE_CONNECTIONS``).
 """
 
 import re
@@ -22,7 +22,7 @@ from unittest.mock import patch
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 
-from apps.common.worker import WORKER_EXECUTION_THREADS
+from apps.common.worker import LANES, MIN_DATABASE_CONNECTIONS, lanes_for
 from apps.composer.models import PlatformPost, Post
 from apps.organizations.models import Organization
 from apps.publisher import engine
@@ -152,23 +152,29 @@ class BudgetSettingTests(TransactionTestCase):
 
 
 class BudgetArithmeticTest(TransactionTestCase):
-    def test_defaults_fit_the_smallest_supported_plan(self):
-        """Peak demand across every process has to fit essential-0's 20.
+    def test_peak_demand_fits_the_connections_the_deployment_requires(self):
+        """Peak demand across every process stays under MIN_DATABASE_CONNECTIONS.
 
-        The web figure is read from the Dokploy compose file rather than copied,
-        so raising ``--threads`` fails here instead of in production.
+        Every worker container busy at once, the web threads and the publish
+        engine's pools. Web threads and worker containers are read from the
+        Dokploy compose file rather than copied, so raising ``--threads`` or
+        adding a worker fails here instead of in production; the worker logs
+        an error at startup when the database grants fewer connections than
+        this (``warn_if_too_few_connections``).
         """
         compose = (REPO_ROOT / "docker-compose.dokploy.yml").read_text()
         web = next(line for line in compose.splitlines() if "gunicorn config.wsgi" in line)
         workers = int(re.search(r"--workers\s+(\d+)", web).group(1))
         threads = int(re.search(r"--threads\s+(\d+)", web).group(1))
+        scopes = re.findall(r"run_studio_worker --scope ([a-z-]+)", compose)
+        self.assertEqual(sorted(scopes), sorted(LANES), "every lane runs in exactly one container")
 
         peak = (
             workers * threads  # gunicorn, one connection per thread
-            + 1  # the Studio dispatcher
-            + WORKER_EXECUTION_THREADS  # the publishing and general task execution threads
+            # Each worker container: its dispatcher, and one per busy lane.
+            + sum(1 + len(lanes_for(scope)) for scope in scopes)
             + engine._max_concurrent_posts()
             + engine._max_concurrent_platform_publishes()
         )
 
-        self.assertLess(peak, 20, f"peak connection demand {peak} leaves no headroom under essential-0's 20")
+        self.assertLess(peak, MIN_DATABASE_CONNECTIONS, f"peak connection demand {peak}")

@@ -1,4 +1,4 @@
-"""Run the shared worker with reserved publishing capacity."""
+"""Run the Studio worker: one lane per kind of background work."""
 
 import logging
 import signal
@@ -6,18 +6,24 @@ import signal
 from background_task.tasks import autodiscover
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.common.worker import SHUTDOWN_REQUESTED, StudioWorker
+from apps.common.worker import SHUTDOWN_REQUESTED, WORKER_SCOPES, StudioWorker
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "Run one worker process with separate publishing and general task threads."
+    help = "Run the Studio worker, for one lane or all of them."
 
     def add_arguments(self, parser):
         parser.add_argument("--duration", type=int, default=0, help="Recycle after this many seconds (0 runs forever).")
         parser.add_argument(
             "--sleep", type=float, default=1.0, help="Dispatcher poll interval in seconds (default: 1)."
+        )
+        parser.add_argument(
+            "--scope",
+            choices=WORKER_SCOPES,
+            default="all",
+            help="One lane (publishing, realtime, inbox, sync, email, media, general) or all (default).",
         )
 
     def handle(self, *args, **options):
@@ -34,7 +40,7 @@ class Command(BaseCommand):
         if deleted:
             logger.info("Removed %s duplicate pending analytics backfills", deleted)
 
-        worker = StudioWorker(duration=options["duration"], poll_interval=options["sleep"])
+        worker = StudioWorker(duration=options["duration"], poll_interval=options["sleep"], scope=options["scope"])
         SHUTDOWN_REQUESTED.clear()
         previous_handlers = {}
 

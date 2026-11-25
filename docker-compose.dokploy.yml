@@ -22,6 +22,27 @@
 #     moves the stack to a network of its own.
 #
 # In Dokploy, add a Domain pointing to service `app`, container port `8000`.
+# What every worker container shares; each service below sets its lane.
+x-worker: &worker
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file:
+    - .env
+  environment:
+    DJANGO_SETTINGS_MODULE: config.settings.production
+    DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the internal connection URL of the Dokploy database}
+    MEDIA_ROOT: /app/media
+    MALLOC_ARENA_MAX: 2
+  volumes:
+    - media_data:/app/media
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+  networks:
+    - dokploy-network
+  restart: unless-stopped
+
 services:
   migrate:
     build:
@@ -78,28 +99,49 @@ services:
       - dokploy-network
     restart: unless-stopped
 
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    # No --duration: this restart policy does not depend on clean-exit
-    # recycling the way Heroku's does.
-    command: python manage.py run_studio_worker
-    env_file:
-      - .env
-    environment:
-      DJANGO_SETTINGS_MODULE: config.settings.production
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the internal connection URL of the Dokploy database}
-      MEDIA_ROOT: /app/media
-      MALLOC_ARENA_MAX: 2
-    volumes:
-      - media_data:/app/media
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-    networks:
-      - dokploy-network
-    restart: unless-stopped
+  # One worker container per lane (apps/common/worker.py), so a crash, an
+  # out-of-memory kill or a hung worker stops one kind of work and never the
+  # others: a stuck account sync cannot hold up publishing or automatic
+  # replies. Each process ends itself when stuck (StudioWorker.stall_reason)
+  # and the restart policy brings it back. No --duration: this restart policy
+  # does not depend on clean-exit recycling.
+  worker-publishing:
+    <<: *worker
+    command: python manage.py run_studio_worker --scope publishing
+
+  worker-realtime:
+    <<: *worker
+    command: python manage.py run_studio_worker --scope realtime
+
+  worker-inbox:
+    <<: *worker
+    command: python manage.py run_studio_worker --scope inbox
+
+  worker-sync:
+    <<: *worker
+    command: python manage.py run_studio_worker --scope sync
+
+  worker-email:
+    <<: *worker
+    command: python manage.py run_studio_worker --scope email
+
+  worker-general:
+    <<: *worker
+    command: python manage.py run_studio_worker --scope general
+
+  # The media jobs under a CPU and memory cap: an FFmpeg encode takes every
+  # core it is given, so here it can never starve the app, the database or the
+  # other workers, and an out-of-memory kill stays inside this container
+  # (fail_stalled_video_trims settles the trim it was on). Match
+  # MEDIA_LIBRARY_FFMPEG_THREADS to the CPU cap.
+  worker-media:
+    <<: *worker
+    command: python manage.py run_studio_worker --scope media
+    deploy:
+      resources:
+        limits:
+          cpus: "${MEDIA_WORKER_CPUS:-1.5}"
+          memory: ${MEDIA_WORKER_MEMORY:-1g}
 
 volumes:
   media_data:

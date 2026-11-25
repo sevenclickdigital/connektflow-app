@@ -617,6 +617,9 @@ MEDIA_LIBRARY_MAX_VIDEO_SIZE = 1024 * 1024 * 1024  # 1GB
 MEDIA_LIBRARY_MAX_BULK_UPLOAD = 50
 MEDIA_LIBRARY_THUMBNAIL_SIZE = (400, 400)
 MEDIA_LIBRARY_FFMPEG_TIMEOUT = 300  # 5 minutes
+# Encoder threads per FFmpeg run (video trims). Matches the media worker's CPU
+# cap: more threads than cores only adds memory (each one buffers frames).
+MEDIA_LIBRARY_FFMPEG_THREADS = env.int("MEDIA_LIBRARY_FFMPEG_THREADS", default=2)
 MEDIA_LIBRARY_MAX_CONCURRENT_TRANSCODES = 2
 MEDIA_LIBRARY_PRESIGN_EXPIRE = 900  # seconds a presigned direct-upload URL stays valid
 
@@ -803,9 +806,9 @@ PUBLISHER_PUBLISH_CONFIRM_TIMEOUT = env.int("PUBLISHER_PUBLISH_CONFIRM_TIMEOUT",
 # publish engine spawns takes its own connection (Django connections are
 # thread-local), so POSTS + PLATFORM_PUBLISHES plus the web dyno's gunicorn
 # threads have to stay under the connection limit the whole database ROLE gets.
-# That is 20 on heroku-postgresql:essential-0, which a per-group platform pool
-# exceeded on its own and took production down on 2026-09-15. Raise these only
-# alongside the Postgres plan. Like the timeouts above, they were read via
+# Exceeding it took production down on 2026-09-15. Together with the worker's
+# lanes they are held under apps.common.worker.MIN_DATABASE_CONNECTIONS by
+# apps/publisher/test_connection_budget.py; raise them only with that. Like the timeouts above, they were read via
 # getattr() from settings that did not exist, so none could be tuned.
 PUBLISHER_MAX_CONCURRENT_PUBLISHES = env.int("PUBLISHER_MAX_CONCURRENT_PUBLISHES", default=10)
 PUBLISHER_MAX_CONCURRENT_POSTS = env.int("PUBLISHER_MAX_CONCURRENT_POSTS", default=4)
