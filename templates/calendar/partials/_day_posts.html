@@ -3,6 +3,8 @@
 Body of the month grid's day pop-up (calendar:day_posts): the day's posts with their
 time and status. Rows tick into the shared selection ($store.sel), so the bulk bar and
 "Remove selected" act on them; a click on a row opens the post's preview (openDayCard).
+Under the title each row names its format first (Feed, Story, Reels, Shorts…), then the
+account, so a long account name is what gets cut, never the format.
 Context: day, platform_posts, display_timezone, workspace.
 {% endcomment %}
 <div x-data="{
@@ -48,7 +50,10 @@ Context: day, platform_posts, display_timezone, workspace.
                 {% include "calendar/partials/_platform_badge.html" with platform=pp.social_account.platform size="3.5" extra_class="pl-channel-icon" %}
                 <span class="min-w-0">
                     <span class="block truncate text-sm font-medium text-neutral-950">{{ pp.post.title|default:pp.post.caption_snippet|default:_("(no caption)") }}</span>
-                    <span class="block truncate text-xs text-neutral-600">{{ pp.social_account.account_name|default:pp.social_account.account_handle }}{% if pp.format_label %} · {{ pp.format_label }}{% endif %}</span>
+                    <span class="flex items-center gap-1.5 min-w-0 mt-0.5">
+                        <span class="inline-flex items-center gap-1 flex-shrink-0 rounded-full bg-neutral-100 px-1.5 py-px text-[11px] font-semibold text-neutral-700">{% include "partials/_format_icon.html" with format=pp.format show_default=True %}{{ pp.format_short }}</span>
+                        <span class="truncate text-xs text-neutral-600">{{ pp.social_account.account_name|default:pp.social_account.account_handle }}</span>
+                    </span>
                 </span>
             </span>
             <span class="text-center text-sm font-semibold tabular-nums text-neutral-800">{{ pp.effective_at|timezone:display_timezone|time:"H:i" }}</span>

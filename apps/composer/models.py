@@ -764,6 +764,13 @@ class PlatformPost(models.Model):
         return self.get_format_display()
 
     @property
+    def format_short(self):
+        """The format's short name as the composer's toggles call it, the ordinary
+        post included ("Feed", "Story", "Reels", "Video", "Shorts", "Post"…)."""
+        options = {option["format"]: option["short"] for option in self.social_account.format_options()}
+        return options.get(self.format) or str(self.get_format_display())
+
+    @property
     def delivered_by_notification(self):
         """Settled by notifying someone to post it by hand, not by publishing it.
 
