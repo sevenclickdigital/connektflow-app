@@ -112,6 +112,7 @@ When a hook reports a problem, fix it before moving on. When it asks the reuse q
 - `provider-integration` — adding or changing a social platform integration.
 - `worker-tasks` — background tasks, recurring jobs, the worker.
 - `pytest-project` — writing and running tests in this project.
+- `glitchtip` — what is going wrong in production: issues, logs, uptime monitors and performance from the error tracker, through its MCP server, and how to go from an issue to its cause.
 - `security-audit` (vendored from `cloudflare/security-audit-skill`) — security questions, focused vulnerability reviews and, only when explicitly asked, the full audit workflow, which writes its reports to `~/security-audit-skill/`, outside the repository.
 - `django-safe-migration` (plugin from `vintasoftware/django-ai-plugins`, enabled in `.claude/settings.json`) — writing or reviewing any migration. Use it every time a migration is created, not only when asked.
 
@@ -131,6 +132,10 @@ It is installed only in the local `.venv`, not in `requirements.txt` (it is not 
 .venv/bin/python -m pip freeze > /tmp/constraints.txt
 .venv/bin/python -m pip install -c /tmp/constraints.txt django-ai-boost
 ```
+
+## MCP: glitchtip
+
+`.mcp.json` also declares `glitchtip` (`https://erros.connektflow.com.br/mcp`, OAuth: sign in once with `/mcp`). It reads production's error tracker: issues and their events, logs, uptime monitors, performance. Use it, with the `glitchtip` skill, before asking for production access to find out what failed. Its only write is `update_issue` (resolve / ignore), which needs the user's agreement.
 
 ## Commands
 

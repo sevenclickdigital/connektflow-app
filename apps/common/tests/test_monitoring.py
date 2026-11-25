@@ -11,7 +11,8 @@ from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.common.error_reporting import SecretScrubber
+from apps.common import error_reporting
+from apps.common.error_reporting import SecretScrubber, task_scope
 from apps.common.monitoring_views import CLIENT_ERRORS_PER_HOUR
 from apps.common.tasks import purge_completed_tasks
 from apps.common.worker import LANE_MAX_WAIT_SECONDS, LANES, late_lanes
@@ -78,6 +79,28 @@ def test_a_secret_is_masked_by_what_its_name_contains():
     assert variables["caption"] == "hello"
     assert variables["payload"]["media_ids"] == [1, 2]
     assert event["request"]["headers"]["Accept"] == "text/html"
+
+
+def test_a_log_line_says_which_service_and_task_wrote_it(monkeypatch):
+    """Under the names the tracker fills its service and host columns from."""
+    monkeypatch.setattr(error_reporting, "_service", "worker-inbox")
+
+    outside = error_reporting._label_log({"body": "a"}, {})
+    with task_scope("inbox", "apps.inbox.tasks.run_inbox_sync_cycle"):
+        inside = error_reporting._label_log({"body": "b", "attributes": {"logger.name": "apps.inbox"}}, {})
+    after = error_reporting._label_log({"body": "c"}, {})
+
+    assert outside["attributes"]["service.name"] == "worker-inbox"
+    assert outside["attributes"]["host.name"]
+    assert "task" not in outside["attributes"]
+    assert inside["attributes"] == {
+        "logger.name": "apps.inbox",
+        "service.name": "worker-inbox",
+        "host.name": outside["attributes"]["host.name"],
+        "lane": "inbox",
+        "task": "apps.inbox.tasks.run_inbox_sync_cycle",
+    }
+    assert "task" not in after["attributes"]
 
 
 def test_a_lane_is_late_once_a_due_task_waits_past_its_limit(registry):

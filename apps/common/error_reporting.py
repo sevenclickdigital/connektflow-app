@@ -7,7 +7,11 @@ Imported by the settings module: keep Django out of the module level.
 """
 
 import logging
-from typing import Literal
+import socket
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Any, Literal
 
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration, ignore_logger
@@ -28,6 +32,13 @@ CLIENT_ERROR_KINDS: dict[str, Literal["error", "warning"]] = {
     "htmx": "error",  # a swap HTMX could not do (target missing, swap failed)
     "freeze": "warning",  # the page stopped responding for seconds
 }
+
+
+# What this process is ("app", "worker-sync"...), and the background task the
+# current thread is running, if any. Issues get them as tags from the scope;
+# log lines do not read the scope's tags, so ``_label_log`` writes them.
+_service = "app"
+_task: ContextVar[tuple[str, str] | None] = ContextVar("reported_task", default=None)
 
 
 class SecretScrubber(EventScrubber):
@@ -71,6 +82,7 @@ def init(
         auto_session_tracking=False,
         enable_logs=isinstance(level, int),
         integrations=[LoggingIntegration(sentry_logs_level=level if isinstance(level, int) else None)],
+        before_send_log=_label_log,
         event_scrubber=SecretScrubber(denylist=DEFAULT_DENYLIST, recursive=True),
     )
     # Every scanner probing the server with a foreign Host header logs an
@@ -81,7 +93,41 @@ def init(
 
 def tag_service(name: str) -> None:
     """Mark everything this process reports with the service it is ("app", "worker-sync"...)."""
+    global _service
+    _service = name
     sentry_sdk.get_global_scope().set_tag("service", name)
+
+
+@contextmanager
+def task_scope(lane: str, task_name: str) -> Iterator[None]:
+    """Mark what is reported while a background task runs with its lane and name.
+
+    Also times the task as a transaction, when the sample rate picks it.
+    """
+    token = _task.set((lane, task_name))
+    try:
+        with sentry_sdk.isolation_scope() as scope:
+            scope.set_tag("lane", lane)
+            scope.set_tag("task", task_name)
+            with sentry_sdk.start_transaction(op="queue.task", name=task_name):
+                yield
+    finally:
+        _task.reset(token)
+
+
+def _label_log(log: Any, hint: Any) -> Any:
+    """Give a log line the service, host and task its issue would be tagged with.
+
+    Under the attribute names the tracker reads its own columns from
+    (``service.name``, ``host.name``), so its service and host filters work.
+    """
+    attributes = log.setdefault("attributes", {})
+    attributes["service.name"] = _service
+    attributes["host.name"] = socket.gethostname()
+    task = _task.get()
+    if task:
+        attributes["lane"], attributes["task"] = task
+    return log
 
 
 def capture_client_error(*, kind: str, message: str, user_id: object, details: dict[str, object]) -> None:

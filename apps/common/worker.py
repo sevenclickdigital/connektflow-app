@@ -51,6 +51,7 @@ from django.db.models import Min, QuerySet
 from django.utils import timezone
 
 from apps.common.db import in_worker_thread
+from apps.common.error_reporting import task_scope
 
 logger = logging.getLogger(__name__)
 
@@ -334,16 +335,11 @@ class StudioWorker:
             delay,
         )
         try:
-            # The scope tags whatever this task reports to the error tracker;
-            # the transaction times it when the sample rate picks it.
-            with sentry_sdk.isolation_scope() as scope:
-                scope.set_tag("lane", lane)
-                scope.set_tag("task", task.task_name)
-                with sentry_sdk.start_transaction(op="queue.task", name=task.task_name):
-                    # bg_runner is synchronous even if the legacy worker's async
-                    # setting is enabled. It writes CompletedTask, repeats on
-                    # success, and reschedules failures, just as process_tasks does.
-                    bg_runner(self.registry._tasks[task.task_name], task)
+            with task_scope(lane, task.task_name):
+                # bg_runner is synchronous even if the legacy worker's async
+                # setting is enabled. It writes CompletedTask, repeats on
+                # success, and reschedules failures, just as process_tasks does.
+                bg_runner(self.registry._tasks[task.task_name], task)
         finally:
             logger.info(
                 "Studio task finished lane=%s task=%s id=%s duration_seconds=%.3f",
