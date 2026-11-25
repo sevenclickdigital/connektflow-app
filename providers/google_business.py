@@ -314,35 +314,45 @@ class GoogleBusinessProvider(SocialProvider):
     # ------------------------------------------------------------------
 
     def get_profile(self, access_token: str) -> AccountProfile:
-        """Fetch the Google Business account and primary location info."""
-        account_id = self._get_account_id(access_token)
+        """The connected location, or the grant's first one when none was picked.
 
-        resp = self._request(
-            "GET",
-            f"{BUSINESS_INFO_API}/{account_id}/locations",
-            access_token=access_token,
-            params={"readMask": LOCATION_READ_MASK},
-        )
-        data = resp.json()
-        locations = data.get("locations", [])
-
-        if locations:
-            loc = locations[0]
-            name = loc.get("title", loc.get("name", ""))
-            address_obj = loc.get("storefrontAddress", {})
-            address_lines = address_obj.get("addressLines", [])
-            address = ", ".join(address_lines) if address_lines else ""
-            phone = loc.get("phoneNumbers", {}).get("primaryPhone", "")
-            return AccountProfile(
-                platform_id=loc.get("name", account_id),
-                name=name,
-                handle=None,
-                extra={"address": address, "phone": phone},
+        A connected account carries its location (``location_id``), and that
+        is the one read: the health check writes this profile's name over the
+        account's, so answering with the first location the grant lists
+        renamed every account connected to another one after it. The first
+        location is only the answer for a grant that has not chosen yet.
+        """
+        location_id = self.credentials.get("location_id")
+        if location_id:
+            resp = self._request(
+                "GET",
+                f"{BUSINESS_INFO_API}/{location_id}",
+                access_token=access_token,
+                params={"readMask": LOCATION_READ_MASK},
             )
+            return self._location_profile(resp.json(), fallback_id=location_id)
 
+        account_id = self._get_account_id(access_token)
+        locations = self._list_locations(access_token, account_id)
+        if locations:
+            return self._location_profile(locations[0], fallback_id=account_id)
         return AccountProfile(
             platform_id=account_id,
             name=account_id,
+            handle=None,
+        )
+
+    @staticmethod
+    def _location_profile(location: dict, *, fallback_id: str) -> AccountProfile:
+        address_lines = location.get("storefrontAddress", {}).get("addressLines", [])
+        return AccountProfile(
+            platform_id=location.get("name", fallback_id),
+            name=location.get("title", location.get("name", "")),
+            handle=None,
+            extra={
+                "address": ", ".join(address_lines),
+                "phone": location.get("phoneNumbers", {}).get("primaryPhone", ""),
+            },
         )
 
     # ------------------------------------------------------------------

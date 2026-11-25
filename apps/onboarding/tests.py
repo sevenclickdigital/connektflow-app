@@ -229,6 +229,54 @@ class TestConnectionLinkPageTokens:
 
 
 @pytest.mark.django_db
+class TestConnectionLinkGoogleBusiness:
+    """Nobody is on the link page to pick a business, so it is never guessed."""
+
+    def _callback(self, client, workspace, connection_link, locations):
+        nonce = "nonce-gbp"
+        state = _sign_connection_link_state(workspace.id, "google_business", connection_link.token, nonce)
+        session = client.session
+        session[CONNECTION_LINK_OAUTH_SESSION_KEY] = {
+            "nonce": nonce,
+            "workspace_id": str(workspace.id),
+            "platform": "google_business",
+            "token": connection_link.token,
+        }
+        session.save()
+
+        provider = MagicMock()
+        provider.exchange_code.return_value = OAuthTokens(access_token="tok", refresh_token="r", expires_in=3600)
+        provider.get_profile.return_value = AccountProfile(platform_id="locations/11", name="First listed")
+        provider.get_user_pages.return_value = locations
+
+        url = reverse("onboarding:oauth_callback", kwargs={"platform": "google_business"})
+        with patch("apps.onboarding.views._get_provider_for_platform", return_value=provider):
+            return client.get(url, {"code": "auth-code", "state": state}, headers={"accept-language": "en"})
+
+    def test_a_login_with_several_businesses_connects_none(self, client, workspace, connection_link):
+        from apps.social_accounts.models import SocialAccount
+
+        response = self._callback(
+            client,
+            workspace,
+            connection_link,
+            [{"id": "locations/11", "name": "First listed"}, {"id": "locations/22", "name": "The intended one"}],
+        )
+
+        assert response.status_code == 302
+        assert not SocialAccount.objects.filter(workspace=workspace, platform="google_business").exists()
+        assert "more than one business" in client.session["connection_link_error"]
+
+    def test_a_login_with_one_business_connects_it(self, client, workspace, connection_link):
+        from apps.social_accounts.models import SocialAccount
+
+        self._callback(client, workspace, connection_link, [{"id": "locations/22", "name": "The only one"}])
+
+        account = SocialAccount.objects.get(workspace=workspace, platform="google_business")
+        assert (account.account_platform_id, account.account_name) == ("locations/22", "The only one")
+        assert "connection_link_error" not in client.session
+
+
 class TestConnectionLinkMastodonInstance:
     """The public Mastodon form makes the server call the host it is given."""
 

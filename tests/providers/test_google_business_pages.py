@@ -1,4 +1,4 @@
-"""Tests for GoogleBusinessProvider.get_user_pages."""
+"""Tests for the locations GoogleBusinessProvider lists and the one it reports as the profile."""
 
 from unittest.mock import MagicMock, patch
 
@@ -125,3 +125,38 @@ class TestGetUserPages:
         mock_request.side_effect = _responses({})
 
         assert GoogleBusinessProvider().get_user_pages("token") == []
+
+
+class TestGetProfile:
+    @patch.object(GoogleBusinessProvider, "_request")
+    def test_the_profile_is_the_connected_location_not_the_first_listed(self, mock_request):
+        """The health check writes this name over the account's.
+
+        Answering with the grant's first location renamed every account
+        connected to another one of the same Google login.
+        """
+        mock_request.side_effect = _responses({"name": "locations/22", "title": "Airport"})
+        provider = GoogleBusinessProvider({"location_id": "locations/22"})
+
+        profile = provider.get_profile("token")
+
+        assert (profile.platform_id, profile.name) == ("locations/22", "Airport")
+        assert mock_request.call_count == 1
+        assert mock_request.call_args.args[1].endswith("/v1/locations/22")
+        assert mock_request.call_args.kwargs["params"] == {"readMask": LOCATION_READ_MASK}
+
+    @patch.object(GoogleBusinessProvider, "_request")
+    def test_a_grant_with_no_location_picked_reports_its_first(self, mock_request):
+        mock_request.side_effect = _responses(
+            {"accounts": [{"name": "accounts/1"}]},
+            {
+                "locations": [
+                    {"name": "locations/11", "title": "Downtown"},
+                    {"name": "locations/22", "title": "Airport"},
+                ]
+            },
+        )
+
+        profile = GoogleBusinessProvider({}).get_profile("token")
+
+        assert (profile.platform_id, profile.name) == ("locations/11", "Downtown")

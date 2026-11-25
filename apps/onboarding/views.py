@@ -439,8 +439,9 @@ def connection_oauth_callback(request, platform):
         # path connects *everything* the grant reaches, with no one present to
         # choose. That suits Meta Pages, but LinkedIn company pages and Google
         # Business locations are opted out — connecting every location a Google
-        # account can manage is rarely what the sender meant, and the
-        # interactive callback is where those get picked one at a time.
+        # account can manage is rarely what the sender meant. The interactive
+        # callback is where those get picked one at a time; here Google
+        # Business connects the only location or none (below).
         if platform in (
             PlatformCredential.Platform.FACEBOOK,
             PlatformCredential.Platform.INSTAGRAM,
@@ -544,8 +545,33 @@ def connection_oauth_callback(request, platform):
             )
             return redirect("onboarding:connection_page", token=token)
 
-        # Standard single-account flow
-        profile = provider.get_profile(tokens.access_token)
+        if platform == PlatformCredential.Platform.GOOGLE_BUSINESS:
+            # One Google login can manage several businesses, and nobody is
+            # here to pick: connect the only one, never the first of several.
+            from providers.types import AccountProfile
+
+            locations = provider.get_user_pages(tokens.access_token)
+            if len(locations) != 1:
+                request.session["connection_link_error"] = (
+                    _(
+                        "This Google account manages more than one business, so we could not tell "
+                        "which one to connect. Ask the team that sent you this link to connect "
+                        "Google Business for you."
+                    )
+                    if locations
+                    else _(
+                        "No Google Business locations were found for your account. "
+                        "Only verified locations can be connected. If you expected to "
+                        "see one, check that it is verified and that this Google account "
+                        "has access to it in Google Business Profile → Businesses, "
+                        "then reconnect."
+                    )
+                )
+                return redirect("onboarding:connection_page", token=token)
+            profile = AccountProfile(platform_id=locations[0]["id"], name=locations[0]["name"])
+        else:
+            # Standard single-account flow
+            profile = provider.get_profile(tokens.access_token)
         account = _create_or_update_account(
             workspace_id=workspace_id,
             platform=platform,
