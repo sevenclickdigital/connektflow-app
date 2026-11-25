@@ -12,6 +12,11 @@ urlpatterns = [
         name="list",
     ),
     path(
+        "<uuid:workspace_id>/reorder/",
+        views.reorder,
+        name="reorder",
+    ),
+    path(
         "<uuid:workspace_id>/connect/",
         views.connect_platform,
         name="connect",

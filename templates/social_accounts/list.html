@@ -88,7 +88,11 @@ data-category and data-name on each card: the whole page is already here.
             {% translate "Connected accounts" %} ({{ accounts|length }})
         </h2>
         {% if accounts %}
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="accounts-list">
+        <p class="text-xs text-neutral-500 -mt-2 mb-3">{% translate "Drag the cards to choose the order the accounts appear in when you publish." %}</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="accounts-list"
+             x-data="accountOrder('{% url 'social_accounts:reorder' workspace_id=workspace_id %}')"
+             @pointerdown="arm($event)" @pointerup="disarm()" @dragstart="start($event)" @dragover.prevent="over($event)" @drop.prevent @dragend="end()"
+             @move-account.window="move($event.detail.id, $event.detail.step)">
             {% for account in accounts %}
             {% include "social_accounts/partials/_account_card.html" with account=account workspace_id=workspace_id %}
             {% endfor %}
@@ -181,6 +185,60 @@ data-category and data-name on each card: the whole page is already here.
 {% endblock %}
 
 {% block extra_js %}
+<script nonce="{{ request.csp_nonce }}">
+// Reorders the connected-account cards: a card becomes draggable only while
+// its grip is held, follows the pointer across the grid, and the new order is
+// posted once the drag ends, if it changed (or a card is moved a place from
+// its menu).
+function accountOrder(url) {
+    return {
+        dragged: null,
+        before: '',
+        order() { return this.cards().map(card => card.dataset.accountId).join(','); },
+        cards() { return [...this.$el.querySelectorAll(':scope > [data-account-id]')]; },
+        arm(event) {
+            const handle = event.target.closest('[data-drag-handle]');
+            const card = handle && handle.closest('[data-account-id]');
+            if (card) card.draggable = true;
+        },
+        disarm() {
+            if (!this.dragged) this.cards().forEach(card => { card.draggable = false; });
+        },
+        start(event) {
+            this.dragged = event.target.closest('[data-account-id]');
+            if (!this.dragged) return;
+            this.before = this.order();
+            event.dataTransfer.effectAllowed = 'move';
+            this.dragged.classList.add('opacity-50');
+        },
+        over(event) {
+            const target = event.target.closest('[data-account-id]');
+            if (!this.dragged || !target || target === this.dragged) return;
+            const cards = this.cards();
+            const after = cards.indexOf(target) > cards.indexOf(this.dragged);
+            target.parentNode.insertBefore(this.dragged, after ? target.nextSibling : target);
+        },
+        end() {
+            if (!this.dragged) return;
+            this.dragged.classList.remove('opacity-50');
+            this.dragged.draggable = false;
+            this.dragged = null;
+            if (this.order() !== this.before) this.save();
+        },
+        move(id, step) {
+            const cards = this.cards();
+            const index = cards.findIndex(card => card.dataset.accountId === id);
+            const target = cards[index + step];
+            if (index < 0 || !target) return;
+            this.$el.insertBefore(cards[index], step > 0 ? target.nextSibling : target);
+            this.save();
+        },
+        save() {
+            htmx.ajax('POST', url, { values: { order: this.order() }, swap: 'none', source: this.$el });
+        },
+    };
+}
+</script>
 {% include "social_accounts/partials/_oauth_popup.html" %}
 {% if whatsapp_signup %}{% include "social_accounts/partials/_whatsapp_signup.html" %}{% endif %}
 {% endblock %}

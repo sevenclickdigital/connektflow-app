@@ -28,3 +28,19 @@ def remove_account_data(account) -> None:
     if orphan_post_ids:
         Post.objects.filter(id__in=orphan_post_ids).delete()
     account.delete()
+
+
+def reorder_accounts(workspace_id, ordered_ids) -> None:
+    """Number the brand's accounts in ``ordered_ids`` order.
+
+    Ids that are not this brand's accounts are ignored; the brand's accounts
+    missing from the list keep their relative order after the ones listed.
+    """
+    from apps.social_accounts.models import SocialAccount
+
+    wanted = {key: index for index, key in enumerate(dict.fromkeys(str(value) for value in ordered_ids))}
+    accounts = list(SocialAccount.objects.for_workspace(workspace_id).in_display_order().only("id", "position"))
+    accounts.sort(key=lambda account: wanted.get(str(account.id), len(wanted)))
+    for position, account in enumerate(accounts, start=1):
+        account.position = position
+    SocialAccount.objects.bulk_update(accounts, ["position"])

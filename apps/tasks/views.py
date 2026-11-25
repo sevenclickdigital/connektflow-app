@@ -897,14 +897,9 @@ def _window_initial(window) -> str:
 
 def _art_catalogue(workspace) -> list[dict]:
     """The networks to ask arts for, by the workspace's connected accounts, with their formats."""
-    from apps.social_accounts.models import PlatformVisibility, SocialAccount
+    from apps.social_accounts.models import PlatformVisibility
 
-    accounts = list(
-        SocialAccount.objects.for_workspace(workspace.id)
-        .publishable()
-        .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
-        .order_by("platform", "account_name")
-    )
+    accounts = list(channel_accounts(workspace))
     visible = [value for value, _label in PlatformVisibility.visible_choices()]
     return creative_formats.catalogue(accounts, visible)
 

@@ -181,10 +181,11 @@ class IdeaTemplateForm(forms.ModelForm):
     #: The arts to produce, posted as JSON by composer/partials/_template_art_items.html.
     art_items = forms.JSONField(required=False, widget=forms.HiddenInput)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, accounts=(), **kwargs):
+        """``accounts``: the brand's, whose networks the network cards list first."""
         super().__init__(*args, **kwargs)
         self.art_format_options = creative_formats.format_options()
-        self.network_options = services.template_network_options()
+        self.network_options = services.template_network_options(accounts)
         self.fields["targets"].choices = [
             (option["value"], option["short"]) for network in self.network_options for option in network["formats"]
         ]

@@ -202,7 +202,8 @@ def catalogue(accounts=(), visible_platforms=None) -> list[dict]:
     Only networks with a platform in ``visible_platforms`` (what the connect
     page offers; every one when None) are listed, and the ones the app does not
     connect to (no platforms: Shopee, Kwai), always. Networks with a connected
-    account come first, in catalogue order.
+    account come first, in the order of ``accounts`` (the brand's,
+    ``SocialAccountQuerySet.in_display_order``); the rest follow in catalogue order.
     """
     groups = []
     for net in NETWORKS:
@@ -215,7 +216,8 @@ def catalogue(accounts=(), visible_platforms=None) -> list[dict]:
                 "formats": [f for f in FORMATS if f.network == net.key],
             }
         )
-    return sorted(groups, key=lambda g: not g["accounts"])
+    accounts = list(accounts)
+    return sorted(groups, key=lambda g: accounts.index(g["accounts"][0]) if g["accounts"] else len(accounts))
 
 
 def ratio_matches(fmt_width: int, fmt_height: int, width: int, height: int) -> bool:

@@ -1106,18 +1106,31 @@ def template_format_short(fmt, formats) -> str:
     return str(names.get(fmt, fmt))
 
 
-def template_network_options() -> list[dict]:
-    """Every network a template can name, with its formats, for the forms:
-    ``[{"network", "label", "formats": [{"value": "<network>:<format>", "short"}]}]``."""
+def networks_in_account_order(accounts=()) -> list[str]:
+    """Every template network: those of ``accounts`` first, in the accounts' order
+    (the brand's, ``SocialAccountQuerySet.in_display_order``), then the rest."""
     from .models import IdeaTemplate
 
+    first = list(
+        dict.fromkeys(network for network in map(network_of_platform, (a.platform for a in accounts)) if network)
+    )
+    return first + [network for network in IdeaTemplate.Network.values if network not in first]
+
+
+def template_network_options(accounts=()) -> list[dict]:
+    """Every network a template can name, with its formats, for the forms:
+    ``[{"network", "label", "formats": [{"value": "<network>:<format>", "short"}]}]``,
+    the networks of ``accounts`` first (``networks_in_account_order``)."""
+    from .models import IdeaTemplate
+
+    labels = dict(IdeaTemplate.Network.choices)
     options = []
-    for network, label in IdeaTemplate.Network.choices:
+    for network in networks_in_account_order(accounts):
         formats = template_network_formats(network)
         options.append(
             {
                 "network": network,
-                "label": str(label),
+                "label": str(labels[network]),
                 "formats": [
                     {"value": f"{network}:{fmt}", "format": fmt, "short": template_format_short(fmt, formats)}
                     for fmt in formats
@@ -1144,14 +1157,15 @@ def network_formats_from_targets(targets) -> dict[str, list[str]]:
     }
 
 
-def template_network_items(template) -> list[dict]:
+def template_network_items(template, accounts=()) -> list[dict]:
     """The template's networks for its panel, each with the formats picked:
-    ``[{"network", "label", "formats": [{"format", "short"}]}]``."""
+    ``[{"network", "label", "formats": [{"format", "short"}]}]``, the networks of
+    ``accounts`` first (``networks_in_account_order``)."""
     from .models import IdeaTemplate
 
     labels = dict(IdeaTemplate.Network.choices)
     items = []
-    for network in IdeaTemplate.Network.values:
+    for network in networks_in_account_order(accounts):
         picked = (template.network_formats or {}).get(network)
         if picked is None and network not in (template.networks or []):
             continue
@@ -1167,14 +1181,15 @@ def template_network_items(template) -> list[dict]:
     return items
 
 
-def template_network_labels(template) -> list[str]:
+def template_network_labels(template, accounts=()) -> list[str]:
     """The template's networks as its panel lists them: "Instagram (Feed, Reels)",
-    or just the name where the network has only the one format."""
+    or just the name where the network has only the one format; the networks of
+    ``accounts`` first (``networks_in_account_order``)."""
     from .models import IdeaTemplate
 
     labels = dict(IdeaTemplate.Network.choices)
     result = []
-    for network in IdeaTemplate.Network.values:
+    for network in networks_in_account_order(accounts):
         if network not in (template.network_formats or {}) and network not in (template.networks or []):
             continue
         offered = template_network_formats(network)
@@ -1278,8 +1293,8 @@ def template_shelf(workspace) -> list[dict]:
                 "image": template.image.url if template.image else "",
                 "formats": [str(formats[key]) for key in template.formats if key in formats],
                 "goals": [str(goals[key]) for key in template.goals if key in goals],
-                "networks": template_network_labels(template),
-                "network_items": template_network_items(template),
+                "networks": template_network_labels(template, accounts),
+                "network_items": template_network_items(template, accounts),
                 "ideal_for": template.ideal_for,
                 "briefing": template.briefing,
                 "art_items": creative_formats.art_items_payload(template.art_items),
@@ -1438,7 +1453,7 @@ def channel_accounts(workspace):
         SocialAccount.objects.for_workspace(workspace.id)
         .publishable()
         .filter(connection_status=SocialAccount.ConnectionStatus.CONNECTED)
-        .order_by("platform", "account_name", "id")
+        .in_display_order()
     )
 
 

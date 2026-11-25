@@ -35,6 +35,12 @@ class SocialAccountQuerySet(models.QuerySet):
         """Accounts that posts can be published to."""
         return self.exclude(platform__in=MESSAGING_ONLY_PLATFORMS)
 
+    def in_display_order(self):
+        """The order the brand set on the Social Accounts page; accounts it
+        never placed (all of them until it reorders, and any connected
+        after) follow, by platform and name."""
+        return self.order_by(models.F("position").asc(nulls_last=True), "platform", "account_name", "id")
+
 
 class YouTubeRevocation(models.Model):
     """Encrypted, short-lived grant retry, independent of a deleted account."""
@@ -152,6 +158,10 @@ class SocialAccount(models.Model):
     granted_by_platform_user_id = models.CharField(max_length=255, blank=True, default="", db_default="")
 
     connected_at = models.DateTimeField(auto_now_add=True)
+    # Place among the brand's accounts, set by dragging the cards on the
+    # Social Accounts page (``services.reorder_accounts``); see
+    # ``SocialAccountQuerySet.in_display_order``.
+    position = models.PositiveIntegerField(blank=True, null=True)
     youtube_authorized_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,

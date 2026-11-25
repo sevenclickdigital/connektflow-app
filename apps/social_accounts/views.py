@@ -24,7 +24,7 @@ from django.utils.translation import ngettext
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from django_ratelimit.decorators import ratelimit
 
-from apps.common.htmx import lazy_body_urls, wants_lazy_body
+from apps.common.htmx import lazy_body_urls, toast_response, wants_lazy_body
 from apps.common.validators import is_safe_url as _is_safe_url
 from apps.credentials.models import PlatformCredential, derive_is_configured
 from apps.members.decorators import require_permission
@@ -37,7 +37,7 @@ from .models import MESSAGING_ONLY_PLATFORMS, MastodonAppRegistration, PlatformV
 from .oauth_aliases import from_url_slug, redirect_uri_from_request, to_url_slug
 from .oauth_pkce import issue_pkce_verifier, pkce_kwargs
 from .provider_factory import _get_provider_for_platform, apply_analytics_scope_flag
-from .services import remove_account_data
+from .services import remove_account_data, reorder_accounts
 from .webhooks import (
     subscribe_account_webhooks,
     subscribe_account_webhooks_task,
@@ -236,9 +236,7 @@ def _overview_context(request, workspace_id):
     """Everything the Social Accounts page shows: the workspace's accounts,
     the platforms it can still connect, and the opportunity sources."""
     accounts = list(
-        SocialAccount.objects.for_workspace(workspace_id)
-        .prefetch_related("posting_slots")
-        .order_by("platform", "account_name")
+        SocialAccount.objects.for_workspace(workspace_id).prefetch_related("posting_slots").in_display_order()
     )
     configured_platforms = _get_configured_platforms(request.org.id)
 
@@ -1125,6 +1123,17 @@ def reconnect(request, workspace_id, account_id):
 
 
 @login_required
+@require_permission("manage_social_accounts")
+@require_POST
+def reorder(request, workspace_id):
+    """Save the order the cards were dragged into (``order``: account ids, comma-separated).
+
+    The composer and the other channel pickers list the accounts in this order.
+    """
+    reorder_accounts(workspace_id, [value for value in request.POST.get("order", "").split(",") if value.strip()])
+    return toast_response(tone="success", title=_("Order saved"))
+
+
 @require_permission("manage_social_accounts")
 @require_POST
 @ratelimit(key="user", rate="10/m", method="POST", block=True)

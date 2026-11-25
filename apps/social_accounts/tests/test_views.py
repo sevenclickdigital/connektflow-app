@@ -1278,3 +1278,90 @@ class TestMastodonConnectView:
         response = authenticated_client.get(url)
         assert response.status_code == 200
         assert b"Connect Mastodon" in response.content
+
+
+class TestReorderView:
+    """The order the brand drags its account cards into is the order its pickers list them in."""
+
+    def _account(self, workspace, platform, name):
+        return SocialAccount.objects.create(
+            workspace=workspace,
+            platform=platform,
+            account_platform_id=f"{platform}-{name}",
+            account_name=name,
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+
+    def _url(self, workspace):
+        return reverse("social_accounts:reorder", kwargs={"workspace_id": workspace.id})
+
+    def test_the_composer_lists_the_accounts_in_the_order_saved(self, authenticated_client, workspace):
+        from apps.composer.services import channel_accounts
+
+        facebook = self._account(workspace, "facebook", "Page")
+        instagram = self._account(workspace, "instagram", "Profile")
+        youtube = self._account(workspace, "youtube", "Channel")
+        assert list(channel_accounts(workspace)) == [facebook, instagram, youtube]
+
+        response = authenticated_client.post(self._url(workspace), {"order": f"{youtube.id},{facebook.id}"})
+
+        assert response.status_code == 204
+        assert "showToast" in response["HX-Trigger"]
+        assert list(channel_accounts(workspace)) == [youtube, facebook, instagram]
+
+    def test_the_network_pickers_follow_the_order_saved(self, authenticated_client, workspace):
+        """The art request and the template form pick networks, not accounts: the brand's come first, in its order."""
+        from apps.composer.services import channel_accounts, template_network_options
+        from apps.tasks import creative_formats
+
+        facebook = self._account(workspace, "facebook", "Page")
+        youtube = self._account(workspace, "youtube", "Channel")
+        authenticated_client.post(self._url(workspace), {"order": f"{youtube.id},{facebook.id}"})
+        accounts = list(channel_accounts(workspace))
+
+        art_networks = [group["network"].key for group in creative_formats.catalogue(accounts)]
+        template_networks = [option["network"] for option in template_network_options(accounts)]
+
+        assert art_networks[:2] == ["youtube", "facebook"]
+        assert template_networks[:2] == ["youtube", "facebook"]
+
+    def test_an_account_connected_afterwards_goes_last(self, authenticated_client, workspace):
+        facebook = self._account(workspace, "facebook", "Page")
+        youtube = self._account(workspace, "youtube", "Channel")
+        authenticated_client.post(self._url(workspace), {"order": f"{youtube.id},{facebook.id}"})
+
+        bluesky = self._account(workspace, "bluesky", "Handle")
+
+        assert list(SocialAccount.objects.for_workspace(workspace.id).in_display_order()) == [
+            youtube,
+            facebook,
+            bluesky,
+        ]
+
+    def test_another_brands_account_is_left_alone(self, authenticated_client, workspace, organization):
+        from apps.workspaces.models import Workspace
+
+        other = self._account(Workspace.objects.create(name="Other WS", organization=organization), "x", "Other")
+        mine = self._account(workspace, "facebook", "Page")
+
+        authenticated_client.post(self._url(workspace), {"order": f"{other.id},{mine.id},not-an-id"})
+
+        other.refresh_from_db()
+        mine.refresh_from_db()
+        assert other.position is None
+        assert mine.position == 1
+
+    def test_requires_the_manage_social_accounts_permission(self, client, user, organization, workspace):
+        from apps.members.models import OrgMembership, WorkspaceMembership
+
+        OrgMembership.objects.create(user=user, organization=organization, org_role="member")
+        WorkspaceMembership.objects.create(user=user, workspace=workspace, workspace_role="viewer")
+        client.force_login(user)
+        account = self._account(workspace, "facebook", "Page")
+
+        assert client.post(self._url(workspace), {"order": str(account.id)}).status_code == 403
+        account.refresh_from_db()
+        assert account.position is None
+
+    def test_only_post_is_accepted(self, authenticated_client, workspace):
+        assert authenticated_client.get(self._url(workspace)).status_code == 405

@@ -7,6 +7,11 @@ an error turns the pill into a button that opens the detail modal, with the
 explanation and the way out (reconnect, try again, disconnect). Posting
 schedule and disconnect live in the "⋯" menu, so the card keeps
 the same shape whatever state the account is in.
+
+On the Social Accounts page the cards can be put in another order: dragged by
+the grip (which alone makes the card draggable, so text and fields inside it
+stay selectable) or moved one place from the menu. The page's
+accountOrder() component saves the order (views.reorder).
 {% endcomment %}
 {% load social_accounts_tags i18n %}
 {% with health=account.health webhook_warning=account.webhook_warning history_job=account.inbox_history_job_state %}
@@ -21,9 +26,15 @@ that finds the job finished brings the toast with the result.
      data-state="{% if health == 'error' %}problem{% else %}connected{% endif %}"
      data-category="{{ account.platform|platform_category }}"
      data-name="{{ account.get_platform_display|lower }} {{ account.display_label|lower }}"
+     data-account-id="{{ account.id }}"
      x-show="typeof matches !== 'function' || matches($el)"
      x-data="{ detail: false, manage: false, menu: false, confirmDisconnect: false }"
      @keydown.escape.window="detail = false; manage = false">
+    <button type="button" data-drag-handle
+            class="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 cursor-grab active:cursor-grabbing"
+            title="{% translate 'Drag to reorder' %}" aria-label="{% translate 'Drag to reorder' %}">
+        <svg width="16" height="8" viewBox="0 0 16 8" fill="currentColor" aria-hidden="true"><circle cx="3" cy="2" r="1.3"/><circle cx="8" cy="2" r="1.3"/><circle cx="13" cy="2" r="1.3"/><circle cx="3" cy="6" r="1.3"/><circle cx="8" cy="6" r="1.3"/><circle cx="13" cy="6" r="1.3"/></svg>
+    </button>
     <div class="flex items-start gap-3">
         {% include "social_accounts/partials/_platform_tile.html" with platform=account.platform %}
         <div class="flex-1 min-w-0">
@@ -70,6 +81,8 @@ that finds the job finished brings the toast with the result.
             <div x-show="menu" x-cloak @click.away="menu = false" x-transition
                  class="absolute right-0 top-full mt-1 z-20 w-48 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1">
                 <button type="button" @click="menu = false; manage = true" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Manage connection" %}</button>
+                <button type="button" @click="menu = false; $dispatch('move-account', { id: '{{ account.id }}', step: -1 })" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Move one place back" %}</button>
+                <button type="button" @click="menu = false; $dispatch('move-account', { id: '{{ account.id }}', step: 1 })" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Move one place forward" %}</button>
                 {% if account.platform == "whatsapp" %}
                 <a href="{% url 'social_accounts:whatsapp_templates' workspace_id=workspace_id account_id=account.id %}" class="block w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50">{% translate "Message templates" %}</a>
                 {% endif %}

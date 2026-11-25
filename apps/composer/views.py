@@ -1156,7 +1156,7 @@ def compose(request, workspace_id, post_id=None):
         .filter(
             connection_status=SocialAccount.ConnectionStatus.CONNECTED,
         )
-        .order_by("platform", "account_name")
+        .in_display_order()
     )
 
     # When opening from calendar with a specific account, show only that account.
@@ -2171,7 +2171,7 @@ def preview(request, workspace_id):
         accounts = SocialAccount.objects.filter(
             id__in=selected_ids,
             workspace=workspace,
-        ).order_by("platform")
+        ).in_display_order()
         for account in accounts:
             options = {option["format"]: option for option in account.format_options()}
             field_config = account.field_config
@@ -4176,7 +4176,7 @@ def create_landing(request, workspace_id, tab="ideas"):
         context.update(
             builtin_templates=IdeaTemplate.objects.filter(is_active=True),
             template_shelf=template_shelf(workspace),
-            submission_form=TemplateSubmissionForm(),
+            submission_form=TemplateSubmissionForm(accounts=context["idea_channel_options"]),
             template_categories=[{"slug": slug, "label": label} for slug, label in IdeaTemplate.Category.choices],
         )
     if tab == "dates":

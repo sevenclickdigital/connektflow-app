@@ -18,6 +18,7 @@ from django.views.decorators.http import require_POST
 from apps.common.htmx import toast_response
 from apps.common.validators import is_valid_hex_color
 from apps.composer.models import ContentCategory, PlatformPost, Post, any_tag_q
+from apps.composer.services import channel_accounts
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
 from apps.social_accounts.models import SocialAccount
@@ -752,14 +753,7 @@ def calendar_view(request, workspace_id):
     target_date = _parse_date(request.GET.get("date"))
 
     # Connected accounts for calendar filter UI
-    social_accounts = (
-        SocialAccount.objects.for_workspace(workspace.id)
-        .publishable()
-        .filter(
-            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-        )
-        .order_by("platform")
-    )
+    social_accounts = channel_accounts(workspace)
 
     # Authors for filter
     from django.contrib.auth import get_user_model
@@ -1946,13 +1940,7 @@ def queue_list(request, workspace_id):
     """List all queues for this workspace."""
     workspace = _get_workspace(request, workspace_id)
     queues = Queue.objects.for_workspace(workspace.id).select_related("social_account", "category")
-    accounts = (
-        SocialAccount.objects.for_workspace(workspace.id)
-        .publishable()
-        .filter(
-            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
-        )
-    )
+    accounts = channel_accounts(workspace)
     categories = ContentCategory.objects.for_workspace(workspace.id)
 
     return render(
