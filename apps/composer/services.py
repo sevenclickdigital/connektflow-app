@@ -800,6 +800,20 @@ def post_videos(post) -> list[tuple[float, int, int, int]]:
     ]
 
 
+def format_videos(platform_post) -> list[tuple[float, int, int, int]]:
+    """``post_videos`` as this row publishes them: its own trimmed copy in place
+    of the attachment it was cut from (``apply_format_media``)."""
+    attachments = apply_format_media(
+        platform_post,
+        list(_usable_attachments().filter(post_id=platform_post.post_id).select_related("media_asset")),
+    )
+    return [
+        (a.duration or 0, a.file_size or 0, a.width or 0, a.height or 0)
+        for a in (pm.media_asset for pm in attachments)
+        if a.media_type == "video" and a.file
+    ]
+
+
 def story_video_blocker(social_account, *, videos) -> str:
     """Why these videos can't go out as Stories of ``social_account``, or "".
 
@@ -827,6 +841,21 @@ def story_video_blocker(social_account, *, videos) -> str:
                 "Compress the video, or publish it as Reels."
             ) % {"platform": platform, "limit": max_bytes // (1024 * 1024), "size": size / (1024 * 1024)}
     return ""
+
+
+def format_video_limits(social_account, fmt) -> tuple[float | None, int | None]:
+    """``(max seconds, max bytes)`` a video can have to go out as ``fmt`` of
+    ``social_account``; None where nothing is declared. The limits
+    ``story_video_blocker`` and ``short_video_blocker`` apply."""
+    from providers import story_video_limits
+    from providers.youtube import SHORTS_MAX_SECONDS
+
+    if fmt == "story":
+        limits = story_video_limits(social_account.platform)
+        return (limits[0], limits[1]) if limits else (None, None)
+    if fmt == "short":
+        return SHORTS_MAX_SECONDS, None
+    return None, None
 
 
 def short_video_blocker(videos) -> str:
@@ -939,7 +968,7 @@ def require_publishable(platform_post, *, media_types=None) -> None:
         ordered_media_types=(
             post_ordered_media_types(platform_post.post) if platform_post.format != "default" else None
         ),
-        videos=post_videos(platform_post.post) if platform_post.format in ("story", "short") else None,
+        videos=format_videos(platform_post) if platform_post.format in ("story", "short") else None,
     )
     if reason:
         raise ValueError(reason)

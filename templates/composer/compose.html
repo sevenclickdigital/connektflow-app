@@ -864,7 +864,11 @@
                             <span class="font-semibold">{% translate "YouTube only publishes videos." %}</span>
                             {% translate "Add a video to schedule this post, or deselect the account." %}
                         </p>
-                        <p x-show="hasFormat(accId, 'short') && shortVideoIssue()" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800" x-text="shortVideoIssue()"></p>
+                        <div x-show="hasFormat(accId, 'short') && shortVideoIssue(accId)" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                            <p x-text="shortVideoIssue(accId)"></p>
+                            <button type="button" x-show="trimNeed(accId, 'short')" @click="openTrim(accId, 'short')" x-text="trimButtonLabel(accId, 'short')"
+                                    class="mt-2 px-3 py-1 rounded-full border border-brand-300 text-brand-800 text-xs font-semibold hover:bg-brand-50 cursor-pointer"></button>
+                        </div>
                         <!-- Thumbnail -->
                         <div>
                             <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{% translate "Custom Thumbnail" %}</label>
@@ -1289,7 +1293,11 @@
                             <button type="button" class="ml-auto text-xs text-red-400 hover:text-red-500 cursor-pointer" @click="$el.closest('.rounded-xl').querySelectorAll('[name^=override_]').forEach(field => field.value = ''); overrides[t.key] = false; $nextTick(() => triggerPreviewUpdate())">{% translate "Remove override" %}</button>
                         </div>
 
-                        <p x-show="formatMismatch(t.fmt, t.accId)" class="text-[11px] font-medium text-amber-700 mb-3" x-text="formatMismatch(t.fmt, t.accId)"></p>
+                        <div x-show="formatMismatch(t.fmt, t.accId)" class="mb-3">
+                            <p class="text-[11px] font-medium text-amber-700" x-text="formatMismatch(t.fmt, t.accId)"></p>
+                            <button type="button" x-show="trimNeed(t.accId, t.fmt)" @click="openTrim(t.accId, t.fmt)" x-text="trimButtonLabel(t.accId, t.fmt)"
+                                    class="mt-2 px-3 py-1 rounded-full border border-brand-300 text-brand-800 text-xs font-semibold hover:bg-brand-50 cursor-pointer"></button>
+                        </div>
 
                         <div x-show="ratioIssues(t.accId, t.fmt).length > 0" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
                             <p class="text-[12px] font-semibold text-amber-800" x-text="ratioIssueText(t.accId, t.fmt)"></p>
@@ -1773,6 +1781,10 @@
                 <div class="mr-auto sm:hidden"></div>
                 <p x-show="targetProblem()" x-cloak class="text-xs font-medium text-amber-700 max-w-xs truncate"
                    :title="targetProblem()" x-text="targetProblem()" role="status"></p>
+                <button type="button" x-show="firstTrimTarget()" x-cloak
+                        @click="openTrim(firstTrimTarget().accId, firstTrimTarget().fmt)"
+                        x-text="firstTrimTarget() && trimButtonLabel(firstTrimTarget().accId, firstTrimTarget().fmt)"
+                        class="flex-shrink-0 px-3 py-1.5 rounded-full border border-brand-300 text-brand-800 text-xs font-semibold hover:bg-brand-50 cursor-pointer"></button>
 
                 {% if not post_is_readonly %}
                 <!-- Save Draft -->
@@ -2106,6 +2118,13 @@
     (composer.views.crop_media); the library keeps the original.
     {% endcomment %}
     {% include "composer/partials/_crop_editor.html" %}
+
+    {% comment %}
+    Video trimmer, opened from "Adjust length" when a video is too long for a
+    format: the copy it makes is published by that format only
+    (composer.views.trim_format_media); the post keeps the full video.
+    {% endcomment %}
+    {% include "media_library/_video_trimmer.html" %}
 
     <!-- ════════════════════════════════════════════════════════════
          MEDIA PICKER MODAL
@@ -2506,6 +2525,13 @@
 {% translate "YouTube makes Shorts of videos up to {limit} minutes and this one has {duration} seconds. Trim the video, or publish it as an ordinary video." as lbl_c_short_too_long %}
 {% translate "Video Settings" as lbl_c_yt_video_settings %}
 {% translate "A profile photo needs exactly one image." as lbl_c_photo_media %}
+{% translate "Trim the video for {format}" as lbl_c_trim_title %}
+{% translate "Compress the video for {format}" as lbl_c_compress_title %}
+{% translate "Adjust length" as lbl_c_adjust_length %}
+{% translate "Compress video" as lbl_c_compress_video %}
+{% translate "Preparing the video for this format. It can be published once it is ready." as lbl_c_trim_processing %}
+{% translate "The video for {format} is ready." as lbl_c_trim_ready %}
+{% translate "The video for {format} could not be adjusted: {reason}" as lbl_c_trim_failed %}
 {{ lbl_c_saved|json_script:"c-saved" }}
 {{ lbl_c_save_unreachable|json_script:"c-save-unreachable" }}
 {{ lbl_c_ratio_rule_story|json_script:"c-ratio-rule-story" }}
@@ -2524,6 +2550,13 @@
 {{ lbl_c_short_too_long|json_script:"c-short-too-long" }}
 {{ lbl_c_yt_video_settings|json_script:"c-yt-video-settings" }}
 {{ lbl_c_photo_media|json_script:"c-photo-media" }}
+{{ lbl_c_trim_title|json_script:"c-trim-title" }}
+{{ lbl_c_compress_title|json_script:"c-compress-title" }}
+{{ lbl_c_adjust_length|json_script:"c-adjust-length" }}
+{{ lbl_c_compress_video|json_script:"c-compress-video" }}
+{{ lbl_c_trim_processing|json_script:"c-trim-processing" }}
+{{ lbl_c_trim_ready|json_script:"c-trim-ready" }}
+{{ lbl_c_trim_failed|json_script:"c-trim-failed" }}
 {{ lbl_c_not_saved|json_script:"c-not-saved" }}
 {{ lbl_c_caption|json_script:"c-caption" }}
 {{ lbl_c_caption_desc|json_script:"c-caption-desc" }}
@@ -2622,6 +2655,8 @@ function composerApp() {
         // {"<account>:<format>": {sourceAssetId: {id, url, width, height}}}: crops
         // a format publishes instead of the attachment (composer.views.crop_format_media).
         formatMedia: JSON.parse(document.getElementById('composer-format-media').textContent) || {},
+        // Trims still running, by "<account>:<format>": { copy, source, statusUrl }.
+        trimJobs: {},
         // Keyed by social account id; empty for an unsaved post, because the
         // flow builder is reached per PlatformPost and those are created on
         // first save. See ``composer.views`` where this is built.
@@ -2958,7 +2993,10 @@ function composerApp() {
             const crops = this.formatMedia[accId + ':' + fmt] || {};
             return this.mediaInfo.map(m => {
                 const crop = crops[m.assetId];
-                return crop ? { ...m, cropped: true, width: crop.width, height: crop.height, shownUrl: crop.url } : m;
+                return crop ? {
+                    ...m, cropped: true, width: crop.width, height: crop.height, shownUrl: crop.url,
+                    duration: crop.duration || m.duration, size: crop.size || m.size,
+                } : m;
             });
         },
         ratioIssues(accId, fmt) {
@@ -3084,6 +3122,115 @@ function composerApp() {
             }
         },
 
+        // The video this format publishes and the limits it breaks, when the
+        // trimmer can fix it (too long, or too large for a Story), or null. A
+        // Short that is horizontal is not something it fixes. ``mode`` is
+        // 'compress' when only the size is over: the whole video fits the
+        // time, and recompressing it is the fix (the handles are optional).
+        trimNeed(accId, fmt) {
+            if (!['story', 'short'].includes(fmt) || this.trimJobs[accId + ':' + fmt]) return null;
+            let maxSeconds = null, maxBytes = null;
+            if (fmt === 'story') {
+                const limits = this.charLimits[accId]?.story_video_limits;
+                if (!limits) return null;
+                [maxSeconds, maxBytes] = limits;
+            } else {
+                maxSeconds = 180;
+            }
+            const video = this.formatMediaInfo(accId, fmt).find(m => m.kind === 'video'
+                && (m.duration > maxSeconds || (maxBytes && m.size > maxBytes)));
+            if (!video) return null;
+            if (fmt === 'short' && video.width > video.height) return null;
+            // Trimmed from the attachment itself, never from an earlier trim.
+            const original = this.mediaInfo.find(m => m.assetId === video.assetId) || video;
+            const mode = video.duration > maxSeconds ? 'trim' : 'compress';
+            return { video: original, maxSeconds, maxBytes, mode };
+        },
+        trimButtonLabel(accId, fmt) {
+            return cLabel(this.trimNeed(accId, fmt)?.mode === 'compress' ? 'compress-video' : 'adjust-length');
+        },
+        // The first picked format a trim would fix, for the action bar's button.
+        firstTrimTarget() {
+            return this.selectedTargetList().find(t => this.trimNeed(t.accId, t.fmt)) || null;
+        },
+        openTrim(accId, fmt) {
+            const need = this.trimNeed(accId, fmt);
+            if (!need) return;
+            window.dispatchEvent(new CustomEvent('video-trim-open', { detail: {
+                url: need.video.url,
+                duration: need.video.duration,
+                maxSeconds: need.maxSeconds,
+                maxBytes: need.maxBytes,
+                size: need.video.size,
+                mode: need.mode,
+                filmstripUrl: `/workspace/{{ workspace.id }}/compose/media-filmstrip/${need.video.assetId}/`,
+                title: cLabel(need.mode === 'compress' ? 'compress-title' : 'trim-title').replace('{format}', this.targetLabel(accId, fmt)),
+                onConfirm: (start, end, report) => this.saveFormatTrim(accId, fmt, need.video.assetId, start, end, report),
+            } }));
+        },
+        // Saves the post first (its rows must exist), then starts the trim on
+        // the server and follows the copy until it is ready (pollTrim),
+        // telling the trimmer each step through ``report``. Settles when the
+        // trim is done or has failed; closing the trimmer doesn't stop it.
+        async saveFormatTrim(accId, fmt, assetId, start, end, report) {
+            await this.autosaveNow();
+            const response = await fetch(`/workspace/{{ workspace.id }}/compose/${this.autosavedPostId}/trim-format-media/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ asset_id: assetId, target: accId + ':' + fmt, start, end }),
+            });
+            if (!response.ok) {
+                const plain = (response.headers.get('Content-Type') || '').startsWith('text/plain');
+                const text = await response.text();
+                throw new Error(plain && text ? text : cLabel('generic-error'));
+            }
+            const job = await response.json();
+            report({ phase: 'queued', percent: 0 });
+            return new Promise((resolve, reject) => {
+                this.trimJobs = {
+                    ...this.trimJobs,
+                    [job.target]: { copy: job.copy, source: job.source, statusUrl: job.status_url, report, resolve, reject },
+                };
+                this.pollTrim(job.target, accId, fmt);
+            });
+        },
+        // The server's percent (processing_progress) is 0 until the media
+        // worker takes the job (queued behind another video), then 2-10
+        // getting the original, 10-90 ffmpeg cutting, 90-100 storing the copy.
+        pollTrim(target, accId, fmt) {
+            const job = this.trimJobs[target];
+            if (!job) return;
+            const label = this.targetLabel(accId, fmt);
+            const finish = (tone, title) => {
+                const { [target]: _done, ...rest } = this.trimJobs;
+                this.trimJobs = rest;
+                document.body.dispatchEvent(new CustomEvent('showToast', { detail: { tone, title, duration: tone === 'error' ? 8000 : 4000 } }));
+            };
+            fetch(job.statusUrl, { headers: { 'Accept': 'application/json' } })
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(data => {
+                    if (data.status === 'completed' && data.asset) {
+                        this.formatMedia = {
+                            ...this.formatMedia,
+                            [target]: { ...(this.formatMedia[target] || {}), [job.source]: data.asset },
+                        };
+                        finish('success', cLabel('trim-ready').replace('{format}', label));
+                        this.triggerPreviewUpdate();
+                        job.resolve();
+                    } else if (data.status === 'failed') {
+                        const reason = data.error || cLabel('generic-error');
+                        finish('error', cLabel('trim-failed').replace('{format}', label).replace('{reason}', reason));
+                        job.reject(new Error(reason));
+                    } else {
+                        const percent = data.progress || 0;
+                        const phase = percent === 0 ? 'queued' : percent < 10 ? 'preparing' : percent < 90 ? 'trimming' : 'saving';
+                        job.report({ phase, percent });
+                        setTimeout(() => this.pollTrim(target, accId, fmt), 1000);
+                    }
+                })
+                .catch(() => setTimeout(() => this.pollTrim(target, accId, fmt), 3000));
+        },
+
         hasFormat(accId, fmt) {
             return (this.selectedFormats[accId] || []).includes(fmt);
         },
@@ -3159,8 +3306,8 @@ function composerApp() {
         // Mirrors composer.services.short_video_blocker: YouTube would publish
         // it as an ordinary video, so the Shorts format is held back until the
         // video fits or the format is unpicked.
-        shortVideoIssue() {
-            const video = this.mediaInfo.find(m => m.kind === 'video');
+        shortVideoIssue(accId) {
+            const video = this.formatMediaInfo(accId, 'short').find(m => m.kind === 'video');
             if (!video) return '';
             if (video.width && video.height && video.width > video.height) return cLabel('short-horizontal');
             if (video.duration > 180) return cLabel('short-too-long').replace('{limit}', 3).replace('{duration}', Math.ceil(video.duration));
@@ -3174,12 +3321,12 @@ function composerApp() {
             if (!limits) return '';
             const [maxSeconds, maxBytes] = limits;
             const platform = this.charLimits[accId]?.format_labels?.default || '';
-            for (const video of this.mediaInfo.filter(m => m.kind === 'video')) {
+            for (const video of this.formatMediaInfo(accId, 'story').filter(m => m.kind === 'video')) {
                 if (video.duration > maxSeconds) {
                     return cLabel('story-video-too-long').replace('{platform}', platform).replace('{limit}', maxSeconds).replace('{duration}', Math.ceil(video.duration));
                 }
                 if (video.size > maxBytes) {
-                    return cLabel('story-video-too-large').replace('{platform}', platform).replace('{limit}', Math.floor(maxBytes / 1048576)).replace('{size}', (video.size / 1048576).toFixed(1));
+                    return cLabel('story-video-too-large').replace('{platform}', platform).replace('{limit}', Math.floor(maxBytes / 1048576)).replace('{size}', (video.size / 1048576).toLocaleString(document.documentElement.lang || undefined, { maximumFractionDigits: 1 }));
                 }
             }
             return '';
@@ -3192,6 +3339,7 @@ function composerApp() {
         // story_video_blocker, which have the final say on save.
         formatMismatch(fmt, accId) {
             if (fmt === 'story' && !this.hasMediaAttached) return cLabel('story-media');
+            if (accId && this.trimJobs[accId + ':' + fmt]) return cLabel('trim-processing');
             if (fmt === 'story' && accId) {
                 const issue = this.storyVideoIssue(accId);
                 if (issue) return issue;
@@ -3199,7 +3347,7 @@ function composerApp() {
             if (fmt === 'reel' && !this.hasSingleVideoAttached) return cLabel('reel-media');
             if (fmt === 'short' && !this.hasSingleVideoAttached) return cLabel('short-media');
             if (fmt === 'short') {
-                const issue = this.shortVideoIssue();
+                const issue = this.shortVideoIssue(accId);
                 if (issue) return issue;
             }
             if (fmt === 'profile_photo' && !this.hasSingleImageAttached) return cLabel('photo-media');

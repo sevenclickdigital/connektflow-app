@@ -926,6 +926,40 @@ button.target-card { cursor: pointer; }
    the title; the post can't be scheduled until the media fits or it is unpicked. */
 .format-toggle.is-warn { border-style: dashed; border-color: var(--warning-500); color: var(--warning-700); }
 .format-toggle.is-on.is-warn { color: #fff; box-shadow: 0 0 0 2px var(--warning-500); }
+/* Video trimmer (templates/media_library/_video_trimmer.html): the frame strip,
+   the shade over what is cut, the frame around what is kept, two handles. */
+.vt-track {
+    position: relative; height: 64px; border-radius: var(--radius-lg, 0.5rem);
+    background: var(--neutral-800, #1F2937); touch-action: none; user-select: none;
+}
+.vt-frames { position: absolute; inset: 0; display: flex; overflow: hidden; border-radius: inherit; }
+.vt-frame { flex: 1 1 0; min-width: 0; height: 100%; object-fit: cover; pointer-events: none; }
+.vt-frames-loading { position: absolute; inset: 0; background: var(--neutral-700, #374151); }
+.vt-shade { position: absolute; top: 0; bottom: 0; background: rgba(15, 23, 42, 0.65); pointer-events: none; }
+.vt-window {
+    position: absolute; top: 0; bottom: 0; cursor: grab;
+    border-top: 3px solid var(--brand-700); border-bottom: 3px solid var(--brand-700);
+}
+.vt-window.is-over { border-color: var(--error-500); }
+.vt-playhead { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #fff; pointer-events: none; }
+.vt-handle {
+    position: absolute; top: 0; bottom: 0; width: 22px; z-index: 1;
+    background: var(--brand-700); cursor: ew-resize;
+}
+.vt-handle::after {
+    content: ""; position: absolute; top: 50%; left: 50%; width: 2px; height: 22px;
+    transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.85); border-radius: 1px; pointer-events: none;
+}
+/* Both sit inside the stretch kept, so neither leaves the strip at its ends. */
+.vt-handle-start { border-radius: 6px 0 0 6px; }
+.vt-handle-end { margin-left: -22px; border-radius: 0 6px 6px 0; }
+.vt-handle.is-over { background: var(--error-500); }
+.vt-handle:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+/* A taller touch target than the bar itself on touch screens. */
+@media (pointer: coarse) {
+    .vt-handle { width: 32px; }
+    .vt-handle-end { margin-left: -32px; }
+}
 .target-card.is-connect {
     border-style: dashed; background: transparent; align-items: center; justify-content: center;
     text-align: center; color: var(--text-secondary); cursor: pointer;

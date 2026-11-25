@@ -5,6 +5,7 @@ import tempfile
 
 from background_task import background
 from django.core.files.base import File
+from django.utils import timezone
 
 from .models import MediaAsset, MediaAssetVersion
 from .services import (
@@ -162,60 +163,206 @@ def process_image_edit(version_id, operations):
 
 
 @background(schedule=0)
-def process_video_trim(version_id, start_seconds, end_seconds):
-    """Trim a video and update the version."""
+def trim_video_copy(
+    copy_id, start_seconds, end_seconds, max_seconds=None, max_bytes=None, platform_post_ids=None, fit_for_phone=False
+):
+    """Fill the empty copy ``services.start_video_trim`` made with the trimmed video.
+
+    Runs once per copy: anything but a ``processing`` copy is left alone, so a
+    retried task changes nothing. The source is read, never written. The
+    result is checked against the real file (length measured by ffprobe,
+    size against ``max_bytes``, re-encoded once smaller when it is over) and
+    against the storage quotas before it is stored. Ready, the copy is what
+    the ``platform_post_ids`` rows still open for editing publish in place of
+    the source. A failure marks the copy failed with a code
+    (``processing_error``) that the composer and the library show.
+    """
+    import os
+    import subprocess
+
+    from apps.billing.storage_usage import WorkspaceStorageExceededError
+
+    from .quotas import StorageQuotaExceededError, enforce_upload_quotas
+    from .services import MIN_TRIM_SECONDS, VideoTrimError
+    from .validators import storage_filename
+
     try:
-        version = MediaAssetVersion.objects.select_related("media_asset").get(pk=version_id)
-    except MediaAssetVersion.DoesNotExist:
-        logger.warning("MediaAssetVersion %s not found", version_id)
+        copy = MediaAsset.objects.select_related("derived_from", "organization", "workspace").get(pk=copy_id)
+    except MediaAsset.DoesNotExist:
+        logger.warning("Trimmed copy %s not found", copy_id)
+        return
+    if copy.processing_status != MediaAsset.ProcessingStatus.PROCESSING:
         return
 
-    asset = version.media_asset
+    import time
 
+    # Read by the composer's trimmer to draw its bar: 0-10 getting the
+    # original, 10-90 ffmpeg's own count, 90-100 storing the result. Written
+    # at most about once a second, never backwards within a pass.
+    last = {"value": 0, "at": 0.0}
+
+    def report(value, *, force=False):
+        value = int(max(0, min(100, value)))
+        now = time.monotonic()
+        if force or (value != last["value"] and now - last["at"] >= 1.0):
+            # updated_at too: it is the heartbeat fail_stalled_video_trims reads.
+            MediaAsset.objects.filter(pk=copy.pk).update(processing_progress=value, updated_at=timezone.now())
+            last.update(value=value, at=now)
+
+    report(2, force=True)
+    paths = []
     try:
-        with tempfile.NamedTemporaryFile(suffix=f".{asset.file_extension}", delete=False) as tmp_in:
-            input_path = tmp_in.name
-        download_to_path(asset.file, input_path)
-
-        output_path = f"{input_path}_trimmed.mp4"
-
+        source = copy.derived_from
+        if source is None or not source.file:
+            raise VideoTrimError("trim_source")
+        for suffix in (f".{source.file_extension or 'mp4'}", ".mp4"):
+            fd, path = tempfile.mkstemp(suffix=suffix, prefix="connektflow_trim_")
+            os.close(fd)
+            paths.append(path)
+        input_path, output_path = paths
         try:
-            trim_video(input_path, output_path, start_seconds, end_seconds)
+            download_to_path(source.file, input_path)
+        except Exception as exc:  # noqa: BLE001 - storage backends raise varied errors when the object is gone
+            raise VideoTrimError("trim_source") from exc
+        report(10, force=True)
 
-            # Wrapped, not read: ContentFile(f.read()) held the whole trimmed
-            # video in memory on its way back to storage, which the upload
-            # streams from disk perfectly well without.
-            with open(output_path, "rb") as f:
-                version.file.save(f"trimmed_{version.id}.mp4", File(f, name=f"trimmed_{version.id}.mp4"), save=False)
-            version.duration = end_seconds - start_seconds
+        real_duration = extract_video_metadata(input_path).get("duration_seconds") or source.duration
+        if not real_duration:
+            raise VideoTrimError("trim_source")
+        end_seconds = min(float(end_seconds), real_duration)
+        if end_seconds - float(start_seconds) < MIN_TRIM_SECONDS:
+            raise VideoTrimError("trim_range")
 
-            metadata = extract_video_metadata(output_path)
-            version.width = metadata.get("width", asset.width)
-            version.height = metadata.get("height", asset.height)
+        # A higher CRF only once, and only when a size limit is in play: the
+        # trimmed stretch usually fits, and a second pass doubles the wait.
+        for crf in (23, 28) if max_bytes else (23,):
+            trim_video(
+                input_path,
+                output_path,
+                start_seconds,
+                end_seconds,
+                crf=crf,
+                fit_for_phone=bool(fit_for_phone),
+                on_progress=lambda f: report(10 + 80 * f),
+            )
+            size = os.path.getsize(output_path)
+            if not max_bytes or size <= max_bytes:
+                break
+        else:
+            raise VideoTrimError("trim_too_large")
 
-            import os
+        metadata = extract_video_metadata(output_path)
+        duration = metadata.get("duration_seconds") or (end_seconds - float(start_seconds))
+        if max_seconds and duration > float(max_seconds) + 0.5:
+            raise VideoTrimError("trim_failed")
 
-            version.file_size = os.path.getsize(output_path)
-            version.save(update_fields=["file", "duration", "width", "height", "file_size"])
+        report(90, force=True)
+        try:
+            enforce_upload_quotas(copy.organization, copy.workspace, size)
+        except (StorageQuotaExceededError, WorkspaceStorageExceededError) as exc:
+            raise VideoTrimError("trim_quota") from exc
 
-            thumbnail = generate_video_thumbnail(output_path)
-            if thumbnail:
-                version.thumbnail.save(f"thumb_v{version.id}.jpg", thumbnail, save=False)
-                version.save(update_fields=["thumbnail"])
-
-            asset.duration = version.duration
-            asset.thumbnail = version.thumbnail
-            asset.save(update_fields=["duration", "thumbnail", "updated_at"])
-
-        finally:
-            import os
-
-            os.unlink(input_path)
-            if os.path.exists(output_path):
-                os.unlink(output_path)
-
+        with open(output_path, "rb") as f:
+            name = storage_filename(copy.filename, "video/mp4")
+            copy.file.save(name, File(f, name=name), save=False)
+        copy.file_size = size
+        copy.duration = duration
+        copy.width = metadata.get("width") or source.width
+        copy.height = metadata.get("height") or source.height
+        thumbnail = generate_video_thumbnail(output_path)
+        if thumbnail:
+            copy.thumbnail.save(f"thumb_{copy.id}.jpg", thumbnail, save=False)
+        copy.processing_status = MediaAsset.ProcessingStatus.COMPLETED
+        copy.processing_error = ""
+        copy.processing_progress = 100
+        copy.save()
+    except VideoTrimError as exc:
+        _fail_trim(copy, exc.code)
+        return
+    except subprocess.TimeoutExpired:
+        _fail_trim(copy, "trim_timeout")
+        return
     except Exception:
-        logger.exception("Failed to process video trim for version %s", version_id)
+        logger.exception("Failed to trim video into copy %s", copy_id)
+        _fail_trim(copy, "trim_failed")
+        return
+    finally:
+        for path in paths:
+            if os.path.exists(path):
+                os.unlink(path)
+
+    if platform_post_ids:
+        from apps.composer.models import PlatformPost
+        from apps.composer.services import set_format_crop
+
+        rows = list(
+            PlatformPost.objects.filter(pk__in=platform_post_ids, post__workspace_id=copy.workspace_id).exclude(
+                status__in=PlatformPost.PROTECTED_STATUSES
+            )
+        )
+        if rows:
+            set_format_crop(rows, copy)
+
+
+def _fail_trim(copy, code):
+    copy.processing_status = MediaAsset.ProcessingStatus.FAILED
+    copy.processing_error = code
+    copy.save(update_fields=["processing_status", "processing_error", "updated_at"])
+
+
+# How often fail_stalled_video_trims looks, and how long a trim may go silent
+# (no progress written) or wait in the queue before its copy is called failed.
+STALLED_TRIM_SWEEP_INTERVAL_SECONDS = 10 * 60
+STALLED_TRIM_SILENCE_SECONDS = 15 * 60
+STALLED_TRIM_QUEUE_SECONDS = 60 * 60
+
+
+@background(schedule=0)
+def fail_stalled_video_trims():
+    """Mark failed the trimmed copies whose trim will never finish.
+
+    A copy waits ``processing`` while ``trim_video_copy`` runs, and the
+    composer keeps the format held back meanwhile. If the media worker dies
+    mid-encode (an out-of-memory kill under its container cap, a deploy) or
+    never runs, the copy would stay ``processing`` for good and the trimmer
+    would wait forever. Failed here, the person sees "the processing
+    stopped" and can trim again:
+
+    - its job is gone (finished or dropped without settling the copy);
+    - its job was taken and the copy has written no progress for
+      ``STALLED_TRIM_SILENCE_SECONDS`` (the task updates it every second);
+    - its job has waited more than ``STALLED_TRIM_QUEUE_SECONDS`` without
+      starting (no media worker running).
+
+    Runs on the general worker, so it still works when the media one is down.
+    """
+    from datetime import timedelta
+
+    from background_task.models import Task
+
+    now = timezone.now()
+    stalled = []
+    copies = MediaAsset.objects.filter(
+        processing_status=MediaAsset.ProcessingStatus.PROCESSING, derived_from__isnull=False, file=""
+    ).only("pk", "updated_at", "created_at")
+    for copy in copies:
+        job = Task.objects.filter(
+            task_name="apps.media_library.tasks.trim_video_copy", task_params__contains=str(copy.pk)
+        ).first()
+        if job is None:
+            # Created a moment ago: its job row may not be visible yet.
+            if now - copy.created_at > timedelta(minutes=1):
+                stalled.append(copy.pk)
+        elif job.locked_by:
+            if now - copy.updated_at > timedelta(seconds=STALLED_TRIM_SILENCE_SECONDS):
+                stalled.append(copy.pk)
+        elif now - copy.created_at > timedelta(seconds=STALLED_TRIM_QUEUE_SECONDS):
+            stalled.append(copy.pk)
+    if stalled:
+        MediaAsset.objects.filter(pk__in=stalled, processing_status=MediaAsset.ProcessingStatus.PROCESSING).update(
+            processing_status=MediaAsset.ProcessingStatus.FAILED, processing_error="trim_stalled", updated_at=now
+        )
+        logger.warning("Marked %s stalled video trim(s) failed: %s", len(stalled), stalled)
 
 
 # How often the recurring pending-upload sweep runs; registered on a repeating

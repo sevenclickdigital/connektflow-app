@@ -1,0 +1,387 @@
+{% load i18n %}
+{% comment %}
+The video trimmer: the player, a strip of the video's frames and two handles
+that mark the stretch to keep. Nothing else: no audio, filters or text.
+
+Opened with a ``video-trim-open`` window event whose detail is
+``{url, duration, maxSeconds, maxBytes, size, mode, filmstripUrl, title, onConfirm}``:
+``maxSeconds`` / ``maxBytes`` are the destination's limits (null for none),
+``size`` the file's bytes, and ``mode`` "compress" when only the size is over
+(the whole video fits the time: confirming as it opens recompresses it, the
+handles are optional) or "trim" (the default),
+and ``onConfirm(start, end, report)`` returns a promise that settles when the
+trim is done; a rejected one shows its message here. Meanwhile the caller
+calls ``report({phase, percent})`` (phase: sending, queued, preparing,
+trimming, saving) and the modal draws it as a bar, so the person sees the request go
+out, the cut run and the result being stored. It can be closed while the
+work runs on the server; closing never cancels it. The frames come from
+``composer.views.media_filmstrip`` (cached per video, fetched once per open).
+
+``inline`` renders it in the page instead of a modal (the library's edit
+screen, which opens it from its own x-init).
+{% endcomment %}
+<div x-data="videoTrimmer()"
+     @video-trim-open.window="open($event.detail)"
+     data-label-limit="{% translate 'This destination takes up to {limit}.' %}"
+     data-label-over="{% translate 'Over the limit by {extra}. Move the handles closer together.' %}"
+     data-label-frames-error="{% translate 'Frame previews unavailable for this video. The handles still work.' %}"
+     data-label-error="{% translate 'Something went wrong. Please try again.' %}"
+     data-phase-sending="{% translate 'Sending…' %}"
+     data-phase-queued="{% translate 'In the queue: waiting for another video to finish…' %}"
+     data-phase-preparing="{% translate 'Preparing the video…' %}"
+     data-phase-trimming="{% translate 'Trimming the video…' %}"
+     data-phase-saving="{% translate 'Saving the video…' %}"
+     data-phase-done="{% translate 'Done! The video is trimmed.' %}"
+     data-phase-compressing="{% translate 'Compressing the video…' %}"
+     data-phase-done-compress="{% translate 'Done! The video is compressed.' %}"
+     data-note-compress="{% translate 'The video already fits the time this destination takes, but it has {size} MB and the limit is {limit} MB. It will be recompressed to fit; moving the handles is optional.' %}"
+     data-note-also-compress="{% translate 'The video has {size} MB and the limit is {limit} MB: it will also be recompressed to fit.' %}">
+  {% if inline %}
+  <div class="space-y-4">
+  {% else %}
+  <template x-teleport="body">
+  <div x-show="isOpen" x-cloak x-transition.opacity
+       class="fixed inset-0 z-[220] flex items-end sm:items-center justify-center sm:p-6"
+       style="background: rgba(15,23,42,0.7);"
+       role="dialog" aria-modal="true" :aria-label="title"
+       @pointerdown="backdropDown = $event.target === $el"
+       @click.self="backdropDown && canClose() && close()"
+       @keydown.escape.window="isOpen && canClose() && close()">
+  <div class="w-full sm:max-w-2xl max-h-[100dvh] overflow-y-auto bg-white sm:rounded-2xl rounded-t-2xl p-4 sm:p-6 space-y-4">
+    <div class="flex items-center gap-3">
+      <h2 class="text-sm font-semibold text-neutral-900 truncate" x-text="title"></h2>
+      <button type="button" class="ml-auto w-9 h-9 rounded-full flex items-center justify-center text-neutral-500 hover:bg-neutral-100 cursor-pointer"
+              @click="close()" :disabled="!canClose()" aria-label="{% translate 'Close' %}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+  {% endif %}
+
+    <div class="relative rounded-xl overflow-hidden bg-black flex items-center justify-center">
+      <video x-ref="video" :src="url" playsinline preload="metadata"
+             class="w-full object-contain" style="max-height: 50vh;"
+             @loadedmetadata="onMetadata()" @timeupdate="onTimeUpdate()"
+             @play="playing = true" @pause="playing = false"
+             @click="togglePlay()"></video>
+      <button type="button" class="absolute bottom-3 left-3 w-11 h-11 rounded-full flex items-center justify-center cursor-pointer"
+              style="background: rgba(255,255,255,0.92); color: var(--text-primary, #0F172A);"
+              @click="togglePlay()" :aria-label="playing ? '{% translate "Pause" %}' : '{% translate "Play" %}'">
+        <svg x-show="!playing" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        <svg x-show="playing" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+      </button>
+    </div>
+
+    {% comment %}
+    The strip is the experience: the frames fill its width, the stretch kept
+    is framed, the rest is shaded. The handles are wide for touch and move
+    with the arrow keys too (0.1 s, or 1 s with Shift).
+    {% endcomment %}
+    <div x-ref="track" class="vt-track" @pointerdown="trackDown($event)">
+      <div class="vt-frames">
+        <template x-for="(frame, i) in frames" :key="i">
+          <img :src="frame.dataUrl" alt="" class="vt-frame" draggable="false">
+        </template>
+        <div x-show="framesLoading" class="vt-frames-loading animate-pulse"></div>
+      </div>
+      <div class="vt-shade" :style="'left: 0; width: ' + pct(start) + '%'"></div>
+      <div class="vt-shade" :style="'left: ' + pct(end) + '%; right: 0'"></div>
+      <div class="vt-window" :class="overLimit() && 'is-over'"
+           :style="'left: ' + pct(start) + '%; width: ' + (pct(end) - pct(start)) + '%'"
+           data-part="window"></div>
+      <div class="vt-playhead" x-show="duration" :style="'left: ' + pct(currentTime) + '%'"></div>
+      <button type="button" class="vt-handle vt-handle-start" :class="overLimit() && 'is-over'"
+              :style="'left: ' + pct(start) + '%'" data-part="start"
+              role="slider" aria-label="{% translate 'Start' %}" :aria-valuemin="0" :aria-valuemax="duration"
+              :aria-valuenow="start.toFixed(1)" :aria-valuetext="clock(start)"
+              @keydown="nudge($event, 'start')"></button>
+      <button type="button" class="vt-handle vt-handle-end" :class="overLimit() && 'is-over'"
+              :style="'left: ' + pct(end) + '%'" data-part="end"
+              role="slider" aria-label="{% translate 'End' %}" :aria-valuemin="0" :aria-valuemax="duration"
+              :aria-valuenow="end.toFixed(1)" :aria-valuetext="clock(end)"
+              @keydown="nudge($event, 'end')"></button>
+    </div>
+    <p x-show="framesError" x-cloak class="text-[11px] text-neutral-500" x-text="framesError"></p>
+
+    <dl class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+      <div class="rounded-lg bg-neutral-50 px-2 py-2">
+        <dt class="text-[11px] text-neutral-500">{% translate "Original video" %}</dt>
+        <dd class="text-sm font-semibold text-neutral-800 tabular-nums" x-text="clock(duration)"></dd>
+      </div>
+      <div class="rounded-lg bg-neutral-50 px-2 py-2">
+        <dt class="text-[11px] text-neutral-500">{% translate "Start" %}</dt>
+        <dd class="text-sm font-semibold text-neutral-800 tabular-nums" x-text="clock(start)"></dd>
+      </div>
+      <div class="rounded-lg bg-neutral-50 px-2 py-2">
+        <dt class="text-[11px] text-neutral-500">{% translate "End" %}</dt>
+        <dd class="text-sm font-semibold text-neutral-800 tabular-nums" x-text="clock(end)"></dd>
+      </div>
+      <div class="rounded-lg px-2 py-2" :class="overLimit() ? 'bg-red-50' : 'bg-brand-50'">
+        <dt class="text-[11px]" :class="overLimit() ? 'text-red-700' : 'text-brand-700'">{% translate "Selected" %}</dt>
+        <dd class="text-sm font-semibold tabular-nums" :class="overLimit() ? 'text-red-700' : 'text-brand-800'" x-text="clock(end - start)"></dd>
+      </div>
+    </dl>
+
+    <p x-show="sizeNote()" x-cloak class="text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2" x-text="sizeNote()"></p>
+    <p x-show="maxSeconds && !overLimit()" class="text-xs text-neutral-500" x-text="limitText()"></p>
+    <p x-show="overLimit()" x-cloak class="text-xs font-medium text-red-700" x-text="overText()" role="status"></p>
+    <p x-show="error" x-cloak class="text-xs font-medium text-red-700" x-text="error" role="alert"></p>
+
+    <div x-show="progress" x-cloak class="space-y-1.5" role="status" aria-live="polite">
+      <div class="flex items-center justify-between text-xs font-medium"
+           :class="progress?.phase === 'done' ? 'text-green-700' : 'text-neutral-700'">
+        <span x-text="phaseText()"></span>
+        <span class="tabular-nums" x-show="!['sending', 'queued'].includes(progress?.phase)" x-text="barPercent() + '%'"></span>
+      </div>
+      <div class="h-2 rounded-full bg-neutral-100 overflow-hidden"
+           role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="barPercent()">
+        <div class="h-full rounded-full transition-all duration-700 ease-out"
+             :class="[progress?.phase === 'done' ? 'bg-green-500' : 'bg-brand-700', ['sending', 'queued'].includes(progress?.phase) && 'animate-pulse']"
+             :style="'width: ' + barPercent() + '%'"></div>
+      </div>
+      {% if not inline %}
+      <p x-show="progress && progress.phase !== 'sending' && progress.phase !== 'done'" class="text-[11px] text-neutral-500">{% translate "You can close this window: the trim goes on, and the post can be published once it is ready." %}</p>
+      {% endif %}
+    </div>
+
+    <div class="flex items-center justify-end gap-2">
+      {% if inline and cancel_url %}
+      <a href="{{ cancel_url }}" class="px-4 py-2.5 text-sm font-medium rounded-lg border border-neutral-300 text-neutral-700 hover:bg-neutral-50">{% translate "Cancel" %}</a>
+      {% elif not inline %}
+      <button type="button" class="px-4 py-2.5 text-sm font-medium rounded-lg border border-neutral-300 text-neutral-700 hover:bg-neutral-50 cursor-pointer"
+              @click="close()" :disabled="!canClose()">
+        <span x-show="!saving">{% translate "Cancel" %}</span>
+        <span x-show="saving" x-cloak>{% translate "Close" %}</span>
+      </button>
+      {% endif %}
+      <button type="button" class="px-5 py-2.5 text-sm font-semibold text-white rounded-lg bg-brand-700 hover:bg-brand-800 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="!canConfirm()" @click="confirm()">
+        <span x-show="!saving && mode !== 'compress'">{% translate "Trim video" %}</span>
+        <span x-show="!saving && mode === 'compress'" x-cloak>{% translate "Compress video" %}</span>
+        <span x-show="saving" x-cloak>{% translate "Working…" %}</span>
+      </button>
+    </div>
+
+  {% if inline %}
+  </div>
+  {% else %}
+  </div>
+  </div>
+  </template>
+  {% endif %}
+</div>
+
+<script nonce="{{ request.csp_nonce }}">
+  {% comment %}
+  Guarded: the partial is included by the composer and the library, and an
+  HTMX swap may bring it in again.
+  {% endcomment %}
+  window.videoTrimmer = window.videoTrimmer || function () {
+    const MIN_SECONDS = 1;
+    return {
+      isOpen: false,
+      url: '',
+      title: '',
+      duration: 0,
+      maxSeconds: null,
+      maxBytes: null,
+      size: 0,
+      mode: 'trim',
+      start: 0,
+      end: 0,
+      currentTime: 0,
+      playing: false,
+      frames: [],
+      framesLoading: false,
+      framesError: '',
+      saving: false,
+      error: '',
+      // { phase, percent } while a trim runs, or null.
+      progress: null,
+      _run: 0,
+      onConfirm: null,
+      drag: null,
+      _stopDrag: null,
+      backdropDown: false,
+      labels: {},
+
+      // Read once from the root: the modal's body is teleported to <body>.
+      init() { this.labels = { ...this.$el.dataset }; },
+
+      open(detail) {
+        this.endDrag();
+        this.url = detail.url;
+        this.title = detail.title || '';
+        this.maxSeconds = detail.maxSeconds || null;
+        this.maxBytes = detail.maxBytes || null;
+        this.size = detail.size || 0;
+        this.mode = detail.mode === 'compress' ? 'compress' : 'trim';
+        this.onConfirm = detail.onConfirm || null;
+        this.error = '';
+        this.saving = false;
+        this.progress = null;
+        this._run += 1;
+        this.frames = [];
+        this.framesError = '';
+        this.setDuration(detail.duration || 0);
+        this.isOpen = true;
+        if (detail.filmstripUrl) this.loadFrames(detail.filmstripUrl);
+      },
+      close() {
+        this.endDrag();
+        this.isOpen = false;
+        if (this.$refs.video) this.$refs.video.pause();
+      },
+      // The whole video, or its first ``maxSeconds`` when it is longer.
+      setDuration(duration) {
+        this.duration = duration;
+        this.start = 0;
+        this.end = this.maxSeconds ? Math.min(duration, this.maxSeconds) : duration;
+        this.currentTime = 0;
+      },
+      onMetadata() {
+        const measured = this.$refs.video.duration;
+        if (isFinite(measured) && measured > 0 && Math.abs(measured - this.duration) > 0.25) this.setDuration(measured);
+      },
+      loadFrames(url) {
+        this.framesLoading = true;
+        fetch(url, { headers: { 'Accept': 'application/json' } })
+          .then(r => r.json().then(data => ({ ok: r.ok, data })))
+          .then(({ ok, data }) => {
+            if (!ok || !data.frames) throw new Error();
+            this.frames = data.frames;
+          })
+          .catch(() => { this.framesError = this.labels.labelFramesError; })
+          .finally(() => { this.framesLoading = false; });
+      },
+
+      pct(t) { return this.duration ? Math.max(0, Math.min(100, t / this.duration * 100)) : 0; },
+      clock(t) {
+        t = Math.max(0, t || 0);
+        const m = Math.floor(t / 60);
+        const s = t - m * 60;
+        return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1);
+      },
+      overLimit() { return !!this.maxSeconds && this.end - this.start > this.maxSeconds + 0.05; },
+      limitText() { return this.labels.labelLimit.replace('{limit}', this.clock(this.maxSeconds)); },
+      overText() { return this.labels.labelOver.replace('{extra}', this.clock(this.end - this.start - this.maxSeconds)); },
+      // Only while the request itself is on its way; once the server has
+      // the job, closing just hides it.
+      canClose() { return this.progress?.phase !== 'sending'; },
+      barPercent() {
+        const p = this.progress;
+        if (!p) return 0;
+        if (p.phase === 'done') return 100;
+        if (p.phase === 'sending' || p.phase === 'queued') return 4;
+        return Math.max(4, Math.min(99, Math.round(p.percent || 0)));
+      },
+      phaseText() {
+        const p = this.progress;
+        if (!p) return '';
+        let phase = p.phase;
+        if (this.mode === 'compress' && phase === 'trimming') phase = 'compressing';
+        if (this.mode === 'compress' && phase === 'done') phase = 'doneCompress';
+        return this.labels['phase' + phase.charAt(0).toUpperCase() + phase.slice(1)] || '';
+      },
+      // Why the file will be recompressed, when it is over the size limit.
+      sizeNote() {
+        if (!this.maxBytes || this.size <= this.maxBytes) return '';
+        const mb = bytes => (bytes / 1048576).toLocaleString(document.documentElement.lang || undefined, { maximumFractionDigits: 1 });
+        const note = this.mode === 'compress' ? this.labels.noteCompress : this.labels.noteAlsoCompress;
+        return (note || '').replace('{size}', mb(this.size)).replace('{limit}', mb(this.maxBytes));
+      },
+      canConfirm() {
+        return !this.saving && this.duration > 0 && this.end - this.start >= MIN_SECONDS && !this.overLimit();
+      },
+
+      // Pointer drags of a handle, or of the framed stretch as a whole. The
+      // track captures the pointer, so the release always arrives, even off
+      // the window; without it a missed release left the handle following
+      // the mouse. preventDefault (not .stop) so the drag never selects text.
+      trackDown(event) {
+        const part = event.target.dataset.part;
+        if (!part || !this.duration || this.saving) return;
+        event.preventDefault();
+        this.endDrag();
+        const track = this.$refs.track;
+        const rect = track.getBoundingClientRect();
+        const toTime = x => Math.max(0, Math.min(this.duration, (x - rect.left) / rect.width * this.duration));
+        const drag = { part, offset: toTime(event.clientX) - this.start, length: this.end - this.start };
+        this.drag = drag;
+        this.$refs.video.pause();
+        const move = e => {
+          const t = toTime(e.clientX);
+          if (drag.part === 'start') this.start = Math.min(t, this.end - MIN_SECONDS);
+          else if (drag.part === 'end') this.end = Math.max(t, this.start + MIN_SECONDS);
+          else {
+            this.start = Math.max(0, Math.min(t - drag.offset, this.duration - drag.length));
+            this.end = this.start + drag.length;
+          }
+          this.seek(drag.part === 'end' ? this.end : this.start);
+        };
+        const stop = () => {
+          track.removeEventListener('pointermove', move);
+          ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => track.removeEventListener(type, stop));
+          try { track.releasePointerCapture(event.pointerId); } catch (_err) { /* not captured */ }
+          if (this.drag === drag) this.drag = null;
+          this._stopDrag = null;
+        };
+        try { track.setPointerCapture(event.pointerId); } catch (_err) { /* pointer already gone */ }
+        track.addEventListener('pointermove', move);
+        ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => track.addEventListener(type, stop));
+        this._stopDrag = stop;
+      },
+      endDrag() { if (this._stopDrag) this._stopDrag(); },
+      nudge(event, part) {
+        const steps = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 };
+        if (!(event.key in steps) || this.saving) return;
+        event.preventDefault();
+        const delta = steps[event.key] * (event.shiftKey ? 1 : 0.1);
+        if (part === 'start') this.start = Math.max(0, Math.min(this.start + delta, this.end - MIN_SECONDS));
+        else this.end = Math.min(this.duration, Math.max(this.end + delta, this.start + MIN_SECONDS));
+        this.seek(part === 'start' ? this.start : this.end);
+      },
+      seek(t) {
+        this.currentTime = t;
+        if (this.$refs.video) this.$refs.video.currentTime = t;
+      },
+      // Plays only the stretch kept, from its start, looping at its end.
+      togglePlay() {
+        const video = this.$refs.video;
+        if (!video.paused) { video.pause(); return; }
+        if (video.currentTime < this.start || video.currentTime >= this.end - 0.05) video.currentTime = this.start;
+        video.play();
+      },
+      onTimeUpdate() {
+        const video = this.$refs.video;
+        this.currentTime = video.currentTime;
+        if (!video.paused && !this.drag && video.currentTime >= this.end) video.currentTime = this.start;
+      },
+
+      async confirm() {
+        if (!this.canConfirm() || !this.onConfirm) return;
+        // A run is only drawn while it is the latest one: reopening the
+        // modal starts afresh while an earlier trim may still be reporting.
+        // A number, not an object: Alpine hands objects back wrapped in a
+        // proxy, which never compares equal to the original.
+        const run = ++this._run;
+        this.saving = true;
+        this.error = '';
+        this.progress = { phase: 'sending', percent: 0 };
+        const start = Math.round(this.start * 1000) / 1000;
+        const end = Math.round(this.end * 1000) / 1000;
+        try {
+          await this.onConfirm(start, end, (p) => { if (this._run === run) this.progress = p; });
+          if (this._run !== run) return;
+          this.progress = { phase: 'done', percent: 100 };
+          setTimeout(() => { if (this._run === run) this.close(); }, 1200);
+        } catch (err) {
+          if (this._run !== run) return;
+          this.progress = null;
+          this.error = (err && err.message) || this.labels.labelError;
+        } finally {
+          if (this._run === run) this.saving = false;
+        }
+      },
+    };
+  };
+</script>

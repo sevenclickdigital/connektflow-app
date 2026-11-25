@@ -17,6 +17,8 @@ class MediaLibraryConfig(AppConfig):
         from apps.media_library.tasks import (
             ORPHANED_MEDIA_SWEEP_INTERVAL_SECONDS,
             PENDING_UPLOAD_SWEEP_INTERVAL_SECONDS,
+            STALLED_TRIM_SWEEP_INTERVAL_SECONDS,
+            fail_stalled_video_trims,
             run_orphaned_media_sweep,
             sweep_pending_uploads,
         )
@@ -27,6 +29,12 @@ class MediaLibraryConfig(AppConfig):
             sweep_pending_uploads,
             repeat=PENDING_UPLOAD_SWEEP_INTERVAL_SECONDS,
             verbose_name="sweep_pending_uploads",
+        )
+        # Settle video trims whose media worker died or never ran.
+        register_recurring_task(
+            fail_stalled_video_trims,
+            repeat=STALLED_TRIM_SWEEP_INTERVAL_SECONDS,
+            verbose_name="fail_stalled_video_trims",
         )
         register_recurring_task(
             run_orphaned_media_sweep,

@@ -152,6 +152,12 @@ class MediaAsset(models.Model):
         choices=ProcessingStatus.choices,
         default=ProcessingStatus.COMPLETED,
     )
+    # Why a FAILED asset failed, as a code ``services.processing_error_message``
+    # turns into the sentence shown; "" when nothing recorded one.
+    processing_error = models.CharField(max_length=40, blank=True, default="", db_default="")
+    # How far a background job on the file has got, 0-100, while it is
+    # ``processing``; the video trim reports it (``tasks.trim_video_copy``).
+    processing_progress = models.PositiveSmallIntegerField(default=0, db_default=0)
     processed_variants = models.JSONField(
         default=dict,
         blank=True,

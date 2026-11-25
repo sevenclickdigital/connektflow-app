@@ -3,6 +3,7 @@
 import contextlib
 import io
 import logging
+import math
 import os
 import subprocess
 import tempfile
@@ -868,28 +869,210 @@ def crop_into_new_asset(asset, *, workspace, x, y, width, height, uploaded_by, d
     return cropped
 
 
-def trim_video(input_path, output_path, start_seconds, end_seconds):
-    """Trim a video using ffmpeg."""
+def trim_video(input_path, output_path, start_seconds, end_seconds, *, crf=23, fit_for_phone=False, on_progress=None):
+    """Write ``start_seconds``..``end_seconds`` of a video to ``output_path`` as H.264/AAC MP4.
+
+    Re-encoded rather than stream-copied: a copy can only cut on a keyframe, so
+    a 60 s cut could come out at 61 s and still be refused as a Story. ``-ss``
+    before ``-i`` seeks fast and, with a re-encode, frame-accurately. 8-bit
+    4:2:0 is what Instagram and YouTube take (a phone's HDR video is 10-bit);
+    the rotation is applied to the pixels, and audio is kept when there is any.
+    ``crf`` trades size for quality (higher is smaller).
+
+    ``fit_for_phone`` also brings the picture down to at most 1080 px on its
+    short side and 30 frames a second, which is all a Story or a Short shows:
+    a 4K or 60 fps phone video otherwise stays over a size limit however it is
+    compressed, and takes several times as long to encode. Off for a library
+    trim, which keeps the resolution it was given. Encoding uses
+    ``MEDIA_LIBRARY_FFMPEG_THREADS`` threads.
+
+    ``on_progress(fraction)`` is called as ffmpeg reports how much of the
+    stretch it has written (``-progress``), from 0 to 1. Raises
+    ``RuntimeError`` when ffmpeg fails and ``subprocess.TimeoutExpired`` past
+    ``MEDIA_LIBRARY_FFMPEG_TIMEOUT``.
+    """
+    import time
+
     timeout = getattr(settings, "MEDIA_LIBRARY_FFMPEG_TIMEOUT", 300)
-    result = subprocess.run(
-        [
-            "ffmpeg",
-            "-i",
-            str(input_path),
-            "-ss",
-            str(start_seconds),
-            "-to",
-            str(end_seconds),
-            "-c",
-            "copy",
-            "-y",
-            str(output_path),
-        ],
-        capture_output=True,
-        timeout=timeout,
+    length = float(end_seconds) - float(start_seconds)
+    command = [
+        "ffmpeg",
+        "-y",
+        "-nostats",
+        "-loglevel",
+        "error",
+        "-progress",
+        "pipe:1",
+        "-ss",
+        f"{float(start_seconds):.3f}",
+        "-i",
+        str(input_path),
+        "-t",
+        f"{length:.3f}",
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a?",
+        *(PHONE_FIT_ARGS if fit_for_phone else ()),
+        "-threads",
+        str(getattr(settings, "MEDIA_LIBRARY_FFMPEG_THREADS", 2)),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        str(int(crf)),
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ]
+    deadline = time.monotonic() + timeout
+    # stderr goes to a file: only errors are logged there, but a pipe nobody
+    # reads while stdout is being consumed could still fill and stall ffmpeg.
+    with tempfile.TemporaryFile() as errors:
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=errors, text=True)
+        try:
+            for line in process.stdout:
+                if time.monotonic() > deadline:
+                    raise subprocess.TimeoutExpired(command, timeout)
+                key, _sep, value = line.strip().partition("=")
+                if on_progress and key == "out_time_us" and value.isdigit() and length > 0:
+                    on_progress(min(1.0, int(value) / 1_000_000 / length))
+            process.wait(timeout=max(1.0, deadline - time.monotonic()))
+        except BaseException:
+            process.kill()
+            process.wait()
+            raise
+        if process.returncode != 0:
+            errors.seek(0)
+            raise RuntimeError(f"FFmpeg trim failed: {errors.read()[-2000:].decode(errors='replace')}")
+
+
+# ``trim_video(fit_for_phone=True)``: the short side at most 1080 px (the even
+# size closest to the aspect, by -2), at most 30 frames a second.
+PHONE_FIT_ARGS = (
+    "-vf",
+    "scale=w='if(lte(iw,ih),min(iw,1080),-2)':h='if(lte(iw,ih),-2,min(ih,1080))'",
+    "-fpsmax",
+    "30",
+)
+
+
+# The shortest stretch the trimmer cuts, in seconds.
+MIN_TRIM_SECONDS = 1.0
+
+
+class VideoTrimError(Exception):
+    """A trim that can't be made; ``code`` is stored in ``MediaAsset.processing_error``."""
+
+    def __init__(self, code):
+        super().__init__(code)
+        self.code = code
+
+
+def processing_error_message(code):
+    """The sentence shown for a ``MediaAsset.processing_error`` code."""
+    messages = {
+        "trim_range": _("The stretch chosen is outside the video. Choose it again."),
+        "trim_too_large": _(
+            "Even compressed, the video is still larger than this destination takes. "
+            "Choose a shorter stretch, or publish it in another format."
+        ),
+        "trim_quota": _("Storage quota exceeded. Free up space or upgrade your plan."),
+        "trim_timeout": _("The video took too long to trim. Try a shorter stretch, or try again later."),
+        "trim_source": _("The original video could not be read. Upload it again and try once more."),
+        "trim_stalled": _("The video processing stopped before it finished. Try again."),
+    }
+    return messages.get(code) or _("The video could not be trimmed. Try again.")
+
+
+def validate_trim_range(start, end, *, duration, max_seconds=None):
+    """``(start, end)`` as floats, or raise ``ValueError`` with the sentence to show.
+
+    ``duration`` is the video's length as measured (0 when unknown, which only
+    skips the check against it: the trim task checks the real length again).
+    ``max_seconds`` is the longest stretch the destination takes, or None.
+    """
+    try:
+        start, end = float(start), float(end)
+    except (TypeError, ValueError):
+        raise ValueError(_("Choose the stretch of the video to keep.")) from None
+    if not (math.isfinite(start) and math.isfinite(end)) or start < 0 or end <= start:
+        raise ValueError(_("Choose the stretch of the video to keep."))
+    if duration and end > duration + 0.05:
+        raise ValueError(_("The stretch chosen is outside the video. Choose it again."))
+    if end - start < MIN_TRIM_SECONDS:
+        raise ValueError(_("Keep at least one second of the video."))
+    if max_seconds and end - start > max_seconds + 0.05:
+        raise ValueError(
+            _("Keep at most %(limit)d seconds: that is the longest this destination takes.") % {"limit": max_seconds}
+        )
+    return start, end
+
+
+def start_video_trim(
+    asset,
+    *,
+    organization,
+    workspace,
+    start,
+    end,
+    uploaded_by,
+    max_seconds=None,
+    max_bytes=None,
+    fit_for_phone=False,
+    platform_post_ids=(),
+):
+    """A new video asset that will hold ``start``..``end`` of ``asset``, trimmed in the background.
+
+    Like ``crop_into_new_asset``, the source is never touched: other posts may
+    use it, and the full video stays in the library. The copy is created at
+    once, empty and ``processing``, in ``workspace`` (None for the shared
+    library) and the source's folder when it lives there, and
+    ``tasks.trim_video_copy`` fills it. Once it is ready, the
+    ``platform_post_ids`` rows publish it in place of the source
+    (``composer.services.set_format_crop``); until then they keep the source.
+
+    ``max_seconds`` / ``max_bytes`` are what the destination takes, checked
+    here against the stored length and again by the task on the real file.
+    ``fit_for_phone`` is passed on to ``trim_video`` (a post format's copy).
+    Raises ``ValueError`` with the sentence to show for an invalid stretch.
+    """
+    from .tasks import trim_video_copy
+
+    if asset.media_type != MediaAsset.MediaType.VIDEO or not asset.file:
+        raise ValueError(_("Only videos can be trimmed."))
+    start, end = validate_trim_range(start, end, duration=asset.duration, max_seconds=max_seconds)
+
+    stem = os.path.splitext(asset.filename or "video")[0]
+    copy = MediaAsset.objects.create(
+        organization=organization,
+        workspace=workspace,
+        folder=asset.folder if asset.workspace_id == (workspace.id if workspace else None) else None,
+        filename=f"{stem}-{int(start)}-{math.ceil(end)}s.mp4",
+        media_type=MediaAsset.MediaType.VIDEO,
+        mime_type="video/mp4",
+        uploaded_by=uploaded_by,
+        processing_status=MediaAsset.ProcessingStatus.PROCESSING,
+        alt_text=asset.alt_text,
+        title=asset.title,
+        tags=list(asset.tags or []),
+        derived_from=asset,
     )
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg trim failed: {result.stderr.decode()}")
+    trim_video_copy(
+        str(copy.id),
+        start,
+        end,
+        max_seconds=max_seconds,
+        max_bytes=max_bytes,
+        fit_for_phone=fit_for_phone,
+        platform_post_ids=[str(i) for i in platform_post_ids],
+    )
+    return copy
 
 
 # Minimum asset age (days) the orphaned-media sweep considers — the single source

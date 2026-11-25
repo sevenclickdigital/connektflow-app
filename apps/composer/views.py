@@ -82,6 +82,8 @@ from .services import (
     ensure_tags,
     format_blocker,
     format_media_replacements,
+    format_video_limits,
+    format_videos,
     image_count_blocker,
     media_blocker,
     media_change_blocker,
@@ -728,9 +730,15 @@ def _composer_ordered_media_types(request, post, workspace) -> list[str]:
     return (saved + [by_id[str(i)] for i in pending_ids if str(i) in by_id])[:2]
 
 
-def _composer_videos(request, post, workspace) -> list[tuple[float, int, int, int]]:
-    """``post_videos`` plus the uploads waiting to be attached."""
-    saved = [] if post._state.adding else post_videos(post)
+def _composer_videos(request, post, workspace, *, account, fmt) -> list[tuple[float, int, int, int]]:
+    """The videos ``fmt`` of ``account`` would publish, plus the uploads waiting to be attached.
+
+    A saved row publishes its own trimmed copy where it has one (``format_videos``).
+    """
+    saved = []
+    if not post._state.adding:
+        row = post.platform_posts.filter(social_account=account, format=fmt).first()
+        saved = format_videos(row) if row else post_videos(post)
     pending_ids = _pending_media_ids(request, post, workspace)
     if not pending_ids:
         return saved
@@ -756,14 +764,12 @@ def _validate_formats(request, post, workspace, action):
     if all(formats == [PlatformPost.Format.DEFAULT] for formats in targets.values()):
         return None
     media = _composer_ordered_media_types(request, post, workspace)
-    videos = None
     for account in accounts:
         formats = targets[str(account.id)]
         for fmt in formats:
             reason = format_blocker(fmt, media)
             if not reason and fmt in (PlatformPost.Format.STORY, PlatformPost.Format.SHORT):
-                if videos is None:
-                    videos = _composer_videos(request, post, workspace)
+                videos = _composer_videos(request, post, workspace, account=account, fmt=fmt)
                 if fmt == PlatformPost.Format.STORY:
                     reason = story_video_blocker(account, videos=videos)
                 else:
@@ -1116,6 +1122,8 @@ def compose(request, workspace_id, post_id=None):
                     "url": asset.file.url,
                     "width": asset.width,
                     "height": asset.height,
+                    "duration": asset.duration,
+                    "size": asset.file_size,
                 }
         for pp in scoped_platform_posts:
             selected_formats.setdefault(str(pp.social_account_id), []).append(pp.format)
@@ -3509,6 +3517,73 @@ def crop_format_media(request, workspace_id, post_id):
                 "width": cropped.width,
                 "height": cropped.height,
             },
+        }
+    )
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def trim_format_media(request, workspace_id, post_id):
+    """Trim one attached video for a single format of an account, leaving the others as they are.
+
+    ``target`` is ``"<account>:<format>"``, ``asset_id`` the attachment's video
+    and ``start`` / ``end`` the stretch to keep, in seconds. The trim runs in
+    the background (``media_library.services.start_video_trim``); once ready,
+    the copy goes on that format's rows, as ``crop_format_media`` does with an
+    image, and until then they keep the full video. The longest stretch is the
+    format's own limit (``format_video_limits``), never one sent by the page.
+    Answers JSON naming the copy and where to poll it.
+    """
+    from django.urls import reverse
+
+    from apps.media_library.services import start_video_trim
+
+    workspace = _get_workspace(request, workspace_id)
+    post = get_object_or_404(Post, id=post_id, workspace=workspace)
+    _require_post_editor(request, post)
+    if _is_readonly_write(request, post):
+        return HttpResponse(
+            _("This post has already published and can't be edited."), status=400, content_type="text/plain"
+        )
+    acc_id, _sep, fmt = request.POST.get("target", "").partition(":")
+    asset_id = request.POST.get("asset_id", "")
+    if not (_is_valid_uuid(acc_id) and _is_valid_uuid(asset_id)):
+        raise Http404
+    attachment = get_object_or_404(PostMedia.objects.select_related("media_asset"), post=post, media_asset_id=asset_id)
+    rows = list(
+        post.platform_posts.select_related("social_account")
+        .filter(social_account_id=acc_id, social_account__workspace=workspace, format=fmt)
+        .exclude(status__in=PlatformPost.PROTECTED_STATUSES)
+    )
+    if not rows:
+        raise Http404
+
+    max_seconds, max_bytes = format_video_limits(rows[0].social_account, fmt)
+    try:
+        copy = start_video_trim(
+            attachment.media_asset,
+            organization=workspace.organization,
+            workspace=workspace,
+            start=request.POST.get("start"),
+            end=request.POST.get("end"),
+            uploaded_by=request.user,
+            max_seconds=max_seconds,
+            max_bytes=max_bytes,
+            fit_for_phone=True,
+            platform_post_ids=[row.pk for row in rows],
+        )
+    except ValueError as exc:
+        return HttpResponse(str(exc), status=400, content_type="text/plain")
+    _send_back_for_review(request, post)
+    return JsonResponse(
+        {
+            "target": f"{acc_id}:{fmt}",
+            "source": str(attachment.media_asset_id),
+            "copy": str(copy.id),
+            "status_url": reverse(
+                "media_library:processing_status", kwargs={"workspace_id": workspace.id, "asset_id": copy.id}
+            ),
         }
     )
 

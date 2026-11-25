@@ -85,6 +85,7 @@ urlpatterns = [
     path("compose/<uuid:post_id>/remove-media/<uuid:media_id>/", views.remove_media, name="remove_media"),
     path("compose/remove-pending-media/<uuid:asset_id>/", views.remove_pending_media, name="remove_pending_media"),
     path("compose/<uuid:post_id>/crop-media/<uuid:media_id>/", views.crop_media, name="crop_media"),
+    path("compose/<uuid:post_id>/trim-format-media/", views.trim_format_media, name="trim_format_media"),
     path("compose/crop-pending-media/<uuid:asset_id>/", views.crop_pending_media, name="crop_pending_media"),
     path("compose/<uuid:post_id>/crop-format-media/", views.crop_format_media, name="crop_format_media"),
     # Drafts

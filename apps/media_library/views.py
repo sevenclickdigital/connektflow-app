@@ -27,7 +27,7 @@ from .services import (
     delete_asset,
     restore_version,
 )
-from .tasks import process_image_edit, process_media_asset, process_video_trim
+from .tasks import process_image_edit, process_media_asset
 from .validators import get_accepted_file_types
 
 
@@ -335,6 +335,24 @@ def asset_detail(request, workspace_id, asset_id):
 # ──────────────────────────────────────────────────────────────
 
 
+def _trim_into_copy(request, asset, *, organization, workspace):
+    """Start the library's trim of ``asset`` into a new video; the sentence to show when refused, or ""."""
+    from .services import start_video_trim
+
+    try:
+        start_video_trim(
+            asset,
+            organization=organization,
+            workspace=workspace,
+            start=request.POST.get("trim_start"),
+            end=request.POST.get("trim_end"),
+            uploaded_by=request.user,
+        )
+    except ValueError as exc:
+        return str(exc)
+    return ""
+
+
 @login_required
 @require_permission("edit_media")
 @require_http_methods(["GET", "POST"])
@@ -414,20 +432,14 @@ def asset_edit(request, workspace_id, asset_id):
                 process_image_edit(str(version.id), operations)
 
         elif asset.media_type == MediaAsset.MediaType.VIDEO:
-            start = request.POST.get("trim_start")
-            end = request.POST.get("trim_end")
-            if start is not None and end is not None:
-                start_seconds = float(start)
-                end_seconds = float(end)
-                description = f"Trimmed to {start_seconds:.1f}s - {end_seconds:.1f}s"
-
-                version = create_version(
-                    asset=asset,
-                    file=asset.file,
-                    change_description=description,
-                    created_by=request.user,
-                )
-                process_video_trim(str(version.id), start_seconds, end_seconds)
+            trim_error = _trim_into_copy(request, asset, organization=workspace.organization, workspace=workspace)
+            if not trim_error:
+                return redirect("media_library:index", workspace_id=workspace.id)
+            return render(
+                request,
+                "media_library/asset_edit.html",
+                {"asset": asset, "workspace": workspace, "trim_error": trim_error},
+            )
 
         return redirect("media_library:asset_detail", workspace_id=workspace.id, asset_id=asset.id)
 
@@ -915,12 +927,28 @@ def processing_status(request, workspace_id, asset_id):
             )
         return HttpResponse(status=204)
 
-    return JsonResponse(
-        {
-            "status": asset.processing_status,
-            "thumbnail_url": asset.thumbnail.url if asset.thumbnail else None,
+    # The composer polls a trimmed copy here: once ready it needs what the
+    # format's checks read, and if it failed, the reason to show.
+    payload = {
+        "status": asset.processing_status,
+        "thumbnail_url": asset.thumbnail.url if asset.thumbnail else None,
+    }
+    if asset.processing_status == MediaAsset.ProcessingStatus.COMPLETED and asset.file:
+        payload["asset"] = {
+            "id": str(asset.id),
+            "url": asset.file.url,
+            "width": asset.width,
+            "height": asset.height,
+            "duration": asset.duration,
+            "size": asset.file_size,
         }
-    )
+    elif asset.processing_status == MediaAsset.ProcessingStatus.PROCESSING:
+        payload["progress"] = asset.processing_progress
+    elif asset.processing_status == MediaAsset.ProcessingStatus.FAILED and asset.processing_error:
+        from .services import processing_error_message
+
+        payload["error"] = processing_error_message(asset.processing_error)
+    return JsonResponse(payload)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -1147,20 +1175,20 @@ def shared_asset_edit(request, asset_id):
                 process_image_edit(str(version.id), operations)
 
         elif asset.media_type == MediaAsset.MediaType.VIDEO:
-            start = request.POST.get("trim_start")
-            end = request.POST.get("trim_end")
-            if start is not None and end is not None:
-                start_seconds = float(start)
-                end_seconds = float(end)
-                description = f"Trimmed to {start_seconds:.1f}s - {end_seconds:.1f}s"
-
-                version = create_version(
-                    asset=asset,
-                    file=asset.file,
-                    change_description=description,
-                    created_by=request.user,
-                )
-                process_video_trim(str(version.id), start_seconds, end_seconds)
+            trim_error = _trim_into_copy(request, asset, organization=org, workspace=None)
+            if not trim_error:
+                return redirect("media_library_org:shared_index")
+            return render(
+                request,
+                "media_library/asset_edit.html",
+                {
+                    "asset": asset,
+                    "workspace": None,
+                    "is_shared_library": True,
+                    "is_admin": True,
+                    "trim_error": trim_error,
+                },
+            )
 
         return redirect("media_library_org:shared_asset_detail", asset_id=asset.id)
 
