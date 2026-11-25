@@ -126,7 +126,7 @@ def test_instagram_poll_continuation_survives_a_fresh_worker(connected_account, 
             InboxSyncEngine().sync_all()
 
     connected_account.refresh_from_db()
-    assert connected_account.instagram_dm_poll_state == {}
+    assert set(connected_account.instagram_dm_poll_state) == {"page_id", "owner_id", "synced_until"}
     assert calls[100][0].endswith("/busy/messages")
     assert calls[100][1] == "99"
     assert InboxMessage.objects.filter(social_account=connected_account, platform_message_id="later-dm").exists()

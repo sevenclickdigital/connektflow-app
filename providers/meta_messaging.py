@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlsplit
 
 import httpx
@@ -29,11 +29,19 @@ META_DM_PLATFORMS = {"facebook", "instagram", "instagram_login"}
 DM_POLL_BUDGET_SECONDS = 20
 DM_REQUEST_TIMEOUT_SECONDS = 10
 DM_MIN_REQUEST_SECONDS = 6
+# How far before the last completed walk the next one looks again. Meta can
+# take a while to list a message it already delivered; reading a few minutes
+# twice costs nothing, since a message already imported is only updated.
+DM_OVERLAP = timedelta(minutes=10)
 
 
 def enabled(value) -> bool:
     """Accept booleans and the strings stored by the credential admin."""
     return value is True or (isinstance(value, str) and value.strip().lower() == "true")
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
 
 
 def message_timestamp(value) -> datetime | None:
@@ -106,10 +114,11 @@ def require_message_id(data: dict, *, platform: str) -> str:
 
 
 class InstagramMessageBatch(list[InboxMessage]):
-    """Messages and the continuation to commit after importing them.
+    """Messages and the poll state to commit after importing them.
 
-    None means the DM channel did not complete a poll; an empty dict means the
-    walk finished and the previous continuation can be cleared.
+    None means the DM channel did not complete a poll, so the state already
+    stored stands. Otherwise it is where the walk stopped, or, once it has
+    finished, the time the next one starts from (``synced_until``).
     """
 
     def __init__(self, messages=(), *, poll_state: dict | None = None):
@@ -137,12 +146,22 @@ def meta_subscription_needs_reconnect(exc: Exception) -> bool:
 def fetch_instagram_page_messages(
     request, *, base_url, page_id, owner_id, access_token, since=None, poll_state=None
 ) -> InstagramMessageBatch:
-    """Walk conversations and messages with durable continuation and bounds.
+    """Read the account's direct messages: all of them once, then only what is new.
 
-    Keep at most one conversation page's remaining IDs and the current message
-    cursor. A later worker resumes that exact walk instead of spending every
-    poll's budget on the same early history. Rebuild URLs locally, never follow
-    platform-provided URLs, and ignore the shared comment/DM high-water mark.
+    The first walk goes through every conversation and every message, across
+    as many polls as it takes: it keeps the conversation ids still to read and
+    the current message cursor, so a later worker resumes that exact walk
+    instead of spending every poll's budget on the same early history.
+
+    A walk that finishes records when it started (``synced_until``). The next
+    one lists the conversations, which come most recently updated first with
+    their ``updated_time``, enters only those updated since then and stops
+    reading one at the first message older than that. An account nobody wrote
+    to costs one request per poll, instead of its whole history again.
+
+    Rebuild URLs locally, never follow platform-provided URLs, and ignore the
+    shared comment/DM high-water mark (``since``): it includes comments, and a
+    newer comment must never hide an older DM after a failed DM poll.
 
     A request that times out after others answered ends the walk there: what
     was read is returned with the continuation, and the next poll takes it
@@ -161,6 +180,20 @@ def fetch_instagram_page_messages(
     conversation_after = state.get("conversation_after")
     message_after = state.get("message_after")
     listed_conversations = bool(conversations or conversation_after)
+    if listed_conversations:
+        # A walk in progress keeps the bounds it began with.
+        walk_started = message_timestamp(state.get("started")) or _utcnow()
+        cutoff = message_timestamp(state.get("cutoff"))
+    else:
+        walk_started = _utcnow()
+        synced_until = message_timestamp(state.get("synced_until"))
+        cutoff = synced_until - DM_OVERLAP if synced_until else None
+
+    def older(value) -> bool:
+        """Whether ``value``, a platform date, falls before what this walk reads."""
+        stamp = message_timestamp(value)
+        return cutoff is not None and stamp is not None and stamp < cutoff
+
     seen_conversation_cursors = {conversation_after} if conversation_after else set()
     seen_message_cursors = {message_after} if message_after else set()
     answered = 0
@@ -197,7 +230,7 @@ def fetch_instagram_page_messages(
             try:
                 data = page(
                     f"{base_url}/{page_id}/conversations",
-                    {"platform": "instagram", "fields": "id"},
+                    {"platform": "instagram", "fields": "id,updated_time"},
                     conversation_after,
                 )
             except httpx.TimeoutException:
@@ -205,8 +238,12 @@ def fetch_instagram_page_messages(
                     raise
                 break
             answered += 1
-            conversations = [str(convo["id"]) for convo in data.get("data", []) if convo.get("id")]
+            listed = [convo for convo in data.get("data", []) if convo.get("id")]
+            conversations = [str(convo["id"]) for convo in listed if not older(convo.get("updated_time"))]
             conversation_after = next_cursor(data, seen_conversation_cursors)
+            if listed and older(listed[-1].get("updated_time")):
+                # Most recently updated first: every later page is older still.
+                conversation_after = None
             listed_conversations = True
             continue
         convo_id = conversations[0]
@@ -221,14 +258,17 @@ def fetch_instagram_page_messages(
                 raise
             break
         answered += 1
+        reached_known = False
         for msg in data.get("data", []):
+            if older(msg.get("created_time")):
+                # Newest first: the rest of the conversation was read before.
+                reached_known = True
+                break
             sender = msg.get("from") or {}
             sender_id = str(sender.get("id") or "")
             stamp = message_timestamp(msg.get("created_time"))
             if not sender_id or sender_id in {str(owner_id), str(page_id)} or msg.get("is_echo"):
                 continue
-            # The sync engine's high-water mark includes comments. A newer
-            # comment must never hide an older DM after a failed DM poll.
             if not msg.get("id") or stamp is None:
                 continue
             messages.append(
@@ -242,21 +282,24 @@ def fetch_instagram_page_messages(
                     extra=dm_extra(msg, sender_id=sender_id, conversation_id=str(convo_id)),
                 )
             )
-        message_after = next_cursor(data, seen_message_cursors)
+        message_after = None if reached_known else next_cursor(data, seen_message_cursors)
         if not message_after:
             conversations.pop(0)
             seen_message_cursors.clear()
-    continuation = {}
+    owner = {"page_id": str(page_id), "owner_id": str(owner_id)}
     if conversations or conversation_after or not listed_conversations:
         # The usual end of a poll on an account with a long history.
         logger.info("Instagram DM poll reached its bounded request/time budget")
         continuation = {
-            "page_id": str(page_id),
-            "owner_id": str(owner_id),
+            **owner,
             "conversations": conversations,
             "conversation_after": conversation_after,
             "message_after": message_after,
+            "started": walk_started.isoformat(),
+            "cutoff": cutoff.isoformat() if cutoff else None,
         }
+    else:
+        continuation = {**owner, "synced_until": walk_started.isoformat()}
     return InstagramMessageBatch(messages, poll_state=continuation)
 
 

@@ -1,5 +1,5 @@
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
@@ -310,7 +310,7 @@ def test_capped_poll_resumes_history_and_reaches_later_conversations():
         "later-conversation",
         "last-conversation",
     }
-    assert resumed.poll_state == {}
+    assert set(resumed.poll_state) == {"page_id", "owner_id", "synced_until"}
 
 
 def test_time_capped_poll_keeps_the_unvisited_conversation():
@@ -332,7 +332,7 @@ def test_time_capped_poll_keeps_the_unvisited_conversation():
     second = provider()
     second.credentials["instagram_dm_poll_state"] = batch.poll_state
     second._request = MagicMock(return_value=response({"data": []}))
-    assert second._fetch_direct_messages("token").poll_state == {}
+    assert "conversations" not in second._fetch_direct_messages("token").poll_state
     assert second._request.call_args.args[1].endswith("/later/messages")
 
 
@@ -397,6 +397,126 @@ def test_no_request_is_started_without_the_time_to_finish_it():
     assert batch.poll_state["message_after"] == "4"
 
 
+NOW = datetime(2026, 11, 25, 12, 0, tzinfo=UTC)
+
+
+def _synced(hours_ago: float) -> dict:
+    """The state of an account whose last full walk began ``hours_ago``."""
+    return {"page_id": "page-1", "owner_id": "ig-1", "synced_until": (NOW - timedelta(hours=hours_ago)).isoformat()}
+
+
+def _stamp(hours_ago: float) -> str:
+    return (NOW - timedelta(hours=hours_ago)).strftime("%Y-%m-%dT%H:%M:%S+0000")
+
+
+def _poll(instance):
+    with patch("providers.meta_messaging._utcnow", return_value=NOW):
+        return instance._fetch_direct_messages("token")
+
+
+def test_a_finished_walk_records_when_it_started():
+    instance = provider()
+    instance._request = MagicMock(return_value=response({"data": []}))
+
+    assert _poll(instance).poll_state == {"page_id": "page-1", "owner_id": "ig-1", "synced_until": NOW.isoformat()}
+
+
+def test_an_account_nobody_wrote_to_costs_one_request():
+    """Reading every conversation again on every poll took 20 s per account."""
+    instance = provider()
+    instance.credentials["instagram_dm_poll_state"] = _synced(hours_ago=1)
+    instance._request = MagicMock(
+        return_value=response(
+            {
+                "data": [{"id": "quiet-1", "updated_time": _stamp(30)}, {"id": "quiet-2", "updated_time": _stamp(300)}],
+                "paging": {"next": "https://untrusted/next", "cursors": {"after": "older-conversations"}},
+            }
+        )
+    )
+
+    batch = _poll(instance)
+
+    assert list(batch) == []
+    assert instance._request.call_count == 1
+    assert instance._request.call_args.kwargs["params"]["fields"] == "id,updated_time"
+    assert batch.poll_state["synced_until"] == NOW.isoformat()
+
+
+def test_only_the_conversation_written_to_is_read_and_only_its_new_messages():
+    instance = provider()
+    instance.credentials["instagram_dm_poll_state"] = _synced(hours_ago=1)
+    asked = []
+
+    def request(method, url, **kwargs):
+        asked.append(url.rsplit("/", 2)[-2])
+        if url.endswith("/conversations"):
+            return response(
+                {"data": [{"id": "active", "updated_time": _stamp(0.2)}, {"id": "quiet", "updated_time": _stamp(48)}]}
+            )
+        return response(
+            {
+                "data": [
+                    {"id": "new", "from": {"id": "customer"}, "created_time": _stamp(0.2)},
+                    {"id": "known", "from": {"id": "customer"}, "created_time": _stamp(20)},
+                ],
+                "paging": {"next": "https://untrusted/next", "cursors": {"after": "the-rest-of-the-history"}},
+            }
+        )
+
+    instance._request = MagicMock(side_effect=request)
+
+    batch = _poll(instance)
+
+    assert [message.platform_message_id for message in batch] == ["new"]
+    assert asked == ["page-1", "active"]
+    assert "conversations" not in batch.poll_state
+
+
+def test_a_message_just_before_the_last_walk_is_read_again():
+    """Meta can list a message minutes after delivering it; the overlap is what catches it."""
+    instance = provider()
+    instance.credentials["instagram_dm_poll_state"] = _synced(hours_ago=1)
+
+    def request(method, url, **kwargs):
+        if url.endswith("/conversations"):
+            return response({"data": [{"id": "late", "updated_time": _stamp(1.1)}]})
+        return response({"data": [{"id": "late-message", "from": {"id": "customer"}, "created_time": _stamp(1.1)}]})
+
+    instance._request = MagicMock(side_effect=request)
+
+    assert [message.platform_message_id for message in _poll(instance)] == ["late-message"]
+
+
+def test_an_interrupted_walk_keeps_its_bounds_until_it_finishes():
+    """What arrives while a walk is spread over several polls belongs to the next one."""
+    began = NOW - timedelta(minutes=30)
+    instance = provider()
+    instance.credentials["instagram_dm_poll_state"] = {
+        "page_id": "page-1",
+        "owner_id": "ig-1",
+        "conversations": ["pending"],
+        "conversation_after": None,
+        "message_after": None,
+        "started": began.isoformat(),
+        "cutoff": (NOW - timedelta(hours=5)).isoformat(),
+    }
+    instance._request = MagicMock(
+        return_value=response(
+            {
+                "data": [
+                    {"id": "inside", "from": {"id": "customer"}, "created_time": _stamp(2)},
+                    {"id": "before", "from": {"id": "customer"}, "created_time": _stamp(9)},
+                ]
+            }
+        )
+    )
+
+    batch = _poll(instance)
+
+    assert [message.platform_message_id for message in batch] == ["inside"]
+    assert batch.poll_state["synced_until"] == began.isoformat()
+
+
 def test_continuation_is_discarded_when_linked_page_changes():
     instance = provider()
     instance.credentials["instagram_dm_poll_state"] = {
@@ -405,7 +525,7 @@ def test_continuation_is_discarded_when_linked_page_changes():
         "conversations": ["old-conversation"],
     }
     instance._request = MagicMock(return_value=response({"data": []}))
-    assert instance._fetch_direct_messages("token").poll_state == {}
+    assert "conversations" not in instance._fetch_direct_messages("token").poll_state
     assert instance._request.call_args.args[1].endswith("/page-1/conversations")
 
 
