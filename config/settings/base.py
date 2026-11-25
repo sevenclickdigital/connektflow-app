@@ -645,18 +645,22 @@ STORAGE_QUOTA_DEFAULT = 5 * 1024**3  # 5 GB fallback for orgs without an active 
 # Encryption key derivation salt - MUST be set per-deployment via environment
 ENCRYPTION_KEY_SALT = env("ENCRYPTION_KEY_SALT", default="").encode("utf-8") or None
 
-# Sentry
+# Error tracker (Sentry protocol; production runs GlitchTip). What is sent,
+# and what is masked first: apps/common/error_reporting.py.
 SENTRY_DSN = env("SENTRY_DSN")
 if SENTRY_DSN:
-    import sentry_sdk
+    from apps.common import error_reporting
 
-    # Both rates are env-tunable because the profiler keeps stack samples in
-    # memory, which a 512 MB dyno cannot spare. Profiling defaults to off; turn
-    # it on deliberately when you are actually chasing a regression.
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
+    error_reporting.init(
+        SENTRY_DSN,
+        environment=env("SENTRY_ENVIRONMENT", default="production"),
+        # The share of requests and background tasks timed for the performance
+        # view. Profiling keeps stack samples in memory: off unless chasing a
+        # regression.
+        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.02),
         profiles_sample_rate=env.float("SENTRY_PROFILES_SAMPLE_RATE", default=0.0),
+        # Log lines from this level up are kept as searchable logs; "" keeps none.
+        logs_level=env("SENTRY_LOGS_LEVEL", default="WARNING"),
     )
 
 # Platform credentials env vars (cloud version)

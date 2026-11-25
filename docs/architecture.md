@@ -19,7 +19,7 @@ How the codebase is put together today. It replaces the original v1 plan (`devel
 | Email | SMTP behind a budget wrapper (`apps/common/mail.py`). Resend is used as an SMTP provider and sends bounce webhooks. |
 | Agent API | `django-ninja` (REST + OpenAPI), a hand-written MCP transport, `django-oauth-toolkit` |
 | Payments | Asaas (workspace billing). Stripe is only reached through the optional Intelligence service. |
-| Monitoring | Sentry (`sentry-sdk`), turned on when `SENTRY_DSN` is set |
+| Monitoring | GlitchTip through `sentry-sdk` (Sentry protocol), turned on when `SENTRY_DSN` is set — §18a |
 | Web server | Gunicorn (`--workers 1 --threads 4`) behind Dokploy's Traefik |
 
 ---
@@ -166,6 +166,7 @@ Status belongs to `PlatformPost`, which is one row per post, account and format 
 | `end_cancelled_subscriptions` | daily | `apps/billing/apps.py` |
 | `remove_expired_archives` | daily | `apps/billing/apps.py` |
 | `purge_email_counters` | daily | `apps/common/apps.py` |
+| `purge_completed_tasks` (the queue library's `CompletedTask` rows: successes past 7 days, failures past 30) | daily | `apps/common/apps.py` |
 | `clear_expired_sessions` | daily | `apps/accounts/apps.py` |
 | `send_task_due_reminders` | hourly | `apps/tasks/apps.py` |
 | `intelligence_reconcile` | 6 h (only relevant when Intelligence is enabled) | `apps/intelligence/apps.py` |
@@ -363,6 +364,17 @@ The image (`Dockerfile`, `python:3.12-slim`) installs FFmpeg, gettext and Node 2
 
 ---
 
+## 18a. Monitoring
+
+Everything goes to one error tracker, GlitchTip (`erros.connektflow.com.br`, its own Dokploy stack), through `sentry-sdk`; `apps/common/error_reporting.py` holds what is sent and nothing is sent without `SENTRY_DSN`.
+
+- **Server errors.** Uncaught exceptions and every `logger.error` / `logger.exception` become issues, in the app and in every worker. A failing background task is one of them: the queue library logs its traceback at error level before rescheduling it. Each event carries the tag `service` (`app`, `worker-sync`…), and inside a task also `lane` and `task`.
+- **Secrets are masked first.** Events carry the local variables of every frame; `SecretScrubber` masks any variable, header or field whose name contains `token`, `secret`, `password`, `credential`, `authorization`, `cookie` or `api_key` (the SDK's own list matches whole names only and would let `access_token` through). Name a new kind of secret so that it matches, or add its part to `SECRET_NAME_PARTS`.
+- **Logs.** Lines from `SENTRY_LOGS_LEVEL` up (default `WARNING`) are also kept as searchable logs, which is what survives a deploy; `docker logs` is capped at 3 × 10 MB per container and lost when it is recreated.
+- **Browser errors.** `static/js/error-reporter.js` (loaded first by `base.html` for signed-in users) posts uncaught errors, unhandled rejections, scripts and stylesheets that fail to load, HTMX swaps that cannot be done (`htmx:targetError`, `swapError`, `oobErrorNoTarget`, `onLoadError`) and main-thread freezes of 3 s or more to `client-errors/` (`monitoring_views.client_error`), which files each as an issue tagged `source=browser`. No third-party script, since the CSP only allows connections to the app itself. At most 5 reports per page load and 30 per account per hour.
+- **Queues.** `GET /health/queues/` answers 503 with the late lanes when a due task has waited past `worker.LANE_MAX_WAIT_SECONDS` (10 min for publishing and realtime, up to 4 h for sync), from one query cached for 30 s. Together with `/health/` it is what GlitchTip's uptime monitors poll: a worker container that is down, hung or far behind shows there. A worker that hangs also ends itself and reports why (the watchdog, §7).
+- **Performance.** `SENTRY_TRACES_SAMPLE_RATE` (default 2 %) is the share of requests and background tasks timed (`queue.task` transactions, named after the task).
+
 ## 19. Backup and Restore
 
 There is no backup management command. What needs backing up:
@@ -386,9 +398,9 @@ To restore: load the dump into an empty database, restore the media volume, and 
 - **Publisher:** `PUBLISHER_*` timeouts and concurrency
 - **Webhooks:** `FACEBOOK_WEBHOOK_VERIFY_TOKEN`, `INSTAGRAM_LOGIN_WEBHOOK_VERIFY_TOKEN`, `YOUTUBE_WEBHOOK_SECRET`
 - **Billing:** `BILLING_WORKSPACE_PRICE_CENTS`, `BILLING_ANNUAL_DISCOUNT_PERCENT`, `BILLING_VOLUME_DISCOUNTS`, `BILLING_TRIAL_DAYS`, `BILLING_REQUIRE_SUBSCRIPTION` (starting values only: Plans and prices overrides each once saved), `ASAAS_API_KEY`, `ASAAS_API_BASE`, `ASAAS_WEBHOOK_TOKEN`
-- **Optional:** `INTELLIGENCE_*` / `STUDIO_*`, `MCP_PUBLIC_BASE_URL`, `MCP_OAUTH_ISSUER_URL`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`
+- **Optional:** `INTELLIGENCE_*` / `STUDIO_*`, `MCP_PUBLIC_BASE_URL`, `MCP_OAUTH_ISSUER_URL`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`, `SENTRY_LOGS_LEVEL`
 
-These are read in `config/settings/base.py` but missing from `.env.example`: `SENTRY_DSN`, `REDIS_URL`, `BB_TRUSTED_PROXIES`, `RESEND_WEBHOOK_SECRET`, `EMAIL_SENDING_ENABLED`, `EMAIL_*_LIMIT`, `INVITE_*`, `ASAAS_TIMEOUT_SECONDS`, `BILLING_WORKSPACE_BASE_STORAGE_BYTES`, `BILLING_STORAGE_*`, `STORAGE_QUOTA_ENABLED`, `MAX_ACCOUNTS_PER_PLATFORM`, `INBOX_YOUTUBE_MIN_POLL_SECONDS`, `INBOX_DEEP_SWEEP_SECONDS`, `PUBLISHER_FIRST_COMMENT_*`.
+These are read in `config/settings/base.py` but missing from `.env.example`: `REDIS_URL`, `BB_TRUSTED_PROXIES`, `RESEND_WEBHOOK_SECRET`, `EMAIL_SENDING_ENABLED`, `EMAIL_*_LIMIT`, `INVITE_*`, `ASAAS_TIMEOUT_SECONDS`, `BILLING_WORKSPACE_BASE_STORAGE_BYTES`, `BILLING_STORAGE_*`, `STORAGE_QUOTA_ENABLED`, `MAX_ACCOUNTS_PER_PLATFORM`, `INBOX_YOUTUBE_MIN_POLL_SECONDS`, `INBOX_DEEP_SWEEP_SECONDS`, `PUBLISHER_FIRST_COMMENT_*`.
 
 ---
 

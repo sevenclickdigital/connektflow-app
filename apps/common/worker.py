@@ -40,11 +40,14 @@ import os
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
+from datetime import datetime
 
+import sentry_sdk
 from background_task.models import Task
 from background_task.settings import app_settings
-from background_task.tasks import Tasks, bg_runner, tasks
+from background_task.tasks import Tasks, autodiscover, bg_runner, tasks
 from django.db import OperationalError, close_old_connections, connection, connections
+from django.db.models import Min, QuerySet
 from django.utils import timezone
 
 from apps.common.db import in_worker_thread
@@ -123,6 +126,20 @@ WORKER_SCOPES = ("all", *LANES)
 # worker container and the publish engine's pools (test_connection_budget.py).
 MIN_DATABASE_CONNECTIONS = 30
 
+# How long a due task may wait before its lane counts as late (``late_lanes``),
+# whatever the cause - a worker that is down, hung or simply behind. Short
+# where someone is waiting on the result; long where a queue behind a slow
+# job is the normal state of the lane.
+LANE_MAX_WAIT_SECONDS = {
+    "publishing": 10 * 60,
+    "realtime": 10 * 60,
+    "inbox": 30 * 60,
+    "email": 60 * 60,
+    "media": 30 * 60,
+    "general": 60 * 60,
+    "sync": 4 * 60 * 60,
+}
+
 # How long the dispatcher may go without finishing a round before the
 # watchdog takes it for hung. A round is a few short queries plus a wait of
 # ``poll_interval``, so minutes without one means it is stuck, not busy.
@@ -141,6 +158,39 @@ def lanes_for(scope: str) -> dict[str, frozenset[str] | None]:
         raise ValueError(f"Unknown worker scope {scope!r}")
     every: dict[str, frozenset[str] | None] = {**LANE_TASK_NAMES, "general": None}
     return every if scope == "all" else {scope: every[scope]}
+
+
+def discover_tasks() -> None:
+    """Fill the task registry: every app's tasks.py, and the tasks declared elsewhere."""
+    autodiscover()
+    # First-comment tasks live in engine.py, which tasks.py autodiscovery
+    # alone does not import.
+    from apps.publisher import engine  # noqa: F401
+
+
+def due_tasks(now: datetime, registry: Tasks) -> QuerySet[Task]:
+    """Tasks a worker could run at ``now``: due, not locked, not failed, still in the code."""
+    return Task.objects.unlocked(now).filter(
+        run_at__lte=now,
+        failed_at__isnull=True,
+        task_name__in=list(registry._tasks),
+    )
+
+
+def late_lanes(now: datetime | None = None, registry: Tasks | None = None) -> dict[str, int]:
+    """Lanes whose oldest due task has waited past ``LANE_MAX_WAIT_SECONDS``: name -> seconds waited.
+
+    One query over the queue table, so it is cheap enough to be polled.
+    """
+    now = now or timezone.now()
+    oldest: dict[str, datetime] = {}
+    lane_of = {name: lane for lane, names in LANE_TASK_NAMES.items() for name in names}
+    rows = due_tasks(now, tasks if registry is None else registry).values("task_name").annotate(first=Min("run_at"))
+    for row in rows:
+        lane = lane_of.get(row["task_name"], "general")
+        oldest[lane] = min(oldest.get(lane, row["first"]), row["first"])
+    waits = {lane: int((now - first).total_seconds()) for lane, first in oldest.items()}
+    return {lane: waited for lane, waited in waits.items() if waited > LANE_MAX_WAIT_SECONDS[lane]}
 
 
 def database_connection_limit() -> int | None:
@@ -259,11 +309,7 @@ class StudioWorker:
         now = timezone.now()
         # Build an unsliced query so lane selection precedes limiting. In
         # particular, do not use find_available()'s global async-slot count.
-        available = Task.objects.unlocked(now).filter(
-            run_at__lte=now,
-            failed_at__isnull=True,
-            task_name__in=list(self.registry._tasks),
-        )
+        available = due_tasks(now, self.registry)
         names = self.lane_tasks[lane]
         if names is None:
             available = available.exclude(task_name__in=self._named_task_names)
@@ -288,10 +334,16 @@ class StudioWorker:
             delay,
         )
         try:
-            # bg_runner is synchronous even if the legacy worker's async
-            # setting is enabled. It writes CompletedTask, repeats on success,
-            # and reschedules failures, just as process_tasks does.
-            bg_runner(self.registry._tasks[task.task_name], task)
+            # The scope tags whatever this task reports to the error tracker;
+            # the transaction times it when the sample rate picks it.
+            with sentry_sdk.isolation_scope() as scope:
+                scope.set_tag("lane", lane)
+                scope.set_tag("task", task.task_name)
+                with sentry_sdk.start_transaction(op="queue.task", name=task.task_name):
+                    # bg_runner is synchronous even if the legacy worker's async
+                    # setting is enabled. It writes CompletedTask, repeats on
+                    # success, and reschedules failures, just as process_tasks does.
+                    bg_runner(self.registry._tasks[task.task_name], task)
         finally:
             logger.info(
                 "Studio task finished lane=%s task=%s id=%s duration_seconds=%.3f",
@@ -321,6 +373,8 @@ class StudioWorker:
             reason = self.stall_reason(time.monotonic())
             if reason:
                 logger.critical("Studio worker stuck (%s); exiting so the container restarts", reason)
+                # The report is sent from a background thread: wait for it.
+                sentry_sdk.flush(timeout=5)
                 logging.shutdown()
                 # Not sys.exit: the hung thread would keep the process alive.
                 os._exit(1)

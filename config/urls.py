@@ -12,7 +12,7 @@ from apps.accounts.operators import STAFF_AREA_PREFIX
 from apps.accounts.views import health_check
 from apps.affiliates import views as affiliate_views
 from apps.api.api import api as agent_api
-from apps.common import legal_views
+from apps.common import legal_views, monitoring_views
 from apps.oauth_server import views as oauth_views
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", health_check, name="health_check"),
+    path("health/queues/", monitoring_views.queue_health, name="queue_health"),
+    path("client-errors/", monitoring_views.client_error, name="client_error"),
     path("robots.txt", legal_views.robots_txt, name="robots_txt"),
     # Django's own view: POSTs a language code, stores it on the session and
     # redirects back. The language picker in the sidebar posts here.

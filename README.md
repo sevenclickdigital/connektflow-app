@@ -45,7 +45,7 @@ This repository is the application. It is a fork of the open-source [BrightBean 
 | **Notifications** | In-app, email and webhook delivery with per-user preferences. |
 | **Billing** | Priced per workspace, charged through [Asaas](https://www.asaas.com/), with included disk space and paid extra storage. |
 | **API & MCP** | A REST API and an MCP server so scripts and agents can read analytics, manage media and create or schedule posts. |
-| **Security & ops** | Encrypted token and credential storage, Google sign-in, Sentry support, and a grace period before an organization's data is deleted. |
+| **Security & ops** | Encrypted token and credential storage, Google sign-in, error tracking (GlitchTip or Sentry: server, queue and browser errors, queue health), and a grace period before an organization's data is deleted. |
 
 What each feature does, and where it lives in the code, is in [`docs/features.md`](docs/features.md). How the pieces fit together is in [`docs/architecture.md`](docs/architecture.md).
 

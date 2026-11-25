@@ -22,8 +22,17 @@
 #     moves the stack to a network of its own.
 #
 # In Dokploy, add a Domain pointing to service `app`, container port `8000`.
+# Docker keeps a container's output without limit by default. What has to
+# outlive a container goes to the error tracker (SENTRY_DSN), not here.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 # What every worker container shares; each service below sets its lane.
 x-worker: &worker
+  logging: *logging
   build:
     context: .
     dockerfile: Dockerfile
@@ -45,6 +54,7 @@ x-worker: &worker
 
 services:
   migrate:
+    logging: *logging
     build:
       context: .
       dockerfile: Dockerfile
@@ -61,6 +71,7 @@ services:
     restart: "no"
 
   app:
+    logging: *logging
     build:
       context: .
       dockerfile: Dockerfile

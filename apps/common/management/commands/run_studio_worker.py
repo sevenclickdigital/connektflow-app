@@ -3,10 +3,10 @@
 import logging
 import signal
 
-from background_task.tasks import autodiscover
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.common.worker import SHUTDOWN_REQUESTED, WORKER_SCOPES, StudioWorker
+from apps.common.error_reporting import tag_service
+from apps.common.worker import SHUTDOWN_REQUESTED, WORKER_SCOPES, StudioWorker, discover_tasks
 
 logger = logging.getLogger(__name__)
 
@@ -30,16 +30,14 @@ class Command(BaseCommand):
         if options["duration"] < 0 or options["sleep"] <= 0:
             raise CommandError("--duration must be nonnegative and --sleep must be positive.")
 
-        autodiscover()
-        # First-comment tasks live in engine.py, so tasks.py autodiscovery
-        # alone cannot see an existing first-comment job on a fresh process.
+        discover_tasks()
         from apps.analytics.tasks import deduplicate_pending_backfills
-        from apps.publisher import engine  # noqa: F401
 
         deleted = deduplicate_pending_backfills()
         if deleted:
             logger.info("Removed %s duplicate pending analytics backfills", deleted)
 
+        tag_service(f"worker-{options['scope']}")
         worker = StudioWorker(duration=options["duration"], poll_interval=options["sleep"], scope=options["scope"])
         SHUTDOWN_REQUESTED.clear()
         previous_handlers = {}

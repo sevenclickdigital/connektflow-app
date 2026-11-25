@@ -23,6 +23,7 @@
     <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
     <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}">
     <link rel="stylesheet" href="{% static 'js/vendor/flatpickr.min.css' %}">
+    {% if user.is_authenticated %}<script src="{% static 'js/error-reporter.js' %}" data-endpoint="{% url 'client_error' %}"></script>{% endif %}
     <script nonce="{{ request.csp_nonce }}">
         // Set sidebar state class on <html> before first paint to prevent flash
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
