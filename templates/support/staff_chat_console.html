@@ -13,9 +13,18 @@ lists and the open chat every few seconds, even in a background tab, and
 when a chat joins the queue or a visitor writes in one of the agent's chats
 it plays a sound (window.cfSupportBeep, support/partials/_staff_chat_alert.html),
 shows a browser notification if allowed and, with no chat open, opens that
-one. Messages are drawn with x-text, never as HTML.
+one. Messages are escaped before their formatting marks become tags
+(cfMessageFormat.render, support/partials/_message_format.html).
+
+The console fits the window (column_height / content_scroll, as the inbox
+does): the three panels keep the window's height and each scrolls on its own,
+so a long conversation scrolls inside the chat window instead of growing the
+page. On a narrow screen the panels stack and the chat window keeps a fixed
+height.
 {% endcomment %}
 {% block title %}{% translate "Live chat" %} - {% translate "Administration" %} - Connekt Flow{% endblock %}
+{% block column_height %}min-h-0{% endblock %}
+{% block content_scroll %}min-h-0 overflow-y-auto overflow-x-hidden{% endblock %}
 
 {% block page_header %}
 <div class="page-header">
@@ -56,9 +65,9 @@ one. Messages are drawn with x-text, never as HTML.
     <button type="button" @click="enableAlerts()" class="btn-brand flex-shrink-0">{% translate "Turn on sound and alerts" %}</button>
   </div>
 
-  <div class="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)_18rem] flex-1 min-h-[32rem]">
+  <div class="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)_18rem] lg:grid-rows-[minmax(0,1fr)] flex-1 lg:min-h-[32rem]">
     {# Lists #}
-    <aside class="a-card flex flex-col min-h-0 overflow-hidden">
+    <aside class="a-card flex flex-col min-h-0 max-lg:max-h-[20rem] overflow-hidden">
       <div class="overflow-y-auto flex-1">
         <div class="px-4 pt-4 pb-2 flex items-center justify-between">
           <h2 class="text-xs font-semibold uppercase tracking-wider text-neutral-500">{% translate "Queue" %}</h2>
@@ -116,7 +125,7 @@ one. Messages are drawn with x-text, never as HTML.
     </aside>
 
     {# The chat window #}
-    <section class="a-card flex flex-col min-h-[28rem] overflow-hidden">
+    <section class="a-card flex flex-col min-h-0 max-lg:h-[32rem] overflow-hidden">
       <template x-if="!chat">
         <div class="flex-1 flex flex-col items-center justify-center text-center p-8 text-neutral-600">
           <svg class="w-10 h-10 text-neutral-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
@@ -179,7 +188,7 @@ one. Messages are drawn with x-text, never as HTML.
     </section>
 
     {# The visitor, for the team only #}
-    <aside class="a-card overflow-y-auto">
+    <aside class="a-card min-h-0 overflow-y-auto">
       <template x-if="!chat">
         <div class="h-full flex flex-col items-center justify-center text-center p-6 text-neutral-500">
           <svg class="w-8 h-8 text-neutral-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
