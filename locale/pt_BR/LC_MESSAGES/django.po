@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-25 00:32+0000\n"
+"POT-Creation-Date: 2026-11-25 00:54+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -427,10 +427,10 @@ msgid "Choosing the ad account"
 msgstr "Escolhendo a conta de anúncios"
 
 #: apps/ads/models.py:31 apps/radar/models.py:23
-#: apps/social_accounts/models.py:61
+#: apps/social_accounts/models.py:67
 #: templates/onboarding/connection_page.html:116
 #: templates/radar/partials/_source_card.html:31
-#: templates/social_accounts/partials/_account_card.html:43
+#: templates/social_accounts/partials/_account_card.html:54
 #: templates/social_accounts/partials/_status_badge.html:9
 msgid "Connected"
 msgstr "Conectada"
@@ -682,7 +682,7 @@ msgstr "Stories"
 #: apps/ads/services.py:623 apps/ads/services.py:624 apps/ads/services.py:625
 #: apps/analytics/services.py:811 apps/composer/models.py:557
 #: apps/composer/models.py:1139 apps/composer/services.py:1102
-#: apps/social_accounts/models.py:670 apps/tasks/creative_formats.py:96
+#: apps/social_accounts/models.py:680 apps/tasks/creative_formats.py:96
 #: apps/tasks/creative_formats.py:106
 msgid "Reels"
 msgstr "Reels"
@@ -785,15 +785,15 @@ msgstr "Escolha um dos objetivos oferecidos."
 msgid "The Meta sign-in was cancelled or refused."
 msgstr "O login da Meta foi cancelado ou recusado."
 
-#: apps/ads/views.py:170 apps/social_accounts/views.py:496
+#: apps/ads/views.py:170 apps/social_accounts/views.py:494
 msgid "Invalid or expired OAuth state. Please try again."
 msgstr "Estado de OAuth inválido ou expirado. Tente novamente."
 
-#: apps/ads/views.py:178 apps/social_accounts/views.py:502
+#: apps/ads/views.py:178 apps/social_accounts/views.py:500
 msgid "OAuth session mismatch. Please try again."
 msgstr "A sessão de OAuth não confere. Tente novamente."
 
-#: apps/ads/views.py:193 apps/social_accounts/views.py:489
+#: apps/ads/views.py:193 apps/social_accounts/views.py:487
 msgid "Missing authorization code or state parameter."
 msgstr "Código de autorização ou parâmetro de estado ausente."
 
@@ -3862,7 +3862,7 @@ msgstr[1] "últimos %(days)d dias"
 #: templates/notifications/history.html:77
 #: templates/radar/partials/_offers.html:15
 #: templates/social_accounts/list.html:67
-#: templates/social_accounts/list.html:125
+#: templates/social_accounts/list.html:129
 #: templates/support/staff_chat_history.html:24
 #: templates/support/staff_ticket_queue.html:29
 msgid "All"
@@ -4048,8 +4048,8 @@ msgstr "Redes"
 msgid "Icon"
 msgstr "Ícone"
 
-#: apps/composer/forms.py:251 templates/composer/compose.html:595
-#: templates/composer/compose.html:2451
+#: apps/composer/forms.py:251 apps/social_accounts/models.py:643
+#: templates/composer/compose.html:595 templates/composer/compose.html:2451
 #: templates/composer/create_landing.html:395
 #: templates/composer/create_landing.html:578
 #: templates/composer/partials/template_gallery.html:117
@@ -4061,7 +4061,9 @@ msgstr "Ícone"
 msgid "Title"
 msgstr "Título"
 
-#: apps/composer/forms.py:252 templates/automations/flow_builder.html:1164
+#: apps/composer/forms.py:252 apps/social_accounts/models.py:597
+#: apps/social_accounts/models.py:605
+#: templates/automations/flow_builder.html:1164
 #: templates/composer/create_landing.html:430
 #: templates/composer/create_landing.html:615
 #: templates/composer/partials/template_gallery.html:138
@@ -4205,7 +4207,7 @@ msgid "Deadline"
 msgstr "Prazo"
 
 #: apps/composer/idea_icons.py:51 apps/composer/models.py:559
-#: apps/composer/services.py:1104 apps/social_accounts/models.py:672
+#: apps/composer/services.py:1104 apps/social_accounts/models.py:682
 #: apps/tasks/creative_formats.py:152 templates/accounts/settings.html:47
 msgid "Photo"
 msgstr "Foto"
@@ -4320,14 +4322,14 @@ msgid "Post"
 msgstr "Publicação"
 
 #: apps/composer/models.py:556 apps/composer/services.py:1101
-#: apps/social_accounts/models.py:669 apps/tasks/creative_formats.py:95
+#: apps/social_accounts/models.py:679 apps/tasks/creative_formats.py:95
 #: apps/tasks/creative_formats.py:105 apps/tasks/creative_formats.py:131
 msgctxt "publishing format"
 msgid "Story"
 msgstr "Story"
 
 #: apps/composer/models.py:558 apps/composer/services.py:1103
-#: apps/social_accounts/models.py:671
+#: apps/social_accounts/models.py:681
 msgid "Shorts"
 msgstr "Shorts"
 
@@ -6142,7 +6144,7 @@ msgid "Reconnect this account before sending DMs."
 msgstr "Reconecte esta conta antes de enviar mensagens diretas."
 
 #: apps/inbox/reply_policy.py:63
-#: templates/social_accounts/partials/_account_card.html:144
+#: templates/social_accounts/partials/_account_card.html:157
 msgid ""
 "Instagram DM access is unavailable for this connection. Contact your "
 "administrator to enable it."
@@ -6725,7 +6727,7 @@ msgstr "Não foi possível enviar o link agora. Tente novamente em instantes."
 msgid "Connection link sent to %(email)s."
 msgstr "Link de conexão enviado para %(email)s."
 
-#: apps/onboarding/views.py:697 apps/social_accounts/views.py:1017
+#: apps/onboarding/views.py:697 apps/social_accounts/views.py:1015
 msgid "Invalid instance URL. Private or reserved addresses are not allowed."
 msgstr ""
 "URL de instância inválida. Endereços privados ou reservados não são "
@@ -7086,7 +7088,7 @@ msgid "Not read yet. The reading runs once a week, or now with the button."
 msgstr ""
 "Ainda não lida. A leitura roda uma vez por semana, ou agora pelo botão."
 
-#: apps/radar/models.py:24 apps/social_accounts/models.py:64
+#: apps/radar/models.py:24 apps/social_accounts/models.py:70
 #: templates/social_accounts/partials/_status_badge.html:24
 msgid "Error"
 msgstr "Erro"
@@ -8057,56 +8059,78 @@ msgstr ""
 msgid "WhatsApp didn't answer as expected. Try again."
 msgstr "O WhatsApp não respondeu como esperado. Tente de novo."
 
-#: apps/social_accounts/models.py:53
+#: apps/social_accounts/models.py:59
 msgid "Not checked"
 msgstr "Não verificado"
 
-#: apps/social_accounts/models.py:54
+#: apps/social_accounts/models.py:60
 msgid "Checking"
 msgstr "Verificando"
 
-#: apps/social_accounts/models.py:55
+#: apps/social_accounts/models.py:61
 msgid "Ready"
 msgstr "Pronto"
 
-#: apps/social_accounts/models.py:56
+#: apps/social_accounts/models.py:62
 msgid "Reconnect required"
 msgstr "Reconexão necessária"
 
-#: apps/social_accounts/models.py:57
+#: apps/social_accounts/models.py:63
 msgid "Operator attention required"
 msgstr "Requer atenção do operador"
 
-#: apps/social_accounts/models.py:58
+#: apps/social_accounts/models.py:64
 msgid "Temporary failure"
 msgstr "Falha temporária"
 
-#: apps/social_accounts/models.py:62
+#: apps/social_accounts/models.py:68
 #: templates/social_accounts/partials/_status_badge.html:14
 msgid "Token Expiring"
 msgstr "Token expirando"
 
-#: apps/social_accounts/models.py:63
+#: apps/social_accounts/models.py:69
 #: templates/social_accounts/partials/_status_badge.html:19
 msgid "Disconnected"
 msgstr "Desconectada"
 
-#: apps/social_accounts/models.py:662
+#: apps/social_accounts/models.py:596
+msgid "Video Title"
+msgstr "Título do vídeo"
+
+#: apps/social_accounts/models.py:604
+msgid "Pin Title"
+msgstr "Título do Pin"
+
+#: apps/social_accounts/models.py:634
+msgid "Article Title"
+msgstr "Título do artigo"
+
+#: apps/social_accounts/models.py:635
+msgid "Body (Markdown)"
+msgstr "Corpo (Markdown)"
+
+#: apps/social_accounts/models.py:644
+#: templates/calendar/partials/list_view.html:14
+#: templates/composer/manual_publish.html:43
+msgid "Caption"
+msgstr "Legenda"
+
+#: apps/social_accounts/models.py:672
 #, python-format
 msgid "%(platform)s Stories"
 msgstr "%(platform)s Stories"
 
-#: apps/social_accounts/models.py:663
+#: apps/social_accounts/models.py:673
 #, python-format
 msgid "%(platform)s Reels"
 msgstr "%(platform)s Reels"
 
-#: apps/social_accounts/models.py:664
+#: apps/social_accounts/models.py:674
 #, python-format
 msgid "%(platform)s Shorts"
 msgstr "%(platform)s Shorts"
 
-#: apps/social_accounts/models.py:665
+#: apps/social_accounts/models.py:675
 #, python-format
 msgid "%(platform)s photo"
 msgstr "%(platform)s · Foto"
@@ -8132,7 +8156,7 @@ msgstr "%(platform)s está visível para os clientes."
 msgid "%(platform)s is hidden from customers."
 msgstr "%(platform)s está oculto para os clientes."
 
-#: apps/social_accounts/views.py:310 templates/ads/index.html:7
+#: apps/social_accounts/views.py:308 templates/ads/index.html:7
 #: templates/analytics/_page_header.html:23
 #: templates/analytics/_page_header.html:107
 #: templates/analytics/meta_ads.html:4
@@ -8140,20 +8164,20 @@ msgstr "%(platform)s está oculto para os clientes."
 msgid "Meta Ads"
 msgstr "Meta Ads"
 
-#: apps/social_accounts/views.py:337
+#: apps/social_accounts/views.py:335
 msgid "WhatsApp is still loading. Try again in a moment."
 msgstr "O WhatsApp ainda está carregando. Tente de novo em instantes."
 
-#: apps/social_accounts/views.py:338
+#: apps/social_accounts/views.py:336
 msgid "The WhatsApp connection was cancelled."
 msgstr "A conexão com o WhatsApp foi cancelada."
 
-#: apps/social_accounts/views.py:339
+#: apps/social_accounts/views.py:337
 msgid "Pick a phone number in the WhatsApp window to finish connecting."
 msgstr ""
 "Escolha um número de telefone na janela do WhatsApp para concluir a conexão."
 
-#: apps/social_accounts/views.py:341
+#: apps/social_accounts/views.py:339
 msgid ""
 "Numbers in use in the WhatsApp Business app can't be connected yet. Use a "
 "number that isn't on the app."
@@ -8161,7 +8185,7 @@ msgstr ""
 "Números em uso no app WhatsApp Business ainda não podem ser conectados. Use "
 "um número que não esteja no app."
 
-#: apps/social_accounts/views.py:343
+#: apps/social_accounts/views.py:341
 msgid ""
 "The WhatsApp window reported an error. Try again, or check the number in "
 "WhatsApp Manager."
@@ -8169,11 +8193,11 @@ msgstr ""
 "A janela do WhatsApp informou um erro. Tente de novo ou confira o número no "
 "Gerenciador do WhatsApp."
 
-#: apps/social_accounts/views.py:412
+#: apps/social_accounts/views.py:410
 msgid "This platform is not available."
 msgstr "Esta plataforma não está disponível."
 
-#: apps/social_accounts/views.py:418
+#: apps/social_accounts/views.py:416
 #, python-format
 msgid ""
 "Platform credentials for %(platform)s are not configured. Please contact "
@@ -8182,16 +8206,16 @@ msgstr ""
 "As credenciais da plataforma %(platform)s não estão configuradas. Fale com o "
 "administrador."
 
-#: apps/social_accounts/views.py:478
+#: apps/social_accounts/views.py:476
 #, python-format
 msgid "OAuth error: %(error)s"
 msgstr "Erro de OAuth: %(error)s"
 
-#: apps/social_accounts/views.py:507
+#: apps/social_accounts/views.py:505
 msgid "Platform mismatch in OAuth callback."
 msgstr "A plataforma não confere no retorno do OAuth."
 
-#: apps/social_accounts/views.py:586
+#: apps/social_accounts/views.py:584
 msgid ""
 "No LinkedIn Company Pages were found for your account. Only Company Pages "
 "you administer can be connected — personal profiles connect via the LinkedIn "
@@ -8205,7 +8229,7 @@ msgstr ""
 "proprietário dela para conceder acesso de Admin em LinkedIn → Admin tools → "
 "Manage admins e conecte novamente."
 
-#: apps/social_accounts/views.py:595
+#: apps/social_accounts/views.py:593
 msgid ""
 "No Google Business locations were found for your account. Only verified "
 "locations can be connected. If you expected to see one, check that it is "
@@ -8217,7 +8241,7 @@ msgstr ""
 "confirme que ela está verificada e que esta conta do Google tem acesso a ela "
 "em Google Business Profile → Businesses e conecte novamente."
 
-#: apps/social_accounts/views.py:604
+#: apps/social_accounts/views.py:602
 msgid ""
 "No Instagram Business accounts were found for your account. Only Instagram "
 "Business or Creator accounts linked to a Facebook Page can be connected "
@@ -8229,7 +8253,7 @@ msgstr ""
 "uma página do Facebook. Se você esperava ver uma conta, confirme que ela "
 "está vinculada a uma página que você administra e conecte novamente."
 
-#: apps/social_accounts/views.py:611
+#: apps/social_accounts/views.py:609
 msgid ""
 "No Facebook Pages were found for your account. Only Pages can be connected — "
 "personal profiles are not supported by the Facebook API. If you expected to "
@@ -8242,24 +8266,24 @@ msgstr ""
 "remover o app em Configurações do Facebook → Integrações comerciais, depois "
 "conecte novamente."
 
-#: apps/social_accounts/views.py:633
+#: apps/social_accounts/views.py:631
 #, python-format
 msgid "Connected %(name)s successfully."
 msgstr "%(name)s conectada com sucesso."
 
-#: apps/social_accounts/views.py:653
+#: apps/social_accounts/views.py:651
 msgid "Failed to connect account. Please try again."
 msgstr "Não foi possível conectar a conta. Tente novamente."
 
-#: apps/social_accounts/views.py:669
+#: apps/social_accounts/views.py:667
 msgid "No accounts to select. Please start over."
 msgstr "Nenhuma conta para selecionar. Comece de novo."
 
-#: apps/social_accounts/views.py:708
+#: apps/social_accounts/views.py:706
 msgid "Please select at least one account."
 msgstr "Selecione ao menos uma conta."
 
-#: apps/social_accounts/views.py:726
+#: apps/social_accounts/views.py:724
 #, python-format
 msgid ""
 "Could not connect %(name)s: your Facebook access cannot create content for "
@@ -8268,7 +8292,7 @@ msgstr ""
 "Não foi possível conectar %(name)s: seu acesso no Facebook não permite criar "
 "conteúdo para esta página."
 
-#: apps/social_accounts/views.py:734
+#: apps/social_accounts/views.py:732
 #, python-format
 msgid ""
 "Could not connect %(name)s: the platform did not provide an account token."
@@ -8276,58 +8300,58 @@ msgstr ""
 "Não foi possível conectar %(name)s: a plataforma não forneceu um token de "
 "conta."
 
-#: apps/social_accounts/views.py:770
+#: apps/social_accounts/views.py:768
 #, python-format
 msgid "Could not connect %(name)s: %(reason)s"
 msgstr "Não foi possível conectar %(name)s: %(reason)s"
 
-#: apps/social_accounts/views.py:779
+#: apps/social_accounts/views.py:777
 #, python-format
 msgid "Connected: %(names)s"
 msgstr "Conectadas: %(names)s"
 
-#: apps/social_accounts/views.py:804
+#: apps/social_accounts/views.py:802
 msgid "Handle and app password are required."
 msgstr "Usuário e senha de app são obrigatórios."
 
-#: apps/social_accounts/views.py:825
+#: apps/social_accounts/views.py:823
 #, python-format
 msgid "Connected %(name)s on Bluesky."
 msgstr "%(name)s conectada no Bluesky."
 
-#: apps/social_accounts/views.py:840
+#: apps/social_accounts/views.py:838
 msgid "Failed to connect Bluesky account. Check your handle and app password."
 msgstr ""
 "Não foi possível conectar a conta do Bluesky. Confira o usuário e a senha de "
 "app."
 
-#: apps/social_accounts/views.py:869
+#: apps/social_accounts/views.py:867
 msgid "A DEV.to API key is required."
 msgstr "A chave de API do DEV.to é obrigatória."
 
-#: apps/social_accounts/views.py:885
+#: apps/social_accounts/views.py:883
 #, python-format
 msgid "Connected %(name)s on DEV.to."
 msgstr "%(name)s conectada no DEV.to."
 
-#: apps/social_accounts/views.py:891
+#: apps/social_accounts/views.py:889
 msgid "Failed to connect DEV.to account. Check your API key."
 msgstr "Não foi possível conectar a conta do DEV.to. Confira sua chave de API."
 
-#: apps/social_accounts/views.py:929
+#: apps/social_accounts/views.py:927
 msgid "WhatsApp did not finish the connection. Try again."
 msgstr "O WhatsApp não concluiu a conexão. Tente de novo."
 
-#: apps/social_accounts/views.py:932
+#: apps/social_accounts/views.py:930
 msgid "WhatsApp is not configured. Contact your administrator."
 msgstr "O WhatsApp não está configurado. Fale com o administrador."
 
-#: apps/social_accounts/views.py:953
+#: apps/social_accounts/views.py:951
 msgid ""
 "That phone number does not belong to the WhatsApp account you authorized."
 msgstr "Esse número não pertence à conta do WhatsApp que você autorizou."
 
-#: apps/social_accounts/views.py:977
+#: apps/social_accounts/views.py:975
 msgid ""
 "Meta refused the WhatsApp connection. Try again, or check the number in "
 "WhatsApp Manager."
@@ -8335,91 +8359,91 @@ msgstr ""
 "A Meta recusou a conexão do WhatsApp. Tente de novo ou confira o número no "
 "Gerenciador do WhatsApp."
 
-#: apps/social_accounts/views.py:983
+#: apps/social_accounts/views.py:981
 #, python-format
 msgid "WhatsApp %(number)s connected. New messages arrive in the inbox."
 msgstr "WhatsApp %(number)s conectado. As novas mensagens chegam no inbox."
 
-#: apps/social_accounts/views.py:1008
+#: apps/social_accounts/views.py:1006
 msgid "Instance URL is required."
 msgstr "A URL da instância é obrigatória."
 
-#: apps/social_accounts/views.py:1050
+#: apps/social_accounts/views.py:1048
 #, python-format
 msgid "Failed to register with %(url)s. Check the URL."
 msgstr "Não foi possível registrar em %(url)s. Confira a URL."
 
-#: apps/social_accounts/views.py:1155 apps/social_accounts/views.py:1190
+#: apps/social_accounts/views.py:1164 apps/social_accounts/views.py:1199
 #, python-format
 msgid "Reconnect %(label)s first — its connection isn't healthy."
 msgstr "Reconecte %(label)s primeiro — a conexão não está saudável."
 
-#: apps/social_accounts/views.py:1171
+#: apps/social_accounts/views.py:1180
 #, python-format
 msgid "Real-time updates are back on for %(label)s."
 msgstr "As atualizações em tempo real voltaram a funcionar para %(label)s."
 
-#: apps/social_accounts/views.py:1173
+#: apps/social_accounts/views.py:1182
 msgid "Couldn't set up real-time updates. Please try again."
 msgstr ""
 "Não foi possível ativar as atualizações em tempo real. Tente novamente."
 
-#: apps/social_accounts/views.py:1214
+#: apps/social_accounts/views.py:1223
 #, python-format
 msgid "Importing the history of %(label)s. This card shows when it is done."
 msgstr ""
 "Importando o histórico de %(label)s. Este cartão avisa quando terminar."
 
-#: apps/social_accounts/views.py:1233
+#: apps/social_accounts/views.py:1242
 #, python-format
 msgid "Removing the old history of %(label)s. This card shows when it is done."
 msgstr ""
 "Removendo o histórico antigo de %(label)s. Este cartão avisa quando terminar."
 
-#: apps/social_accounts/views.py:1257
+#: apps/social_accounts/views.py:1266
 msgid "The old history could not be removed. Try again."
 msgstr "Não foi possível remover o histórico antigo. Tente de novo."
 
-#: apps/social_accounts/views.py:1259
+#: apps/social_accounts/views.py:1268
 msgid "The history could not be imported. Try again."
 msgstr "Não foi possível importar o histórico. Tente de novo."
 
-#: apps/social_accounts/views.py:1265
+#: apps/social_accounts/views.py:1274
 #, python-format
 msgid "Old history removed: %(count)s message."
 msgid_plural "Old history removed: %(count)s messages."
 msgstr[0] "Histórico antigo removido: %(count)s mensagem."
 msgstr[1] "Histórico antigo removido: %(count)s mensagens."
 
-#: apps/social_accounts/views.py:1267
+#: apps/social_accounts/views.py:1276
 #, python-format
 msgid "History imported: %(count)s message."
 msgid_plural "History imported: %(count)s messages."
 msgstr[0] "Histórico importado: %(count)s mensagem."
 msgstr[1] "Histórico importado: %(count)s mensagens."
 
-#: apps/social_accounts/views.py:1299
+#: apps/social_accounts/views.py:1308
 #, python-format
 msgid "Disconnected %(name)s. YouTube data was deleted immediately."
 msgstr ""
 "%(name)s desconectada. Os dados do YouTube foram excluídos imediatamente."
 
-#: apps/social_accounts/views.py:1326
+#: apps/social_accounts/views.py:1335
 #, python-format
 msgid "Disconnected %(name)s."
 msgstr "%(name)s desconectada."
 
-#: apps/social_accounts/views.py:1365
+#: apps/social_accounts/views.py:1374
 msgid "Template sent for review"
 msgstr "Modelo enviado para revisão"
 
-#: apps/social_accounts/views.py:1366
+#: apps/social_accounts/views.py:1375
 msgid "WhatsApp reviews it before it can be used, usually within a day."
 msgstr ""
 "O WhatsApp analisa o modelo antes de ele poder ser usado, em geral em até um "
 "dia."
 
-#: apps/social_accounts/views.py:1569
+#: apps/social_accounts/views.py:1578
 #, python-format
 msgid ""
 "This workspace already has a %(platform)s account. Disconnect it before "
@@ -9989,7 +10013,7 @@ msgstr "Não recebeu o e-mail?"
 #: templates/analytics/_meta_ads_body.html:16
 #: templates/analytics/_shopee_body.html:13
 #: templates/calendar/partials/_board_columns.html:88
-#: templates/social_accounts/partials/_account_card.html:183
+#: templates/social_accounts/partials/_account_card.html:196
 msgid "Try again"
 msgstr "Tentar novamente"
 
@@ -10656,10 +10680,10 @@ msgstr "Esta campanha não tem anúncios."
 #: templates/organizations/workspaces.html:283
 #: templates/radar/partials/_share_dialog.html:18
 #: templates/radar/partials/_source_card.html:121
-#: templates/social_accounts/partials/_account_card.html:114
-#: templates/social_accounts/partials/_account_card.html:191
-#: templates/social_accounts/partials/_account_card.html:210
-#: templates/social_accounts/partials/_account_card.html:231
+#: templates/social_accounts/partials/_account_card.html:127
+#: templates/social_accounts/partials/_account_card.html:204
+#: templates/social_accounts/partials/_account_card.html:223
+#: templates/social_accounts/partials/_account_card.html:244
 #: templates/social_accounts/partials/_connect_guide.html:16
 #: templates/support/staff_chat_console.html:138 templates/tasks/board.html:121
 #: templates/tasks/partials/_art_thumb.html:29
@@ -10779,7 +10803,7 @@ msgstr "Desempenho"
 #: templates/organizations/partials/workspace_card.html:54
 #: templates/organizations/workspaces.html:183
 #: templates/radar/partials/_source_card.html:45
-#: templates/social_accounts/partials/_account_card.html:67
+#: templates/social_accounts/partials/_account_card.html:78
 msgid "More actions"
 msgstr "Mais ações"
 
@@ -10980,9 +11004,9 @@ msgstr ""
 "Desconectar o Meta Ads? As campanhas continuam rodando na conta de anúncios."
 
 #: templates/ads/settings.html:47 templates/radar/partials/_source_card.html:61
-#: templates/social_accounts/partials/_account_card.html:94
-#: templates/social_accounts/partials/_account_card.html:192
-#: templates/social_accounts/partials/_account_card.html:232
+#: templates/social_accounts/partials/_account_card.html:107
+#: templates/social_accounts/partials/_account_card.html:205
+#: templates/social_accounts/partials/_account_card.html:245
 #: templates/social_accounts/partials/_disconnect_confirm.html:56
 msgid "Disconnect"
 msgstr "Desconectar"
@@ -12223,9 +12247,9 @@ msgstr ""
 #: templates/analytics/_page.html:16
 #: templates/radar/partials/_source_card.html:53
 #: templates/radar/partials/_source_card.html:57
-#: templates/social_accounts/partials/_account_card.html:163
-#: templates/social_accounts/partials/_account_card.html:196
-#: templates/social_accounts/partials/_account_card.html:236
+#: templates/social_accounts/partials/_account_card.html:176
+#: templates/social_accounts/partials/_account_card.html:209
+#: templates/social_accounts/partials/_account_card.html:249
 #: templates/social_accounts/partials/_meta_ads_card.html:25
 msgid "Reconnect"
 msgstr "Reconectar"
@@ -12265,12 +12289,12 @@ msgstr "Contas conectadas"
 
 #: templates/analytics/_page_header.html:68
 #: templates/intelligence/_benchmark_channel_result.html:11
-#: templates/social_accounts/partials/_account_card.html:63
+#: templates/social_accounts/partials/_account_card.html:74
 msgid "subscribers"
 msgstr "inscritos"
 
 #: templates/analytics/_page_header.html:68
-#: templates/social_accounts/partials/_account_card.html:63
+#: templates/social_accounts/partials/_account_card.html:74
 msgid "followers"
 msgstr "seguidores"
 
@@ -15383,9 +15407,9 @@ msgstr "Menos"
 #: templates/composer/partials/_tag_groups.html:200
 #: templates/composer/partials/template_gallery.html:214
 #: templates/funnels/partials/_pick_conversation.html:21
-#: templates/social_accounts/list.html:141
-#: templates/social_accounts/list.html:143
-#: templates/social_accounts/list.html:148
+#: templates/social_accounts/list.html:145
+#: templates/social_accounts/list.html:147
+#: templates/social_accounts/list.html:152
 #: templates/social_accounts/partials/_posting_slots_grid.html:116
 #: templates/tasks/partials/_column.html:78
 #: templates/tasks/partials/_new_item_modal.html:171
@@ -17715,11 +17739,6 @@ msgstr "Excluir campanha"
 msgid "Create campaign"
 msgstr "Criar campanha"
 
-#: templates/calendar/partials/list_view.html:14
-#: templates/composer/manual_publish.html:43
-msgid "Caption"
-msgstr "Legenda"
-
 #: templates/calendar/partials/list_view.html:15
 #: templates/layouts/admin_shell.html:130
 #: templates/social_accounts/staff_platforms.html:14
@@ -17870,7 +17889,7 @@ msgstr "Horários de publicação"
 
 #: templates/calendar/posting_slots.html:5
 #: templates/calendar/posting_slots.html:10
-#: templates/social_accounts/partials/_account_card.html:224
+#: templates/social_accounts/partials/_account_card.html:237
 msgid "Posting Schedule"
 msgstr "Agenda de publicação"
 
@@ -19598,6 +19617,7 @@ msgstr "Adicione uma imagem, referência ou arquivo."
 #: templates/composer/create_landing.html:466
 #: templates/composer/create_landing.html:652
 #: templates/composer/partials/_media_thumb_actions.html:14
+#: templates/social_accounts/partials/_account_card.html:35
 msgid "Drag to reorder"
 msgstr "Arraste para reordenar"
 
@@ -25230,9 +25250,9 @@ msgstr "Business e Creator"
 #: templates/radar/partials/_shopee_connect_form.html:43
 #: templates/radar/partials/_source_card.html:80
 #: templates/radar/partials/_source_card.html:87
-#: templates/social_accounts/list.html:141
-#: templates/social_accounts/list.html:143
-#: templates/social_accounts/list.html:148
+#: templates/social_accounts/list.html:145
+#: templates/social_accounts/list.html:147
+#: templates/social_accounts/list.html:152
 #: templates/social_accounts/partials/_meta_ads_card.html:30
 msgid "Connect"
 msgstr "Conectar"
@@ -26515,12 +26535,12 @@ msgid "Soon"
 msgstr "Em breve"
 
 #: templates/radar/partials/_source_card.html:29
-#: templates/social_accounts/partials/_account_card.html:48
+#: templates/social_accounts/partials/_account_card.html:59
 msgid "Problem"
 msgstr "Com problema"
 
 #: templates/radar/partials/_source_card.html:42
-#: templates/social_accounts/partials/_account_card.html:63
+#: templates/social_accounts/partials/_account_card.html:74
 #, python-format
 msgid "Connected on %(date)s"
 msgstr "Conectada em %(date)s"
@@ -26946,7 +26966,7 @@ msgstr "Plataformas no total"
 msgid "Search platform…"
 msgstr "Buscar plataforma…"
 
-#: templates/social_accounts/list.html:97
+#: templates/social_accounts/list.html:101
 #, python-format
 msgid ""
 "%(counter)s account connected. Health checks run automatically every 6 hours."
@@ -26960,25 +26980,25 @@ msgstr[1] ""
 "%(counter)s contas conectadas. As verificações de saúde rodam "
 "automaticamente a cada 6 horas."
 
-#: templates/social_accounts/list.html:109
+#: templates/social_accounts/list.html:113
 msgid "Ad accounts"
 msgstr "Contas de anúncio"
 
-#: templates/social_accounts/list.html:122
+#: templates/social_accounts/list.html:126
 msgid "Connect other platforms"
 msgstr "Conectar outras plataformas"
 
-#: templates/social_accounts/list.html:151
+#: templates/social_accounts/list.html:155
 #: templates/social_accounts/partials/_meta_ads_card.html:32
 msgid "Platform credentials not configured. Contact your administrator."
 msgstr "Credenciais da plataforma não configuradas. Fale com o administrador."
 
-#: templates/social_accounts/list.html:151
+#: templates/social_accounts/list.html:155
 #: templates/social_accounts/partials/_meta_ads_card.html:32
 msgid "Not Configured"
 msgstr "Não configurada"
 
-#: templates/social_accounts/list.html:171
+#: templates/social_accounts/list.html:175
 #: templates/social_accounts/staff_platforms.html:57
 msgid "Business & opportunities"
 msgstr "Negócios e oportunidades"
@@ -27012,11 +27032,11 @@ msgstr ""
 msgid "Continue to Mastodon"
 msgstr "Continuar para o Mastodon"
 
-#: templates/social_accounts/partials/_account_card.html:35
+#: templates/social_accounts/partials/_account_card.html:46
 msgid "Private messages arrive in the inbox in real time."
 msgstr "As mensagens privadas chegam ao inbox em tempo real."
 
-#: templates/social_accounts/partials/_account_card.html:35
+#: templates/social_accounts/partials/_account_card.html:46
 msgid ""
 "Private messages are not reaching the inbox. Open the status for details or "
 "reconnect."
@@ -27024,36 +27044,36 @@ msgstr ""
 "As mensagens privadas não estão chegando ao inbox. Abra o status para ver os "
 "detalhes ou reconecte."
 
-#: templates/social_accounts/partials/_account_card.html:37
+#: templates/social_accounts/partials/_account_card.html:48
 msgid "Messages active"
 msgstr "Mensagens ativas"
 
-#: templates/social_accounts/partials/_account_card.html:37
+#: templates/social_accounts/partials/_account_card.html:48
 msgid "Messages unavailable"
 msgstr "Mensagens indisponíveis"
 
-#: templates/social_accounts/partials/_account_card.html:47
+#: templates/social_accounts/partials/_account_card.html:58
 msgid "See details"
 msgstr "Ver detalhes"
 
-#: templates/social_accounts/partials/_account_card.html:48
+#: templates/social_accounts/partials/_account_card.html:59
 msgid "Attention"
 msgstr "Atenção"
 
-#: templates/social_accounts/partials/_account_card.html:72
-#: templates/social_accounts/partials/_account_card.html:216
+#: templates/social_accounts/partials/_account_card.html:83
+#: templates/social_accounts/partials/_account_card.html:229
 msgid "Manage connection"
 msgstr "Gerenciar conexão"
 
-#: templates/social_accounts/partials/_account_card.html:74
+#: templates/social_accounts/partials/_account_card.html:87
 msgid "Message templates"
 msgstr "Modelos de mensagem"
 
-#: templates/social_accounts/partials/_account_card.html:78
+#: templates/social_accounts/partials/_account_card.html:91
 msgid "Import the history?"
 msgstr "Importar o histórico?"
 
-#: templates/social_accounts/partials/_account_card.html:79
+#: templates/social_accounts/partials/_account_card.html:92
 msgid ""
 "The comments and conversations from before this account was connected come "
 "into the inbox, without notifications. You can take them out again with "
@@ -27063,16 +27083,16 @@ msgstr ""
 "caixa de entrada, sem gerar notificações. Você pode tirá-los de novo em "
 "Remover histórico antigo."
 
-#: templates/social_accounts/partials/_account_card.html:80
-#: templates/social_accounts/partials/_account_card.html:82
+#: templates/social_accounts/partials/_account_card.html:93
+#: templates/social_accounts/partials/_account_card.html:95
 msgid "Import history"
 msgstr "Importar histórico"
 
-#: templates/social_accounts/partials/_account_card.html:87
+#: templates/social_accounts/partials/_account_card.html:100
 msgid "Remove the old history?"
 msgstr "Remover o histórico antigo?"
 
-#: templates/social_accounts/partials/_account_card.html:88
+#: templates/social_accounts/partials/_account_card.html:101
 #, python-format
 msgid ""
 "The comments and conversations from before %(date)s, the day this account "
@@ -27083,28 +27103,28 @@ msgstr ""
 "foi conectada, saem da caixa de entrada, junto com as respostas e anotações "
 "feitas neles. Nada é apagado na rede social."
 
-#: templates/social_accounts/partials/_account_card.html:89
-#: templates/social_accounts/partials/_account_card.html:91
+#: templates/social_accounts/partials/_account_card.html:102
+#: templates/social_accounts/partials/_account_card.html:104
 msgid "Remove old history"
 msgstr "Remover histórico antigo"
 
-#: templates/social_accounts/partials/_account_card.html:103
+#: templates/social_accounts/partials/_account_card.html:116
 msgid "Removing old history…"
 msgstr "Removendo histórico antigo…"
 
-#: templates/social_accounts/partials/_account_card.html:103
+#: templates/social_accounts/partials/_account_card.html:116
 msgid "Importing history…"
 msgstr "Importando histórico…"
 
-#: templates/social_accounts/partials/_account_card.html:122
+#: templates/social_accounts/partials/_account_card.html:135
 msgid "The connection was lost"
 msgstr "A conexão foi perdida"
 
-#: templates/social_accounts/partials/_account_card.html:122
+#: templates/social_accounts/partials/_account_card.html:135
 msgid "Some features are unavailable."
 msgstr "Alguns recursos estão indisponíveis."
 
-#: templates/social_accounts/partials/_account_card.html:128
+#: templates/social_accounts/partials/_account_card.html:141
 msgid ""
 "Connekt Flow can no longer reach this account. Scheduled posts for it will "
 "fail and new comments stop arriving until you reconnect."
@@ -27113,7 +27133,7 @@ msgstr ""
 "agendadas para ela vão falhar e novos comentários deixam de chegar até você "
 "reconectar."
 
-#: templates/social_accounts/partials/_account_card.html:130
+#: templates/social_accounts/partials/_account_card.html:143
 msgid ""
 "The access to this account expires soon. Reconnect to renew it before "
 "scheduled posts start failing."
@@ -27121,7 +27141,7 @@ msgstr ""
 "O acesso a esta conta expira em breve. Reconecte para renová-lo antes que as "
 "publicações agendadas comecem a falhar."
 
-#: templates/social_accounts/partials/_account_card.html:141
+#: templates/social_accounts/partials/_account_card.html:154
 #, python-format
 msgid ""
 "This account was connected without %(scopes)s. Anything relying on them will "
@@ -27130,7 +27150,7 @@ msgstr ""
 "Esta conta foi conectada sem %(scopes)s. Tudo o que depende disso vai falhar "
 "até a permissão ser concedida — reconecte para tentar de novo."
 
-#: templates/social_accounts/partials/_account_card.html:146
+#: templates/social_accounts/partials/_account_card.html:159
 msgid ""
 "DMs unavailable: grant messaging access on the linked Facebook Page, then "
 "reconnect this account."
@@ -27138,28 +27158,28 @@ msgstr ""
 "DMs indisponíveis: conceda acesso a mensagens na página do Facebook "
 "vinculada e reconecte esta conta."
 
-#: templates/social_accounts/partials/_account_card.html:157
+#: templates/social_accounts/partials/_account_card.html:170
 msgid "Some real-time inbox updates are unavailable."
 msgstr ""
 "Algumas atualizações em tempo real da caixa de entrada não estão disponíveis."
 
-#: templates/social_accounts/partials/_account_card.html:158
+#: templates/social_accounts/partials/_account_card.html:171
 msgid "We couldn't set up real-time updates for this account."
 msgstr ""
 "Não conseguimos configurar as atualizações em tempo real para esta conta."
 
-#: templates/social_accounts/partials/_account_card.html:159
+#: templates/social_accounts/partials/_account_card.html:172
 msgid ""
 "Activity with the required permissions can still arrive through polling."
 msgstr ""
 "A atividade com as permissões necessárias ainda pode chegar por "
 "sincronização periódica."
 
-#: templates/social_accounts/partials/_account_card.html:183
+#: templates/social_accounts/partials/_account_card.html:196
 msgid "Trying…"
 msgstr "Tentando…"
 
-#: templates/social_accounts/partials/_account_card.html:225
+#: templates/social_accounts/partials/_account_card.html:238
 msgid ""
 "Set recurring time slots for when queued posts are automatically published."
 msgstr ""

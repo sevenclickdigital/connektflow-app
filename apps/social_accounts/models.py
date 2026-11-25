@@ -583,16 +583,16 @@ class SocialAccount(models.Model):
         "youtube": {
             "needs_title": True,
             "title_max_length": 100,
-            "title_label": "Video Title",
-            "caption_label": "Description",
+            "title_label": _("Video Title"),
+            "caption_label": _("Description"),
             "advanced_fields": ["made_for_kids", "privacy_status", "tags", "thumbnail"],
             "formats": ["default", "short"],
         },
         "pinterest": {
             "needs_title": True,
             "title_max_length": 100,
-            "title_label": "Pin Title",
-            "caption_label": "Description",
+            "title_label": _("Pin Title"),
+            "caption_label": _("Description"),
             "supports_first_comment": False,
             "advanced_fields": ["allow_comments", "show_similar_products", "alt_text", "cover_image"],
         },
@@ -621,8 +621,8 @@ class SocialAccount(models.Model):
         "devto": {
             "needs_title": True,
             "title_max_length": 128,
-            "title_label": "Article Title",
-            "caption_label": "Body (Markdown)",
+            "title_label": _("Article Title"),
+            "caption_label": _("Body (Markdown)"),
             "supports_first_comment": False,
         },
     }
@@ -630,8 +630,8 @@ class SocialAccount(models.Model):
     PLATFORM_FIELD_DEFAULTS = {
         "needs_title": False,
         "title_max_length": 0,
-        "title_label": "Title",
-        "caption_label": "Caption",
+        "title_label": _("Title"),
+        "caption_label": _("Caption"),
         "supports_first_comment": True,
         "advanced_fields": [],
         # PlatformPost formats one post can go out as on this account. A post
