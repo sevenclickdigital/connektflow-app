@@ -88,14 +88,14 @@ at the top; "Pay" opens a window that takes the receipt and marks it paid.
               {% if affiliate.is_active %}<span class="pill pill-success"><i></i>{% translate "On" %}</span>{% else %}<span class="pill pill-neutral">{% translate "Off" %}</span>{% endif %}
             </td>
             <td class="px-4 py-3 text-right">
-              <div x-data="{ menu: false, menuStyle: '' }">
+              <div x-data="{ menu: false }">
                 <button type="button" :aria-expanded="menu.toString()" aria-label="{% translate 'Actions' %}"
-                        @click="menu = !menu; if (menu) { const r = $el.getBoundingClientRect(); menuStyle = 'top:' + (r.bottom + 4) + 'px;left:' + Math.max(8, r.right - 192) + 'px'; }"
+                        @click="menu = !menu; if (menu) placeMenu($el, $refs.menu)"
                         class="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50 cursor-pointer">
                   <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
                 </button>
                 <div x-show="menu" x-cloak x-transition role="menu" @click.outside="menu = false" @keydown.escape.window="menu = false"
-                     @scroll.window.capture="menu = false" @resize.window="menu = false" :style="menuStyle"
+                     @scroll.window.capture="menu = false" @resize.window="menu = false" x-ref="menu"
                      class="fixed bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-40 w-48 text-left">
                   {% if affiliate.open_payout %}<button type="button" role="menuitem" class="w-full flex items-center gap-2.5 text-left px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-neutral-50 cursor-pointer" @click="menu = false; $dispatch('open-payout', '{{ affiliate.open_payout.id }}')">{% translate "Pay withdrawal" %}</button>{% endif %}
                   <button type="button" role="menuitem" class="w-full flex items-center gap-2.5 text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer" @click="menu = false; editing = true">{% translate "Edit" %}</button>

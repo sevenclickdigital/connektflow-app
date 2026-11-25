@@ -11,7 +11,7 @@ column still takes a card dropped on it.
 Expects: column (with task_list), column_tones, can_edit, workspace.
 {% endcomment %}
 <section class="kanban-column kanban-tone-{{ column.tone }} task-column" data-column-id="{{ column.id }}"
-         x-data="{ menu: false, menuStyle: '', renaming: false, adding: false, closed: localStorage.getItem('task-column:{{ column.id }}') === 'closed',
+         x-data="{ menu: false, renaming: false, adding: false, closed: localStorage.getItem('task-column:{{ column.id }}') === 'closed',
                   startRename() { this.renaming = true; this.$nextTick(() => { this.$refs.rename.focus(); this.$refs.rename.select(); }); } }"
          x-effect="localStorage.setItem('task-column:{{ column.id }}', closed ? 'closed' : 'open')"
          :class="closed && 'is-closed'">
@@ -52,18 +52,18 @@ Expects: column (with task_list), column_tones, can_edit, workspace.
             </button>
             <div class="relative">
                 {% comment %}
-                The menu is fixed to the window under its button, kept inside it, so the board's
+                The menu is fixed to the window beside its button (placeMenu), so the board's
                 sideways scroll does not cut it on the first column; any scroll closes it.
                 {% endcomment %}
                 <button type="button" :aria-expanded="menu.toString()"
-                        @click="menu = !menu; if (menu) { const r = $el.getBoundingClientRect(); menuStyle = 'top:' + (r.bottom + 4) + 'px;left:' + Math.max(8, Math.min(r.right - 220, window.innerWidth - 228)) + 'px'; }"
+                        @click="menu = !menu; if (menu) placeMenu($el, $refs.menu)"
                         class="w-6 h-6 rounded-md text-neutral-600 hover:text-neutral-700 hover:bg-white/80 flex items-center justify-center transition-colors cursor-pointer"
                         title="{% translate 'Column options' %}" aria-label="{% translate 'Column options' %}">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
                 </button>
                 <div x-show="menu" x-cloak x-transition @click.outside="menu = false; adding = false" @keydown.escape="menu = false; adding = false"
                      @scroll.window.capture="menu = false; adding = false" @resize.window="menu = false; adding = false"
-                     :style="menuStyle"
+                     x-ref="menu"
                      class="fixed bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 w-[220px]">
                     {# "Add a column to the right" turns the menu into the new column's name field. #}
                     <form x-show="adding" x-cloak class="px-3 py-2"

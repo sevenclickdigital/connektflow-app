@@ -95,7 +95,7 @@ organizations that have an archived brand and, in them, only those brands.
 
 <div class="flex flex-col gap-5 mb-8">
 {% for group in org_groups %}
-<section class="a-card overflow-hidden" x-data="{ collapsed: false, menu: false, menuStyle: '' }"
+<section class="a-card overflow-hidden" x-data="{ collapsed: false, menu: false }"
          data-search="{{ group.organization.name|lower }}{% for item in group.brands %} {{ item.workspace.name|lower }}{% endfor %}"
          data-status="{{ group.status }}" data-archived="{{ group.archived_count }}"
          x-show="matches($el.dataset.search) && inFilter($el.dataset)"
@@ -178,12 +178,12 @@ organizations that have an archived brand and, in them, only those brands.
             overflows it. Any scroll closes the menu.
             {% endcomment %}
             <button type="button" class="btn-ghost px-2.5" :aria-expanded="menu.toString()"
-                    @click="menu = !menu; if (menu) { const r = $el.getBoundingClientRect(); menuStyle = 'top:' + (r.bottom + 4) + 'px;left:' + Math.max(8, r.right - 224) + 'px'; }"
+                    @click="menu = !menu; if (menu) placeMenu($el, $refs.menu)"
                     title="{% translate 'More actions' %}" aria-label="{% translate 'More actions' %}">
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
             </button>
             <div x-show="menu" x-cloak x-transition @click.outside="menu = false" @keydown.escape.window="menu = false"
-                 @scroll.window.capture="menu = false" @resize.window="menu = false" :style="menuStyle"
+                 @scroll.window.capture="menu = false" @resize.window="menu = false" x-ref="menu"
                  class="fixed bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 w-56">
                 <a href="{% url 'organizations:manage' organization_id=group.organization.id %}"
                    class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">

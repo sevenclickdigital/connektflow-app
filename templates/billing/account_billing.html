@@ -58,14 +58,14 @@ each with its state and the one action it needs.
             with fixed coordinates because the card clips what overflows it.
             {% endcomment %}
             {% if group.cancellable %}
-            <div x-data="{ menu: false, menuStyle: '' }">
+            <div x-data="{ menu: false }">
                 <button type="button" class="btn-ghost py-1.5 px-2" :aria-expanded="menu.toString()"
-                        @click="menu = !menu; if (menu) { const r = $el.getBoundingClientRect(); menuStyle = 'top:' + (r.bottom + 4) + 'px;left:' + Math.max(8, r.right - 224) + 'px'; }"
+                        @click="menu = !menu; if (menu) placeMenu($el, $refs.menu)"
                         title="{% translate 'More actions' %}" aria-label="{% translate 'More actions' %}">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
                 </button>
                 <div x-show="menu" x-cloak x-transition @click.outside="menu = false" @keydown.escape.window="menu = false"
-                     @scroll.window.capture="menu = false" @resize.window="menu = false" :style="menuStyle"
+                     @scroll.window.capture="menu = false" @resize.window="menu = false" x-ref="menu"
                      class="fixed bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 z-50 w-56">
                     <a href="{% url 'billing_account:cancel' organization_id=group.organization.id %}"
                        class="flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm text-red-700 hover:bg-red-50 cursor-pointer">

@@ -924,6 +924,49 @@
             }
         });
     </script>
+    {% comment %}
+    placeMenu(button, menu, align): places a position:fixed menu against its
+    button — below it when it fits, above it when the room below is short,
+    and inside the window either way (with its own scroll when the window is
+    shorter than the menu). Menus close on any scroll, so one that ran past
+    the bottom of the window could not be reached at all. Called right after
+    opening: Alpine shows the element a moment later, so a menu still hidden
+    is measured invisibly. align "end" lines its right edge up with the
+    button's, "start" its left edge.
+    {% endcomment %}
+    <script nonce="{{ request.csp_nonce }}">
+        function placeMenu(button, menu, align) {
+            var gap = 4, margin = 8;
+            var box = button.getBoundingClientRect();
+            var display = menu.style.display, visibility = menu.style.visibility;
+            menu.style.maxHeight = '';
+            menu.style.overflowY = '';
+            if (getComputedStyle(menu).display === 'none') {
+                menu.style.visibility = 'hidden';
+                menu.style.display = 'block';
+            }
+            var width = menu.offsetWidth, height = menu.offsetHeight;
+            menu.style.display = display;
+            menu.style.visibility = visibility;
+
+            var room = window.innerHeight - 2 * margin;
+            var below = window.innerHeight - box.bottom - gap - margin;
+            var above = box.top - gap - margin;
+            var top;
+            if (height <= below) top = box.bottom + gap;
+            else if (height <= above) top = box.top - gap - height;
+            else top = Math.max(margin, window.innerHeight - margin - height);
+            if (height > room) {
+                top = margin;
+                menu.style.maxHeight = room + 'px';
+                menu.style.overflowY = 'auto';
+            }
+            var left = align === 'start' ? box.left : box.right - width;
+            left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+            menu.style.top = top + 'px';
+            menu.style.left = left + 'px';
+        }
+    </script>
     <script src="{% static 'js/alpine.min.js' %}" defer></script>
     <script src="{% static 'js/vendor/flatpickr.min.js' %}"></script>
     <script src="{% static 'js/vendor/flatpickr.pt.js' %}"></script>

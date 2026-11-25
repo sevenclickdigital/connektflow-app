@@ -67,14 +67,14 @@ swapped into the index page in place of its placeholder.
                 scrolls sideways inside its card, which would cut an absolutely
                 placed menu off on the last rows.
                 {% endcomment %}
-                <td class="px-2 py-3 text-right" x-data="{ menu: false, top: 0, right: 0 }" @scroll.window.capture="menu = false" @resize.window="menu = false">
+                <td class="px-2 py-3 text-right" x-data="{ menu: false }" @scroll.window.capture="menu = false" @resize.window="menu = false">
                     <span class="inline-block" @click.away="menu = false">
                         <button type="button" class="p-1.5 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
-                                @click="const box = $el.getBoundingClientRect(); top = box.bottom + 4; right = window.innerWidth - box.right; menu = !menu"
+                                @click="menu = !menu; if (menu) placeMenu($el, $refs.menu)"
                                 :aria-expanded="menu.toString()" aria-label="{% translate 'More actions' %}">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
                         </button>
-                        <span x-show="menu" x-cloak :style="`top: ${top}px; right: ${right}px`" class="fixed z-50 w-60 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 text-left">
+                        <span x-show="menu" x-cloak x-ref="menu" class="fixed z-50 w-60 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1 text-left">
                             <a href="{% url 'ads:campaign_detail' workspace_id=workspace_id campaign_id=campaign.id %}?{{ period.query }}" class="block px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50">{% translate "See campaign details" %}</a>
                             <a href="https://adsmanager.facebook.com/adsmanager/manage/campaigns?act={{ connection.ad_account_id|cut:'act_'|urlencode }}&amp;selected_campaign_ids={{ campaign.id|urlencode }}" target="_blank" rel="noopener noreferrer" class="block px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50">{% translate "Open in Meta Ads Manager" %}</a>
                         </span>
