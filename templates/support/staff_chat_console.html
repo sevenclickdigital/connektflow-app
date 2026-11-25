@@ -38,7 +38,9 @@ one. Messages are drawn with x-text, never as HTML.
   "newChat": "{% filter escapejs %}{% translate 'New chat in the queue' %}{% endfilter %}",
   "newMessage": "{% filter escapejs %}{% translate 'New message from %(name)s' %}{% endfilter %}",
   "error": "{% filter escapejs %}{% translate 'Something went wrong. Try again.' %}{% endfilter %}",
-  "confirmClose": "{% filter escapejs %}{% translate 'Close this chat?' %}{% endfilter %}"
+  "confirmClose": "{% filter escapejs %}{% translate 'Close this chat?' %}{% endfilter %}",
+  "typing": "{% filter escapejs %}{% translate '%(name)s is typing' %}{% endfilter %}",
+  "typingShort": "{% filter escapejs %}{% translate 'typing…' %}{% endfilter %}"
 }</script>
 
 <div x-data="chatConsole"
@@ -86,7 +88,10 @@ one. Messages are drawn with x-text, never as HTML.
                   :class="selectedId === item.id && 'bg-brand-50'">
             <span class="flex-1 min-w-0">
               <span class="block text-sm font-semibold text-neutral-950 truncate" x-text="item.visitor"></span>
-              <span class="block text-xs text-neutral-600 truncate" x-text="item.page || item.organization"></span>
+              <span x-show="item.typing" class="flex items-center gap-1.5 text-xs text-brand-700">
+                <span class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></span><span x-text="strings.typingShort"></span>
+              </span>
+              <span x-show="!item.typing" class="block text-xs text-neutral-600 truncate" x-text="item.page || item.organization"></span>
             </span>
             <span x-show="item.unread" class="pill pill-brand" x-text="item.unread"></span>
           </button>
@@ -146,6 +151,12 @@ one. Messages are drawn with x-text, never as HTML.
                 </div>
               </div>
             </template>
+            <div x-show="chat.typing && chat.status !== 'closed'" class="flex justify-start" aria-live="polite">
+              <div class="rounded-2xl bg-white border border-neutral-300 px-3.5 py-2 text-xs text-neutral-600 flex items-center gap-2">
+                <span class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+                <span x-text="strings.typing.replace('%(name)s', chat.visitor.name)"></span>
+              </div>
+            </div>
             <p x-show="chat.status === 'closed'" class="text-center text-xs text-neutral-500">{% translate "This chat is closed." %}</p>
           </div>
 
@@ -154,7 +165,7 @@ one. Messages are drawn with x-text, never as HTML.
             <div class="flex items-end gap-2 mt-1.5">
             <label for="console-input" class="sr-only">{% translate "Message" %}</label>
             <textarea id="console-input" x-ref="input" x-model="draft" rows="2" maxlength="2000"
-                      @keydown="cfMessageFormat.keydown($event, $el)"
+                      @keydown="cfMessageFormat.keydown($event, $el)" @input.debounce.150ms="typed()"
                       @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); send() }"
                       placeholder="{% translate 'Write the answer (Enter sends, Shift+Enter breaks the line)' %}"
                       class="form-input-styled flex-1 resize-none"></textarea>
@@ -329,6 +340,7 @@ document.addEventListener('alpine:init', function () {
       alertsOn: false,
       seenQueue: null,
       seenUnread: {},
+      typedAt: 0,
 
       init: function () {
         document.body.setAttribute('data-support-console', '');
@@ -411,7 +423,9 @@ document.addEventListener('alpine:init', function () {
             if (!data || id !== this.selectedId) return;
             var fresh = data.messages.filter((m) => m.id > this.lastId);
             if (this.chat && fresh.some((m) => !m.from_team)) hadUnseen = true;
+            var startedTyping = data.typing && !(this.chat && this.chat.typing);
             this.chat = data;
+            if (startedTyping) this.$nextTick(() => { var el = this.$refs.scroller; if (el) el.scrollTop = el.scrollHeight; });
             if (fresh.length) {
               this.messages = this.messages.concat(fresh);
               this.lastId = fresh[fresh.length - 1].id;
@@ -434,6 +448,14 @@ document.addEventListener('alpine:init', function () {
 
       fail: function (result) {
         document.body.dispatchEvent(new CustomEvent('showToast', { detail: { tone: 'error', title: (result && result.data && result.data.error) || this.strings.error } }));
+      },
+
+      typed: function () {
+        // Tell the visitor, at most every few seconds, while there is something being written.
+        var now = Date.now();
+        if (!this.chat || !this.chat.mine || !this.draft.trim() || now - this.typedAt < 2500) return;
+        this.typedAt = now;
+        this.post(this.action('typing')).catch(() => {});
       },
 
       accept: function () {

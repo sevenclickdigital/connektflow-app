@@ -91,7 +91,7 @@ def test_the_visitor_never_sees_their_device_nor_their_pages(client, ana, online
 
     text = str(state)
     assert "Chrome" not in text and "Android" not in text and "/workspace/" not in text
-    assert set(state["chat"]) == {"status", "position", "agent", "unread"}
+    assert set(state["chat"]) == {"status", "position", "agent", "unread", "typing"}
     # The team sees both pages, newest first.
     team = services.console_chat(Chat.objects.get(), online)
     assert [v["path"] for v in team["visits"]] == ["/workspace/x/inbox/", "/workspace/x/calendar/"]
@@ -235,3 +235,43 @@ def test_the_team_reads_every_past_chat_with_the_visit(client, ana, online):
     assert "Pergunta da Ana" in listing
     assert "Chrome 131" in page and "/workspace/x/inbox/" in page and "Caixa de entrada" in page
     assert "Pergunta da Ana" not in client.get(reverse("support_staff:chat_history"), {"q": "bruno"}).content.decode()
+
+
+@pytest.mark.django_db
+def test_each_side_sees_the_other_typing_until_they_send(client, ana, online, other_agent):
+    chat = services.accept(services.visitor_writes(ana, "oi").pk, online)
+    client.force_login(ana)
+
+    client.post(reverse("support:chat_typing"))
+    assert services.console_chat(Chat.objects.get(pk=chat.pk), online)["typing"] is True
+    assert services.console_feed(online)["mine"][0]["typing"] is True
+    services.visitor_writes(ana, "pronto")
+    assert services.console_chat(Chat.objects.get(pk=chat.pk), online)["typing"] is False
+
+    # Only the agent answering the chat can show as typing in it.
+    services.agent_types(Chat.objects.get(pk=chat.pk), other_agent)
+    assert client.get(reverse("support:chat_state")).json()["chat"]["typing"] is False
+    client.force_login(online)
+    client.post(reverse("support_staff:chat_typing", args=[chat.pk]))
+    client.force_login(ana)
+    assert client.get(reverse("support:chat_state")).json()["chat"]["typing"] is True
+    services.agent_writes(Chat.objects.get(pk=chat.pk), online, "Olá")
+    assert client.get(reverse("support:chat_state")).json()["chat"]["typing"] is False
+
+
+@pytest.mark.django_db
+def test_typing_fades_after_a_few_seconds(ana, online):
+    chat = services.accept(services.visitor_writes(ana, "oi").pk, online)
+    Chat.objects.filter(pk=chat.pk).update(visitor_typing_at=timezone.now() - timedelta(seconds=6))
+
+    assert services.console_chat(Chat.objects.get(pk=chat.pk), online)["typing"] is False
+
+
+@pytest.mark.django_db
+def test_a_visitor_cannot_mark_typing_in_someone_elses_chat(client, ana, bruno, online):
+    chat = services.accept(services.visitor_writes(ana, "oi").pk, online)
+    client.force_login(bruno)
+
+    client.post(reverse("support:chat_typing"))
+
+    assert Chat.objects.get(pk=chat.pk).visitor_typing_at is None

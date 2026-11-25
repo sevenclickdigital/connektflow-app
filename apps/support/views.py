@@ -247,6 +247,17 @@ def chat_visit(request):
 @login_required
 @no_takeover
 @require_POST
+def chat_typing(request):
+    """The visitor is typing; the agent's console shows it for a few seconds."""
+    chat = services.open_chat_of(request.user)
+    if chat is not None:
+        services.visitor_types(chat)
+    return JsonResponse({"ok": True})
+
+
+@login_required
+@no_takeover
+@require_POST
 def chat_close(request):
     chat = services.open_chat_of(request.user)
     if chat is not None and chat.status != Chat.Status.CLOSED:

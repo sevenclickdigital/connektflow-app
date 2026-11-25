@@ -330,6 +330,14 @@ def chat_send(request, chat_id):
 
 @staff_required
 @require_POST
+def chat_typing(request, chat_id):
+    """The agent is typing; the visitor's widget shows it for a few seconds."""
+    services.agent_types(get_object_or_404(Chat, pk=chat_id), request.user)
+    return JsonResponse({"ok": True})
+
+
+@staff_required
+@require_POST
 def chat_close(request, chat_id):
     chat = get_object_or_404(Chat, pk=chat_id)
     services.agent_closes(chat)

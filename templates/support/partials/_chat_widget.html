@@ -31,10 +31,12 @@ become tags (support/partials/_message_format.html).
   "sendError": "{% filter escapejs %}{% translate 'The message was not sent. Try again.' %}{% endfilter %}",
   "offlineError": "{% filter escapejs %}{% translate 'No connection to the server. Check your internet and try again.' %}{% endfilter %}",
   "you": "{% filter escapejs %}{% translate 'You' %}{% endfilter %}",
-  "confirmEnd": "{% filter escapejs %}{% translate 'End this conversation?' %}{% endfilter %}"
+  "confirmEnd": "{% filter escapejs %}{% translate 'End this conversation?' %}{% endfilter %}",
+  "typing": "{% filter escapejs %}{% translate '%(name)s is typing' %}{% endfilter %}"
 }</script>
 <div x-data="supportChat" data-state-url="{% url 'support:chat_state' %}" data-send-url="{% url 'support:chat_send' %}"
      data-visit-url="{% url 'support:chat_visit' %}" data-close-url="{% url 'support:chat_close' %}"
+     data-typing-url="{% url 'support:chat_typing' %}"
      data-has-chat="{% if chat.status %}1{% endif %}"
      @support-chat-open.window="openPanel()" @keydown.escape.window="open && (open = false)"
      class="fixed z-[150] bottom-4 right-4 sm:bottom-5 sm:right-5 flex flex-col items-end gap-3 print:hidden">
@@ -85,6 +87,13 @@ become tags (support/partials/_message_format.html).
         </div>
       </template>
 
+      <div x-show="chat && chat.typing" x-cloak class="flex justify-start" aria-live="polite">
+        <div class="rounded-2xl bg-white border border-neutral-300 px-3.5 py-2 text-xs text-neutral-600 flex items-center gap-2">
+          <span class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span x-text="chat && strings.typing.replace('%(name)s', chat.agent)"></span>
+        </div>
+      </div>
+
       <div x-show="ended" x-cloak class="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-700">
         <p x-show="!ticket">{% translate "This conversation has ended. Write again whenever you need us." %}</p>
         <p x-show="ticket">
@@ -98,7 +107,7 @@ become tags (support/partials/_message_format.html).
     <form x-show="!ticket" @submit.prevent="send()" class="border-t border-neutral-300 p-3 flex items-end gap-2 bg-white">
       <label for="support-chat-input" class="sr-only">{% translate "Message" %}</label>
       <textarea id="support-chat-input" x-ref="input" x-model="draft" rows="1" maxlength="2000"
-                @keydown="cfMessageFormat.keydown($event, $el)"
+                @keydown="cfMessageFormat.keydown($event, $el)" @input.debounce.150ms="typed()"
                 @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); send() }"
                 @input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 120) + 'px'"
                 placeholder="{% translate 'Write a message' %}"
@@ -126,6 +135,7 @@ document.addEventListener('alpine:init', function () {
   Alpine.data('supportChat', function () {
     var POLL_MS = 3000;
     var OPEN_KEY = 'cf:support-chat-open';
+    var TYPING_EVERY_MS = 2500;
     return {
       strings: JSON.parse(document.getElementById('support-chat-strings').textContent),
       open: false,
@@ -140,6 +150,7 @@ document.addEventListener('alpine:init', function () {
       ended: false,
       ticket: null,
       timer: null,
+      typedAt: 0,
 
       init: function () {
         this.open = sessionStorage.getItem(OPEN_KEY) === '1';
@@ -194,6 +205,7 @@ document.addEventListener('alpine:init', function () {
       apply: function (state) {
         this.online = state.online;
         if (state.chat) {
+          if (state.chat.typing && !(this.chat && this.chat.typing)) this.scrollDown();
           this.chat = state.chat;
           this.ended = false;
           this.addMessages(state.messages);
@@ -257,6 +269,14 @@ document.addEventListener('alpine:init', function () {
         this.messages = this.messages.concat([{ id: 'local-' + now.getTime(), body: body, from_team: false, author: '',
           at: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') }]);
         this.scrollDown();
+      },
+
+      typed: function () {
+        // Tell the agent, at most every few seconds, while there is something being written.
+        var now = Date.now();
+        if (!this.chat || !this.draft.trim() || now - this.typedAt < TYPING_EVERY_MS) return;
+        this.typedAt = now;
+        this.post(this.$root.dataset.typingUrl, {}).catch(() => {});
       },
 
       restart: function () {

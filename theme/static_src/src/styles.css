@@ -1319,3 +1319,11 @@ button.chat-reaction:hover { background: var(--brand-50); }
 .message-text code { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.85em; padding: 1px 5px; border-radius: 4px; background: color-mix(in srgb, currentColor 12%, transparent); }
 .message-text a { text-underline-offset: 2px; }
 .rich-text > :first-child { margin-top: 0; }
+
+/* "… is typing" in the support chat: three dots that rise in turn. */
+.typing-dots { display: inline-flex; gap: 3px; }
+.typing-dots span { width: 5px; height: 5px; border-radius: 9999px; background: currentColor; opacity: .45; animation: typing-dot 1.2s infinite ease-in-out; }
+.typing-dots span:nth-child(2) { animation-delay: .15s; }
+.typing-dots span:nth-child(3) { animation-delay: .3s; }
+@keyframes typing-dot { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-3px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .typing-dots span { animation: none; } }

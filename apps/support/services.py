@@ -45,6 +45,10 @@ ONLINE_WINDOW = timedelta(seconds=45)
 VISITOR_GONE_AFTER = timedelta(seconds=30)
 # A queued chat whose visitor is gone this long becomes a ticket.
 ABANDONED_AFTER = timedelta(minutes=10)
+# Someone counts as typing for this long after their last keystroke report.
+# The widget and the console report at most every few seconds while typing
+# and poll every 3 s, so the other side sees it with a delay of a few seconds.
+TYPING_WINDOW = timedelta(seconds=5)
 
 
 class SupportError(ValueError):
@@ -233,7 +237,8 @@ def visitor_writes(
             )
         chat = _start_chat(user, user_agent=user_agent, page=page or {}, organization=organization, workspace=workspace)
     ChatMessage.objects.create(chat=chat, author=user, body=body)
-    Chat.objects.filter(pk=chat.pk).update(visitor_seen_at=timezone.now())
+    # The message went out: they are no longer typing it.
+    Chat.objects.filter(pk=chat.pk).update(visitor_seen_at=timezone.now(), visitor_typing_at=None)
     return chat
 
 
@@ -299,6 +304,7 @@ def visitor_state(user, *, after: int = 0) -> dict:
         "position": queue_position(chat),
         "agent": chat.agent.greeting_name if chat.agent else "",
         "unread": unread,
+        "typing": _is_typing(chat.agent_typing_at),
     }
     state["messages"] = [
         _message_json(message) for message in chat.messages.filter(id__gt=after).select_related("author")
@@ -377,8 +383,24 @@ def agent_writes(chat: Chat, agent, body: str) -> ChatMessage:
     message = ChatMessage.objects.create(
         chat=chat, author=agent, from_team=True, body=clean_body(body, MAX_CHAT_MESSAGE_LENGTH)
     )
-    Chat.objects.filter(pk=chat.pk).update(agent_seen_at=timezone.now())
+    Chat.objects.filter(pk=chat.pk).update(agent_seen_at=timezone.now(), agent_typing_at=None)
     return message
+
+
+def visitor_types(chat: Chat) -> None:
+    """The visitor is typing in their open chat."""
+    if chat.status != Chat.Status.CLOSED:
+        Chat.objects.filter(pk=chat.pk).update(visitor_typing_at=timezone.now())
+
+
+def agent_types(chat: Chat, agent) -> None:
+    """The agent is typing in a chat they are answering; ignored in anyone else's."""
+    if chat.status == Chat.Status.ACTIVE and chat.agent_id == agent.pk:
+        Chat.objects.filter(pk=chat.pk).update(agent_typing_at=timezone.now())
+
+
+def _is_typing(when) -> bool:
+    return bool(when and when >= timezone.now() - TYPING_WINDOW)
 
 
 def agent_closes(chat: Chat) -> None:
@@ -484,6 +506,7 @@ def console_feed(agent) -> dict:
             queue.append(item)
         elif chat.agent_id == agent.pk:
             item["unread"] = unread.get(chat.pk, 0)
+            item["typing"] = _is_typing(chat.visitor_typing_at)
             mine.append(item)
         else:
             item["agent"] = chat.agent.greeting_name if chat.agent else ""
@@ -512,6 +535,7 @@ def console_chat(chat: Chat, agent, *, after: int = 0) -> dict:
         "agent": chat.agent.greeting_name if chat.agent else "",
         "ticket": chat.ticket_id,
         "present": bool(chat.visitor_seen_at and chat.visitor_seen_at >= gone),
+        "typing": _is_typing(chat.visitor_typing_at),
         "visitor": {
             "id": str(visitor.pk),
             "name": visitor.display_name,

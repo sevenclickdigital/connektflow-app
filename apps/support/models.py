@@ -166,6 +166,9 @@ class Chat(models.Model):
     # Each side's last poll: whether they are still there, and what they have read.
     visitor_seen_at = models.DateTimeField(null=True, blank=True)
     agent_seen_at = models.DateTimeField(null=True, blank=True)
+    # When each side last typed in the message box (services.TYPING_WINDOW); cleared when they send.
+    visitor_typing_at = models.DateTimeField(null=True, blank=True)
+    agent_typing_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "support_chat"
