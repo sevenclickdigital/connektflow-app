@@ -1,8 +1,10 @@
+import logging
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
 
+import httpx
 import pytest
 
 from providers.exceptions import (
@@ -15,7 +17,7 @@ from providers.exceptions import (
 )
 from providers.facebook import FacebookProvider
 from providers.instagram import InstagramProvider
-from providers.meta_messaging import normalize_attachments
+from providers.meta_messaging import DM_MIN_REQUEST_SECONDS, normalize_attachments
 
 
 def response(data):
@@ -249,6 +251,7 @@ def test_facebook_reconnect_preserves_other_existing_page_fields():
 
 
 def test_paginated_poll_has_a_shared_request_budget(caplog):
+    caplog.set_level(logging.INFO, logger="providers.meta_messaging")
     instance = provider()
     calls = 0
 
@@ -331,6 +334,67 @@ def test_time_capped_poll_keeps_the_unvisited_conversation():
     second._request = MagicMock(return_value=response({"data": []}))
     assert second._fetch_direct_messages("token").poll_state == {}
     assert second._request.call_args.args[1].endswith("/later/messages")
+
+
+def _long_conversation(clock, *, seconds_per_page, timeout_on_call=None):
+    """A conversation whose every page costs ``seconds_per_page`` of the poll's clock."""
+    calls = []
+
+    def request(method, url, **kwargs):
+        calls.append(kwargs)
+        if timeout_on_call == len(calls):
+            raise httpx.ReadTimeout("The read operation timed out")
+        if url.endswith("/conversations"):
+            return response({"data": [{"id": "long"}, {"id": "later"}]})
+        clock[0] += seconds_per_page
+        page = int(kwargs["params"].get("after") or "0")
+        return response(
+            {
+                "data": [{"id": f"m{page}", "from": {"id": "customer"}, "created_time": "2026-10-12T10:00:00Z"}],
+                "paging": {"next": "https://untrusted/next", "cursors": {"after": str(page + 1)}},
+            }
+        )
+
+    return request, calls
+
+
+def test_a_timeout_after_pages_were_read_keeps_them_and_moves_on():
+    """Raising would drop the pages read and retry the same one for ever."""
+    clock = [0]
+    request, calls = _long_conversation(clock, seconds_per_page=1, timeout_on_call=4)
+    instance = provider()
+    instance._request = MagicMock(side_effect=request)
+
+    with patch("providers.meta_messaging.time.monotonic", side_effect=lambda: clock[0]):
+        batch = instance._fetch_direct_messages("token")
+
+    assert [message.platform_message_id for message in batch] == ["m0", "m1"]
+    assert batch.poll_state["conversations"] == ["long", "later"]
+    assert batch.poll_state["message_after"] == "2"
+
+
+def test_a_timeout_on_the_first_request_is_raised():
+    request, _ = _long_conversation([0], seconds_per_page=1, timeout_on_call=1)
+    instance = provider()
+    instance._request = MagicMock(side_effect=request)
+
+    with pytest.raises(httpx.ReadTimeout):
+        instance._fetch_direct_messages("token")
+
+
+def test_no_request_is_started_without_the_time_to_finish_it():
+    """Meta takes seconds per page: a request given the budget's last moments can only time out."""
+    clock = [0]
+    request, calls = _long_conversation(clock, seconds_per_page=4.5)
+    instance = provider()
+    instance._request = MagicMock(side_effect=request)
+
+    with patch("providers.meta_messaging.time.monotonic", side_effect=lambda: clock[0]):
+        batch = instance._fetch_direct_messages("token")
+
+    assert all(call["timeout"] >= DM_MIN_REQUEST_SECONDS for call in calls)
+    assert len(batch) == 4
+    assert batch.poll_state["message_after"] == "4"
 
 
 def test_continuation_is_discarded_when_linked_page_changes():

@@ -13,12 +13,22 @@ import time
 from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
+import httpx
+
 from .exceptions import APIError, MessagingError, OAuthError, RateLimitError, TokenExpiredError
 from .types import InboxMessage
 
 logger = logging.getLogger(__name__)
 
 META_DM_PLATFORMS = {"facebook", "instagram", "instagram_login"}
+
+# One poll of an account's direct messages: how long the whole walk may take,
+# how long one request may, and the least time worth starting a request with.
+# A page of messages takes Meta 4-5 s, so a request started with less than
+# that left can only time out.
+DM_POLL_BUDGET_SECONDS = 20
+DM_REQUEST_TIMEOUT_SECONDS = 10
+DM_MIN_REQUEST_SECONDS = 6
 
 
 def enabled(value) -> bool:
@@ -133,6 +143,13 @@ def fetch_instagram_page_messages(
     cursor. A later worker resumes that exact walk instead of spending every
     poll's budget on the same early history. Rebuild URLs locally, never follow
     platform-provided URLs, and ignore the shared comment/DM high-water mark.
+
+    A request that times out after others answered ends the walk there: what
+    was read is returned with the continuation, and the next poll takes it
+    from that page. Raising instead would discard those pages and leave the
+    continuation where it was, so a long conversation would be read from the
+    same point, and time out at the same point, on every poll. A timeout on
+    the first request is raised: nothing was read.
     """
     started = time.monotonic()
     remaining_calls = 100
@@ -146,6 +163,10 @@ def fetch_instagram_page_messages(
     listed_conversations = bool(conversations or conversation_after)
     seen_conversation_cursors = {conversation_after} if conversation_after else set()
     seen_message_cursors = {message_after} if message_after else set()
+    answered = 0
+
+    def time_left():
+        return DM_POLL_BUDGET_SECONDS - (time.monotonic() - started)
 
     def page(url, params, after):
         nonlocal remaining_calls
@@ -158,7 +179,7 @@ def fetch_instagram_page_messages(
             url,
             access_token=access_token,
             params=query,
-            timeout=max(0.1, min(20 - (time.monotonic() - started), 10)),
+            timeout=min(time_left(), DM_REQUEST_TIMEOUT_SECONDS),
         ).json()
 
     def next_cursor(data, seen):
@@ -169,25 +190,37 @@ def fetch_instagram_page_messages(
         seen.add(after)
         return after
 
-    while remaining_calls and time.monotonic() - started < 20:
+    while remaining_calls and time_left() >= DM_MIN_REQUEST_SECONDS:
         if not conversations:
             if listed_conversations and not conversation_after:
                 break
-            data = page(
-                f"{base_url}/{page_id}/conversations",
-                {"platform": "instagram", "fields": "id"},
-                conversation_after,
-            )
+            try:
+                data = page(
+                    f"{base_url}/{page_id}/conversations",
+                    {"platform": "instagram", "fields": "id"},
+                    conversation_after,
+                )
+            except httpx.TimeoutException:
+                if not answered:
+                    raise
+                break
+            answered += 1
             conversations = [str(convo["id"]) for convo in data.get("data", []) if convo.get("id")]
             conversation_after = next_cursor(data, seen_conversation_cursors)
             listed_conversations = True
             continue
         convo_id = conversations[0]
-        data = page(
-            f"{base_url}/{convo_id}/messages",
-            {"fields": "id,message,from,created_time,attachments"},
-            message_after,
-        )
+        try:
+            data = page(
+                f"{base_url}/{convo_id}/messages",
+                {"fields": "id,message,from,created_time,attachments"},
+                message_after,
+            )
+        except httpx.TimeoutException:
+            if not answered:
+                raise
+            break
+        answered += 1
         for msg in data.get("data", []):
             sender = msg.get("from") or {}
             sender_id = str(sender.get("id") or "")
@@ -215,7 +248,8 @@ def fetch_instagram_page_messages(
             seen_message_cursors.clear()
     continuation = {}
     if conversations or conversation_after or not listed_conversations:
-        logger.warning("Instagram DM poll reached its bounded request/time budget")
+        # The usual end of a poll on an account with a long history.
+        logger.info("Instagram DM poll reached its bounded request/time budget")
         continuation = {
             "page_id": str(page_id),
             "owner_id": str(owner_id),
@@ -442,7 +476,14 @@ def build_send_payload(
 #: for one. ``is_user_follow_business`` is the one this exists for — "send the
 #: link only to followers" — and the others ride along because splitting them
 #: into separate requests would spend a round trip to learn nothing new.
-PROFILE_FIELDS = ("name", "username", "follower_count", "is_user_follow_business", "is_business_follow_user", "is_verified_user")
+PROFILE_FIELDS = (
+    "name",
+    "username",
+    "follower_count",
+    "is_user_follow_business",
+    "is_business_follow_user",
+    "is_verified_user",
+)
 
 
 def fetch_user_profile(request, *, base_url: str, user_id: str, access_token: str) -> dict:

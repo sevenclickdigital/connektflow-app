@@ -40,3 +40,4 @@ Adding a platform touches more than `providers/`: `PlatformCredential` choices a
 
 - Token refresh is serialized (`apps/social_accounts/token_refresh.py`); use it instead of refreshing inline.
 - Respect platform quotas (YouTube quota handling in `providers/google_errors.py`). YouTube data retention has its own rules (`apps/social_accounts/youtube_compliance.py`, `docs/youtube-compliance-rollout.md`).
+- A walk bounded by a time budget (`fetch_instagram_page_messages`) must keep what it has read when a later request times out — return it with the continuation, don't raise — and must not start a request with less time left than the platform takes to answer. Otherwise the last request of every poll times out, the pages read are discarded and the continuation never moves: the same history is fetched, and lost, on every poll.
