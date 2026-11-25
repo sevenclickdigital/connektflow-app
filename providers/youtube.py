@@ -305,6 +305,20 @@ class YouTubeProvider(SocialProvider):
     # Publishing
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _video_title(content: PublishContent) -> str:
+        """The upload's title, within the API's 100 characters.
+
+        YouTube decides what is a Short from the file (vertical or square, up
+        to 3 minutes); a ``#Shorts`` tag in the title only helps it along, so a
+        Short gets one, cutting the title to make room for it.
+        """
+        title = content.title or content.text or ""
+        if content.post_type == PostType.SHORT and "#shorts" not in title.lower():
+            suffix = " #Shorts"
+            return f"{title[: 100 - len(suffix)].rstrip()}{suffix}".strip()
+        return title[:100]
+
     def publish_post(self, access_token: str, content: PublishContent) -> PublishResult:
         if content.post_type not in (PostType.VIDEO, PostType.SHORT):
             raise PublishError(
@@ -313,12 +327,8 @@ class YouTubeProvider(SocialProvider):
                 retryable=False,
             )
 
-        title = content.title or content.text or ""
+        title = self._video_title(content)
         description = content.description or content.text or ""
-
-        # Shorts: add #Shorts tag if not already present
-        if content.post_type == PostType.SHORT and "#Shorts" not in title:
-            title = f"{title} #Shorts".strip()
 
         privacy_status = content.extra.get("privacy_status", "public")
         made_for_kids = content.extra.get("self_declared_made_for_kids", False)
@@ -327,7 +337,7 @@ class YouTubeProvider(SocialProvider):
 
         metadata = {
             "snippet": {
-                "title": title[:100],
+                "title": title,
                 "description": description[: self.max_caption_length],
                 "tags": tags,
                 "categoryId": category_id,

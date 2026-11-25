@@ -858,12 +858,13 @@
                          class="border border-neutral-300 rounded-xl bg-white p-4 space-y-3">
                         <div class="flex items-center gap-2">
                             <a :href="charLimits[accId]?.youtube_url || 'https://www.youtube.com/'" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-neutral-700 underline underline-offset-2">{% translate "YouTube" %}</a>
-                            <span class="text-xs font-semibold text-neutral-700" x-text="targetLabel(accId, 'default') + ' - Video Settings'"></span>
+                            <span class="text-xs font-semibold text-neutral-700" x-text="targetLabel(accId, 'default') + ' - ' + cLabel('yt-video-settings')"></span>
                         </div>
                         <p x-show="!hasVideoAttached" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
                             <span class="font-semibold">{% translate "YouTube only publishes videos." %}</span>
                             {% translate "Add a video to schedule this post, or deselect the account." %}
                         </p>
+                        <p x-show="hasFormat(accId, 'short') && shortVideoIssue()" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800" x-text="shortVideoIssue()"></p>
                         <!-- Thumbnail -->
                         <div>
                             <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{% translate "Custom Thumbnail" %}</label>
@@ -2492,6 +2493,10 @@
 {% translate "This crop applies to {format} only; the other formats keep the original image." as lbl_c_crop_for_format %}
 {% translate "A Story needs at least one photo or video." as lbl_c_story_media %}
 {% translate "A Reel needs exactly one video." as lbl_c_reel_media %}
+{% translate "A Short needs exactly one video." as lbl_c_short_media %}
+{% translate "This video is horizontal. YouTube only shows vertical or square videos as Shorts, so it will go out as an ordinary video." as lbl_c_short_horizontal %}
+{% translate "This video is longer than 3 minutes. YouTube only shows videos up to 3 minutes as Shorts, so it will go out as an ordinary video." as lbl_c_short_too_long %}
+{% translate "Video Settings" as lbl_c_yt_video_settings %}
 {% translate "A profile photo needs exactly one image." as lbl_c_photo_media %}
 {{ lbl_c_saved|json_script:"c-saved" }}
 {{ lbl_c_save_unreachable|json_script:"c-save-unreachable" }}
@@ -2504,6 +2509,10 @@
 {{ lbl_c_crop_for_format|json_script:"c-crop-for-format" }}
 {{ lbl_c_story_media|json_script:"c-story-media" }}
 {{ lbl_c_reel_media|json_script:"c-reel-media" }}
+{{ lbl_c_short_media|json_script:"c-short-media" }}
+{{ lbl_c_short_horizontal|json_script:"c-short-horizontal" }}
+{{ lbl_c_short_too_long|json_script:"c-short-too-long" }}
+{{ lbl_c_yt_video_settings|json_script:"c-yt-video-settings" }}
 {{ lbl_c_photo_media|json_script:"c-photo-media" }}
 {{ lbl_c_not_saved|json_script:"c-not-saved" }}
 {{ lbl_c_caption|json_script:"c-caption" }}
@@ -2870,6 +2879,7 @@ function composerApp() {
                     name: t.dataset.name,
                     width: parseInt(t.dataset.width, 10) || 0,
                     height: parseInt(t.dataset.height, 10) || 0,
+                    duration: parseFloat(t.dataset.duration) || 0,
                 }));
                 // Older assets may not have their size stored; read it off the file.
                 this.mediaInfo.filter(m => m.kind === 'image' && !m.width).forEach(m => {
@@ -3103,6 +3113,16 @@ function composerApp() {
             if (!this.hasMediaAttached || this.hasFormat(accId, fmt)) return '';
             return this.formatMismatch(fmt);
         },
+        // Why the attached video won't show as a Short on YouTube, or ''. Not
+        // a blocker: YouTube publishes it anyway, as an ordinary video. Size
+        // and length are known once the upload has been processed.
+        shortVideoIssue() {
+            const video = this.mediaInfo.find(m => m.kind === 'video');
+            if (!video) return '';
+            if (video.width && video.height && video.width > video.height) return cLabel('short-horizontal');
+            if (video.duration > 180) return cLabel('short-too-long');
+            return '';
+        },
         clearTargets() {
             [...this.selectedAccounts].forEach(accId => this.toggleAccount(accId));
         },
@@ -3111,6 +3131,7 @@ function composerApp() {
         formatMismatch(fmt) {
             if (fmt === 'story' && !this.hasMediaAttached) return cLabel('story-media');
             if (fmt === 'reel' && !this.hasSingleVideoAttached) return cLabel('reel-media');
+            if (fmt === 'short' && !this.hasSingleVideoAttached) return cLabel('short-media');
             if (fmt === 'profile_photo' && !this.hasSingleImageAttached) return cLabel('photo-media');
             return '';
         },

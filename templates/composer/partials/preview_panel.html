@@ -68,8 +68,8 @@ this panel.
 
             {% if s.format == "story" %}
             {% include "composer/partials/_preview_vertical.html" with p=s kind="story" media_items=s.media_items|default:media_items %}
-            {% elif s.format == "reel" %}
-            {% include "composer/partials/_preview_vertical.html" with p=s kind="reel" media_items=s.media_items|default:media_items %}
+            {% elif s.format == "reel" or s.format == "short" %}
+            {% include "composer/partials/_preview_vertical.html" with p=s kind=s.format media_items=s.media_items|default:media_items %}
             {% elif s.format == "profile_photo" %}
             {% include "composer/partials/_preview_vertical.html" with p=s kind="photo" media_items=s.media_items|default:media_items %}
             {% else %}

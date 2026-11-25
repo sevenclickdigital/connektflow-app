@@ -295,7 +295,7 @@ class PlatformPostSummary(Schema):
     id: uuid.UUID
     social_account_id: uuid.UUID
     platform: str
-    # "default", "story", "reel" or "profile_photo"; one post can list the
+    # "default", "story", "reel", "short" or "profile_photo"; one post can list the
     # same account once per format.
     format: str = "default"
     status: str

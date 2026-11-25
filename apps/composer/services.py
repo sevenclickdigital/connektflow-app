@@ -715,6 +715,8 @@ def format_blocker(format: str, ordered_media_types) -> str:
         return _("A Story needs at least one photo or video.")
     if format == "reel":
         return _("A Reel needs exactly one video.")
+    if format == "short":
+        return _("A Short needs exactly one video.")
     return _("A profile photo needs exactly one image.")
 
 
@@ -1089,14 +1091,16 @@ def template_network_formats(network) -> list[str]:
 
 
 def template_format_short(fmt, formats) -> str:
-    """A format's short name, as the composer's toggles call it: the ordinary
-    post is "Feed" where the network also has Stories, "Post" elsewhere."""
+    """A format's short name, as the composer's toggles call it."""
     from django.utils.translation import pgettext
 
+    from apps.social_accounts.models import default_format_short
+
     names = {
-        "default": _("Feed") if "story" in formats else _("Post"),
+        "default": default_format_short(formats),
         "story": pgettext("publishing format", "Story"),
         "reel": _("Reels"),
+        "short": _("Shorts"),
         "profile_photo": _("Photo"),
     }
     return str(names.get(fmt, fmt))

@@ -801,6 +801,13 @@ class ResolvePostTypeFromMediaTypeTest(SimpleTestCase):
                         PostType.STORY,
                     )
 
+    def test_a_youtube_short_row_is_a_short(self):
+        self.assertEqual(self._resolve("youtube", format="short"), PostType.SHORT)
+
+    def test_a_short_hint_on_an_ordinary_youtube_row_is_a_leftover(self):
+        """The Short is its own row; honouring the hint would upload the video twice as a Short."""
+        self.assertEqual(self._resolve("youtube", extra={"post_type": "short"}), PostType.VIDEO)
+
     def test_a_profile_photo_row_is_a_profile_photo(self):
         self.assertEqual(
             self._resolve("google_business", first_media_type="image", format="profile_photo"),

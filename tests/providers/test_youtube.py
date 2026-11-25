@@ -839,3 +839,24 @@ class TestQuotaUnitAccounting:
             provider.get_messages("tok")
 
         assert provider.last_call_quota_units == 1
+
+
+class TestVideoTitle:
+    def _title(self, title, post_type):
+        from providers.types import PostType, PublishContent
+
+        return YouTubeProvider._video_title(PublishContent(title=title, post_type=getattr(PostType, post_type)))
+
+    def test_a_short_gets_the_tag(self):
+        assert self._title("Lançamento", "SHORT") == "Lançamento #Shorts"
+
+    def test_a_long_short_title_is_cut_to_keep_the_tag(self):
+        title = self._title("x" * 120, "SHORT")
+        assert len(title) == 100
+        assert title.endswith(" #Shorts")
+
+    def test_a_title_that_already_has_the_tag_is_left_alone(self):
+        assert self._title("Novo #shorts", "SHORT") == "Novo #shorts"
+
+    def test_an_ordinary_video_gets_no_tag(self):
+        assert self._title("y" * 120, "VIDEO") == "y" * 100

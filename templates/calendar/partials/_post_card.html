@@ -26,7 +26,7 @@ gets this card back) and view_url (the post on its network, or empty).
         </div>
 
         {% if media %}
-        <div class="relative rounded-lg overflow-hidden bg-neutral-100" style="aspect-ratio: {% if pp.format == 'story' or pp.format == 'reel' %}9/16; max-height: 320px; margin: 0 auto{% else %}1/1{% endif %};">
+        <div class="relative rounded-lg overflow-hidden bg-neutral-100" style="aspect-ratio: {% if pp.format == 'story' or pp.format == 'reel' or pp.format == 'short' %}9/16; max-height: 320px; margin: 0 auto{% else %}1/1{% endif %};">
             {% if media.is_video %}
             <video src="{{ media.file.url }}#t=0.5" class="absolute inset-0 w-full h-full object-cover" muted preload="metadata"></video>
             {% else %}

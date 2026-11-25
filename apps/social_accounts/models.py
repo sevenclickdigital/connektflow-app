@@ -20,6 +20,16 @@ from apps.credentials.models import PlatformCredential
 MESSAGING_ONLY_PLATFORMS = frozenset({"whatsapp"})
 
 
+def default_format_short(formats):
+    """The ordinary post's short name next to an account's other formats:
+    "Feed" beside Stories, "Video" beside Shorts, "Post" elsewhere."""
+    if "story" in formats:
+        return _("Feed")
+    if "short" in formats:
+        return _("Video")
+    return _("Post")
+
+
 class SocialAccountQuerySet(models.QuerySet):
     def publishable(self):
         """Accounts that posts can be published to."""
@@ -576,6 +586,7 @@ class SocialAccount(models.Model):
             "title_label": "Video Title",
             "caption_label": "Description",
             "advanced_fields": ["made_for_kids", "privacy_status", "tags", "thumbnail"],
+            "formats": ["default", "short"],
         },
         "pinterest": {
             "needs_title": True,
@@ -642,20 +653,22 @@ class SocialAccount(models.Model):
 
         ``label`` names what the user gets ("Instagram Stories"); the ordinary
         post is just the platform's name. ``short`` is the format alone, for a
-        toggle or chip next to the account: the ordinary post is "Feed" where
-        the account also has Stories, "Post" elsewhere.
+        toggle or chip next to the account, the ordinary post named by
+        ``default_format_short``.
         """
         platform = self.get_platform_display()
         labels = {
             "default": platform,
             "story": _("%(platform)s Stories") % {"platform": platform},
             "reel": _("%(platform)s Reels") % {"platform": platform},
+            "short": _("%(platform)s Shorts") % {"platform": platform},
             "profile_photo": _("%(platform)s photo") % {"platform": platform},
         }
         shorts = {
-            "default": _("Feed") if "story" in self.formats else _("Post"),
+            "default": default_format_short(self.formats),
             "story": pgettext_lazy("publishing format", "Story"),
             "reel": _("Reels"),
+            "short": _("Shorts"),
             "profile_photo": _("Photo"),
         }
         return [{"format": fmt, "label": str(labels[fmt]), "short": str(shorts[fmt])} for fmt in self.formats]

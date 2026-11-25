@@ -49,6 +49,18 @@ class FormatBlockerTests(FormatsTestsBase):
         self.assertEqual(format_blocker("story", ["document"]), "A Story needs at least one photo or video.")
         self.assertEqual(format_blocker("story", ["image", "video"]), "")
 
+    def test_a_short_needs_exactly_one_video(self):
+        self.assertEqual(format_blocker("short", ["image"]), "A Short needs exactly one video.")
+        self.assertEqual(format_blocker("short", ["video", "video"]), "A Short needs exactly one video.")
+        self.assertEqual(format_blocker("short", ["video"]), "")
+
+    def test_youtube_offers_the_video_and_the_short(self):
+        youtube = SocialAccount(platform="youtube")
+        self.assertEqual(
+            [(option["format"], option["short"]) for option in youtube.format_options()],
+            [("default", "Video"), ("short", "Shorts")],
+        )
+
     def test_the_engine_check_uses_the_ordered_media(self):
         reason = publish_blocker(
             self.instagram,

@@ -132,7 +132,7 @@ FORMATS: tuple[CreativeFormat, ...] = (
     CreativeFormat("tt_profile", "tiktok", _("Profile photo"), 200, 200, IMAGE, None),
     # YouTube
     CreativeFormat("yt_video", "youtube", _("Video"), 1920, 1080, VIDEO),
-    CreativeFormat("yt_short", "youtube", _("Short"), 1080, 1920, VIDEO),
+    CreativeFormat("yt_short", "youtube", _("Short"), 1080, 1920, VIDEO, "short"),
     CreativeFormat("yt_thumbnail", "youtube", _("Thumbnail"), 1280, 720, IMAGE, None),
     CreativeFormat("yt_banner", "youtube", _("Channel banner"), 2560, 1440, IMAGE, None),
     CreativeFormat("yt_logo", "youtube", _("Channel logo"), 800, 800, IMAGE, None),

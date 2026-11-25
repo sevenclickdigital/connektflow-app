@@ -386,14 +386,14 @@ function specialDatesTab() {
         // The formats and the networks of a date's arts, each once, in the arts' order.
         artFormats(entry) { return [...new Set(entry.art_items.map(item => item.label))]; },
         // Per network: its key and name, its arts' names and their publishing formats (feed,
-        // Story, Reels), each once, as a template's network chips.
+        // Story, Reels, Shorts), each once, as a template's network chips.
         artNetworks(entry) {
             const seen = new Map();
             entry.art_items.forEach(item => {
                 if (!seen.has(item.network_key)) seen.set(item.network_key, { key: item.network_key, label: item.network, labels: [], formats: [] });
                 const net = seen.get(item.network_key);
                 if (!net.labels.includes(item.label)) net.labels.push(item.label);
-                if (['default', 'story', 'reel'].includes(item.publish_format) && !net.formats.includes(item.publish_format)) net.formats.push(item.publish_format);
+                if (['default', 'story', 'reel', 'short'].includes(item.publish_format) && !net.formats.includes(item.publish_format)) net.formats.push(item.publish_format);
             });
             return [...seen.values()];
         },

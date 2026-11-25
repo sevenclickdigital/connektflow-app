@@ -480,7 +480,7 @@ def _cover_timestamp_ms(value):
 
 # post_type hints that name a format. The row's ``format`` says this now, so
 # a leftover hint is dropped whenever the composer saves the row.
-_FORMAT_HINTS = ("story", "reel", "profile_photo")
+_FORMAT_HINTS = ("story", "reel", "short", "profile_photo")
 
 
 def _apply_format_extras(request, pp, acc_id):

@@ -47,6 +47,7 @@ class PostType(enum.Enum):
 FORMAT_POST_TYPES = {
     "story": PostType.STORY,
     "reel": PostType.REEL,
+    "short": PostType.SHORT,
     "profile_photo": PostType.PROFILE_PHOTO,
 }
 
@@ -57,8 +58,8 @@ def media_fits_post_type(post_type: PostType, media_count: int, first_media_type
     Only post types that name a media shape are checked; TEXT, LINK, PIN and the
     rest say nothing about attachments and always fit.
     """
-    if post_type is PostType.REEL:
-        # Every Reels API takes exactly one video.
+    if post_type in (PostType.REEL, PostType.SHORT):
+        # Every Reels API takes exactly one video, and a Short is one video.
         return media_count == 1 and first_media_type == "video"
     if post_type is PostType.VIDEO:
         return first_media_type == "video"

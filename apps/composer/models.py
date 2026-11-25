@@ -555,6 +555,7 @@ class PlatformPost(models.Model):
         DEFAULT = "default", _("Post")
         STORY = "story", pgettext_lazy("publishing format", "Story")
         REEL = "reel", _("Reels")
+        SHORT = "short", _("Shorts")
         PROFILE_PHOTO = "profile_photo", _("Photo")
 
     class FirstCommentStatus(models.TextChoices):
