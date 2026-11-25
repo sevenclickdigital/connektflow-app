@@ -286,6 +286,12 @@ class SocialProvider(HttpProvider):
     # None: no limit of ours.
     max_images_per_post: int | None = None
 
+    # The longest (seconds) and largest (bytes) video one Story takes. A Story
+    # over either is stopped before it is scheduled and before the publisher
+    # uploads it (``composer.services.story_video_blocker``). None: no limit
+    # of ours.
+    story_video_limits: tuple[int, int] | None = None
+
     @property
     def rate_limits(self) -> RateLimitConfig:
         """Platform rate limit configuration."""

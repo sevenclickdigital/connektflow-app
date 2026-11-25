@@ -303,6 +303,42 @@ rules have to arrive with it.
       </div>
     </div>
   </div>
+
+  {% comment %}
+  The enlarged file, opened from a card's corner button. Teleported to body so
+  it covers the whole screen rather than the modal's box; picking stays a
+  click on the card itself.
+  {% endcomment %}
+  <template x-teleport="body">
+    <div x-show="preview" x-cloak x-transition.opacity
+         class="fixed inset-0 z-[300] flex items-center justify-center p-4 sm:p-10"
+         style="background: rgba(15,23,42,0.85);"
+         role="dialog" aria-modal="true" aria-label="{% translate 'Preview' %}"
+         @click.self="closePreview()" @keydown.escape.window="preview && closePreview()">
+      <template x-if="preview">
+        <div class="relative flex flex-col items-center gap-3 max-w-full max-h-full">
+          <template x-if="preview?.type === 'video'">
+            <video :src="preview?.url" controls autoplay playsinline
+                   class="max-w-full rounded-lg bg-black" style="max-height: calc(100vh - 9rem);"></video>
+          </template>
+          <template x-if="preview && preview.type !== 'video'">
+            <img :src="preview?.url" :alt="preview?.name"
+                 class="max-w-full rounded-lg object-contain" style="max-height: calc(100vh - 9rem);">
+          </template>
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-white truncate max-w-[50vw]" x-text="preview?.name"></span>
+            <button type="button" class="px-4 py-2 text-sm font-medium rounded-lg border cursor-pointer"
+                    style="border-color: rgba(255,255,255,0.4); color: white;"
+                    @click="closePreview()">{% translate "Close" %}</button>
+            <button type="button" class="px-5 py-2 text-sm font-semibold text-white rounded-lg cursor-pointer"
+                    style="background: var(--primary-600, #6D28D9);"
+                    @click="toggle(preview.id, preview.data); closePreview()"
+                    x-text="isPicked(preview?.id) ? '{% translate "Unselect" %}' : '{% translate "Select" %}'"></button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
 </div>
 
 <script nonce="{{ request.csp_nonce }}">
@@ -324,6 +360,17 @@ rules have to arrive with it.
       creatingFolder: false,
 
       isPicked(id) { return this.picked.includes(id); },
+
+      // The file enlarged from a card's corner button, or null.
+      preview: null,
+
+      // ``data`` is the card's dataset, as in toggle().
+      openPreview(id, data) {
+        if (!data || !data.assetUrl) return;
+        this.preview = { id, url: data.assetUrl, type: data.assetType, name: data.assetName || '', data };
+      },
+
+      closePreview() { this.preview = null; },
 
       // 1-based, and '' for anything unpicked so the badge renders empty.
       pickedPosition(id) {
@@ -360,8 +407,19 @@ rules have to arrive with it.
         appended to the composer's media list. fetch ignores HX-Trigger, so
         the preview is refreshed by hand, on body where it listens.
         {% endcomment %}
+        // Media already on the composer's list is left out: a file sent with
+        // Upload is attached at once and still selectable in the grid. The
+        // server skips it too, but the pending list it reads lives in a
+        // session that a request running alongside the upload can overwrite.
+        const onList = new Set(Array.from(document.querySelectorAll('#media-list .media-thumb[data-asset-id]')).map(el => el.dataset.assetId));
+        const fresh = this.picked.filter(id => !onList.has(id));
+        if (!fresh.length) {
+          this.picked = [];
+          this.showMediaPicker = false;
+          return;
+        }
         const body = new FormData();
-        this.picked.forEach(id => body.append('media_asset_ids', id));
+        fresh.forEach(id => body.append('media_asset_ids', id));
         fetch(url, {
           method: 'POST',
           headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
@@ -470,9 +528,22 @@ rules have to arrive with it.
             }
           });
           {% endif %}
-          // The upload endpoint already attached each file, so the composer's
-          // own media list needs refreshing too.
+          // The upload endpoint already attached each file and answers with its
+          // thumbnail, the same piece "Insert" appends. The composer reads what
+          // is attached from these thumbnails (one video for Reels and Shorts),
+          // so they go into its list before previewUpdate re-reads it.
+          {% if picker_target != "idea" %}
+          Promise.all(responses.filter(r => r.ok).map(r => r.text())).then(pieces => {
+            const list = document.getElementById('media-list');
+            if (list && pieces.length) {
+              list.insertAdjacentHTML('beforeend', pieces.join(''));
+              htmx.process(list);
+            }
+            document.body.dispatchEvent(new CustomEvent('previewUpdate'));
+          });
+          {% else %}
           document.body.dispatchEvent(new CustomEvent('previewUpdate'));
+          {% endif %}
         });
       },
     };

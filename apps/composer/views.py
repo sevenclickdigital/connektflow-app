@@ -45,7 +45,7 @@ from apps.members.models import WorkspaceMembership
 from apps.publisher.manual_delivery import NOTIFY_DELIVERY, is_notify_delivery
 from apps.social_accounts.models import PlatformVisibility, SocialAccount
 from apps.workspaces.models import Workspace
-from providers import is_video_only, max_images_per_post, requires_media
+from providers import is_video_only, max_images_per_post, requires_media, story_video_limits
 from providers.exceptions import ProviderError
 from providers.google_business import PROFILE_PHOTO_CATEGORIES
 from providers.tiktok import VALID_PRIVACY_LEVELS as TIKTOK_PRIVACY_LEVELS
@@ -91,6 +91,7 @@ from .services import (
     post_image_count,
     post_media_types,
     post_ordered_media_types,
+    post_videos,
     publish_blocker,
     record_template_use,
     require_publishable,
@@ -98,6 +99,8 @@ from .services import (
     reviewed_content_changed,
     reviewed_content_snapshot,
     save_tag_group,
+    short_video_blocker,
+    story_video_blocker,
     submit_template,
     tag_group_payload,
     tag_groups_payload,
@@ -725,6 +728,18 @@ def _composer_ordered_media_types(request, post, workspace) -> list[str]:
     return (saved + [by_id[str(i)] for i in pending_ids if str(i) in by_id])[:2]
 
 
+def _composer_videos(request, post, workspace) -> list[tuple[float, int, int, int]]:
+    """``post_videos`` plus the uploads waiting to be attached."""
+    saved = [] if post._state.adding else post_videos(post)
+    pending_ids = _pending_media_ids(request, post, workspace)
+    if not pending_ids:
+        return saved
+    pending = MediaAsset.objects.filter(id__in=pending_ids, workspace=workspace, media_type="video").exclude(file="")
+    return saved + [
+        (asset.duration or 0, asset.file_size or 0, asset.width or 0, asset.height or 0) for asset in pending
+    ]
+
+
 def _validate_formats(request, post, workspace, action):
     """Refuse to schedule a post whose chosen formats the media can't be published as.
 
@@ -741,10 +756,18 @@ def _validate_formats(request, post, workspace, action):
     if all(formats == [PlatformPost.Format.DEFAULT] for formats in targets.values()):
         return None
     media = _composer_ordered_media_types(request, post, workspace)
+    videos = None
     for account in accounts:
         formats = targets[str(account.id)]
         for fmt in formats:
             reason = format_blocker(fmt, media)
+            if not reason and fmt in (PlatformPost.Format.STORY, PlatformPost.Format.SHORT):
+                if videos is None:
+                    videos = _composer_videos(request, post, workspace)
+                if fmt == PlatformPost.Format.STORY:
+                    reason = story_video_blocker(account, videos=videos)
+                else:
+                    reason = short_video_blocker(videos)
             if reason:
                 return JsonResponse(
                     {"errors": {"media": f"{account.account_name}: {reason}"}},
@@ -1194,6 +1217,8 @@ def compose(request, workspace_id, post_id=None):
             # "Facebook", "Facebook Stories"…: with one account per platform
             # the channel name says which chip is which.
             "format_labels": {option["format"]: option["label"] for option in acc.format_options()},
+            # (seconds, bytes) a Story video may be on this account, or None (storyVideoIssue).
+            "story_video_limits": story_video_limits(acc.platform),
             "limit": acc.char_limit,
             # Each of these costs two characters once the provider escapes it,
             # so the live counter can charge for them as the user types.
@@ -3141,6 +3166,16 @@ def attach_media_batch(request, workspace_id, post_id=None):
     if not assets:
         return JsonResponse({"error": "no matching media"}, status=404)
 
+    # Media already on the post (or queued for it) is not attached again: a
+    # file sent from the picker's Upload is attached at once and still listed
+    # in the grid, so picking it there and pressing Insert would put the same
+    # video on the post twice, and a Reel or a Short refuses two videos.
+    session_key = f"pending_media_{workspace.id}"
+    already = set(request.session.get(session_key, []))
+    if post is not None:
+        already |= {str(i) for i in post.media_attachments.values_list("media_asset_id", flat=True)}
+    assets = [asset for asset in assets if str(asset.id) not in already]
+
     attachments = []
     pending_assets = []
     for asset in assets:
@@ -3153,7 +3188,8 @@ def attach_media_batch(request, workspace_id, post_id=None):
     if post is not None:
         # Option A, as in ``attach_media``: editing the media of an approved
         # post sends it back for re-approval.
-        _send_back_for_review(request, post)
+        if attachments:
+            _send_back_for_review(request, post)
         response = render(
             request,
             "composer/partials/media_list.html",

@@ -13,6 +13,7 @@ from .base import SocialProvider
 from .exceptions import APIError, OAuthError, ProviderError, PublishError
 from .meta_accounts import fetch_me_accounts, page_can_publish
 from .meta_comments import parse_graph_time
+from .meta_errors import permanent_graph_api_error
 from .meta_feed_extras import (
     PLACE_SEARCH_FIELDS,
     PLACE_SEARCH_LIMIT,
@@ -341,7 +342,14 @@ class FacebookProvider(SocialProvider):
         It stays an ``APIError`` carrying ``status_code``, as
         ``_error_for_response``'s contract requires, so the reconnect and
         rate-limit routing above it is unchanged.
+
+        Any other refusal Meta marks ``is_transient: false`` is permanent too
+        (``meta_errors.permanent_graph_api_error``), and carries the sentence
+        Meta wrote for the person.
         """
+        permanent = permanent_graph_api_error(self, response)
+        if permanent is not None:
+            return permanent
         if response.status_code >= 500:
             body = self._safe_json(response)
             error = body.get("error") if isinstance(body, dict) else None

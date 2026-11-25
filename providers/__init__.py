@@ -114,6 +114,12 @@ def max_images_per_post(platform: str) -> int | None:
     return getattr(provider_cls, "max_images_per_post", None)
 
 
+def story_video_limits(platform: str) -> tuple[int, int] | None:
+    """The longest (seconds) and largest (bytes) video one Story of ``platform`` takes, or None."""
+    provider_cls = PROVIDER_REGISTRY.get(platform)
+    return getattr(provider_cls, "story_video_limits", None)
+
+
 def can_delete_post(platform: str, post_format: str) -> bool:
     """Whether ``platform``'s API deletes a published post of ``post_format``."""
     provider_cls = PROVIDER_REGISTRY.get(platform)

@@ -908,6 +908,9 @@ def processing_status(request, workspace_id, asset_id):
                 {
                     "asset": asset,
                     "workspace": workspace,
+                    # The composer's media picker polls with picker=1: its
+                    # cards select instead of opening the library's panel.
+                    "picker_mode": request.GET.get("picker") == "1",
                 },
             )
         return HttpResponse(status=204)

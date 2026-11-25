@@ -49,6 +49,13 @@ class MediaAssetModelTest(TestCase):
         asset.file_size = 500
         self.assertIn("B", asset.file_size_display)
 
+    def test_duration_display_shows_minutes_and_seconds(self):
+        # The card's badge read "1:" for a 69 s video: the seconds were lost.
+        cases = {69.2: "1:09", 5: "0:05", 59.6: "1:00", 600: "10:00", 3725: "1:02:05", None: "", 0: ""}
+        for duration, expected in cases.items():
+            asset = MediaAsset(duration=duration)
+            self.assertEqual(asset.duration_display, expected, duration)
+
     def test_str_representation(self):
         asset = MediaAsset()
         asset.filename = "photo.jpg"

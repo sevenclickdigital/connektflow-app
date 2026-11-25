@@ -1940,3 +1940,25 @@ def test_only_a_facebook_feed_post_has_text_to_edit():
     assert FacebookProvider.can_edit_post("default")
     assert not FacebookProvider.can_edit_post("reel")
     assert not FacebookProvider.can_edit_post("story")
+
+
+def test_a_refusal_meta_calls_permanent_is_not_retried():
+    provider = FacebookProvider({"client_id": "id", "client_secret": "secret"})
+    response = httpx.Response(
+        400,
+        json={
+            "error": {
+                "message": "Invalid video",
+                "code": 352,
+                "is_transient": False,
+                "error_user_msg": "Vídeo inválido.",
+            }
+        },
+        request=httpx.Request("POST", "https://graph.facebook.com/v25.0/page-1/video_stories"),
+    )
+
+    error = provider._error_for_response(response)
+
+    assert isinstance(error, APIError)
+    assert error.retryable is False
+    assert error.user_message == "Vídeo inválido."

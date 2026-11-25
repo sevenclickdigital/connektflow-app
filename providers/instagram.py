@@ -11,6 +11,8 @@ import time
 from datetime import UTC, datetime
 from urllib.parse import urlencode
 
+import httpx
+
 from . import meta_history
 from .base import SocialProvider
 from .exceptions import APIError, MessagingError, OAuthError, ProviderError, PublishError, WebhookChannelError
@@ -22,6 +24,7 @@ from .meta_comments import (
     parse_graph_time,
     resolve_comment_reply_target,
 )
+from .meta_errors import permanent_graph_api_error
 from .meta_feed_extras import apply_instagram_extras
 from .meta_insights import fetch_insights_safe, fetch_insights_series
 from .meta_messaging import (
@@ -60,6 +63,12 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://graph.facebook.com/v25.0"
 OAUTH_URL = "https://www.facebook.com/v25.0/dialog/oauth"
 TOKEN_URL = f"{BASE_URL}/oauth/access_token"
+# What one Instagram Story video may be (Content Publishing API, media_type
+# STORIES): up to 60 seconds and 100 MB. Over either, Meta accepts the upload
+# and then fails the container with subcode 2207032 "try re-creating the
+# media". Shared with the Instagram Login provider: both publish through it.
+INSTAGRAM_STORY_VIDEO_LIMITS = (60, 100 * 1024 * 1024)
+
 # Subscribed on the Instagram user, NOT on the linked Facebook Page. These are
 # fields of Meta's *Instagram* webhook object; a Page accepts only its own
 # ({feed, mention, messages, ...}) and answers anything else with
@@ -140,6 +149,7 @@ class InstagramProvider(SocialProvider):
     # One login reaches every Business account linked to a Page it administers;
     # see ``get_user_pages``.
     offers_account_picker = True
+    story_video_limits = INSTAGRAM_STORY_VIDEO_LIMITS
 
     def __init__(self, credentials: dict | None = None):
         creds = dict(credentials or {})
@@ -368,6 +378,11 @@ class InstagramProvider(SocialProvider):
     # ------------------------------------------------------------------
     # Publishing (two-step container flow)
     # ------------------------------------------------------------------
+
+    def _error_for_response(self, response: httpx.Response) -> ProviderError:
+        """A refusal Meta marks ``is_transient: false`` is permanent and carries
+        Meta's own sentence (``meta_errors.permanent_graph_api_error``)."""
+        return permanent_graph_api_error(self, response) or super()._error_for_response(response)
 
     def publish_post(self, access_token: str, content: PublishContent) -> PublishResult:
         if not content.media_urls:

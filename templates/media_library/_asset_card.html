@@ -6,11 +6,16 @@ With ``picker_mode``, the card becomes a selection target for the composer's
 media picker: clicking toggles it instead of opening the detail panel, a
 checkbox shows its position in the selection, and the star button is dropped
 (nothing here manages the library).
+
+While the file is still being processed the card asks for itself again every
+few seconds and replaces itself with the answer. ``hx-target="this"`` keeps
+that swap on the card, which would otherwise inherit the grid's target and
+replace the whole grid. ``picker=1`` brings it back as a picker card.
 {% endcomment %}
 
 <div class="ml-asset-card group cursor-pointer overflow-hidden relative"
      {% if picker_mode %}
-     data-asset-url="{% if asset.file %}{{ asset.file.url }}{% endif %}" data-asset-type="{{ asset.media_type }}"
+     data-asset-url="{% if asset.file %}{{ asset.file.url }}{% endif %}" data-asset-type="{{ asset.media_type }}" data-asset-name="{{ asset.original_filename }}"
      @click="toggle('{{ asset.id }}', $el.dataset)"
      {% comment %}
      ``ml-asset-card-picked`` rather than a ring utility: the ring drew
@@ -26,8 +31,9 @@ checkbox shows its position in the selection, and the star button is dropped
      :class="selected.includes('{{ asset.id }}') && 'ml-asset-card-picked'"
      {% endif %}
      {% if asset.processing_status == 'pending' or asset.processing_status == 'processing' %}
-     hx-get="{% url 'media_library:processing_status' workspace_id=workspace.id asset_id=asset.id %}"
+     hx-get="{% url 'media_library:processing_status' workspace_id=workspace.id asset_id=asset.id %}{% if picker_mode %}?picker=1{% endif %}"
      hx-trigger="every 3s"
+     hx-target="this"
      hx-swap="outerHTML"
      {% endif %}>
 
@@ -86,6 +92,19 @@ checkbox shows its position in the selection, and the star button is dropped
                  : 'bg-white/90 border-neutral-400 text-transparent opacity-0 group-hover:opacity-100'">
       <span x-text="pickedPosition('{{ asset.id }}')"></span>
     </div>
+    {% if asset.file and asset.processing_status != 'pending' and asset.processing_status != 'processing' %}
+    {% comment %}
+    Opens the file at full size (the video playing) without picking it, so the
+    choice can be checked first; mediaPicker.openPreview reads the card's data.
+    {% endcomment %}
+    <button type="button"
+            class="absolute bottom-2 right-2 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer"
+            style="background: rgba(255,255,255,0.9); box-shadow: var(--shadow-sm); color: var(--text-secondary, #475569);"
+            title="{% translate 'Enlarge' %}" aria-label="{% blocktranslate with name=asset.original_filename %}Enlarge {{ name }}{% endblocktranslate %}"
+            @click.stop="openPreview('{{ asset.id }}', $el.closest('.ml-asset-card').dataset)">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/></svg>
+    </button>
+    {% endif %}
     {% else %}
     {% if not asset.is_shared and request.workspace_membership.effective_permissions.edit_media or not asset.is_shared and request.workspace_membership.effective_permissions.delete_media %}
     {% comment %}
@@ -114,11 +133,7 @@ checkbox shows its position in the selection, and the star button is dropped
 
     {% if asset.file_type == 'video' and asset.duration_seconds %}
     <span class="absolute bottom-2 left-2 text-xs font-semibold px-1.5 py-0.5 rounded"
-          style="background: rgba(0,0,0,0.7); color: white; font-variant-numeric: tabular-nums;">
-      {% widthratio asset.duration_seconds 60 1 as mins %}
-      {% widthratio asset.duration_seconds 1 1 as secs %}
-      {{ mins }}:{{ secs|stringformat:"02d" }}
-    </span>
+          style="background: rgba(0,0,0,0.7); color: white; font-variant-numeric: tabular-nums;">{{ asset.duration_display }}</span>
     {% endif %}
   </div>
 

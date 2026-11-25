@@ -11,7 +11,13 @@ from django.utils import timezone
 from apps.calendar.models import Queue, QueueEntry
 from apps.calendar.services import drop_queue_entry_unless_scheduled
 from apps.composer.models import PlatformPost, Post
-from apps.composer.services import format_blocker, publish_blocker, require_publishable
+from apps.composer.services import (
+    format_blocker,
+    publish_blocker,
+    require_publishable,
+    short_video_blocker,
+    story_video_blocker,
+)
 from apps.composer.tests.test_account_scope import AccountScopeTestsBase
 from apps.media_library.models import MediaAsset
 from apps.members.models import WorkspaceMembership
@@ -48,6 +54,39 @@ class FormatBlockerTests(FormatsTestsBase):
         self.assertEqual(format_blocker("story", []), "A Story needs at least one photo or video.")
         self.assertEqual(format_blocker("story", ["document"]), "A Story needs at least one photo or video.")
         self.assertEqual(format_blocker("story", ["image", "video"]), "")
+
+    def test_an_instagram_story_video_over_a_minute_is_refused_before_scheduling(self):
+        """A 69-second Story was accepted, then failed at Meta four times over half an hour."""
+        video = self._attach(MediaAsset.MediaType.VIDEO, "long.mp4", post=self.post)
+        MediaAsset.objects.filter(pk=video.pk).update(duration=69.2, file_size=104_156_532)
+
+        with self.assertRaisesMessage(
+            ValueError, "Instagram takes Story videos of up to 60 seconds and this one has 70."
+        ):
+            require_publishable(self.story)
+        require_publishable(self.feed)
+
+    def test_a_story_video_over_the_size_is_refused(self):
+        instagram = SocialAccount(platform="instagram")
+        reason = story_video_blocker(instagram, videos=[(30, 120 * 1024 * 1024, 1080, 1920)])
+
+        self.assertEqual(
+            reason,
+            "Instagram takes Story videos of up to 100 MB and this one has 120.0 MB. Compress the video, or publish it as Reels.",
+        )
+
+    def test_an_unmeasured_video_and_a_facebook_story_pass(self):
+        self.assertEqual(story_video_blocker(SocialAccount(platform="instagram"), videos=[(0, 0, 0, 0)]), "")
+        self.assertEqual(
+            story_video_blocker(SocialAccount(platform="facebook"), videos=[(69.2, 104_156_532, 1080, 1920)]), ""
+        )
+
+    def test_youtube_only_makes_a_short_of_a_vertical_video_up_to_three_minutes(self):
+        """Anything else goes out as an ordinary video, so picking Shorts for it is held back."""
+        self.assertIn("horizontal", short_video_blocker([(30, 1, 1920, 1080)]))
+        self.assertIn("up to 3 minutes", short_video_blocker([(200, 1, 1080, 1920)]))
+        self.assertEqual(short_video_blocker([(69.2, 1, 1080, 1920)]), "")
+        self.assertEqual(short_video_blocker([(0, 1, 0, 0)]), "")
 
     def test_a_short_needs_exactly_one_video(self):
         self.assertEqual(format_blocker("short", ["image"]), "A Short needs exactly one video.")

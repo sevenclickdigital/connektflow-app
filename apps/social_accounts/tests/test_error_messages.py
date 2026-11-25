@@ -452,3 +452,21 @@ class TestExhaustedPublishMessage:
         with_promise = f"{PUBLISH_QUOTA_EXHAUSTED_MESSAGE} We'll resume after 07:00 UTC."
 
         assert exhausted_publish_message(with_promise) == PUBLISH_QUOTA_EXHAUSTED_MESSAGE
+
+
+def test_publish_error_shows_the_sentence_the_platform_wrote_for_the_person():
+    """Meta's error_user_msg names the cause; "The platform rejected this post." said nothing."""
+    exc = APIError(
+        'Instagram API error 400: {"error":{"code":-1,"error_subcode":2207032}}',
+        status_code=400,
+        retryable=False,
+        user_message="Não é possível criar a mídia: Falha ao criar imagem. Tente recriar a mídia",
+    )
+
+    assert friendly_publish_error(exc) == "Não é possível criar a mídia: Falha ao criar imagem. Tente recriar a mídia"
+
+
+def test_publish_error_keeps_our_advice_over_the_platform_sentence_on_a_reconnect():
+    exc = APIError("nope", status_code=403, user_message="Sessão expirada.")
+
+    assert friendly_publish_error(exc) == PUBLISH_RECONNECT_MESSAGE

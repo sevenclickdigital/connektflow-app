@@ -514,6 +514,21 @@ class FormatTargetsTests(AccountScopeTestsBase):
         self.assertIn("A Reel needs exactly one video", response.json()["errors"]["media"])
         self.assertEqual(self._formats(self.instagram), set())
 
+    def test_scheduling_an_instagram_story_over_a_minute_is_refused(self):
+        """The composer lets the Story be picked; scheduling waits until the video fits or the Story is unpicked."""
+        self.post.media_attachments.all().delete()
+        video = self._attach(MediaAsset.MediaType.VIDEO, "long.mp4", post=self.post)
+        MediaAsset.objects.filter(pk=video.pk).update(duration=69.2, file_size=104_156_532)
+
+        refused = self.client.post(
+            self.save_url, data=self._targets_payload(self.instagram, "default", "story", action="schedule")
+        )
+        draft = self.client.post(self.save_url, data=self._targets_payload(self.instagram, "default", "story"))
+
+        self.assertEqual(refused.status_code, 400)
+        self.assertIn("Story videos of up to 60 seconds", refused.json()["errors"]["media"])
+        self.assertIn(draft.status_code, (200, 204, 302))
+
     def test_instagram_feed_and_reels_on_one_video_is_refused(self):
         self.post.media_attachments.all().delete()
         self._attach(MediaAsset.MediaType.VIDEO, "clip.mp4", post=self.post)

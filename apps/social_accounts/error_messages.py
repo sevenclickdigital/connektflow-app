@@ -439,7 +439,16 @@ def friendly_publish_error(exc: Exception) -> str:
 
     The raw text is not lost: every publish failure writes a PublishLog row
     carrying ``error_message`` before the post is marked failed.
+
+    A refusal that came with a sentence the platform wrote for the person
+    (``ProviderError.user_message``, Meta's ``error_user_msg``) shows that
+    sentence: it names the cause ("the media could not be created"), where our
+    own copy can only say the post was rejected. Reconnect and rate-limit
+    failures keep our copy, which says what to do.
     """
+    platform_text = str(getattr(exc, "user_message", "") or "").strip()
+    if platform_text and _classify(exc) == _REJECTED and _is_user_safe(platform_text):
+        return platform_text
     return _friendly(
         exc,
         {

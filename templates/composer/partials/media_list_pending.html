@@ -12,7 +12,7 @@ against when the post is first created.
 {% endcomment %}
 <div class="media-thumb" data-media-id="{{ asset.id }}" x-data="{ menu: false }"
      data-kind="{{ asset.media_type }}" data-asset-id="{{ asset.id }}" data-full-url="{{ asset.file.url }}"
-     data-name="{{ asset.filename }}" data-width="{{ asset.width|default:'' }}" data-height="{{ asset.height|default:'' }}" data-duration="{{ asset.duration|default:''|stringformat:'s' }}"
+     data-name="{{ asset.filename }}" data-width="{{ asset.width|default:'' }}" data-height="{{ asset.height|default:'' }}" data-duration="{{ asset.duration|default:''|stringformat:'s' }}" data-size="{{ asset.file_size|default:''|stringformat:'s' }}"
      data-crop-url="{% url 'composer:crop_pending_media' workspace_id=workspace.id asset_id=asset.id %}">
     {% if asset.is_video %}
     <video src="{{ asset.file.url }}#t=0.5" data-asset-id="{{ asset.id }}" class="w-full h-full object-cover" muted preload="metadata"></video>

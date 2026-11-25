@@ -250,6 +250,15 @@ class MediaAsset(models.Model):
     def duration_seconds(self):
         return self.duration if self.duration else None
 
+    @property
+    def duration_display(self):
+        """Video length as ``m:ss`` (``h:mm:ss`` from an hour), or "" without one."""
+        if not self.duration:
+            return ""
+        minutes, seconds = divmod(round(self.duration), 60)
+        hours, minutes = divmod(minutes, 60)
+        return f"{hours}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes}:{seconds:02d}"
+
 
 class MediaAssetVersion(models.Model):
     """Version history for edited media assets. Each edit creates a new version."""

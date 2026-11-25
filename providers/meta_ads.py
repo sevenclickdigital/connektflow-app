@@ -36,6 +36,7 @@ from django.utils.dateparse import parse_datetime
 from .base import HttpProvider
 from .exceptions import APIError, ProviderError, RateLimitError, TokenExpiredError
 from .facebook import BASE_URL, OAUTH_URL
+from .meta_errors import THROTTLE_ERROR_CODES, TOKEN_ERROR_CODES, graph_error_message
 from .meta_oauth import facebook_login_params
 
 logger = logging.getLogger(__name__)
@@ -52,8 +53,6 @@ ADS_SCOPES = [
     "pages_manage_ads",
 ]
 
-TOKEN_ERROR_CODES = {102, 190}
-THROTTLE_ERROR_CODES = {4, 17, 32, 613, 80000, 80003, 80004, 80014}
 
 # Currencies whose budgets Meta takes in whole units (offset 1); all others are
 # in hundredths.
@@ -221,18 +220,6 @@ def parse_insights_row(row: dict) -> Insights:
         campaign_name=row.get("campaign_name", ""),
         extra={key: str(row[key]) for key in BREAKDOWN_KEYS if row.get(key) not in (None, "")},
     )
-
-
-def graph_error_message(body: dict) -> str:
-    """The sentence Meta wrote for the advertiser, or its technical message."""
-    error = body.get("error") if isinstance(body, dict) else None
-    if not isinstance(error, dict):
-        return ""
-    user_title = str(error.get("error_user_title") or "").strip()
-    user_msg = str(error.get("error_user_msg") or "").strip()
-    if user_msg:
-        return f"{user_title}: {user_msg}" if user_title else user_msg
-    return str(error.get("message") or "").strip()
 
 
 class MetaAdsClient(HttpProvider):

@@ -123,6 +123,11 @@ class YouTubeMessageBatch(list[InboxMessage]):
         self.next_page_token = next_page_token
 
 
+# YouTube shows a video as a Short only when it is vertical or square and up to
+# 3 minutes long; anything else uploaded as a Short goes out as an ordinary video.
+SHORTS_MAX_SECONDS = 180
+
+
 class YouTubeProvider(SocialProvider):
     """YouTube Data API v3 provider using Google OAuth 2.0."""
 

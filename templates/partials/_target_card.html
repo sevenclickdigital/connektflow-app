@@ -8,7 +8,7 @@ Args:
   platform   platform key (required)
   account    SocialAccount, or nothing for a network not connected
   formats    the account's format_options: one toggle per format, wired to
-             composerApp() (hasFormat / toggleFormat / formatBlocked)
+             composerApp() (hasFormat / toggleFormat / formatWarning)
   label      name shown when there is no account
 {% endcomment %}
 {% with account_id=account.id|stringformat:"s" %}
@@ -36,12 +36,11 @@ Args:
     <div class="target-card-formats">
         {% for option in formats %}
         <button type="button" class="format-toggle"
-                :class="{ 'is-on': hasFormat('{{ account_id }}', '{{ option.format }}'), 'is-blocked': formatBlocked('{{ account_id }}', '{{ option.format }}') }"
+                :class="{ 'is-on': hasFormat('{{ account_id }}', '{{ option.format }}'), 'is-warn': formatWarning('{{ account_id }}', '{{ option.format }}') }"
                 :aria-pressed="hasFormat('{{ account_id }}', '{{ option.format }}') ? 'true' : 'false'"
-                :aria-disabled="formatBlocked('{{ account_id }}', '{{ option.format }}') ? 'true' : 'false'"
-                :title="formatBlocked('{{ account_id }}', '{{ option.format }}') || '{{ option.label|escapejs }}'"
+                :title="formatWarning('{{ account_id }}', '{{ option.format }}') || '{{ option.label|escapejs }}'"
                 aria-label="{{ option.label }}"
-                @click="formatBlocked('{{ account_id }}', '{{ option.format }}') || toggleFormat('{{ account_id }}', '{{ option.format }}')">
+                @click="toggleFormat('{{ account_id }}', '{{ option.format }}')">
             {% include "partials/_format_icon.html" with format=option.format show_default=True %}
             {{ option.short }}
         </button>

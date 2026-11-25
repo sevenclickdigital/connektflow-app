@@ -922,8 +922,10 @@ button.target-card { cursor: pointer; }
 .format-toggle:hover { border-color: var(--primary-ring); color: var(--primary); }
 .format-toggle:focus-visible { outline: 2px solid var(--primary-ring); outline-offset: 1px; }
 .format-toggle.is-on { background: var(--primary); border-color: var(--primary); color: #fff; }
-.format-toggle.is-blocked { opacity: 0.5; cursor: not-allowed; text-decoration: line-through; }
-.format-toggle.is-blocked:hover { border-color: var(--border); color: var(--text-secondary); }
+/* The attached media doesn't fit this format yet: still pickable, the reason in
+   the title; the post can't be scheduled until the media fits or it is unpicked. */
+.format-toggle.is-warn { border-style: dashed; border-color: var(--warning-500); color: var(--warning-700); }
+.format-toggle.is-on.is-warn { color: #fff; box-shadow: 0 0 0 2px var(--warning-500); }
 .target-card.is-connect {
     border-style: dashed; background: transparent; align-items: center; justify-content: center;
     text-align: center; color: var(--text-secondary); cursor: pointer;

@@ -11,7 +11,9 @@ import io
 
 import pytest
 from django.core.files.base import ContentFile
-from django.test import override_settings
+from django.test import TestCase, override_settings
+from django.urls import reverse
+from django.utils import timezone
 from PIL import Image
 
 from apps.media_library.models import MediaAsset, MediaAssetVersion
@@ -238,3 +240,59 @@ def test_rejected_edit_preserves_the_shared_source_file(asset, user):
     media.refresh_from_db()
     assert media.file.name
     assert default_storage.exists(media.file.name)
+
+
+class ProcessingStatusCardTests(TestCase):
+    """The card a processing asset polls for replaces itself, and comes back in the mode it was asked in."""
+
+    def setUp(self):
+        from apps.accounts.models import User
+        from apps.members.models import OrgMembership, WorkspaceMembership
+        from apps.organizations.models import Organization
+        from apps.workspaces.models import Workspace
+
+        user = User.objects.create_user(email="owner@example.com", password="x", tos_accepted_at=timezone.now())
+        org = Organization.objects.create(name="Org")
+        self.workspace = Workspace.objects.create(organization=org, name="Brand")
+        OrgMembership.objects.create(user=user, organization=org, org_role=OrgMembership.OrgRole.OWNER)
+        WorkspaceMembership.objects.create(
+            user=user, workspace=self.workspace, workspace_role=WorkspaceMembership.WorkspaceRole.OWNER
+        )
+        self.asset = MediaAsset.objects.create(
+            organization=org,
+            workspace=self.workspace,
+            uploaded_by=user,
+            file="media_library/tests/clip.mp4",
+            filename="clip.mp4",
+            media_type=MediaAsset.MediaType.VIDEO,
+            mime_type="video/mp4",
+            processing_status=MediaAsset.ProcessingStatus.COMPLETED,
+        )
+        self.client.force_login(user)
+        self.url = reverse(
+            "media_library:processing_status", kwargs={"workspace_id": self.workspace.id, "asset_id": self.asset.id}
+        )
+
+    def test_the_composer_pickers_card_comes_back_as_a_picker_card(self):
+        """Without picker=1 the finished card opened the library panel, which the picker does not have."""
+        body = self.client.get(self.url + "?picker=1", HTTP_HX_REQUEST="true").content.decode()
+
+        self.assertIn(f"toggle('{self.asset.id}'", body)
+
+    def test_the_librarys_card_comes_back_as_a_library_card(self):
+        body = self.client.get(self.url, HTTP_HX_REQUEST="true").content.decode()
+
+        self.assertNotIn(f"toggle('{self.asset.id}'", body)
+
+    def test_a_processing_card_swaps_only_itself(self):
+        """Inheriting the grid's hx-target, one finished card replaced the whole grid."""
+        from django.template.loader import render_to_string
+
+        MediaAsset.objects.filter(pk=self.asset.pk).update(processing_status=MediaAsset.ProcessingStatus.PROCESSING)
+        self.asset.refresh_from_db()
+        html = render_to_string(
+            "media_library/_asset_card.html", {"asset": self.asset, "workspace": self.workspace, "picker_mode": True}
+        )
+
+        self.assertIn('hx-target="this"', html)
+        self.assertIn("?picker=1", html)

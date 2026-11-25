@@ -855,6 +855,11 @@ class PublishEngine:
             format=platform_post.format,
             ordered_media_types=[pm.media_asset.media_type for pm in attachments if pm.media_asset.file],
             image_count=sum(1 for pm in attachments if pm.media_asset.file and pm.media_asset.media_type == "image"),
+            videos=[
+                (pm.media_asset.duration, pm.media_asset.file_size, pm.media_asset.width, pm.media_asset.height)
+                for pm in attachments
+                if pm.media_asset.file and pm.media_asset.media_type == "video"
+            ],
         )
         if blocker:
             raise PublishError(blocker, platform=account.get_platform_display(), retryable=False)

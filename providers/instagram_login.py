@@ -18,15 +18,19 @@ import time
 from datetime import datetime
 from urllib.parse import urlencode
 
+import httpx
+
 from . import meta_history
 from .base import SocialProvider
 from .exceptions import APIError, OAuthError, ProviderError, PublishError
+from .instagram import INSTAGRAM_STORY_VIDEO_LIMITS
 from .meta_comments import (
     fetch_instagram_comments,
     find_own_instagram_comment,
     instagram_media_preview,
     resolve_comment_reply_target,
 )
+from .meta_errors import permanent_graph_api_error
 from .meta_insights import fetch_insights_safe, fetch_insights_series
 from .meta_messaging import (
     build_send_payload,
@@ -106,6 +110,7 @@ class InstagramLoginProvider(SocialProvider):
     # itself, so ``PublishContent.media_files`` is never read and the engine
     # can skip downloading the asset to local disk entirely.
     needs_local_media = False
+    story_video_limits = INSTAGRAM_STORY_VIDEO_LIMITS
 
     def __init__(self, credentials: dict | None = None):
         creds = dict(credentials or {})
@@ -312,6 +317,11 @@ class InstagramLoginProvider(SocialProvider):
     # ------------------------------------------------------------------
     # Publishing
     # ------------------------------------------------------------------
+
+    def _error_for_response(self, response: httpx.Response) -> ProviderError:
+        """A refusal Meta marks ``is_transient: false`` is permanent and carries
+        Meta's own sentence (``meta_errors.permanent_graph_api_error``)."""
+        return permanent_graph_api_error(self, response) or super()._error_for_response(response)
 
     def publish_post(self, access_token: str, content: PublishContent) -> PublishResult:
         if not content.media_urls:

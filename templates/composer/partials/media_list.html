@@ -12,7 +12,7 @@ persisted when the post is saved.
 {% endcomment %}
 <div class="media-thumb" data-media-id="{{ attachment.id }}" x-data="{ menu: false }"
      data-kind="{{ attachment.media_asset.media_type }}" data-asset-id="{{ attachment.media_asset.id }}" data-full-url="{{ attachment.media_asset.file.url }}"
-     data-name="{{ attachment.media_asset.filename }}" data-width="{{ attachment.media_asset.width|default:'' }}" data-height="{{ attachment.media_asset.height|default:'' }}" data-duration="{{ attachment.media_asset.duration|default:''|stringformat:'s' }}"
+     data-name="{{ attachment.media_asset.filename }}" data-width="{{ attachment.media_asset.width|default:'' }}" data-height="{{ attachment.media_asset.height|default:'' }}" data-duration="{{ attachment.media_asset.duration|default:''|stringformat:'s' }}" data-size="{{ attachment.media_asset.file_size|default:''|stringformat:'s' }}"
      {% if post %}data-crop-url="{% url 'composer:crop_media' workspace_id=workspace.id post_id=post.id media_id=attachment.id %}"{% endif %}>
     {% if attachment.media_asset.is_video %}
     <video src="{{ attachment.media_asset.file.url }}#t=0.5" data-asset-id="{{ attachment.media_asset.id }}" class="w-full h-full object-cover" muted preload="metadata"></video>

@@ -1416,3 +1416,59 @@ def test_the_delete_permission_is_requested_only_when_the_deployment_enables_it(
 def test_instagram_login_cannot_delete_a_post():
     assert InstagramProvider.can_delete_post("default")
     assert not InstagramLoginProvider.can_delete_post("default")
+
+
+def _graph_refusal(status, error):
+    import httpx
+
+    return httpx.Response(
+        status, json={"error": error}, request=httpx.Request("POST", "https://graph.facebook.com/v25.0/1/media")
+    )
+
+
+@pytest.mark.parametrize("provider_cls", [InstagramProvider, InstagramLoginProvider])
+def test_a_refusal_meta_calls_permanent_is_not_retried_and_keeps_metas_sentence(provider_cls):
+    """A Story video over 60 s came back 2207032 with is_transient false; it was retried for half an hour."""
+    provider = provider_cls({"client_id": "id", "client_secret": "secret"})
+    error = provider._error_for_response(
+        _graph_refusal(
+            400,
+            {
+                "message": "Fatal",
+                "code": -1,
+                "error_subcode": 2207032,
+                "is_transient": False,
+                "error_user_title": "Não é possível criar a mídia",
+                "error_user_msg": "Falha ao criar imagem. Tente recriar a mídia",
+            },
+        )
+    )
+
+    assert isinstance(error, APIError)
+    assert error.status_code == 400
+    assert error.retryable is False
+    assert error.user_message == "Não é possível criar a mídia: Falha ao criar imagem. Tente recriar a mídia"
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        {"message": "Error validating access token", "code": 190, "is_transient": False},
+        {"message": "Application request limit reached", "code": 4, "is_transient": False},
+        {"message": "Temporary failure", "code": 2, "is_transient": True},
+        {"message": "No word on retrying", "code": 100},
+    ],
+)
+def test_token_throttle_and_transient_refusals_keep_their_retries(error):
+    provider = InstagramProvider({"client_id": "id", "client_secret": "secret"})
+
+    assert provider._error_for_response(_graph_refusal(400, error)).retryable is True
+
+
+def test_instagram_declares_the_story_video_limits_and_facebook_none():
+    """The same 69-second video went out as a Facebook Story; only Instagram refuses it."""
+    import providers
+
+    assert providers.story_video_limits("instagram") == (60, 100 * 1024 * 1024)
+    assert providers.story_video_limits("instagram_login") == (60, 100 * 1024 * 1024)
+    assert providers.story_video_limits("facebook") is None

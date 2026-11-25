@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-25 00:54+0000\n"
+"POT-Creation-Date: 2026-11-25 03:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -21,6 +21,7 @@ msgstr ""
 #: apps/accounts/forms.py:12 apps/common/templatetags/common_extras.py:104
 #: templates/automations/flow_builder.html:215
 #: templates/calendar/partials/_select_checkbox.html:11
+#: templates/composer/partials/media_picker.html:345
 #: templates/inbox/partials/_message_row.html:27
 msgid "Select"
 msgstr "Selecionar"
@@ -352,7 +353,7 @@ msgstr "Idade máxima"
 msgid "Gender"
 msgstr "Gênero"
 
-#: apps/ads/forms.py:81 templates/composer/compose.html:2473
+#: apps/ads/forms.py:81 templates/composer/compose.html:2479
 #: templates/tasks/board.html:64 templates/tasks/board.html:69
 msgid "Everyone"
 msgstr "Todos"
@@ -475,7 +476,7 @@ msgid "Traffic"
 msgstr "Tráfego"
 
 #: apps/ads/services.py:43 apps/composer/idea_icons.py:77
-#: apps/composer/models.py:1145 apps/workspaces/dashboard.py:138
+#: apps/composer/models.py:1152 apps/workspaces/dashboard.py:138
 #: templates/contacts/list.html:90 templates/contacts/partials/_results.html:89
 #: templates/inbox/partials/_message_details.html:91
 msgid "Engagement"
@@ -486,7 +487,7 @@ msgstr "Engajamento"
 msgid "Leads"
 msgstr "Cadastros"
 
-#: apps/ads/services.py:45 apps/composer/models.py:1147
+#: apps/ads/services.py:45 apps/composer/models.py:1154
 #: apps/radar/reports.py:46
 msgid "Sales"
 msgstr "Vendas"
@@ -546,7 +547,7 @@ msgstr "Campanha pausada"
 msgid "Ad set paused"
 msgstr "Conjunto pausado"
 
-#: apps/ads/services.py:73 apps/composer/models.py:1028
+#: apps/ads/services.py:73 apps/composer/models.py:1035
 msgid "Processing"
 msgstr "Processando"
 
@@ -557,7 +558,7 @@ msgstr "Em revisão"
 
 #: apps/ads/services.py:75 apps/approvals/templatetags/approval_extras.py:16
 #: apps/calendar/status_board.py:50 apps/composer/models.py:478
-#: apps/composer/models.py:1197 apps/social_accounts/whatsapp_templates.py:33
+#: apps/composer/models.py:1204 apps/social_accounts/whatsapp_templates.py:33
 #: templates/calendar/partials/publish_approvals.html:25
 #: templates/calendar/partials/publish_calendar_shell.html:100
 msgid "Approved"
@@ -573,7 +574,7 @@ msgstr "Pagamento pendente"
 
 #: apps/ads/services.py:78 apps/affiliates/models.py:129
 #: apps/approvals/templatetags/approval_extras.py:24
-#: apps/composer/models.py:480 apps/composer/models.py:1199
+#: apps/composer/models.py:480 apps/composer/models.py:1206
 #: apps/social_accounts/whatsapp_templates.py:36
 #: templates/affiliates/_payout_status.html:1
 #: templates/calendar/partials/publish_approvals.html:26
@@ -674,14 +675,14 @@ msgid "Feed"
 msgstr "Feed"
 
 #: apps/ads/services.py:620 apps/ads/services.py:621 apps/ads/services.py:622
-#: apps/analytics/services.py:813 apps/composer/models.py:1140
+#: apps/analytics/services.py:813 apps/composer/models.py:1147
 #: templates/composer/partials/_crop_editor.html:67
 msgid "Stories"
 msgstr "Stories"
 
 #: apps/ads/services.py:623 apps/ads/services.py:624 apps/ads/services.py:625
 #: apps/analytics/services.py:811 apps/composer/models.py:557
-#: apps/composer/models.py:1139 apps/composer/services.py:1102
+#: apps/composer/models.py:1146 apps/composer/services.py:1180
 #: apps/social_accounts/models.py:680 apps/tasks/creative_formats.py:96
 #: apps/tasks/creative_formats.py:106
 msgid "Reels"
@@ -1058,7 +1059,7 @@ msgid ""
 msgstr ""
 "Saque solicitado. Vamos pagar na chave Pix informada em até %(days)s dias."
 
-#: apps/analytics/metrics.py:17 apps/composer/models.py:1148
+#: apps/analytics/metrics.py:17 apps/composer/models.py:1155
 #: templates/ads/partials/_insights.html:27
 msgid "Reach"
 msgstr "Alcance"
@@ -1080,7 +1081,7 @@ msgid "Reactions"
 msgstr "Reações"
 
 #: apps/analytics/metrics.py:22 apps/inbox/views.py:263
-#: templates/composer/compose.html:2013
+#: templates/composer/compose.html:2019
 msgid "Comments"
 msgstr "Comentários"
 
@@ -1109,7 +1110,7 @@ msgid "New follows"
 msgstr "Novos seguidores"
 
 #: apps/analytics/metrics.py:30 templates/analytics/_page_header.html:122
-#: templates/composer/compose.html:2475
+#: templates/composer/compose.html:2481
 #: templates/radar/partials/_instagram_results.html:28
 msgid "Followers"
 msgstr "Seguidores"
@@ -1174,19 +1175,19 @@ msgstr ""
 "Os dados de origem vêm de %(platform)s. São calculados pelo Connekt Flow, e "
 "não informados por %(platform)s: %(listed)s."
 
-#: apps/analytics/services.py:508 apps/composer/views.py:839
-#: apps/composer/views.py:848 apps/composer/views.py:5178
+#: apps/analytics/services.py:508 apps/composer/views.py:862
+#: apps/composer/views.py:871 apps/composer/views.py:5214
 #: templates/composer/compose.html:1232
 msgid "and"
 msgstr "e"
 
-#: apps/analytics/services.py:816 apps/composer/models.py:1138
+#: apps/analytics/services.py:816 apps/composer/models.py:1145
 #: apps/tasks/creative_formats.py:120
 msgid "Carousel"
 msgstr "Carrossel"
 
 #: apps/analytics/services.py:818 apps/composer/idea_icons.py:55
-#: apps/composer/models.py:1141 apps/media_library/models.py:83
+#: apps/composer/models.py:1148 apps/media_library/models.py:83
 #: apps/social_accounts/models.py:29 apps/tasks/creative_formats.py:113
 #: apps/tasks/creative_formats.py:119 apps/tasks/creative_formats.py:127
 #: apps/tasks/creative_formats.py:134 apps/tasks/creative_formats.py:156
@@ -1201,7 +1202,7 @@ msgstr "Vídeo"
 msgid "Single image"
 msgstr "Imagem única"
 
-#: apps/analytics/services.py:821 apps/composer/forms.py:285
+#: apps/analytics/services.py:821 apps/composer/forms.py:286
 #: apps/composer/idea_icons.py:61
 #: templates/composer/partials/template_gallery.html:186
 msgid "Text"
@@ -1301,7 +1302,7 @@ msgstr "Publicado parcialmente"
 
 #: apps/approvals/templatetags/approval_extras.py:35 apps/billing/models.py:432
 #: apps/composer/models.py:484 apps/composer/models.py:565
-#: apps/composer/models.py:1030 apps/inbox/models.py:210
+#: apps/composer/models.py:1037 apps/inbox/models.py:210
 #: apps/notifications/models.py:44
 #: templates/calendar/partials/publish_calendar_shell.html:104
 #: templates/composer/partials/media_picker.html:254
@@ -1463,7 +1464,7 @@ msgstr "Os dados da organização %(name)s serão removidos em breve"
 
 #: apps/billing/models.py:74 apps/billing/models.py:296
 #: apps/billing/models.py:753 apps/composer/models.py:563
-#: apps/composer/models.py:1027 apps/notifications/models.py:42
+#: apps/composer/models.py:1034 apps/notifications/models.py:42
 #: apps/radar/reports.py:53 templates/automations/log.html:71
 #: templates/billing/account_billing.html:135
 #: templates/billing/staff_subscriptions.html:198
@@ -3752,7 +3753,7 @@ msgstr "Você só pode mover as suas publicações."
 msgid "You don't have permission to approve posts."
 msgstr "Você não tem permissão para aprovar publicações."
 
-#: apps/calendar/status_board.py:127 apps/composer/views.py:1678
+#: apps/calendar/status_board.py:127 apps/composer/views.py:1703
 msgid "This post has to be approved before it is scheduled."
 msgstr "Esta publicação precisa ser aprovada antes de ser agendada."
 
@@ -3760,70 +3761,70 @@ msgstr "Esta publicação precisa ser aprovada antes de ser agendada."
 msgid "Open the post and choose when it goes out before scheduling it."
 msgstr "Abra a publicação e escolha quando ela sai antes de agendá-la."
 
-#: apps/calendar/views.py:1066 apps/inbox/views.py:236
+#: apps/calendar/views.py:1060 apps/inbox/views.py:236
 #: templates/billing/checkout.html:300
 #: templates/organizations/cross_calendar.html:140
 #: templates/workspaces/dashboard.html:156
 msgid "Today"
 msgstr "Hoje"
 
-#: apps/calendar/views.py:1068
+#: apps/calendar/views.py:1062
 msgid "Tomorrow"
 msgstr "Amanhã"
 
-#: apps/calendar/views.py:1248
+#: apps/calendar/views.py:1242
 #: templates/calendar/partials/_period_toolbar.html:89
 #: templates/organizations/cross_calendar.html:186
 msgid "All Posts"
 msgstr "Todas as publicações"
 
-#: apps/calendar/views.py:1359
+#: apps/calendar/views.py:1353
 #, python-format
 msgid "%(platform)s post"
 msgstr "Post do %(platform)s"
 
-#: apps/calendar/views.py:1423
+#: apps/calendar/views.py:1417
 msgid "Post updated"
 msgstr "Publicação atualizada"
 
-#: apps/calendar/views.py:1424
+#: apps/calendar/views.py:1418
 #, python-format
 msgid "The new text is live on %(network)s."
 msgstr "O novo texto já está no ar em %(network)s."
 
-#: apps/calendar/views.py:2150 apps/calendar/views.py:2199
+#: apps/calendar/views.py:2138 apps/calendar/views.py:2187
 msgid "Fill in the name and the dates."
 msgstr "Preencha o nome e as datas."
 
-#: apps/calendar/views.py:2153 apps/calendar/views.py:2204
+#: apps/calendar/views.py:2141 apps/calendar/views.py:2192
 msgid "Choose a valid colour."
 msgstr "Escolha uma cor válida."
 
-#: apps/calendar/views.py:2159
+#: apps/calendar/views.py:2147
 msgid "Enter valid dates."
 msgstr "Informe datas válidas."
 
-#: apps/calendar/views.py:2183
+#: apps/calendar/views.py:2171
 msgid "Campaign added to the calendar."
 msgstr "Campanha adicionada ao calendário."
 
-#: apps/calendar/views.py:2226
+#: apps/calendar/views.py:2214
 msgid "Campaign updated."
 msgstr "Campanha atualizada."
 
-#: apps/calendar/views.py:2242
+#: apps/calendar/views.py:2230
 msgid "Campaign deleted."
 msgstr "Campanha excluída."
 
-#: apps/calendar/views.py:2308
+#: apps/calendar/views.py:2296
 msgid "Unknown column."
 msgstr "Coluna desconhecida."
 
-#: apps/calendar/views.py:2316
+#: apps/calendar/views.py:2304
 msgid "The post was not moved."
 msgstr "A publicação não foi movida."
 
-#: apps/calendar/views.py:2342
+#: apps/calendar/views.py:2330
 #, python-format
 msgid "Moved to “%(column)s”."
 msgstr "Movida para “%(column)s”."
@@ -3868,43 +3869,43 @@ msgstr[1] "últimos %(days)d dias"
 msgid "All"
 msgstr "Todos"
 
-#: apps/composer/builtin_templates.py:13 apps/composer/models.py:1126
+#: apps/composer/builtin_templates.py:13 apps/composer/models.py:1133
 msgid "Tip"
 msgstr "Dica"
 
 #: apps/composer/builtin_templates.py:14 apps/composer/idea_icons.py:119
-#: apps/composer/models.py:1127
+#: apps/composer/models.py:1134
 msgid "Case Study"
 msgstr "Estudo de caso"
 
 #: apps/composer/builtin_templates.py:15 apps/composer/idea_icons.py:124
-#: apps/composer/models.py:1128
+#: apps/composer/models.py:1135
 msgid "Story"
 msgstr "História"
 
 #: apps/composer/builtin_templates.py:16 apps/composer/idea_icons.py:130
-#: apps/composer/models.py:1129
+#: apps/composer/models.py:1136
 msgid "How-to"
 msgstr "Tutorial"
 
 #: apps/composer/builtin_templates.py:17 apps/composer/idea_icons.py:67
-#: apps/composer/models.py:1130 templates/support/staff_faq_edit.html:35
+#: apps/composer/models.py:1137 templates/support/staff_faq_edit.html:35
 msgid "Question"
 msgstr "Pergunta"
 
 #: apps/composer/builtin_templates.py:18 apps/composer/idea_icons.py:135
-#: apps/composer/models.py:1131
+#: apps/composer/models.py:1138
 msgid "Opinion"
 msgstr "Opinião"
 
 #: apps/composer/builtin_templates.py:19 apps/composer/idea_icons.py:139
-#: apps/composer/models.py:1132 templates/calendar/calendar.html:24
+#: apps/composer/models.py:1139 templates/calendar/calendar.html:24
 #: templates/email_center/partials/_editor.html:62
 msgid "List"
 msgstr "Lista"
 
 #: apps/composer/builtin_templates.py:20 apps/composer/idea_icons.py:144
-#: apps/composer/models.py:1133
+#: apps/composer/models.py:1140
 msgid "Behind the Scenes"
 msgstr "Bastidores"
 
@@ -4044,12 +4045,12 @@ msgstr "Formato"
 msgid "Networks"
 msgstr "Redes"
 
-#: apps/composer/forms.py:250
+#: apps/composer/forms.py:251
 msgid "Icon"
 msgstr "Ícone"
 
-#: apps/composer/forms.py:251 apps/social_accounts/models.py:643
-#: templates/composer/compose.html:595 templates/composer/compose.html:2451
+#: apps/composer/forms.py:252 apps/social_accounts/models.py:643
+#: templates/composer/compose.html:595 templates/composer/compose.html:2457
 #: templates/composer/create_landing.html:395
 #: templates/composer/create_landing.html:578
 #: templates/composer/partials/template_gallery.html:117
@@ -4061,7 +4062,7 @@ msgstr "Ícone"
 msgid "Title"
 msgstr "Título"
 
-#: apps/composer/forms.py:252 apps/social_accounts/models.py:597
+#: apps/composer/forms.py:253 apps/social_accounts/models.py:597
 #: apps/social_accounts/models.py:605
 #: templates/automations/flow_builder.html:1164
 #: templates/composer/create_landing.html:430
@@ -4071,12 +4072,12 @@ msgstr "Título"
 msgid "Description"
 msgstr "Descrição"
 
-#: apps/composer/forms.py:253
+#: apps/composer/forms.py:254
 #: templates/composer/partials/template_gallery.html:169
 msgid "Text of the template"
 msgstr "Texto do modelo"
 
-#: apps/composer/forms.py:254 apps/social_accounts/whatsapp_templates.py:55
+#: apps/composer/forms.py:255 apps/social_accounts/whatsapp_templates.py:55
 #: templates/calendar/partials/_staff_date_rows.html:33
 #: templates/composer/compose.html:1541
 #: templates/composer/partials/template_gallery.html:35
@@ -4088,34 +4089,34 @@ msgstr "Texto do modelo"
 msgid "Category"
 msgstr "Categoria"
 
-#: apps/composer/forms.py:255 templates/social_accounts/staff_platforms.html:42
+#: apps/composer/forms.py:256 templates/social_accounts/staff_platforms.html:42
 #: templates/social_accounts/staff_platforms.html:68
 msgid "Shown to customers"
 msgstr "Visível para os clientes"
 
-#: apps/composer/forms.py:256
+#: apps/composer/forms.py:257
 #: templates/composer/partials/template_gallery.html:143
 msgid "Detailed description"
 msgstr "Descrição detalhada"
 
-#: apps/composer/forms.py:257
+#: apps/composer/forms.py:258
 #: templates/composer/partials/template_gallery.html:205
 msgid "Cover image"
 msgstr "Imagem de capa"
 
-#: apps/composer/forms.py:258
+#: apps/composer/forms.py:259
 #: templates/composer/partials/template_gallery.html:132
 #: templates/composer/partials/template_gallery.html:360
 msgid "Ideal for"
 msgstr "Ideal para"
 
-#: apps/composer/forms.py:259
+#: apps/composer/forms.py:260
 #: templates/composer/partials/template_gallery.html:231
 #: templates/tasks/partials/_new_item_options.html:33
 msgid "Briefing for creating the arts"
 msgstr "Briefing para a criação das artes"
 
-#: apps/composer/forms.py:260
+#: apps/composer/forms.py:261
 #: templates/calendar/partials/_staff_date_rows.html:53
 #: templates/composer/partials/_special_dates_tab.html:309
 #: templates/composer/partials/template_gallery.html:226
@@ -4123,11 +4124,11 @@ msgstr "Briefing para a criação das artes"
 msgid "Arts to produce"
 msgstr "Artes a produzir"
 
-#: apps/composer/forms.py:263
+#: apps/composer/forms.py:264
 msgid "One or two lines on the card, saying what the idea is."
 msgstr "Uma ou duas linhas no cartão, dizendo qual é a ideia."
 
-#: apps/composer/forms.py:264
+#: apps/composer/forms.py:265
 msgid ""
 "What opens in the composer. Mark the parts to fill in with double braces, "
 "like {{topic}}."
@@ -4135,20 +4136,20 @@ msgstr ""
 "O que abre no editor. Marque as partes a preencher com chaves duplas, como "
 "{{tema}}."
 
-#: apps/composer/forms.py:265
+#: apps/composer/forms.py:266
 msgid "Shown in the template's panel. Without it, the description is shown."
 msgstr "Aparece no painel do modelo. Sem ela, aparece a descrição."
 
-#: apps/composer/forms.py:266
+#: apps/composer/forms.py:267
 msgid "The top of the card. Without one, the category's icon is shown."
 msgstr "O topo do card. Sem imagem, aparece o ícone da categoria."
 
-#: apps/composer/forms.py:267
+#: apps/composer/forms.py:268
 #: templates/composer/partials/template_gallery.html:134
 msgid "For example: tips, recommendations, lists."
 msgstr "Por exemplo: dicas, recomendações, listas."
 
-#: apps/composer/forms.py:268
+#: apps/composer/forms.py:269
 msgid ""
 "How the arts should be made: what they say and show. Goes to the task's "
 "briefing."
@@ -4156,16 +4157,16 @@ msgstr ""
 "Como as artes devem ser feitas: o que dizem e mostram. Vai para o briefing "
 "da tarefa."
 
-#: apps/composer/forms.py:285
+#: apps/composer/forms.py:286
 #: templates/composer/partials/template_gallery.html:178
 msgid "Name of the version"
 msgstr "Nome da versão"
 
-#: apps/composer/forms.py:324
+#: apps/composer/forms.py:325
 msgid "Write the text of the template."
 msgstr "Escreva o texto do modelo."
 
-#: apps/composer/forms.py:330
+#: apps/composer/forms.py:331
 msgid "The cover can have at most 5 MB."
 msgstr "A capa pode ter no máximo 5 MB."
 
@@ -4207,7 +4208,7 @@ msgid "Deadline"
 msgstr "Prazo"
 
 #: apps/composer/idea_icons.py:51 apps/composer/models.py:559
-#: apps/composer/services.py:1104 apps/social_accounts/models.py:682
+#: apps/composer/services.py:1182 apps/social_accounts/models.py:682
 #: apps/tasks/creative_formats.py:152 templates/accounts/settings.html:47
 msgid "Photo"
 msgstr "Foto"
@@ -4272,14 +4273,14 @@ msgstr "Bastidores"
 msgid "Internal only"
 msgstr "Somente interna"
 
-#: apps/composer/models.py:81 templates/composer/compose.html:2459
+#: apps/composer/models.py:81 templates/composer/compose.html:2465
 #: templates/radar/instagram.html:90
 #: templates/radar/staff_market_hashtags.html:80
 msgid "Hashtag"
 msgstr "Hashtag"
 
 #: apps/composer/models.py:83 apps/inbox/models.py:18
-#: templates/composer/compose.html:2460
+#: templates/composer/compose.html:2466
 msgid "Mention"
 msgstr "Menção"
 
@@ -4313,7 +4314,7 @@ msgstr "Pronto"
 msgid "On Hold"
 msgstr "Em espera"
 
-#: apps/composer/models.py:555 apps/composer/models.py:1137
+#: apps/composer/models.py:555 apps/composer/models.py:1144
 #: apps/social_accounts/models.py:30 apps/tasks/creative_formats.py:161
 #: templates/analytics/_post_table.html:36
 #: templates/inbox/partials/_entry_facts.html:29
@@ -4321,14 +4322,14 @@ msgstr "Em espera"
 msgid "Post"
 msgstr "Publicação"
 
-#: apps/composer/models.py:556 apps/composer/services.py:1101
+#: apps/composer/models.py:556 apps/composer/services.py:1179
 #: apps/social_accounts/models.py:679 apps/tasks/creative_formats.py:95
 #: apps/tasks/creative_formats.py:105 apps/tasks/creative_formats.py:131
 msgctxt "publishing format"
 msgid "Story"
 msgstr "Story"
 
-#: apps/composer/models.py:558 apps/composer/services.py:1103
+#: apps/composer/models.py:558 apps/composer/services.py:1181
 #: apps/social_accounts/models.py:681
 msgid "Shorts"
 msgstr "Shorts"
@@ -4341,40 +4342,40 @@ msgstr "Não solicitado"
 msgid "Posted"
 msgstr "Publicado"
 
-#: apps/composer/models.py:1029 apps/radar/reports.py:52
+#: apps/composer/models.py:1036 apps/radar/reports.py:52
 msgid "Completed"
 msgstr "Concluído"
 
-#: apps/composer/models.py:1146
+#: apps/composer/models.py:1153
 msgid "Authority"
 msgstr "Autoridade"
 
-#: apps/composer/models.py:1149
+#: apps/composer/models.py:1156
 msgid "Community"
 msgstr "Comunidade"
 
-#: apps/composer/models.py:1150 apps/organizations/models.py:54
+#: apps/composer/models.py:1157 apps/organizations/models.py:54
 msgid "Education"
 msgstr "Educação"
 
-#: apps/composer/models.py:1198
+#: apps/composer/models.py:1205
 msgid "Waiting for approval"
 msgstr "Aguardando aprovação"
 
-#: apps/composer/services.py:422
+#: apps/composer/services.py:423
 msgid "This post's text can't be changed on the network from here."
 msgstr "O texto desta publicação não pode ser alterado na rede por aqui."
 
-#: apps/composer/services.py:425
+#: apps/composer/services.py:426
 msgid "Write the post's text."
 msgstr "Escreva o texto da publicação."
 
-#: apps/composer/services.py:431
+#: apps/composer/services.py:432
 #, python-format
 msgid "The text is longer than the %(limit)s characters this network accepts."
 msgstr "O texto passa dos %(limit)s caracteres que esta rede aceita."
 
-#: apps/composer/services.py:689
+#: apps/composer/services.py:690
 #, python-format
 msgid ""
 "%(platform)s can only publish videos. Add a video to this post before "
@@ -4383,7 +4384,7 @@ msgstr ""
 "O %(platform)s só publica vídeos. Adicione um vídeo a esta publicação antes "
 "de agendá-la."
 
-#: apps/composer/services.py:693
+#: apps/composer/services.py:694
 #, python-format
 msgid ""
 "%(platform)s needs an image or a video. Add one to this post before "
@@ -4392,28 +4393,63 @@ msgstr ""
 "O %(platform)s precisa de uma imagem ou um vídeo. Adicione um a esta "
 "publicação antes de agendá-la."
 
-#: apps/composer/services.py:715 templates/composer/compose.html:2515
+#: apps/composer/services.py:716 templates/composer/compose.html:2521
 #: templates/composer/partials/_preview_vertical.html:101
 msgid "A Story needs at least one photo or video."
 msgstr "Um Story precisa de pelo menos uma foto ou um vídeo."
 
-#: apps/composer/services.py:717 templates/composer/compose.html:2516
+#: apps/composer/services.py:718 templates/composer/compose.html:2522
 #: templates/composer/partials/_preview_vertical.html:101
 msgid "A Reel needs exactly one video."
 msgstr "Um Reel precisa de exatamente um vídeo."
 
-#: apps/composer/services.py:719 templates/composer/compose.html:2517
+#: apps/composer/services.py:720 templates/composer/compose.html:2523
 #: templates/composer/partials/_preview_vertical.html:101
 msgid "A Short needs exactly one video."
 msgstr "Um Short precisa de exatamente um vídeo."
 
-#: apps/composer/services.py:720 templates/composer/compose.html:2521
+#: apps/composer/services.py:721 templates/composer/compose.html:2529
 #: templates/composer/partials/_preview_vertical.html:16
 #: templates/composer/partials/_preview_vertical.html:22
 msgid "A profile photo needs exactly one image."
 msgstr "Uma foto do perfil precisa de exatamente uma imagem."
 
-#: apps/composer/services.py:803
+#: apps/composer/services.py:821
+#, python-format
+msgid ""
+"%(platform)s takes Story videos of up to %(limit)d seconds and this one has "
+"%(duration)d. Trim the video, or publish it as Reels."
+msgstr ""
+"O %(platform)s aceita vídeos de até %(limit)d segundos no Story e este tem "
+"%(duration)d. Corte o vídeo ou publique-o como Reels."
+
+#: apps/composer/services.py:826
+#, python-format
+msgid ""
+"%(platform)s takes Story videos of up to %(limit)d MB and this one has "
+"%(size).1f MB. Compress the video, or publish it as Reels."
+msgstr ""
+"O %(platform)s aceita vídeos de até %(limit)d MB no Story e este tem "
+"%(size).1f MB. Comprima o vídeo ou publique-o como Reels."
+
+#: apps/composer/services.py:845 templates/composer/compose.html:2526
+msgid ""
+"YouTube only makes Shorts of vertical or square videos and this one is "
+"horizontal. Use a vertical video, or publish it as an ordinary video."
+msgstr ""
+"O YouTube só faz Shorts de vídeos verticais ou quadrados e este é "
+"horizontal. Use um vídeo vertical ou publique-o como vídeo comum."
+
+#: apps/composer/services.py:850
+#, python-format
+msgid ""
+"YouTube makes Shorts of videos up to %(limit)d minutes and this one has "
+"%(duration)d seconds. Trim the video, or publish it as an ordinary video."
+msgstr ""
+"O YouTube faz Shorts de vídeos de até %(limit)d minutos e este tem "
+"%(duration)d segundos. Corte o vídeo ou publique-o como vídeo comum."
+
+#: apps/composer/services.py:868
 #, python-format
 msgid ""
 "%(platform)s takes up to %(limit)d photos in one post and this one has "
@@ -4422,7 +4458,7 @@ msgstr ""
 "O %(platform)s aceita até %(limit)d fotos em uma publicação e esta tem "
 "%(count)d. Remova algumas antes de agendá-la."
 
-#: apps/composer/services.py:840
+#: apps/composer/services.py:917
 msgid ""
 "Pinterest needs a board for every pin. Choose one for this post in the "
 "composer before scheduling it."
@@ -4430,13 +4466,13 @@ msgstr ""
 "O Pinterest precisa de uma pasta para cada pin. Escolha uma para esta "
 "publicação no editor antes de agendá-la."
 
-#: apps/composer/services.py:887
+#: apps/composer/services.py:965
 #, python-format
 msgid "This post is scheduled as %(format)s on %(platform)s. %(reason)s"
 msgstr ""
 "Esta publicação está agendada como %(format)s no %(platform)s. %(reason)s"
 
-#: apps/composer/services.py:898
+#: apps/composer/services.py:976
 #, python-format
 msgid ""
 "This post is scheduled to %(platform)s, which needs a video on it. Keep one "
@@ -4446,7 +4482,7 @@ msgstr ""
 "nela. Mantenha um na publicação ou cancele primeiro o agendamento no "
 "%(platform)s."
 
-#: apps/composer/services.py:903
+#: apps/composer/services.py:981
 #, python-format
 msgid ""
 "This post is scheduled to %(platform)s, which needs an image or a video on "
@@ -4468,7 +4504,7 @@ msgstr "Modelo recusado."
 msgid "Template deleted."
 msgstr "Modelo excluído."
 
-#: apps/composer/views.py:151
+#: apps/composer/views.py:154
 msgid ""
 "No open posting slot within the scheduling horizon — add posting slots or "
 "free one up."
@@ -4476,12 +4512,12 @@ msgstr ""
 "Nenhum horário livre dentro do período de agendamento — adicione horários de "
 "publicação ou libere um."
 
-#: apps/composer/views.py:666
+#: apps/composer/views.py:669
 #, python-format
 msgid "Select a Pinterest board for %(account)s."
 msgstr "Selecione uma pasta do Pinterest para %(account)s."
 
-#: apps/composer/views.py:764
+#: apps/composer/views.py:787
 #, python-format
 msgid ""
 "%(account)s: Instagram publishes a single video in the feed as a Reel. "
@@ -4490,27 +4526,27 @@ msgstr ""
 "%(account)s: o Instagram publica um vídeo único no feed como Reel. Escolha "
 "Feed ou Reels, não os dois."
 
-#: apps/composer/views.py:835
+#: apps/composer/views.py:858
 #, python-format
 msgid "%(platforms)s can only publish videos."
 msgid_plural "%(platforms)s can only publish videos."
 msgstr[0] "O %(platforms)s só publica vídeos."
 msgstr[1] "%(platforms)s só publicam vídeos."
 
-#: apps/composer/views.py:844
+#: apps/composer/views.py:867
 #, python-format
 msgid "%(platforms)s needs an image or a video."
 msgid_plural "%(platforms)s need an image or a video."
 msgstr[0] "O %(platforms)s precisa de uma imagem ou um vídeo."
 msgstr[1] "%(platforms)s precisam de uma imagem ou um vídeo."
 
-#: apps/composer/views.py:856
+#: apps/composer/views.py:879
 msgid "Add a video to this post, or deselect that account."
 msgid_plural "Add a video to this post, or deselect those accounts."
 msgstr[0] "Adicione um vídeo a esta publicação ou desmarque essa conta."
 msgstr[1] "Adicione um vídeo a esta publicação ou desmarque essas contas."
 
-#: apps/composer/views.py:864
+#: apps/composer/views.py:887
 msgid "Add an image or a video to this post, or deselect that account."
 msgid_plural ""
 "Add an image or a video to this post, or deselect those accounts."
@@ -4519,88 +4555,88 @@ msgstr[0] ""
 msgstr[1] ""
 "Adicione uma imagem ou um vídeo a esta publicação ou desmarque essas contas."
 
-#: apps/composer/views.py:1716 templates/composer/compose.html:2506
+#: apps/composer/views.py:1741 templates/composer/compose.html:2512
 msgid "Scheduled time must be in the future."
 msgstr "O horário agendado precisa estar no futuro."
 
-#: apps/composer/views.py:1729
+#: apps/composer/views.py:1754
 msgid "Date and time required."
 msgstr "Data e hora são obrigatórias."
 
-#: apps/composer/views.py:1752 apps/composer/views.py:1796
+#: apps/composer/views.py:1777 apps/composer/views.py:1821
 msgid "No active queue found for the selected channel."
 msgstr "Nenhuma fila ativa encontrada para o canal selecionado."
 
-#: apps/composer/views.py:2071
+#: apps/composer/views.py:2096
 msgid "Read-only — not saved"
 msgstr "Somente leitura — não salvo"
 
-#: apps/composer/views.py:2108
+#: apps/composer/views.py:2133
 msgid "Nothing to save yet"
 msgstr "Nada para salvar ainda"
 
-#: apps/composer/views.py:2138
+#: apps/composer/views.py:2163
 #, python-format
 msgid "Saved %(time)s"
 msgstr "Salvo às %(time)s"
 
-#: apps/composer/views.py:2365 apps/composer/views.py:3235
-#: apps/composer/views.py:4204
+#: apps/composer/views.py:2390 apps/composer/views.py:3271
+#: apps/composer/views.py:4240
 msgid "No file provided"
 msgstr "Nenhum arquivo enviado"
 
-#: apps/composer/views.py:2370
+#: apps/composer/views.py:2395
 msgid "Only image files are allowed"
 msgstr "Apenas arquivos de imagem são permitidos"
 
-#: apps/composer/views.py:2616
+#: apps/composer/views.py:2641
 msgid "Could not read video duration."
 msgstr "Não foi possível ler a duração do vídeo."
 
-#: apps/composer/views.py:2631
+#: apps/composer/views.py:2656
 msgid "Could not extract frames."
 msgstr "Não foi possível extrair os quadros."
 
-#: apps/composer/views.py:2672
+#: apps/composer/views.py:2697
 msgid "Missing search query"
 msgstr "Informe um termo de busca"
 
-#: apps/composer/views.py:2685
+#: apps/composer/views.py:2710
 msgid "Could not reach Unsplash. Try again."
 msgstr "Não foi possível acessar o Unsplash. Tente novamente."
 
-#: apps/composer/views.py:2690
+#: apps/composer/views.py:2715
 msgid "Unsplash rate limit reached. Try again in a few minutes."
 msgstr ""
 "Limite de requisições do Unsplash atingido. Tente novamente em alguns "
 "minutos."
 
-#: apps/composer/views.py:2692 templates/composer/compose.html:2494
+#: apps/composer/views.py:2717 templates/composer/compose.html:2500
 msgid "Unsplash search failed. Try again."
 msgstr "A busca no Unsplash falhou. Tente novamente."
 
-#: apps/composer/views.py:2719
+#: apps/composer/views.py:2744
 msgid "Unexpected response from Unsplash. Try again."
 msgstr "Resposta inesperada do Unsplash. Tente novamente."
 
-#: apps/composer/views.py:2746
+#: apps/composer/views.py:2771
 msgid "No photos selected"
 msgstr "Nenhuma foto selecionada"
 
-#: apps/composer/views.py:2749
+#: apps/composer/views.py:2774
 #, python-format
 msgid "Select at most %(count)s photos per import."
 msgstr "Selecione no máximo %(count)s fotos por importação."
 
-#: apps/composer/views.py:2861
+#: apps/composer/views.py:2886
 msgid "Could not import the selected photos."
 msgstr "Não foi possível importar as fotos selecionadas."
 
-#: apps/composer/views.py:2911
+#: apps/composer/views.py:2936
 msgid "Failed to fetch boards"
 msgstr "Não foi possível carregar as pastas"
 
-#: apps/composer/views.py:2951
+#: apps/composer/views.py:2976
 msgid ""
 "Place search isn't enabled for this app on Meta yet: it needs the Page "
 "Public Metadata Access feature approved in App Review."
@@ -4608,23 +4644,23 @@ msgstr ""
 "A busca de locais ainda não está liberada para este app na Meta: ela precisa "
 "do recurso Page Public Metadata Access aprovado na revisão do app."
 
-#: apps/composer/views.py:2955
+#: apps/composer/views.py:2980
 msgid "Could not search places right now. Try again in a moment."
 msgstr "Não foi possível buscar locais agora. Tente de novo em instantes."
 
-#: apps/composer/views.py:3414 apps/composer/views.py:3497
+#: apps/composer/views.py:3450 apps/composer/views.py:3533
 msgid "This post has already published and can't be edited."
 msgstr "Esta publicação já foi publicada e não pode ser editada."
 
-#: apps/composer/views.py:3542
+#: apps/composer/views.py:3578
 msgid "Marked as published. Thank you!"
 msgstr "Marcado como publicado. Obrigado!"
 
-#: apps/composer/views.py:3619
+#: apps/composer/views.py:3655
 msgid "You don't have permission to delete this post."
 msgstr "Você não tem permissão para excluir esta publicação."
 
-#: apps/composer/views.py:3697
+#: apps/composer/views.py:3733
 #, python-format
 msgid ""
 "%(network)s didn't give this post's link. The post may be gone from there, "
@@ -4633,30 +4669,30 @@ msgstr ""
 "%(network)s não informou o link desta publicação. Ela pode ter sido removida "
 "de lá, ou a conta pode precisar ser reconectada."
 
-#: apps/composer/views.py:3757
+#: apps/composer/views.py:3793
 msgid "Brainstorming"
 msgstr "Brainstorming"
 
-#: apps/composer/views.py:3758
+#: apps/composer/views.py:3794
 msgctxt "idea column"
 msgid "Under review"
 msgstr "Em avaliação"
 
-#: apps/composer/views.py:3759
+#: apps/composer/views.py:3795
 msgctxt "idea column"
 msgid "Approved"
 msgstr "Aprovadas"
 
-#: apps/composer/views.py:3760
+#: apps/composer/views.py:3796
 msgctxt "idea column"
 msgid "Discarded"
 msgstr "Descartadas"
 
-#: apps/composer/views.py:3792
+#: apps/composer/views.py:3828
 msgid "This is a place to plan ✍️ your content"
 msgstr "Este é o lugar para planejar ✍️ seu conteúdo"
 
-#: apps/composer/views.py:3794
+#: apps/composer/views.py:3830
 msgid ""
 "Save your Ideas before converting them into posts. Brainstorm, plan ahead, "
 "and keep everything organized in one place."
@@ -4664,82 +4700,82 @@ msgstr ""
 "Salve suas ideias antes de transformá-las em publicações. Tenha ideias, "
 "planeje com antecedência e mantenha tudo organizado em um só lugar."
 
-#: apps/composer/views.py:3826
+#: apps/composer/views.py:3862
 msgid "First ideas to explore."
 msgstr "Ideias iniciais para explorar."
 
-#: apps/composer/views.py:3827
+#: apps/composer/views.py:3863
 msgid "Weighing whether it works and in which format."
 msgstr "Analisando a viabilidade e o formato."
 
-#: apps/composer/views.py:3828
+#: apps/composer/views.py:3864
 msgid "Ideas ready for production."
 msgstr "Ideias prontas para produção."
 
-#: apps/composer/views.py:3829
+#: apps/composer/views.py:3865
 msgid "Ideas that will not be used."
 msgstr "Ideias que não serão utilizadas."
 
-#: apps/composer/views.py:4045 apps/media_library/cropping.py:32
-#: apps/tasks/views.py:976
+#: apps/composer/views.py:4081 apps/media_library/cropping.py:32
+#: apps/tasks/views.py:971
 msgid "Storage quota exceeded. Free up space or upgrade your plan."
 msgstr ""
 "Cota de armazenamento excedida. Libere espaço ou faça upgrade do seu plano."
 
-#: apps/composer/views.py:4118
+#: apps/composer/views.py:4154
 msgid "The template is now one of your ideas."
 msgstr "O modelo agora é uma das suas ideias."
 
-#: apps/composer/views.py:4627
+#: apps/composer/views.py:4663
 msgid "Name is required."
 msgstr "O nome é obrigatório."
 
-#: apps/composer/views.py:4656
+#: apps/composer/views.py:4692
 msgid "Column must be empty before deleting."
 msgstr "A coluna precisa estar vazia antes de ser excluída."
 
-#: apps/composer/views.py:4896
+#: apps/composer/views.py:4932
 msgid "CSV file too large (max 5 MB)."
 msgstr "Arquivo CSV muito grande (máx. 5 MB)."
 
-#: apps/composer/views.py:4906
+#: apps/composer/views.py:4942
 msgid "CSV file is empty."
 msgstr "O arquivo CSV está vazio."
 
-#: apps/composer/views.py:5214
+#: apps/composer/views.py:5250
 msgid "Tag name is required."
 msgstr "O nome da tag é obrigatório."
 
-#: apps/composer/views.py:5217
+#: apps/composer/views.py:5253
 msgid "Unknown tag kind."
 msgstr "Tipo de etiqueta desconhecido."
 
-#: apps/composer/views.py:5232
+#: apps/composer/views.py:5268
 msgid "Group name is required."
 msgstr "O nome do grupo é obrigatório."
 
-#: apps/composer/views.py:5243
+#: apps/composer/views.py:5279
 msgid "A group with this name already exists."
 msgstr "Já existe um grupo com este nome."
 
-#: apps/composer/views.py:5266
+#: apps/composer/views.py:5302
 msgid "The template was not sent."
 msgstr "O modelo não foi enviado."
 
-#: apps/composer/views.py:5279
+#: apps/composer/views.py:5315
 #, python-format
 msgid "You already have %(count)s templates waiting for approval."
 msgstr "Você já tem %(count)s modelos aguardando aprovação."
 
-#: apps/composer/views.py:5284
+#: apps/composer/views.py:5320
 msgid "Template sent. Thank you!"
 msgstr "Modelo enviado. Obrigado!"
 
-#: apps/composer/views.py:5285
+#: apps/composer/views.py:5321
 msgid "It reaches every brand's shelf once our team approves it."
 msgstr "Ele aparece para todas as marcas assim que a nossa equipe aprovar."
 
-#: apps/composer/views.py:5317
+#: apps/composer/views.py:5353
 msgid "This tag no longer exists."
 msgstr "Esta tag não existe mais."
 
@@ -4778,7 +4814,7 @@ msgstr "Empresa"
 #: templates/billing/staff_subscriptions.html:149
 #: templates/billing/staff_subscriptions.html:172
 #: templates/billing/workspace_billing.html:63
-#: templates/calendar/partials/_day_posts.html:38
+#: templates/calendar/partials/_day_posts.html:40
 #: templates/calendar/partials/_list_table.html:15
 #: templates/calendar/partials/list_view.html:12
 #: templates/contacts/list.html:85 templates/email_center/staff_index.html:36
@@ -5688,7 +5724,7 @@ msgstr "Estas variáveis não existem neste e-mail: %(names)s."
 #: templates/billing/staff_account.html:119
 #: templates/support/email/ticket_opened_team.html:10
 #: templates/support/email/ticket_opened_team.txt:5
-#: templates/support/staff_chat_console.html:299
+#: templates/support/staff_chat_console.html:308
 #: templates/support/ticket_new.html:37
 msgid "Subject"
 msgstr "Assunto"
@@ -8514,7 +8550,7 @@ msgstr "Letras minúsculas, números e sublinhados, por exemplo pedido_enviado."
 
 #: apps/social_accounts/whatsapp_templates.py:60 templates/base.html:771
 #: templates/social_accounts/partials/_whatsapp_templates_list.html:20
-#: templates/support/staff_chat_console.html:267
+#: templates/support/staff_chat_console.html:276
 #: templates/support/staff_chat_history_detail.html:51
 msgid "Language"
 msgstr "Idioma"
@@ -8523,7 +8559,7 @@ msgstr "Idioma"
 #: templates/social_accounts/partials/_whatsapp_templates_list.html:22
 #: templates/support/email/ticket_opened_team.html:12
 #: templates/support/partials/_chat_widget.html:108
-#: templates/support/staff_chat_console.html:166
+#: templates/support/staff_chat_console.html:175
 #: templates/support/staff_ticket_detail.html:40
 #: templates/support/ticket_new.html:43
 msgid "Message"
@@ -8624,8 +8660,8 @@ msgid "Take the chat before answering it."
 msgstr "Atenda o chat antes de responder."
 
 #: apps/support/services.py:424 templates/layouts/admin_shell.html:49
-#: templates/support/staff_chat_console.html:18
-#: templates/support/staff_chat_console.html:23
+#: templates/support/staff_chat_console.html:25
+#: templates/support/staff_chat_console.html:32
 #: templates/support/staff_chat_history.html:13
 #: templates/support/staff_chat_history_detail.html:13
 msgid "Live chat"
@@ -9044,36 +9080,36 @@ msgstr "Do modelo “%(title)s”"
 msgid "From the special date “%(title)s”"
 msgstr "Da data comemorativa “%(title)s”"
 
-#: apps/tasks/views.py:925
+#: apps/tasks/views.py:920
 msgid "Art request settings saved."
 msgstr "Configurações de artes salvas."
 
-#: apps/tasks/views.py:962
+#: apps/tasks/views.py:957
 msgid "Choose the file of the art."
 msgstr "Escolha o arquivo da arte."
 
-#: apps/tasks/views.py:971 apps/tasks/views.py:975 apps/tasks/views.py:979
+#: apps/tasks/views.py:966 apps/tasks/views.py:970 apps/tasks/views.py:974
 msgid "The art was not uploaded."
 msgstr "A arte não foi enviada."
 
-#: apps/tasks/views.py:1003
+#: apps/tasks/views.py:998
 msgid "The art's proportions don't match the format"
 msgstr "A proporção da arte não bate com o formato"
 
-#: apps/tasks/views.py:1004
+#: apps/tasks/views.py:999
 #, python-format
 msgid "Expected %(w)s × %(h)s, received %(rw)s × %(rh)s."
 msgstr "Esperado %(w)s × %(h)s, recebido %(rw)s × %(rh)s."
 
-#: apps/tasks/views.py:1022
+#: apps/tasks/views.py:1017
 msgid "Approve the task before creating its post."
 msgstr "Aprove a tarefa antes de criar a publicação."
 
-#: apps/tasks/views.py:1028
+#: apps/tasks/views.py:1023
 msgid "There is no delivered art to publish."
 msgstr "Não há arte entregue para publicar."
 
-#: apps/tasks/views.py:1029
+#: apps/tasks/views.py:1024
 msgid ""
 "Deliver a publishable format for an account connected to this workspace."
 msgstr "Entregue um formato publicável para uma conta conectada a esta marca."
@@ -9915,8 +9951,8 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/components/_confirm_dialog.html:36
 #: templates/components/_period_picker.html:47
 #: templates/composer/categories.html:45 templates/composer/categories.html:91
-#: templates/composer/compose.html:1749 templates/composer/compose.html:2240
-#: templates/composer/compose.html:2316 templates/composer/compose.html:2404
+#: templates/composer/compose.html:1749 templates/composer/compose.html:2246
+#: templates/composer/compose.html:2322 templates/composer/compose.html:2410
 #: templates/composer/create_landing.html:281
 #: templates/composer/create_landing.html:800
 #: templates/composer/create_landing.html:836
@@ -9960,7 +9996,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/social_accounts/partials/_disconnect_confirm.html:47
 #: templates/social_accounts/partials/_posting_slots_grid.html:87
 #: templates/social_accounts/partials/_posting_slots_grid.html:121
-#: templates/support/staff_chat_console.html:314
+#: templates/support/staff_chat_console.html:323
 #: templates/support/staff_faq_edit.html:50
 #: templates/support/ticket_new.html:55
 #: templates/tasks/partials/_checklist_item.html:114
@@ -10328,7 +10364,7 @@ msgstr "Equipe"
 #: templates/onboarding/staff_tutorial_edit.html:9
 #: templates/radar/staff_market_hashtags.html:12
 #: templates/social_accounts/staff_platforms.html:14
-#: templates/support/staff_chat_console.html:18
+#: templates/support/staff_chat_console.html:25
 #: templates/support/staff_chat_history.html:8
 #: templates/support/staff_chat_history_detail.html:8
 #: templates/support/staff_faq_edit.html:7
@@ -10644,6 +10680,7 @@ msgstr "Esta campanha não tem conjuntos de anúncios."
 
 #: templates/ads/partials/_campaign_body.html:23
 #: templates/composer/compose.html:427
+#: templates/composer/partials/media_picker.html:325
 #: templates/email_center/partials/_preview.html:8
 msgid "Preview"
 msgstr "Prévia"
@@ -10665,7 +10702,7 @@ msgstr "Esta campanha não tem anúncios."
 #: templates/calendar/partials/publish_calendar_shell.html:56
 #: templates/calendar/partials/publish_calendar_shell.html:68
 #: templates/components/_media_preview.html:23
-#: templates/composer/compose.html:2092
+#: templates/composer/compose.html:2098
 #: templates/composer/create_landing.html:362
 #: templates/composer/create_landing.html:475
 #: templates/composer/create_landing.html:548
@@ -10676,6 +10713,7 @@ msgstr "Esta campanha não tem anúncios."
 #: templates/composer/partials/_media_thumb_actions.html:26
 #: templates/composer/partials/_tag_groups.html:144
 #: templates/composer/partials/_tag_manager.html:60
+#: templates/composer/partials/media_picker.html:341
 #: templates/composer/partials/template_gallery.html:96
 #: templates/contacts/partials/_import_modal.html:10
 #: templates/email_center/partials/_editor.html:109
@@ -10689,7 +10727,7 @@ msgstr "Esta campanha não tem anúncios."
 #: templates/social_accounts/partials/_account_card.html:223
 #: templates/social_accounts/partials/_account_card.html:244
 #: templates/social_accounts/partials/_connect_guide.html:16
-#: templates/support/staff_chat_console.html:138 templates/tasks/board.html:121
+#: templates/support/staff_chat_console.html:147 templates/tasks/board.html:121
 #: templates/tasks/partials/_art_thumb.html:29
 #: templates/tasks/partials/_new_item_modal.html:29
 #: templates/tasks/partials/_task_modal.html:294
@@ -11092,7 +11130,7 @@ msgstr ""
 "e o painel são liberados assim que o afiliado é criado."
 
 #: templates/affiliates/_new_affiliate_modal.html:32
-#: templates/composer/compose.html:2467
+#: templates/composer/compose.html:2473
 msgid "Change"
 msgstr "Alterar"
 
@@ -12013,7 +12051,7 @@ msgstr "Excluir afiliado"
 #: templates/calendar/partials/_post_actions_menu.html:36
 #: templates/calendar/partials/_post_card.html:143
 #: templates/calendar/staff_dates.html:79 templates/composer/compose.html:1777
-#: templates/composer/compose.html:2490
+#: templates/composer/compose.html:2496
 #: templates/composer/create_landing.html:473
 #: templates/composer/create_landing.html:659
 #: templates/composer/create_landing.html:718
@@ -12787,7 +12825,7 @@ msgstr "Proposto para %(date)s"
 
 #: templates/approvals/partials/_approval_row.html:43
 #: templates/calendar/partials/_board_columns.html:70
-#: templates/calendar/partials/_day_posts.html:50
+#: templates/calendar/partials/_day_posts.html:52
 #: templates/calendar/partials/_list_row.html:31
 #: templates/calendar/partials/_post_card.html:42
 #: templates/calendar/partials/_side_panel.html:61
@@ -12829,7 +12867,7 @@ msgstr "compartilhado com o cliente"
 #: templates/billing/staff_account.html:93
 #: templates/calendar/partials/_list_row.html:54
 #: templates/client_portal/activity.html:46
-#: templates/composer/compose.html:1973 templates/composer/compose.html:2005
+#: templates/composer/compose.html:1979 templates/composer/compose.html:2011
 #: templates/composer/drafts_list.html:34
 #: templates/composer/partials/feed_events_batch.html:41
 #: templates/funnels/board.html:143
@@ -12851,7 +12889,7 @@ msgstr "Ver alterações"
 
 #: templates/approvals/partials/_approval_row.html:102
 #: templates/client_portal/_client_card.html:64
-#: templates/composer/compose.html:1984
+#: templates/composer/compose.html:1990
 #: templates/composer/staff_idea_templates.html:91
 #: templates/tasks/partials/_task_modal.html:289
 msgid "Approve"
@@ -12901,7 +12939,7 @@ msgid "Internal Only"
 msgstr "Somente interno"
 
 #: templates/approvals/partials/comment_list.html:15
-#: templates/composer/compose.html:2458
+#: templates/composer/compose.html:2464
 #: templates/inbox/partials/_note_item.html:8
 msgid "Internal"
 msgstr "Interna"
@@ -13042,7 +13080,7 @@ msgstr "Começar com um fluxo pronto"
 
 #: templates/automations/flow_builder.html:262
 #: templates/automations/flow_builder.html:904
-#: templates/composer/compose.html:2487
+#: templates/composer/compose.html:2493
 #: templates/composer/partials/_crop_editor.html:64
 msgid "Saving…"
 msgstr "Salvando…"
@@ -13326,14 +13364,14 @@ msgid "Search images…"
 msgstr "Buscar imagens…"
 
 #: templates/automations/flow_builder.html:953
-#: templates/composer/compose.html:2469
+#: templates/composer/compose.html:2475
 #: templates/composer/partials/media_picker.html:251
 #: templates/tasks/partials/_art_thumb.html:46
 msgid "Uploading…"
 msgstr "Enviando…"
 
 #: templates/automations/flow_builder.html:953
-#: templates/composer/compose.html:2470
+#: templates/composer/compose.html:2476
 #: templates/composer/partials/_media_picker_modal.html:64
 #: templates/media_library/library_index.html:37
 msgid "Upload"
@@ -14215,7 +14253,7 @@ msgstr "Dê um nome acima para começar a desenhá-lo na tela."
 msgid "Dismiss"
 msgstr "Dispensar"
 
-#: templates/base.html:306 templates/composer/compose.html:2502
+#: templates/base.html:306 templates/composer/compose.html:2508
 msgid "Something went wrong. Please try again."
 msgstr "Algo deu errado. Tente novamente."
 
@@ -15977,8 +16015,8 @@ msgstr "Destinatário"
 #: templates/notifications/history.html:46
 #: templates/support/email/ticket_opened_team.html:11
 #: templates/support/email/ticket_opened_team.txt:6
-#: templates/support/staff_chat_console.html:258
-#: templates/support/staff_chat_console.html:303
+#: templates/support/staff_chat_console.html:267
+#: templates/support/staff_chat_console.html:312
 #: templates/support/staff_chat_history_detail.html:49
 #: templates/support/staff_ticket_queue.html:32
 msgid "Type"
@@ -17226,7 +17264,7 @@ msgstr "Cobrado todo mês, em fatura própria, a partir de hoje."
 #: templates/calendar/calendar.html:4 templates/calendar/calendar.html:548
 #: templates/calendar/calendar.html:580
 #: templates/calendar/partials/_list_row.html:84
-#: templates/composer/compose.html:2453
+#: templates/composer/compose.html:2459
 msgid "Publish"
 msgstr "Publicar"
 
@@ -17359,25 +17397,25 @@ msgstr "Enviar para revisão"
 msgid "Schedule post"
 msgstr "Agendar post"
 
-#: templates/calendar/partials/_day_posts.html:24
+#: templates/calendar/partials/_day_posts.html:26
 #: templates/tasks/partials/_art_formats.html:86
 msgid "Select all"
 msgstr "Selecionar todos"
 
-#: templates/calendar/partials/_day_posts.html:29
+#: templates/calendar/partials/_day_posts.html:31
 msgid "Remove selected"
 msgstr "Remover selecionados"
 
-#: templates/calendar/partials/_day_posts.html:36
+#: templates/calendar/partials/_day_posts.html:38
 msgid "Item"
 msgstr "Item"
 
-#: templates/calendar/partials/_day_posts.html:37
-#: templates/composer/compose.html:1884
+#: templates/calendar/partials/_day_posts.html:39
+#: templates/composer/compose.html:1889
 msgid "Time"
 msgstr "Hora"
 
-#: templates/calendar/partials/_day_posts.html:55
+#: templates/calendar/partials/_day_posts.html:60
 #: templates/calendar/partials/_list_row.html:63
 #: templates/calendar/partials/day_grid.html:62
 #: templates/calendar/partials/month_grid.html:76
@@ -17385,17 +17423,17 @@ msgstr "Hora"
 msgid "Notified"
 msgstr "Notificado"
 
-#: templates/calendar/partials/_day_posts.html:60
+#: templates/calendar/partials/_day_posts.html:65
 msgid "No posts on this day."
 msgstr "Nenhuma publicação neste dia."
 
 #: templates/calendar/partials/_delete_post_modal.html:39
-#: templates/composer/compose.html:2385
+#: templates/composer/compose.html:2391
 msgid "Delete post?"
 msgstr "Excluir publicação?"
 
 #: templates/calendar/partials/_delete_post_modal.html:40
-#: templates/composer/compose.html:2386
+#: templates/composer/compose.html:2392
 msgid ""
 "This action cannot be undone. The post and all associated data will be "
 "permanently removed."
@@ -17404,13 +17442,13 @@ msgstr ""
 "serão removidos permanentemente."
 
 #: templates/calendar/partials/_delete_post_modal.html:46
-#: templates/composer/compose.html:2392
+#: templates/composer/compose.html:2398
 #, python-format
 msgid "Also delete it from %(network)s"
 msgstr "Excluir também do %(network)s"
 
 #: templates/calendar/partials/_delete_post_modal.html:47
-#: templates/composer/compose.html:2393
+#: templates/composer/compose.html:2399
 msgid ""
 "Unticked, the post stays live there and only its record here is removed."
 msgstr ""
@@ -17418,7 +17456,7 @@ msgstr ""
 "removido."
 
 #: templates/calendar/partials/_delete_post_modal.html:50
-#: templates/composer/compose.html:2398
+#: templates/composer/compose.html:2404
 #, python-format
 msgid ""
 "This post stays live on %(network)s: it can't be deleted from here. Only its "
@@ -17428,7 +17466,7 @@ msgstr ""
 "aqui. Só o registro no Connekt Flow é removido."
 
 #: templates/calendar/partials/_delete_post_modal.html:59
-#: templates/composer/compose.html:2407
+#: templates/composer/compose.html:2413
 msgid "The post couldn't be deleted. Try again."
 msgstr "Não foi possível excluir a publicação. Tente novamente."
 
@@ -17860,7 +17898,7 @@ msgid "Draft posts will appear here as you create them"
 msgstr "Os rascunhos aparecerão aqui conforme você os criar"
 
 #: templates/calendar/partials/publish_list_shell.html:15
-#: templates/support/staff_chat_console.html:64
+#: templates/support/staff_chat_console.html:73
 msgid "Queue"
 msgstr "Fila"
 
@@ -18612,7 +18650,7 @@ msgstr ""
 "Campos compartilhados, como a legenda, também são usados por aquela "
 "publicação — editá-los aqui altera o registro dela."
 
-#: templates/composer/compose.html:618 templates/composer/compose.html:2449
+#: templates/composer/compose.html:618 templates/composer/compose.html:2455
 msgid "Post content"
 msgstr "Conteúdo da publicação"
 
@@ -18620,7 +18658,7 @@ msgstr "Conteúdo da publicação"
 msgid "What would you like to share?"
 msgstr "O que você quer compartilhar?"
 
-#: templates/composer/compose.html:659 templates/composer/compose.html:2183
+#: templates/composer/compose.html:659 templates/composer/compose.html:2189
 msgid "Search Unsplash"
 msgstr "Buscar no Unsplash"
 
@@ -19046,7 +19084,7 @@ msgstr "Mostrar o Reels também na grade do perfil"
 msgid "Comment automation"
 msgstr "Automação de comentários"
 
-#: templates/composer/compose.html:1531 templates/composer/compose.html:2465
+#: templates/composer/compose.html:1531 templates/composer/compose.html:2471
 msgid "Set up flow"
 msgstr "Configurar fluxo"
 
@@ -19109,31 +19147,31 @@ msgstr "Uso"
 msgid "Draft saved"
 msgstr "Rascunho salvo"
 
-#: templates/composer/compose.html:1797
+#: templates/composer/compose.html:1799
 msgid "Save Draft"
 msgstr "Salvar rascunho"
 
-#: templates/composer/compose.html:1807
+#: templates/composer/compose.html:1810
 msgid "Submit for Approval"
 msgstr "Enviar para aprovação"
 
-#: templates/composer/compose.html:1808
+#: templates/composer/compose.html:1811
 msgid "For Approval"
 msgstr "Para aprovação"
 
-#: templates/composer/compose.html:1818
+#: templates/composer/compose.html:1822
 msgid "Resubmit"
 msgstr "Enviar novamente"
 
-#: templates/composer/compose.html:1837 templates/composer/compose.html:2452
+#: templates/composer/compose.html:1842 templates/composer/compose.html:2458
 msgid "Schedule"
 msgstr "Agendar"
 
-#: templates/composer/compose.html:1842
+#: templates/composer/compose.html:1847
 msgid "Schedule Post"
 msgstr "Agendar publicação"
 
-#: templates/composer/compose.html:1906
+#: templates/composer/compose.html:1911
 msgid ""
 "Saving as a draft keeps this as a <span class=\"font-medium text-"
 "neutral-600\">proposed</span> time. Use <span class=\"font-medium text-"
@@ -19143,283 +19181,283 @@ msgstr ""
 "neutral-600\">proposto</span>. Use <span class=\"font-medium text-"
 "neutral-600\">Definir agendamento</span> para publicar neste horário."
 
-#: templates/composer/compose.html:1911
+#: templates/composer/compose.html:1916
 msgid "Set Schedule"
 msgstr "Definir agendamento"
 
-#: templates/composer/compose.html:1922
+#: templates/composer/compose.html:1928
 msgid "Publish now"
 msgstr "Publicar agora"
 
-#: templates/composer/compose.html:1936
+#: templates/composer/compose.html:1942
 msgid "Awaiting internal review"
 msgstr "Aguardando revisão interna"
 
-#: templates/composer/compose.html:1941
+#: templates/composer/compose.html:1947
 msgid "Awaiting client approval"
 msgstr "Aguardando aprovação do cliente"
 
-#: templates/composer/compose.html:1946
+#: templates/composer/compose.html:1952
 msgid "Changes requested - edit and resubmit"
 msgstr "Alterações solicitadas — edite e reenvie"
 
-#: templates/composer/compose.html:1951
+#: templates/composer/compose.html:1957
 msgid "Rejected - edit and resubmit or delete"
 msgstr "Rejeitada — edite e reenvie ou exclua"
 
-#: templates/composer/compose.html:1956
+#: templates/composer/compose.html:1962
 msgid "Approved - saving changes sends it back for re-approval"
 msgstr "Aprovada — salvar alterações a envia de volta para nova aprovação"
 
-#: templates/composer/compose.html:1961
+#: templates/composer/compose.html:1967
 msgid "On hold - a client paused this; resume it from the approvals queue"
 msgstr "Em espera — um cliente pausou; retome pela fila de aprovações"
 
-#: templates/composer/compose.html:1971
+#: templates/composer/compose.html:1977
 msgid "Reviewer"
 msgstr "Revisor"
 
-#: templates/composer/compose.html:1972
+#: templates/composer/compose.html:1978
 msgid "rejected"
 msgstr "rejeitou"
 
-#: templates/composer/compose.html:1972
+#: templates/composer/compose.html:1978
 msgid "requested changes"
 msgstr "solicitou alterações"
 
-#: templates/composer/compose.html:1985
+#: templates/composer/compose.html:1991
 msgid "Request Changes"
 msgstr "Solicitar alterações"
 
-#: templates/composer/compose.html:1987
+#: templates/composer/compose.html:1993
 msgid "What needs to change?"
 msgstr "O que precisa mudar?"
 
-#: templates/composer/compose.html:1991
+#: templates/composer/compose.html:1997
 msgid "Submit"
 msgstr "Enviar"
 
-#: templates/composer/compose.html:1997
+#: templates/composer/compose.html:2003
 msgid "Approval History"
 msgstr "Histórico de aprovações"
 
-#: templates/composer/compose.html:2055
+#: templates/composer/compose.html:2061
 msgid "Post preview"
 msgstr "Prévia da publicação"
 
-#: templates/composer/compose.html:2059
+#: templates/composer/compose.html:2065
 msgid "Previous platform"
 msgstr "Plataforma anterior"
 
-#: templates/composer/compose.html:2062
+#: templates/composer/compose.html:2068
 msgid "Next platform"
 msgstr "Próxima plataforma"
 
-#: templates/composer/compose.html:2091
+#: templates/composer/compose.html:2097
 msgid "Media to adjust"
 msgstr "Mídias para ajustar"
 
-#: templates/composer/compose.html:2098
+#: templates/composer/compose.html:2104
 msgid "Select a media to adjust it."
 msgstr "Selecione uma mídia para ajustá-la."
 
-#: templates/composer/compose.html:2145
+#: templates/composer/compose.html:2151
 msgid "Select Thumbnail"
 msgstr "Selecionar miniatura"
 
-#: templates/composer/compose.html:2184
+#: templates/composer/compose.html:2190
 msgid "Free high-resolution photos &middot; add one or many"
 msgstr "Fotos gratuitas em alta resolução &middot; adicione uma ou várias"
 
-#: templates/composer/compose.html:2196
+#: templates/composer/compose.html:2202
 msgid "Search free high-resolution photos…"
 msgstr "Buscar fotos gratuitas em alta resolução…"
 
-#: templates/composer/compose.html:2199
+#: templates/composer/compose.html:2205
 #: templates/composer/staff_idea_templates.html:51
 #: templates/radar/instagram.html:95 templates/radar/shopee.html:138
 msgid "Search"
 msgstr "Buscar"
 
-#: templates/composer/compose.html:2216
+#: templates/composer/compose.html:2222
 msgid "No results. Try another search."
 msgstr "Nenhum resultado. Tente outra busca."
 
-#: templates/composer/compose.html:2271
+#: templates/composer/compose.html:2277
 msgid "Choose thumbnail from video"
 msgstr "Escolher miniatura do vídeo"
 
-#: templates/composer/compose.html:2272
+#: templates/composer/compose.html:2278
 msgid "Scrub to the frame you want, then grab it"
 msgstr "Avance até o quadro que quiser e capture"
 
-#: templates/composer/compose.html:2312
+#: templates/composer/compose.html:2318
 msgid "Frame at"
 msgstr "Quadro em"
 
-#: templates/composer/compose.html:2339
+#: templates/composer/compose.html:2345
 msgid "Post saved"
 msgstr "Publicação salva"
 
-#: templates/composer/compose.html:2447
+#: templates/composer/compose.html:2453
 msgid "Saved at"
 msgstr "Salvo às"
 
-#: templates/composer/compose.html:2448
+#: templates/composer/compose.html:2454
 msgid "Not saved yet"
 msgstr "Ainda não salvo"
 
-#: templates/composer/compose.html:2450
+#: templates/composer/compose.html:2456
 msgid "Caption / Description"
 msgstr "Legenda / Descrição"
 
-#: templates/composer/compose.html:2454
+#: templates/composer/compose.html:2460
 msgid "override"
 msgstr "personalizado"
 
-#: templates/composer/compose.html:2455
+#: templates/composer/compose.html:2461
 msgid "Own title for this channel…"
 msgstr "Título próprio para este canal…"
 
-#: templates/composer/compose.html:2456
+#: templates/composer/compose.html:2462
 msgid "Own caption for this channel…"
 msgstr "Legenda própria para este canal…"
 
-#: templates/composer/compose.html:2457
+#: templates/composer/compose.html:2463
 msgid "Customize"
 msgstr "Personalizar"
 
-#: templates/composer/compose.html:2461
+#: templates/composer/compose.html:2467
 msgid "Published at the end of the caption"
 msgstr "Publicada no fim da legenda"
 
-#: templates/composer/compose.html:2462
+#: templates/composer/compose.html:2468
 msgid "Reply to comments and send a DM automatically"
 msgstr "Responder aos comentários e enviar um direct automaticamente"
 
-#: templates/composer/compose.html:2463
+#: templates/composer/compose.html:2469
 msgid "Save this draft to set up an automation"
 msgstr "Salve este rascunho para configurar uma automação"
 
-#: templates/composer/compose.html:2464
+#: templates/composer/compose.html:2470
 msgid "Edit flow"
 msgstr "Editar fluxo"
 
-#: templates/composer/compose.html:2466
+#: templates/composer/compose.html:2472
 msgid "Enter a title…"
 msgstr "Digite um título…"
 
-#: templates/composer/compose.html:2468
+#: templates/composer/compose.html:2474
 msgid "Pick from Library"
 msgstr "Escolher da biblioteca"
 
-#: templates/composer/compose.html:2471
+#: templates/composer/compose.html:2477
 msgid "Drag & drop a thumbnail"
 msgstr "Arraste e solte uma miniatura"
 
-#: templates/composer/compose.html:2472
+#: templates/composer/compose.html:2478
 #, python-brace-format
 msgid "Posting to @{name}"
 msgstr "Publicando em @{name}"
 
-#: templates/composer/compose.html:2474
+#: templates/composer/compose.html:2480
 msgid "Friends"
 msgstr "Amigos"
 
-#: templates/composer/compose.html:2476
+#: templates/composer/compose.html:2482
 msgid "Only you"
 msgstr "Somente você"
 
-#: templates/composer/compose.html:2477
+#: templates/composer/compose.html:2483
 msgid "Your photo/video will be labeled as 'Paid partnership'"
 msgstr "Sua foto/vídeo receberá o rótulo “Parceria paga”"
 
-#: templates/composer/compose.html:2478
+#: templates/composer/compose.html:2484
 msgid "Your photo/video will be labeled as 'Promotional content'"
 msgstr "Sua foto/vídeo receberá o rótulo “Conteúdo promocional”"
 
-#: templates/composer/compose.html:2479
+#: templates/composer/compose.html:2485
 msgid "Select who can view this post"
 msgstr "Selecione quem pode ver esta publicação"
 
-#: templates/composer/compose.html:2480
+#: templates/composer/compose.html:2486
 #, python-brace-format
 msgid "Cover at {time}"
 msgstr "Capa em {time}"
 
-#: templates/composer/compose.html:2481
+#: templates/composer/compose.html:2487
 msgid "1 photo selected"
 msgstr "1 foto selecionada"
 
-#: templates/composer/compose.html:2482
+#: templates/composer/compose.html:2488
 #, python-brace-format
 msgid "{n} photos selected"
 msgstr "{n} fotos selecionadas"
 
-#: templates/composer/compose.html:2483
+#: templates/composer/compose.html:2489
 msgid "Select photos to add"
 msgstr "Selecione as fotos para adicionar"
 
-#: templates/composer/compose.html:2484
+#: templates/composer/compose.html:2490
 msgid "Adding…"
 msgstr "Adicionando…"
 
-#: templates/composer/compose.html:2485
+#: templates/composer/compose.html:2491
 #, python-brace-format
 msgid "Add {n} images"
 msgstr "Adicionar {n} imagens"
 
-#: templates/composer/compose.html:2486
+#: templates/composer/compose.html:2492
 msgid "Add images"
 msgstr "Adicionar imagens"
 
-#: templates/composer/compose.html:2488
+#: templates/composer/compose.html:2494
 msgid "Use this frame"
 msgstr "Usar este quadro"
 
-#: templates/composer/compose.html:2489
+#: templates/composer/compose.html:2495
 #: templates/composer/create_landing.html:817
 msgid "Deleting…"
 msgstr "Excluindo…"
 
-#: templates/composer/compose.html:2491
+#: templates/composer/compose.html:2497
 msgid "Thumbnail must be an image (JPG or PNG)."
 msgstr "A miniatura deve ser uma imagem (JPG ou PNG)."
 
-#: templates/composer/compose.html:2492
+#: templates/composer/compose.html:2498
 msgid "Thumbnail upload failed."
 msgstr "Falha ao enviar a miniatura."
 
-#: templates/composer/compose.html:2493
+#: templates/composer/compose.html:2499
 msgid "Unsplash search failed."
 msgstr "Falha na busca do Unsplash."
 
-#: templates/composer/compose.html:2495
+#: templates/composer/compose.html:2501
 msgid "You cannot mix images and video in one post."
 msgstr "Não é possível misturar imagens e vídeo em uma publicação."
 
-#: templates/composer/compose.html:2496
+#: templates/composer/compose.html:2502
 msgid "Import failed. Try again."
 msgstr "Falha na importação. Tente novamente."
 
-#: templates/composer/compose.html:2497
+#: templates/composer/compose.html:2503
 msgid "Frame previews unavailable for this video — use the scrubber instead."
 msgstr ""
 "Prévias de quadros indisponíveis para este vídeo — use o controle deslizante."
 
-#: templates/composer/compose.html:2498
+#: templates/composer/compose.html:2504
 msgid "Could not load video frames."
 msgstr "Não foi possível carregar os quadros do vídeo."
 
-#: templates/composer/compose.html:2499
+#: templates/composer/compose.html:2505
 msgid "Video is still loading — try again in a moment."
 msgstr "O vídeo ainda está carregando — tente novamente em instantes."
 
-#: templates/composer/compose.html:2500
+#: templates/composer/compose.html:2506
 msgid "Could not capture this frame."
 msgstr "Não foi possível capturar este quadro."
 
-#: templates/composer/compose.html:2501
+#: templates/composer/compose.html:2507
 msgid ""
 "Cannot capture frames from this video (cross-origin storage). Upload a "
 "thumbnail instead."
@@ -19427,11 +19465,11 @@ msgstr ""
 "Não é possível capturar quadros deste vídeo (armazenamento de outra origem). "
 "Envie uma miniatura."
 
-#: templates/composer/compose.html:2503
+#: templates/composer/compose.html:2509
 msgid "Only one video file can be uploaded at a time."
 msgstr "Só é possível enviar um arquivo de vídeo por vez."
 
-#: templates/composer/compose.html:2504
+#: templates/composer/compose.html:2510
 msgid ""
 "You cannot mix images and video. Please upload either images or a single "
 "video."
@@ -19439,11 +19477,11 @@ msgstr ""
 "Não é possível misturar imagens e vídeo. Envie apenas imagens ou um único "
 "vídeo."
 
-#: templates/composer/compose.html:2505
+#: templates/composer/compose.html:2511
 msgid "Please select both a date and time."
 msgstr "Selecione a data e o horário."
 
-#: templates/composer/compose.html:2507
+#: templates/composer/compose.html:2513
 msgid ""
 "Could not reach the server, so nothing was saved. Check your connection and "
 "try again."
@@ -19451,33 +19489,33 @@ msgstr ""
 "Não foi possível falar com o servidor, então nada foi salvo. Verifique sua "
 "conexão e tente novamente."
 
-#: templates/composer/compose.html:2508
+#: templates/composer/compose.html:2514
 msgid "Stories (9:16)"
 msgstr "Stories (9:16)"
 
-#: templates/composer/compose.html:2509
+#: templates/composer/compose.html:2515
 msgid "Reels (9:16)"
 msgstr "Reels (9:16)"
 
-#: templates/composer/compose.html:2510
+#: templates/composer/compose.html:2516
 msgid "Instagram feed (4:5 to 1.91:1)"
 msgstr "feed do Instagram (4:5 a 1.91:1)"
 
-#: templates/composer/compose.html:2511
+#: templates/composer/compose.html:2517
 #, python-brace-format
 msgid "1 media outside the {format} ratio"
 msgstr "1 mídia fora da proporção de {format}"
 
-#: templates/composer/compose.html:2512
+#: templates/composer/compose.html:2518
 #, python-brace-format
 msgid "{count} media outside the {format} ratio"
 msgstr "{count} mídias fora da proporção de {format}"
 
-#: templates/composer/compose.html:2513
+#: templates/composer/compose.html:2519
 msgid "outside the ratio"
 msgstr "fora da proporção"
 
-#: templates/composer/compose.html:2514
+#: templates/composer/compose.html:2520
 #, python-brace-format
 msgid ""
 "This crop applies to {format} only; the other formats keep the original "
@@ -19486,23 +19524,34 @@ msgstr ""
 "Este corte vale só para {format}; os outros formatos continuam com a imagem "
 "original."
 
-#: templates/composer/compose.html:2518
+#: templates/composer/compose.html:2524
+#, python-brace-format
 msgid ""
-"This video is horizontal. YouTube only shows vertical or square videos as "
-"Shorts, so it will go out as an ordinary video."
+"{platform} takes Story videos of up to {limit} seconds and this one has "
+"{duration}. Trim the video, or publish it as Reels."
 msgstr ""
-"Este vídeo é horizontal. O YouTube só mostra como Short vídeos verticais ou "
-"quadrados, então ele vai sair como um vídeo comum."
+"O {platform} aceita vídeos de até {limit} segundos no Story e este tem "
+"{duration}. Corte o vídeo ou publique-o como Reels."
 
-#: templates/composer/compose.html:2519
+#: templates/composer/compose.html:2525
+#, python-brace-format
 msgid ""
-"This video is longer than 3 minutes. YouTube only shows videos up to 3 "
-"minutes as Shorts, so it will go out as an ordinary video."
+"{platform} takes Story videos of up to {limit} MB and this one has {size} "
+"MB. Compress the video, or publish it as Reels."
 msgstr ""
-"Este vídeo tem mais de 3 minutos. O YouTube só mostra como Short vídeos de "
-"até 3 minutos, então ele vai sair como um vídeo comum."
+"O {platform} aceita vídeos de até {limit} MB no Story e este tem {size} MB. "
+"Comprima o vídeo ou publique-o como Reels."
 
-#: templates/composer/compose.html:2520
+#: templates/composer/compose.html:2527
+#, python-brace-format
+msgid ""
+"YouTube makes Shorts of videos up to {limit} minutes and this one has "
+"{duration} seconds. Trim the video, or publish it as an ordinary video."
+msgstr ""
+"O YouTube faz Shorts de vídeos de até {limit} minutos e este tem {duration} "
+"segundos. Corte o vídeo ou publique-o como vídeo comum."
+
+#: templates/composer/compose.html:2528
 msgid "Video Settings"
 msgstr "Configurações de vídeo"
 
@@ -20189,7 +20238,7 @@ msgstr "Repostar"
 #: templates/composer/partials/_preview_post.html:270
 #: templates/inbox/partials/_draft_reply_item.html:30
 #: templates/support/partials/_chat_widget.html:115
-#: templates/support/staff_chat_console.html:172
+#: templates/support/staff_chat_console.html:181
 #: templates/tasks/partials/_task_modal.html:197
 msgid "Send"
 msgstr "Enviar"
@@ -20820,8 +20869,12 @@ msgstr "1 selecionada"
 msgid "Insert"
 msgstr "Inserir"
 
-#: templates/composer/partials/media_picker.html:464
-#: templates/composer/partials/media_picker.html:478
+#: templates/composer/partials/media_picker.html:345
+msgid "Unselect"
+msgstr "Desmarcar"
+
+#: templates/composer/partials/media_picker.html:523
+#: templates/composer/partials/media_picker.html:537
 #: templates/media_library/library_index.html:421
 msgid "Upload failed"
 msgstr "Falha no envio"
@@ -21394,7 +21447,7 @@ msgstr ""
 "também pode cadastrar contatos à mão ou importar um CSV."
 
 #: templates/contacts/partials/_row.html:10
-#: templates/media_library/_asset_card.html:101
+#: templates/media_library/_asset_card.html:121
 #: templates/media_library/_asset_list_row.html:14
 #, python-format
 msgid "Select %(name)s"
@@ -21743,7 +21796,7 @@ msgid "Screen size"
 msgstr "Tamanho da tela"
 
 #: templates/email_center/partials/_preview_card.html:17
-#: templates/support/staff_chat_console.html:321
+#: templates/support/staff_chat_console.html:330
 #: templates/support/staff_chat_history_detail.html:49
 msgid "Computer"
 msgstr "Computador"
@@ -24302,7 +24355,7 @@ msgid "Withdrawals to pay"
 msgstr "Saques a pagar"
 
 #: templates/layouts/admin_shell.html:125
-#: templates/support/staff_chat_console.html:254
+#: templates/support/staff_chat_console.html:263
 #: templates/support/staff_chat_history_detail.html:48
 msgid "System"
 msgstr "Sistema"
@@ -24346,10 +24399,19 @@ msgstr "Fluxo de aprovação"
 msgid "Manage team"
 msgstr "Gerenciar equipe"
 
-#: templates/media_library/_asset_card.html:74
+#: templates/media_library/_asset_card.html:80
 #: templates/media_library/_shared_asset_card.html:34
 msgid "SHARED"
 msgstr "COMPARTILHADA"
+
+#: templates/media_library/_asset_card.html:106
+msgid "Enlarge"
+msgstr "Ampliar"
+
+#: templates/media_library/_asset_card.html:106
+#, python-format
+msgid "Enlarge %(name)s"
+msgstr "Ampliar %(name)s"
 
 #: templates/media_library/_asset_detail_panel.html:87
 msgid "Delete asset?"
@@ -27621,7 +27683,7 @@ msgid "End this conversation?"
 msgstr "Encerrar esta conversa?"
 
 #: templates/support/partials/_chat_widget.html:35
-#: templates/support/staff_chat_console.html:42
+#: templates/support/staff_chat_console.html:51
 #, python-format
 msgid "%%(name)s is typing"
 msgstr "%%(name)s está digitando"
@@ -27727,7 +27789,7 @@ msgstr "Passo a passo, com vídeo"
 msgid "Step by step"
 msgstr "Passo a passo"
 
-#: templates/support/staff_chat_console.html:24
+#: templates/support/staff_chat_console.html:33
 msgid ""
 "Take chats from the queue, answer customers live and turn into a ticket what "
 "can't be solved now."
@@ -27735,7 +27797,7 @@ msgstr ""
 "Pegue chats da fila, atenda os clientes ao vivo e transforme em chamado o "
 "que não dá para resolver agora."
 
-#: templates/support/staff_chat_console.html:28
+#: templates/support/staff_chat_console.html:37
 #: templates/support/staff_chat_history.html:8
 #: templates/support/staff_chat_history.html:14
 #: templates/support/staff_chat_history_detail.html:8
@@ -27743,42 +27805,42 @@ msgstr ""
 msgid "Chat history"
 msgstr "Histórico de conversas"
 
-#: templates/support/staff_chat_console.html:35
+#: templates/support/staff_chat_console.html:44
 #, python-format
 msgid "Taken by %%(name)s"
 msgstr "Atendido por %%(name)s"
 
-#: templates/support/staff_chat_console.html:36
+#: templates/support/staff_chat_console.html:45
 #, python-format
 msgid "Ticket #%%(n)s created."
 msgstr "Chamado #%%(n)s criado."
 
-#: templates/support/staff_chat_console.html:37
+#: templates/support/staff_chat_console.html:46
 msgid "Chat closed."
 msgstr "Chat encerrado."
 
-#: templates/support/staff_chat_console.html:38
+#: templates/support/staff_chat_console.html:47
 msgid "New chat in the queue"
 msgstr "Novo chat na fila"
 
-#: templates/support/staff_chat_console.html:39
+#: templates/support/staff_chat_console.html:48
 #, python-format
 msgid "New message from %%(name)s"
 msgstr "Nova mensagem de %%(name)s"
 
-#: templates/support/staff_chat_console.html:40
+#: templates/support/staff_chat_console.html:49
 msgid "Something went wrong. Try again."
 msgstr "Algo deu errado. Tente de novo."
 
-#: templates/support/staff_chat_console.html:41
+#: templates/support/staff_chat_console.html:50
 msgid "Close this chat?"
 msgstr "Encerrar este chat?"
 
-#: templates/support/staff_chat_console.html:43
+#: templates/support/staff_chat_console.html:52
 msgid "typing…"
 msgstr "digitando…"
 
-#: templates/support/staff_chat_console.html:55
+#: templates/support/staff_chat_console.html:64
 msgid ""
 "Turn on the sound and notifications to know when a customer writes, even in "
 "another tab."
@@ -27786,88 +27848,88 @@ msgstr ""
 "Ative o som e as notificações para saber quando um cliente escrever, mesmo "
 "em outra aba."
 
-#: templates/support/staff_chat_console.html:56
+#: templates/support/staff_chat_console.html:65
 msgid "Turn on sound and alerts"
 msgstr "Ativar som e alertas"
 
-#: templates/support/staff_chat_console.html:77
+#: templates/support/staff_chat_console.html:86
 msgid "On the platform"
 msgstr "Na plataforma"
 
-#: templates/support/staff_chat_console.html:77
+#: templates/support/staff_chat_console.html:86
 msgid "Left the page"
 msgstr "Saiu da página"
 
-#: templates/support/staff_chat_console.html:81
+#: templates/support/staff_chat_console.html:90
 msgid "Nobody waiting."
 msgstr "Ninguém esperando."
 
-#: templates/support/staff_chat_console.html:84
+#: templates/support/staff_chat_console.html:93
 msgid "My chats"
 msgstr "Meus chats"
 
-#: templates/support/staff_chat_console.html:99
+#: templates/support/staff_chat_console.html:108
 msgid "Take a chat from the queue to start."
 msgstr "Pegue um chat da fila para começar."
 
-#: templates/support/staff_chat_console.html:104
+#: templates/support/staff_chat_console.html:113
 msgid "With other agents"
 msgstr "Com outros atendentes"
 
-#: templates/support/staff_chat_console.html:123
+#: templates/support/staff_chat_console.html:132
 msgid "Choose a chat on the left. New chats open here by themselves."
 msgstr "Escolha um chat à esquerda. Os chats novos abrem aqui sozinhos."
 
-#: templates/support/staff_chat_console.html:134
+#: templates/support/staff_chat_console.html:143
 #: templates/support/staff_faq_edit.html:40
 msgid "Answer"
 msgstr "Atender"
 
-#: templates/support/staff_chat_console.html:135
+#: templates/support/staff_chat_console.html:144
 msgid "Turn into ticket"
 msgstr "Transformar em chamado"
 
-#: templates/support/staff_chat_console.html:137
+#: templates/support/staff_chat_console.html:146
 msgid "The customer is told the conversation ended."
 msgstr "O cliente é avisado de que a conversa terminou."
 
-#: templates/support/staff_chat_console.html:138
+#: templates/support/staff_chat_console.html:147
 msgid "Close chat"
 msgstr "Encerrar chat"
 
-#: templates/support/staff_chat_console.html:160
+#: templates/support/staff_chat_console.html:169
 msgid "This chat is closed."
 msgstr "Este chat foi encerrado."
 
-#: templates/support/staff_chat_console.html:170
+#: templates/support/staff_chat_console.html:179
 msgid "Write the answer (Enter sends, Shift+Enter breaks the line)"
 msgstr "Escreva a resposta (Enter envia, Shift+Enter quebra a linha)"
 
-#: templates/support/staff_chat_console.html:175
+#: templates/support/staff_chat_console.html:184
 msgid "Answer this chat to write to the customer."
 msgstr "Atenda este chat para escrever ao cliente."
 
-#: templates/support/staff_chat_console.html:186
+#: templates/support/staff_chat_console.html:195
 msgid "The visitor's details show here."
 msgstr "Os dados do visitante aparecem aqui."
 
-#: templates/support/staff_chat_console.html:202
+#: templates/support/staff_chat_console.html:211
 msgid "On the platform now"
 msgstr "Na plataforma agora"
 
-#: templates/support/staff_chat_console.html:202
+#: templates/support/staff_chat_console.html:211
 msgid "Not on the platform"
 msgstr "Fora da plataforma"
 
-#: templates/support/staff_chat_console.html:218
+#: templates/support/staff_chat_console.html:227
 msgid "Page now"
 msgstr "Página atual"
 
-#: templates/support/staff_chat_console.html:231
+#: templates/support/staff_chat_console.html:240
 msgid "Open this screen as the customer?"
 msgstr "Abrir esta tela como o cliente?"
 
-#: templates/support/staff_chat_console.html:232
+#: templates/support/staff_chat_console.html:241
 msgid ""
 "You enter the customer’s account on the page they are on, in this tab; "
 "everything you do happens as them and is kept in the access log. The chat "
@@ -27877,39 +27939,39 @@ msgstr ""
 "que fizer acontece em nome dele e fica no registro de acessos. O chat espera "
 "até você voltar com “Voltar para minha conta”."
 
-#: templates/support/staff_chat_console.html:233
+#: templates/support/staff_chat_console.html:242
 msgid "Open as the customer"
 msgstr "Abrir como o cliente"
 
-#: templates/support/staff_chat_console.html:239
+#: templates/support/staff_chat_console.html:248
 msgid "Open this screen"
 msgstr "Abrir esta tela"
 
-#: templates/support/staff_chat_console.html:247
+#: templates/support/staff_chat_console.html:256
 #: templates/support/staff_chat_history_detail.html:45
 msgid "Device"
 msgstr "Dispositivo"
 
-#: templates/support/staff_chat_console.html:250
+#: templates/support/staff_chat_console.html:259
 #: templates/support/staff_chat_history_detail.html:47
 msgid "Browser"
 msgstr "Navegador"
 
-#: templates/support/staff_chat_console.html:262
+#: templates/support/staff_chat_console.html:271
 #: templates/support/staff_chat_history_detail.html:50
 msgid "Screen"
 msgstr "Tela"
 
-#: templates/support/staff_chat_console.html:273
+#: templates/support/staff_chat_console.html:282
 #: templates/support/staff_chat_history_detail.html:57
 msgid "Pages visited"
 msgstr "Páginas visitadas"
 
-#: templates/support/staff_chat_console.html:294
+#: templates/support/staff_chat_console.html:303
 msgid "Turn the chat into a ticket"
 msgstr "Transformar o chat em chamado"
 
-#: templates/support/staff_chat_console.html:295
+#: templates/support/staff_chat_console.html:304
 msgid ""
 "The whole conversation goes into the ticket, assigned to you. The customer "
 "sees the ticket's number in the chat."
@@ -27917,24 +27979,24 @@ msgstr ""
 "A conversa inteira vai para o chamado, atribuído a você. O cliente vê o "
 "número do chamado no chat."
 
-#: templates/support/staff_chat_console.html:300
+#: templates/support/staff_chat_console.html:309
 msgid "The first message, if left empty"
 msgstr "A primeira mensagem, se ficar vazio"
 
-#: templates/support/staff_chat_console.html:309
+#: templates/support/staff_chat_console.html:318
 msgid "Note for the team (optional)"
 msgstr "Nota para a equipe (opcional)"
 
-#: templates/support/staff_chat_console.html:315
+#: templates/support/staff_chat_console.html:324
 msgid "Create ticket"
 msgstr "Criar chamado"
 
-#: templates/support/staff_chat_console.html:321
+#: templates/support/staff_chat_console.html:330
 #: templates/support/staff_chat_history_detail.html:49
 msgid "Mobile phone"
 msgstr "Celular"
 
-#: templates/support/staff_chat_console.html:321
+#: templates/support/staff_chat_console.html:330
 #: templates/support/staff_chat_history_detail.html:49
 msgid "Tablet"
 msgstr "Tablet"
@@ -29161,6 +29223,13 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 #: templates/workspaces/team.html:159
 msgid "Send invitation"
 msgstr "Enviar convite"
+
+#~ msgid ""
+#~ "This video is longer than 3 minutes. YouTube only shows videos up to 3 "
+#~ "minutes as Shorts, so it will go out as an ordinary video."
+#~ msgstr ""
+#~ "Este vídeo tem mais de 3 minutos. O YouTube só mostra como Short vídeos "
+#~ "de até 3 minutos, então ele vai sair como um vídeo comum."
 
 #~ msgid ""
 #~ "There is no account with this e-mail. The person has to sign up first."

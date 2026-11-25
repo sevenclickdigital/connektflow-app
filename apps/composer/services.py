@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import copy
 import datetime as dt
+import math
 import uuid
 from collections.abc import Iterable
 from typing import Any
@@ -788,6 +789,70 @@ def post_image_count(post) -> int:
     return _usable_attachments().filter(post_id=post.pk, media_asset__media_type="image").count()
 
 
+def post_videos(post) -> list[tuple[float, int, int, int]]:
+    """``(duration in seconds, size in bytes, width, height)`` of each usable video
+    attached to ``post``; 0 where the background probe has not measured it yet."""
+    return [
+        (duration or 0, size or 0, width or 0, height or 0)
+        for duration, size, width, height in _usable_attachments()
+        .filter(post_id=post.pk, media_asset__media_type="video")
+        .values_list("media_asset__duration", "media_asset__file_size", "media_asset__width", "media_asset__height")
+    ]
+
+
+def story_video_blocker(social_account, *, videos) -> str:
+    """Why these videos can't go out as Stories of ``social_account``, or "".
+
+    ``videos`` is ``(duration in seconds, size in bytes, width, height)`` per video. Only a
+    platform that declares a limit (``SocialProvider.story_video_limits``:
+    Instagram, 60 s and 100 MB) is checked, and an unmeasured duration or size
+    (0) passes: refusing on a probe that has not run would block a valid Story.
+    """
+    from providers import story_video_limits
+
+    limits = story_video_limits(social_account.platform)
+    if not limits:
+        return ""
+    max_seconds, max_bytes = limits
+    platform = social_account.get_platform_display()
+    for duration, size, _width, _height in videos:
+        if duration and duration > max_seconds:
+            return _(
+                "%(platform)s takes Story videos of up to %(limit)d seconds and this one has %(duration)d. "
+                "Trim the video, or publish it as Reels."
+            ) % {"platform": platform, "limit": max_seconds, "duration": math.ceil(duration)}
+        if size and size > max_bytes:
+            return _(
+                "%(platform)s takes Story videos of up to %(limit)d MB and this one has %(size).1f MB. "
+                "Compress the video, or publish it as Reels."
+            ) % {"platform": platform, "limit": max_bytes // (1024 * 1024), "size": size / (1024 * 1024)}
+    return ""
+
+
+def short_video_blocker(videos) -> str:
+    """Why these videos can't go out as a YouTube Short, or "".
+
+    YouTube makes a Short of a vertical or square video up to 3 minutes long
+    (``providers.youtube.SHORTS_MAX_SECONDS``) and publishes anything else as
+    an ordinary video, which is not what the format promises. ``videos`` as in
+    ``story_video_blocker``; what is not measured yet (0) passes.
+    """
+    from providers.youtube import SHORTS_MAX_SECONDS
+
+    for duration, _size, width, height in videos:
+        if width and height and width > height:
+            return _(
+                "YouTube only makes Shorts of vertical or square videos and this one is horizontal. "
+                "Use a vertical video, or publish it as an ordinary video."
+            )
+        if duration and duration > SHORTS_MAX_SECONDS:
+            return _(
+                "YouTube makes Shorts of videos up to %(limit)d minutes and this one has %(duration)d seconds. "
+                "Trim the video, or publish it as an ordinary video."
+            ) % {"limit": SHORTS_MAX_SECONDS // 60, "duration": math.ceil(duration)}
+    return ""
+
+
 def image_count_blocker(social_account, *, image_count: int, format: str = "default") -> str:
     """Why this many images can't go out as one feed post of ``social_account``, or "".
 
@@ -813,6 +878,7 @@ def publish_blocker(
     format: str = "default",
     ordered_media_types=None,
     image_count: int | None = None,
+    videos=None,
 ) -> str:
     """Why a post can't publish to ``social_account`` as it stands, or "".
 
@@ -822,7 +888,10 @@ def publish_blocker(
     out. Only failures that are certain before the platform is ever called: the
     media a platform can't do without (``media_blocker``), more photos than a
     feed post carries (``image_count_blocker``, when the caller knows the
-    count), and a pin with no board, which our own Pinterest provider refuses.
+    count), a Story video longer or larger than the platform takes
+    (``story_video_blocker``) and a Short YouTube would not make a Short of
+    (``short_video_blocker``), when the caller passes ``videos``, and a pin with
+    no board, which our own Pinterest provider refuses.
     """
     reason = media_blocker(social_account, media_types=media_types)
     if reason:
@@ -833,6 +902,14 @@ def publish_blocker(
             return reason
     if ordered_media_types is not None:
         reason = format_blocker(format, ordered_media_types)
+        if reason:
+            return reason
+    if format == "story" and videos:
+        reason = story_video_blocker(social_account, videos=videos)
+        if reason:
+            return reason
+    if format == "short" and videos:
+        reason = short_video_blocker(videos)
         if reason:
             return reason
     if social_account.platform == "pinterest" and not (platform_extra or {}).get("board_id"):
@@ -862,6 +939,7 @@ def require_publishable(platform_post, *, media_types=None) -> None:
         ordered_media_types=(
             post_ordered_media_types(platform_post.post) if platform_post.format != "default" else None
         ),
+        videos=post_videos(platform_post.post) if platform_post.format in ("story", "short") else None,
     )
     if reason:
         raise ValueError(reason)

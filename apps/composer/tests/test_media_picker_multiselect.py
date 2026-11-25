@@ -121,6 +121,43 @@ class AttachBatchTests(MediaPickerTestCase):
         pending = self.client.session[f"pending_media_{self.workspace.id}"]
         self.assertEqual(pending, [str(a.id) for a in assets])
 
+    def test_inserting_a_video_the_upload_already_attached_does_not_attach_it_twice(self):
+        """The picker's Upload attaches the file; picking it again and pressing Insert put it on the post twice."""
+        post = self._post()
+        video = self._asset("clip.mp4", media_type=MediaAsset.MediaType.VIDEO)
+        PostMedia.objects.create(post=post, media_asset=video, position=1)
+        other = self._asset("b.png")
+
+        response = self.client.post(
+            reverse(
+                "composer:attach_media_batch_post",
+                kwargs={"workspace_id": self.workspace.id, "post_id": post.id},
+            ),
+            {"media_asset_ids": [str(video.id), str(other.id)]},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(post.media_attachments.values_list("media_asset_id", flat=True).order_by("position")),
+            [video.id, other.id],
+        )
+        self.assertEqual(response.content.decode().count('class="media-thumb"'), 1)
+
+    def test_a_pending_upload_picked_again_is_not_queued_twice(self):
+        video = self._asset("clip.mp4", media_type=MediaAsset.MediaType.VIDEO)
+        session = self.client.session
+        session[f"pending_media_{self.workspace.id}"] = [str(video.id)]
+        session.save()
+
+        response = self.client.post(
+            reverse("composer:attach_media_batch", kwargs={"workspace_id": self.workspace.id}),
+            {"media_asset_ids": [str(video.id)]},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.session[f"pending_media_{self.workspace.id}"], [str(video.id)])
+        self.assertNotIn('class="media-thumb"', response.content.decode())
+
     def test_an_empty_selection_is_refused(self):
         post = self._post()
         response = self.client.post(

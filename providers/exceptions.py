@@ -44,6 +44,10 @@ class ProviderError(Exception):
 
     ``retryable=False`` marks the error as permanent: the publish engine
     fails the post immediately instead of scheduling backoff retries.
+
+    ``user_message`` is a sentence the platform itself wrote for the person
+    (Meta's ``error_user_msg``), kept apart from the technical message so a
+    failed post can say why without showing the response body.
     """
 
     def __init__(
@@ -52,10 +56,12 @@ class ProviderError(Exception):
         platform: str = "",
         raw_response: dict | None = None,
         retryable: bool = True,
+        user_message: str = "",
     ):
         self.platform = platform
         self.raw_response = raw_response or {}
         self.retryable = retryable
+        self.user_message = user_message
         super().__init__(message)
 
 
