@@ -784,6 +784,43 @@ def test_get_post_metrics_tries_next_candidate_when_feed_id_has_no_insights_edge
     )
 
 
+def test_a_story_is_reported_with_the_story_metrics():
+    """The insights edge refuses post metrics for a Story and lists the ones it has."""
+    refusal = {
+        "error": {
+            "message": "(#100) Param metric[0] must be one of {PAGES_FB_STORY_REPLIES, STORY_MEDIA_VIEW, "
+            'STORY_TOTAL_MEDIA_VIEW_UNIQUE} - got "post_media_view".',
+            "type": "OAuthException",
+            "code": 100,
+        }
+    }
+    story = {
+        "data": [
+            {"name": "story_media_view", "values": [{"value": 40}]},
+            {"name": "story_total_media_view_unique", "values": [{"value": 31}]},
+            {"name": "pages_fb_story_shares", "values": [{"value": 2}]},
+            {"name": "pages_fb_story_thread_lightweight_reactions", "values": [{"value": 5}]},
+        ]
+    }
+
+    def request(method, url, **kwargs):
+        if not url.endswith("/insights"):
+            raise APIError("Unsupported get request", platform="Facebook")
+        if kwargs["params"]["metric"].startswith("story_media_view,"):
+            return _resp(story)
+        raise APIError(f"Facebook API error 400: {refusal}", platform="Facebook", status_code=400, raw_response=refusal)
+
+    provider = FacebookProvider({"client_id": "id", "client_secret": "secret"})
+    provider._request = MagicMock(side_effect=request)
+
+    metrics = provider.get_post_metrics("page-token", "story-9")
+
+    assert (metrics.video_views, metrics.reach, metrics.shares) == (40, 31, 2)
+    assert metrics.extra["reactions"] == 5
+    assert metrics.extra["insight_errors"] == {}
+    assert provider._request.call_args.kwargs["params"]["metric"].startswith("story_media_view,")
+
+
 def test_get_post_metrics_reports_batched_insights_failure_for_each_metric():
     provider = FacebookProvider({"client_id": "id", "client_secret": "secret"})
     provider._request = MagicMock(

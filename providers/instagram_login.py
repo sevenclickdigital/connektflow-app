@@ -31,7 +31,7 @@ from .meta_comments import (
     resolve_comment_reply_target,
 )
 from .meta_errors import permanent_graph_api_error
-from .meta_insights import fetch_insights_safe, fetch_insights_series
+from .meta_insights import fetch_insights_safe, fetch_insights_series, instagram_media_insights
 from .meta_messaging import (
     build_send_payload,
     dm_extra,
@@ -495,7 +495,7 @@ class InstagramLoginProvider(SocialProvider):
             platform=self.platform_name,
             endpoint=f"{API_BASE}/{post_id}/insights",
             access_token=access_token,
-            metrics=INSTAGRAM_MEDIA_INSIGHTS,
+            metrics=instagram_media_insights(fields, INSTAGRAM_MEDIA_INSIGHTS),
             endpoint_type="media",
         )
         likes = values.get("likes", fields.get("like_count", 0))

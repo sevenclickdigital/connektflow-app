@@ -285,6 +285,29 @@ def test_instagram_media_metrics_use_current_metrics_and_field_fallbacks():
     assert metrics.extra["total_interactions"] == 22
 
 
+@pytest.mark.parametrize("provider_class", [InstagramProvider, InstagramLoginProvider])
+def test_a_story_is_asked_only_for_the_metrics_a_story_has(provider_class):
+    """Likes, comments and saves are refused for a Story, one request each."""
+    provider = provider_class({"client_id": "id", "client_secret": "secret"})
+    asked = []
+
+    def request(method, url, **kwargs):
+        metric = kwargs["params"].get("metric")
+        if metric is None:
+            return _resp({"id": "story-1", "media_type": "VIDEO", "media_product_type": "STORY"})
+        asked.append(metric)
+        return _resp({"data": [{"name": metric, "values": [{"value": len(asked)}]}]})
+
+    provider._request = MagicMock(side_effect=request)
+
+    metrics = provider.get_post_metrics("token", "story-1")
+
+    assert asked == ["reach", "views", "shares", "total_interactions", "replies", "navigation"]
+    assert (metrics.reach, metrics.video_views, metrics.shares) == (1, 2, 3)
+    assert metrics.extra["raw_insights"]["replies"] == 5
+    assert metrics.extra["insight_errors"] == {}
+
+
 def test_instagram_login_always_requests_the_insights_scope():
     """The insights scope is not gated on ``include_analytics_scopes``.
 

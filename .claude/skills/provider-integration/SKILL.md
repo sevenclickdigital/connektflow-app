@@ -26,6 +26,11 @@ Generic errors (Meta's `{"code": 1, "message": "An unknown error has occurred."}
 
 Example from history: a Facebook post with a *feeling* and one photo failed with code 1 because feelings only publish through `/feed`; the fix stages the photo unpublished and attaches it to a `/feed` post.
 
+Two traps of Meta's Graph API, both found in production:
+
+- **`"type": "OAuthException"` says nothing.** Nearly every Graph error carries it, "this metric is not supported for this media" included. Classify by `code` and by the message (`meta_insights.is_meta_permission_error`), never by the type or by the exception's text, which repeats the raw body.
+- **A Story is not a post to the insights edges.** Instagram refuses `likes`, `comments` and `saved` for one; Facebook refuses every post metric and lists its own (`FACEBOOK_STORY_INSIGHTS`). Ask by the kind of media (`instagram_media_insights`), and check a new metric against each format before adding it.
+
 ## Platform-specific branches
 
 Adding a platform touches more than `providers/`: `PlatformCredential` choices and credential settings, and the platform branches in `apps/social_accounts`, `apps/publisher`, `apps/inbox`, `apps/analytics` (metric lists in `apps/analytics/metrics.py`, unsupported-metric notes in `apps/analytics/constants.py`). Grep the platform key across `apps/` before declaring it done. Add the required env vars to `.env.example` and the README "Platform Credentials" section.

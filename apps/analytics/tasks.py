@@ -1189,11 +1189,18 @@ def _sync_account_posts_individually(
 
 
 def _looks_like_uuid(value: str) -> bool:
-    if not value:
+    """Whether ``value`` is one of our own row ids, as ``str(uuid)`` writes them.
+
+    Only the hyphenated form: ``UUID()`` also reads 32 bare hex characters and
+    lets ``_`` separate digits, so it takes a Facebook ``<page id>_<post id>``
+    of that length - a 15-digit page with a 16-digit post - for one of ours.
+    """
+    value = str(value or "")
+    if len(value) != 36 or value.count("-") != 4:
         return False
     try:
-        UUID(str(value))
-    except (TypeError, ValueError):
+        UUID(value)
+    except ValueError:
         return False
     return True
 

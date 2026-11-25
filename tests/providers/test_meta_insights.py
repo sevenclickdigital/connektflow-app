@@ -40,6 +40,35 @@ def test_fetch_insights_safe_skips_invalid_metric_errors():
     assert set(errors) == {"bad_metric"}
 
 
+def test_an_unsupported_metric_is_skipped_although_meta_types_it_oauth_exception():
+    """The Graph API types nearly every error ``OAuthException``; only the code and the message tell them apart."""
+    body = {
+        "error": {
+            "message": "(#100) The Media Insights API does not support the likes metric for this media product type.",
+            "type": "OAuthException",
+            "code": 100,
+        }
+    }
+    request = MagicMock(
+        side_effect=[
+            _resp({"data": [{"name": "reach", "values": [{"value": 7}]}]}),
+            APIError(f"Instagram API error 400: {body}", platform="Instagram", status_code=400, raw_response=body),
+        ]
+    )
+
+    values, errors = fetch_insights_safe(
+        request,
+        platform="Instagram",
+        endpoint="https://graph.facebook.com/v25.0/media-1/insights",
+        access_token="token",
+        metrics=["reach", "likes"],
+        require_success=True,
+    )
+
+    assert values == {"reach": 7}
+    assert set(errors) == {"likes"}
+
+
 def test_fetch_insights_safe_reraises_permission_errors():
     permission_error = APIError(
         "Meta API error 400: missing permission",
@@ -206,7 +235,9 @@ def test_fetch_insights_series_asks_for_each_metric_separately():
 
     def request(method, url, access_token=None, params=None):
         calls.append(params["metric"])
-        return _resp({"data": [{"name": params["metric"], "values": [{"value": 1, "end_time": "2026-10-02T07:00:00+0000"}]}]})
+        return _resp(
+            {"data": [{"name": params["metric"], "values": [{"value": 1, "end_time": "2026-10-02T07:00:00+0000"}]}]}
+        )
 
     series = fetch_insights_series(
         request,

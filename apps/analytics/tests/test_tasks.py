@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 from django.utils import timezone
 
-from apps.analytics.tasks import sync_all_account_analytics
+from apps.analytics.tasks import _looks_like_uuid, sync_all_account_analytics
 from apps.social_accounts.models import AnalyticsPlatformConfig, SocialAccount
 from providers.exceptions import APIError, OAuthError, QuotaExceededError, TokenExpiredError
 
@@ -1508,3 +1508,19 @@ class TestAFinishedDayIsReadOnceMore:
         self._sync(account, provider, now)
 
         provider.get_account_metrics.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("value", "ours"),
+    [
+        # A 15-digit page and a 16-digit post: 32 characters UUID() would read.
+        ("104759925890976_1100957312944537", False),
+        ("01047599258909761100957312944537", False),
+        ("1069378109509993", False),
+        ("", False),
+        (str(uuid4()), True),
+    ],
+)
+def test_only_our_own_row_ids_count_as_unusable_platform_ids(value, ours):
+    """Taking a real Facebook id for one of ours skips that post's analytics for ever."""
+    assert _looks_like_uuid(value) is ours

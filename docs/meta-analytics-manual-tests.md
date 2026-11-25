@@ -15,6 +15,14 @@ IDs/tokens with real values.
 /{facebook_post_id}/insights?metric=post_media_view,post_total_media_view_unique,post_clicks,post_reactions_by_type_total
 ```
 
+## Facebook Story
+
+A Story refuses the post metrics above and answers these (`FACEBOOK_STORY_INSIGHTS`), on the bare story id:
+
+```text
+/{facebook_story_id}/insights?metric=story_media_view,story_total_media_view_unique,story_interaction,pages_fb_story_replies,pages_fb_story_shares,pages_fb_story_thread_lightweight_reactions
+```
+
 ## Facebook Post Fields
 
 ```text
@@ -43,6 +51,12 @@ IDs/tokens with real values.
 
 ```text
 /{ig_media_id}/insights?metric=reach,views,likes,comments,saved,shares,total_interactions
+```
+
+A Story (`media_product_type` = `STORY`) has no likes, comments or saves; it is asked for (`INSTAGRAM_STORY_INSIGHTS`):
+
+```text
+/{ig_story_id}/insights?metric=reach,views,shares,total_interactions,replies,navigation
 ```
 
 Expected UI checks:

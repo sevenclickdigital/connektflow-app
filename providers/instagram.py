@@ -26,7 +26,7 @@ from .meta_comments import (
 )
 from .meta_errors import permanent_graph_api_error
 from .meta_feed_extras import apply_instagram_extras
-from .meta_insights import fetch_insights_safe, fetch_insights_series
+from .meta_insights import fetch_insights_safe, fetch_insights_series, instagram_media_insights
 from .meta_messaging import (
     InstagramMessageBatch,
     build_send_payload,
@@ -597,7 +597,7 @@ class InstagramProvider(SocialProvider):
             platform=self.platform_name,
             endpoint=f"{BASE_URL}/{post_id}/insights",
             access_token=access_token,
-            metrics=INSTAGRAM_MEDIA_INSIGHTS,
+            metrics=instagram_media_insights(fields, INSTAGRAM_MEDIA_INSIGHTS),
             endpoint_type="media",
             require_success=True,
         )

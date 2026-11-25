@@ -75,6 +75,16 @@ FACEBOOK_POST_INSIGHTS = [
     "post_clicks",
     "post_reactions_by_type_total",
 ]
+# A Story is not a post to the insights edge: it refuses the metrics above and
+# names its own. Each maps to the post metric it stands for, where there is one.
+FACEBOOK_STORY_INSIGHTS = {
+    "story_media_view": "post_media_view",
+    "story_total_media_view_unique": "post_total_media_view_unique",
+    "story_interaction": None,
+    "pages_fb_story_replies": None,
+    "pages_fb_story_shares": None,
+    "pages_fb_story_thread_lightweight_reactions": None,
+}
 FACEBOOK_POST_FIELDS = [
     "id",
     "message",
@@ -929,10 +939,14 @@ class FacebookProvider(SocialProvider):
         if isinstance(reactions, dict) and reactions:
             reactions_total = sum(reactions.values())
         else:
-            reactions_total = fields.get("reactions", {}).get("summary", {}).get("total_count", 0)
+            reactions_total = (
+                fields.get("reactions", {})
+                .get("summary", {})
+                .get("total_count", values.get("pages_fb_story_thread_lightweight_reactions", 0))
+            )
 
         comments = self._summary_total(fields, "comments")
-        shares = self._share_count(fields)
+        shares = self._share_count(fields) or values.get("pages_fb_story_shares", 0)
 
         return PostMetrics(
             reach=values.get("post_total_media_view_unique", 0),
@@ -984,13 +998,33 @@ class FacebookProvider(SocialProvider):
                     params={"metric": metric},
                 )
             except APIError as exc:
+                if "story_media_view" in str(exc).lower():
+                    # The refusal lists the Story metrics: this id is a Story.
+                    return self._get_story_insights(access_token, endpoint), {}, post_id
                 errors_by_post_id[post_id] = str(exc)
-                logger.warning("Skipping unsupported Facebook post insights at %s: %s", endpoint, exc)
+                # One refusal is how the right id among the candidates is found.
+                logger.info("No Facebook post insights at %s: %s", endpoint, exc)
                 continue
             return parse_insights_response(resp.json()), {}, post_id
 
+        if errors_by_post_id:
+            logger.warning("No Facebook post insights for any of %s", ", ".join(errors_by_post_id))
         error_text = "; ".join(f"{post_id}: {error}" for post_id, error in errors_by_post_id.items())
         return {}, {key: error_text for key in FACEBOOK_POST_INSIGHTS}, post_ids[0] if post_ids else ""
+
+    def _get_story_insights(self, access_token: str, endpoint: str) -> dict:
+        """A Story's own metrics, also under the post metric names the caller reads."""
+        resp = self._request(
+            "GET",
+            endpoint,
+            access_token=access_token,
+            params={"metric": ",".join(FACEBOOK_STORY_INSIGHTS)},
+        )
+        values = parse_insights_response(resp.json())
+        for story_metric, post_metric in FACEBOOK_STORY_INSIGHTS.items():
+            if post_metric and story_metric in values:
+                values[post_metric] = values[story_metric]
+        return values
 
     def _get_post_fields(self, access_token: str, post_id: str) -> dict:
         # ``post_id`` is a Video-node field, not a field on a plain Post node, so

@@ -21,6 +21,14 @@ META_PERMISSION_ERROR_MARKERS = (
     "permissions",
     "scope",
 )
+# What Instagram reports for a Story: it has no likes, comments or saves, and
+# asking for them is refused metric by metric.
+INSTAGRAM_STORY_INSIGHTS = ["reach", "views", "shares", "total_interactions", "replies", "navigation"]
+
+
+def instagram_media_insights(media_fields: dict[str, Any], default: list[str]) -> list[str]:
+    """The insight metrics to ask for a media, by its ``media_product_type``."""
+    return INSTAGRAM_STORY_INSIGHTS if media_fields.get("media_product_type") == "STORY" else default
 
 
 def parse_insights_response(data: dict[str, Any]) -> dict[str, Any]:
@@ -136,20 +144,20 @@ def parse_insights_series(data: dict[str, Any]) -> dict[str, dict[str, float]]:
 
 
 def is_meta_permission_error(exc: APIError) -> bool:
-    """Return true for Meta auth/scope errors that should trigger reconnect handling."""
+    """Return true for Meta auth/scope errors that should trigger reconnect handling.
+
+    Judged by the code and by what the error says, never by its ``type``: the
+    Graph API types nearly every error ``OAuthException``, an unsupported
+    metric included, and reading that as a permission error aborts a media's
+    whole insights fetch over one metric it does not have.
+    """
     error = exc.raw_response.get("error") if isinstance(exc.raw_response, dict) else None
     error = error if isinstance(error, dict) else {}
     code = error.get("code")
-    message = " ".join(
-        str(value)
-        for value in (
-            error.get("message"),
-            error.get("type"),
-            error.get("error_user_msg"),
-            exc,
-        )
-        if value
-    ).lower()
+    # The exception's own text repeats the raw body, type included; it only
+    # speaks for the error when the platform sent no structured one.
+    said = (error.get("message"), error.get("error_user_msg")) if error else (exc,)
+    message = " ".join(str(value) for value in said if value).lower()
 
     if code in META_PERMISSION_ERROR_CODES:
         return True
