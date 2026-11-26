@@ -49,7 +49,7 @@ def facebook_feeling_choices() -> list[dict]:
 EMOJI_CATEGORIES: tuple[tuple[str, str, tuple[tuple[str, str], ...]], ...] = (
     (
         "smileys",
-        "Smileys",
+        gettext_noop("Smileys"),
         (
             ("😀", "grinning face"),
             ("😁", "grinning face with smiling eyes"),
@@ -178,7 +178,7 @@ EMOJI_CATEGORIES: tuple[tuple[str, str, tuple[tuple[str, str], ...]], ...] = (
     ),
     (
         "people",
-        "People",
+        gettext_noop("People"),
         (
             ("👀", "eyes"),
             ("👁", "eye"),
@@ -224,7 +224,7 @@ EMOJI_CATEGORIES: tuple[tuple[str, str, tuple[tuple[str, str], ...]], ...] = (
     ),
     (
         "nature",
-        "Nature",
+        gettext_noop("Nature"),
         (
             ("🐀", "rat"),
             ("🐁", "mouse"),
@@ -348,7 +348,7 @@ EMOJI_CATEGORIES: tuple[tuple[str, str, tuple[tuple[str, str], ...]], ...] = (
     ),
     (
         "food",
-        "Food",
+        gettext_noop("Food"),
         (
             ("🍅", "tomato"),
             ("🍆", "aubergine"),
@@ -445,7 +445,7 @@ EMOJI_CATEGORIES: tuple[tuple[str, str, tuple[tuple[str, str], ...]], ...] = (
     ),
     (
         "activity",
-        "Activity",
+        gettext_noop("Activity"),
         (
             ("🎠", "carousel horse"),
             ("🎡", "ferris wheel"),
@@ -506,7 +506,7 @@ EMOJI_CATEGORIES: tuple[tuple[str, str, tuple[tuple[str, str], ...]], ...] = (
     ),
     (
         "travel",
-        "Travel",
+        gettext_noop("Travel"),
         (
             ("🚀", "rocket"),
             ("🚁", "helicopter"),
@@ -566,7 +566,7 @@ EMOJI_CATEGORIES: tuple[tuple[str, str, tuple[tuple[str, str], ...]], ...] = (
     ),
     (
         "objects",
-        "Objects",
+        gettext_noop("Objects"),
         (
             ("💠", "diamond shape with a dot inside"),
             ("💡", "electric light bulb"),
@@ -692,7 +692,7 @@ EMOJI_CATEGORIES: tuple[tuple[str, str, tuple[tuple[str, str], ...]], ...] = (
     ),
     (
         "symbols",
-        "Symbols",
+        gettext_noop("Symbols"),
         (
             ("❤", "heavy black heart"),
             ("💓", "beating heart"),
@@ -720,8 +720,12 @@ EMOJI_COUNT = sum(len(entries) for _key, _label, entries in EMOJI_CATEGORIES)
 
 
 def emoji_catalogue() -> list[dict]:
-    """The picker's catalogue as ``json_script`` data (static/js/emoji-picker.js)."""
+    """The picker's catalogue as ``json_script`` data (static/js/emoji-picker.js).
+
+    Category names are translated for the active language; the search
+    keywords stay English, as the catalogue's source has them.
+    """
     return [
-        {"key": key, "label": label, "items": [{"c": char, "n": name} for char, name in items]}
+        {"key": key, "label": _(label), "items": [{"c": char, "n": name} for char, name in items]}
         for key, label, items in EMOJI_CATEGORIES
     ]

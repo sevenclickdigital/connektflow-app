@@ -860,6 +860,11 @@ class PublishEngine:
                 for pm in attachments
                 if pm.media_asset.file and pm.media_asset.media_type == "video"
             ],
+            caption=platform_post.effective_caption,
+            title=platform_post.effective_title,
+            # Scheduling refuses a text over the limit; a row queued before
+            # that check keeps going out as it did.
+            check_length=False,
         )
         if blocker:
             raise PublishError(blocker, platform=account.get_platform_display(), retryable=False)

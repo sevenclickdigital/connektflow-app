@@ -183,10 +183,13 @@ def create_post(
         # A new post has no platform_extra, so a Pinterest pin has no board
         # yet and is refused here: it can be created as a draft, given a
         # board in the composer, and scheduled from there.
+        own = (platform_overrides or {}).get(social_account.id) or {}
         reason = publish_blocker(
             social_account,
             media_types=usable_media_types(asset_map.values()),
             image_count=sum(1 for asset in asset_map.values() if asset.file and asset.media_type == "image"),
+            caption=own.get("caption") if own.get("caption") is not None else caption,
+            title=own.get("title") if own.get("title") is not None else title,
         )
         if reason:
             raise ValueError(reason)
@@ -908,6 +911,9 @@ def publish_blocker(
     ordered_media_types=None,
     image_count: int | None = None,
     videos=None,
+    caption: str | None = None,
+    title: str | None = None,
+    check_length: bool = True,
 ) -> str:
     """Why a post can't publish to ``social_account`` as it stands, or "".
 
@@ -919,8 +925,11 @@ def publish_blocker(
     feed post carries (``image_count_blocker``, when the caller knows the
     count), a Story video longer or larger than the platform takes
     (``story_video_blocker``) and a Short YouTube would not make a Short of
-    (``short_video_blocker``), when the caller passes ``videos``, and a pin with
-    no board, which our own Pinterest provider refuses.
+    (``short_video_blocker``), when the caller passes ``videos``, a pin with
+    no board, which our own Pinterest provider refuses, and — when the caller
+    passes the text that goes out (``caption``, ``title``) — a post with
+    neither text nor media, a text longer than the platform takes and a DEV.to
+    article without a title (``text_blocker``).
     """
     reason = media_blocker(social_account, media_types=media_types)
     if reason:
@@ -945,6 +954,44 @@ def publish_blocker(
         return _(
             "Pinterest needs a board for every pin. Choose one for this post in the composer before scheduling it."
         )
+    return text_blocker(
+        social_account,
+        caption=caption,
+        title=title,
+        media_types=media_types,
+        format=format,
+        check_length=check_length,
+    )
+
+
+def text_blocker(
+    social_account, *, caption: str | None, title: str | None, media_types, format: str, check_length: bool = True
+) -> str:
+    """Why the text of a post can't go out to ``social_account``, or "".
+
+    ``caption`` and ``title`` are what publishes (``PlatformPost.effective_*``);
+    ``None`` skips their check. A Story goes out without the caption, so its
+    text is never in the way. ``check_length=False`` leaves the length alone:
+    Pinterest and Threads cut a long text rather than refuse it, so a row
+    scheduled before this check keeps publishing as it did.
+    """
+    if format == "story":
+        return ""
+    platform = social_account.get_platform_display()
+    if caption is not None:
+        if not caption.strip() and not media_types:
+            return _("There is nothing to publish on %(platform)s. Write the text or add an image or a video.") % {
+                "platform": platform
+            }
+        length = social_account.caption_wire_length(caption)
+        if check_length and length > social_account.char_limit:
+            return _("The text has %(count)s characters and %(platform)s takes up to %(limit)s. Shorten it.") % {
+                "count": length,
+                "platform": platform,
+                "limit": social_account.char_limit,
+            }
+    if title is not None and social_account.platform == "devto" and not title.strip():
+        return _("DEV.to needs a title for the article. Write one before scheduling it.")
     return ""
 
 
@@ -969,6 +1016,8 @@ def require_publishable(platform_post, *, media_types=None) -> None:
             post_ordered_media_types(platform_post.post) if platform_post.format != "default" else None
         ),
         videos=format_videos(platform_post) if platform_post.format in ("story", "short") else None,
+        caption=platform_post.effective_caption,
+        title=platform_post.effective_title,
     )
     if reason:
         raise ValueError(reason)

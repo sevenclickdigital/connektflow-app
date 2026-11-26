@@ -179,3 +179,67 @@ class ServiceSchedulingTest(TestCase):
     def test_scheduling_an_instagram_post_with_no_media_is_refused(self):
         with self.assertRaisesMessage(ValueError, "Instagram needs an image or a video"):
             self._create(self._account("instagram"))
+
+
+@override_settings(LANGUAGE_CODE="en-us")
+class TextBlockerTest(TestCase):
+    """A post's text: nothing at all, too long for the platform, a DEV.to article without a title."""
+
+    def _account(self, platform):
+        return SocialAccount(platform=platform)
+
+    def test_a_post_with_neither_text_nor_media_is_refused(self):
+        reason = publish_blocker(self._account("facebook"), media_types=set(), caption="  ")
+        assert reason.startswith("There is nothing to publish on Facebook")
+
+    def test_media_alone_is_enough(self):
+        assert publish_blocker(self._account("facebook"), media_types=IMAGE, caption="") == ""
+
+    def test_a_text_over_the_platform_limit_is_refused(self):
+        reason = publish_blocker(self._account("x"), media_types=set(), caption="a" * 281)
+        assert reason.startswith("The text has 281 characters and X takes up to 280")
+        assert publish_blocker(self._account("x"), media_types=set(), caption="a" * 280) == ""
+
+    def test_the_length_check_can_be_left_out(self):
+        assert publish_blocker(self._account("x"), media_types=set(), caption="a" * 281, check_length=False) == ""
+
+    def test_a_story_goes_out_without_its_text(self):
+        account = self._account("facebook")
+        assert publish_blocker(account, media_types=IMAGE, caption="a" * 70000, format="story") == ""
+
+    def test_a_devto_article_needs_a_title(self):
+        account = self._account("devto")
+        assert publish_blocker(account, media_types=set(), caption="body", title=" ").startswith("DEV.to needs a title")
+        assert publish_blocker(account, media_types=set(), caption="body", title="Title") == ""
+
+    def test_without_the_text_nothing_is_checked(self):
+        assert publish_blocker(self._account("facebook"), media_types=set()) == ""
+
+
+@override_settings(LANGUAGE_CODE="en-us")
+class TextSchedulingTest(TestCase):
+    def setUp(self):
+        org = Organization.objects.create(name="Org")
+        self.workspace = Workspace.objects.create(organization=org, name="WS")
+        self.facebook = SocialAccount.objects.create(
+            workspace=self.workspace,
+            platform="facebook",
+            account_platform_id="fb-1",
+            account_name="Page",
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+
+    def test_scheduling_an_empty_post_is_refused(self):
+        with self.assertRaisesMessage(ValueError, "There is nothing to publish on Facebook"):
+            create_post(
+                workspace=self.workspace,
+                social_account=self.facebook,
+                caption="",
+                scheduled_at=timezone.now() + timedelta(hours=1),
+                status="scheduled",
+            )
+        assert not Post.objects.exists()
+
+    def test_an_empty_draft_may_wait_for_its_text(self):
+        post = create_post(workspace=self.workspace, social_account=self.facebook, caption="", status="draft")
+        assert post.platform_posts.get().status == PlatformPost.Status.DRAFT

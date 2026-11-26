@@ -21,7 +21,7 @@ the picker is usually never opened. Alpine builds the grid on first open.
     </div>
 
     {% comment %} Category tabs are hidden while searching: the results cut across them. {% endcomment %}
-    <div class="flex items-center gap-0.5 px-2 pt-1.5" x-show="!emojiQuery.trim()">
+    <div class="emoji-tabs" x-show="!emojiQuery.trim()">
         <template x-for="cat in emojiCategories" :key="cat.key">
             <button type="button"
                     @click="emojiCategory = cat.key"
@@ -32,6 +32,7 @@ the picker is usually never opened. Alpine builds the grid on first open.
         </template>
     </div>
 
+    <p class="emoji-heading" x-show="!emojiQuery.trim()" x-text="emojiCategories.find(cat => cat.key === emojiCategory)?.label"></p>
     <div class="emoji-grid">
         <template x-for="item in visibleEmoji()" :key="item.c">
             <button type="button"

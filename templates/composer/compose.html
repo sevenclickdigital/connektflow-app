@@ -665,7 +665,7 @@
                         {% endcomment %}
                         <input type="hidden" name="media_order" x-ref="mediaOrder">
 
-                        <!-- Bottom bar: emoji, hashtag, mention, AI assistant + char counter (the media library opens from the "Add" tile) -->
+                        <!-- Bottom bar: emoji, hashtag, AI assistant + char counter (the media library opens from the "Add" tile) -->
                         <div class="flex items-center justify-between px-3 py-2 border-t border-neutral-100">
                             <div class="flex items-center gap-1">
                                 {% comment %}
@@ -681,14 +681,146 @@
                                     </button>
                                     {% include "composer/partials/emoji_picker.html" %}
                                 </div>
-                                <button type="button" @click="insertSigil('#')" class="caption-tool"
-                                        title="{% translate 'Add hashtag' %}" aria-label="{% translate 'Add hashtag' %}">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/></svg>
-                                </button>
-                                <button type="button" @click="insertSigil('@')" class="caption-tool"
-                                        title="{% translate 'Add mention' %}" aria-label="{% translate 'Add mention' %}">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-3.9 7.9"/></svg>
-                                </button>
+                                {% comment %}
+                                The hashtag picker, a panel like the emoji one: the brand's
+                                tags under their groups (the idea and task pickers' rows); what
+                                is ticked goes into the caption at the cursor as the network
+                                reads it (#name, or @name for a mention tag). It also holds the
+                                post's tags, which have no field of their own any more: they
+                                travel unchanged in the hidden "tags" input.
+                                {% endcomment %}
+                                <div class="relative" @keydown.escape.window="hashtagOpen = false" x-data="{
+                        ...window.tagGroupsBase(),
+                        tags: {{ post.tags|json_attr }},
+                        allTags: [{% for tag in all_tags %}'{{ tag.name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                        /* name -> kind: a mention tag goes into the text as @name. */
+                        tagKindByName: {{ tag_kinds_json|default:"{}" }},
+                        /* Mirrors Tag.slug_for_publishing: the networks cut a tag at
+                           the first space, so it is folded the same way here. */
+                        tagPreview(name, kind) {
+                            const sigil = { hashtag: '#', mention: '@' }[kind];
+                            if (!sigil) return '';
+                            const slug = (name || '').split('').filter(c => /\p{L}|\p{N}/u.test(c)).join('');
+                            return slug ? sigil + slug : '';
+                        },
+                        hashtagOpen: false,
+                        hashtagSearch: '',
+                        hashtagPicked: [],
+                        openHashtags() {
+                            this.hashtagPicked = [];
+                            this.hashtagSearch = '';
+                            this.hashtagOpen = true;
+                            this.$nextTick(() => this.$refs.hashtagSearchInput?.focus());
+                        },
+                        toggleHashtag(name) {
+                            const idx = this.hashtagPicked.indexOf(name);
+                            if (idx >= 0) { this.hashtagPicked.splice(idx, 1); } else { this.hashtagPicked.push(name); }
+                        },
+                        hashtagSaving: false,
+                        hashtagError: '',
+                        /* The search without a leading #, as a tag is named. */
+                        get hashtagTerm() {
+                            return this.hashtagSearch.trim().replace(/^[#@]+/, '').trim();
+                        },
+                        /* Whether the brand already has a tag of that name. */
+                        hasTag(name) {
+                            const wanted = name.toLowerCase();
+                            return this.allTags.some(tag => tag.toLowerCase() === wanted);
+                        },
+                        /* The hashtags written in the caption that are not saved
+                           tags yet, once each, so the picker can offer to keep them. */
+                        unsavedCaptionHashtags() {
+                            const found = (this.caption.match(/#[\p{L}\p{N}_]+/gu) || []).map(tag => tag.slice(1));
+                            return [...new Set(found)].filter(name => !this.hasTag(name));
+                        },
+                        /* Saves a hashtag for later (a tag of kind hashtag); ``pick``
+                           also ticks it for the caption. */
+                        saveHashtag(raw, pick) {
+                            const name = (raw || '').replace(/^[#@]+/, '').trim().slice(0, 100);
+                            if (!name || this.hashtagSaving) return;
+                            this.hashtagSaving = true;
+                            this.hashtagError = '';
+                            fetch('{% url "composer:tag_create" workspace_id=workspace.id %}', {
+                                method: 'POST',
+                                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+                                body: new URLSearchParams({ name, kind: 'hashtag' }),
+                            })
+                                .then(response => response.json().then(body => ({ ok: response.ok, body })))
+                                .then(({ ok, body }) => {
+                                    if (!ok) { this.hashtagError = body.error || cLabel('hashtag-save-failed'); return; }
+                                    if (!this.allTags.includes(body.name)) { this.allTags.push(body.name); this.allTags.sort((a, b) => a.localeCompare(b)); }
+                                    this.tagKindByName[body.name] = body.kind;
+                                    if (pick && !this.hashtagPicked.includes(body.name)) this.hashtagPicked.push(body.name);
+                                    this.hashtagSearch = '';
+                                })
+                                .catch(() => { this.hashtagError = cLabel('hashtag-save-failed'); })
+                                .finally(() => { this.hashtagSaving = false; });
+                        },
+                        /* Each ticked tag as the network reads it: @name for a
+                           mention tag, #name for every other one. */
+                        insertHashtags() {
+                            const text = this.hashtagPicked
+                                .map(name => this.tagPreview(name, this.tagKindByName[name] === 'mention' ? 'mention' : 'hashtag'))
+                                .filter(Boolean)
+                                .join(' ');
+                            this.hashtagOpen = false;
+                            if (text) this.insertSigil(text);
+                        },
+                    }">
+                                    <button type="button" @click="hashtagOpen ? (hashtagOpen = false) : openHashtags()" class="caption-tool" :class="hashtagOpen && 'is-on'"
+                                            title="{% translate 'Add hashtag' %}" aria-label="{% translate 'Add hashtag' %}" :aria-expanded="hashtagOpen.toString()">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/></svg>
+                                    </button>
+                                    <input type="hidden" name="tags" :value="tags.join(',')">
+                                    <div x-show="hashtagOpen" x-cloak @click.outside="hashtagOpen = false" x-transition.opacity.duration.120ms class="emoji-panel" style="width: 26rem; max-width: calc(100vw - 2rem);">
+                                        <div class="p-2 border-b border-neutral-100">
+                                            <input type="text" x-ref="hashtagSearchInput" x-model="hashtagSearch"
+                                                   @keydown.enter.prevent="if (hashtagTerm && !hasTag(hashtagTerm)) saveHashtag(hashtagTerm, true)"
+                                                   placeholder="{% translate 'Search or type a new hashtag…' %}" aria-label="{% translate 'Search or type a new hashtag…' %}"
+                                                   class="w-full text-sm px-3 py-1.5 rounded-lg border border-neutral-300 bg-neutral-50 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                        </div>
+                                        <div class="max-h-64 overflow-y-auto py-1">
+                                            {% include "composer/partials/_tag_picker_rows.html" with query="hashtagSearch" selected="hashtagPicked" toggle="toggleHashtag" row_class="flex items-center gap-2 px-3 py-1.5 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer rounded-md mx-1" %}
+                                            <template x-if="!allTags.length && !hashtagTerm">
+                                                <p class="px-3 py-2 text-xs text-neutral-500">{% translate "No saved hashtags yet. Type one above to save it." %}</p>
+                                            </template>
+                                            <template x-if="hashtagTerm && !hasTag(hashtagTerm)">
+                                                <button type="button" @click="saveHashtag(hashtagTerm, true)" :disabled="hashtagSaving"
+                                                        class="flex items-center gap-2 w-[calc(100%-0.5rem)] mx-1 px-3 py-1.5 text-sm text-left text-neutral-800 hover:bg-neutral-50 rounded-md cursor-pointer disabled:opacity-50">
+                                                    <svg class="w-3.5 h-3.5 text-brand-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                                    <span>{% translate "Save" %} <span class="font-semibold" x-text="'#' + hashtagTerm"></span></span>
+                                                </button>
+                                            </template>
+                                        </div>
+                                        {% comment %}
+                                        Hashtags typed straight into the caption that are not saved yet:
+                                        one click keeps each for next time (they are already in the text).
+                                        {% endcomment %}
+                                        <div x-show="unsavedCaptionHashtags().length" class="px-3 py-2 border-t border-neutral-100">
+                                            <p class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{% translate "In the text, not saved yet" %}</p>
+                                            <div class="mt-1.5 flex flex-wrap gap-1.5">
+                                                <template x-for="name in unsavedCaptionHashtags()" :key="name">
+                                                    <button type="button" @click="saveHashtag(name, false)" :disabled="hashtagSaving"
+                                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-dashed border-brand-300 text-xs font-medium text-brand-800 hover:bg-brand-50 cursor-pointer disabled:opacity-50"
+                                                            title="{% translate 'Save for next time' %}">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                                        <span x-text="'#' + name"></span>
+                                                    </button>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <p x-show="hashtagError" class="px-3 pb-2 text-xs text-red-600" role="alert" x-text="hashtagError"></p>
+                                        <div class="flex items-center gap-1 px-2 py-2 border-t border-neutral-100">
+                                            <button type="button" class="px-2 py-1 text-xs font-medium whitespace-nowrap text-neutral-600 hover:text-neutral-900 rounded-md hover:bg-neutral-50 cursor-pointer" @click="hashtagOpen = false; openTagGroups()">{% translate "Tag groups" %}</button>
+                                            <button type="button" class="px-2 py-1 text-xs font-medium whitespace-nowrap text-neutral-600 hover:text-neutral-900 rounded-md hover:bg-neutral-50 cursor-pointer" @click="hashtagOpen = false; insertSigil('#')">{% translate "Type a hashtag" %}</button>
+                                            <button type="button" class="ml-auto px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap text-white bg-brand-700 hover:bg-brand-800 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    :disabled="!hashtagPicked.length" @click="insertHashtags()">
+                                                {% translate "Insert" %}<span x-show="hashtagPicked.length" x-text="' (' + hashtagPicked.length + ')'"></span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {% include "composer/partials/_tag_groups.html" %}
+                                </div>
                                 {% comment %}
                                 There is no AI caption service behind the composer yet, so the
                                 assistant is shown as coming soon instead of a button that does nothing.
@@ -832,9 +964,9 @@
                                            x-text="(charLimits[accId]?.title_label || cLabel('title')) + (titleInCard(accId) ? '' : ' — ' + cLabel('override-suffix'))"></label>
                                     <input type="text" :name="'override_title_' + accId + '_' + t.fmt"
                                            class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all"
-                                           x-init="$el.value = targetOverrides[t.key]?.title || (titleInCard(accId) ? title : '')"
+                                           x-init="$el.value = targetOverrides[t.key]?.title || (titleInCard(accId) ? title : ''); setCardText(t.key, 'title', $el.value)"
                                            :placeholder="titleInCard(accId) ? cLabel('enter-title') : cLabel('own-title')"
-                                           @input="debouncedPreviewUpdate()"
+                                           @input="setCardText(t.key, 'title', $el.value); debouncedPreviewUpdate()"
                                            :maxlength="charLimits[accId]?.title_max_length || 255">
                                 </div>
                             </template>
@@ -850,7 +982,7 @@
                                       style="font-family: system-ui, -apple-system, sans-serif;"
                                       :placeholder="cLabel('own-caption')"
                                       x-init="$el.value = targetOverrides[t.key]?.caption || ''"
-                                      @input="debouncedPreviewUpdate()"
+                                      @input="setCardText(t.key, 'caption', $el.value); debouncedPreviewUpdate()"
                                       rows="3"></textarea>
 
                             {% comment %}
@@ -1198,7 +1330,7 @@
                                 </div>
                             </template>
                             <div class="mt-3 flex justify-end">
-                                <button type="button" class="text-xs text-red-400 hover:text-red-500 cursor-pointer" @click="$el.closest('.rounded-xl').querySelectorAll('[name^=override_]').forEach(field => field.value = ''); $nextTick(() => triggerPreviewUpdate())">{% translate "Remove override" %}</button>
+                                <button type="button" class="text-xs text-red-400 hover:text-red-500 cursor-pointer" @click="$el.closest('.rounded-xl').querySelectorAll('[name^=override_]').forEach(field => field.value = ''); targetOverrides[t.key] = {}; $nextTick(() => triggerPreviewUpdate())">{% translate "Remove override" %}</button>
                             </div>
                         </div>
                     </div>
@@ -1569,10 +1701,9 @@
                 {% endif %}
 
                 {% comment %}
-                First comment and tags share a row; tags take the whole row when
-                no chosen platform supports a first comment.
+                The first comment, when a chosen platform takes one.
                 {% endcomment %}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                <div class="grid grid-cols-1 gap-4 items-start">
                     <!-- First Comment (conditional - only when a platform supporting comments is selected) -->
                     <div x-show="anyPlatformSupportsFirstComment" x-transition x-cloak>
                         <label class="flex items-center gap-2 text-sm font-semibold text-neutral-800 uppercase tracking-wider mb-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m-9 6l2.6-3.4A8 8 0 1112 20H4z"/></svg>{% translate "First Comment" %}</label>
@@ -1580,198 +1711,17 @@
                                   class="comment-editor"
                                   placeholder="{% translate 'First comment posted after the main post…' %}"
                                   rows="1">{{ form.first_comment.value|default:"" }}</textarea>
-                    </div>
-                    <!-- Tags (dropdown with search & create) -->
-                    <div class="relative" :class="anyPlatformSupportsFirstComment ? '' : 'md:col-span-2'" x-data="{
-                        ...window.tagGroupsBase(),
-                        tags: {{ post.tags|json_attr }},
-                        tagDropdownOpen: false,
-                        tagSearch: '',
-                        allTags: [{% for tag in all_tags %}'{{ tag.name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
-                        /* name -> kind, so a chip can show what the tag will do. */
-                        tagKindByName: {{ tag_kinds_json|default:"{}" }},
-                        tagKinds: [
-                            { value: 'internal', label: cLabel('tag-kind-internal') },
-                            { value: 'hashtag', label: cLabel('tag-kind-hashtag') },
-                            { value: 'mention', label: cLabel('tag-kind-mention') },
-                        ],
-                        /* Mirrors Tag.slug_for_publishing: the networks cut a tag at
-                           the first space, so the preview has to fold it the same
-                           way or it would promise something else. */
-                        tagPreview(name, kind) {
-                            const sigil = { hashtag: '#', mention: '@' }[kind];
-                            if (!sigil) return '';
-                            const slug = (name || '').split('').filter(c => /\p{L}|\p{N}/u.test(c)).join('');
-                            return slug ? sigil + slug : '';
-                        },
-                        get filteredTags() {
-                            const q = this.tagSearch.toLowerCase();
-                            return this.allTags.filter(t => !q || t.toLowerCase().includes(q));
-                        },
-                        toggleTag(name) {
-                            const idx = this.tags.indexOf(name);
-                            if (idx >= 0) { this.tags.splice(idx, 1); }
-                            else { this.tags.push(name); }
-                            /* Published tags are part of the caption now, so the
-                               preview is stale the moment one is added or dropped. */
-                            this.triggerPreviewUpdate();
-                        },
-                        createTag() {
-                            const name = this.tagSearch.trim();
-                            if (!name) return;
-                            if (!this.allTags.includes(name)) { this.allTags.push(name); this.allTags.sort(); }
-                            if (!this.tags.includes(name)) { this.tags.push(name); }
-                            this.tagSearch = '';
-                            /* Persist to server */
-                            fetch('{% url "composer:tag_create" workspace_id=workspace.id %}', {
-                                method: 'POST',
-                                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'Content-Type': 'application/x-www-form-urlencoded' },
-                                body: 'name=' + encodeURIComponent(name),
-                            });
-                        },
-                        removeTag(idx) { this.tags.splice(idx, 1); },
-                        showCreateTagModal: false,
-                        newTagName: '',
-                        newTagKind: 'internal',
-                        _persistTag(name, kind) {
-                            kind = kind || 'internal';
-                            if (!this.allTags.includes(name)) { this.allTags.push(name); this.allTags.sort(); }
-                            if (!this.tags.includes(name)) { this.tags.push(name); }
-                            this.tagKindByName[name] = kind;
-                            fetch('{% url "composer:tag_create" workspace_id=workspace.id %}', {
-                                method: 'POST',
-                                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'Content-Type': 'application/x-www-form-urlencoded' },
-                                body: 'name=' + encodeURIComponent(name) + '&kind=' + encodeURIComponent(kind),
-                            }).then(() => this.triggerPreviewUpdate?.());
-                        },
-                    }" @click.away="tagDropdownOpen = false">
-                        <div class="flex items-center gap-2 mb-2">
-                            <label class="flex items-center gap-2 text-sm font-semibold text-neutral-800 uppercase tracking-wider"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12V4a1 1 0 011-1h8l9 9-9 9-9-9z"/><circle cx="7.5" cy="7.5" r="1.25" fill="currentColor"/></svg>{% translate "Tags" %}</label>
-                            <span class="pill pill-brand text-[11px]">{% translate "Internal team only" %}</span>
-                        </div>
-                        <input type="hidden" name="tags" :value="tags.join(',')">
-
-                        <!-- Selected tags chips + trigger -->
-                        <div class="flex flex-wrap items-center gap-1.5 w-full min-h-[42px] px-3 py-2 rounded-xl border border-neutral-300 bg-white transition-all duration-150 cursor-pointer"
-                             :class="tagDropdownOpen && 'border-brand-700 ring-2 ring-brand-100'"
-                             @click="tagDropdownOpen = !tagDropdownOpen; if(tagDropdownOpen) $nextTick(() => { $refs.tagSearchInput.focus(); $refs.tagSearchInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); })">
-                            {% comment %}
-                            A published tag is tinted and carries its sigil, so the
-                            ones that leave the workspace are tellable at a glance
-                            from the ones that only file the post.
-                            {% endcomment %}
-                            <template x-for="(tag, idx) in tags" :key="tag">
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-                                      :class="tagPreview(tag, tagKindByName[tag]) ? 'bg-brand-50 text-brand-900' : 'bg-neutral-100 text-neutral-800'">
-                                    <span x-text="tagPreview(tag, tagKindByName[tag]) || tag"></span>
-                                    <button type="button" @click.stop="removeTag(idx)" class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-neutral-500 hover:text-red-500 hover:bg-red-50 transition-colors">
-                                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                                    </button>
-                                </span>
+                        {% comment %}
+                        Where the comment goes: the chosen channels whose account can have
+                        one posted, Stories excepted (no comment thread), as the publisher
+                        decides in _maybe_schedule_first_comment.
+                        {% endcomment %}
+                        <p class="mt-1.5 text-[11px] text-neutral-500">
+                            {% translate "Posted on:" %} <span class="font-medium text-neutral-700" x-text="firstCommentTargets(true).join(', ')"></span>
+                            <template x-if="firstCommentTargets(false).length">
+                                <span class="block">{% translate "Not on:" %} <span x-text="firstCommentTargets(false).join(', ')"></span></span>
                             </template>
-                            <span x-show="!tags.length" class="text-sm text-neutral-500">{% translate "Select tags..." %}</span>
-                            <svg class="w-4 h-4 ml-auto text-neutral-500 shrink-0 transition-transform duration-150" :class="tagDropdownOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                        </div>
-
-                        <!-- Dropdown -->
-                        <div x-show="tagDropdownOpen" x-cloak x-transition
-                             class="absolute left-0 right-0 top-full z-30 mt-1 bg-white rounded-xl shadow-lg ring-1 ring-neutral-300 py-1 max-h-[220px] overflow-y-auto"
-                             @click.stop>
-                            <!-- Search input -->
-                            <div class="px-2 py-1.5 border-b border-neutral-100">
-                                <input type="text" x-ref="tagSearchInput" x-model="tagSearch"
-                                       @keydown.enter.prevent="if (tagSearch.trim() && !filteredTags.includes(tagSearch.trim())) { createTag(); } else if (filteredTags.length === 1) { toggleTag(filteredTags[0]); tagSearch = ''; }"
-                                       class="w-full text-sm px-2 py-1.5 rounded-lg border border-neutral-300 outline-none focus:border-brand-500 transition-colors"
-                                       placeholder="{% translate 'Search or create tag...' %}">
-                            </div>
-                            <!-- Tag list -->
-                            {% include "composer/partials/_tag_picker_rows.html" with query="tagSearch" selected="tags" toggle="toggleTag" on_group="triggerPreviewUpdate()" previews=True row_class="flex items-center gap-2 px-3 py-1.5 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer rounded-md mx-1" %}
-                            <!-- No results / Create -->
-                            <template x-if="tagSearch.trim() && !filteredTags.length">
-                                <button type="button" @click="createTag()"
-                                        class="flex items-center gap-2 w-full px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md mx-1">
-                                    <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                    {% translate "Create" %} “<span x-text="tagSearch.trim()" class="font-semibold"></span>”
-                                </button>
-                            </template>
-                            <template x-if="tagSearch.trim() && filteredTags.length && !filteredTags.includes(tagSearch.trim())">
-                                <div class="border-t border-neutral-100 mt-1 pt-1">
-                                    <button type="button" @click="createTag()"
-                                            class="flex items-center gap-2 w-full px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md mx-1">
-                                        <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                        {% translate "Create" %} “<span x-text="tagSearch.trim()" class="font-semibold"></span>”
-                                    </button>
-                                </div>
-                            </template>
-                            <template x-if="!tagSearch.trim() && !allTags.length">
-                                <div class="px-3 py-2 text-xs text-neutral-500">{% translate "No tags yet. Type to create one." %}</div>
-                            </template>
-                            <!-- Create new tag -->
-                            <div class="border-t border-neutral-100 px-1 py-1">
-                                <button type="button" @click="tagDropdownOpen = false; showCreateTagModal = true; newTagName = tagSearch; tagSearch = ''; $nextTick(() => $refs.newTagNameInput.focus())"
-                                        class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
-                                    <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                    {% translate "Create new tag" %}
-                                </button>
-                                <button type="button" @click="tagDropdownOpen = false; openTagGroups()"
-                                        class="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md cursor-pointer transition-colors">
-                                    <svg class="w-3.5 h-3.5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-                                    {% translate "Tag groups" %}
-                                </button>
-                            </div>
-                        </div>
-                        {% include "composer/partials/_tag_groups.html" %}
-
-                        <!-- Create Tag Modal (teleported to body to escape stacking contexts) -->
-                        <template x-teleport="body">
-                            <div x-show="showCreateTagModal" x-cloak class="fixed inset-0 z-[200] flex items-center justify-center" @keydown.escape.window="showCreateTagModal = false">
-                                <div class="fixed inset-0 bg-black/30" @click="showCreateTagModal = false"></div>
-                                <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6" @click.stop>
-                                    <h3 class="text-base font-semibold text-neutral-900 mb-4">{% translate "Create new tag" %}</h3>
-                                    <input type="text" x-ref="newTagNameInput" x-model="newTagName"
-                                           @keydown.enter.prevent="if(newTagName.trim()) { _persistTag(newTagName.trim(), newTagKind); showCreateTagModal = false; newTagName = ''; newTagKind = 'internal'; }"
-                                           class="w-full text-sm px-3 py-2.5 rounded-xl border border-neutral-300 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all"
-                                           placeholder="{% translate 'Tag name...' %}">
-                                    {% comment %}
-                                    The kind is the whole point of the tag doing two
-                                    jobs: internal keeps it to the filters, the other
-                                    two also put it in the caption. Defaulting to
-                                    internal means nothing reaches a post unless it
-                                    was chosen deliberately.
-                                    {% endcomment %}
-                                    <div class="mt-3">
-                                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{% translate "Use" %}</label>
-                                        <div class="grid grid-cols-3 gap-1.5">
-                                            <template x-for="opt in tagKinds" :key="opt.value">
-                                                <button type="button" @click="newTagKind = opt.value"
-                                                        class="px-2 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer"
-                                                        :class="newTagKind === opt.value
-                                                            ? 'border-brand-300 bg-brand-50 text-brand-900'
-                                                            : 'border-neutral-300 text-neutral-600 hover:border-neutral-400'">
-                                                    <span x-text="opt.label"></span>
-                                                </button>
-                                            </template>
-                                        </div>
-                                        <p class="text-[11px] text-neutral-500 mt-1.5"
-                                           x-show="newTagKind !== 'internal'"
-                                           x-text="cLabel('tag-kind-hint') + ': ' + tagPreview(newTagName, newTagKind)"></p>
-                                    </div>
-                                    <div class="flex justify-end gap-2 mt-4">
-                                        <button type="button" @click="showCreateTagModal = false; newTagName = ''; newTagKind = 'internal'"
-                                                class="px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded-lg cursor-pointer transition-colors">
-                                            {% translate "Cancel" %}
-                                        </button>
-                                        <button type="button"
-                                                @click="if(newTagName.trim()) { _persistTag(newTagName.trim(), newTagKind); showCreateTagModal = false; newTagName = ''; newTagKind = 'internal'; }"
-                                                class="px-4 py-2 text-sm font-semibold text-white rounded-lg transition-colors"
-                                                style="background: var(--primary);"
-                                                :class="newTagName.trim() ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'">
-                                            {% translate "Create" %}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
+                        </p>
                     </div>
                 </div>
                 <!-- Hidden first_comment field for form submission when section is hidden -->
@@ -2480,10 +2430,6 @@
 {% translate "override" as lbl_c_override_suffix %}
 {% translate "Own title for this channel…" as lbl_c_own_title %}
 {% translate "Own caption for this channel…" as lbl_c_own_caption %}
-{% translate "Internal" as lbl_c_tag_kind_internal %}
-{% translate "Hashtag" as lbl_c_tag_kind_hashtag %}
-{% translate "Mention" as lbl_c_tag_kind_mention %}
-{% translate "Published at the end of the caption" as lbl_c_tag_kind_hint %}
 {% translate "Reply to comments and send a DM automatically" as lbl_c_autom_idle %}
 {% translate "Save this draft to set up an automation" as lbl_c_autom_unsaved %}
 {% translate "Edit flow" as lbl_c_edit_flow %}
@@ -2548,6 +2494,10 @@
 {% translate "Choose a board for the pin." as lbl_c_pin_board %}
 {% translate "Add an image or a video, or unpick this channel." as lbl_c_needs_media %}
 {% translate "Add a video, or unpick this channel." as lbl_c_needs_video %}
+{% translate "Could not save the hashtag." as lbl_c_hashtag_save_failed %}
+{% translate "Write the text or add an image or a video." as lbl_c_needs_content %}
+{% translate "The text has {count} characters, over the {limit} this channel takes." as lbl_c_text_too_long %}
+{% translate "Write a title for the article." as lbl_c_needs_title %}
 {% translate "Failed to fetch boards" as lbl_c_pin_boards_failed %}
 {% translate "A profile photo needs exactly one image." as lbl_c_photo_media %}
 {% translate "Trim the video for {format}" as lbl_c_trim_title %}
@@ -2577,6 +2527,10 @@
 {{ lbl_c_pin_board|json_script:"c-pin-board" }}
 {{ lbl_c_needs_media|json_script:"c-needs-media" }}
 {{ lbl_c_needs_video|json_script:"c-needs-video" }}
+{{ lbl_c_hashtag_save_failed|json_script:"c-hashtag-save-failed" }}
+{{ lbl_c_needs_content|json_script:"c-needs-content" }}
+{{ lbl_c_text_too_long|json_script:"c-text-too-long" }}
+{{ lbl_c_needs_title|json_script:"c-needs-title" }}
 {{ lbl_c_pin_boards_failed|json_script:"c-pin-boards-failed" }}
 {{ lbl_c_photo_media|json_script:"c-photo-media" }}
 {{ lbl_c_trim_title|json_script:"c-trim-title" }}
@@ -2595,10 +2549,6 @@
 {{ lbl_c_override_suffix|json_script:"c-override-suffix" }}
 {{ lbl_c_own_title|json_script:"c-own-title" }}
 {{ lbl_c_own_caption|json_script:"c-own-caption" }}
-{{ lbl_c_tag_kind_internal|json_script:"c-tag-kind-internal" }}
-{{ lbl_c_tag_kind_hashtag|json_script:"c-tag-kind-hashtag" }}
-{{ lbl_c_tag_kind_mention|json_script:"c-tag-kind-mention" }}
-{{ lbl_c_tag_kind_hint|json_script:"c-tag-kind-hint" }}
 {{ lbl_c_autom_idle|json_script:"c-autom-idle" }}
 {{ lbl_c_autom_unsaved|json_script:"c-autom-unsaved" }}
 {{ lbl_c_edit_flow|json_script:"c-edit-flow" }}
@@ -2813,6 +2763,14 @@ function composerApp() {
         },
         get anyPlatformSupportsFirstComment() {
             return this.selectedAccounts.some(id => this.charLimits[id]?.supports_first_comment);
+        },
+        // The chosen channels the first comment is posted on (``true``) or
+        // not (``false``), by name. Mirrors the publisher: the account must
+        // take a first comment, and a Story has no comment thread.
+        firstCommentTargets(posted) {
+            return this.selectedTargetList()
+                .filter(t => (this.charLimits[t.accId]?.supports_first_comment && t.fmt !== 'story') === posted)
+                .map(t => this.targetLabel(t.accId, t.fmt));
         },
         // The accounts among those selected that comment automations can run
         // on. Drives the whole automation section: no such account selected
@@ -3338,7 +3296,32 @@ function composerApp() {
         // Why this chosen format can't go out yet, or '': its card turns amber
         // with this reason until it is fixed or the format unpicked.
         cardProblem(t) {
-            return this.formatMismatch(t.fmt, t.accId) || this.mediaProblem(t.accId) || this.pinterestProblem(t.accId);
+            return this.formatMismatch(t.fmt, t.accId) || this.mediaProblem(t.accId) || this.pinterestProblem(t.accId) || this.textProblem(t);
+        },
+        // Keeps a card's own caption or title in targetOverrides as it is
+        // typed, so the checks below read what this channel will publish.
+        setCardText(key, field, value) {
+            this.targetOverrides[key] = { ...(this.targetOverrides[key] || {}), [field]: value };
+        },
+        // The caption or title this channel publishes: its own when written,
+        // the shared one otherwise (as the save reads a blank card).
+        cardText(t, field) {
+            const own = this.targetOverrides[t.key]?.[field] || '';
+            return own.trim() ? own : (field === 'title' ? this.title : this.caption);
+        },
+        // What is wrong with the text this channel publishes, or ''. Mirrors
+        // composer.services.text_blocker: nothing to publish at all, a text
+        // over the platform's limit, a DEV.to article without a title. A Story
+        // goes out without the caption.
+        textProblem(t) {
+            if (t.fmt === 'story') return '';
+            const text = this.cardText(t, 'caption');
+            if (!text.trim() && !this.hasMediaAttached) return cLabel('needs-content');
+            const limit = this.charLimits[t.accId]?.limit;
+            const length = this.wireLength(text, t.accId);
+            if (limit && length > limit) return cLabel('text-too-long').replace('{count}', length).replace('{limit}', limit);
+            if (this.charLimits[t.accId]?.platform === 'devto' && !this.cardText(t, 'title').trim()) return cLabel('needs-title');
+            return '';
         },
         // The media a platform can't publish without, when it is missing, or ''.
         // Mirrors requires_media / is_video_only, which the server checks on

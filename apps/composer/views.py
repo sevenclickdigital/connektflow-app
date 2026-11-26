@@ -5346,9 +5346,13 @@ def tag_list(request, workspace_id):
 @require_permission("create_posts")
 @require_POST
 def tag_create(request, workspace_id):
-    """Create a new tag and return it as JSON."""
+    """Create a new tag and return it as JSON.
+
+    A leading "#" or "@" is dropped: the hashtag picker saves what was typed
+    in the caption, and the sigil is the tag's kind, not part of its name.
+    """
     workspace = _get_workspace(request, workspace_id)
-    name = request.POST.get("name", "").strip()
+    name = request.POST.get("name", "").strip().lstrip("#@").strip()[:100]
     if not name:
         return JsonResponse({"error": _("Tag name is required.")}, status=400)
     kind = request.POST.get("kind", Tag.Kind.INTERNAL)
