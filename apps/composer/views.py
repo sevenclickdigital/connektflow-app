@@ -2146,13 +2146,14 @@ def autosave(request, workspace_id, post_id=None):
 
     # Opening the composer and walking away must not leave an empty draft
     # behind: a new post is only created once there is something to keep.
+    # Ticking channels is not: people tick them to see what each one asks
+    # for, and that must not put an empty draft on the calendar per visit.
     if is_new and not (
         post.title.strip()
         or post.caption.strip()
         or post.first_comment.strip()
         or post.internal_notes.strip()
         or post.tags
-        or _parse_selected_account_ids(request.POST.get("selected_accounts", ""))
         or request.session.get(f"pending_media_{workspace.id}")
     ):
         return HttpResponse(format_html('<span class="text-xs text-gray-400">{}</span>', _("Nothing to save yet")))
