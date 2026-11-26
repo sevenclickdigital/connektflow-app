@@ -534,7 +534,7 @@ REVIEW_BANNER_ENABLED = env.bool("REVIEW_BANNER_ENABLED", default=False)
 # to reach them. Each line is left out of the footer while its value is empty.
 # The address takes one line per "|"-separated part.
 LEGAL_COMPANY_NAME = env("LEGAL_COMPANY_NAME", default="Seven Click")
-LEGAL_COMPANY_DOCUMENT = env("LEGAL_COMPANY_DOCUMENT", default="18.908.297/0001-53")
+LEGAL_COMPANY_DOCUMENT = env("LEGAL_COMPANY_DOCUMENT", default="36.582.545/0001-09")
 LEGAL_COMPANY_ADDRESS = env(
     "LEGAL_COMPANY_ADDRESS",
     default="Rua Santo Antônio, 1460 · Sala 405 | Barreiros, São José/SC · CEP 88117-351",
