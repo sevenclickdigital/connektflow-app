@@ -7,7 +7,7 @@ import logging
 import re
 import uuid
 from datetime import UTC, date, datetime, time
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin
 
 import httpx
 from dateutil import parser as date_parser
@@ -2948,7 +2948,13 @@ def pinterest_boards(request, workspace_id, account_id):
         message = getattr(exc, "user_message", "") or _("Failed to fetch boards")
         return JsonResponse({"error": message}, status=502)
 
-    return JsonResponse({"boards": [{"id": b.get("id"), "name": b.get("name")} for b in boards]})
+    # The profile is where Pinterest offers "Create board"; it has no link
+    # straight to that dialog.
+    handle = account.account_handle.strip().lstrip("@")
+    create_url = f"https://www.pinterest.com/{quote(handle)}/" if handle else "https://www.pinterest.com/"
+    return JsonResponse(
+        {"boards": [{"id": b.get("id"), "name": b.get("name")} for b in boards], "create_url": create_url}
+    )
 
 
 @login_required

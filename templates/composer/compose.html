@@ -940,12 +940,19 @@
                         {% endcomment %}
                         <template x-if="charLimits[accId]?.platform === 'pinterest' && t.fmt === (selectedFormats[accId] || [])[0]">
                             <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3"
-                                 x-data="{ boards: [], boardsLoading: true, boardsLoaded: false, boardsError: '' }"
-                                 x-init="fetch(`/workspace/{{ workspace.id }}/compose/pinterest-boards/${accId}/`)
-                                     .then(r => r.json())
-                                     .then(data => { boards = data.boards || []; boardsError = data.error || ''; boardsLoaded = !data.error; })
-                                     .catch(() => { boardsError = cLabel('pin-boards-failed'); })
-                                     .finally(() => { boardsLoading = false; })">
+                                 x-data="{
+                                     boards: [], boardsLoading: false, boardsLoaded: false, boardsError: '', createBoardUrl: '',
+                                     loadBoards() {
+                                         this.boardsLoading = true;
+                                         this.boardsError = '';
+                                         fetch(`/workspace/{{ workspace.id }}/compose/pinterest-boards/${accId}/`)
+                                             .then(r => r.json())
+                                             .then(data => { this.boards = data.boards || []; this.createBoardUrl = data.create_url || ''; this.boardsError = data.error || ''; this.boardsLoaded = !data.error; })
+                                             .catch(() => { this.boardsError = cLabel('pin-boards-failed'); })
+                                             .finally(() => { this.boardsLoading = false; });
+                                     },
+                                 }"
+                                 x-init="loadBoards()">
                                 <p x-show="!hasMediaAttached" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
                                     <span class="font-semibold">{% translate "Pinterest needs an image or a video." %}</span>
                                     {% translate "Add one to schedule this post, or deselect the account." %}
@@ -968,7 +975,21 @@
                                     </select>
                                     <p x-show="boardsLoading" class="text-[11px] text-neutral-500 mt-1">{% translate "Loading boards…" %}</p>
                                     <p x-show="boardsError" class="text-[11px] text-red-500 mt-1" role="alert" x-text="boardsError"></p>
-                                    <p x-show="boardsLoaded && boards.length === 0" class="text-[11px] text-red-400 mt-1">{% translate "No boards found. Create a board on Pinterest first." %}</p>
+                                    {% comment %}
+                                    No board yet: a link to the Pinterest profile, where "Create
+                                    board" lives, and a reload for when the person comes back.
+                                    {% endcomment %}
+                                    <div x-show="boardsLoaded && boards.length === 0" class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                        <p class="text-[11px] text-red-400">{% translate "No boards found. Create a board on Pinterest first." %}</p>
+                                        <a :href="createBoardUrl" x-show="createBoardUrl" target="_blank" rel="noopener"
+                                           class="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 hover:text-brand-800">
+                                            {% translate "Create a board on Pinterest" %}
+                                            <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                            <span class="sr-only">{% translate "(opens in a new tab)" %}</span>
+                                        </a>
+                                        <button type="button" @click="loadBoards()" :disabled="boardsLoading"
+                                                class="text-[11px] font-semibold text-neutral-600 hover:text-neutral-800 disabled:opacity-50 cursor-pointer">{% translate "Reload boards" %}</button>
+                                    </div>
                                 </div>
                                 <!-- Destination Link -->
                                 <div>
