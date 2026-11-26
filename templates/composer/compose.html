@@ -937,7 +937,7 @@
                             account's first chosen format, so the fields are posted once;
                             rendered (hidden) while the card is folded, since the save
                             reads them on every submit. The card turns amber while the
-                            board or the media is missing (pinterestProblem).
+                            board or the media is missing (cardProblem).
                             {% endcomment %}
                             <template x-if="charLimits[accId]?.platform === 'pinterest' && t.fmt === (selectedFormats[accId] || [])[0]">
                                 <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3"
@@ -1094,114 +1094,115 @@
                                     </div>
                                 </div>
                             </template>
-                        </div>
-                    </div>
-                </template>
 
-                <!-- YouTube settings (auto-visible when any YouTube account is selected) -->
-                <template x-for="accId in selectedAccounts" :key="'yt-settings-' + accId">
-                    <div x-show="charLimits[accId]?.platform === 'youtube'"
-                         class="border border-neutral-300 rounded-xl bg-white p-4 space-y-3">
-                        <div class="flex items-center gap-2">
-                            <a :href="charLimits[accId]?.youtube_url || 'https://www.youtube.com/'" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-neutral-700 underline underline-offset-2">{% translate "YouTube" %}</a>
-                            <span class="text-xs font-semibold text-neutral-700" x-text="targetLabel(accId, 'default') + ' - ' + cLabel('yt-video-settings')"></span>
-                        </div>
-                        <p x-show="!hasVideoAttached" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                            <span class="font-semibold">{% translate "YouTube only publishes videos." %}</span>
-                            {% translate "Add a video to schedule this post, or deselect the account." %}
-                        </p>
-                        <div x-show="hasFormat(accId, 'short') && shortVideoIssue(accId)" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                            <p x-text="shortVideoIssue(accId)"></p>
-                            <button type="button" x-show="trimNeed(accId, 'short')" @click="openTrim(accId, 'short')" x-text="trimButtonLabel(accId, 'short')"
-                                    class="mt-2 px-3 py-1 rounded-full border border-brand-300 text-brand-800 text-xs font-semibold hover:bg-brand-50 cursor-pointer"></button>
-                        </div>
-                        <!-- Thumbnail -->
-                        <div>
-                            <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{% translate "Custom Thumbnail" %}</label>
-                            <input type="hidden"
-                                   :name="'yt_thumbnail_asset_id_' + accId"
-                                   :value="platformExtras[accId]?.thumbnail_asset_id || ''">
-                            <div class="flex items-stretch gap-3">
-                                {% include "composer/partials/choose_from_video_card.html" with mode="upload" %}
-                                <template x-if="!platformExtras[accId]?.thumbnail_url">
-                                    <div class="flex-1 max-w-[480px] rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-50 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-brand-300 hover:bg-brand-50 transition-colors min-h-[104px]"
-                                         @dragover.prevent="$el.classList.add('border-brand-500', 'bg-brand-50')"
-                                         @dragleave="$el.classList.remove('border-brand-500', 'bg-brand-50')"
-                                         @drop.prevent="handleThumbnailDrop(accId, $event); $el.classList.remove('border-brand-500', 'bg-brand-50')"
-                                         @click="triggerThumbnailUpload(accId)">
-                                        <svg class="w-6 h-6 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                        <span class="text-[11px] text-neutral-500" x-text="thumbnailUploading[accId] ? cLabel('uploading') : cLabel('drag-thumbnail')"></span>
+                            {% comment %}
+                            YouTube options, account-wide: the thumbnail, visibility and
+                            advanced settings, in the card of the account's first chosen
+                            format so the fields are posted once. The channel link is the
+                            attribution YouTube's branding rules ask for next to them.
+                            {% endcomment %}
+                            <template x-if="charLimits[accId]?.platform === 'youtube' && t.fmt === (selectedFormats[accId] || [])[0]">
+                                <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3">
+                                    <a :href="charLimits[accId]?.youtube_url || 'https://www.youtube.com/'" target="_blank" rel="noopener noreferrer" class="inline-block text-xs font-semibold text-neutral-700 underline underline-offset-2">{% translate "YouTube" %}</a>
+                                    <p x-show="!hasVideoAttached" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                                        <span class="font-semibold">{% translate "YouTube only publishes videos." %}</span>
+                                        {% translate "Add a video to schedule this post, or deselect the account." %}
+                                    </p>
+                                    <div x-show="hasFormat(accId, 'short') && shortVideoIssue(accId)" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                                        <p x-text="shortVideoIssue(accId)"></p>
+                                        <button type="button" x-show="trimNeed(accId, 'short')" @click="openTrim(accId, 'short')" x-text="trimButtonLabel(accId, 'short')"
+                                                class="mt-2 px-3 py-1 rounded-full border border-brand-300 text-brand-800 text-xs font-semibold hover:bg-brand-50 cursor-pointer"></button>
                                     </div>
-                                </template>
-                                <template x-if="platformExtras[accId]?.thumbnail_url">
-                                    <div class="relative flex-shrink-0">
-                                        <img :src="platformExtras[accId].thumbnail_url"
-                                             class="h-[104px] w-auto max-w-[480px] object-cover rounded-lg border border-neutral-300">
-                                        <button type="button" @click="clearThumbnail(accId)"
-                                                title="{% translate 'Remove thumbnail' %}"
-                                                class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/55 hover:bg-red-500 text-white flex items-center justify-center transition-colors cursor-pointer">
-                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    <!-- Thumbnail -->
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{% translate "Custom Thumbnail" %}</label>
+                                        <input type="hidden"
+                                               :name="'yt_thumbnail_asset_id_' + accId"
+                                               :value="platformExtras[accId]?.thumbnail_asset_id || ''">
+                                        <div class="flex items-stretch gap-3">
+                                            {% include "composer/partials/choose_from_video_card.html" with mode="upload" %}
+                                            <template x-if="!platformExtras[accId]?.thumbnail_url">
+                                                <div class="flex-1 max-w-[480px] rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-50 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-brand-300 hover:bg-brand-50 transition-colors min-h-[104px]"
+                                                     @dragover.prevent="$el.classList.add('border-brand-500', 'bg-brand-50')"
+                                                     @dragleave="$el.classList.remove('border-brand-500', 'bg-brand-50')"
+                                                     @drop.prevent="handleThumbnailDrop(accId, $event); $el.classList.remove('border-brand-500', 'bg-brand-50')"
+                                                     @click="triggerThumbnailUpload(accId)">
+                                                    <svg class="w-6 h-6 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                    <span class="text-[11px] text-neutral-500" x-text="thumbnailUploading[accId] ? cLabel('uploading') : cLabel('drag-thumbnail')"></span>
+                                                </div>
+                                            </template>
+                                            <template x-if="platformExtras[accId]?.thumbnail_url">
+                                                <div class="relative flex-shrink-0">
+                                                    <img :src="platformExtras[accId].thumbnail_url"
+                                                         class="h-[104px] w-auto max-w-[480px] object-cover rounded-lg border border-neutral-300">
+                                                    <button type="button" @click="clearThumbnail(accId)"
+                                                            title="{% translate 'Remove thumbnail' %}"
+                                                            class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/55 hover:bg-red-500 text-white flex items-center justify-center transition-colors cursor-pointer">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                    </button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <input type="file"
+                                               :data-thumb-upload-for="accId"
+                                               accept="image/jpeg,image/png"
+                                               class="hidden thumb-upload-input"
+                                               @change="uploadThumbnail(accId, $event)">
+                                        <button type="button" @click="openThumbnailPicker(accId)"
+                                                class="mt-2 text-xs font-medium text-neutral-500 hover:text-brand-800 transition-colors flex items-center gap-1.5 cursor-pointer">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                            {% translate "Media Library" %}
                                         </button>
                                     </div>
-                                </template>
-                            </div>
-                            <input type="file"
-                                   :data-thumb-upload-for="accId"
-                                   accept="image/jpeg,image/png"
-                                   class="hidden thumb-upload-input"
-                                   @change="uploadThumbnail(accId, $event)">
-                            <button type="button" @click="openThumbnailPicker(accId)"
-                                    class="mt-2 text-xs font-medium text-neutral-500 hover:text-brand-800 transition-colors flex items-center gap-1.5 cursor-pointer">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                                {% translate "Media Library" %}
-                            </button>
-                        </div>
-                        <!-- Visibility -->
-                        <div>
-                            <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Visibility" %}</label>
-                            <select :name="'yt_privacy_status_' + accId"
-                                    class="bb-select w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
-                                <option value="public" :selected="(platformExtras[accId]?.privacy_status || 'public') === 'public'">{% translate "Public" %}</option>
-                                <option value="unlisted" :selected="platformExtras[accId]?.privacy_status === 'unlisted'">{% translate "Unlisted" %}</option>
-                                <option value="private" :selected="platformExtras[accId]?.privacy_status === 'private'">{% translate "Private" %}</option>
-                            </select>
-                        </div>
-                        <!-- Advanced -->
-                        <div class="border-t border-neutral-100 pt-3">
-                            <button type="button"
-                                    class="text-xs font-semibold text-neutral-600 hover:text-neutral-800 flex items-center gap-1 cursor-pointer"
-                                    @click="advancedOpen[accId] = !advancedOpen[accId]">
-                                <svg class="w-3 h-3 transition-transform"
-                                     :class="advancedOpen[accId] ? 'rotate-90' : ''"
-                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                                </svg>
-                                {% translate "Advanced" %}
-                            </button>
-                            <div x-show="advancedOpen[accId]" x-transition class="mt-3 space-y-3">
-                                <!-- Made for Kids -->
-                                <label class="flex items-start gap-2 cursor-pointer">
-                                    <input type="checkbox"
-                                           :name="'yt_made_for_kids_' + accId"
-                                           value="true"
-                                           :checked="platformExtras[accId]?.self_declared_made_for_kids"
-                                           class="w-4 h-4 mt-0.5 rounded border-neutral-400 text-brand-700 focus:ring-brand-200">
-                                    <span class="text-sm text-neutral-800">
-                                        {% translate "Made for Kids" %}
-                                        <span class="block text-[11px] text-neutral-500 font-normal">{% translate "Required by COPPA - mark if this video is directed at children under 13" %}</span>
-                                    </span>
-                                </label>
-                                <!-- Tags -->
-                                <div>
-                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Tags" %}</label>
-                                    <input type="text"
-                                           :name="'yt_tags_' + accId"
-                                           :value="(platformExtras[accId]?.tags || []).join(', ')"
-                                           placeholder="{% translate 'vlog, travel, daily' %}"
-                                           class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
-                                    <p class="text-[11px] text-neutral-500 mt-1">{% translate "Comma-separated" %}</p>
+                                    <!-- Visibility -->
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Visibility" %}</label>
+                                        <select :name="'yt_privacy_status_' + accId"
+                                                class="bb-select w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                            <option value="public" :selected="(platformExtras[accId]?.privacy_status || 'public') === 'public'">{% translate "Public" %}</option>
+                                            <option value="unlisted" :selected="platformExtras[accId]?.privacy_status === 'unlisted'">{% translate "Unlisted" %}</option>
+                                            <option value="private" :selected="platformExtras[accId]?.privacy_status === 'private'">{% translate "Private" %}</option>
+                                        </select>
+                                    </div>
+                                    <!-- Advanced -->
+                                    <div class="border-t border-neutral-100 pt-3">
+                                        <button type="button"
+                                                class="text-xs font-semibold text-neutral-600 hover:text-neutral-800 flex items-center gap-1 cursor-pointer"
+                                                @click="advancedOpen[accId] = !advancedOpen[accId]">
+                                            <svg class="w-3 h-3 transition-transform"
+                                                 :class="advancedOpen[accId] ? 'rotate-90' : ''"
+                                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                            </svg>
+                                            {% translate "Advanced" %}
+                                        </button>
+                                        <div x-show="advancedOpen[accId]" x-transition class="mt-3 space-y-3">
+                                            <!-- Made for Kids -->
+                                            <label class="flex items-start gap-2 cursor-pointer">
+                                                <input type="checkbox"
+                                                       :name="'yt_made_for_kids_' + accId"
+                                                       value="true"
+                                                       :checked="platformExtras[accId]?.self_declared_made_for_kids"
+                                                       class="w-4 h-4 mt-0.5 rounded border-neutral-400 text-brand-700 focus:ring-brand-200">
+                                                <span class="text-sm text-neutral-800">
+                                                    {% translate "Made for Kids" %}
+                                                    <span class="block text-[11px] text-neutral-500 font-normal">{% translate "Required by COPPA - mark if this video is directed at children under 13" %}</span>
+                                                </span>
+                                            </label>
+                                            <!-- Tags -->
+                                            <div>
+                                                <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Tags" %}</label>
+                                                <input type="text"
+                                                       :name="'yt_tags_' + accId"
+                                                       :value="(platformExtras[accId]?.tags || []).join(', ')"
+                                                       placeholder="{% translate 'vlog, travel, daily' %}"
+                                                       class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                                <p class="text-[11px] text-neutral-500 mt-1">{% translate "Comma-separated" %}</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            </template>
                         </div>
                     </div>
                 </template>
@@ -2546,10 +2547,10 @@
 {% translate "{platform} takes Story videos of up to {limit} MB and this one has {size} MB. Compress the video, or publish it as Reels." as lbl_c_story_video_too_large %}
 {% translate "YouTube only makes Shorts of vertical or square videos and this one is horizontal. Use a vertical video, or publish it as an ordinary video." as lbl_c_short_horizontal %}
 {% translate "YouTube makes Shorts of videos up to {limit} minutes and this one has {duration} seconds. Trim the video, or publish it as an ordinary video." as lbl_c_short_too_long %}
-{% translate "Video Settings" as lbl_c_yt_video_settings %}
 {% translate "Post settings" as lbl_c_post_settings %}
 {% translate "Choose a board for the pin." as lbl_c_pin_board %}
-{% translate "A pin needs an image or a video." as lbl_c_pin_media %}
+{% translate "Add an image or a video, or unpick this channel." as lbl_c_needs_media %}
+{% translate "Add a video, or unpick this channel." as lbl_c_needs_video %}
 {% translate "Failed to fetch boards" as lbl_c_pin_boards_failed %}
 {% translate "A profile photo needs exactly one image." as lbl_c_photo_media %}
 {% translate "Trim the video for {format}" as lbl_c_trim_title %}
@@ -2575,10 +2576,10 @@
 {{ lbl_c_story_video_too_large|json_script:"c-story-video-too-large" }}
 {{ lbl_c_short_horizontal|json_script:"c-short-horizontal" }}
 {{ lbl_c_short_too_long|json_script:"c-short-too-long" }}
-{{ lbl_c_yt_video_settings|json_script:"c-yt-video-settings" }}
 {{ lbl_c_post_settings|json_script:"c-post-settings" }}
 {{ lbl_c_pin_board|json_script:"c-pin-board" }}
-{{ lbl_c_pin_media|json_script:"c-pin-media" }}
+{{ lbl_c_needs_media|json_script:"c-needs-media" }}
+{{ lbl_c_needs_video|json_script:"c-needs-video" }}
 {{ lbl_c_pin_boards_failed|json_script:"c-pin-boards-failed" }}
 {{ lbl_c_photo_media|json_script:"c-photo-media" }}
 {{ lbl_c_trim_title|json_script:"c-trim-title" }}
@@ -2788,10 +2789,10 @@ function composerApp() {
         },
 
         // Computed-like getters for title field visibility
-        // Pinterest's title is asked in its customization card only (the
-        // card opens by itself), so the shared field is for the others.
+        // Pinterest's and YouTube's titles are asked in their customization
+        // cards only, so the shared field is for the others.
         titleInCard(accId) {
-            return this.charLimits[accId]?.platform === 'pinterest';
+            return ['pinterest', 'youtube'].includes(this.charLimits[accId]?.platform);
         },
         sharedTitleAccounts() {
             return this.selectedAccounts.filter(id => this.charLimits[id]?.needs_title && !this.titleInCard(id));
@@ -3340,15 +3341,21 @@ function composerApp() {
         // Why this chosen format can't go out yet, or '': its card turns amber
         // with this reason until it is fixed or the format unpicked.
         cardProblem(t) {
-            return this.formatMismatch(t.fmt, t.accId) || this.pinterestProblem(t.accId);
+            return this.formatMismatch(t.fmt, t.accId) || this.mediaProblem(t.accId) || this.pinterestProblem(t.accId);
         },
-        // What a Pinterest account still needs before its pin can be
-        // scheduled, or ''. Mirrors the server's checks (requires_media and
-        // the board in composer.services.publish_blocker); its customization
-        // card turns amber while this is not empty.
+        // The media a platform can't publish without, when it is missing, or ''.
+        // Mirrors requires_media / is_video_only, which the server checks on
+        // scheduling (charLimits.requires_media, charLimits.video_only).
+        mediaProblem(accId) {
+            const limits = this.charLimits[accId];
+            if (limits?.video_only && !this.hasVideoAttached) return cLabel('needs-video');
+            if (limits?.requires_media && !this.hasMediaAttached) return cLabel('needs-media');
+            return '';
+        },
+        // The board a Pinterest pin needs, when it is missing, or ''. Mirrors
+        // the board check in composer.services.publish_blocker.
         pinterestProblem(accId) {
             if (this.charLimits[accId]?.platform !== 'pinterest') return '';
-            if (!this.hasMediaAttached) return cLabel('pin-media');
             if (!this.platformExtras[accId]?.board_id) return cLabel('pin-board');
             return '';
         },

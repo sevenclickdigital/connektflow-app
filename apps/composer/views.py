@@ -1244,6 +1244,10 @@ def compose(request, workspace_id, post_id=None):
             # so the live counter can charge for them as the user types.
             "escaped_chars": acc.escaped_chars,
             "name": acc.account_name or acc.account_handle,
+            # What the platform can't publish without (the composer's
+            # cardProblem; the server refuses the same on scheduling).
+            "requires_media": requires_media(acc.platform),
+            "video_only": is_video_only(acc.platform),
             "youtube_url": f"https://www.youtube.com/channel/{acc.account_platform_id}"
             if acc.platform == "youtube"
             else "",
