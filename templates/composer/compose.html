@@ -587,7 +587,7 @@
                 </div>
                 {% endif %}
 
-                <!-- Title (conditional - only when YouTube/Pinterest selected) -->
+                <!-- Title (only for a platform whose title isn't asked in its own card) -->
                 <div x-show="anyPlatformNeedsTitle" x-transition x-cloak>
                     <label class="block text-sm font-semibold text-neutral-800 uppercase tracking-wider mb-2"
                            x-text="titleLabel">{% translate "Title" %}</label>
@@ -708,38 +708,24 @@
                 </div>
 
 
-                <!-- Override toggle buttons: one per chosen format of each account -->
-                <div class="flex flex-wrap gap-1.5" x-show="selectedAccounts.length > 0">
-                    <template x-for="t in selectedTargetList()" :key="'toggle-' + t.key">
-                        <button type="button"
-                                class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border transition-all duration-150 cursor-pointer"
-                                :class="(formatMismatch(t.fmt, t.accId) || ratioIssues(t.accId, t.fmt).length) ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-neutral-300 bg-white text-neutral-500 hover:text-neutral-700 hover:border-neutral-400'"
-                                :title="formatMismatch(t.fmt, t.accId)"
-                                @click="overrides[t.key] = true; $nextTick(() => triggerPreviewUpdate())"
-                                x-show="!overrides[t.key]">
-                            <svg x-show="!formatMismatch(t.fmt, t.accId) && !ratioIssues(t.accId, t.fmt).length" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                            <svg x-show="formatMismatch(t.fmt, t.accId) || ratioIssues(t.accId, t.fmt).length" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-                            <span x-text="cLabel('customize') + ' ' + targetLabel(t.accId, t.fmt)"></span>
-                        </button>
-                    </template>
-                </div>
-
                 {% comment %}
                 Per-platform customization: a caption (and title, where the
                 platform has one) that replaces the shared one for this channel
                 only, plus whatever else that platform alone can carry —
                 Facebook's place and feeling, Pinterest's board and link.
 
-                Opened on demand from the "Customize" chips above, so its fields
-                are absent from a save where it was never opened. A Pinterest card
-                also opens by itself while the pin can't be scheduled yet. Each group
-                carries its own hidden marker so the save can tell "left blank"
-                (clear it) from "not rendered" (leave it alone).
+                One card per chosen format, always on screen and folded to its
+                header (``expanded``): the fields are posted folded or not, and a
+                blank caption or title means "use the shared one". A card whose
+                format can't go out yet (cardProblem) turns amber with the reason
+                in its header; targetProblem holds publishing back meanwhile.
+                Facebook and Instagram extras carry their own hidden marker so
+                the save can tell "left blank" (clear it) from "not rendered"
+                (leave it alone).
                 {% endcomment %}
                 <template x-for="t in selectedTargetList()" :key="'override-' + t.key">
-                    <div class="border border-neutral-300 rounded-xl bg-white p-4"
-                         x-show="overrides[t.key] || false" x-transition
-                         x-effect="if (pinterestProblem(t.accId)) overrides[t.key] = true"
+                    <div class="border rounded-xl p-4 transition-colors"
+                         :class="cardProblem(t) ? 'border-amber-300 bg-amber-50/60' : 'border-neutral-300 bg-white'"
                          x-data="{
                              accId: t.accId,
                              placeId: platformExtras[t.accId]?.place_id || '',
@@ -756,343 +742,359 @@
                              storyDelivery: formatExtras[t.accId]?.story_delivery || '',
                              gbpCategory: formatExtras[t.accId]?.photo_category || 'ADDITIONAL',
                          }">
-                        <div class="flex items-center gap-2 mb-3">
-                            <span class="platform-icon w-5 h-5 rounded-[5px] flex items-center justify-center"
-                                  :class="'pi-' + (charLimits[t.accId]?.platform || '')"
-                                  x-html="platformIconSvg(charLimits[t.accId]?.platform || '')"></span>
-                            <span class="text-xs font-semibold text-neutral-700">
-                                <span x-text="targetLabel(t.accId, t.fmt)"></span> — {% translate "Customization" %}
-                            </span>
-                            <button type="button" class="ml-auto text-xs text-red-400 hover:text-red-500 cursor-pointer" @click="$el.closest('.rounded-xl').querySelectorAll('[name^=override_]').forEach(field => field.value = ''); overrides[t.key] = false; $nextTick(() => triggerPreviewUpdate())">{% translate "Remove override" %}</button>
+                        <div class="flex items-center gap-2" :class="expanded[t.key] ? 'mb-3' : ''">
+                            <button type="button" class="flex flex-1 min-w-0 items-center gap-2 text-left cursor-pointer"
+                                    :aria-expanded="!!expanded[t.key]"
+                                    @click="expanded[t.key] = !expanded[t.key]">
+                                <svg class="w-3.5 h-3.5 shrink-0 text-neutral-500 transition-transform" :class="expanded[t.key] ? 'rotate-90' : ''"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                <span class="platform-icon w-5 h-5 shrink-0 rounded-[5px] flex items-center justify-center"
+                                      :class="'pi-' + (charLimits[t.accId]?.platform || '')"
+                                      x-html="platformIconSvg(charLimits[t.accId]?.platform || '')"></span>
+                                <span class="min-w-0">
+                                    <span class="block text-xs font-semibold text-neutral-700 truncate">
+                                        <span x-text="targetLabel(t.accId, t.fmt)"></span> — {% translate "Customization" %}
+                                    </span>
+                                    <span x-show="cardProblem(t)" class="flex items-center gap-1 text-[11px] font-medium text-amber-700">
+                                        <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                                        <span class="truncate" x-text="cardProblem(t)"></span>
+                                    </span>
+                                </span>
+                            </button>
+                            <button type="button" x-show="expanded[t.key]" class="ml-auto shrink-0 text-xs text-red-400 hover:text-red-500 cursor-pointer" @click="$el.closest('.rounded-xl').querySelectorAll('[name^=override_]').forEach(field => field.value = ''); $nextTick(() => triggerPreviewUpdate())">{% translate "Remove override" %}</button>
                         </div>
+                        <div x-show="expanded[t.key]">
 
-                        <div x-show="formatMismatch(t.fmt, t.accId)" class="mb-3">
-                            <p class="text-[11px] font-medium text-amber-700" x-text="formatMismatch(t.fmt, t.accId)"></p>
-                            <button type="button" x-show="trimNeed(t.accId, t.fmt)" @click="openTrim(t.accId, t.fmt)" x-text="trimButtonLabel(t.accId, t.fmt)"
-                                    class="mt-2 px-3 py-1 rounded-full border border-brand-300 text-brand-800 text-xs font-semibold hover:bg-brand-50 cursor-pointer"></button>
-                        </div>
-
-                        <div x-show="ratioIssues(t.accId, t.fmt).length > 0" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
-                            <p class="text-[12px] font-semibold text-amber-800" x-text="ratioIssueText(t.accId, t.fmt)"></p>
-                            <p class="text-[11px] text-amber-700 mt-0.5">{% translate "The post may go out with black bars or be cropped by the platform. Adjust the crop of these media." %}</p>
-                            <button type="button" @click="openRatioFix(t.accId, t.fmt)"
-                                    class="mt-2 px-3 py-1 rounded-full border border-brand-300 text-brand-800 text-xs font-semibold hover:bg-brand-50 cursor-pointer">{% translate "Adjust" %}</button>
-                        </div>
-
-                        {% comment %}
-                        Story options. Rendered (hidden) even while the card is
-                        closed: the save reads them on every submit, and a
-                        missing field would clear the choice.
-                        {% endcomment %}
-                        <template x-if="t.fmt === 'story'">
-                            <div class="mb-3 space-y-1">
-                                <label class="flex items-center gap-2 text-sm text-neutral-800 cursor-pointer">
-                                    <input type="checkbox" class="rounded border-neutral-400 text-brand-700 focus:ring-brand-200"
-                                           :checked="storyDelivery === 'notify'"
-                                           @change="storyDelivery = $event.target.checked ? 'notify' : ''">
-                                    {% translate "Notify me to publish the Story by hand" %}
-                                </label>
-                                <input type="hidden" :name="'story_delivery_' + t.accId" :value="storyDelivery">
-                                <p class="text-[11px] text-neutral-500" x-show="storyDelivery === 'notify'">{% translate "Nothing is sent to the platform. At the scheduled time you get an e-mail and a notification with the media to download and the caption to copy, so you can publish from the app with music, stickers or polls." %}</p>
-                                <p class="text-[11px] text-neutral-500" x-show="storyDelivery !== 'notify'">{% translate "Stories disappear after 24 hours and are published without the caption. Use a vertical photo or video (9:16)." %}</p>
+                            <div x-show="formatMismatch(t.fmt, t.accId)" class="mb-3">
+                                <p class="text-[11px] font-medium text-amber-700" x-text="formatMismatch(t.fmt, t.accId)"></p>
+                                <button type="button" x-show="trimNeed(t.accId, t.fmt)" @click="openTrim(t.accId, t.fmt)" x-text="trimButtonLabel(t.accId, t.fmt)"
+                                        class="mt-2 px-3 py-1 rounded-full border border-brand-300 text-brand-800 text-xs font-semibold hover:bg-brand-50 cursor-pointer"></button>
                             </div>
-                        </template>
 
-                        <template x-if="t.fmt === 'profile_photo'">
-                            <div class="mb-3">
-                                <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Photo category" %}</label>
-                                <select :name="'gbp_photo_category_' + t.accId"
-                                        x-model="gbpCategory"
-                                        class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
-                                    <option value="ADDITIONAL">{% translate "Additional" %}</option>
-                                    <option value="EXTERIOR">{% translate "Exterior" %}</option>
-                                    <option value="INTERIOR">{% translate "Interior" %}</option>
-                                    <option value="PRODUCT">{% translate "Product" %}</option>
-                                    <option value="AT_WORK">{% translate "At work" %}</option>
-                                    <option value="FOOD_AND_DRINK">{% translate "Food and drink" %}</option>
-                                    <option value="MENU">{% translate "Menu" %}</option>
-                                    <option value="COMMON_AREA">{% translate "Common area" %}</option>
-                                    <option value="ROOMS">{% translate "Rooms" %}</option>
-                                    <option value="TEAMS">{% translate "Team" context "google business photo" %}</option>
-                                </select>
-                                <p class="text-[11px] text-neutral-500 mt-1">{% translate "Adds the image to the photos on your Business Profile instead of creating a post. The caption becomes the photo description." %}</p>
+                            <div x-show="ratioIssues(t.accId, t.fmt).length > 0" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+                                <p class="text-[12px] font-semibold text-amber-800" x-text="ratioIssueText(t.accId, t.fmt)"></p>
+                                <p class="text-[11px] text-amber-700 mt-0.5">{% translate "The post may go out with black bars or be cropped by the platform. Adjust the crop of these media." %}</p>
+                                <button type="button" @click="openRatioFix(t.accId, t.fmt)"
+                                        class="mt-2 px-3 py-1 rounded-full border border-brand-300 text-brand-800 text-xs font-semibold hover:bg-brand-50 cursor-pointer">{% translate "Adjust" %}</button>
                             </div>
-                        </template>
 
-                        <!-- Title override (only for platforms that need it) -->
-                        <template x-if="charLimits[accId]?.needs_title">
-                            <div class="mb-3">
-                                <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1"
-                                       x-text="(charLimits[accId]?.title_label || cLabel('title')) + ' — ' + cLabel('override-suffix')"></label>
-                                <input type="text" :name="'override_title_' + accId + '_' + t.fmt"
-                                       class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all"
-                                       :placeholder="cLabel('own-title')"
-                                       @input="debouncedPreviewUpdate()"
-                                       :maxlength="charLimits[accId]?.title_max_length || 255">
-                            </div>
-                        </template>
-                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Caption for this channel" %}</label>
-                        {% comment %}
-                        The preview reads override_caption_<id> off the form, so
-                        this has to announce its own edits the way the global
-                        caption does — otherwise the panel keeps showing the
-                        global text while this channel is being customized.
-                        {% endcomment %}
-                        <textarea :name="'override_caption_' + accId + '_' + t.fmt"
-                                  class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all resize-none"
-                                  style="font-family: system-ui, -apple-system, sans-serif;"
-                                  :placeholder="cLabel('own-caption')"
-                                  @input="debouncedPreviewUpdate()"
-                                  rows="3"></textarea>
+                            {% comment %}
+                            Story options. Rendered (hidden) even while the card is
+                            closed: the save reads them on every submit, and a
+                            missing field would clear the choice.
+                            {% endcomment %}
+                            <template x-if="t.fmt === 'story'">
+                                <div class="mb-3 space-y-1">
+                                    <label class="flex items-center gap-2 text-sm text-neutral-800 cursor-pointer">
+                                        <input type="checkbox" class="rounded border-neutral-400 text-brand-700 focus:ring-brand-200"
+                                               :checked="storyDelivery === 'notify'"
+                                               @change="storyDelivery = $event.target.checked ? 'notify' : ''">
+                                        {% translate "Notify me to publish the Story by hand" %}
+                                    </label>
+                                    <input type="hidden" :name="'story_delivery_' + t.accId" :value="storyDelivery">
+                                    <p class="text-[11px] text-neutral-500" x-show="storyDelivery === 'notify'">{% translate "Nothing is sent to the platform. At the scheduled time you get an e-mail and a notification with the media to download and the caption to copy, so you can publish from the app with music, stickers or polls." %}</p>
+                                    <p class="text-[11px] text-neutral-500" x-show="storyDelivery !== 'notify'">{% translate "Stories disappear after 24 hours and are published without the caption. Use a vertical photo or video (9:16)." %}</p>
+                                </div>
+                            </template>
 
-                        {% comment %}
-                        Facebook-only extras, account-wide: shown once, in the
-                        card of the first chosen format that can carry them
-                        (facebookExtrasFormat). Each field is on screen only
-                        where Facebook takes it: a place on a feed post without
-                        video and on a Reel, a feeling on that feed post only.
-                        The marker is what tells the save these fields were on
-                        screen, so an empty or absent field means "remove it"
-                        rather than "never asked".
-                        {% endcomment %}
-                        <template x-if="charLimits[accId]?.platform === 'facebook' && t.fmt === facebookExtrasFormat(accId)">
-                            <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3">
-                                <input type="hidden" :name="'facebook_custom_' + accId" value="1">
+                            <template x-if="t.fmt === 'profile_photo'">
+                                <div class="mb-3">
+                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Photo category" %}</label>
+                                    <select :name="'gbp_photo_category_' + t.accId"
+                                            x-model="gbpCategory"
+                                            class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                        <option value="ADDITIONAL">{% translate "Additional" %}</option>
+                                        <option value="EXTERIOR">{% translate "Exterior" %}</option>
+                                        <option value="INTERIOR">{% translate "Interior" %}</option>
+                                        <option value="PRODUCT">{% translate "Product" %}</option>
+                                        <option value="AT_WORK">{% translate "At work" %}</option>
+                                        <option value="FOOD_AND_DRINK">{% translate "Food and drink" %}</option>
+                                        <option value="MENU">{% translate "Menu" %}</option>
+                                        <option value="COMMON_AREA">{% translate "Common area" %}</option>
+                                        <option value="ROOMS">{% translate "Rooms" %}</option>
+                                        <option value="TEAMS">{% translate "Team" context "google business photo" %}</option>
+                                    </select>
+                                    <p class="text-[11px] text-neutral-500 mt-1">{% translate "Adds the image to the photos on your Business Profile instead of creating a post. The caption becomes the photo description." %}</p>
+                                </div>
+                            </template>
 
-                                <p x-show="hasFormat(accId, 'default') && firstMediaIsVideo" class="text-[11px] text-neutral-500">{% translate "Facebook doesn't take a location or a feeling on a feed video. A Reel takes the location." %}</p>
+                            <!-- Title override (only for platforms that need it) -->
+                            <template x-if="charLimits[accId]?.needs_title">
+                                <div class="mb-3">
+                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1"
+                                           x-text="(charLimits[accId]?.title_label || cLabel('title')) + (titleInCard(accId) ? '' : ' — ' + cLabel('override-suffix'))"></label>
+                                    <input type="text" :name="'override_title_' + accId + '_' + t.fmt"
+                                           class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all"
+                                           x-init="$el.value = targetOverrides[t.key]?.title || (titleInCard(accId) ? title : '')"
+                                           :placeholder="titleInCard(accId) ? cLabel('enter-title') : cLabel('own-title')"
+                                           @input="debouncedPreviewUpdate()"
+                                           :maxlength="charLimits[accId]?.title_max_length || 255">
+                                </div>
+                            </template>
+                            <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Caption for this channel" %}</label>
+                            {% comment %}
+                            The preview reads override_caption_<id> off the form, so
+                            this has to announce its own edits the way the global
+                            caption does — otherwise the panel keeps showing the
+                            global text while this channel is being customized.
+                            {% endcomment %}
+                            <textarea :name="'override_caption_' + accId + '_' + t.fmt"
+                                      class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all resize-none"
+                                      style="font-family: system-ui, -apple-system, sans-serif;"
+                                      :placeholder="cLabel('own-caption')"
+                                      x-init="$el.value = targetOverrides[t.key]?.caption || ''"
+                                      @input="debouncedPreviewUpdate()"
+                                      rows="3"></textarea>
 
-                                <template x-if="facebookTakesPlace(accId)">
+                            {% comment %}
+                            Facebook-only extras, account-wide: shown once, in the
+                            card of the first chosen format that can carry them
+                            (facebookExtrasFormat). Each field is on screen only
+                            where Facebook takes it: a place on a feed post without
+                            video and on a Reel, a feeling on that feed post only.
+                            The marker is what tells the save these fields were on
+                            screen, so an empty or absent field means "remove it"
+                            rather than "never asked".
+                            {% endcomment %}
+                            <template x-if="charLimits[accId]?.platform === 'facebook' && t.fmt === facebookExtrasFormat(accId)">
+                                <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3">
+                                    <input type="hidden" :name="'facebook_custom_' + accId" value="1">
+
+                                    <p x-show="hasFormat(accId, 'default') && firstMediaIsVideo" class="text-[11px] text-neutral-500">{% translate "Facebook doesn't take a location or a feeling on a feed video. A Reel takes the location." %}</p>
+
+                                    <template x-if="facebookTakesPlace(accId)">
+                                        <div>
+                                            {% include "composer/partials/_place_picker.html" with prefix="facebook" %}
+                                            <p class="text-[11px] text-neutral-500 mt-1">{% translate "Shown on the feed post and on Reels. Stories don't take a location." %}</p>
+                                        </div>
+                                    </template>
+
+                                    <template x-if="facebookTakesFeeling(accId)">
+                                        <div>
+                                            <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Feeling / activity" %}</label>
+                                            <select :name="'facebook_feeling_' + accId" x-model="feeling"
+                                                    class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                                <option value="">{% translate "None" %}</option>
+                                                {% for item in facebook_feelings %}
+                                                <option value="{{ item.id }}">{{ item.label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <p class="text-[11px] text-neutral-500 mt-1">{% translate "Feed post only: text, link or up to 10 photos." %}</p>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            {% comment %}
+                            Instagram extras, account-wide like the Facebook place:
+                            shown in the card of the account's first chosen format
+                            only, so the fields are posted once. The provider sends
+                            each one only where Instagram takes it, and the ones a
+                            Story can't carry (collaborators, location) stay off
+                            screen while Stories is the only format chosen.
+                            {% endcomment %}
+                            <template x-if="charLimits[accId]?.platform === 'instagram' && t.fmt === (selectedFormats[accId] || [])[0]">
+                                <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3">
+                                    <input type="hidden" :name="'instagram_custom_' + accId" value="1">
+                                    <template x-if="instagramBeyondStories(accId)">
+                                        <div>
+                                            <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Collaborators" %}</label>
+                                            <input type="text" :name="'instagram_collaborators_' + accId" x-model="igCollaborators"
+                                                   placeholder="{% translate '@profile1, @profile2' %}"
+                                                   class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                            <p class="text-[11px] text-neutral-500 mt-1">{% translate "Up to 3 profiles. Each gets an invite and, once accepted, the post shows on their profile too. Feed and Reels only." %}</p>
+                                        </div>
+                                    </template>
                                     <div>
-                                        {% include "composer/partials/_place_picker.html" with prefix="facebook" %}
-                                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "Shown on the feed post and on Reels. Stories don't take a location." %}</p>
-                                    </div>
-                                </template>
-
-                                <template x-if="facebookTakesFeeling(accId)">
-                                    <div>
-                                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Feeling / activity" %}</label>
-                                        <select :name="'facebook_feeling_' + accId" x-model="feeling"
-                                                class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
-                                            <option value="">{% translate "None" %}</option>
-                                            {% for item in facebook_feelings %}
-                                            <option value="{{ item.id }}">{{ item.label }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "Feed post only: text, link or up to 10 photos." %}</p>
-                                    </div>
-                                </template>
-                            </div>
-                        </template>
-
-                        {% comment %}
-                        Instagram extras, account-wide like the Facebook place:
-                        shown in the card of the account's first chosen format
-                        only, so the fields are posted once. The provider sends
-                        each one only where Instagram takes it, and the ones a
-                        Story can't carry (collaborators, location) stay off
-                        screen while Stories is the only format chosen.
-                        {% endcomment %}
-                        <template x-if="charLimits[accId]?.platform === 'instagram' && t.fmt === (selectedFormats[accId] || [])[0]">
-                            <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3">
-                                <input type="hidden" :name="'instagram_custom_' + accId" value="1">
-                                <template x-if="instagramBeyondStories(accId)">
-                                    <div>
-                                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Collaborators" %}</label>
-                                        <input type="text" :name="'instagram_collaborators_' + accId" x-model="igCollaborators"
+                                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Tag people" %}</label>
+                                        <input type="text" :name="'instagram_user_tags_' + accId" x-model="igUserTags"
                                                placeholder="{% translate '@profile1, @profile2' %}"
                                                class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
-                                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "Up to 3 profiles. Each gets an invite and, once accepted, the post shows on their profile too. Feed and Reels only." %}</p>
+                                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "Public profiles only. Tagged on the photo (the first one in a carousel), on Reels and on Stories." %}</p>
                                     </div>
-                                </template>
-                                <div>
-                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Tag people" %}</label>
-                                    <input type="text" :name="'instagram_user_tags_' + accId" x-model="igUserTags"
-                                           placeholder="{% translate '@profile1, @profile2' %}"
-                                           class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
-                                    <p class="text-[11px] text-neutral-500 mt-1">{% translate "Public profiles only. Tagged on the photo (the first one in a carousel), on Reels and on Stories." %}</p>
-                                </div>
-                                <template x-if="instagramBeyondStories(accId)">
-                                    <div>
-                                        {% include "composer/partials/_place_picker.html" with prefix="instagram" %}
-                                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "Shown on the feed post and on Reels. Stories don't take a location." %}</p>
-                                    </div>
-                                </template>
-                                <template x-if="(selectedFormats[accId] || []).includes('reel')">
-                                    <div class="space-y-3">
-                                        {% include "composer/partials/_video_cover_picker.html" with field="instagram_reel_cover_ms" %}
-                                        <label class="flex items-center gap-2 text-sm text-neutral-800 cursor-pointer">
-                                            <input type="checkbox" :name="'instagram_share_to_feed_' + accId" value="1" x-model="igShareToFeed"
-                                                   class="rounded border-neutral-400 text-brand-700 focus:ring-brand-200">
-                                            {% translate "Also show the Reel on the profile grid" %}
-                                        </label>
-                                    </div>
-                                </template>
-                            </div>
-                        </template>
-
-                        {% comment %}
-                        Pinterest options: the board every pin needs, plus the link,
-                        products and advanced settings. Shown in the card of the
-                        account's first chosen format, so the fields are posted once;
-                        rendered (hidden) while the card is closed, since the save
-                        reads them on every submit. The card opens by itself while
-                        the board or the media is missing (pinterestProblem).
-                        {% endcomment %}
-                        <template x-if="charLimits[accId]?.platform === 'pinterest' && t.fmt === (selectedFormats[accId] || [])[0]">
-                            <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3"
-                                 x-data="{
-                                     boards: [], boardsLoading: false, boardsLoaded: false, boardsError: '', createBoardUrl: '',
-                                     loadBoards() {
-                                         this.boardsLoading = true;
-                                         this.boardsError = '';
-                                         fetch(`/workspace/{{ workspace.id }}/compose/pinterest-boards/${accId}/`)
-                                             .then(r => r.json())
-                                             .then(data => { this.boards = data.boards || []; this.createBoardUrl = data.create_url || ''; this.boardsError = data.error || ''; this.boardsLoaded = !data.error; })
-                                             .catch(() => { this.boardsError = cLabel('pin-boards-failed'); })
-                                             .finally(() => { this.boardsLoading = false; });
-                                     },
-                                 }"
-                                 x-init="loadBoards()">
-                                <p x-show="!hasMediaAttached" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                                    <span class="font-semibold">{% translate "Pinterest needs an image or a video." %}</span>
-                                    {% translate "Add one to schedule this post, or deselect the account." %}
-                                </p>
-                                <!-- Select Board -->
-                                <div>
-                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">
-                                        {% translate "Select Board" %} <span class="text-red-400">*</span>
-                                    </label>
-                                    <select :name="'pin_board_id_' + accId"
-                                            @change="platformExtras[accId] = { ...(platformExtras[accId] || {}), board_id: $event.target.value }"
-                                            class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all"
-                                            :required="charLimits[accId]?.platform === 'pinterest' && selectedAccounts.includes(accId)">
-                                        <option value="">{% translate "Select a board…" %}</option>
-                                        <template x-for="board in boards" :key="board.id">
-                                            <option :value="board.id"
-                                                    :selected="platformExtras[accId]?.board_id === board.id"
-                                                    x-text="board.name"></option>
-                                        </template>
-                                    </select>
-                                    <p x-show="boardsLoading" class="text-[11px] text-neutral-500 mt-1">{% translate "Loading boards…" %}</p>
-                                    <p x-show="boardsError" class="text-[11px] text-red-500 mt-1" role="alert" x-text="boardsError"></p>
-                                    {% comment %}
-                                    No board yet: a link to the Pinterest profile, where "Create
-                                    board" lives, and a reload for when the person comes back.
-                                    {% endcomment %}
-                                    <div x-show="boardsLoaded && boards.length === 0" class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                                        <p class="text-[11px] text-red-400">{% translate "No boards found. Create a board on Pinterest first." %}</p>
-                                        <a :href="createBoardUrl" x-show="createBoardUrl" target="_blank" rel="noopener"
-                                           class="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 hover:text-brand-800">
-                                            {% translate "Create a board on Pinterest" %}
-                                            <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                                            <span class="sr-only">{% translate "(opens in a new tab)" %}</span>
-                                        </a>
-                                        <button type="button" @click="loadBoards()" :disabled="boardsLoading"
-                                                class="text-[11px] font-semibold text-neutral-600 hover:text-neutral-800 disabled:opacity-50 cursor-pointer">{% translate "Reload boards" %}</button>
-                                    </div>
-                                </div>
-                                <!-- Destination Link -->
-                                <div>
-                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Destination Link" %}</label>
-                                    <input type="url"
-                                           :name="'pin_link_url_' + accId"
-                                           :value="platformExtras[accId]?.link_url || ''"
-                                           placeholder="{% translate 'https://example.com/your-page' %}"
-                                           maxlength="2048"
-                                           class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
-                                    <p class="text-[11px] text-neutral-500 mt-1">{% translate "Where people go when they click the pin" %}</p>
-                                </div>
-                                <!-- Tag Products -->
-                                <div>
-                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Tag Products" %}</label>
-                                    <input type="text"
-                                           :name="'pin_tag_products_' + accId"
-                                           :value="platformExtras[accId]?.tag_products || ''"
-                                           placeholder="{% translate 'Product URLs or IDs (comma-separated)' %}"
-                                           class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
-                                    <p class="text-[11px] text-neutral-500 mt-1">{% translate "Requires a connected product catalog" %}</p>
-                                </div>
-                                <!-- Advanced -->
-                                <div class="border-t border-neutral-100 pt-3">
-                                    <button type="button"
-                                            class="text-xs font-semibold text-neutral-600 hover:text-neutral-800 flex items-center gap-1 cursor-pointer"
-                                            @click="advancedOpen[accId] = !advancedOpen[accId]">
-                                        <svg class="w-3 h-3 transition-transform"
-                                             :class="advancedOpen[accId] ? 'rotate-90' : ''"
-                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                                        </svg>
-                                        {% translate "Advanced" %}
-                                    </button>
-                                    <div x-show="advancedOpen[accId]" x-transition class="mt-3 space-y-3">
-                                        <!-- Allow Comments -->
-                                        <label class="flex items-start gap-2 cursor-pointer">
-                                            <input type="checkbox"
-                                                   :name="'pin_allow_comments_' + accId"
-                                                   value="true"
-                                                   :checked="platformExtras[accId]?.allow_comments !== false"
-                                                   class="w-4 h-4 mt-0.5 rounded border-neutral-400 text-brand-700 focus:ring-brand-200">
-                                            <span class="text-sm text-neutral-800">{% translate "Allow people to comment" %}</span>
-                                        </label>
-                                        <!-- Show Similar Products -->
-                                        <label class="flex items-start gap-2 cursor-pointer">
-                                            <input type="checkbox"
-                                                   :name="'pin_show_similar_' + accId"
-                                                   value="true"
-                                                   :checked="platformExtras[accId]?.show_similar_products !== false"
-                                                   class="w-4 h-4 mt-0.5 rounded border-neutral-400 text-brand-700 focus:ring-brand-200">
-                                            <span class="text-sm text-neutral-800">{% translate "Show similar products" %}</span>
-                                        </label>
-                                        <!-- Alt Text -->
+                                    <template x-if="instagramBeyondStories(accId)">
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Alt Text" %}</label>
-                                            <textarea :name="'pin_alt_text_' + accId"
-                                                      placeholder="{% translate 'Describe this pin for accessibility…' %}"
-                                                      maxlength="500"
-                                                      rows="2"
-                                                      class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all resize-none"
-                                                      x-init="$el.value = platformExtras[accId]?.alt_text || ''"></textarea>
+                                            {% include "composer/partials/_place_picker.html" with prefix="instagram" %}
+                                            <p class="text-[11px] text-neutral-500 mt-1">{% translate "Shown on the feed post and on Reels. Stories don't take a location." %}</p>
                                         </div>
-                                        <!-- Video Cover Image (only when video media is attached) -->
-                                        <template x-if="mediaItems && mediaItems.some(m => m.is_video)">
+                                    </template>
+                                    <template x-if="(selectedFormats[accId] || []).includes('reel')">
+                                        <div class="space-y-3">
+                                            {% include "composer/partials/_video_cover_picker.html" with field="instagram_reel_cover_ms" %}
+                                            <label class="flex items-center gap-2 text-sm text-neutral-800 cursor-pointer">
+                                                <input type="checkbox" :name="'instagram_share_to_feed_' + accId" value="1" x-model="igShareToFeed"
+                                                       class="rounded border-neutral-400 text-brand-700 focus:ring-brand-200">
+                                                {% translate "Also show the Reel on the profile grid" %}
+                                            </label>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            {% comment %}
+                            Pinterest options: the board every pin needs, plus the link,
+                            products and advanced settings. Shown in the card of the
+                            account's first chosen format, so the fields are posted once;
+                            rendered (hidden) while the card is folded, since the save
+                            reads them on every submit. The card turns amber while the
+                            board or the media is missing (pinterestProblem).
+                            {% endcomment %}
+                            <template x-if="charLimits[accId]?.platform === 'pinterest' && t.fmt === (selectedFormats[accId] || [])[0]">
+                                <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3"
+                                     x-data="{
+                                         boards: [], boardsLoading: false, boardsLoaded: false, boardsError: '', createBoardUrl: '',
+                                         loadBoards() {
+                                             this.boardsLoading = true;
+                                             this.boardsError = '';
+                                             fetch(`/workspace/{{ workspace.id }}/compose/pinterest-boards/${accId}/`)
+                                                 .then(r => r.json())
+                                                 .then(data => { this.boards = data.boards || []; this.createBoardUrl = data.create_url || ''; this.boardsError = data.error || ''; this.boardsLoaded = !data.error; })
+                                                 .catch(() => { this.boardsError = cLabel('pin-boards-failed'); })
+                                                 .finally(() => { this.boardsLoading = false; });
+                                         },
+                                     }"
+                                     x-init="loadBoards()">
+                                    <p x-show="!hasMediaAttached" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                                        <span class="font-semibold">{% translate "Pinterest needs an image or a video." %}</span>
+                                        {% translate "Add one to schedule this post, or deselect the account." %}
+                                    </p>
+                                    <!-- Select Board -->
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">
+                                            {% translate "Select Board" %} <span class="text-red-400">*</span>
+                                        </label>
+                                        <select :name="'pin_board_id_' + accId"
+                                                @change="platformExtras[accId] = { ...(platformExtras[accId] || {}), board_id: $event.target.value }"
+                                                class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all"
+                                                :required="charLimits[accId]?.platform === 'pinterest' && selectedAccounts.includes(accId)">
+                                            <option value="">{% translate "Select a board…" %}</option>
+                                            <template x-for="board in boards" :key="board.id">
+                                                <option :value="board.id"
+                                                        :selected="platformExtras[accId]?.board_id === board.id"
+                                                        x-text="board.name"></option>
+                                            </template>
+                                        </select>
+                                        <p x-show="boardsLoading" class="text-[11px] text-neutral-500 mt-1">{% translate "Loading boards…" %}</p>
+                                        <p x-show="boardsError" class="text-[11px] text-red-500 mt-1" role="alert" x-text="boardsError"></p>
+                                        {% comment %}
+                                        No board yet: a link to the Pinterest profile, where "Create
+                                        board" lives, and a reload for when the person comes back.
+                                        {% endcomment %}
+                                        <div x-show="boardsLoaded && boards.length === 0" class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                            <p class="text-[11px] text-red-400">{% translate "No boards found. Create a board on Pinterest first." %}</p>
+                                            <a :href="createBoardUrl" x-show="createBoardUrl" target="_blank" rel="noopener"
+                                               class="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 hover:text-brand-800">
+                                                {% translate "Create a board on Pinterest" %}
+                                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                                <span class="sr-only">{% translate "(opens in a new tab)" %}</span>
+                                            </a>
+                                            <button type="button" @click="loadBoards()" :disabled="boardsLoading"
+                                                    class="text-[11px] font-semibold text-neutral-600 hover:text-neutral-800 disabled:opacity-50 cursor-pointer">{% translate "Reload boards" %}</button>
+                                        </div>
+                                    </div>
+                                    <!-- Destination Link -->
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Destination Link" %}</label>
+                                        <input type="url"
+                                               :name="'pin_link_url_' + accId"
+                                               :value="platformExtras[accId]?.link_url || ''"
+                                               placeholder="{% translate 'https://example.com/your-page' %}"
+                                               maxlength="2048"
+                                               class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "Where people go when they click the pin" %}</p>
+                                    </div>
+                                    <!-- Tag Products -->
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Tag Products" %}</label>
+                                        <input type="text"
+                                               :name="'pin_tag_products_' + accId"
+                                               :value="platformExtras[accId]?.tag_products || ''"
+                                               placeholder="{% translate 'Product URLs or IDs (comma-separated)' %}"
+                                               class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all">
+                                        <p class="text-[11px] text-neutral-500 mt-1">{% translate "Requires a connected product catalog" %}</p>
+                                    </div>
+                                    <!-- Advanced -->
+                                    <div class="border-t border-neutral-100 pt-3">
+                                        <button type="button"
+                                                class="text-xs font-semibold text-neutral-600 hover:text-neutral-800 flex items-center gap-1 cursor-pointer"
+                                                @click="advancedOpen[accId] = !advancedOpen[accId]">
+                                            <svg class="w-3 h-3 transition-transform"
+                                                 :class="advancedOpen[accId] ? 'rotate-90' : ''"
+                                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                            </svg>
+                                            {% translate "Advanced" %}
+                                        </button>
+                                        <div x-show="advancedOpen[accId]" x-transition class="mt-3 space-y-3">
+                                            <!-- Allow Comments -->
+                                            <label class="flex items-start gap-2 cursor-pointer">
+                                                <input type="checkbox"
+                                                       :name="'pin_allow_comments_' + accId"
+                                                       value="true"
+                                                       :checked="platformExtras[accId]?.allow_comments !== false"
+                                                       class="w-4 h-4 mt-0.5 rounded border-neutral-400 text-brand-700 focus:ring-brand-200">
+                                                <span class="text-sm text-neutral-800">{% translate "Allow people to comment" %}</span>
+                                            </label>
+                                            <!-- Show Similar Products -->
+                                            <label class="flex items-start gap-2 cursor-pointer">
+                                                <input type="checkbox"
+                                                       :name="'pin_show_similar_' + accId"
+                                                       value="true"
+                                                       :checked="platformExtras[accId]?.show_similar_products !== false"
+                                                       class="w-4 h-4 mt-0.5 rounded border-neutral-400 text-brand-700 focus:ring-brand-200">
+                                                <span class="text-sm text-neutral-800">{% translate "Show similar products" %}</span>
+                                            </label>
+                                            <!-- Alt Text -->
                                             <div>
-                                                <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Video Cover Image" %}</label>
-                                                <input type="hidden"
-                                                       :name="'pin_cover_image_asset_id_' + accId"
-                                                       :value="platformExtras[accId]?.cover_image_asset_id || ''">
-                                                <div class="flex items-center gap-2">
-                                                    <template x-if="platformExtras[accId]?.cover_image_url">
-                                                        <img :src="platformExtras[accId].cover_image_url"
-                                                             class="w-20 h-12 object-cover rounded-md border border-neutral-300">
-                                                    </template>
-                                                    <button type="button"
-                                                            @click="openThumbnailPicker(accId)"
-                                                            class="text-xs font-medium px-3 py-1.5 rounded-lg border border-neutral-300 text-neutral-800 hover:border-brand-500 hover:text-brand-800 transition-all cursor-pointer">
-                                                        <span x-text="platformExtras[accId]?.cover_image_asset_id ? cLabel('change') : cLabel('pick-from-library')"></span>
-                                                    </button>
-                                                    <button type="button"
-                                                            @click="triggerThumbnailUpload(accId)"
-                                                            :disabled="thumbnailUploading[accId]"
-                                                            class="text-xs font-medium px-3 py-1.5 rounded-lg border border-neutral-300 text-neutral-800 hover:border-brand-500 hover:text-brand-800 transition-all disabled:opacity-50 cursor-pointer">
-                                                        <span x-text="thumbnailUploading[accId] ? cLabel('uploading') : cLabel('upload')"></span>
-                                                    </button>
-                                                    <input type="file"
-                                                           :data-thumb-upload-for="accId"
-                                                           accept="image/jpeg,image/png"
-                                                           class="hidden thumb-upload-input"
-                                                           @change="uploadThumbnail(accId, $event)">
-                                                    <button type="button"
-                                                            x-show="platformExtras[accId]?.cover_image_asset_id"
-                                                            @click="clearThumbnail(accId)"
-                                                            class="text-xs text-neutral-500 hover:text-red-500 cursor-pointer">{% translate "Remove" %}</button>
-                                                </div>
-                                                <p class="text-[11px] text-neutral-500 mt-1">{% translate "Required for video pins. PNG or JPG, same dimensions as video." %}</p>
+                                                <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Alt Text" %}</label>
+                                                <textarea :name="'pin_alt_text_' + accId"
+                                                          placeholder="{% translate 'Describe this pin for accessibility…' %}"
+                                                          maxlength="500"
+                                                          rows="2"
+                                                          class="w-full text-sm px-3 py-2 rounded-lg border border-neutral-300 bg-white outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-100 transition-all resize-none"
+                                                          x-init="$el.value = platformExtras[accId]?.alt_text || ''"></textarea>
                                             </div>
-                                        </template>
+                                            <!-- Video Cover Image (only when video media is attached) -->
+                                            <template x-if="mediaItems && mediaItems.some(m => m.is_video)">
+                                                <div>
+                                                    <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{% translate "Video Cover Image" %}</label>
+                                                    <input type="hidden"
+                                                           :name="'pin_cover_image_asset_id_' + accId"
+                                                           :value="platformExtras[accId]?.cover_image_asset_id || ''">
+                                                    <div class="flex items-center gap-2">
+                                                        <template x-if="platformExtras[accId]?.cover_image_url">
+                                                            <img :src="platformExtras[accId].cover_image_url"
+                                                                 class="w-20 h-12 object-cover rounded-md border border-neutral-300">
+                                                        </template>
+                                                        <button type="button"
+                                                                @click="openThumbnailPicker(accId)"
+                                                                class="text-xs font-medium px-3 py-1.5 rounded-lg border border-neutral-300 text-neutral-800 hover:border-brand-500 hover:text-brand-800 transition-all cursor-pointer">
+                                                            <span x-text="platformExtras[accId]?.cover_image_asset_id ? cLabel('change') : cLabel('pick-from-library')"></span>
+                                                        </button>
+                                                        <button type="button"
+                                                                @click="triggerThumbnailUpload(accId)"
+                                                                :disabled="thumbnailUploading[accId]"
+                                                                class="text-xs font-medium px-3 py-1.5 rounded-lg border border-neutral-300 text-neutral-800 hover:border-brand-500 hover:text-brand-800 transition-all disabled:opacity-50 cursor-pointer">
+                                                            <span x-text="thumbnailUploading[accId] ? cLabel('uploading') : cLabel('upload')"></span>
+                                                        </button>
+                                                        <input type="file"
+                                                               :data-thumb-upload-for="accId"
+                                                               accept="image/jpeg,image/png"
+                                                               class="hidden thumb-upload-input"
+                                                               @change="uploadThumbnail(accId, $event)">
+                                                        <button type="button"
+                                                                x-show="platformExtras[accId]?.cover_image_asset_id"
+                                                                @click="clearThumbnail(accId)"
+                                                                class="text-xs text-neutral-500 hover:text-red-500 cursor-pointer">{% translate "Remove" %}</button>
+                                                    </div>
+                                                    <p class="text-[11px] text-neutral-500 mt-1">{% translate "Required for video pins. PNG or JPG, same dimensions as video." %}</p>
+                                                </div>
+                                            </template>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </template>
+                            </template>
+                        </div>
                     </div>
                 </template>
 
@@ -2480,7 +2482,6 @@
 {% translate "override" as lbl_c_override_suffix %}
 {% translate "Own title for this channel…" as lbl_c_own_title %}
 {% translate "Own caption for this channel…" as lbl_c_own_caption %}
-{% translate "Customize" as lbl_c_customize %}
 {% translate "Internal" as lbl_c_tag_kind_internal %}
 {% translate "Hashtag" as lbl_c_tag_kind_hashtag %}
 {% translate "Mention" as lbl_c_tag_kind_mention %}
@@ -2596,7 +2597,6 @@
 {{ lbl_c_override_suffix|json_script:"c-override-suffix" }}
 {{ lbl_c_own_title|json_script:"c-own-title" }}
 {{ lbl_c_own_caption|json_script:"c-own-caption" }}
-{{ lbl_c_customize|json_script:"c-customize" }}
 {{ lbl_c_tag_kind_internal|json_script:"c-tag-kind-internal" }}
 {{ lbl_c_tag_kind_hashtag|json_script:"c-tag-kind-hashtag" }}
 {{ lbl_c_tag_kind_mention|json_script:"c-tag-kind-mention" }}
@@ -2660,6 +2660,7 @@ function cLabel(id) {
 {{ char_limits|json_script:"composer-char-limits" }}
 {{ automation_targets|json_script:"composer-automation-targets" }}
 {{ platform_extras|json_script:"composer-platform-extras" }}
+{{ target_overrides|json_script:"composer-target-overrides" }}
 {{ selected_formats|json_script:"composer-selected-formats" }}
 {{ format_extras|json_script:"composer-format-extras" }}
 {{ format_media|json_script:"composer-format-media" }}
@@ -2674,9 +2675,13 @@ function composerApp() {
         caption: '{{ form.caption.value|default:""|escapejs }}',
         selectedAccounts: JSON.parse(document.getElementById('composer-selected-accounts').textContent),
         charLimits: JSON.parse(document.getElementById('composer-char-limits').textContent),
-        overrides: {},
         advancedOpen: {},
         platformExtras: JSON.parse(document.getElementById('composer-platform-extras').textContent) || {},
+        // {"<account>:<format>": {title, caption}}: what each format was
+        // customized with when the post was saved. Its cards open filled.
+        targetOverrides: JSON.parse(document.getElementById('composer-target-overrides').textContent) || {},
+        // {"<account>:<format>": true} for a customization card unfolded.
+        expanded: {},
         // {accountId: [format, ...]} — which formats of each selected account
         // the post goes out as. selectedAccounts stays the list of accounts
         // with at least one, so every per-account panel keeps working on it.
@@ -2783,21 +2788,23 @@ function composerApp() {
         },
 
         // Computed-like getters for title field visibility
+        // Pinterest's title is asked in its customization card only (the
+        // card opens by itself), so the shared field is for the others.
+        titleInCard(accId) {
+            return this.charLimits[accId]?.platform === 'pinterest';
+        },
+        sharedTitleAccounts() {
+            return this.selectedAccounts.filter(id => this.charLimits[id]?.needs_title && !this.titleInCard(id));
+        },
         get anyPlatformNeedsTitle() {
-            return this.selectedAccounts.some(id => this.charLimits[id]?.needs_title);
+            return this.sharedTitleAccounts().length > 0;
         },
         get titleMaxLength() {
-            const lengths = this.selectedAccounts
-                .map(id => this.charLimits[id])
-                .filter(c => c?.needs_title)
-                .map(c => c.title_max_length);
+            const lengths = this.sharedTitleAccounts().map(id => this.charLimits[id].title_max_length);
             return lengths.length ? Math.min(...lengths) : 100;
         },
         get titleLabel() {
-            const labels = this.selectedAccounts
-                .map(id => this.charLimits[id])
-                .filter(c => c?.needs_title)
-                .map(c => c.title_label);
+            const labels = this.sharedTitleAccounts().map(id => this.charLimits[id].title_label);
             // If multiple platforms need title, use generic "Title"; otherwise use platform-specific label
             if (labels.length === 1) return labels[0];
             return cLabel('title');
@@ -2868,9 +2875,7 @@ function composerApp() {
             this.selectedAccounts.forEach(id => {
                 if (!(this.selectedFormats[id] || []).length) this.selectedFormats[id] = ['default'];
             });
-            // Initialize overrides map
             this.selectedAccounts.forEach(id => {
-                this.overrides[id] = false;
                 this.advancedOpen[id] = false;
                 if (!this.platformExtras[id]) this.platformExtras[id] = {};
             });
@@ -3327,15 +3332,20 @@ function composerApp() {
         // "<format>: <reason>", or ''. Holds Schedule and Publish now back.
         targetProblem() {
             for (const t of this.selectedTargetList()) {
-                const reason = this.formatMismatch(t.fmt, t.accId) || this.pinterestProblem(t.accId);
+                const reason = this.cardProblem(t);
                 if (reason) return this.targetLabel(t.accId, t.fmt) + ': ' + reason;
             }
             return '';
         },
+        // Why this chosen format can't go out yet, or '': its card turns amber
+        // with this reason until it is fixed or the format unpicked.
+        cardProblem(t) {
+            return this.formatMismatch(t.fmt, t.accId) || this.pinterestProblem(t.accId);
+        },
         // What a Pinterest account still needs before its pin can be
         // scheduled, or ''. Mirrors the server's checks (requires_media and
         // the board in composer.services.publish_blocker); its customization
-        // card opens by itself while this is not empty.
+        // card turns amber while this is not empty.
         pinterestProblem(accId) {
             if (this.charLimits[accId]?.platform !== 'pinterest') return '';
             if (!this.hasMediaAttached) return cLabel('pin-media');
@@ -3398,7 +3408,6 @@ function composerApp() {
             const idx = this.selectedAccounts.indexOf(id);
             if (idx > -1) {
                 this.selectedAccounts.splice(idx, 1);
-                delete this.overrides[id];
                 delete this.advancedOpen[id];
                 this.selectedFormats = { ...this.selectedFormats, [id]: [] };
             } else {
@@ -3406,7 +3415,6 @@ function composerApp() {
                     this.selectedFormats = { ...this.selectedFormats, [id]: ['default'] };
                 }
                 this.selectedAccounts.push(id);
-                this.overrides[id] = false;
                 this.advancedOpen[id] = false;
                 if (!this.platformExtras[id]) this.platformExtras[id] = {};
             }

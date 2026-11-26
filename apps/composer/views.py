@@ -1114,6 +1114,17 @@ def compose(request, workspace_id, post_id=None):
         platform_extras = {}
         for pp in sorted(platform_post_list, key=lambda p: p.format != PlatformPost.Format.DEFAULT):
             platform_extras.setdefault(str(pp.social_account_id), pp.platform_extra or {})
+        # The caption and title each format was customized with, so the
+        # Customize cards open filled instead of blank (a blank one clears
+        # the customization on save).
+        target_overrides = {
+            f"{pp.social_account_id}:{pp.format}": {
+                "title": pp.platform_specific_title or "",
+                "caption": pp.platform_specific_caption or "",
+            }
+            for pp in scoped_platform_posts
+            if pp.platform_specific_title or pp.platform_specific_caption
+        }
         replacements = format_media_replacements(scoped_platform_posts)
         for pp in scoped_platform_posts:
             for source_id, asset in replacements.get(pp.pk, {}).items():
@@ -1170,6 +1181,7 @@ def compose(request, workspace_id, post_id=None):
         format_media = {}
         media_attachments = []
         platform_extras = {}
+        target_overrides = {}
 
     # Clear any stale pending media from previous compose sessions.
     # Each compose page load starts fresh; the upload flow re-populates
@@ -1390,6 +1402,7 @@ def compose(request, workspace_id, post_id=None):
         # the crops a format publishes instead of the attachment.
         "format_media": format_media,
         "platform_extras": platform_extras,
+        "target_overrides": target_overrides,
         "media_attachments": media_attachments,
         "media_items": media_items,
         **_facebook_grid_context(media_items),
