@@ -1166,3 +1166,53 @@ def test_an_over_long_sender_name_does_not_end_the_poll(connected_account, user)
     titles = Notification.objects.filter(user=user).values_list("title", flat=True)
     assert len(titles) == 3
     assert max(len(title) for title in titles) <= 255
+
+
+def _instagram_account(workspace):
+    return SocialAccount.objects.create(
+        workspace=workspace,
+        platform="instagram",
+        account_platform_id="ig-still-there",
+        account_name="Instagram Still There",
+        oauth_access_token="instagram-token",
+        connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+    )
+
+
+def _remove(account):
+    SocialAccount.objects.filter(pk=account.pk).delete()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("removed", ["before_reading", "after_reading"])
+def test_an_account_removed_during_the_cycle_is_skipped_quietly(workspace, caplog, removed):
+    """Disconnecting an account while a pass runs is not an error, and the pass goes on."""
+    youtube = _youtube_account(workspace, expires_in=timedelta(minutes=50))
+    instagram = _instagram_account(workspace)
+    youtube_provider = MagicMock()
+    instagram_provider = MagicMock()
+    instagram_provider.get_messages.return_value = [_msg("still-polled")]
+
+    def youtube_messages(**kwargs):
+        _remove(youtube)
+        return []
+
+    def provider_for(platform, *args, **kwargs):
+        if platform == "youtube" and removed == "before_reading":
+            _remove(youtube)
+        return {"youtube": youtube_provider, "instagram": instagram_provider}[platform]
+
+    if removed == "after_reading":
+        youtube_provider.get_messages.side_effect = youtube_messages
+
+    with (
+        patch("apps.publisher.engine._resolve_publish_credentials", return_value={}),
+        patch("apps.inbox.tasks.get_provider", side_effect=provider_for),
+        patch.object(InboxSyncEngine, "_notify_new_message"),
+        caplog.at_level("INFO", logger="apps.inbox.tasks"),
+    ):
+        InboxSyncEngine().sync_all()
+
+    assert not [r for r in caplog.records if r.levelname in ("ERROR", "CRITICAL")]
+    assert "removed during the cycle" in caplog.text
+    assert InboxMessage.objects.filter(social_account=instagram, platform_message_id="still-polled").exists()

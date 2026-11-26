@@ -337,6 +337,12 @@ class InboxSyncEngine:
         elif deep or (imported and account.inbox_last_deep_sweep_at is None):
             account.inbox_last_deep_sweep_at = started_at or now
             fields.append("inbox_last_deep_sweep_at")
+        if not SocialAccount.objects.filter(pk=account.pk).exists():
+            # Disconnected while it was being polled: a save with update_fields
+            # would raise (no row to update), for an account with nothing left
+            # to record.
+            logger.info("Inbox sync skipped account %s: removed during the cycle", account.id)
+            return
         account.save(update_fields=[*fields, "updated_at"])
 
     def _sync_account(self, account, *, quota_cache=None, spend=None, budget=None):
@@ -430,6 +436,11 @@ class InboxSyncEngine:
             else:
                 messages = provider.get_messages(access_token=account.oauth_access_token, since=since)
         except NotImplementedError:
+            return
+        except SocialAccount.DoesNotExist:
+            # Disconnected while this pass was running (the accounts are read
+            # when it starts): nothing left to poll or to mark as polled.
+            logger.info("Inbox sync skipped account %s: removed during the cycle", account.id)
             return
         except QuotaExceededError as exc:
             # Must precede ProviderError: QuotaExceededError subclasses
