@@ -7,10 +7,13 @@ The copy comes from apps/social_accounts/catalog.py. Open while the page's
 Alpine state ``guide`` holds this platform.
 Context: ``platform`` (a row of ``available_platforms``, with ``guide`` and ``flow``), ``workspace_id``.
 A platform that does not connect through social_accounts:connect (Meta Ads)
-carries its own ``connect_url``.
+carries its own ``connect_url``. A platform connected by a form of our own
+(``flow`` "form") shows that form in a second step of this same modal
+(``step``, back to "guide" whenever the modal closes).
 {% endcomment %}
 <div x-show="guide === '{{ platform.value }}'" x-cloak class="modal-overlay" role="dialog" aria-modal="true"
      aria-labelledby="connect-guide-title-{{ platform.value }}"
+     x-data="{ step: 'guide' }" x-effect="if (guide !== '{{ platform.value }}') step = 'guide'"
      @click.self="guide = null" @keydown.escape.window="guide = null">
     <div class="modal-panel is-lg">
         <button type="button" class="modal-close" @click="guide = null" aria-label="{% translate 'Close' %}">
@@ -20,36 +23,56 @@ carries its own ``connect_url``.
             {% include "social_accounts/partials/_platform_tile.html" with platform=platform.value %}
             <div id="connect-guide-title-{{ platform.value }}" class="modal-title">{% blocktranslate with name=platform.label %}Connect {{ name }}{% endblocktranslate %}</div>
         </div>
-        <div class="modal-body">
-            <ol class="space-y-4">
-                {% for title, detail in platform.guide.steps %}
-                <li class="flex items-start gap-3">
-                    <span class="w-7 h-7 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-semibold flex-shrink-0" aria-hidden="true">{{ forloop.counter }}</span>
-                    <div class="min-w-0">
-                        <div class="text-sm font-semibold text-neutral-950">{{ title }}</div>
-                        <p class="text-sm text-neutral-600 mt-0.5">{{ detail }}</p>
-                    </div>
-                </li>
-                {% endfor %}
-            </ol>
-            {% if platform.guide.note %}
-            <p class="alert-info text-sm">{{ platform.guide.note }}</p>
-            {% endif %}
-            {% if platform.flow != "form" %}
-            <p class="text-xs text-neutral-500">{% blocktranslate with name=platform.label %}{{ name }} opens in a small window. If nothing opens, allow pop-ups for this site and try again.{% endblocktranslate %}</p>
-            {% endif %}
+        <div x-show="step === 'guide'">
+            <div class="modal-body">
+                {% if platform.guide.intro %}
+                <p class="text-sm text-neutral-600">{{ platform.guide.intro }}</p>
+                {% endif %}
+                <ol class="space-y-4">
+                    {% for title, detail in platform.guide.steps %}
+                    <li class="flex items-start gap-3">
+                        <span class="w-7 h-7 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-semibold flex-shrink-0" aria-hidden="true">{{ forloop.counter }}</span>
+                        <div class="min-w-0">
+                            <div class="text-sm font-semibold text-neutral-950">{{ title }}</div>
+                            <p class="text-sm text-neutral-600 mt-0.5">{{ detail }}</p>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% if platform.guide.note %}
+                <p class="alert-info text-sm">{{ platform.guide.note }}</p>
+                {% endif %}
+                {% if platform.flow != "form" %}
+                <p class="text-xs text-neutral-500">{% blocktranslate with name=platform.label %}{{ name }} opens in a small window. If nothing opens, allow pop-ups for this site and try again.{% endblocktranslate %}</p>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                {% if platform.guide.site %}
+                <a href="{{ platform.guide.site }}" target="_blank" rel="noopener noreferrer" class="btn-link mr-auto px-0 gap-1.5 hover:underline hover:bg-transparent">
+                    {% translate "Learn more on the official site" %}
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    <span class="sr-only">{% translate "(opens in a new tab)" %}</span>
+                </a>
+                {% endif %}
+                <button type="button" class="btn-ghost" @click="guide = null">{% translate "Cancel" %}</button>
+                {% if platform.flow == "whatsapp" %}
+                <button type="button" class="btn-brand" data-whatsapp-signup @click="guide = null">{% translate "Continue" %}</button>
+                {% elif platform.flow == "form" %}
+                <button type="button" class="btn-brand"
+                        @click="step = 'form'; $nextTick(() => $root.querySelector('form input:not([type=hidden])')?.focus())">{% translate "Continue" %}</button>
+                {% else %}
+                <form method="post" action="{% if platform.connect_url %}{{ platform.connect_url }}{% else %}{% url 'social_accounts:connect' workspace_id=workspace_id %}{% endif %}" {% if platform.flow == "oauth" %}data-oauth-popup{% endif %} @submit="guide = null">
+                    {% csrf_token %}
+                    <input type="hidden" name="platform" value="{{ platform.value }}">
+                    <button type="submit" class="btn-brand">{% translate "Continue" %}</button>
+                </form>
+                {% endif %}
+            </div>
         </div>
-        <div class="modal-footer">
-            <button type="button" class="btn-ghost" @click="guide = null">{% translate "Cancel" %}</button>
-            {% if platform.flow == "whatsapp" %}
-            <button type="button" class="btn-brand" data-whatsapp-signup @click="guide = null">{% translate "Continue" %}</button>
-            {% else %}
-            <form method="post" action="{% if platform.connect_url %}{{ platform.connect_url }}{% else %}{% url 'social_accounts:connect' workspace_id=workspace_id %}{% endif %}" {% if platform.flow == "oauth" %}data-oauth-popup{% endif %} @submit="guide = null">
-                {% csrf_token %}
-                <input type="hidden" name="platform" value="{{ platform.value }}">
-                <button type="submit" class="btn-brand">{% translate "Continue" %}</button>
-            </form>
-            {% endif %}
+        {% if platform.flow == "form" %}
+        <div x-show="step === 'form'" x-cloak>
+            {% include "social_accounts/partials/_connect_form.html" with platform=platform.value workspace_id=workspace_id %}
         </div>
+        {% endif %}
     </div>
 </div>

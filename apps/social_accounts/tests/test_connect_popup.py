@@ -133,13 +133,155 @@ def test_the_page_offers_the_guide_and_posts_the_connect_into_the_popup(manager,
     assert "guide = 'linkedin_personal'" in page
 
 
-def test_every_guide_has_three_steps_and_form_platforms_have_none():
-    for platform in ("facebook", "instagram", "instagram_login", "whatsapp", "linkedin_company", "google_business"):
+def test_mastodon_opens_the_guide_first_and_its_form_inside_the_same_modal(manager, workspace):
+    page = manager.get(reverse("social_accounts:list", kwargs={"workspace_id": workspace.id})).content.decode()
+
+    assert "guide = 'mastodon'" in page
+    assert "Mastodon is a social network similar to X" in page
+    guide = page[page.index("connect-guide-title-mastodon") :]
+    guide = guide[: guide.index("</form>")]
+    assert "step = 'form'" in guide
+    connect_url = reverse("social_accounts:connect_mastodon", kwargs={"workspace_id": workspace.id})
+    assert f'hx-post="{connect_url}"' in guide
+    assert 'name="instance_url" value="mastodon.social"' in guide
+    assert ':disabled="!other"' in guide
+    assert "data-oauth-popup" in guide
+    assert 'href="https://joinmastodon.org/pt-BR" target="_blank" rel="noopener noreferrer"' in guide
+
+
+def _htmx_post(client, url, data):
+    return client.post(url, data, HTTP_HX_REQUEST="true")
+
+
+def test_a_refused_form_connect_comes_back_inside_the_modal(manager, workspace):
+    url = reverse("social_accounts:connect_mastodon", kwargs={"workspace_id": workspace.id})
+
+    response = _htmx_post(manager, url, {"instance_url": ""})
+
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert "Instance URL is required." in body
+    assert f'hx-post="{url}"' in body
+    assert "<html" not in body
+
+
+def test_mastodon_from_the_modal_goes_on_to_its_server(manager, workspace):
+    from apps.social_accounts.models import MastodonAppRegistration
+
+    MastodonAppRegistration.objects.create(
+        instance_url="https://mastodon.example", client_id="cid", client_secret="secret"
+    )
+    url = reverse("social_accounts:connect_mastodon", kwargs={"workspace_id": workspace.id})
+
+    with patch("apps.social_accounts.views._is_safe_url", return_value=True):
+        response = _htmx_post(manager, url, {"instance_url": "@someone@mastodon.example"})
+
+    assert response.status_code == 204
+    assert response["HX-Redirect"].startswith("https://mastodon.example/oauth/authorize?")
+
+
+def test_mastodon_in_a_popup_hands_its_server_to_the_window_and_finishes_there(manager, workspace, user):
+    import json
+
+    from apps.social_accounts.models import MastodonAppRegistration
+
+    MastodonAppRegistration.objects.create(
+        instance_url="https://mastodon.example", client_id="cid", client_secret="secret"
+    )
+    url = reverse("social_accounts:connect_mastodon", kwargs={"workspace_id": workspace.id})
+
+    with patch("apps.social_accounts.views._is_safe_url", return_value=True):
+        response = _htmx_post(manager, url, {"instance_url": "mastodon.example", "popup": "1"})
+
+    assert response.status_code == 204
+    assert "HX-Redirect" not in response
+    target = json.loads(response["HX-Trigger"])["openConnectPopup"]["url"]
+    assert target.startswith("https://mastodon.example/oauth/authorize?")
+    assert manager.session[OAUTH_POPUP_KEY] is True
+
+
+def test_devto_from_the_modal_connects_and_reloads_the_list(manager, workspace):
+    from apps.social_accounts.models import SocialAccount
+
+    provider = MagicMock()
+    provider.get_profile.return_value = AccountProfile(platform_id="dev-1", name="Dev Person")
+    url = reverse("social_accounts:connect_devto", kwargs={"workspace_id": workspace.id})
+
+    with patch("apps.social_accounts.views._get_provider_for_platform", return_value=provider):
+        response = _htmx_post(manager, url, {"api_key": "key"})
+
+    assert response.status_code == 204
+    assert response["HX-Redirect"] == reverse("social_accounts:list", kwargs={"workspace_id": workspace.id})
+    assert SocialAccount.objects.filter(workspace=workspace, platform="devto", account_platform_id="dev-1").exists()
+
+
+def test_a_devto_key_the_platform_refuses_is_said_inside_the_modal(manager, workspace):
+    provider = MagicMock()
+    provider.get_profile.side_effect = RuntimeError("401")
+    url = reverse("social_accounts:connect_devto", kwargs={"workspace_id": workspace.id})
+
+    with patch("apps.social_accounts.views._get_provider_for_platform", return_value=provider):
+        response = _htmx_post(manager, url, {"api_key": "wrong"})
+
+    assert response.status_code == 200
+    assert "Failed to connect DEV.to account. Check your API key." in response.content.decode()
+
+
+@pytest.mark.parametrize(
+    ("data", "signed_in_as"),
+    [
+        ({"username": "@someone"}, "someone.bsky.social"),
+        ({"username": "someone.bsky.social"}, "someone.bsky.social"),
+        ({"handle": "brand.com"}, "brand.com"),
+    ],
+)
+def test_bluesky_takes_a_bsky_social_username_or_a_full_handle(manager, workspace, data, signed_in_as):
+    provider = MagicMock()
+    provider.create_session.return_value = OAuthTokens(access_token="token")
+    provider.get_profile.return_value = AccountProfile(platform_id="did:plc:1", name="Someone")
+    provider.pds_url = "https://bsky.social"
+    url = reverse("social_accounts:connect_bluesky", kwargs={"workspace_id": workspace.id})
+
+    with patch("apps.social_accounts.views._get_provider_for_platform", return_value=provider):
+        response = _htmx_post(manager, url, {**data, "app_password": "xxxx-xxxx-xxxx-xxxx"})
+
+    assert response.status_code == 204
+    provider.create_session.assert_called_once_with(signed_in_as, "xxxx-xxxx-xxxx-xxxx")
+
+
+def test_a_refused_bluesky_username_reopens_the_bsky_social_option(manager, workspace):
+    provider = MagicMock()
+    provider.create_session.side_effect = RuntimeError("401")
+    url = reverse("social_accounts:connect_bluesky", kwargs={"workspace_id": workspace.id})
+
+    with patch("apps.social_accounts.views._get_provider_for_platform", return_value=provider):
+        response = _htmx_post(manager, url, {"username": "someone", "app_password": "wrong"})
+
+    body = response.content.decode()
+    assert "Failed to connect Bluesky account." in body
+    assert "mode: 'bsky'" in body
+    assert 'value="someone"' in body
+
+
+def test_every_guide_has_three_steps_and_form_platforms_explain_what_they_are():
+    for platform in (
+        "facebook",
+        "instagram",
+        "instagram_login",
+        "whatsapp",
+        "linkedin_company",
+        "google_business",
+        "bluesky",
+        "mastodon",
+        "devto",
+    ):
         guide = connect_guide(platform)
         assert len(guide["steps"]) == 3, platform
         assert all(str(title) and str(detail) for title, detail in guide["steps"]), platform
     for platform in ("bluesky", "mastodon", "devto"):
-        assert connect_guide(platform) is None
+        assert str(connect_guide(platform)["intro"])
         assert connect_flow(platform) == "form"
+    for platform in ("facebook", "linkedin_personal", "mastodon", "devto", "meta_ads"):
+        assert connect_guide(platform)["site"].startswith("https://"), platform
     assert connect_flow("whatsapp") == "whatsapp"
     assert connect_flow("facebook") == "oauth"

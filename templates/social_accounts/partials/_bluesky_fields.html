@@ -1,0 +1,36 @@
+{% load i18n %}
+{% comment %}
+Bluesky's connect fields, shared by its own page and the connect guide's form.
+Context: ``values`` (optional), what was typed before a refused attempt;
+``in_chooser`` inside the guide, where Alpine ``mode`` is "bsky" (only the
+username, the view adds ".bsky.social") or "custom" (a full handle on the
+person's own domain). The field of the other mode is disabled, so it is not
+sent.
+{% endcomment %}
+{% if in_chooser %}
+<div x-show="mode === 'bsky'">
+    <label for="bluesky-username" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Username" %}</label>
+    <div class="flex items-stretch">
+        <input type="text" id="bluesky-username" name="username" value="{{ values.username|default:'' }}" placeholder="{% translate 'yourname' %}" required autocomplete="off"
+               class="form-input-styled rounded-r-none" x-ref="username" :disabled="mode !== 'bsky'">
+        <span class="inline-flex items-center px-3 text-sm text-neutral-600 border-[1.5px] border-l-0 border-neutral-300 rounded-r-xl bg-neutral-50">.bsky.social</span>
+    </div>
+</div>
+<div x-show="mode === 'custom'" x-cloak>
+    <label for="bluesky-handle" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Handle" %}</label>
+    <input type="text" id="bluesky-handle" name="handle" value="{{ values.handle|default:'' }}" placeholder="yourcompany.com" required autocomplete="off"
+           class="form-input-styled" x-ref="handle" :disabled="mode !== 'custom'">
+    <p class="text-xs text-neutral-500 mt-1">{% translate "Your full handle, which is your own domain." %}</p>
+</div>
+{% else %}
+<div>
+    <label for="bluesky-handle" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Handle" %}</label>
+    <input type="text" id="bluesky-handle" name="handle" value="{{ values.handle|default:'' }}" placeholder="yourname.bsky.social" required autocomplete="off" class="form-input-styled">
+    <p class="text-xs text-neutral-500 mt-1">{% translate "Your full Bluesky handle including domain" %}</p>
+</div>
+{% endif %}
+<div>
+    <label for="bluesky-app-password" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "App Password" %}</label>
+    <input type="password" id="bluesky-app-password" name="app_password" placeholder="xxxx-xxxx-xxxx-xxxx" required autocomplete="off" class="form-input-styled">
+    <p class="text-xs text-neutral-500 mt-1">{% translate "Generate one in Bluesky at Settings → Privacy and Security → App Passwords" %}</p>
+</div>

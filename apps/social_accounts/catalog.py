@@ -68,11 +68,12 @@ def platform_category(platform: str) -> str:
     return _PLATFORMS.get(platform, ("", "other"))[1]
 
 
-# What a person should know before the platform's own window opens: who has to
-# be signed in, what to allow, what comes back. Written for someone who has
-# never connected an account. ``note`` is the one requirement that most often
-# makes the connection fail. A platform without an entry connects straight
-# away (the ones with their own form already explain themselves there).
+# What a person should know before the platform's own window (or our form for
+# it) opens: who has to be signed in, what to allow, what comes back. Written
+# for someone who has never connected an account. ``intro``, optional, says
+# what a lesser-known network is; ``note`` is the one requirement that most
+# often makes the connection fail. A platform without an entry connects
+# straight away.
 _SIGN_IN_AND_ALLOW = _("Allow the access we ask for")
 _KEEP_PERMISSIONS = _("Keep every permission ticked: each one powers a feature, and leaving one out breaks it later.")
 
@@ -224,6 +225,70 @@ _CONNECT_GUIDES = {
         ),
         "note": "",
     },
+    "mastodon": {
+        "intro": _(
+            "Mastodon is a social network similar to X, made of thousands of independent servers that talk to "
+            "each other. Your account lives on one of them, such as mastodon.social."
+        ),
+        "steps": (
+            (
+                _("Choose your server"),
+                _(
+                    "On the next screen, sign in with mastodon.social, where most accounts live, "
+                    "or choose another server if yours is elsewhere."
+                ),
+            ),
+            (
+                _("Authorize on your server"),
+                _("Your Mastodon server opens: sign in there if asked and authorize the access."),
+            ),
+            (_("Done"), _("The account appears here, ready to publish and to receive mentions and replies.")),
+        ),
+        "note": "",
+    },
+    "bluesky": {
+        "intro": _("Bluesky is an open social network similar to X, with short posts, replies and reposts."),
+        "steps": (
+            (
+                _("Create an app password"),
+                _(
+                    "In Bluesky, open Settings → Privacy and security → App passwords and create one named Connekt Flow."
+                ),
+            ),
+            (
+                _("Type your username and the app password"),
+                _(
+                    "On the next screen, choose bsky.social and type only your username, or use your own domain, "
+                    "then the password you created."
+                ),
+            ),
+            (_("Done"), _("The account appears here, ready to publish.")),
+        ),
+        "note": _(
+            "Use an app password, not the password you sign in with: you can revoke it at any time without "
+            "changing your login."
+        ),
+    },
+    "devto": {
+        "intro": _(
+            "DEV.to is a community where software developers publish technical articles. "
+            "Your posts go out there as articles, with a title and a Markdown body."
+        ),
+        "steps": (
+            (
+                _("Generate an API key"),
+                _(
+                    "On DEV.to, open Settings → Extensions and, under DEV Community API Keys, generate a key named Connekt Flow."
+                ),
+            ),
+            (
+                _("Paste the key"),
+                _("On the next screen, paste the key. You can revoke it on DEV.to at any time."),
+            ),
+            (_("Done"), _("The account appears here, ready to publish articles.")),
+        ),
+        "note": _("Every post to DEV.to needs a title, which becomes the title of the article."),
+    },
 }
 
 # Meta Ads is not a SocialAccount (apps.ads), but it is offered on the same page
@@ -256,6 +321,29 @@ _CONNECT_GUIDES["meta_ads"] = {
         "need the Pixel installed on your site, and every ad needs a Facebook Page."
     ),
 }
+
+# The platform's official site, linked from its guide ("Learn more on the
+# official site") for someone who does not know the network yet.
+_OFFICIAL_SITES = {
+    "facebook": "https://www.facebook.com/",
+    "instagram": "https://www.instagram.com/",
+    "instagram_login": "https://www.instagram.com/",
+    "threads": "https://www.threads.com/",
+    "whatsapp": "https://business.whatsapp.com/",
+    "linkedin_personal": "https://www.linkedin.com/",
+    "linkedin_company": "https://www.linkedin.com/",
+    "google_business": "https://www.google.com/business/",
+    "youtube": "https://www.youtube.com/",
+    "tiktok": "https://www.tiktok.com/",
+    "pinterest": "https://www.pinterest.com/",
+    "x": "https://x.com/",
+    "mastodon": "https://joinmastodon.org/pt-BR",
+    "bluesky": "https://bsky.social/",
+    "devto": "https://dev.to/",
+    "meta_ads": "https://www.facebook.com/business/ads",
+}
+for _platform, _site in _OFFICIAL_SITES.items():
+    _CONNECT_GUIDES[_platform]["site"] = _site
 
 # Connected by a form of our own, or by the platform's embedded window, rather
 # than by sending the person to the platform to sign in and come back.

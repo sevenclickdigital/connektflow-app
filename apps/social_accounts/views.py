@@ -17,7 +17,9 @@ from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.utils.translation import ngettext
@@ -780,6 +782,41 @@ def select_account(request):
 
 
 # ------------------------------------------------------------------
+# Connect forms of our own (Bluesky, Mastodon, DEV.to)
+# ------------------------------------------------------------------
+
+
+def _connect_form_refused(request, workspace_id, platform, error, values=None):
+    """Answer a refused Bluesky/Mastodon/DEV.to connect where the form was sent from.
+
+    From the connect guide (HTMX) the form comes back inside the modal with the
+    error and what was typed; from the platform's own page, the page again with
+    the error as a message.
+    """
+    if request.htmx:
+        return render(
+            request,
+            "social_accounts/partials/_connect_form.html",
+            {"workspace_id": workspace_id, "platform": platform, "error": error, "values": values or {}},
+        )
+    messages.error(request, error)
+    return render(request, f"social_accounts/{platform}_connect.html", {"workspace_id": workspace_id})
+
+
+def _connect_form_redirect(request, url):
+    """Leave the connect form for ``url``; from the modal HTMX has to do it.
+
+    When the page opened a popup for the platform's sign-in (``popup=1``, see
+    _oauth_popup.html), the address is handed to the page to load into it.
+    """
+    if request.htmx and request.POST.get("popup") == "1":
+        return HttpResponse(status=204, headers={"HX-Trigger": json.dumps({"openConnectPopup": {"url": url}})})
+    if request.htmx:
+        return HttpResponse(status=204, headers={"HX-Redirect": url})
+    return redirect(url)
+
+
+# ------------------------------------------------------------------
 # Bluesky Connect (session-based, no OAuth)
 # ------------------------------------------------------------------
 
@@ -795,15 +832,17 @@ def connect_bluesky(request, workspace_id):
             {"workspace_id": workspace_id},
         )
 
+    # The connect guide sends either a bsky.social username or a full handle.
+    username = request.POST.get("username", "").strip().lstrip("@")
     handle = request.POST.get("handle", "").strip().lstrip("@")
+    typed = {"username": username} if username else {"handle": handle}
+    if username:
+        handle = username if username.endswith(".bsky.social") else f"{username}.bsky.social"
     app_password = request.POST.get("app_password", "").strip()
 
     if not handle or not app_password:
-        messages.error(request, _("Handle and app password are required."))
-        return render(
-            request,
-            "social_accounts/bluesky_connect.html",
-            {"workspace_id": workspace_id},
+        return _connect_form_refused(
+            request, workspace_id, "bluesky", _("Handle and app password are required."), typed
         )
 
     try:
@@ -825,25 +864,18 @@ def connect_bluesky(request, workspace_id):
     except AccountLimitReached as exc:
         # The credentials were fine, so the generic clause's advice to re-check
         # them would send the user hunting for a problem that isn't there.
-        messages.error(request, str(exc))
-        return render(
-            request,
-            "social_accounts/bluesky_connect.html",
-            {"workspace_id": workspace_id},
-        )
+        return _connect_form_refused(request, workspace_id, "bluesky", str(exc), typed)
     except Exception:
         logger.exception("Bluesky connection failed")
-        messages.error(
+        return _connect_form_refused(
             request,
+            workspace_id,
+            "bluesky",
             _("Failed to connect Bluesky account. Check your handle and app password."),
-        )
-        return render(
-            request,
-            "social_accounts/bluesky_connect.html",
-            {"workspace_id": workspace_id},
+            typed,
         )
 
-    return redirect("social_accounts:list", workspace_id=workspace_id)
+    return _connect_form_redirect(request, reverse("social_accounts:list", kwargs={"workspace_id": workspace_id}))
 
 
 # ------------------------------------------------------------------
@@ -864,12 +896,7 @@ def connect_devto(request, workspace_id):
 
     api_key = request.POST.get("api_key", "").strip()
     if not api_key:
-        messages.error(request, _("A DEV.to API key is required."))
-        return render(
-            request,
-            "social_accounts/devto_connect.html",
-            {"workspace_id": workspace_id},
-        )
+        return _connect_form_refused(request, workspace_id, "devto", _("A DEV.to API key is required."))
 
     try:
         provider = _get_provider_for_platform(PlatformCredential.Platform.DEVTO, request.org.id)
@@ -882,14 +909,14 @@ def connect_devto(request, workspace_id):
         )
         messages.success(request, _("Connected %(name)s on DEV.to.") % {"name": profile.name})
     except AccountLimitReached as exc:
-        messages.error(request, str(exc))
-        return render(request, "social_accounts/devto_connect.html", {"workspace_id": workspace_id})
+        return _connect_form_refused(request, workspace_id, "devto", str(exc))
     except Exception:
         logger.exception("DEV.to connection failed")
-        messages.error(request, _("Failed to connect DEV.to account. Check your API key."))
-        return render(request, "social_accounts/devto_connect.html", {"workspace_id": workspace_id})
+        return _connect_form_refused(
+            request, workspace_id, "devto", _("Failed to connect DEV.to account. Check your API key.")
+        )
 
-    return redirect("social_accounts:list", workspace_id=workspace_id)
+    return _connect_form_redirect(request, reverse("social_accounts:list", kwargs={"workspace_id": workspace_id}))
 
 
 # ------------------------------------------------------------------
@@ -992,6 +1019,7 @@ def connect_whatsapp(request, workspace_id):
 @csp_update(FORM_ACTION="'self' https:")
 @login_required
 @require_permission("manage_social_accounts")
+@finish_in_popup
 def connect_mastodon(request, workspace_id):
     """Connect a Mastodon account via instance URL + OAuth."""
     if request.method == "GET":
@@ -1001,22 +1029,19 @@ def connect_mastodon(request, workspace_id):
             {"workspace_id": workspace_id},
         )
 
-    instance_url = _normalize_mastodon_instance_url(request.POST.get("instance_url", ""))
+    typed = {"instance_url": request.POST.get("instance_url", "").strip()}
+    instance_url = _normalize_mastodon_instance_url(typed["instance_url"])
     if not instance_url:
-        messages.error(request, _("Instance URL is required."))
-        return render(
-            request,
-            "social_accounts/mastodon_connect.html",
-            {"workspace_id": workspace_id},
-        )
+        return _connect_form_refused(request, workspace_id, "mastodon", _("Instance URL is required."), typed)
 
     # Validate against SSRF - reject private/reserved IP ranges
     if not _is_safe_url(instance_url):
-        messages.error(request, _("Invalid instance URL. Private or reserved addresses are not allowed."))
-        return render(
+        return _connect_form_refused(
             request,
-            "social_accounts/mastodon_connect.html",
-            {"workspace_id": workspace_id},
+            workspace_id,
+            "mastodon",
+            _("Invalid instance URL. Private or reserved addresses are not allowed."),
+            typed,
         )
 
     # Check for existing app registration or create one
@@ -1043,14 +1068,12 @@ def connect_mastodon(request, workspace_id):
             client_secret = app_data["client_secret"]
         except Exception:
             logger.exception("Mastodon app registration failed for %s", instance_url)
-            messages.error(
+            return _connect_form_refused(
                 request,
+                workspace_id,
+                "mastodon",
                 _("Failed to register with %(url)s. Check the URL.") % {"url": instance_url},
-            )
-            return render(
-                request,
-                "social_accounts/mastodon_connect.html",
-                {"workspace_id": workspace_id},
+                typed,
             )
 
     # Initiate OAuth
@@ -1079,7 +1102,7 @@ def connect_mastodon(request, workspace_id):
 
     redirect_uri = _build_redirect_uri(request, PlatformCredential.Platform.MASTODON)
     auth_url = provider.get_auth_url(redirect_uri, state)
-    return redirect(auth_url)
+    return _connect_form_redirect(request, auth_url)
 
 
 # ------------------------------------------------------------------

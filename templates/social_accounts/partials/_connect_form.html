@@ -1,0 +1,68 @@
+{% load i18n %}
+{% comment %}
+The second step of the connect guide for a platform connected by a form of our
+own (Bluesky, Mastodon, DEV.to): its fields, posted with HTMX to the platform's
+connect view. A refusal comes back as this same partial with ``error``; a
+success answers with HX-Redirect (the account list, or Mastodon's server).
+Mastodon's form is also ``data-oauth-popup``: on a desktop its server opens in
+the same small window as the other platforms' sign-in (_oauth_popup.html).
+Mastodon asks for the server only, never the username, which the person types
+on the server's own sign-in page. Most accounts live on mastodon.social, so the
+form first offers to sign in there with one click (the button carries the
+server as its value) and shows the field only for "another server"
+(Alpine ``other``; the field is disabled while hidden, so it is not sent).
+Bluesky offers the same two ways in: a bsky.social username, to which the view
+adds the domain, or a full handle on the person's own domain (Alpine ``mode``),
+then the app password in both.
+Context: ``platform`` (bluesky, mastodon or devto), ``workspace_id``,
+``error`` and ``values`` (optional, after a refused attempt).
+{% endcomment %}
+{% with "social_accounts:connect_"|add:platform as url_name %}
+<form method="post" action="{% url url_name workspace_id=workspace_id %}"
+      hx-post="{% url url_name workspace_id=workspace_id %}" hx-target="this" hx-swap="outerHTML"
+      hx-disabled-elt="find button[type='submit']"
+      {% if platform == "mastodon" %}data-oauth-popup x-data="{ other: {% if values.instance_url and values.instance_url != 'mastodon.social' %}true{% else %}false{% endif %} }"{% endif %}
+      {% if platform == "bluesky" %}x-data="{ mode: {% if values.username %}'bsky'{% elif values.handle %}'custom'{% else %}null{% endif %} }"{% endif %}>
+    {% csrf_token %}
+    <div class="modal-body">
+        {% if error %}<p class="alert-error text-sm" role="alert">{{ error }}</p>{% endif %}
+        <div class="space-y-4">
+            {% if platform == "bluesky" %}
+            <div x-show="!mode" class="space-y-3">
+                <p class="text-sm text-neutral-600">{% translate "Most handles end in .bsky.social. If yours is your own domain, such as yourcompany.com, choose the second option." %}</p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <button type="button" class="btn-brand w-full" @click="mode = 'bsky'; $nextTick(() => $refs.username.focus())">{% translate "Sign in with bsky.social" %}</button>
+                    <button type="button" class="btn-outline w-full" @click="mode = 'custom'; $nextTick(() => $refs.handle.focus())">{% translate "Use my own domain" %}</button>
+                </div>
+            </div>
+            <div x-show="mode" x-cloak class="space-y-4">
+                {% include "social_accounts/partials/_bluesky_fields.html" with in_chooser=True %}
+            </div>
+            {% elif platform == "mastodon" %}
+            <div x-show="!other" class="space-y-3">
+                <p class="text-sm text-neutral-600">{% translate "Most accounts live on mastodon.social. You sign in on Mastodon's own page, with your username and password." %}</p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <button type="submit" name="instance_url" value="mastodon.social" class="btn-brand w-full">{% translate "Sign in with mastodon.social" %}</button>
+                    <button type="button" class="btn-outline w-full" @click="other = true; $nextTick(() => $refs.server.focus())">{% translate "Choose another server" %}</button>
+                </div>
+            </div>
+            <div x-show="other" x-cloak>
+                {% include "social_accounts/partials/_mastodon_fields.html" with in_chooser=True %}
+            </div>
+            {% else %}{% include "social_accounts/partials/_devto_fields.html" %}{% endif %}
+        </div>
+    </div>
+    <div class="modal-footer">
+        {% if platform == "mastodon" %}
+        <button type="button" class="btn-ghost" @click="if (other) { other = false } else { step = 'guide' }">{% translate "Back" %}</button>
+        <button type="submit" class="btn-brand" x-show="other" x-cloak>{% translate "Connect" %}</button>
+        {% elif platform == "bluesky" %}
+        <button type="button" class="btn-ghost" @click="if (mode) { mode = null } else { step = 'guide' }">{% translate "Back" %}</button>
+        <button type="submit" class="btn-brand" x-show="mode" x-cloak>{% translate "Connect" %}</button>
+        {% else %}
+        <button type="button" class="btn-ghost" @click="step = 'guide'">{% translate "Back" %}</button>
+        <button type="submit" class="btn-brand">{% translate "Connect" %}</button>
+        {% endif %}
+    </div>
+</form>
+{% endwith %}

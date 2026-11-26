@@ -11,6 +11,11 @@ sign-in on the login and signup pages).
 The popup is skipped, and the form submits as it always did, on touch devices
 and narrow screens, where a second window is more trouble than help, and when
 the browser blocks it.
+A form sent with HTMX (Mastodon's, in the connect guide, whose refusals come
+back inside the modal) cannot be posted into the window: the window is still
+opened on the click, which is when the browser allows it, and the server
+answers with the ``openConnectPopup`` event carrying the platform's address,
+which this page loads into it. Any other answer closes the window again.
 {% endcomment %}
 <script nonce="{{ request.csp_nonce }}">
 (function () {
@@ -37,6 +42,9 @@ the browser blocks it.
         }
     }
 
+    let htmxPopup = null;
+
+    // Capture phase: runs before HTMX reads the form, so ``popup=1`` goes with it.
     document.addEventListener('submit', function (event) {
         const form = event.target.closest('form[data-oauth-popup]');
         if (!form) return;
@@ -48,6 +56,22 @@ the browser blocks it.
             popup = window.open('', POPUP_NAME, 'popup=yes,width=' + width + ',height=' + height + ',left=' + left + ',top=' + top);
         }
         markPopup(form, !!popup);
+        if (form.hasAttribute('hx-post')) htmxPopup = popup;
+    }, true);
+
+    document.body.addEventListener('openConnectPopup', function (event) {
+        const url = event.detail && event.detail.url;
+        if (htmxPopup && !htmxPopup.closed && typeof url === 'string' && url.startsWith('https://')) {
+            htmxPopup.location.href = url;
+            htmxPopup = null;
+        }
+    });
+
+    document.body.addEventListener('htmx:afterRequest', function (event) {
+        if (!htmxPopup || !event.detail.elt.matches('form[data-oauth-popup]')) return;
+        // The address arrived (openConnectPopup ran first) or the form was refused.
+        if (!htmxPopup.closed) htmxPopup.close();
+        htmxPopup = null;
     });
 
     if ('BroadcastChannel' in window) {

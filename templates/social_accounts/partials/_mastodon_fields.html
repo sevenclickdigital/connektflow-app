@@ -1,0 +1,14 @@
+{% load i18n %}
+{% comment %}
+Mastodon's server field, shared by its own page and the connect guide's form.
+The view also accepts a profile address or a handle and keeps only the server.
+Context: ``values`` (optional), what was typed before a refused attempt;
+``in_chooser`` when it sits behind the guide's "Choose another server" (Alpine
+``other``), which disables it while hidden.
+{% endcomment %}
+<div>
+    <label for="mastodon-instance-url" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "Server" %}</label>
+    <input type="text" id="mastodon-instance-url" name="instance_url" value="{{ values.instance_url|default:'' }}" placeholder="mastodon.social" required autocomplete="off" class="form-input-styled"
+           {% if in_chooser %}x-ref="server" :disabled="!other"{% endif %}>
+    <p class="text-xs text-neutral-500 mt-1">{% translate "The server where your account lives. You can also paste your full address, such as @you@server.com." %}</p>
+</div>

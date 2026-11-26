@@ -1,0 +1,7 @@
+{% load i18n %}
+{# DEV.to's connect field, shared by its own page and the connect guide's form. #}
+<div>
+    <label for="devto-api-key" class="block text-sm font-semibold text-neutral-950 mb-1">{% translate "API Key" %}</label>
+    <input type="password" id="devto-api-key" name="api_key" placeholder="{% translate 'your DEV.to API key' %}" required autocomplete="off" class="form-input-styled">
+    <p class="text-xs text-neutral-500 mt-1">{% translate "Create one at DEV.to → Settings → Extensions → DEV Community API Keys." %}</p>
+</div>
