@@ -2936,12 +2936,17 @@ def pinterest_boards(request, workspace_id, account_id):
         try:
             access_token = account.refresh_oauth_token(provider, enqueue_backfill=False)
         except Exception:
-            return JsonResponse({"error": "Token refresh failed"}, status=502)
+            logger.warning("Pinterest token refresh failed for account %s", account.id, exc_info=True)
+            return JsonResponse(
+                {"error": _("Pinterest refused to renew the connection. Reconnect the account.")}, status=502
+            )
 
     try:
         boards = provider.get_boards(access_token)
-    except Exception:
-        return JsonResponse({"error": _("Failed to fetch boards")}, status=502)
+    except Exception as exc:
+        logger.warning("Pinterest boards fetch failed for account %s", account.id, exc_info=True)
+        message = getattr(exc, "user_message", "") or _("Failed to fetch boards")
+        return JsonResponse({"error": message}, status=502)
 
     return JsonResponse({"boards": [{"id": b.get("id"), "name": b.get("name")} for b in boards]})
 
