@@ -285,3 +285,29 @@ def test_every_guide_has_three_steps_and_form_platforms_explain_what_they_are():
         assert connect_guide(platform)["site"].startswith("https://"), platform
     assert connect_flow("whatsapp") == "whatsapp"
     assert connect_flow("facebook") == "oauth"
+
+
+def test_every_oauth_platform_sign_in_is_allowed_as_a_form_action(settings):
+    """The connect form is answered with a redirect to the platform's sign-in,
+    and Chromium enforces form-action along that redirect: a platform missing
+    from CSP_FORM_ACTION leaves the popup on about:blank."""
+    import importlib
+    from urllib.parse import urlsplit
+
+    allowed = set(settings.CSP_FORM_ACTION)
+    for module in (
+        "facebook",
+        "instagram",
+        "instagram_login",
+        "threads",
+        "linkedin",
+        "google_business",
+        "youtube",
+        "tiktok",
+        "pinterest",
+        "x",
+    ):
+        provider = importlib.import_module(f"providers.{module}")
+        url = getattr(provider, "AUTH_URL", None) or provider.OAUTH_URL
+        origin = "{0.scheme}://{0.netloc}".format(urlsplit(url))
+        assert origin in allowed, (module, origin)

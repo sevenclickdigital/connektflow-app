@@ -576,6 +576,9 @@ CSP_FORM_ACTION = (
     "https://www.linkedin.com",
     "https://www.pinterest.com",
     "https://www.tiktok.com",
+    # X's sign-in, on its current and its former domain.
+    "https://x.com",
+    "https://twitter.com",
 )
 CSP_INCLUDE_NONCE_IN = ["script-src"]
 # default-src does not cover these three. base-uri stops an injected <base>
