@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-25 13:02+0000\n"
+"POT-Creation-Date: 2026-11-26 00:21+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -5199,6 +5199,14 @@ msgstr ""
 msgid "none"
 msgstr "nenhuma"
 
+#: apps/credentials/models.py:50
+msgid "LinkedIn (Personal Profile)"
+msgstr "LinkedIn (Perfil pessoal)"
+
+#: apps/credentials/models.py:51
+msgid "LinkedIn (Company Page)"
+msgstr "LinkedIn (Página de empresa)"
+
 #: apps/email_center/catalog.py:45
 #: templates/affiliates/_new_affiliate_modal.html:25
 #: templates/affiliates/panel.html:92 templates/affiliates/panel.html:125
@@ -5572,7 +5580,7 @@ msgstr "Novo afiliado"
 
 #: apps/email_center/catalog.py:438 apps/email_center/catalog.py:445
 #: templates/affiliates/panel.html:14 templates/affiliates/panel.html:19
-#: templates/base.html:752 templates/layouts/settings.html:53
+#: templates/base.html:753 templates/layouts/settings.html:53
 msgid "Affiliate panel"
 msgstr "Painel do afiliado"
 
@@ -6681,7 +6689,7 @@ msgid ""
 msgstr ""
 "Cole o link de um vídeo do YouTube, como https://www.youtube.com/watch?v=…"
 
-#: apps/onboarding/models.py:119 templates/base.html:579
+#: apps/onboarding/models.py:119 templates/base.html:580
 #: templates/workspaces/dashboard.html:4
 msgctxt "menu"
 msgid "Dashboard"
@@ -6717,22 +6725,22 @@ msgstr "Modelos"
 msgid "Special dates"
 msgstr "Datas comemorativas"
 
-#: apps/onboarding/models.py:125 templates/base.html:617
+#: apps/onboarding/models.py:125 templates/base.html:618
 msgctxt "menu"
 msgid "Inbox"
 msgstr "Inbox"
 
-#: apps/onboarding/models.py:126 templates/base.html:618
+#: apps/onboarding/models.py:126 templates/base.html:619
 msgctxt "menu"
 msgid "Automation"
 msgstr "Automação"
 
-#: apps/onboarding/models.py:127 templates/base.html:619
+#: apps/onboarding/models.py:127 templates/base.html:620
 msgctxt "menu"
 msgid "Contacts"
 msgstr "Contatos"
 
-#: apps/onboarding/models.py:128 templates/base.html:626
+#: apps/onboarding/models.py:128 templates/base.html:627
 #: templates/client_portal/reports.html:3
 #: templates/client_portal/reports.html:8
 msgid "Reports"
@@ -6741,24 +6749,24 @@ msgstr "Relatórios"
 #: apps/onboarding/models.py:129 apps/social_accounts/catalog.py:19
 #: templates/ads/index.html:3 templates/ads/partials/_breakdowns.html:15
 #: templates/ads/partials/_campaign_body.html:14
-#: templates/analytics/_page_header.html:102 templates/base.html:632
+#: templates/analytics/_page_header.html:102 templates/base.html:633
 #: templates/social_accounts/partials/_meta_ads_card.html:12
 msgid "Ads"
 msgstr "Anúncios"
 
-#: apps/onboarding/models.py:130 templates/base.html:638
+#: apps/onboarding/models.py:130 templates/base.html:639
 #: templates/social_accounts/list.html:3 templates/social_accounts/list.html:8
 msgid "Social Accounts"
 msgstr "Contas sociais"
 
-#: apps/onboarding/models.py:131 templates/base.html:645
+#: apps/onboarding/models.py:131 templates/base.html:646
 #: templates/composer/partials/_media_picker_modal.html:51
 #: templates/media_library/library_index.html:12
 #: templates/media_library/library_index.html:26
 msgid "Gallery"
 msgstr "Galeria"
 
-#: apps/onboarding/models.py:132 templates/base.html:650
+#: apps/onboarding/models.py:132 templates/base.html:651
 #: templates/radar/index.html:3 templates/radar/index.html:8
 #: templates/radar/shopee.html:37
 msgid "Radar"
@@ -6816,7 +6824,29 @@ msgstr "Não foi possível enviar o link agora. Tente novamente em instantes."
 msgid "Connection link sent to %(email)s."
 msgstr "Link de conexão enviado para %(email)s."
 
-#: apps/onboarding/views.py:697 apps/social_accounts/views.py:1015
+#: apps/onboarding/views.py:557
+msgid ""
+"This Google account manages more than one business, so we could not tell "
+"which one to connect. Ask the team that sent you this link to connect Google "
+"Business for you."
+msgstr ""
+"Esta conta do Google gerencia mais de um negócio, por isso não foi possível "
+"saber qual conectar. Peça à equipe que enviou este link para conectar o "
+"Google Business para você."
+
+#: apps/onboarding/views.py:563 apps/social_accounts/views.py:593
+msgid ""
+"No Google Business locations were found for your account. Only verified "
+"locations can be connected. If you expected to see one, check that it is "
+"verified and that this Google account has access to it in Google Business "
+"Profile → Businesses, then reconnect."
+msgstr ""
+"Nenhuma localização do Google Business foi encontrada na sua conta. Só é "
+"possível conectar localizações verificadas. Se você esperava ver uma, "
+"confirme que ela está verificada e que esta conta do Google tem acesso a ela "
+"em Google Business Profile → Businesses e conecte novamente."
+
+#: apps/onboarding/views.py:723 apps/social_accounts/views.py:1015
 msgid "Invalid instance URL. Private or reserved addresses are not allowed."
 msgstr ""
 "URL de instância inválida. Endereços privados ou reservados não são "
@@ -8318,28 +8348,6 @@ msgstr ""
 "proprietário dela para conceder acesso de Admin em LinkedIn → Admin tools → "
 "Manage admins e conecte novamente."
 
-#: apps/social_accounts/views.py:593
-msgid ""
-"No Google Business locations were found for your account. Only verified "
-"locations can be connected. If you expected to see one, check that it is "
-"verified and that this Google account has access to it in Google Business "
-"Profile → Businesses, then reconnect."
-msgstr ""
-"Nenhuma localização do Google Business foi encontrada na sua conta. Só é "
-"possível conectar localizações verificadas. Se você esperava ver uma, "
-"confirme que ela está verificada e que esta conta do Google tem acesso a ela "
-"em Google Business Profile → Businesses e conecte novamente."
-
-#: apps/onboarding/views.py
-msgid ""
-"This Google account manages more than one business, so we could not tell "
-"which one to connect. Ask the team that sent you this link to connect Google "
-"Business for you."
-msgstr ""
-"Esta conta do Google gerencia mais de um negócio, por isso não foi possível "
-"saber qual conectar. Peça à equipe que enviou este link para conectar o "
-"Google Business para você."
-
 #: apps/social_accounts/views.py:602
 msgid ""
 "No Instagram Business accounts were found for your account. Only Instagram "
@@ -8611,7 +8619,7 @@ msgstr "Use só letras minúsculas, números e sublinhados."
 msgid "Lowercase letters, numbers and underscores, for example order_shipped."
 msgstr "Letras minúsculas, números e sublinhados, por exemplo pedido_enviado."
 
-#: apps/social_accounts/whatsapp_templates.py:60 templates/base.html:771
+#: apps/social_accounts/whatsapp_templates.py:60 templates/base.html:772
 #: templates/social_accounts/partials/_whatsapp_templates_list.html:20
 #: templates/support/staff_chat_console.html:276
 #: templates/support/staff_chat_history_detail.html:51
@@ -9999,7 +10007,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/automations/flow_builder.html:900
 #: templates/automations/flow_builder.html:1121
 #: templates/automations/flow_new.html:158 templates/automations/form.html:392
-#: templates/base.html:1160 templates/base.html:1217
+#: templates/base.html:1205 templates/base.html:1262
 #: templates/billing/checkout.html:570 templates/billing/checkout.html:599
 #: templates/billing/partials/_staff_brand_courtesy_form.html:31
 #: templates/billing/staff_console.html:397
@@ -10265,7 +10273,7 @@ msgstr ""
 "Crie uma marca para começar a agendar publicações, gerenciar conteúdo e "
 "colaborar com sua equipe."
 
-#: templates/accounts/dashboard.html:55 templates/base.html:1155
+#: templates/accounts/dashboard.html:55 templates/base.html:1200
 #: templates/workspaces/list.html:65
 msgid "Workspace name"
 msgstr "Nome da marca"
@@ -10312,7 +10320,7 @@ msgstr "Enviar foto"
 msgid "Role"
 msgstr "Função"
 
-#: templates/accounts/settings.html:75 templates/base.html:695
+#: templates/accounts/settings.html:75 templates/base.html:696
 #: templates/billing/partials/_staff_role_label.html:3
 #: templates/billing/staff_console.html:229
 #: templates/billing/staff_console.html:292
@@ -10324,7 +10332,7 @@ msgstr "Função"
 msgid "Owner"
 msgstr "Proprietário"
 
-#: templates/accounts/settings.html:75 templates/base.html:695
+#: templates/accounts/settings.html:75 templates/base.html:696
 #: templates/billing/partials/_staff_role_label.html:3
 #: templates/billing/staff_console.html:229
 #: templates/billing/staff_console.html:292
@@ -10337,7 +10345,7 @@ msgstr "Proprietário"
 msgid "Admin"
 msgstr "Administrador"
 
-#: templates/accounts/settings.html:75 templates/base.html:695
+#: templates/accounts/settings.html:75 templates/base.html:696
 #: templates/billing/partials/_staff_role_label.html:3
 #: templates/billing/staff_console.html:229
 #: templates/billing/staff_console.html:292
@@ -12060,7 +12068,7 @@ msgstr "Pagar saque"
 #: templates/approvals/partials/_approval_row.html:111
 #: templates/automations/staff_template_list.html:114
 #: templates/calendar/partials/_list_row.html:102
-#: templates/calendar/partials/_post_actions_menu.html:31
+#: templates/calendar/partials/_post_actions_menu.html:28
 #: templates/calendar/partials/_post_card.html:112
 #: templates/calendar/staff_dates.html:69
 #: templates/composer/staff_idea_templates.html:98
@@ -12115,7 +12123,7 @@ msgstr "Excluir afiliado"
 #: templates/automations/staff_template_list.html:138
 #: templates/calendar/calendar.html:549 templates/calendar/calendar.html:580
 #: templates/calendar/partials/_delete_post_modal.html:81
-#: templates/calendar/partials/_post_actions_menu.html:36
+#: templates/calendar/partials/_post_actions_menu.html:33
 #: templates/calendar/partials/_post_card.html:143
 #: templates/calendar/staff_dates.html:79 templates/composer/compose.html:1785
 #: templates/composer/compose.html:2516
@@ -12642,8 +12650,8 @@ msgstr ""
 msgid "e.g. Zapier bot, content pipeline"
 msgstr "ex.: bot do Zapier, pipeline de conteúdo"
 
-#: templates/api_keys/_issue_modal.html:51 templates/base.html:414
-#: templates/base.html:424 templates/billing/staff_subscriptions.html:171
+#: templates/api_keys/_issue_modal.html:51 templates/base.html:415
+#: templates/base.html:425 templates/billing/staff_subscriptions.html:171
 msgid "Workspace"
 msgstr "Marca"
 
@@ -14316,130 +14324,130 @@ msgstr ""
 msgid "Name one above to start drawing it on the canvas."
 msgstr "Dê um nome acima para começar a desenhá-lo na tela."
 
-#: templates/base.html:301 templates/partials/_review_banner.html:22
+#: templates/base.html:302 templates/partials/_review_banner.html:22
 msgid "Dismiss"
 msgstr "Dispensar"
 
-#: templates/base.html:306 templates/composer/compose.html:2528
+#: templates/base.html:307 templates/composer/compose.html:2528
 #: templates/media_library/_video_trimmer.html:28
 msgid "Something went wrong. Please try again."
 msgstr "Algo deu errado. Tente novamente."
 
-#: templates/base.html:307
+#: templates/base.html:308
 msgid "Select date…"
 msgstr "Selecionar data…"
 
-#: templates/base.html:308
+#: templates/base.html:309
 msgid "Select time…"
 msgstr "Selecionar horário…"
 
-#: templates/base.html:309 templates/composer/create_landing.html:859
+#: templates/base.html:310 templates/composer/create_landing.html:859
 msgid "Security token missing. Please reload the page."
 msgstr "Token de segurança ausente. Recarregue a página."
 
-#: templates/base.html:310 templates/composer/create_landing.html:863
+#: templates/base.html:311 templates/composer/create_landing.html:863
 msgid "Could not save the idea. Please try again."
 msgstr "Não foi possível salvar a ideia. Tente novamente."
 
-#: templates/base.html:473
+#: templates/base.html:474
 msgid "No workspaces"
 msgstr "Nenhuma marca"
 
-#: templates/base.html:488
+#: templates/base.html:489
 msgid "Manage organizations"
 msgstr "Gerenciar organizações"
 
-#: templates/base.html:502
+#: templates/base.html:503
 msgid "Expand sidebar"
 msgstr "Expandir barra lateral"
 
-#: templates/base.html:502 templates/base.html:503
+#: templates/base.html:503 templates/base.html:504
 msgid "Collapse sidebar"
 msgstr "Recolher barra lateral"
 
-#: templates/base.html:518
+#: templates/base.html:519
 msgid "Add new"
 msgstr "Adicionar novo"
 
-#: templates/base.html:538
+#: templates/base.html:539
 msgid "New post"
 msgstr "Novo post"
 
-#: templates/base.html:554
+#: templates/base.html:555
 msgid "New idea"
 msgstr "Nova ideia"
 
-#: templates/base.html:589
+#: templates/base.html:590
 msgctxt "menu"
 msgid "Publish"
 msgstr "Publicar"
 
-#: templates/base.html:595
+#: templates/base.html:596
 msgctxt "menu"
 msgid "Calendar"
 msgstr "Calendário"
 
-#: templates/base.html:597
+#: templates/base.html:598
 msgctxt "menu"
 msgid "Task management"
 msgstr "Gestão de Tarefas"
 
-#: templates/base.html:600 templates/composer/create_landing.html:172
+#: templates/base.html:601 templates/composer/create_landing.html:172
 msgid "Idea hub"
 msgstr "Central de ideias"
 
-#: templates/base.html:613
+#: templates/base.html:614
 msgctxt "menu"
 msgid "Engage"
 msgstr "Engajar"
 
-#: templates/base.html:642 templates/billing/checkout.html:709
+#: templates/base.html:643 templates/billing/checkout.html:709
 msgid "More"
 msgstr "Mais"
 
-#: templates/base.html:657 templates/notifications/history.html:4
+#: templates/base.html:658 templates/notifications/history.html:4
 #: templates/notifications/history.html:12
 #: templates/notifications/partials/drawer.html:5
 msgid "Notifications"
 msgstr "Notificações"
 
-#: templates/base.html:661
+#: templates/base.html:662
 msgid "Help and support"
 msgstr "Ajuda e suporte"
 
-#: templates/base.html:666 templates/intelligence/playground.html:4
+#: templates/base.html:667 templates/intelligence/playground.html:4
 #: templates/intelligence/playground.html:9
 msgid "Intelligence"
 msgstr "Inteligência"
 
-#: templates/base.html:676
+#: templates/base.html:677
 msgid "Moti, the Connekt Flow robot, working on a laptop"
 msgstr "Moti, o robô do Connekt Flow, trabalhando no notebook"
 
-#: templates/base.html:699 templates/base.html:785
+#: templates/base.html:700 templates/base.html:786
 #: templates/billing/subscribe_modal.html:250
 #: templates/client_portal/portal_base.html:69
 #: templates/partials/_setup_header.html:35
 msgid "Log out"
 msgstr "Sair"
 
-#: templates/base.html:738
+#: templates/base.html:739
 msgid "My profile"
 msgstr "Meu perfil"
 
-#: templates/base.html:745
+#: templates/base.html:746
 msgid "Manage organization"
 msgstr "Gerenciar organização"
 
-#: templates/base.html:806
+#: templates/base.html:807
 msgid "Toggle menu"
 msgstr "Alternar menu"
 
-#: templates/base.html:1151 templates/organizations/workspaces.html:174
+#: templates/base.html:1196 templates/organizations/workspaces.html:174
 msgid "Create workspace"
 msgstr "Criar marca"
 
-#: templates/base.html:1164 templates/base.html:1220
+#: templates/base.html:1209 templates/base.html:1265
 #: templates/calendar/queues.html:64 templates/composer/compose.html:1688
 #: templates/composer/compose.html:1696 templates/composer/compose.html:1764
 #: templates/composer/create_landing.html:4
@@ -14453,11 +14461,11 @@ msgstr "Criar marca"
 msgid "Create"
 msgstr "Criar"
 
-#: templates/base.html:1191 templates/organizations/workspaces.html:15
+#: templates/base.html:1236 templates/organizations/workspaces.html:15
 msgid "Create organization"
 msgstr "Criar organização"
 
-#: templates/base.html:1192
+#: templates/base.html:1237
 msgid ""
 "For another company of yours. It has its own brands, team and billing data, "
 "separate from the others."
@@ -14465,30 +14473,30 @@ msgstr ""
 "Para outra empresa sua. Ela tem marcas, equipe e dados de cobrança próprios, "
 "separados das outras."
 
-#: templates/base.html:1195 templates/organizations/settings.html:28
+#: templates/base.html:1240 templates/organizations/settings.html:28
 msgid "Organization Name"
 msgstr "Nome da organização"
 
-#: templates/base.html:1200 templates/billing/checkout.html:322
+#: templates/base.html:1245 templates/billing/checkout.html:322
 #: templates/billing/subscribe_modal.html:216
 #: templates/organizations/settings.html:42
 msgid "CPF or CNPJ"
 msgstr "CPF ou CNPJ"
 
-#: templates/base.html:1205 templates/billing/checkout.html:330
+#: templates/base.html:1250 templates/billing/checkout.html:330
 #: templates/billing/subscribe_modal.html:219
 #: templates/organizations/settings.html:47
 msgid "Phone with area code"
 msgstr "Telefone com DDD"
 
-#: templates/base.html:1210
+#: templates/base.html:1255
 msgid ""
 "Of the organization. They go on its invoices and are what the free trial "
 "asks for."
 msgstr ""
 "Da organização. Eles vão nas faturas dela e são o que o teste grátis pede."
 
-#: templates/base.html:1211
+#: templates/base.html:1256
 msgid "Name of its first brand"
 msgstr "Nome da primeira marca dela"
 
@@ -18589,7 +18597,7 @@ msgstr "Agora clique no último dia."
 msgid "selected"
 msgstr "selecionadas"
 
-#: templates/components/ui_select.html:36
+#: templates/components/ui_select.html:35
 #, python-format
 msgid "%(label)s — all"
 msgstr "%(label)s — todos"

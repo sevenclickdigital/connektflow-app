@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from apps.common.encryption import EncryptedJSONField
 from apps.common.managers import OrgScopedManager
@@ -46,8 +47,8 @@ class PlatformCredential(models.Model):
         FACEBOOK = "facebook", "Facebook"
         INSTAGRAM = "instagram", "Instagram"
         INSTAGRAM_LOGIN = "instagram_login", "Instagram (Direct)"
-        LINKEDIN_PERSONAL = "linkedin_personal", "LinkedIn (Personal Profile)"
-        LINKEDIN_COMPANY = "linkedin_company", "LinkedIn (Company Page)"
+        LINKEDIN_PERSONAL = "linkedin_personal", _("LinkedIn (Personal Profile)")
+        LINKEDIN_COMPANY = "linkedin_company", _("LinkedIn (Company Page)")
         TIKTOK = "tiktok", "TikTok"
         YOUTUBE = "youtube", "YouTube"
         PINTEREST = "pinterest", "Pinterest"
