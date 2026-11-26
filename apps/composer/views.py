@@ -7,7 +7,7 @@ import logging
 import re
 import uuid
 from datetime import UTC, date, datetime, time
-from urllib.parse import quote, urljoin
+from urllib.parse import urljoin
 
 import httpx
 from dateutil import parser as date_parser
@@ -2932,46 +2932,68 @@ def unsplash_import(request, workspace_id, post_id=None):
     )
 
 
-@login_required
-@require_GET
-def pinterest_boards(request, workspace_id, account_id):
-    """Fetch Pinterest boards for board selection in the composer."""
-    workspace = _get_workspace(request, workspace_id)
+def _pinterest_session(workspace, account_id):
+    """The Pinterest account of this workspace, its provider and a live token.
+
+    Returns ``(account, provider, access_token, None)``, or a 502 response
+    in the last place when Pinterest refuses to renew the token.
+    """
     account = get_object_or_404(SocialAccount, id=account_id, workspace=workspace, platform="pinterest")
 
     from apps.credentials.models import resolve_platform_credentials
     from providers import get_provider
 
     # .env is dominant; admin-entered org credentials are the fallback.
-    credentials = resolve_platform_credentials("pinterest", workspace.organization_id)
-
-    provider = get_provider("pinterest", credentials)
-
-    # Refresh token if expiring
+    provider = get_provider("pinterest", resolve_platform_credentials("pinterest", workspace.organization_id))
     access_token = account.oauth_access_token
     if account.token_expires_at and account.is_token_expiring_soon:
         try:
             access_token = account.refresh_oauth_token(provider, enqueue_backfill=False)
         except Exception:
             logger.warning("Pinterest token refresh failed for account %s", account.id, exc_info=True)
-            return JsonResponse(
+            refused = JsonResponse(
                 {"error": _("Pinterest refused to renew the connection. Reconnect the account.")}, status=502
             )
+            return account, provider, None, refused
+    return account, provider, access_token, None
 
+
+@login_required
+@require_GET
+def pinterest_boards(request, workspace_id, account_id):
+    """Fetch Pinterest boards for board selection in the composer."""
+    workspace = _get_workspace(request, workspace_id)
+    account, provider, access_token, refused = _pinterest_session(workspace, account_id)
+    if refused:
+        return refused
     try:
         boards = provider.get_boards(access_token)
     except Exception as exc:
         logger.warning("Pinterest boards fetch failed for account %s", account.id, exc_info=True)
         message = getattr(exc, "user_message", "") or _("Failed to fetch boards")
         return JsonResponse({"error": message}, status=502)
+    return JsonResponse({"boards": [{"id": b.get("id"), "name": b.get("name")} for b in boards]})
 
-    # The profile is where Pinterest offers "Create board"; it has no link
-    # straight to that dialog.
-    handle = account.account_handle.strip().lstrip("@")
-    create_url = f"https://www.pinterest.com/{quote(handle)}/" if handle else "https://www.pinterest.com/"
-    return JsonResponse(
-        {"boards": [{"id": b.get("id"), "name": b.get("name")} for b in boards], "create_url": create_url}
-    )
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def pinterest_board_create(request, workspace_id, account_id):
+    """Create a board on a Pinterest account from the composer's board picker."""
+    workspace = _get_workspace(request, workspace_id)
+    name = request.POST.get("name", "").strip()
+    if not name:
+        return JsonResponse({"error": _("Name the board.")}, status=400)
+    account, provider, access_token, refused = _pinterest_session(workspace, account_id)
+    if refused:
+        return refused
+    try:
+        board = provider.create_board(access_token, name)
+    except Exception as exc:
+        logger.warning("Pinterest board create failed for account %s", account.id, exc_info=True)
+        message = getattr(exc, "user_message", "") or _("Pinterest did not create the board.")
+        return JsonResponse({"error": message}, status=502)
+    return JsonResponse({"id": board.get("id"), "name": board.get("name") or name})
 
 
 @login_required

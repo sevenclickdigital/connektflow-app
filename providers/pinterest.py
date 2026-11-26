@@ -301,14 +301,31 @@ class PinterestProvider(SocialProvider):
     # ------------------------------------------------------------------
 
     def get_boards(self, access_token: str) -> list[dict]:
-        """Fetch all boards for the authenticated account."""
-        resp = self._request(
-            "GET",
-            f"{API_BASE}/boards",
-            access_token=access_token,
-        )
-        body = resp.json()
-        return body.get("items", [])
+        """Every board of the authenticated account.
+
+        The list is paged (25 a page unless asked otherwise, 250 at most), so
+        the bookmark is followed; ten pages are far past any real account.
+        """
+        boards: list[dict] = []
+        bookmark = None
+        for _page in range(10):
+            params: dict = {"page_size": 250}
+            if bookmark:
+                params["bookmark"] = bookmark
+            body = self._request("GET", f"{API_BASE}/boards", access_token=access_token, params=params).json()
+            boards.extend(body.get("items", []))
+            bookmark = body.get("bookmark")
+            if not bookmark:
+                break
+        return boards
+
+    def create_board(self, access_token: str, name: str) -> dict:
+        """Create a board on the authenticated account and return it.
+
+        Needs ``boards:write``, which the app asks for at sign-in. An app on
+        Trial access creates it in the Sandbox, where its pins go too.
+        """
+        return self._request("POST", f"{API_BASE}/boards", access_token=access_token, json={"name": name}).json()
 
     # ------------------------------------------------------------------
     # Analytics
