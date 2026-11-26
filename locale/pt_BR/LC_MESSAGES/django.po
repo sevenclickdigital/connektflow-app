@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 01:21+0000\n"
+"POT-Creation-Date: 2026-11-26 01:28+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -675,13 +675,13 @@ msgid "Feed"
 msgstr "Feed"
 
 #: apps/ads/services.py:620 apps/ads/services.py:621 apps/ads/services.py:622
-#: apps/analytics/services.py:813 apps/composer/models.py:1147
+#: apps/analytics/services.py:815 apps/composer/models.py:1147
 #: templates/composer/partials/_crop_editor.html:67
 msgid "Stories"
 msgstr "Stories"
 
 #: apps/ads/services.py:623 apps/ads/services.py:624 apps/ads/services.py:625
-#: apps/analytics/services.py:811 apps/composer/models.py:557
+#: apps/analytics/services.py:813 apps/composer/models.py:557
 #: apps/composer/models.py:1146 apps/composer/services.py:1209
 #: apps/social_accounts/models.py:680 apps/tasks/creative_formats.py:96
 #: apps/tasks/creative_formats.py:106
@@ -1059,6 +1059,28 @@ msgid ""
 msgstr ""
 "Saque solicitado. Vamos pagar na chave Pix informada em até %(days)s dias."
 
+#: apps/analytics/constants.py:19
+msgid ""
+"LinkedIn doesn't expose personal-profile analytics. Only Company Pages have "
+"analytics."
+msgstr ""
+"O LinkedIn não libera métricas de perfis pessoais. Só as páginas de empresa "
+"têm métricas."
+
+#: apps/analytics/constants.py:20
+msgid "Bluesky doesn't share post analytics with other apps."
+msgstr "O Bluesky não libera as métricas dos posts para outros aplicativos."
+
+#: apps/analytics/constants.py:21
+msgid "Mastodon doesn't share post analytics with other apps."
+msgstr "O Mastodon não libera as métricas dos posts para outros aplicativos."
+
+#: apps/analytics/constants.py:26
+msgid "Publishing to DEV.to works, but its analytics are not available yet."
+msgstr ""
+"A publicação no DEV.to funciona, mas as métricas dele ainda não estão "
+"disponíveis."
+
 #: apps/analytics/metrics.py:17 apps/composer/models.py:1155
 #: templates/ads/partials/_insights.html:27
 msgid "Reach"
@@ -1133,7 +1155,15 @@ msgstr "% médio assistido"
 msgid "Engagement rate"
 msgstr "Taxa de engajamento"
 
-#: apps/analytics/services.py:482
+#: apps/analytics/services.py:99
+msgid "This account is on a platform this version no longer supports."
+msgstr "Esta conta é de uma plataforma que esta versão não suporta mais."
+
+#: apps/analytics/services.py:108
+msgid "Analytics is not currently enabled for this platform."
+msgstr "As métricas não estão ativadas para esta plataforma no momento."
+
+#: apps/analytics/services.py:484
 msgid ""
 "Metrics reported by YouTube. Data may be delayed. Percentage comparisons, "
 "when available, are calculated from reported totals."
@@ -1142,31 +1172,31 @@ msgstr ""
 "comparações em porcentagem, quando disponíveis, são calculadas a partir dos "
 "totais informados."
 
-#: apps/analytics/services.py:493
+#: apps/analytics/services.py:495
 msgid "engagement rate"
 msgstr "taxa de engajamento"
 
-#: apps/analytics/services.py:495
+#: apps/analytics/services.py:497
 msgid "daily averages"
 msgstr "médias diárias"
 
-#: apps/analytics/services.py:498
+#: apps/analytics/services.py:500
 msgid "estimates built from per-video counts"
 msgstr "estimativas feitas a partir dos números de cada vídeo"
 
-#: apps/analytics/services.py:500
+#: apps/analytics/services.py:502
 msgid "estimates built from per-post counts"
 msgstr "estimativas feitas a partir dos números de cada publicação"
 
-#: apps/analytics/services.py:503
+#: apps/analytics/services.py:505
 msgid "follower growth"
 msgstr "crescimento de seguidores"
 
-#: apps/analytics/services.py:504
+#: apps/analytics/services.py:506
 msgid "changes in percent vs. the previous period"
 msgstr "variações em porcentagem em relação ao período anterior"
 
-#: apps/analytics/services.py:506
+#: apps/analytics/services.py:508
 #, python-format
 msgid ""
 "Underlying data comes from %(platform)s. The %(listed)s are calculated by "
@@ -1175,18 +1205,18 @@ msgstr ""
 "Os dados de origem vêm de %(platform)s. São calculados pelo Connekt Flow, e "
 "não informados por %(platform)s: %(listed)s."
 
-#: apps/analytics/services.py:508 apps/composer/views.py:868
+#: apps/analytics/services.py:510 apps/composer/views.py:868
 #: apps/composer/views.py:877 apps/composer/views.py:5289
 #: templates/composer/compose.html:1236
 msgid "and"
 msgstr "e"
 
-#: apps/analytics/services.py:816 apps/composer/models.py:1145
+#: apps/analytics/services.py:818 apps/composer/models.py:1145
 #: apps/tasks/creative_formats.py:120
 msgid "Carousel"
 msgstr "Carrossel"
 
-#: apps/analytics/services.py:818 apps/composer/idea_icons.py:55
+#: apps/analytics/services.py:820 apps/composer/idea_icons.py:55
 #: apps/composer/models.py:1148 apps/media_library/models.py:83
 #: apps/social_accounts/models.py:29 apps/tasks/creative_formats.py:113
 #: apps/tasks/creative_formats.py:119 apps/tasks/creative_formats.py:127
@@ -1198,11 +1228,11 @@ msgstr "Carrossel"
 msgid "Video"
 msgstr "Vídeo"
 
-#: apps/analytics/services.py:820
+#: apps/analytics/services.py:822
 msgid "Single image"
 msgstr "Imagem única"
 
-#: apps/analytics/services.py:821 apps/composer/forms.py:286
+#: apps/analytics/services.py:823 apps/composer/forms.py:286
 #: apps/composer/idea_icons.py:61
 #: templates/composer/partials/template_gallery.html:186
 msgid "Text"

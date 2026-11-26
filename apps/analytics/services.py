@@ -16,6 +16,7 @@ from typing import Any, NamedTuple
 
 from django.db import connections
 from django.utils import timezone
+from django.utils.functional import Promise
 from django.utils.text import get_text_list
 from django.utils.translation import gettext
 
@@ -54,7 +55,7 @@ class Unavailable(NamedTuple):
     """
 
     cause: str
-    message: str
+    message: str | Promise
 
 
 # ``cause`` values. NO_API and UNSUPPORTED are dead ends for the user;
@@ -95,7 +96,7 @@ def analytics_availability(platform: str, enabled_platforms: list[str] | None = 
     from apps.credentials.models import PlatformCredential
 
     if platform not in PlatformCredential.Platform.values:
-        return Unavailable(CAUSE_UNSUPPORTED, "This account is on a platform this version no longer supports.")
+        return Unavailable(CAUSE_UNSUPPORTED, gettext("This account is on a platform this version no longer supports."))
     inherent = NO_ANALYTICS_PLATFORMS.get(platform)
     if inherent is not None:
         return Unavailable(CAUSE_NO_API, inherent)
@@ -104,7 +105,7 @@ def analytics_availability(platform: str, enabled_platforms: list[str] | None = 
 
         enabled_platforms = AnalyticsPlatformConfig.enabled_platforms()
     if platform not in enabled_platforms:
-        return Unavailable(CAUSE_DISABLED, "Analytics is not currently enabled for this platform.")
+        return Unavailable(CAUSE_DISABLED, gettext("Analytics is not currently enabled for this platform."))
     return None
 
 
@@ -114,7 +115,8 @@ def unavailable_reason(platform: str, enabled_platforms: list[str] | None = None
     For callers that only render the copy (the agent-API builders).
     """
     verdict = analytics_availability(platform, enabled_platforms)
-    return verdict.message if verdict else None
+    # str(): the API schemas take a plain string, not a lazy translation.
+    return str(verdict.message) if verdict else None
 
 
 def analytics_accounts(workspace, enabled_platforms: list[str]) -> list[SocialAccount]:

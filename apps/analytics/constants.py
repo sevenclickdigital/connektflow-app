@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from django.utils.functional import Promise
+from django.utils.translation import gettext_lazy as _
+
 # Platforms whose APIs don't expose aggregate analytics. The analytics
 # page renders a per-platform "not available" variant instead of zeroed-
 # out KPI cards and charts.
@@ -12,13 +15,13 @@ from __future__ import annotations
 # — that guard alone is not sufficient (it only skips the per-post loop, after
 # the account-level fetch has already run), but it keeps the per-post window
 # honest for any caller that reads the table directly.
-NO_ANALYTICS_PLATFORMS: dict[str, str] = {
-    "linkedin_personal": ("LinkedIn doesn't expose personal-profile analytics. Only Company Pages have analytics."),
-    "bluesky": ("Bluesky's AT Protocol doesn't surface aggregate post analytics."),
-    "mastodon": ("The Mastodon API doesn't expose aggregate post analytics."),
+NO_ANALYTICS_PLATFORMS: dict[str, str | Promise] = {
+    "linkedin_personal": _("LinkedIn doesn't expose personal-profile analytics. Only Company Pages have analytics."),
+    "bluesky": _("Bluesky doesn't share post analytics with other apps."),
+    "mastodon": _("Mastodon doesn't share post analytics with other apps."),
     # DevtoProvider implements no metrics methods, so the sync would call into
     # SocialProvider's NotImplementedError. Listed here rather than left to
     # AnalyticsPlatformConfig: a missing config row now reads as *enabled*, and
     # this is a capability gap, not an admin decision.
-    "devto": ("Publishing to DEV.to is supported, but its analytics aren't wired up yet."),
+    "devto": _("Publishing to DEV.to works, but its analytics are not available yet."),
 }
