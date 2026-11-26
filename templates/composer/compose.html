@@ -742,41 +742,49 @@
                              storyDelivery: formatExtras[t.accId]?.story_delivery || '',
                              gbpCategory: formatExtras[t.accId]?.photo_category || 'ADDITIONAL',
                          }">
-                        <div class="flex items-center gap-2" :class="expanded[t.key] ? 'mb-3' : ''">
-                            <button type="button" class="flex flex-1 min-w-0 items-center gap-2 text-left cursor-pointer"
-                                    :aria-expanded="!!expanded[t.key]"
-                                    @click="expanded[t.key] = !expanded[t.key]">
-                                <svg class="w-3.5 h-3.5 shrink-0 text-neutral-500 transition-transform" :class="expanded[t.key] ? 'rotate-90' : ''"
-                                     fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                                <span class="platform-icon w-5 h-5 shrink-0 rounded-[5px] flex items-center justify-center"
-                                      :class="'pi-' + (charLimits[t.accId]?.platform || '')"
-                                      x-html="platformIconSvg(charLimits[t.accId]?.platform || '')"></span>
-                                <span class="min-w-0">
-                                    <span class="block text-xs font-semibold text-neutral-700 truncate">
+                        {% comment %}
+                        Header: the accordion toggle and, under it, what the format
+                        still needs, shown folded or not. The fix it offers (trim a
+                        video, adjust a crop) sits on the same line.
+                        {% endcomment %}
+                        <div :class="expanded[t.key] ? 'mb-3' : ''">
+                            <div class="flex items-center gap-2">
+                                <button type="button" class="flex flex-1 min-w-0 items-center gap-2 text-left cursor-pointer"
+                                        :aria-expanded="!!expanded[t.key]"
+                                        @click="expanded[t.key] = !expanded[t.key]">
+                                    <svg class="w-3.5 h-3.5 shrink-0 text-neutral-500 transition-transform" :class="expanded[t.key] ? 'rotate-90' : ''"
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                    {% comment %}
+                                    YouTube's branding rules allow its official red icon, not a
+                                    redrawn glyph on a tile like the other platforms'.
+                                    {% endcomment %}
+                                    <template x-if="charLimits[t.accId]?.platform === 'youtube'">
+                                        <span class="shrink-0 inline-flex items-center">{% include "partials/_platform_icon.html" with platform="youtube" size="md" %}</span>
+                                    </template>
+                                    <template x-if="charLimits[t.accId]?.platform !== 'youtube'">
+                                        <span class="platform-icon w-5 h-5 shrink-0 rounded-[5px] flex items-center justify-center"
+                                              :class="'pi-' + (charLimits[t.accId]?.platform || '')"
+                                              x-html="platformIconSvg(charLimits[t.accId]?.platform || '')"></span>
+                                    </template>
+                                    <span class="block min-w-0 text-xs font-semibold text-neutral-700 truncate">
                                         <span x-text="targetLabel(t.accId, t.fmt)"></span> — {% translate "Customization" %}
                                     </span>
-                                    <span x-show="cardProblem(t)" class="flex items-center gap-1 text-[11px] font-medium text-amber-700">
-                                        <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-                                        <span class="truncate" x-text="cardProblem(t)"></span>
-                                    </span>
-                                </span>
-                            </button>
-                            <button type="button" x-show="expanded[t.key]" class="ml-auto shrink-0 text-xs text-red-400 hover:text-red-500 cursor-pointer" @click="$el.closest('.rounded-xl').querySelectorAll('[name^=override_]').forEach(field => field.value = ''); $nextTick(() => triggerPreviewUpdate())">{% translate "Remove override" %}</button>
+                                </button>
+                                <button type="button" x-show="expanded[t.key]" class="ml-auto shrink-0 text-xs text-red-400 hover:text-red-500 cursor-pointer" @click="$el.closest('.rounded-xl').querySelectorAll('[name^=override_]').forEach(field => field.value = ''); $nextTick(() => triggerPreviewUpdate())">{% translate "Remove override" %}</button>
+                            </div>
+                            <div x-show="cardProblem(t) || ratioIssues(t.accId, t.fmt).length > 0"
+                                 class="mt-1 pl-[3.125rem] flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium text-amber-700">
+                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                                <span x-show="cardProblem(t)" x-text="cardProblem(t)"></span>
+                                <span x-show="!cardProblem(t)" x-text="ratioIssueText(t.accId, t.fmt)"
+                                      title="{% translate 'The post may go out with black bars or be cropped by the platform. Adjust the crop of these media.' %}"></span>
+                                <button type="button" x-show="cardProblem(t) && trimNeed(t.accId, t.fmt)" @click="openTrim(t.accId, t.fmt)" x-text="trimButtonLabel(t.accId, t.fmt)"
+                                        class="font-semibold text-brand-700 hover:text-brand-800 underline underline-offset-2 cursor-pointer"></button>
+                                <button type="button" x-show="!cardProblem(t) && ratioIssues(t.accId, t.fmt).length > 0" @click="openRatioFix(t.accId, t.fmt)"
+                                        class="font-semibold text-brand-700 hover:text-brand-800 underline underline-offset-2 cursor-pointer">{% translate "Adjust" %}</button>
+                            </div>
                         </div>
                         <div x-show="expanded[t.key]">
-
-                            <div x-show="formatMismatch(t.fmt, t.accId)" class="mb-3">
-                                <p class="text-[11px] font-medium text-amber-700" x-text="formatMismatch(t.fmt, t.accId)"></p>
-                                <button type="button" x-show="trimNeed(t.accId, t.fmt)" @click="openTrim(t.accId, t.fmt)" x-text="trimButtonLabel(t.accId, t.fmt)"
-                                        class="mt-2 px-3 py-1 rounded-full border border-brand-300 text-brand-800 text-xs font-semibold hover:bg-brand-50 cursor-pointer"></button>
-                            </div>
-
-                            <div x-show="ratioIssues(t.accId, t.fmt).length > 0" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
-                                <p class="text-[12px] font-semibold text-amber-800" x-text="ratioIssueText(t.accId, t.fmt)"></p>
-                                <p class="text-[11px] text-amber-700 mt-0.5">{% translate "The post may go out with black bars or be cropped by the platform. Adjust the crop of these media." %}</p>
-                                <button type="button" @click="openRatioFix(t.accId, t.fmt)"
-                                        class="mt-2 px-3 py-1 rounded-full border border-brand-300 text-brand-800 text-xs font-semibold hover:bg-brand-50 cursor-pointer">{% translate "Adjust" %}</button>
-                            </div>
 
                             {% comment %}
                             Story options. Rendered (hidden) even while the card is
@@ -954,10 +962,6 @@
                                          },
                                      }"
                                      x-init="loadBoards()">
-                                    <p x-show="!hasMediaAttached" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                                        <span class="font-semibold">{% translate "Pinterest needs an image or a video." %}</span>
-                                        {% translate "Add one to schedule this post, or deselect the account." %}
-                                    </p>
                                     <!-- Select Board -->
                                     <div>
                                         <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">
@@ -1104,15 +1108,6 @@
                             <template x-if="charLimits[accId]?.platform === 'youtube' && t.fmt === (selectedFormats[accId] || [])[0]">
                                 <div class="mt-3 pt-3 border-t border-neutral-100 space-y-3">
                                     <a :href="charLimits[accId]?.youtube_url || 'https://www.youtube.com/'" target="_blank" rel="noopener noreferrer" class="inline-block text-xs font-semibold text-neutral-700 underline underline-offset-2">{% translate "YouTube" %}</a>
-                                    <p x-show="!hasVideoAttached" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                                        <span class="font-semibold">{% translate "YouTube only publishes videos." %}</span>
-                                        {% translate "Add a video to schedule this post, or deselect the account." %}
-                                    </p>
-                                    <div x-show="hasFormat(accId, 'short') && shortVideoIssue(accId)" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                                        <p x-text="shortVideoIssue(accId)"></p>
-                                        <button type="button" x-show="trimNeed(accId, 'short')" @click="openTrim(accId, 'short')" x-text="trimButtonLabel(accId, 'short')"
-                                                class="mt-2 px-3 py-1 rounded-full border border-brand-300 text-brand-800 text-xs font-semibold hover:bg-brand-50 cursor-pointer"></button>
-                                    </div>
                                     <!-- Thumbnail -->
                                     <div>
                                         <label class="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{% translate "Custom Thumbnail" %}</label>
