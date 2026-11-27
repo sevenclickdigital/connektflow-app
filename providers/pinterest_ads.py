@@ -231,7 +231,7 @@ class PinterestAdsClient(PinterestProvider):
         return body if isinstance(body, list) else (body.get("items") or [])
 
     def targeting_options(self, token: str, ad_account_id: str, targeting_type: str) -> list:
-        """What Pinterest offers for one targeting type (``interest``, ``geo``…), as it answers it."""
+        """What Pinterest offers for one targeting type (``INTEREST``, ``GEO``…, in capitals), as it answers it."""
         body = self._get(token, f"resources/targeting/{targeting_type}", {"ad_account_id": ad_account_id})
         return body if isinstance(body, list) else (body.get("items") or [])
 

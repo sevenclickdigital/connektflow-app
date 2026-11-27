@@ -300,7 +300,7 @@ the form as it changes.
     </div>
 </form>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 document.addEventListener('alpine:init', () => {
     // The browser names ISO country and language codes in the page's language.
     const lang = document.documentElement.lang || undefined;

@@ -561,7 +561,12 @@ class TestScreens:
         ):
             response = _logged_in(manager).get(_url("pinterest_campaign_new", workspace))
         assert response.status_code == 200
-        assert "Meu pin" in response.content.decode()
+        body = response.content.decode()
+        assert "Meu pin" in body
+        # The wizard's own script must carry the CSP nonce, or production blocks it.
+        script = body[: body.index("Alpine.data('campaignWizard'")]
+        wizard_tag = script[script.rindex("<script") :].split(">", 1)[0]
+        assert 'nonce="' in wizard_tag
 
     def test_each_published_pin_is_offered_with_its_image(self, workspace, manager, connection, no_choices):
         from apps.composer.models import PlatformPost, Post, PostMedia
@@ -694,7 +699,7 @@ class TestFullCreation:
             {"3": "Art"},
         ]
         routes = {
-            ("GET", "resources/targeting/interest"): interests,
+            ("GET", "resources/targeting/INTEREST"): interests,
             ("GET", f"ad_accounts/{ACCOUNT}/audiences"): {
                 "items": [{"id": "9", "name": "Clientes", "status": "READY"}, {"id": "8", "status": "TOO_SMALL"}],
                 "bookmark": None,

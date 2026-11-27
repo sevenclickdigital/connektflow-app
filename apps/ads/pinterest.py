@@ -757,7 +757,7 @@ def targeting_choices(connection: AdsConnection) -> dict:
     interests = cache.get(cache_key)
     if interests is None:
         try:
-            interests = _flatten_interests(_call(connection, client.targeting_options, account, "interest"))
+            interests = _flatten_interests(_call(connection, client.targeting_options, account, "INTEREST"))
         except AdsError as exc:
             choices["errors"]["interests"] = str(exc)
             interests = []
