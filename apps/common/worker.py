@@ -123,9 +123,9 @@ LANE_TASK_NAMES: dict[str, frozenset[str]] = {
 }
 LANES = (*LANE_TASK_NAMES, "general")
 WORKER_SCOPES = ("all", *LANES)
-# Connections the whole deployment may hold at its peak: web threads, every
-# worker container and the publish engine's pools (test_connection_budget.py).
-MIN_DATABASE_CONNECTIONS = 30
+# Connections the whole deployment may hold at its peak: the threads of both
+# web containers, every worker container and the publish engine's pools (test_connection_budget.py).
+MIN_DATABASE_CONNECTIONS = 35
 
 # How long a due task may wait before its lane counts as late (``late_lanes``),
 # whatever the cause - a worker that is down, hung or simply behind. Short

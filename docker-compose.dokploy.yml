@@ -21,7 +21,15 @@
 #     resolve. Keep "Isolated Deployments" off for this application, since it
 #     moves the stack to a network of its own.
 #
-# In Dokploy, add a Domain pointing to service `app`, container port `8000`.
+# The site's routing is written here, as Traefik labels on `app` and
+# `app-standby`, with the names Dokploy's own Traefik uses (entry points `web`
+# and `websecure`, certificate resolver `letsencrypt`). Do NOT add a Domain for
+# this application in Dokploy: it would write a third router for the same host.
+# Set APP_DOMAIN in the Environment tab instead.
+#
+# Deploy with the command in the README ("Deploying without downtime"), set in
+# Advanced -> Run Command. Dokploy's default `up -d --build` also works, but it
+# stops every container before starting any, so the site is down meanwhile.
 # Docker keeps a container's output without limit by default. What has to
 # outlive a container goes to the error tracker (SENTRY_DSN), not here.
 x-logging: &logging
@@ -52,6 +60,55 @@ x-worker: &worker
     - dokploy-network
   restart: unless-stopped
 
+# What the two web containers share; each service below sets its routing.
+x-web: &web
+  logging: *logging
+  build:
+    context: .
+    dockerfile: Dockerfile
+  # Same sizing rationale as the Dockerfile CMD: ~200 MB per warmed worker.
+  # Raise --workers only alongside the container's memory limit.
+  # deploy/drain.sh takes the container out of the proxy's rotation before the
+  # server stops.
+  command: sh deploy/drain.sh gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 1 --threads 4
+  env_file:
+    - .env
+  environment:
+    DJANGO_SETTINGS_MODULE: config.settings.production
+    DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the internal connection URL of the Dokploy database}
+    MEDIA_ROOT: /app/media
+    # The Dockerfile reports the host's core count, so glibc's per-thread
+    # arena cap is effectively unbounded here. See README "MALLOC_ARENA_MAX".
+    MALLOC_ARENA_MAX: 2
+    # Longer than the healthcheck's interval x retries below.
+    DRAIN_SECONDS: 25
+  # DRAIN_SECONDS, then Gunicorn's 30 s to finish the requests it has.
+  stop_grace_period: 70s
+  volumes:
+    - media_data:/app/media
+  expose:
+    - "8000"
+  healthcheck:
+    # Unhealthy while draining (deploy/drain.sh), which is what makes Traefik
+    # stop routing here before the server stops.
+    # The Host header must be a name in ALLOWED_HOSTS. Without it Django
+    # answers 400 DisallowedHost ("Invalid HTTP_HOST header: 'localhost:8000'")
+    # and the container is marked unhealthy while actually serving fine. Take
+    # the first entry, since ALLOWED_HOSTS may be a comma-separated list.
+    test:
+      - CMD-SHELL
+      - 'test ! -f /tmp/draining && curl -fsS -H "Host: $${ALLOWED_HOSTS%%,*}" http://localhost:8000/health/ || exit 1'
+    interval: 5s
+    timeout: 10s
+    retries: 3
+    start_period: 40s
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+  networks:
+    - dokploy-network
+  restart: unless-stopped
+
 services:
   migrate:
     logging: *logging
@@ -70,45 +127,43 @@ services:
       - dokploy-network
     restart: "no"
 
+  # The site. `app` takes every request; `app-standby` is the same server with a
+  # lower router priority, so it takes them only while `app` is out of rotation:
+  # during a deploy the standby is replaced first, then `app`, and the site never
+  # goes without a container (see "Deploying without downtime" in the README).
   app:
-    logging: *logging
-    build:
-      context: .
-      dockerfile: Dockerfile
-    # Same sizing rationale as the Dockerfile CMD: ~200 MB per warmed worker.
-    # Raise --workers only alongside the container's memory limit.
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 1 --threads 4
-    env_file:
-      - .env
-    environment:
-      DJANGO_SETTINGS_MODULE: config.settings.production
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the internal connection URL of the Dokploy database}
-      MEDIA_ROOT: /app/media
-      # The Dockerfile reports the host's core count, so glibc's per-thread
-      # arena cap is effectively unbounded here. See README "MALLOC_ARENA_MAX".
-      MALLOC_ARENA_MAX: 2
-    volumes:
-      - media_data:/app/media
-    expose:
-      - "8000"
-    healthcheck:
-      # The Host header must be a name in ALLOWED_HOSTS. Without it Django
-      # answers 400 DisallowedHost ("Invalid HTTP_HOST header: 'localhost:8000'")
-      # and the container is marked unhealthy while actually serving fine. Take
-      # the first entry, since ALLOWED_HOSTS may be a comma-separated list.
-      test:
-        - CMD-SHELL
-        - 'curl -fsS -H "Host: $${ALLOWED_HOSTS%%,*}" http://localhost:8000/health/ || exit 1'
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-    networks:
-      - dokploy-network
-    restart: unless-stopped
+    <<: *web
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.connektflow-web.rule=Host(`${APP_DOMAIN:?Set APP_DOMAIN to the host name of the site, e.g. app.example.com}`)
+      - traefik.http.routers.connektflow-web.entrypoints=web
+      - traefik.http.routers.connektflow-web.priority=200
+      - traefik.http.routers.connektflow-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.connektflow-web.service=connektflow
+      - traefik.http.routers.connektflow-websecure.rule=Host(`${APP_DOMAIN}`)
+      - traefik.http.routers.connektflow-websecure.entrypoints=websecure
+      - traefik.http.routers.connektflow-websecure.priority=200
+      - traefik.http.routers.connektflow-websecure.tls.certresolver=letsencrypt
+      - traefik.http.routers.connektflow-websecure.service=connektflow
+      - traefik.http.services.connektflow.loadbalancer.server.port=8000
+
+  app-standby:
+    <<: *web
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.connektflow-standby-web.rule=Host(`${APP_DOMAIN}`)
+      - traefik.http.routers.connektflow-standby-web.entrypoints=web
+      - traefik.http.routers.connektflow-standby-web.priority=100
+      - traefik.http.routers.connektflow-standby-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.connektflow-standby-web.service=connektflow-standby
+      - traefik.http.routers.connektflow-standby-websecure.rule=Host(`${APP_DOMAIN}`)
+      - traefik.http.routers.connektflow-standby-websecure.entrypoints=websecure
+      - traefik.http.routers.connektflow-standby-websecure.priority=100
+      - traefik.http.routers.connektflow-standby-websecure.tls.certresolver=letsencrypt
+      - traefik.http.routers.connektflow-standby-websecure.service=connektflow-standby
+      - traefik.http.services.connektflow-standby.loadbalancer.server.port=8000
 
   # One worker container per lane (apps/common/worker.py), so a crash, an
   # out-of-memory kill or a hung worker stops one kind of work and never the

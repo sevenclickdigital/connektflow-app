@@ -352,7 +352,9 @@ STORAGE_BACKEND=s3     →  storages.backends.s3boto3.S3Boto3Storage (S3_* env v
 
 ```
 migrate:  one-shot `manage.py migrate --noinput`
-app:      gunicorn config.wsgi:application --workers 1 --threads 4 (expose 8000, /health/ healthcheck)
+app, app-standby: gunicorn config.wsgi:application --workers 1 --threads 4 behind deploy/drain.sh
+          (expose 8000, /health/ healthcheck, Traefik labels for APP_DOMAIN; the standby has the
+          lower router priority)
 worker-<lane>: manage.py run_studio_worker --scope <lane>, one container per lane (publishing, realtime,
           inbox, sync, email, general, media), sharing the x-worker block; worker-media is capped at
           MEDIA_WORKER_CPUS (1.5) / MEDIA_WORKER_MEMORY (1g)
@@ -360,7 +362,7 @@ volumes:  media_data (mounted at /app/media in app and every worker)
 networks: dokploy-network (external), where the database and Traefik are
 ```
 
-Cloudflare proxies the domain (orange cloud) in front of Dokploy's Traefik, which terminates TLS and proxies to `app:8000`. No host port is published. Env vars come from Dokploy's Environment tab. `config.settings.production` trusts `X-Forwarded-Proto` and exempts `/health/` from the SSL redirect. Gunicorn uses one worker because of memory (about 200 MB per warmed worker). `--max-requests` is left off on purpose (see the `Dockerfile` comment). `MALLOC_ARENA_MAX=2` is set on app and every worker. The worker containers are deployed together: a lane's jobs wait in the queue while its container is not running.
+Cloudflare proxies the domain (orange cloud) in front of Dokploy's Traefik, which terminates TLS and proxies to `app:8000`, or to `app-standby:8000` while `app` is unhealthy or absent. The routing is the compose file's own Traefik labels (no Domain in Dokploy). No host port is published. Env vars come from Dokploy's Environment tab. `config.settings.production` trusts `X-Forwarded-Proto` and exempts `/health/` from the SSL redirect. Gunicorn uses one worker because of memory (about 200 MB per warmed worker). `--max-requests` is left off on purpose (see the `Dockerfile` comment). `MALLOC_ARENA_MAX=2` is set on app and every worker. A deploy runs the command in the README ("Deploying without downtime"), set as the application's Run Command in Dokploy: build, `migrate`, `app-standby`, `app`, then the workers. The old release serves until its container is replaced, so the migrations run against the previous code, and a web container told to stop reports unhealthy first (`deploy/drain.sh`), which moves Traefik to the other one before Gunicorn exits. Every container is replaced by every deploy, from one build, so the site and the workers run the same code. The worker containers are replaced together: a lane's jobs wait in the queue while its container is not running.
 
 The image (`Dockerfile`, `python:3.12-slim`) installs FFmpeg, gettext and Node 20, builds Tailwind, compiles messages and runs `collectstatic`.
 

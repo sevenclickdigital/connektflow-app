@@ -118,7 +118,7 @@ When a hook reports a problem, fix it before moving on. When it asks the reuse q
 
 ## django-safe-migration
 - Django version: 5.2
-- Deploy strategy: rolling deploy. On Dokploy the one-shot `migrate` service runs to completion before `app` and `worker` are recreated, so the previous release keeps serving traffic against the new schema while it runs. Every migration must be safe for the old code.
+- Deploy strategy: rolling deploy. On Dokploy the deploy command (README, "Deploying without downtime") runs the one-shot `migrate` service to completion before `app-standby`, `app` and the workers are replaced, so the previous release keeps serving traffic against the new schema while it runs. Every migration must be safe for the old code.
 - Runtime guard: none
 - Migration command: `.venv/bin/python manage.py sqlmigrate <app_label> <migration_name>`
 

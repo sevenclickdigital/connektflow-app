@@ -156,21 +156,26 @@ class BudgetArithmeticTest(TransactionTestCase):
         """Peak demand across every process stays under MIN_DATABASE_CONNECTIONS.
 
         Every worker container busy at once, the web threads and the publish
-        engine's pools. Web threads and worker containers are read from the
-        Dokploy compose file rather than copied, so raising ``--threads`` or
-        adding a worker fails here instead of in production; the worker logs
-        an error at startup when the database grants fewer connections than
-        this (``warn_if_too_few_connections``).
+        engine's pools. Web threads, web containers and worker containers are
+        read from the Dokploy compose file rather than copied, so raising
+        ``--threads`` or adding a container fails here instead of in
+        production; the worker logs an error at startup when the database
+        grants fewer connections than this (``warn_if_too_few_connections``).
+
+        Both web containers count: while a deploy moves the requests from one
+        to the other, each can hold a connection per thread.
         """
         compose = (REPO_ROOT / "docker-compose.dokploy.yml").read_text()
         web = next(line for line in compose.splitlines() if "gunicorn config.wsgi" in line)
         workers = int(re.search(r"--workers\s+(\d+)", web).group(1))
         threads = int(re.search(r"--threads\s+(\d+)", web).group(1))
+        web_containers = len(re.findall(r"^    <<: \*web$", compose, re.MULTILINE))
+        self.assertEqual(web_containers, 2, "the site and its standby")
         scopes = re.findall(r"run_studio_worker --scope ([a-z-]+)", compose)
         self.assertEqual(sorted(scopes), sorted(LANES), "every lane runs in exactly one container")
 
         peak = (
-            workers * threads  # gunicorn, one connection per thread
+            web_containers * workers * threads  # gunicorn, one connection per thread
             # Each worker container: its dispatcher, and one per busy lane.
             + sum(1 + len(lanes_for(scope)) for scope in scopes)
             + engine._max_concurrent_posts()
