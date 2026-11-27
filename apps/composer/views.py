@@ -38,7 +38,7 @@ from apps.common.validators import (
     parse_and_truncate_youtube_tag_string,
     safe_xml_fromstring,
 )
-from apps.media_library.models import MediaAsset
+from apps.media_library.models import UNSPLASH_SITE, MediaAsset, unsplash_referral_url
 from apps.media_library.quotas import StorageQuotaExceededError
 from apps.members.decorators import require_permission
 from apps.members.models import WorkspaceMembership
@@ -2760,6 +2760,7 @@ def unsplash_search(request, workspace_id):
                 "alt": p.get("alt_description") or p.get("description") or "",
                 "photographer": p["user"]["name"],
                 "photographer_url": p["user"]["links"]["html"],
+                "photographer_link": unsplash_referral_url(p["user"]["links"]["html"]),
                 "photo_url": p["links"]["html"],
                 "download_location": p["links"]["download_location"],
             }
@@ -2768,7 +2769,13 @@ def unsplash_search(request, workspace_id):
         total = data.get("total", 0)
     except (ValueError, KeyError, TypeError, AttributeError):
         return JsonResponse({"error": _("Unexpected response from Unsplash. Try again.")}, status=502)
-    return JsonResponse({"results": results, "total": total})
+    return JsonResponse({"results": results, "total": total, "unsplash_link": unsplash_referral_url(UNSPLASH_SITE)})
+
+
+def _unsplash_page(value):
+    """A client-supplied link kept only when it points at unsplash.com, so it is safe as an href."""
+    url = _as_str(value)
+    return url if url.startswith(UNSPLASH_SITE) and len(url) <= 200 else ""
 
 
 @login_required
@@ -2897,8 +2904,10 @@ def unsplash_import(request, workspace_id, post_id=None):
                 mime_type=content_type,
                 file_size=len(content),
                 source="unsplash",
-                source_url=_as_str(photo.get("photo_url")),
+                source_url=_unsplash_page(photo.get("photo_url")),
                 attribution=f"Photo by {_as_str(photo.get('photographer')) or 'Unknown'} on Unsplash",
+                author_name=_as_str(photo.get("photographer"))[:255],
+                author_url=_unsplash_page(photo.get("photographer_url")),
                 alt_text=_as_str(photo.get("alt")),
             )
             new_assets.append(asset)

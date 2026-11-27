@@ -168,12 +168,19 @@ class UnsplashSearchTests(ComposerTestCase):
                 "alt",
                 "photographer",
                 "photographer_url",
+                "photographer_link",
                 "photo_url",
                 "download_location",
             },
         )
         self.assertEqual(photo["alt"], "A cup of coffee")
         self.assertEqual(photo["photographer"], "Brigitte Tohm")
+        # The credit links carry the referral parameters Unsplash's guidelines require.
+        self.assertEqual(
+            photo["photographer_link"],
+            "https://unsplash.com/@brigittetohm?utm_source=connekt_flow&utm_medium=referral",
+        )
+        self.assertEqual(data["unsplash_link"], "https://unsplash.com/?utm_source=connekt_flow&utm_medium=referral")
         # The key must be sent as a Client-ID header, not a query param.
         headers = mock_get.call_args.kwargs["headers"]
         self.assertEqual(headers["Authorization"], "Client-ID test-key")
@@ -258,6 +265,8 @@ class UnsplashImportTests(ComposerTestCase):
         self.assertEqual(asset.organization, self.org)
         self.assertEqual(asset.source_url, "https://unsplash.com/photos/abc123")
         self.assertEqual(asset.attribution, "Photo by Brigitte Tohm on Unsplash")
+        self.assertEqual(asset.author_name, "Brigitte Tohm")
+        self.assertEqual(asset.author_url, "https://unsplash.com/@brigittetohm")
         self.assertEqual(asset.media_type, MediaAsset.MediaType.IMAGE)
 
         session_key = f"pending_media_{self.workspace.id}"
@@ -321,6 +330,20 @@ class UnsplashImportTests(ComposerTestCase):
         self.assertEqual(asset.source_url, "")
         self.assertEqual(asset.alt_text, "")
         self.assertEqual(asset.attribution, "Photo by Unknown on Unsplash")
+
+    def test_credit_links_outside_unsplash_are_dropped(self):
+        # The links come from the client and end up as hrefs in the library.
+        photo = _unsplash_photo()
+        photo["photographer_url"] = "javascript:alert(1)"
+        photo["photo_url"] = "https://evil.example.com/photo"
+        patcher, _client = self._patch_client(**self._ok_photo_mocks())
+        with patcher:
+            response = self._post([photo])
+        self.assertEqual(response.status_code, 200)
+        asset = MediaAsset.objects.get(workspace=self.workspace)
+        self.assertEqual(asset.author_url, "")
+        self.assertEqual(asset.source_url, "")
+        self.assertEqual(asset.author_name, "Brigitte Tohm")
 
     def test_rejects_non_unsplash_image_url(self):
         # Registration succeeds but points the byte download somewhere else.

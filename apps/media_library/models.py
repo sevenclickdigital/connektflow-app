@@ -9,6 +9,17 @@ from django.utils.translation import gettext_lazy as _
 
 from .managers import MediaAssetManager
 
+UNSPLASH_SITE = "https://unsplash.com/"
+# Unsplash's guidelines ask every link back to them to carry the app name as utm_source.
+UNSPLASH_REFERRAL_QUERY = "utm_source=connekt_flow&utm_medium=referral"
+
+
+def unsplash_referral_url(url: str) -> str:
+    """``url`` with Unsplash's referral parameters, or "" when it isn't an unsplash.com page."""
+    if not url.startswith(UNSPLASH_SITE):
+        return ""
+    return f"{url}{'&' if '?' in url else '?'}{UNSPLASH_REFERRAL_QUERY}"
+
 
 class MediaFolder(models.Model):
     """Folder for organizing media assets. Max 3 levels of nesting."""
@@ -145,6 +156,10 @@ class MediaAsset(models.Model):
     source = models.CharField(max_length=50, blank=True, default="", help_text="e.g., 'upload', 'unsplash', 'pexels'")
     source_url = models.URLField(blank=True, default="")
     attribution = models.TextField(blank=True, default="")
+    # Who made a stock photo and their profile page, for the credit the stock
+    # site requires ("Photo by <author> on Unsplash", both linked).
+    author_name = models.CharField(max_length=255, blank=True, default="", db_default="")
+    author_url = models.URLField(blank=True, default="", db_default="")
 
     # Processing
     processing_status = models.CharField(
@@ -264,6 +279,17 @@ class MediaAsset(models.Model):
         minutes, seconds = divmod(round(self.duration), 60)
         hours, minutes = divmod(minutes, 60)
         return f"{hours}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes}:{seconds:02d}"
+
+    @property
+    def unsplash_credit(self):
+        """Links for the Unsplash credit line, or None for an asset that didn't come from Unsplash."""
+        if self.source != "unsplash" or not self.author_name:
+            return None
+        return {
+            "author": self.author_name,
+            "author_link": unsplash_referral_url(self.author_url),
+            "unsplash_link": unsplash_referral_url(UNSPLASH_SITE),
+        }
 
 
 class MediaAssetVersion(models.Model):

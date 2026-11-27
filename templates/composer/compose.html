@@ -2228,17 +2228,25 @@
                 </div>
                 <div x-show="!unsplashLoading && !unsplashError" class="columns-2 sm:columns-3 gap-3">
                     <template x-for="photo in unsplashResults" :key="photo.id">
-                        <div class="mb-3 break-inside-avoid relative rounded-lg overflow-hidden cursor-pointer group"
-                             :class="unsplashSelected[photo.id] ? 'ring-2 ring-inset ring-brand-700' : ''"
-                             @click="toggleUnsplashSelect(photo)">
-                            <img :src="photo.thumb" :alt="photo.alt" loading="lazy"
-                                 class="w-full block" :style="photo.color ? `background:${photo.color}` : ''">
-                            <span class="absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
-                                  :class="unsplashSelected[photo.id] ? 'bg-brand-700 border-brand-700' : 'bg-black/25 border-white/90'">
-                                <svg x-show="unsplashSelected[photo.id]" class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                            </span>
-                            <span class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 pt-4 pb-1.5 text-[10px] text-white truncate opacity-0 group-hover:opacity-100 transition-opacity"
-                                  x-text="photo.photographer + ' / Unsplash'"></span>
+                        <div class="mb-3 break-inside-avoid">
+                            <div class="relative rounded-lg overflow-hidden cursor-pointer"
+                                 :class="unsplashSelected[photo.id] ? 'ring-2 ring-inset ring-brand-700' : ''"
+                                 @click="toggleUnsplashSelect(photo)">
+                                <img :src="photo.thumb" :alt="photo.alt" loading="lazy"
+                                     class="w-full block" :style="photo.color ? `background:${photo.color}` : ''">
+                                <span class="absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
+                                      :class="unsplashSelected[photo.id] ? 'bg-brand-700 border-brand-700' : 'bg-black/25 border-white/90'">
+                                    <svg x-show="unsplashSelected[photo.id]" class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                </span>
+                            </div>
+                            <p class="mt-1 text-[11px] leading-snug text-neutral-600 truncate">
+                                {% translate "Photo by" context "Unsplash credit" %}
+                                <a :href="photo.photographer_link" target="_blank" rel="noopener noreferrer"
+                                   class="underline hover:text-neutral-950" x-text="photo.photographer"></a>
+                                {% translate "on" context "Unsplash credit" %}
+                                <a :href="unsplashLink" target="_blank" rel="noopener noreferrer"
+                                   class="underline hover:text-neutral-950">Unsplash</a>
+                            </p>
                         </div>
                     </template>
                 </div>
@@ -2702,6 +2710,7 @@ function composerApp() {
         unsplashQuery: '',
         unsplashActiveChip: '',
         unsplashResults: [],
+        unsplashLink: '',
         unsplashSelected: {},
         unsplashLoading: false,
         unsplashError: '',
@@ -3576,6 +3585,7 @@ function composerApp() {
                         return;
                     }
                     this.unsplashResults = data.results || [];
+                    this.unsplashLink = data.unsplash_link || '';
                 })
                 .catch(() => {
                     this.unsplashResults = [];

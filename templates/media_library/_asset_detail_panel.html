@@ -150,6 +150,19 @@
           <dd class="text-xs font-medium" style="color: var(--text-primary);">{{ asset.uploaded_by.display_name }}</dd>
         </div>
         {% endif %}
+        {% with credit=asset.unsplash_credit %}
+        {% if credit %}
+        <div class="flex justify-between gap-3">
+          <dt class="text-xs shrink-0" style="color: var(--text-tertiary);">{% translate "Credit" %}</dt>
+          <dd class="text-xs font-medium text-right" style="color: var(--text-primary);">
+            {% translate "Photo by" context "Unsplash credit" %}
+            {% if credit.author_link %}<a href="{{ credit.author_link }}" target="_blank" rel="noopener noreferrer" class="underline">{{ credit.author }}</a>{% else %}{{ credit.author }}{% endif %}
+            {% translate "on" context "Unsplash credit" %}
+            <a href="{{ credit.unsplash_link }}" target="_blank" rel="noopener noreferrer" class="underline">Unsplash</a>
+          </dd>
+        </div>
+        {% endif %}
+        {% endwith %}
       </dl>
     </div>
 
