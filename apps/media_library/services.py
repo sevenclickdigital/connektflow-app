@@ -23,6 +23,9 @@ from .validators import validate_file
 
 logger = logging.getLogger(__name__)
 
+# Where a stock photo came from and who to credit; a copy made from it keeps them.
+STOCK_CREDIT_FIELDS = ("source", "source_url", "attribution", "author_name", "author_url")
+
 
 class ProtectedAssetError(Exception):
     """Raised when trying to delete an asset referenced by scheduled posts."""
@@ -825,7 +828,8 @@ def crop_into_new_asset(asset, *, workspace, x, y, width, height, uploaded_by, d
     The source asset is left untouched: it may be used by other posts, and the
     user may want the uncropped image back. The copy lands in ``workspace``
     (a shared org asset has none of its own), in the source's folder when the
-    source lives there, with the same alt text, title and tags, and goes
+    source lives there, with the same alt text, title, tags and stock-photo
+    credit, and goes
     through ``create_asset``, so it is sniffed and counted against the storage
     quotas like any upload.
 
@@ -859,7 +863,10 @@ def crop_into_new_asset(asset, *, workspace, x, y, width, height, uploaded_by, d
     cropped.width = new_width
     cropped.height = new_height
     cropped.derived_from = derived_from or asset
-    cropped.save(update_fields=["width", "height", "derived_from"])
+    # A crop of a stock photo still owes its photographer the credit.
+    for field in STOCK_CREDIT_FIELDS:
+        setattr(cropped, field, getattr(asset, field))
+    cropped.save(update_fields=["width", "height", "derived_from", *STOCK_CREDIT_FIELDS])
 
     # Like every other upload: thumbnail, metadata, and the pending status
     # cleared. Left pending, the library polls the card forever.

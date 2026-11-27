@@ -57,6 +57,23 @@ class CropMediaTests(CropMediaTestsBase):
         with Image.open(self.asset.file) as img:
             self.assertEqual(img.size, (400, 300))
 
+    def test_a_cropped_stock_photo_keeps_its_photographer_credit(self):
+        self.asset.source = "unsplash"
+        self.asset.source_url = "https://unsplash.com/photos/abc123"
+        self.asset.attribution = "Photo by Brigitte Tohm on Unsplash"
+        self.asset.author_name = "Brigitte Tohm"
+        self.asset.author_url = "https://unsplash.com/@brigittetohm"
+        self.asset.save()
+
+        self.client.post(self.url, data={"x": 10, "y": 20, "width": 160, "height": 200})
+
+        self.attachment.refresh_from_db()
+        cropped = self.attachment.media_asset
+        self.assertNotEqual(cropped.pk, self.asset.pk)
+        self.assertEqual(cropped.unsplash_credit["author"], "Brigitte Tohm")
+        self.assertEqual(cropped.author_url, "https://unsplash.com/@brigittetohm")
+        self.assertEqual(cropped.source_url, "https://unsplash.com/photos/abc123")
+
     def test_a_box_outside_the_image_is_refused(self):
         response = self.client.post(self.url, data={"x": 300, "y": 0, "width": 200, "height": 100})
 
