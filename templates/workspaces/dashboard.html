@@ -46,7 +46,7 @@ plus failed posts and accounts that lost their connection.
 {% endcomment %}
 <div class="flex flex-wrap gap-2 mb-5">
     {% if failed_posts %}
-    <a href="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=list&status=failed" class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm transition-colors bg-red-50 text-red-700 hover:bg-red-100">
+    <a href="{% url 'calendar:calendar' workspace_id=workspace.id %}?mode=list&tab=sent&failures=pending" class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm transition-colors bg-red-50 text-red-700 hover:bg-red-100">
         <b>{% blocktranslate count total=failed_posts %}{{ total }} post failed{% plural %}{{ total }} posts failed{% endblocktranslate %}</b>
         <span aria-hidden="true">·</span><span class="underline">{% translate "fix" %}</span>
     </a>

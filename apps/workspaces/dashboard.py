@@ -18,6 +18,7 @@ from django.utils.translation import gettext_noop
 from apps.analytics import services as analytics
 from apps.analytics.metrics import METRICS, PLATFORM_METRICS
 from apps.composer.models import PlatformPost
+from apps.composer.services import pending_failures
 from apps.social_accounts.models import SocialAccount
 
 
@@ -33,13 +34,8 @@ def reconnect_accounts(workspace) -> list[SocialAccount]:
 
 
 def failed_post_count(workspace) -> int:
-    """Posts with at least one network whose publication failed."""
-    return (
-        PlatformPost.objects.filter(post__workspace_id=workspace.id, status=PlatformPost.Status.FAILED)
-        .values("post_id")
-        .distinct()
-        .count()
-    )
+    """Posts with at least one network whose publication failed and wasn't marked resolved."""
+    return pending_failures(workspace.id).values("post_id").distinct().count()
 
 
 def _month_bounds(today: date, tz) -> tuple[datetime, datetime]:

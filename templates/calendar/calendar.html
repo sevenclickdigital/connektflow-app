@@ -1074,6 +1074,9 @@ function publishList() {
         tags: [{% for tag in active_filters.tags %}'{{ tag|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
         // The month shown; the tabs list only what falls in it.
         periodDate: '{{ target_date|date:"Y-m-d" }}',
+        // The Sent tab listing only the failures nobody marked resolved, from any month
+        // (the dashboard's "N posts failed · fix"), until the user asks for every sent post.
+        pendingFailures: {{ pending_failures_only|yesno:"true,false" }},
 
         tabUrls: {
             queue: '{% url "calendar:publish_tab_queue" workspace_id=workspace.id %}',
@@ -1084,9 +1087,19 @@ function publishList() {
 
         init() {
             window.addEventListener('post-deleted', () => this.reloadTab());
+            // A row action answering with HX-Trigger (e.g. "Mark as resolved").
+            document.body.addEventListener('statusBoardChanged', () => {
+                if (document.getElementById('tab-content')) this.reloadTab();
+            });
+        },
+
+        showAllSent() {
+            this.pendingFailures = false;
+            this.reloadTab();
         },
 
         switchTab(tab) {
+            this.pendingFailures = false;
             this.activeTab = tab;
             this.reloadTab();
         },
@@ -1109,6 +1122,7 @@ function publishList() {
             const params = new URLSearchParams({ date: this.periodDate });
             this.platform.forEach((code) => params.append('platform', code));
             this.tags.forEach((tag) => params.append('tag', tag));
+            if (this.pendingFailures && this.activeTab === 'sent') params.set('failures', 'pending');
             const url = this.tabUrls[this.activeTab] + '?' + params.toString();
             htmx.ajax('GET', url, {target: '#tab-content', swap: 'innerHTML'});
         }

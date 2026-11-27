@@ -1216,6 +1216,8 @@ class PublishEngine:
         ).update(
             status=PlatformPost.Status.FAILED,
             publish_error=publish_error,
+            # A new failure is pending again, even if an earlier one was marked resolved.
+            failure_dismissed_at=None,
             updated_at=timezone.now(),
         )
 
@@ -1249,6 +1251,7 @@ class PublishEngine:
 
         platform_post.status = PlatformPost.Status.FAILED
         platform_post.publish_error = publish_error
+        platform_post.failure_dismissed_at = None
         self._notify_publish_failed(platform_post)
 
     @staticmethod

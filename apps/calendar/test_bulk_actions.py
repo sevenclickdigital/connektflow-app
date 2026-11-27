@@ -7,6 +7,7 @@ branch, REST ``/schedule``). These tests pin that gate plus the protected-status
 skips and the orphan-Post cleanup.
 """
 
+import json
 from datetime import timedelta
 
 from django.test import TestCase, override_settings
@@ -689,3 +690,100 @@ class PublishabilityTests(BulkActionBase):
         self.assertEqual(response.status_code, 200)
         pp.refresh_from_db()
         self.assertEqual(pp.status, "scheduled")
+
+
+class FailureDismissalTests(BulkActionBase):
+    """ "Mark as resolved" on a failed row: it leaves the dashboard's pending count and the
+    Sent tab's "Pending failures", stays in the Sent tab, and a new failure is pending again."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.owner)
+
+    def _dismiss(self, pp):
+        return self.client.post(
+            reverse(
+                "calendar:dismiss_failure",
+                kwargs={"workspace_id": self.workspace.id, "platform_post_id": pp.id},
+            )
+        )
+
+    def _sent(self, **params):
+        return self.client.get(reverse("calendar:publish_tab_sent", kwargs={"workspace_id": self.workspace.id}), params)
+
+    def test_a_resolved_failure_leaves_the_pending_count_but_stays_in_the_sent_tab(self):
+        from apps.workspaces.dashboard import failed_post_count
+
+        pp = self._pp("failed", scheduled_at=timezone.now() - timedelta(hours=1))
+        pp.publish_error = "The platform rejected this post."
+        pp.save(update_fields=["publish_error"])
+        self.assertEqual(failed_post_count(self.workspace), 1)
+        self.assertContains(self._sent(failures="pending"), str(pp.id))
+
+        response = self._dismiss(pp)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(json.loads(response["HX-Trigger"])["showToast"]["tone"], "success")
+        pp.refresh_from_db()
+        self.assertEqual(pp.status, "failed")
+        self.assertIsNotNone(pp.failure_dismissed_at)
+        self.assertEqual(failed_post_count(self.workspace), 0)
+        self.assertNotContains(self._sent(failures="pending"), str(pp.id))
+        sent = self._sent()
+        self.assertContains(sent, str(pp.id))
+        self.assertContains(sent, "Resolvida em")
+
+    def test_pending_failures_list_an_old_month_too(self):
+        old = self._pp("failed", scheduled_at=timezone.now() - timedelta(days=90))
+
+        self.assertNotContains(self._sent(), str(old.id))
+        self.assertContains(self._sent(failures="pending"), str(old.id))
+
+    def test_only_a_failed_row_is_marked(self):
+        published = self._pp("published")
+
+        response = self._dismiss(published)
+
+        self.assertEqual(json.loads(response["HX-Trigger"])["showToast"]["tone"], "error")
+        published.refresh_from_db()
+        self.assertIsNone(published.failure_dismissed_at)
+
+    def test_a_contributor_cannot_resolve_someone_elses_failure(self):
+        pp = self._pp("failed", author=self.owner)
+        self.client.force_login(self.contributor)
+
+        response = self._dismiss(pp)
+
+        self.assertEqual(json.loads(response["HX-Trigger"])["showToast"]["tone"], "error")
+        pp.refresh_from_db()
+        self.assertIsNone(pp.failure_dismissed_at)
+
+    def test_another_workspace_cannot_resolve_it(self):
+        pp = self._pp("failed")
+        other_org = Organization.objects.create(name="Other org")
+        other = Workspace.objects.create(organization=other_org, name="Other")
+        stranger = _make_user("stranger@example.com")
+        OrgMembership.objects.create(user=stranger, organization=other_org, org_role="owner")
+        WorkspaceMembership.objects.create(user=stranger, workspace=other, workspace_role="owner")
+        self.client.force_login(stranger)
+
+        response = self.client.post(
+            reverse("calendar:dismiss_failure", kwargs={"workspace_id": other.id, "platform_post_id": pp.id})
+        )
+
+        self.assertEqual(response.status_code, 404)
+        pp.refresh_from_db()
+        self.assertIsNone(pp.failure_dismissed_at)
+
+    def test_failing_again_makes_it_pending_again(self):
+        from apps.publisher.engine import PublishEngine
+
+        pp = self._pp("publishing")
+        pp.failure_dismissed_at = timezone.now()
+        pp.save(update_fields=["failure_dismissed_at"])
+
+        PublishEngine()._fail_permanently(pp, "boom", user_message="The platform rejected this post.")
+
+        pp.refresh_from_db()
+        self.assertEqual(pp.status, "failed")
+        self.assertIsNone(pp.failure_dismissed_at)

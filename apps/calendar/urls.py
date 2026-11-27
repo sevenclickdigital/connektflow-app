@@ -12,6 +12,7 @@ urlpatterns = [
     path("day/", views.day_posts, name="day_posts"),
     path("post-card/<uuid:platform_post_id>/", views.post_card, name="post_card"),
     path("post-card/<uuid:platform_post_id>/text/", views.post_card_edit_text, name="post_card_edit_text"),
+    path("platform-posts/<uuid:platform_post_id>/dismiss-failure/", views.dismiss_failure, name="dismiss_failure"),
     path("special-dates/toggle/", views.special_dates_toggle, name="special_dates_toggle"),
     path("special-dates/favorite/", views.special_date_favorite, name="special_date_favorite"),
     path(

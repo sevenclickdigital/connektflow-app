@@ -610,15 +610,32 @@ def _get_tab_context(request, workspace, tab: str) -> dict:
         return {**base_ctx, "platform_posts": platform_posts[:200]}
 
     if tab == "sent":
+        # "Pending failures" (the dashboard's "N posts failed · fix"): only the failures
+        # nobody marked resolved, from any month, so an old one can't hide in another.
+        pending_only = request.GET.get("failures") == "pending"
+        if pending_only:
+            from django.db.models.functions import Coalesce
+
+            from apps.composer.services import pending_failures
+
+            listed = _apply_pp_publish_filters(
+                pending_failures(workspace.id).annotate(effective_at=Coalesce(*_LIST_TABS["sent"][1])), request
+            )
+        else:
+            listed = _list_tab_platform_posts(workspace, request, tab)
         platform_posts = (
-            _list_tab_platform_posts(workspace, request, tab)
-            .select_related("post__author", "social_account")
+            listed.select_related("post__author", "social_account")
             .prefetch_related("post__media_attachments__media_asset")
             .order_by(F("effective_at").desc(nulls_last=True), "-post__created_at")
         )
         rows = list(platform_posts[:200])
         _annotate_automation(rows)
-        return {**base_ctx, "platform_posts": rows, "day_groups": _group_by_day(rows, display_tz)}
+        return {
+            **base_ctx,
+            "platform_posts": rows,
+            "day_groups": _group_by_day(rows, display_tz),
+            "pending_failures_only": pending_only,
+        }
 
     # approvals — one row per Post (bundled), matching the approval-action model
     # and the approved design. on_hold is included so client-held posts surface
@@ -1421,6 +1438,29 @@ def post_card_edit_text(request, workspace_id, platform_post_id):
         }
     )
     return response
+
+
+@login_required
+@require_permission("create_posts")
+@require_POST
+def dismiss_failure(request, workspace_id, platform_post_id):
+    """Mark a failed publication as resolved ("Mark as resolved" in the Sent tab): it
+    stops counting as pending and keeps its error in the list."""
+    from apps.composer.services import dismiss_failure as dismiss
+
+    workspace = _get_workspace(request, workspace_id)
+    pp = _platform_post_in(workspace, platform_post_id)
+    if not _can_change_post(request, pp.post):
+        return toast_response(
+            tone="error", title=_("Only the post's author, or someone who can edit other people's posts, can do this.")
+        )
+    if not dismiss(pp):
+        return toast_response(
+            tone="error",
+            title=_("This publication is no longer pending."),
+            events={"statusBoardChanged": True},
+        )
+    return toast_response(tone="success", title=_("Marked as resolved."), events={"statusBoardChanged": True})
 
 
 @login_required

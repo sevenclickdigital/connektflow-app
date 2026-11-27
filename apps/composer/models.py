@@ -626,6 +626,11 @@ class PlatformPost(models.Model):
         help_text="The post ID on the platform after publishing.",
     )
     publish_error = models.TextField(blank=True, default="")
+    # A failure someone marked as resolved ("Mark as resolved" in the Sent tab): it stays
+    # in the list with its error, but no longer counts as pending (the dashboard's
+    # "N posts failed"). Only read while the row is ``failed``; the publish engine
+    # clears it when the row fails again.
+    failure_dismissed_at = models.DateTimeField(blank=True, null=True)
     published_at = models.DateTimeField(blank=True, null=True)
 
     # First-comment outcome. Kept in dedicated columns rather than in

@@ -67,8 +67,20 @@ display_timezone, can_create_posts; tab ("queue" | "drafts" | "sent") adds that 
         <a @click.stop href="{% url 'composer:manual_publish' workspace_id=workspace.id post_id=pp.post_id platform_post_id=pp.id %}"
            class="block text-[11px] text-brand-800 hover:underline mt-1">{% translate "Media and caption to publish" %}</a>
         {% endif %}
-        {% if pp.status == "failed" and pp.publish_error %}
-        <p class="text-[11px] text-red-500 mt-1 truncate" title="{{ pp.publish_error }}">{{ pp.publish_error }}</p>
+        {% if pp.status == "failed" %}
+        {% if pp.publish_error %}<p class="text-[11px] {% if pp.failure_dismissed_at %}text-neutral-500{% else %}text-red-500{% endif %} mt-1 truncate" title="{{ pp.publish_error }}">{{ pp.publish_error }}</p>{% endif %}
+        {% comment %}
+        A failure is pending until someone retries it, deletes it or marks it as resolved
+        (it was republished another way); marked, it stays here but leaves the dashboard's count.
+        {% endcomment %}
+        {% if pp.failure_dismissed_at %}
+        <p class="text-[11px] text-neutral-500 mt-0.5">{% blocktranslate with day=pp.failure_dismissed_at|timezone:display_timezone|date:"d/m" %}Resolved on {{ day }}{% endblocktranslate %}</p>
+        {% elif can_create_posts %}
+        <button type="button" @click.stop class="text-[11px] font-semibold text-brand-700 hover:text-brand-900 hover:underline mt-0.5 cursor-pointer"
+                hx-post="{% url 'calendar:dismiss_failure' workspace_id=workspace.id platform_post_id=pp.id %}" hx-swap="none">
+            {% translate "Mark as resolved" %}
+        </button>
+        {% endif %}
         {% endif %}
         {% comment %}Published, but its first comment never landed — amber, not red: the post itself went out fine.{% endcomment %}
         {% if pp.first_comment_status == "failed" %}

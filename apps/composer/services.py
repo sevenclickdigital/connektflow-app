@@ -321,6 +321,33 @@ def can_edit_post(post, user, effective_permissions) -> bool:
     return user_id is not None and post.author_id == user_id
 
 
+def pending_failures(workspace_id):
+    """The workspace's failed publications nobody marked as resolved: what the dashboard's
+    "N posts failed" counts and the Sent tab's "Pending failures" lists."""
+    from apps.composer.models import PlatformPost
+
+    return PlatformPost.objects.filter(
+        post__workspace_id=workspace_id, status=PlatformPost.Status.FAILED, failure_dismissed_at__isnull=True
+    )
+
+
+def dismiss_failure(platform_post) -> bool:
+    """Mark a failed publication as resolved (the author republished it another way, or
+    gave it up): it stays in the Sent tab with its error but is no longer pending.
+
+    Conditional on the row still being failed, so a retry that started meanwhile is not
+    marked. Returns whether it was marked.
+    """
+    from django.utils import timezone
+
+    from apps.composer.models import PlatformPost
+
+    marked = PlatformPost.objects.filter(
+        id=platform_post.id, status=PlatformPost.Status.FAILED, failure_dismissed_at__isnull=True
+    ).update(failure_dismissed_at=timezone.now())
+    return bool(marked)
+
+
 #: Hosts a link to a post on each network may point at. A link is read from
 #: the network's API and opened from our pages, so it is only followed there.
 PERMALINK_HOSTS = {
