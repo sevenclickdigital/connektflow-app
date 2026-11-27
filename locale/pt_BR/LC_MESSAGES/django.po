@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 13:17+0000\n"
+"POT-Creation-Date: 2026-11-27 13:34+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -21,7 +21,7 @@ msgstr ""
 #: apps/accounts/forms.py:12 apps/common/templatetags/common_extras.py:104
 #: templates/automations/flow_builder.html:215
 #: templates/calendar/partials/_select_checkbox.html:11
-#: templates/composer/partials/media_picker.html:360
+#: templates/composer/partials/media_picker.html:362
 #: templates/inbox/partials/_message_row.html:27
 msgid "Select"
 msgstr "Selecionar"
@@ -4307,7 +4307,7 @@ msgstr "Primeiro comentário específico..."
 #: templates/composer/partials/_special_dates_tab.html:247
 #: templates/composer/partials/_template_art_items.html:23
 #: templates/composer/partials/template_gallery.html:352
-#: templates/media_library/_asset_info.html:14
+#: templates/media_library/_asset_info.html:20
 msgid "Format"
 msgstr "Formato"
 
@@ -5027,7 +5027,8 @@ msgid "Ideas that will not be used."
 msgstr "Ideias que não serão utilizadas."
 
 #: apps/composer/views.py:4261 apps/media_library/cropping.py:32
-#: apps/media_library/services.py:992 apps/tasks/views.py:971
+#: apps/media_library/services.py:1007 apps/media_library/views.py:409
+#: apps/tasks/views.py:971
 msgid "Storage quota exceeded. Free up space or upgrade your plan."
 msgstr ""
 "Cota de armazenamento excedida. Libere espaço ou faça upgrade do seu plano."
@@ -6687,7 +6688,7 @@ msgstr "Escolha a área que vai ficar."
 msgid "The area to keep must be inside the image."
 msgstr "A área a manter precisa estar dentro da imagem."
 
-#: apps/media_library/cropping.py:60
+#: apps/media_library/cropping.py:60 apps/media_library/views.py:405
 msgid "This image is too large to edit."
 msgstr "Esta imagem é grande demais para editar."
 
@@ -6702,11 +6703,11 @@ msgstr ""
 "Já existe uma pasta com esse nome aqui.Não foi possível criar a pasta. "
 "Talvez já exista uma pasta com esse nome."
 
-#: apps/media_library/services.py:987 apps/media_library/services.py:1014
+#: apps/media_library/services.py:1002 apps/media_library/services.py:1029
 msgid "The stretch chosen is outside the video. Choose it again."
 msgstr "O trecho escolhido está fora do vídeo. Escolha de novo."
 
-#: apps/media_library/services.py:989
+#: apps/media_library/services.py:1004
 msgid ""
 "Even compressed, the video is still larger than this destination takes. "
 "Choose a shorter stretch, or publish it in another format."
@@ -6714,75 +6715,91 @@ msgstr ""
 "Mesmo comprimido, o vídeo continua maior do que este destino aceita. Escolha "
 "um trecho menor ou publique-o em outro formato."
 
-#: apps/media_library/services.py:993
+#: apps/media_library/services.py:1008
 msgid ""
 "The video took too long to trim. Try a shorter stretch, or try again later."
 msgstr ""
 "O corte do vídeo demorou demais. Tente um trecho menor ou tente de novo mais "
 "tarde."
 
-#: apps/media_library/services.py:994
+#: apps/media_library/services.py:1009
 msgid ""
 "The original video could not be read. Upload it again and try once more."
 msgstr ""
 "Não foi possível ler o vídeo original. Envie-o de novo e tente outra vez."
 
-#: apps/media_library/services.py:995
+#: apps/media_library/services.py:1010
 msgid "The video processing stopped before it finished. Try again."
 msgstr "O processamento do vídeo parou antes de terminar. Tente novamente."
 
-#: apps/media_library/services.py:997
+#: apps/media_library/services.py:1012
 msgid "The video could not be trimmed. Try again."
 msgstr "Não foi possível cortar o vídeo. Tente novamente."
 
-#: apps/media_library/services.py:1010 apps/media_library/services.py:1012
+#: apps/media_library/services.py:1025 apps/media_library/services.py:1027
 msgid "Choose the stretch of the video to keep."
 msgstr "Escolha o trecho do vídeo que vai ficar."
 
-#: apps/media_library/services.py:1016
+#: apps/media_library/services.py:1031
 msgid "Keep at least one second of the video."
 msgstr "Mantenha pelo menos um segundo do vídeo."
 
-#: apps/media_library/services.py:1019
+#: apps/media_library/services.py:1034
 #, python-format
 msgid ""
 "Keep at most %(limit)d seconds: that is the longest this destination takes."
 msgstr ""
 "Mantenha no máximo %(limit)d segundos: é o máximo que este destino aceita."
 
-#: apps/media_library/services.py:1055
+#: apps/media_library/services.py:1070
 msgid "Only videos can be trimmed."
 msgstr "Só vídeos podem ser cortados."
 
-#: apps/media_library/views.py:569
+#: apps/media_library/views.py:370 apps/media_library/views.py:372
+msgid "Invalid crop."
+msgstr "Recorte inválido."
+
+#: apps/media_library/views.py:378 apps/media_library/views.py:380
+msgid "Invalid rotation."
+msgstr "Rotação inválida."
+
+#: apps/media_library/views.py:385
+msgid "Invalid flip."
+msgstr "Espelhamento inválido."
+
+#: apps/media_library/views.py:401
+msgid "Nothing was changed."
+msgstr "Nada foi alterado."
+
+#: apps/media_library/views.py:571
 #, python-format
 msgid "%(count)s file moved to %(folder)s."
 msgid_plural "%(count)s files moved to %(folder)s."
 msgstr[0] "%(count)s arquivo movido para %(folder)s."
 msgstr[1] "%(count)s arquivos movidos para %(folder)s."
 
-#: apps/media_library/views.py:574
+#: apps/media_library/views.py:576
 #, python-format
 msgid "%(count)s file taken out of folders."
 msgid_plural "%(count)s files taken out of folders."
 msgstr[0] "%(count)s arquivo tirado das pastas."
 msgstr[1] "%(count)s arquivos tirados das pastas."
 
-#: apps/media_library/views.py:596 apps/media_library/views.py:605
+#: apps/media_library/views.py:598 apps/media_library/views.py:607
 #, python-format
 msgid "%(count)s file deleted."
 msgid_plural "%(count)s files deleted."
 msgstr[0] "%(count)s arquivo excluído."
 msgstr[1] "%(count)s arquivos excluídos."
 
-#: apps/media_library/views.py:598
+#: apps/media_library/views.py:600
 #, python-format
 msgid "%(count)s file is used by a scheduled post and was kept."
 msgid_plural "%(count)s files are used by scheduled posts and were kept."
 msgstr[0] "%(count)s arquivo é usado por um post agendado e foi mantido."
 msgstr[1] "%(count)s arquivos são usados por posts agendados e foram mantidos."
 
-#: apps/media_library/views.py:692
+#: apps/media_library/views.py:694
 msgid "Give the folder a name."
 msgstr "Dê um nome à pasta."
 
@@ -10524,7 +10541,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/media_library/_folder_tree.html:98
 #: templates/media_library/_video_trimmer.html:149
 #: templates/media_library/_video_trimmer.html:153
-#: templates/media_library/asset_edit.html:93
+#: templates/media_library/asset_edit.html:96
 #: templates/media_library/library_index.html:384
 #: templates/members/partials/invite_modal.html:121
 #: templates/oauth2_provider/authorize.html:48
@@ -11240,7 +11257,7 @@ msgstr "Esta campanha não tem conjuntos de anúncios."
 
 #: templates/ads/partials/_campaign_body.html:23
 #: templates/composer/compose.html:427
-#: templates/composer/partials/media_picker.html:327
+#: templates/composer/partials/media_picker.html:328
 #: templates/email_center/partials/_preview.html:8
 msgid "Preview"
 msgstr "Prévia"
@@ -11276,8 +11293,8 @@ msgstr "Esta campanha não tem anúncios."
 #: templates/composer/partials/_media_thumb_actions.html:26
 #: templates/composer/partials/_tag_groups.html:144
 #: templates/composer/partials/_tag_manager.html:60
-#: templates/composer/partials/media_picker.html:346
-#: templates/composer/partials/media_picker.html:357
+#: templates/composer/partials/media_picker.html:347
+#: templates/composer/partials/media_picker.html:359
 #: templates/composer/partials/template_gallery.html:96
 #: templates/contacts/partials/_import_modal.html:10
 #: templates/email_center/partials/_editor.html:109
@@ -12795,7 +12812,7 @@ msgstr "Pagar saque"
 #: templates/funnels/partials/_settings_list.html:49
 #: templates/media_library/_asset_detail_panel.html:49
 #: templates/media_library/_asset_detail_panel.html:56
-#: templates/media_library/_shared_asset_card.html:67
+#: templates/media_library/_shared_asset_card.html:73
 #: templates/media_library/asset_edit.html:4
 #: templates/organizations/workspaces.html:192
 #: templates/tasks/partials/_art_thumb.html:36
@@ -12868,7 +12885,7 @@ msgstr "Excluir afiliado"
 #: templates/media_library/_asset_detail_panel.html:114
 #: templates/media_library/_folder_tree.html:92
 #: templates/media_library/_folder_tree.html:104
-#: templates/media_library/_shared_asset_card.html:79
+#: templates/media_library/_shared_asset_card.html:85
 #: templates/media_library/library_index.html:350
 #: templates/organizations/partials/workspace_card.html:131
 #: templates/tasks/partials/_task_modal.html:246
@@ -13641,7 +13658,7 @@ msgstr "Ocultar"
 #: templates/approvals/partials/_approval_row.html:49
 #: templates/billing/staff_account.html:100
 #: templates/calendar/partials/_staff_date_rows.html:36
-#: templates/media_library/_asset_info.html:7
+#: templates/media_library/_asset_info.html:13
 msgid "Details"
 msgstr "Detalhes"
 
@@ -13789,11 +13806,11 @@ msgstr "As plataformas de destino foram alteradas."
 
 #: templates/approvals/version_diff.html:3
 #: templates/approvals/version_diff.html:12
-#: templates/media_library/_asset_detail_panel.html:141
 msgid "Version History"
 msgstr "Histórico de versões"
 
 #: templates/approvals/version_diff.html:20
+#: templates/media_library/_version_strip.html:13
 msgid "Versions"
 msgstr "Versões"
 
@@ -18339,7 +18356,7 @@ msgstr "Todas as redes"
 #: templates/funnels/board.html:94
 #: templates/funnels/partials/_opportunity_details.html:57
 #: templates/inbox/partials/_message_details.html:83
-#: templates/media_library/_asset_detail_panel.html:132
+#: templates/media_library/_asset_detail_panel.html:139
 #: templates/organizations/cross_calendar.html:210
 #: templates/tasks/partials/_task_summary.html:41
 msgid "Tags"
@@ -20073,13 +20090,13 @@ msgid "No results. Try another search."
 msgstr "Nenhum resultado. Tente outra busca."
 
 #: templates/composer/compose.html:2271
-#: templates/media_library/_asset_info.html:44
+#: templates/media_library/_asset_info.html:50
 msgctxt "Unsplash credit"
 msgid "Photo by"
 msgstr "Foto de"
 
 #: templates/composer/compose.html:2274
-#: templates/media_library/_asset_info.html:46
+#: templates/media_library/_asset_info.html:52
 msgctxt "Unsplash credit"
 msgid "on"
 msgstr "no"
@@ -20548,7 +20565,7 @@ msgstr "Arraste para reordenar"
 #: templates/composer/create_landing.html:481
 #: templates/composer/create_landing.html:667
 #: templates/composer/partials/_media_thumb_actions.html:33
-#: templates/media_library/asset_edit.html:69
+#: templates/media_library/asset_edit.html:72
 msgid "Crop"
 msgstr "Recortar"
 
@@ -21757,16 +21774,16 @@ msgstr "Nenhuma mídia selecionada"
 msgid "1 selected"
 msgstr "1 selecionada"
 
-#: templates/composer/partials/media_picker.html:354
+#: templates/composer/partials/media_picker.html:356
 msgid "Could not load the details."
 msgstr "Não foi possível carregar os detalhes."
 
-#: templates/composer/partials/media_picker.html:360
+#: templates/composer/partials/media_picker.html:362
 msgid "Unselect"
 msgstr "Desmarcar"
 
-#: templates/composer/partials/media_picker.html:543
-#: templates/composer/partials/media_picker.html:557
+#: templates/composer/partials/media_picker.html:547
+#: templates/composer/partials/media_picker.html:561
 #: templates/media_library/library_index.html:422
 msgid "Upload failed"
 msgstr "Falha no envio"
@@ -22339,7 +22356,7 @@ msgstr ""
 "também pode cadastrar contatos à mão ou importar um CSV."
 
 #: templates/contacts/partials/_row.html:10
-#: templates/media_library/_asset_card.html:121
+#: templates/media_library/_asset_card.html:127
 #: templates/media_library/_asset_list_row.html:14
 #, python-format
 msgid "Select %(name)s"
@@ -25292,16 +25309,24 @@ msgstr "Fluxo de aprovação"
 msgid "Manage team"
 msgstr "Gerenciar equipe"
 
-#: templates/media_library/_asset_card.html:80
-#: templates/media_library/_shared_asset_card.html:34
+#: templates/media_library/_asset_card.html:79
+#: templates/media_library/_shared_asset_card.html:35
+#, python-format
+msgid "%(count)s version"
+msgid_plural "%(count)s versions"
+msgstr[0] "%(count)s versão"
+msgstr[1] "%(count)s versões"
+
+#: templates/media_library/_asset_card.html:86
+#: templates/media_library/_shared_asset_card.html:40
 msgid "SHARED"
 msgstr "COMPARTILHADA"
 
-#: templates/media_library/_asset_card.html:106
+#: templates/media_library/_asset_card.html:112
 msgid "Enlarge"
 msgstr "Ampliar"
 
-#: templates/media_library/_asset_card.html:106
+#: templates/media_library/_asset_card.html:112
 #, python-format
 msgid "Enlarge %(name)s"
 msgstr "Ampliar %(name)s"
@@ -25327,7 +25352,7 @@ msgid "Size"
 msgstr "Tamanho"
 
 #: templates/media_library/_asset_grid.html:45
-#: templates/media_library/_asset_info.html:30
+#: templates/media_library/_asset_info.html:36
 msgid "Uploaded"
 msgstr "Enviado em"
 
@@ -25337,23 +25362,23 @@ msgstr "Enviado em"
 msgid "Page %(number)s of %(total)s"
 msgstr "Página %(number)s de %(total)s"
 
-#: templates/media_library/_asset_info.html:10
+#: templates/media_library/_asset_info.html:16
 msgid "File size"
 msgstr "Tamanho do arquivo"
 
-#: templates/media_library/_asset_info.html:19
+#: templates/media_library/_asset_info.html:25
 msgid "Dimensions"
 msgstr "Dimensões"
 
-#: templates/media_library/_asset_info.html:25
+#: templates/media_library/_asset_info.html:31
 msgid "Duration"
 msgstr "Duração"
 
-#: templates/media_library/_asset_info.html:35
+#: templates/media_library/_asset_info.html:41
 msgid "Uploaded by"
 msgstr "Enviado por"
 
-#: templates/media_library/_asset_info.html:42
+#: templates/media_library/_asset_info.html:48
 msgid "Credit"
 msgstr "Crédito"
 
@@ -25431,11 +25456,11 @@ msgstr "Excluir pasta?"
 msgid "? Assets will be moved to the parent folder."
 msgstr "? Os arquivos serão movidos para a pasta superior."
 
-#: templates/media_library/_shared_asset_card.html:55
+#: templates/media_library/_shared_asset_card.html:61
 msgid "Asset actions"
 msgstr "Ações do arquivo"
 
-#: templates/media_library/_shared_asset_card.html:72
+#: templates/media_library/_shared_asset_card.html:78
 msgid "Delete this shared asset? It will be removed for all workspaces."
 msgstr ""
 "Excluir este arquivo compartilhado? Ele será removido de todas as marcas."
@@ -25460,6 +25485,7 @@ msgid "Add tag..."
 msgstr "Adicionar etiqueta..."
 
 #: templates/media_library/_version_list.html:28
+#: templates/media_library/_version_strip.html:45
 #, python-format
 msgid "Version %(number)s"
 msgstr "Versão %(number)s"
@@ -25481,6 +25507,10 @@ msgstr "Restaurar"
 #: templates/media_library/_version_list.html:53
 msgid "No version history yet. Edits will appear here."
 msgstr "Ainda não há histórico de versões. As edições aparecerão aqui."
+
+#: templates/media_library/_version_strip.html:45
+msgid "Original"
+msgstr "Original"
 
 #: templates/media_library/_video_trimmer.html:25
 #, python-brace-format
@@ -25584,27 +25614,27 @@ msgstr "Compartilhada"
 msgid "Edit - %(filename)s"
 msgstr "Editar - %(filename)s"
 
-#: templates/media_library/asset_edit.html:73
+#: templates/media_library/asset_edit.html:76
 msgid "Rotate Left"
 msgstr "Girar à esquerda"
 
-#: templates/media_library/asset_edit.html:77
+#: templates/media_library/asset_edit.html:80
 msgid "Rotate Right"
 msgstr "Girar à direita"
 
-#: templates/media_library/asset_edit.html:81
+#: templates/media_library/asset_edit.html:84
 msgid "Flip H"
 msgstr "Inverter na horizontal"
 
-#: templates/media_library/asset_edit.html:85
+#: templates/media_library/asset_edit.html:88
 msgid "Flip V"
 msgstr "Inverter na vertical"
 
-#: templates/media_library/asset_edit.html:98
+#: templates/media_library/asset_edit.html:101
 msgid "Save as new version"
 msgstr "Salvar como nova versão"
 
-#: templates/media_library/asset_edit.html:129
+#: templates/media_library/asset_edit.html:132
 msgid ""
 "Choose the stretch to keep. It is saved as a new video in the library, and "
 "this one stays as it is."
@@ -25612,11 +25642,11 @@ msgstr ""
 "Escolha o trecho que vai ficar. Ele é salvo como um novo vídeo na galeria, e "
 "este continua como está."
 
-#: templates/media_library/asset_edit.html:146
+#: templates/media_library/asset_edit.html:149
 msgid "Editing is not available for this file type."
 msgstr "A edição não está disponível para este tipo de arquivo."
 
-#: templates/media_library/asset_edit.html:150
+#: templates/media_library/asset_edit.html:153
 msgid "Back to library"
 msgstr "Voltar para a biblioteca"
 

@@ -306,8 +306,9 @@ rules have to arrive with it.
 
   {% comment %}
   The enlarged file, opened from a card's corner button: the file on the left,
-  its details (``media_library/_asset_info.html``, fetched when it opens) and
-  Select on the right, the same layout as the library's detail modal. Teleported
+  its versions and details (``media_library/_asset_info.html``, fetched when it
+  opens), Select and Insert on the right; a version's thumbnail shows that
+  version and makes it the one Select picks, the same layout as the library's detail modal. Teleported
   to body so it covers the whole screen rather than the modal's box; picking
   stays a click on the card itself.
   {% endcomment %}
@@ -341,14 +342,19 @@ rules have to arrive with it.
               </button>
             </div>
             <div class="px-5 py-4 lg:flex-1 lg:overflow-y-auto">
-              <div x-show="preview?.info" x-html="preview?.info"></div>
+              <div x-show="preview?.info" x-html="preview?.info"
+                   @click="const v = $event.target.closest('[data-version-pick]'); if (v) openPreview(v.dataset.assetId, v.dataset)"></div>
               <p x-show="preview?.infoFailed" class="text-xs text-neutral-600">{% translate "Could not load the details." %}</p>
             </div>
             <div class="flex items-center justify-end gap-2 px-5 py-4 border-t" style="border-color: var(--border, #E5E7EB);">
-              <button type="button" class="btn-outline" @click="closePreview()">{% translate "Close" %}</button>
-              <button type="button" class="btn-brand"
-                      @click="toggle(preview.id, preview.data); closePreview()"
+              <button type="button" class="btn-ghost" @click="closePreview()">{% translate "Close" %}</button>
+              <button type="button" class="btn-outline"
+                      @click="toggle(preview.id, preview.data); if (!preview.hasVersions) closePreview()"
                       x-text="isPicked(preview?.id) ? '{% translate "Unselect" %}' : '{% translate "Select" %}'"></button>
+              <button type="button" class="btn-brand" @click="insertFromPreview('{{ insert_url }}')"
+                      x-text="previewInsertCount() > 1
+                              ? '{% translate "Insert" %} (' + previewInsertCount() + ')'
+                              : '{% translate "Insert" %}'"></button>
             </div>
           </div>
         </div>
@@ -380,13 +386,20 @@ rules have to arrive with it.
       // The file enlarged from a card's corner button, or null.
       preview: null,
 
-      // ``data`` is the card's dataset, as in toggle().
+      // ``data`` is the card's dataset (or a version thumbnail's), as in toggle().
+      // The details on screen stay until the new ones arrive, so switching
+      // versions does not blank the column.
       openPreview(id, data) {
         if (!data || !data.assetUrl) return;
-        this.preview = { id, url: data.assetUrl, type: data.assetType, name: data.assetName || '', data, info: '', infoFailed: false };
+        this.preview = { id, url: data.assetUrl, type: data.assetType, name: data.assetName || '', data, info: this.preview?.info || '', hasVersions: !!this.preview?.hasVersions, infoFailed: false };
         fetch('{% url "media_library:index" workspace_id=workspace.id %}' + id + '/?part=info')
           .then(r => (r.ok ? r.text() : Promise.reject(r.status)))
-          .then(html => { if (this.preview?.id === id) this.preview.info = html; })
+          .then(html => {
+            if (this.preview?.id !== id) return;
+            this.preview.info = html;
+            // With versions on screen, Select leaves the window open so more than one can be picked.
+            this.preview.hasVersions = html.includes('data-version-pick');
+          })
           .catch(() => { if (this.preview?.id === id) this.preview.infoFailed = true; });
       },
 
@@ -398,17 +411,43 @@ rules have to arrive with it.
         return i === -1 ? '' : i + 1;
       },
 
-      // ``data`` is the card's dataset: what the page needs to show a picked
-      // file when the selection is handed over instead of attached.
+      // The original each picked file is a version of (``data-asset-group``).
+      pickedGroup: {},
+
+      // Whether any version of the file ``group`` is picked, and where the
+      // first one sits in the selection: the grid shows one card per file.
+      isGroupPicked(group) { return this.picked.some(id => (this.pickedGroup[id] || id) === group); },
+      groupPickedPosition(group) {
+        const i = this.picked.findIndex(id => (this.pickedGroup[id] || id) === group);
+        return i === -1 ? '' : i + 1;
+      },
+
+      // ``data`` is the card's dataset (or a version thumbnail's): what the
+      // page needs to show a picked file when the selection is handed over
+      // instead of attached. Several versions of one file can be picked.
       toggle(id, data) {
         const i = this.picked.indexOf(id);
         if (data) this.pickedMedia[id] = { asset_id: id, url: data.assetUrl || '', media_type: data.assetType || 'image' };
         if (i === -1) {
+          this.pickedGroup[id] = (data && data.assetGroup) || id;
           this.picked.push(id);
         } else {
           // Splice, not filter: the numbers after it have to close up.
           this.picked.splice(i, 1);
         }
+      },
+
+      // What Insert in the enlarged view puts in: the selection, plus the
+      // file on screen when it is not picked yet.
+      previewInsertCount() {
+        return this.picked.length + (this.preview && !this.isPicked(this.preview.id) ? 1 : 0);
+      },
+
+      insertFromPreview(url) {
+        if (!this.preview) return;
+        if (!this.isPicked(this.preview.id)) this.toggle(this.preview.id, this.preview.data);
+        this.closePreview();
+        this.insert(url);
       },
 
       insert(url) {

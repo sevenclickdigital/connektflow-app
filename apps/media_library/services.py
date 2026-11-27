@@ -823,18 +823,10 @@ def apply_image_edits(file_path_or_file, operations):
 
 
 def crop_into_new_asset(asset, *, workspace, x, y, width, height, uploaded_by, derived_from=None):
-    """A new image asset holding ``asset`` cropped to the given pixel box.
+    """A new image asset holding ``asset`` cropped to the given pixel box (``edited_copy``).
 
-    The source asset is left untouched: it may be used by other posts, and the
-    user may want the uncropped image back. The copy lands in ``workspace``
-    (a shared org asset has none of its own), in the source's folder when the
-    source lives there, with the same alt text, title, tags and stock-photo
-    credit, and goes
-    through ``create_asset``, so it is sniffed and counted against the storage
-    quotas like any upload.
-
-    ``derived_from`` records the original the copy stands in for (defaults to
-    ``asset``); see ``MediaAsset.derived_from``.
+    ``derived_from`` records the attachment the copy stands in for in a post
+    format (defaults to ``asset``); see ``MediaAsset.derived_from``.
 
     Raises ``ValueError`` for a box outside the image and ``ImageTooLargeError``
     for an image too large to edit; quota errors propagate from ``create_asset``.
@@ -844,36 +836,59 @@ def crop_into_new_asset(asset, *, workspace, x, y, width, height, uploaded_by, d
     if x < 0 or y < 0 or width <= 0 or height <= 0 or x + width > image_width or y + height > image_height:
         raise ValueError("Crop box outside the image.")
 
-    edited, (new_width, new_height) = apply_image_edits(
-        asset.file, {"crop": {"x": x, "y": y, "width": width, "height": height}}
+    return edited_copy(
+        asset,
+        {"crop": {"x": x, "y": y, "width": width, "height": height}},
+        organization=workspace.organization,
+        workspace=workspace,
+        uploaded_by=uploaded_by,
+        derived_from=derived_from or asset,
     )
+
+
+def edited_copy(asset, operations, *, organization, workspace, uploaded_by, derived_from=None):
+    """A new version of ``asset`` with ``operations`` applied (``apply_image_edits``).
+
+    The source is never changed: posts that use it keep publishing what they
+    showed, and every edit stays available as its own version. The copy points
+    at the group's original (``MediaAsset.original``), lands in ``workspace``
+    (``None`` for the organization's shared library) in the source's folder
+    when the source lives there, keeps its alt text, title, tags and
+    stock-photo credit, and goes through ``create_asset``, so it is sniffed and
+    counted against the storage quotas like any upload.
+
+    Raises ``ImageTooLargeError`` for an image too large to edit; quota errors
+    propagate from ``create_asset``.
+    """
+    edited, (new_width, new_height) = apply_image_edits(asset.file, operations)
     stem = os.path.splitext(asset.filename or "image")[0]
     edited.name = f"{stem}-{new_width}x{new_height}{os.path.splitext(edited.name)[1]}"
 
-    cropped = create_asset(
-        workspace.organization,
+    copy = create_asset(
+        organization,
         workspace,
         edited,
         uploaded_by,
-        folder=asset.folder if asset.workspace_id == workspace.id else None,
+        folder=asset.folder if asset.workspace_id == (workspace.id if workspace else None) else None,
         alt_text=asset.alt_text,
         title=asset.title,
         tags=asset.tags,
     )
-    cropped.width = new_width
-    cropped.height = new_height
-    cropped.derived_from = derived_from or asset
-    # A crop of a stock photo still owes its photographer the credit.
+    copy.width = new_width
+    copy.height = new_height
+    copy.derived_from = derived_from
+    copy.original_id = asset.original_id_or_self
+    # A copy of a stock photo still owes its photographer the credit.
     for field in STOCK_CREDIT_FIELDS:
-        setattr(cropped, field, getattr(asset, field))
-    cropped.save(update_fields=["width", "height", "derived_from", *STOCK_CREDIT_FIELDS])
+        setattr(copy, field, getattr(asset, field))
+    copy.save(update_fields=["width", "height", "derived_from", "original", *STOCK_CREDIT_FIELDS])
 
     # Like every other upload: thumbnail, metadata, and the pending status
     # cleared. Left pending, the library polls the card forever.
     from .tasks import process_media_asset
 
-    process_media_asset(str(cropped.id))
-    return cropped
+    process_media_asset(str(copy.id))
+    return copy
 
 
 def trim_video(input_path, output_path, start_seconds, end_seconds, *, crf=23, fit_for_phone=False, on_progress=None):
@@ -1069,6 +1084,7 @@ def start_video_trim(
         title=asset.title,
         tags=list(asset.tags or []),
         derived_from=asset,
+        original_id=asset.original_id_or_self,
     )
     trim_video_copy(
         str(copy.id),

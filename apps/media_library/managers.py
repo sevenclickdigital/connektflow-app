@@ -1,7 +1,8 @@
 """Custom managers for media library models."""
 
 from django.db import connection, models
-from django.db.models import Max, Q
+from django.db.models import Count, IntegerField, Max, OuterRef, Q, Subquery
+from django.db.models.functions import Coalesce
 
 
 class MediaAssetManager(models.Manager):
@@ -23,6 +24,26 @@ class MediaAssetManager(models.Manager):
             organization_id=organization_id,
             workspace__isnull=True,
         )
+
+    def originals(self, queryset, visible):
+        """The originals in ``queryset``, each with ``version_count``.
+
+        A library lists one card per original; its crops and edits are its
+        versions (``MediaAsset.original``). ``version_count`` counts only the
+        copies in ``visible`` (the viewer's scope): a shared photo cropped in
+        another workspace does not count here.
+        """
+        copies = (
+            visible.filter(original=OuterRef("pk")).order_by().values("original").annotate(n=Count("pk")).values("n")
+        )
+        return queryset.filter(original__isnull=True).annotate(
+            version_count=Coalesce(Subquery(copies, output_field=IntegerField()), 0)
+        )
+
+    def version_group(self, asset, visible):
+        """``asset``'s original and its copies within ``visible``, oldest first."""
+        root = asset.original_id_or_self
+        return visible.filter(Q(pk=root) | Q(original_id=root)).order_by("created_at")
 
     def with_last_used_at(self, queryset=None):
         """Annotate each asset with ``last_used_at``.

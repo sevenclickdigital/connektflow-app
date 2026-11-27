@@ -23,11 +23,10 @@ from .services import (
     ProtectedAssetError,
     create_asset,
     create_folder,
-    create_version,
     delete_asset,
     restore_version,
 )
-from .tasks import process_image_edit, process_media_asset
+from .tasks import process_media_asset
 from .validators import get_accepted_file_types
 
 
@@ -61,10 +60,11 @@ def filtered_assets(request, workspace):
     queryset plus the normalized params the templates echo back into their
     own HTMX URLs.
     """
-    qs = MediaAsset.objects.for_workspace_with_shared(
+    visible = MediaAsset.objects.for_workspace_with_shared(
         workspace_id=workspace.id,
         organization_id=workspace.organization_id,
-    ).select_related("uploaded_by", "folder")
+    )
+    qs = MediaAsset.objects.originals(visible, visible).select_related("uploaded_by", "folder")
 
     file_type = request.GET.get("type")
     if file_type and file_type in dict(MediaAsset.MediaType.choices):
@@ -309,25 +309,21 @@ def search(request, workspace_id):
 @login_required
 def asset_detail(request, workspace_id, asset_id):
     workspace = _get_workspace_or_404(request, workspace_id)
-    asset = get_object_or_404(
-        MediaAsset.objects.for_workspace_with_shared(
-            workspace_id=workspace.id,
-            organization_id=workspace.organization_id,
-        ),
-        pk=asset_id,
+    visible = MediaAsset.objects.for_workspace_with_shared(
+        workspace_id=workspace.id,
+        organization_id=workspace.organization_id,
     )
-
-    # The composer's media picker shows only the details beside its preview.
-    if request.GET.get("part") == "info":
-        return render(request, "media_library/_asset_info.html", {"asset": asset})
-
-    versions = asset.versions.all()[:10]
+    asset = get_object_or_404(visible, pk=asset_id)
 
     context = {
         "asset": asset,
         "workspace": workspace,
-        "versions": versions,
+        "version_group": list(MediaAsset.objects.version_group(asset, visible)),
     }
+
+    # The composer's media picker shows only the versions and details beside its preview.
+    if request.GET.get("part") == "info":
+        return render(request, "media_library/_asset_info.html", {**context, "version_mode": "picker"})
 
     if request.htmx:
         return render(request, "media_library/_asset_detail_panel.html", context)
@@ -357,6 +353,65 @@ def _trim_into_copy(request, asset, *, organization, workspace):
     return ""
 
 
+def _image_operations(data):
+    """``(operations, error)`` for ``apply_image_edits`` from the editor's form.
+
+    Only what was changed is kept: an untouched rotation (0, or a full turn) is
+    not an edit. ``error`` is the sentence to show for a malformed value.
+    """
+    operations = {}
+    if data.get("crop_x") not in (None, ""):
+        try:
+            box = {
+                key: int(data[f"crop_{field}"])
+                for key, field in (("x", "x"), ("y", "y"), ("width", "width"), ("height", "height"))
+            }
+        except (KeyError, ValueError, TypeError):
+            return {}, _("Invalid crop.")
+        if box["x"] < 0 or box["y"] < 0 or box["width"] <= 0 or box["height"] <= 0:
+            return {}, _("Invalid crop.")
+        operations["crop"] = box
+    if data.get("rotate"):
+        try:
+            rotate = int(data["rotate"]) % 360
+        except (ValueError, TypeError):
+            return {}, _("Invalid rotation.")
+        if rotate not in (0, 90, 180, 270):
+            return {}, _("Invalid rotation.")
+        if rotate:
+            operations["rotate"] = rotate
+    if data.get("flip"):
+        if data["flip"] not in ("horizontal", "vertical"):
+            return {}, _("Invalid flip.")
+        operations["flip"] = data["flip"]
+    return operations, None
+
+
+def _edit_into_copy(request, asset, *, organization, workspace):
+    """Save the editor's changes to ``asset`` as a new version; the sentence to show when refused, or ""."""
+    from apps.billing.storage_usage import WorkspaceStorageExceededError
+
+    from .quotas import StorageQuotaExceededError
+    from .services import ImageTooLargeError, edited_copy
+
+    operations, error = _image_operations(request.POST)
+    if error:
+        return error
+    if not operations:
+        return _("Nothing was changed.")
+    try:
+        edited_copy(asset, operations, organization=organization, workspace=workspace, uploaded_by=request.user)
+    except ImageTooLargeError:
+        return _("This image is too large to edit.")
+    except WorkspaceStorageExceededError as exc:
+        return str(exc.message)
+    except StorageQuotaExceededError:
+        return _("Storage quota exceeded. Free up space or upgrade your plan.")
+    except ValidationError as exc:
+        return " ".join(exc.messages)
+    return ""
+
+
 @login_required
 @require_permission("edit_media")
 @require_http_methods(["GET", "POST"])
@@ -373,67 +428,14 @@ def asset_edit(request, workspace_id, asset_id):
 
     if request.method == "POST":
         if asset.media_type in (MediaAsset.MediaType.IMAGE, MediaAsset.MediaType.GIF):
-            operations = {}
-            # Parse and validate crop data
-            if request.POST.get("crop_x") is not None and request.POST.get("crop_x") != "":
-                try:
-                    crop_x = int(request.POST["crop_x"])
-                    crop_y = int(request.POST["crop_y"])
-                    crop_w = int(request.POST["crop_width"])
-                    crop_h = int(request.POST["crop_height"])
-                    if crop_x < 0 or crop_y < 0 or crop_w <= 0 or crop_h <= 0:
-                        raise ValueError("Crop dimensions must be positive")
-                    operations["crop"] = {
-                        "x": crop_x,
-                        "y": crop_y,
-                        "width": crop_w,
-                        "height": crop_h,
-                    }
-                except (ValueError, TypeError):
-                    return JsonResponse({"error": "Invalid crop parameters"}, status=400)
-            if request.POST.get("rotate"):
-                try:
-                    rotate_val = int(request.POST["rotate"])
-                    if rotate_val not in (0, 90, 180, 270):
-                        raise ValueError("Rotate must be 0, 90, 180, or 270")
-                    operations["rotate"] = rotate_val
-                except (ValueError, TypeError):
-                    return JsonResponse({"error": "Invalid rotate parameter"}, status=400)
-            if request.POST.get("flip"):
-                flip_val = request.POST["flip"]
-                if flip_val not in ("horizontal", "vertical"):
-                    return JsonResponse({"error": "Invalid flip parameter"}, status=400)
-                operations["flip"] = flip_val
-            if request.POST.get("resize_width") and request.POST.get("resize_height"):
-                try:
-                    rw = int(request.POST["resize_width"])
-                    rh = int(request.POST["resize_height"])
-                    if rw <= 0 or rh <= 0 or rw > 10000 or rh > 10000:
-                        raise ValueError("Resize dimensions out of range")
-                    operations["resize"] = {"width": rw, "height": rh}
-                except (ValueError, TypeError):
-                    return JsonResponse({"error": "Invalid resize parameters"}, status=400)
-
-            if operations:
-                # Build change description
-                parts = []
-                if "crop" in operations:
-                    parts.append(f"Cropped to {operations['crop']['width']}x{operations['crop']['height']}")
-                if "rotate" in operations:
-                    parts.append(f"Rotated {operations['rotate']}deg")
-                if "flip" in operations:
-                    parts.append(f"Flipped {operations['flip']}")
-                if "resize" in operations:
-                    parts.append(f"Resized to {operations['resize']['width']}x{operations['resize']['height']}")
-                description = ", ".join(parts)
-
-                version = create_version(
-                    asset=asset,
-                    file=asset.file,
-                    change_description=description,
-                    created_by=request.user,
-                )
-                process_image_edit(str(version.id), operations)
+            edit_error = _edit_into_copy(request, asset, organization=workspace.organization, workspace=workspace)
+            if not edit_error:
+                return redirect("media_library:index", workspace_id=workspace.id)
+            return render(
+                request,
+                "media_library/asset_edit.html",
+                {"asset": asset, "workspace": workspace, "edit_error": edit_error},
+            )
 
         elif asset.media_type == MediaAsset.MediaType.VIDEO:
             trim_error = _trim_into_copy(request, asset, organization=workspace.organization, workspace=workspace)
@@ -967,7 +969,8 @@ def shared_library_index(request):
     if not org:
         raise Http404
 
-    qs = MediaAsset.objects.shared_only(org.id)
+    shared = MediaAsset.objects.shared_only(org.id)
+    qs = MediaAsset.objects.originals(shared, shared)
 
     # Search
     query = request.GET.get("q", "").strip()
@@ -1079,12 +1082,9 @@ def shared_asset_detail(request, asset_id):
     if not org:
         raise Http404
 
-    asset = get_object_or_404(
-        MediaAsset.objects.shared_only(org.id),
-        pk=asset_id,
-    )
+    shared = MediaAsset.objects.shared_only(org.id)
+    asset = get_object_or_404(shared, pk=asset_id)
 
-    versions = asset.versions.all()[:10]
     is_admin = request.org_membership and request.org_membership.org_role in ("owner", "admin")
 
     # Shared assets have no workspace. Templates branch on `is_shared_library`
@@ -1092,7 +1092,7 @@ def shared_asset_detail(request, asset_id):
     context = {
         "asset": asset,
         "workspace": None,
-        "versions": versions,
+        "version_group": list(MediaAsset.objects.version_group(asset, shared)),
         "is_shared_library": True,
         "is_admin": is_admin,
     }
@@ -1118,65 +1118,20 @@ def shared_asset_edit(request, asset_id):
 
     if request.method == "POST":
         if asset.media_type in (MediaAsset.MediaType.IMAGE, MediaAsset.MediaType.GIF):
-            operations = {}
-            if request.POST.get("crop_x") is not None and request.POST.get("crop_x") != "":
-                try:
-                    crop_x = int(request.POST["crop_x"])
-                    crop_y = int(request.POST["crop_y"])
-                    crop_w = int(request.POST["crop_width"])
-                    crop_h = int(request.POST["crop_height"])
-                    if crop_x < 0 or crop_y < 0 or crop_w <= 0 or crop_h <= 0:
-                        raise ValueError("Crop dimensions must be positive")
-                    operations["crop"] = {
-                        "x": crop_x,
-                        "y": crop_y,
-                        "width": crop_w,
-                        "height": crop_h,
-                    }
-                except (ValueError, TypeError):
-                    return JsonResponse({"error": "Invalid crop parameters"}, status=400)
-            if request.POST.get("rotate"):
-                try:
-                    rotate_val = int(request.POST["rotate"])
-                    if rotate_val not in (0, 90, 180, 270):
-                        raise ValueError("Rotate must be 0, 90, 180, or 270")
-                    operations["rotate"] = rotate_val
-                except (ValueError, TypeError):
-                    return JsonResponse({"error": "Invalid rotate parameter"}, status=400)
-            if request.POST.get("flip"):
-                flip_val = request.POST["flip"]
-                if flip_val not in ("horizontal", "vertical"):
-                    return JsonResponse({"error": "Invalid flip parameter"}, status=400)
-                operations["flip"] = flip_val
-            if request.POST.get("resize_width") and request.POST.get("resize_height"):
-                try:
-                    rw = int(request.POST["resize_width"])
-                    rh = int(request.POST["resize_height"])
-                    if rw <= 0 or rh <= 0 or rw > 10000 or rh > 10000:
-                        raise ValueError("Resize dimensions out of range")
-                    operations["resize"] = {"width": rw, "height": rh}
-                except (ValueError, TypeError):
-                    return JsonResponse({"error": "Invalid resize parameters"}, status=400)
-
-            if operations:
-                parts = []
-                if "crop" in operations:
-                    parts.append(f"Cropped to {operations['crop']['width']}x{operations['crop']['height']}")
-                if "rotate" in operations:
-                    parts.append(f"Rotated {operations['rotate']}deg")
-                if "flip" in operations:
-                    parts.append(f"Flipped {operations['flip']}")
-                if "resize" in operations:
-                    parts.append(f"Resized to {operations['resize']['width']}x{operations['resize']['height']}")
-                description = ", ".join(parts)
-
-                version = create_version(
-                    asset=asset,
-                    file=asset.file,
-                    change_description=description,
-                    created_by=request.user,
-                )
-                process_image_edit(str(version.id), operations)
+            edit_error = _edit_into_copy(request, asset, organization=org, workspace=None)
+            if not edit_error:
+                return redirect("media_library_org:shared_index")
+            return render(
+                request,
+                "media_library/asset_edit.html",
+                {
+                    "asset": asset,
+                    "workspace": None,
+                    "is_shared_library": True,
+                    "is_admin": True,
+                    "edit_error": edit_error,
+                },
+            )
 
         elif asset.media_type == MediaAsset.MediaType.VIDEO:
             trim_error = _trim_into_copy(request, asset, organization=org, workspace=None)

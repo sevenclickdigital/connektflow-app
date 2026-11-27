@@ -198,6 +198,17 @@ class MediaAsset(models.Model):
         blank=True,
         related_name="derivatives",
     )
+    # The first file of this one's versions: every crop or edit is a copy that
+    # points at it, and the original itself is never changed. Null on an
+    # original. The library shows one card per original and its versions in
+    # the detail view (``version_group_ids``).
+    original = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="versions_of",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -227,6 +238,11 @@ class MediaAsset(models.Model):
     @property
     def is_shared(self):
         return self.workspace_id is None
+
+    @property
+    def original_id_or_self(self):
+        """The id of the original this asset's versions hang from (its own when it is the original)."""
+        return self.original_id or self.pk
 
     @property
     def aspect_ratio(self):

@@ -1024,7 +1024,8 @@ def create_post_from_task(task, actor):
         if asset.pk != primary.pk and asset.derived_from_id in (None, primary.pk):
             if asset.derived_from_id is None:
                 asset.derived_from = primary
-                asset.save(update_fields=["derived_from", "updated_at"])
+                asset.original = primary
+                asset.save(update_fields=["derived_from", "original", "updated_at"])
             own_media = [str(asset.pk)]
         rows.append(
             PlatformPost(post=post, social_account=account, format=publish_format, platform_specific_media=own_media)

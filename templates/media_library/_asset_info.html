@@ -2,8 +2,14 @@
 {% comment %}
 An asset's details list (size, format, dimensions, who uploaded it and, for a
 stock photo, the credit its source requires). Expects: asset. Shown in the
-library's detail modal and, on its own, beside the media picker's preview.
+library's detail modal and, on its own, beside the media picker's preview,
+where it also lists the file's versions (``version_mode`` "picker").
 {% endcomment %}
+{% if version_mode == "picker" and version_group|length > 1 %}
+<div class="mb-5">
+  {% include "media_library/_version_strip.html" %}
+</div>
+{% endif %}
 <h3 class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-tertiary, #64748B);">{% translate "Details" %}</h3>
 <dl class="space-y-2.5">
   <div class="flex justify-between">

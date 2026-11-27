@@ -74,6 +74,19 @@ class CropMediaTests(CropMediaTestsBase):
         self.assertEqual(cropped.author_url, "https://unsplash.com/@brigittetohm")
         self.assertEqual(cropped.source_url, "https://unsplash.com/photos/abc123")
 
+    def test_a_crop_is_a_version_of_the_first_original(self):
+        self.client.post(self.url, data={"x": 0, "y": 0, "width": 200, "height": 200})
+        self.attachment.refresh_from_db()
+        first_crop = self.attachment.media_asset
+
+        self.client.post(self.url, data={"x": 0, "y": 0, "width": 100, "height": 100})
+
+        self.attachment.refresh_from_db()
+        second_crop = self.attachment.media_asset
+        self.assertEqual(first_crop.original_id, self.asset.pk)
+        self.assertEqual(second_crop.original_id, self.asset.pk)
+        self.assertEqual(second_crop.derived_from_id, first_crop.pk)
+
     def test_a_box_outside_the_image_is_refused(self):
         response = self.client.post(self.url, data={"x": 300, "y": 0, "width": 200, "height": 100})
 

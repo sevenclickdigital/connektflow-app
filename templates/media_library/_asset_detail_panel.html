@@ -2,7 +2,7 @@
 {% comment %}
 An asset's detail view: the file large on the left, its name, actions,
 details, tags and versions on the right (stacked on a phone). Expects: asset,
-workspace, versions. The library opens it in a near-full-screen modal;
+workspace, version_group. The library opens it in a near-full-screen modal;
 ``standalone`` (the full asset page) drops the close button.
 {% endcomment %}
 
@@ -122,6 +122,13 @@ workspace, versions. The library opens it in a near-full-screen modal;
     <!-- Scrollable metadata area -->
     <div class="lg:flex-1 lg:overflow-y-auto border-t" style="border-color: var(--border, #E5E7EB);">
 
+      {% if version_group|length > 1 %}
+      <!-- Versions -->
+      <div class="px-5 py-4 border-b" style="border-color: var(--surface-2, #F5F3FF);">
+        {% include "media_library/_version_strip.html" with version_mode=standalone|yesno:"page,modal" %}
+      </div>
+      {% endif %}
+
       <!-- Metadata -->
       <div class="px-5 py-4">
         {% include "media_library/_asset_info.html" %}
@@ -135,21 +142,6 @@ workspace, versions. The library opens it in a near-full-screen modal;
         </div>
       </div>
 
-      <!-- Version History -->
-      <div class="px-5 py-4 border-t" style="border-color: var(--surface-2, #F5F3FF);">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-tertiary, #64748B);">{% translate "Version History" %}</h3>
-          {% if versions %}
-          <span class="text-xs px-2 py-0.5 rounded-full font-semibold" style="background: var(--surface-2); color: var(--text-tertiary);">{{ versions|length }}</span>
-          {% endif %}
-        </div>
-        <div id="version-list-{{ asset.id }}"
-             hx-get="{% if is_shared_library %}{% url 'media_library_org:shared_version_list' asset_id=asset.id %}{% else %}{% url 'media_library:version_list' workspace_id=workspace.id asset_id=asset.id %}{% endif %}"
-             hx-trigger="load"
-             hx-target="#version-list-{{ asset.id }}">
-          {% include "media_library/_version_list.html" %}
-        </div>
-      </div>
     </div>
   </div>
 </div>

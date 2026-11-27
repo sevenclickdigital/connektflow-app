@@ -16,14 +16,16 @@ replace the whole grid. ``picker=1`` brings it back as a picker card.
 <div class="ml-asset-card group cursor-pointer overflow-hidden relative"
      {% if picker_mode %}
      data-asset-url="{% if asset.file %}{{ asset.file.url }}{% endif %}" data-asset-type="{{ asset.media_type }}" data-asset-name="{{ asset.original_filename }}"
-     @click="toggle('{{ asset.id }}', $el.dataset)"
+     data-asset-group="{{ asset.original_id_or_self }}"
+     {% comment %}A file with versions opens them to pick one; any other is picked at once.{% endcomment %}
+     @click="{% if asset.version_count %}openPreview('{{ asset.id }}', $el.dataset){% else %}toggle('{{ asset.id }}', $el.dataset){% endif %}"
      {% comment %}
      ``ml-asset-card-picked`` rather than a ring utility: the ring drew
      outside the border, so a picked card showed two outlines at once. This
      recolours the card's own border and lifts it, matching the hover state
      the gallery already uses.
      {% endcomment %}
-     :class="isPicked('{{ asset.id }}') && 'ml-asset-card-picked'"
+     :class="isGroupPicked('{{ asset.original_id_or_self }}') && 'ml-asset-card-picked'"
      {% elif asset.is_shared or not request.workspace_membership.effective_permissions.edit_media and not request.workspace_membership.effective_permissions.delete_media %}
      @click="openDetail('{{ asset.id }}')"
      {% else %}
@@ -73,6 +75,12 @@ replace the whole grid. ``picker=1`` brings it back as a picker card.
       {{ asset.get_media_type_display|upper }}
     </span>
 
+    {% if asset.version_count %}
+    <span class="ml-type-badge absolute top-9 left-2" style="background: rgba(15,23,42,0.75); color: white;">
+      {% with total=asset.version_count|add:1 %}{% blocktranslate count count=total %}{{ count }} version{% plural %}{{ count }} versions{% endblocktranslate %}{% endwith %}
+    </span>
+    {% endif %}
+
     {% if asset.is_shared %}
     <span class="ml-type-badge absolute top-2 right-2"
           style="background: rgba(20,184,166,0.9); color: white;">
@@ -87,10 +95,10 @@ replace the whole grid. ``picker=1`` brings it back as a picker card.
     which image will lead the carousel.
     {% endcomment %}
     <div class="absolute top-2 right-2 w-6 h-6 rounded-md border-2 flex items-center justify-center text-[11px] font-bold transition-all duration-150 pointer-events-none"
-         :class="isPicked('{{ asset.id }}')
+         :class="isGroupPicked('{{ asset.original_id_or_self }}')
                  ? 'bg-brand-700 border-brand-700 text-white'
                  : 'bg-white/90 border-neutral-400 text-transparent opacity-0 group-hover:opacity-100'">
-      <span x-text="pickedPosition('{{ asset.id }}')"></span>
+      <span x-text="groupPickedPosition('{{ asset.original_id_or_self }}')"></span>
     </div>
     {% if asset.file and asset.processing_status != 'pending' and asset.processing_status != 'processing' %}
     {% comment %}

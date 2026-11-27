@@ -53,6 +53,9 @@
 {% if asset.file_type == 'image' or asset.file_type == 'gif' %}
 <!-- ═══════ IMAGE EDITOR ═══════ -->
 <div x-data="imageCropper()" class="space-y-4">
+  {% if edit_error %}
+  <p class="alert-error text-sm" role="alert">{{ edit_error }}</p>
+  {% endif %}
   <!-- Canvas -->
   <div class="ml-edit-canvas">
     <div class="max-h-[500px] overflow-hidden">

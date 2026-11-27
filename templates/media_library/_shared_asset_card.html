@@ -29,6 +29,12 @@
       {{ asset.get_media_type_display|upper }}
     </span>
 
+    {% if asset.version_count %}
+    <span class="ml-type-badge absolute top-9 left-2" style="background: rgba(15,23,42,0.75); color: white;">
+      {% with total=asset.version_count|add:1 %}{% blocktranslate count count=total %}{{ count }} version{% plural %}{{ count }} versions{% endblocktranslate %}{% endwith %}
+    </span>
+    {% endif %}
+
     <span class="absolute top-2 right-2" style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: var(--radius-sm, 0.25rem); background: rgba(20,184,166,0.9); color: white;">
       {% translate "SHARED" %}
     </span>

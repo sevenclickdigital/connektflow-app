@@ -1,0 +1,57 @@
+{% load i18n %}
+{% comment %}
+The versions of a file: its original and every crop or edit made from it, as
+thumbnails, the one on screen marked. Expects: asset (the one shown),
+version_group (original first), and ``version_mode``:
+  "modal"  - the library's detail modal; a click loads that version into it.
+  "page"   - the asset page; a click opens that version's page.
+  "picker" - the composer's media picker; the picker's script reads the
+             button's data-* to show that version and pick it with Select,
+             and the picked ones carry their place in the selection.
+{% endcomment %}
+{% if version_group|length > 1 %}
+<div>
+  <h3 class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-tertiary, #64748B);">{% translate "Versions" %}</h3>
+  <div class="grid grid-cols-4 gap-2">
+    {% for version in version_group %}
+    {% if version_mode == "page" %}
+    <a href="{% if is_shared_library %}{% url 'media_library_org:shared_asset_detail' asset_id=version.id %}{% else %}{% url 'media_library:asset_detail' workspace_id=workspace.id asset_id=version.id %}{% endif %}"
+    {% else %}
+    <button type="button"
+            {% if version_mode == "modal" %}
+            hx-get="{% url 'media_library:asset_detail' workspace_id=workspace.id asset_id=version.id %}"
+            hx-target="#detail-panel" hx-swap="innerHTML"
+            {% else %}
+            data-version-pick
+            data-asset-id="{{ version.id }}"
+            data-asset-url="{% if version.file %}{{ version.file.url }}{% endif %}"
+            data-asset-type="{{ version.media_type }}"
+            data-asset-name="{{ version.original_filename }}"
+            data-asset-group="{{ version.original_id_or_self }}"
+            {% endif %}
+    {% endif %}
+            class="group block text-left cursor-pointer"
+            {% if version.pk == asset.pk %}aria-current="true"{% endif %}
+            title="{{ version.original_filename }}">
+      <span class="relative block aspect-square rounded-lg overflow-hidden border-2 transition-colors {% if version.pk == asset.pk %}border-brand-700{% else %}border-transparent group-hover:border-neutral-300{% endif %}"
+            style="background: var(--surface-2, #F5F3FF);">
+        {% if version_mode == "picker" %}
+        <span x-show="isPicked('{{ version.id }}')" x-text="pickedPosition('{{ version.id }}')"
+              class="absolute top-1 right-1 w-5 h-5 rounded-md bg-brand-700 text-white text-[10px] font-bold flex items-center justify-center"></span>
+        {% endif %}
+        {% if version.thumbnail %}
+          <img src="{{ version.thumbnail.url }}" alt="" class="w-full h-full object-cover" loading="lazy">
+        {% elif version.file and version.media_type == 'image' or version.file and version.media_type == 'gif' %}
+          <img src="{{ version.file.url }}" alt="" class="w-full h-full object-cover" loading="lazy">
+        {% else %}
+          <span class="w-full h-full flex items-center justify-center text-xs font-bold" style="color: var(--text-ghost, #94A3B8);">{{ forloop.counter }}</span>
+        {% endif %}
+      </span>
+      <span class="block mt-1 text-[11px] leading-tight truncate {% if version.pk == asset.pk %}font-semibold text-neutral-950{% else %}text-neutral-600{% endif %}">
+        {% if not version.original_id %}{% translate "Original" %}{% elif version.width and version.height %}{{ version.width }}&times;{{ version.height }}{% else %}{% blocktranslate with number=forloop.counter %}Version {{ number }}{% endblocktranslate %}{% endif %}
+      </span>
+    {% if version_mode == "page" %}</a>{% else %}</button>{% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
