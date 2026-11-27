@@ -1,0 +1,52 @@
+{% load i18n %}
+{% comment %}
+An asset's details list (size, format, dimensions, who uploaded it and, for a
+stock photo, the credit its source requires). Expects: asset. Shown in the
+library's detail modal and, on its own, beside the media picker's preview.
+{% endcomment %}
+<h3 class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-tertiary, #64748B);">{% translate "Details" %}</h3>
+<dl class="space-y-2.5">
+  <div class="flex justify-between">
+    <dt class="text-xs" style="color: var(--text-tertiary);">{% translate "File size" %}</dt>
+    <dd class="text-xs font-medium" style="color: var(--text-primary);">{{ asset.human_file_size }}</dd>
+  </div>
+  <div class="flex justify-between">
+    <dt class="text-xs" style="color: var(--text-tertiary);">{% translate "Format" %}</dt>
+    <dd class="text-xs font-medium" style="color: var(--text-primary);">{{ asset.mime_type }}</dd>
+  </div>
+  {% if asset.width and asset.height %}
+  <div class="flex justify-between">
+    <dt class="text-xs" style="color: var(--text-tertiary);">{% translate "Dimensions" %}</dt>
+    <dd class="text-xs font-medium" style="color: var(--text-primary);">{{ asset.width }} &times; {{ asset.height }}px</dd>
+  </div>
+  {% endif %}
+  {% if asset.duration_seconds %}
+  <div class="flex justify-between">
+    <dt class="text-xs" style="color: var(--text-tertiary);">{% translate "Duration" %}</dt>
+    <dd class="text-xs font-medium" style="color: var(--text-primary);">{{ asset.duration_seconds }}s</dd>
+  </div>
+  {% endif %}
+  <div class="flex justify-between">
+    <dt class="text-xs" style="color: var(--text-tertiary);">{% translate "Uploaded" %}</dt>
+    <dd class="text-xs font-medium" style="color: var(--text-primary);">{{ asset.created_at|date:"M j, Y g:i A" }}</dd>
+  </div>
+  {% if asset.uploaded_by %}
+  <div class="flex justify-between">
+    <dt class="text-xs" style="color: var(--text-tertiary);">{% translate "Uploaded by" %}</dt>
+    <dd class="text-xs font-medium" style="color: var(--text-primary);">{{ asset.uploaded_by.display_name }}</dd>
+  </div>
+  {% endif %}
+  {% with credit=asset.unsplash_credit %}
+  {% if credit %}
+  <div class="flex justify-between gap-3">
+    <dt class="text-xs shrink-0" style="color: var(--text-tertiary);">{% translate "Credit" %}</dt>
+    <dd class="text-xs font-medium text-right" style="color: var(--text-primary);">
+      {% translate "Photo by" context "Unsplash credit" %}
+      {% if credit.author_link %}<a href="{{ credit.author_link }}" target="_blank" rel="noopener noreferrer" class="underline">{{ credit.author }}</a>{% else %}{{ credit.author }}{% endif %}
+      {% translate "on" context "Unsplash credit" %}
+      <a href="{{ credit.unsplash_link }}" target="_blank" rel="noopener noreferrer" class="underline">Unsplash</a>
+    </dd>
+  </div>
+  {% endif %}
+  {% endwith %}
+</dl>

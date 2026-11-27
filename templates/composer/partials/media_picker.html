@@ -305,35 +305,51 @@ rules have to arrive with it.
   </div>
 
   {% comment %}
-  The enlarged file, opened from a card's corner button. Teleported to body so
-  it covers the whole screen rather than the modal's box; picking stays a
-  click on the card itself.
+  The enlarged file, opened from a card's corner button: the file on the left,
+  its details (``media_library/_asset_info.html``, fetched when it opens) and
+  Select on the right, the same layout as the library's detail modal. Teleported
+  to body so it covers the whole screen rather than the modal's box; picking
+  stays a click on the card itself.
   {% endcomment %}
   <template x-teleport="body">
     <div x-show="preview" x-cloak x-transition.opacity
-         class="fixed inset-0 z-[300] flex items-center justify-center p-4 sm:p-10"
-         style="background: rgba(15,23,42,0.85);"
+         class="fixed inset-0 z-[300] flex items-center justify-center p-2 sm:p-6"
+         style="background: rgba(15,23,42,0.6);"
          role="dialog" aria-modal="true" aria-label="{% translate 'Preview' %}"
          @click.self="closePreview()" @keydown.escape.window="preview && closePreview()">
       <template x-if="preview">
-        <div class="relative flex flex-col items-center gap-3 max-w-full max-h-full">
-          <template x-if="preview?.type === 'video'">
-            <video :src="preview?.url" controls autoplay playsinline
-                   class="max-w-full rounded-lg bg-black" style="max-height: calc(100vh - 9rem);"></video>
-          </template>
-          <template x-if="preview && preview.type !== 'video'">
-            <img :src="preview?.url" :alt="preview?.name"
-                 class="max-w-full rounded-lg object-contain" style="max-height: calc(100vh - 9rem);">
-          </template>
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-white truncate max-w-[50vw]" x-text="preview?.name"></span>
-            <button type="button" class="px-4 py-2 text-sm font-medium rounded-lg border cursor-pointer"
-                    style="border-color: rgba(255,255,255,0.4); color: white;"
-                    @click="closePreview()">{% translate "Close" %}</button>
-            <button type="button" class="px-5 py-2 text-sm font-semibold text-white rounded-lg cursor-pointer"
-                    style="background: var(--primary-600, #6D28D9);"
-                    @click="toggle(preview.id, preview.data); closePreview()"
-                    x-text="isPicked(preview?.id) ? '{% translate "Unselect" %}' : '{% translate "Select" %}'"></button>
+        <div class="relative w-full h-full max-w-[1600px] bg-white shadow-xl rounded-2xl overflow-hidden flex flex-col lg:flex-row overflow-y-auto lg:overflow-y-hidden">
+          <div class="flex items-center justify-center p-4 lg:p-6 min-h-[45vh] lg:min-h-0 lg:flex-1 lg:min-w-0"
+               style="background: var(--surface-1, #FAFAFF);">
+            <template x-if="preview?.type === 'video'">
+              <video :src="preview?.url" controls autoplay playsinline
+                     class="max-w-full max-h-[60vh] lg:max-h-full rounded-lg bg-black"></video>
+            </template>
+            <template x-if="preview && preview.type !== 'video'">
+              <img :src="preview?.url" :alt="preview?.name"
+                   class="max-w-full max-h-[60vh] lg:max-h-full object-contain rounded-lg">
+            </template>
+          </div>
+          <div class="flex flex-col w-full lg:w-[400px] lg:shrink-0 lg:min-h-0 border-t lg:border-t-0 lg:border-l"
+               style="border-color: var(--border, #E5E7EB);">
+            <div class="flex items-center justify-between px-5 py-4 border-b" style="border-color: var(--border, #E5E7EB);">
+              <h2 class="text-sm font-bold truncate pr-4" style="color: var(--text-primary, #0F172A);" x-text="preview?.name"></h2>
+              <button type="button" @click="closePreview()" aria-label="{% translate 'Close' %}"
+                      class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors btn-surface-2"
+                      style="color: var(--text-tertiary, #64748B);">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div class="px-5 py-4 lg:flex-1 lg:overflow-y-auto">
+              <div x-show="preview?.info" x-html="preview?.info"></div>
+              <p x-show="preview?.infoFailed" class="text-xs text-neutral-600">{% translate "Could not load the details." %}</p>
+            </div>
+            <div class="flex items-center justify-end gap-2 px-5 py-4 border-t" style="border-color: var(--border, #E5E7EB);">
+              <button type="button" class="btn-outline" @click="closePreview()">{% translate "Close" %}</button>
+              <button type="button" class="btn-brand"
+                      @click="toggle(preview.id, preview.data); closePreview()"
+                      x-text="isPicked(preview?.id) ? '{% translate "Unselect" %}' : '{% translate "Select" %}'"></button>
+            </div>
           </div>
         </div>
       </template>
@@ -367,7 +383,11 @@ rules have to arrive with it.
       // ``data`` is the card's dataset, as in toggle().
       openPreview(id, data) {
         if (!data || !data.assetUrl) return;
-        this.preview = { id, url: data.assetUrl, type: data.assetType, name: data.assetName || '', data };
+        this.preview = { id, url: data.assetUrl, type: data.assetType, name: data.assetName || '', data, info: '', infoFailed: false };
+        fetch('{% url "media_library:index" workspace_id=workspace.id %}' + id + '/?part=info')
+          .then(r => (r.ok ? r.text() : Promise.reject(r.status)))
+          .then(html => { if (this.preview?.id === id) this.preview.info = html; })
+          .catch(() => { if (this.preview?.id === id) this.preview.infoFailed = true; });
       },
 
       closePreview() { this.preview = null; },

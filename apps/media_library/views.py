@@ -317,6 +317,10 @@ def asset_detail(request, workspace_id, asset_id):
         pk=asset_id,
     )
 
+    # The composer's media picker shows only the details beside its preview.
+    if request.GET.get("part") == "info":
+        return render(request, "media_library/_asset_info.html", {"asset": asset})
+
     versions = asset.versions.all()[:10]
 
     context = {
