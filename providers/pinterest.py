@@ -24,7 +24,9 @@ from .types import (
 logger = logging.getLogger(__name__)
 
 AUTH_URL = "https://www.pinterest.com/oauth/"
-API_BASE = os.environ.get("PINTEREST_API_BASE", "https://api.pinterest.com/v5")
+# The Sandbox (https://api-sandbox.pinterest.com/v5) while the app has Trial access.
+# An empty value, as an env file leaves it, means production.
+API_BASE = os.environ.get("PINTEREST_API_BASE") or "https://api.pinterest.com/v5"
 TOKEN_URL = f"{API_BASE}/oauth/token"
 
 
