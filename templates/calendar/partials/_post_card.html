@@ -97,6 +97,36 @@ gets this card back) and view_url (the post on its network, or empty).
                 {% if pp.status == "failed" and pp.publish_error %}
                 <li class="text-red-600 break-words">{{ pp.publish_error|truncatechars:160 }}</li>
                 {% endif %}
+                {% comment %}
+                The post's id on its network, to copy (a support request, an API
+                check). Pinterest also gets "Check on Pinterest": the server reads
+                the pin back (composer:pinterest_pin) and shows what Pinterest has.
+                {% endcomment %}
+                {% if pp.platform_post_id %}
+                <li class="flex items-start gap-2" x-data="{ copied: false }">
+                    <svg class="w-4 h-4 flex-shrink-0 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/></svg>
+                    <span class="min-w-0">{% blocktranslate with platform=account.get_platform_display %}Id on {{ platform }}{% endblocktranslate %}<br>
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="font-mono text-neutral-800 break-all" x-ref="networkId">{{ pp.platform_post_id }}</span>
+                            <button type="button" class="text-brand-700 hover:text-brand-800 font-semibold cursor-pointer"
+                                    @click="navigator.clipboard.writeText($refs.networkId.innerText).then(() => { copied = true; setTimeout(() => copied = false, 2000); })">
+                                <span x-show="!copied">{% translate "Copy" %}</span><span x-show="copied" x-cloak>{% translate "Copied" %}</span>
+                            </button>
+                        </span>
+                    </span>
+                </li>
+                {% if account.platform == "pinterest" %}
+                <li>
+                    <button type="button" class="cal-card-action"
+                            hx-get="{% url 'composer:pinterest_pin' workspace_id=workspace.id platform_post_id=pp.id %}"
+                            hx-target="#pin-check-{{ pp.id }}" hx-swap="innerHTML">
+                        <svg class="w-4 h-4 flex-shrink-0 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        {% translate "Check on Pinterest" %}
+                    </button>
+                    <div id="pin-check-{{ pp.id }}"></div>
+                </li>
+                {% endif %}
+                {% endif %}
             </ul>
         </div>
 

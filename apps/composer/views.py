@@ -2977,6 +2977,48 @@ def pinterest_boards(request, workspace_id, account_id):
 
 
 @login_required
+@require_GET
+def pinterest_pin(request, workspace_id, platform_post_id):
+    """A published pin as Pinterest answers it now, for the calendar's post card.
+
+    Read on the server so the token never reaches the page; shows the pin's
+    id, title, description, board and image.
+    """
+    workspace = _get_workspace(request, workspace_id)
+    pp = get_object_or_404(
+        PlatformPost.objects.select_related("social_account"),
+        id=platform_post_id,
+        post__workspace=workspace,
+        social_account__platform="pinterest",
+    )
+    context = {"pin": None, "error": ""}
+    if not pp.platform_post_id:
+        context["error"] = _("This pin has no Pinterest id yet.")
+        return render(request, "composer/partials/_pinterest_pin.html", context)
+    _account, provider, access_token, refused = _pinterest_session(workspace, pp.social_account_id)
+    if refused:
+        context["error"] = _("Pinterest refused to renew the connection. Reconnect the account.")
+        return render(request, "composer/partials/_pinterest_pin.html", context)
+    try:
+        pin = provider.get_pin(access_token, pp.platform_post_id)
+    except Exception as exc:
+        logger.warning("Pinterest pin read failed for platform post %s", pp.id, exc_info=True)
+        context["error"] = getattr(exc, "user_message", "") or _("Pinterest did not answer for this pin.")
+        return render(request, "composer/partials/_pinterest_pin.html", context)
+    images = (pin.get("media") or {}).get("images") or {}
+    image = images.get("600x") or images.get("400x300") or next(iter(images.values()), None)
+    context["pin"] = {
+        "id": pin.get("id", ""),
+        "title": pin.get("title") or "",
+        "description": pin.get("description") or "",
+        "board_id": pin.get("board_id") or "",
+        "created_at": pin.get("created_at") or "",
+        "image_url": (image or {}).get("url", ""),
+    }
+    return render(request, "composer/partials/_pinterest_pin.html", context)
+
+
+@login_required
 @require_permission("create_posts")
 @require_POST
 def pinterest_board_create(request, workspace_id, account_id):

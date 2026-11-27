@@ -1,0 +1,25 @@
+{% load i18n %}
+{% comment %}
+A published pin as Pinterest answers it now (composer:pinterest_pin), swapped
+into the calendar's post card by "Check on Pinterest". Read on the server, so
+no token reaches the page.
+Expects: pin ({id, title, description, board_id, created_at, image_url}) or error.
+{% endcomment %}
+{% if error %}
+<p class="mt-2 text-xs text-red-600" role="alert">{{ error }}</p>
+{% else %}
+<div class="mt-2 rounded-lg border border-neutral-300 bg-white p-3 text-xs text-neutral-700 space-y-2">
+    <p class="flex items-center gap-1.5 font-semibold text-green-700">
+        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+        {% translate "Pinterest has this pin" %}
+    </p>
+    {% if pin.image_url %}<img src="{{ pin.image_url }}" alt="" class="w-full max-h-40 object-contain rounded-md bg-neutral-50">{% endif %}
+    <dl class="space-y-1">
+        <div><dt class="inline font-semibold text-neutral-900">{% translate "Pin id" %}:</dt> <dd class="inline font-mono break-all">{{ pin.id }}</dd></div>
+        {% if pin.title %}<div><dt class="inline font-semibold text-neutral-900">{% translate "Title" %}:</dt> <dd class="inline">{{ pin.title }}</dd></div>{% endif %}
+        {% if pin.description %}<div><dt class="inline font-semibold text-neutral-900">{% translate "Description" %}:</dt> <dd class="inline whitespace-pre-line">{{ pin.description|truncatechars:300 }}</dd></div>{% endif %}
+        {% if pin.board_id %}<div><dt class="inline font-semibold text-neutral-900">{% translate "Board" context "pinterest" %}:</dt> <dd class="inline font-mono break-all">{{ pin.board_id }}</dd></div>{% endif %}
+        {% if pin.created_at %}<div><dt class="inline font-semibold text-neutral-900">{% translate "Created on" %}:</dt> <dd class="inline">{{ pin.created_at }}</dd></div>{% endif %}
+    </dl>
+</div>
+{% endif %}

@@ -2,6 +2,8 @@
 
 from unittest import mock
 
+from django.urls import reverse
+
 from apps.composer.tests.test_authorization import ComposerAuthorizationBase
 from apps.social_accounts.models import SocialAccount
 from providers.exceptions import ProviderError
@@ -106,3 +108,58 @@ class PinterestProviderBoardsTests(ComposerAuthorizationBase):
             boards = provider.get_boards("token")
         self.assertEqual([b["id"] for b in boards], ["b1", "b2"])
         self.assertEqual(request.call_args_list[1].kwargs["params"]["bookmark"], "next")
+
+
+class PinterestPinCheckTests(ComposerAuthorizationBase):
+    def setUp(self):
+        super().setUp()
+        from apps.composer.models import PlatformPost, Post
+
+        self.pinterest = SocialAccount.objects.create(
+            workspace=self.ws,
+            platform="pinterest",
+            account_platform_id="pin-1",
+            account_name="Pins",
+            connection_status=SocialAccount.ConnectionStatus.CONNECTED,
+        )
+        post = Post.objects.create(workspace=self.ws, author=self.manager, caption="pin")
+        self.row = PlatformPost.objects.create(
+            post=post, social_account=self.pinterest, status="published", platform_post_id="1129559150354629778"
+        )
+        self.url = self._url("pinterest_pin", platform_post_id=self.row.id)
+        self.client.force_login(self.manager)
+
+    def test_shows_what_pinterest_has(self):
+        pin = {
+            "id": "1129559150354629778",
+            "title": "Oi",
+            "description": "Prazer, sou o MOTI!",
+            "board_id": "b1",
+            "media": {"images": {"600x": {"url": "https://i.pinimg.com/564x/a.jpg"}}},
+        }
+        with mock.patch.object(PinterestProvider, "get_pin", return_value=pin) as get_pin:
+            response = self.client.get(self.url)
+        assert response.status_code == 200
+        assert get_pin.call_args.args[1] == "1129559150354629778"
+        body = response.content.decode()
+        assert "1129559150354629778" in body
+        assert "Prazer, sou o MOTI!" in body
+        assert "https://i.pinimg.com/564x/a.jpg" in body
+
+    def test_a_refusal_shows_the_reason(self):
+        error = ProviderError("404", platform="pinterest", user_message="Pin not found.")
+        with mock.patch.object(PinterestProvider, "get_pin", side_effect=error):
+            response = self.client.get(self.url)
+        assert response.status_code == 200
+        assert "Pin not found." in response.content.decode()
+
+    def test_another_workspaces_pin_is_not_found(self):
+        from apps.organizations.models import Organization
+        from apps.workspaces.models import Workspace
+
+        other = Workspace.objects.create(organization=Organization.objects.create(name="Other"), name="Other")
+        url = reverse("composer:pinterest_pin", kwargs={"workspace_id": other.id, "platform_post_id": self.row.id})
+        with mock.patch.object(PinterestProvider, "get_pin") as get_pin:
+            response = self.client.get(url)
+        assert response.status_code in (403, 404)
+        get_pin.assert_not_called()

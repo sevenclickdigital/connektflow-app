@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 22:59+0000\n"
+"POT-Creation-Date: 2026-11-27 00:40+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -1206,7 +1206,7 @@ msgstr ""
 "não informados por %(platform)s: %(listed)s."
 
 #: apps/analytics/services.py:510 apps/composer/views.py:868
-#: apps/composer/views.py:877 apps/composer/views.py:5339
+#: apps/composer/views.py:877 apps/composer/views.py:5382
 #: templates/composer/compose.html:1659
 msgid "and"
 msgstr "e"
@@ -4122,6 +4122,7 @@ msgstr "Ícone"
 #: templates/composer/compose.html:595 templates/composer/compose.html:2490
 #: templates/composer/create_landing.html:395
 #: templates/composer/create_landing.html:578
+#: templates/composer/partials/_pinterest_pin.html:19
 #: templates/composer/partials/template_gallery.html:117
 #: templates/email_center/partials/_editor.html:15
 #: templates/email_center/partials/_editor.html:58
@@ -4136,6 +4137,7 @@ msgstr "Título"
 #: templates/automations/flow_builder.html:1164
 #: templates/composer/create_landing.html:430
 #: templates/composer/create_landing.html:615
+#: templates/composer/partials/_pinterest_pin.html:20
 #: templates/composer/partials/template_gallery.html:138
 #: templates/tasks/partials/_task_fields.html:25
 msgid "Description"
@@ -4656,84 +4658,92 @@ msgstr "Nenhuma fila ativa encontrada para o canal selecionado."
 msgid "Read-only — not saved"
 msgstr "Somente leitura — não salvo"
 
-#: apps/composer/views.py:2158
+#: apps/composer/views.py:2159
 msgid "Nothing to save yet"
 msgstr "Nada para salvar ainda"
 
-#: apps/composer/views.py:2188
+#: apps/composer/views.py:2189
 #, python-format
 msgid "Saved %(time)s"
 msgstr "Salvo às %(time)s"
 
-#: apps/composer/views.py:2415 apps/composer/views.py:3329
-#: apps/composer/views.py:4365
+#: apps/composer/views.py:2416 apps/composer/views.py:3372
+#: apps/composer/views.py:4408
 msgid "No file provided"
 msgstr "Nenhum arquivo enviado"
 
-#: apps/composer/views.py:2420
+#: apps/composer/views.py:2421
 msgid "Only image files are allowed"
 msgstr "Apenas arquivos de imagem são permitidos"
 
-#: apps/composer/views.py:2666
+#: apps/composer/views.py:2667
 msgid "Could not read video duration."
 msgstr "Não foi possível ler a duração do vídeo."
 
-#: apps/composer/views.py:2681
+#: apps/composer/views.py:2682
 msgid "Could not extract frames."
 msgstr "Não foi possível extrair os quadros."
 
-#: apps/composer/views.py:2722
+#: apps/composer/views.py:2723
 msgid "Missing search query"
 msgstr "Informe um termo de busca"
 
-#: apps/composer/views.py:2735
+#: apps/composer/views.py:2736
 msgid "Could not reach Unsplash. Try again."
 msgstr "Não foi possível acessar o Unsplash. Tente novamente."
 
-#: apps/composer/views.py:2740
+#: apps/composer/views.py:2741
 msgid "Unsplash rate limit reached. Try again in a few minutes."
 msgstr ""
 "Limite de requisições do Unsplash atingido. Tente novamente em alguns "
 "minutos."
 
-#: apps/composer/views.py:2742 templates/composer/compose.html:2528
+#: apps/composer/views.py:2743 templates/composer/compose.html:2528
 msgid "Unsplash search failed. Try again."
 msgstr "A busca no Unsplash falhou. Tente novamente."
 
-#: apps/composer/views.py:2769
+#: apps/composer/views.py:2770
 msgid "Unexpected response from Unsplash. Try again."
 msgstr "Resposta inesperada do Unsplash. Tente novamente."
 
-#: apps/composer/views.py:2796
+#: apps/composer/views.py:2797
 msgid "No photos selected"
 msgstr "Nenhuma foto selecionada"
 
-#: apps/composer/views.py:2799
+#: apps/composer/views.py:2800
 #, python-format
 msgid "Select at most %(count)s photos per import."
 msgstr "Selecione no máximo %(count)s fotos por importação."
 
-#: apps/composer/views.py:2911
+#: apps/composer/views.py:2912
 msgid "Could not import the selected photos."
 msgstr "Não foi possível importar as fotos selecionadas."
 
-#: apps/composer/views.py:2955
+#: apps/composer/views.py:2956 apps/composer/views.py:3000
 msgid "Pinterest refused to renew the connection. Reconnect the account."
 msgstr "O Pinterest recusou renovar a conexão. Reconecte a conta."
 
-#: apps/composer/views.py:2973 templates/composer/compose.html:2565
+#: apps/composer/views.py:2974 templates/composer/compose.html:2565
 msgid "Failed to fetch boards"
 msgstr "Não foi possível carregar as pastas"
 
-#: apps/composer/views.py:2986
+#: apps/composer/views.py:2996
+msgid "This pin has no Pinterest id yet."
+msgstr "Este pin ainda não tem ID no Pinterest."
+
+#: apps/composer/views.py:3006
+msgid "Pinterest did not answer for this pin."
+msgstr "O Pinterest não respondeu sobre este pin."
+
+#: apps/composer/views.py:3029
 msgid "Name the board."
 msgstr "Dê um nome à pasta."
 
-#: apps/composer/views.py:2994 templates/composer/compose.html:2561
+#: apps/composer/views.py:3037 templates/composer/compose.html:2561
 msgid "Pinterest did not create the board."
 msgstr "O Pinterest não criou a pasta."
 
-#: apps/composer/views.py:3034
+#: apps/composer/views.py:3077
 msgid ""
 "Place search isn't enabled for this app on Meta yet: it needs the Page "
 "Public Metadata Access feature approved in App Review."
@@ -4741,24 +4751,24 @@ msgstr ""
 "A busca de locais ainda não está liberada para este app na Meta: ela precisa "
 "do recurso Page Public Metadata Access aprovado na revisão do app."
 
-#: apps/composer/views.py:3038
+#: apps/composer/views.py:3081
 msgid "Could not search places right now. Try again in a moment."
 msgstr "Não foi possível buscar locais agora. Tente de novo em instantes."
 
-#: apps/composer/views.py:3508 apps/composer/views.py:3597
-#: apps/composer/views.py:3658
+#: apps/composer/views.py:3551 apps/composer/views.py:3640
+#: apps/composer/views.py:3701
 msgid "This post has already published and can't be edited."
 msgstr "Esta publicação já foi publicada e não pode ser editada."
 
-#: apps/composer/views.py:3703
+#: apps/composer/views.py:3746
 msgid "Marked as published. Thank you!"
 msgstr "Marcado como publicado. Obrigado!"
 
-#: apps/composer/views.py:3780
+#: apps/composer/views.py:3823
 msgid "You don't have permission to delete this post."
 msgstr "Você não tem permissão para excluir esta publicação."
 
-#: apps/composer/views.py:3858
+#: apps/composer/views.py:3901
 #, python-format
 msgid ""
 "%(network)s didn't give this post's link. The post may be gone from there, "
@@ -4767,30 +4777,30 @@ msgstr ""
 "%(network)s não informou o link desta publicação. Ela pode ter sido removida "
 "de lá, ou a conta pode precisar ser reconectada."
 
-#: apps/composer/views.py:3918
+#: apps/composer/views.py:3961
 msgid "Brainstorming"
 msgstr "Brainstorming"
 
-#: apps/composer/views.py:3919
+#: apps/composer/views.py:3962
 msgctxt "idea column"
 msgid "Under review"
 msgstr "Em avaliação"
 
-#: apps/composer/views.py:3920
+#: apps/composer/views.py:3963
 msgctxt "idea column"
 msgid "Approved"
 msgstr "Aprovadas"
 
-#: apps/composer/views.py:3921
+#: apps/composer/views.py:3964
 msgctxt "idea column"
 msgid "Discarded"
 msgstr "Descartadas"
 
-#: apps/composer/views.py:3953
+#: apps/composer/views.py:3996
 msgid "This is a place to plan ✍️ your content"
 msgstr "Este é o lugar para planejar ✍️ seu conteúdo"
 
-#: apps/composer/views.py:3955
+#: apps/composer/views.py:3998
 msgid ""
 "Save your Ideas before converting them into posts. Brainstorm, plan ahead, "
 "and keep everything organized in one place."
@@ -4798,82 +4808,82 @@ msgstr ""
 "Salve suas ideias antes de transformá-las em publicações. Tenha ideias, "
 "planeje com antecedência e mantenha tudo organizado em um só lugar."
 
-#: apps/composer/views.py:3987
+#: apps/composer/views.py:4030
 msgid "First ideas to explore."
 msgstr "Ideias iniciais para explorar."
 
-#: apps/composer/views.py:3988
+#: apps/composer/views.py:4031
 msgid "Weighing whether it works and in which format."
 msgstr "Analisando a viabilidade e o formato."
 
-#: apps/composer/views.py:3989
+#: apps/composer/views.py:4032
 msgid "Ideas ready for production."
 msgstr "Ideias prontas para produção."
 
-#: apps/composer/views.py:3990
+#: apps/composer/views.py:4033
 msgid "Ideas that will not be used."
 msgstr "Ideias que não serão utilizadas."
 
-#: apps/composer/views.py:4206 apps/media_library/cropping.py:32
+#: apps/composer/views.py:4249 apps/media_library/cropping.py:32
 #: apps/media_library/services.py:985 apps/tasks/views.py:971
 msgid "Storage quota exceeded. Free up space or upgrade your plan."
 msgstr ""
 "Cota de armazenamento excedida. Libere espaço ou faça upgrade do seu plano."
 
-#: apps/composer/views.py:4279
+#: apps/composer/views.py:4322
 msgid "The template is now one of your ideas."
 msgstr "O modelo agora é uma das suas ideias."
 
-#: apps/composer/views.py:4788
+#: apps/composer/views.py:4831
 msgid "Name is required."
 msgstr "O nome é obrigatório."
 
-#: apps/composer/views.py:4817
+#: apps/composer/views.py:4860
 msgid "Column must be empty before deleting."
 msgstr "A coluna precisa estar vazia antes de ser excluída."
 
-#: apps/composer/views.py:5057
+#: apps/composer/views.py:5100
 msgid "CSV file too large (max 5 MB)."
 msgstr "Arquivo CSV muito grande (máx. 5 MB)."
 
-#: apps/composer/views.py:5067
+#: apps/composer/views.py:5110
 msgid "CSV file is empty."
 msgstr "O arquivo CSV está vazio."
 
-#: apps/composer/views.py:5379
+#: apps/composer/views.py:5422
 msgid "Tag name is required."
 msgstr "O nome da tag é obrigatório."
 
-#: apps/composer/views.py:5382
+#: apps/composer/views.py:5425
 msgid "Unknown tag kind."
 msgstr "Tipo de etiqueta desconhecido."
 
-#: apps/composer/views.py:5397
+#: apps/composer/views.py:5440
 msgid "Group name is required."
 msgstr "O nome do grupo é obrigatório."
 
-#: apps/composer/views.py:5408
+#: apps/composer/views.py:5451
 msgid "A group with this name already exists."
 msgstr "Já existe um grupo com este nome."
 
-#: apps/composer/views.py:5431
+#: apps/composer/views.py:5474
 msgid "The template was not sent."
 msgstr "O modelo não foi enviado."
 
-#: apps/composer/views.py:5444
+#: apps/composer/views.py:5487
 #, python-format
 msgid "You already have %(count)s templates waiting for approval."
 msgstr "Você já tem %(count)s modelos aguardando aprovação."
 
-#: apps/composer/views.py:5449
+#: apps/composer/views.py:5492
 msgid "Template sent. Thank you!"
 msgstr "Modelo enviado. Obrigado!"
 
-#: apps/composer/views.py:5450
+#: apps/composer/views.py:5493
 msgid "It reaches every brand's shelf once our team approves it."
 msgstr "Ele aparece para todas as marcas assim que a nossa equipe aprovar."
 
-#: apps/composer/views.py:5482
+#: apps/composer/views.py:5525
 msgid "This tag no longer exists."
 msgstr "Esta tag não existe mais."
 
@@ -11475,6 +11485,7 @@ msgstr "Depósito até"
 #: templates/billing/staff_account.html:42
 #: templates/billing/staff_console.html:363
 #: templates/billing/staff_console.html:366
+#: templates/calendar/partials/_post_card.html:115
 #: templates/onboarding/partials/_connection_link_created.html:43
 msgid "Copy"
 msgstr "Copiar"
@@ -11484,6 +11495,7 @@ msgstr "Copiar"
 #: templates/billing/_pix_qr_code.html:32
 #: templates/billing/staff_account.html:38
 #: templates/billing/staff_console.html:363
+#: templates/calendar/partials/_post_card.html:115
 #: templates/composer/manual_publish.html:46
 msgid "Copied"
 msgstr "Copiado"
@@ -12271,7 +12283,7 @@ msgstr "Desativado"
 #: templates/billing/staff_console.html:204
 #: templates/billing/staff_console.html:234
 #: templates/billing/staff_console.html:297
-#: templates/calendar/partials/_post_card.html:105
+#: templates/calendar/partials/_post_card.html:136
 #: templates/contacts/partials/_results.html:91
 #: templates/email_center/staff_index.html:64
 #: templates/email_center/staff_index.html:141
@@ -12288,7 +12300,7 @@ msgstr "Pagar saque"
 #: templates/automations/staff_template_list.html:114
 #: templates/calendar/partials/_list_row.html:102
 #: templates/calendar/partials/_post_actions_menu.html:28
-#: templates/calendar/partials/_post_card.html:112
+#: templates/calendar/partials/_post_card.html:143
 #: templates/calendar/staff_dates.html:69
 #: templates/composer/staff_idea_templates.html:98
 #: templates/contacts/partials/_row.html:62
@@ -12343,7 +12355,7 @@ msgstr "Excluir afiliado"
 #: templates/calendar/calendar.html:549 templates/calendar/calendar.html:580
 #: templates/calendar/partials/_delete_post_modal.html:81
 #: templates/calendar/partials/_post_actions_menu.html:33
-#: templates/calendar/partials/_post_card.html:143
+#: templates/calendar/partials/_post_card.html:174
 #: templates/calendar/staff_dates.html:79 templates/composer/compose.html:1798
 #: templates/composer/compose.html:2524
 #: templates/composer/create_landing.html:473
@@ -12670,7 +12682,7 @@ msgid "ago"
 msgstr "atrás"
 
 #: templates/analytics/_post_detail.html:54
-#: templates/calendar/partials/_post_card.html:123
+#: templates/calendar/partials/_post_card.html:154
 #, python-format
 msgid "View on %(platform)s"
 msgstr "Ver em %(platform)s"
@@ -17783,12 +17795,12 @@ msgid "Automation"
 msgstr "Automação"
 
 #: templates/calendar/partials/_list_row.html:96
-#: templates/calendar/partials/_post_card.html:136
+#: templates/calendar/partials/_post_card.html:167
 msgid "Set up automation"
 msgstr "Configurar automação"
 
 #: templates/calendar/partials/_list_row.html:106
-#: templates/calendar/partials/_post_card.html:130
+#: templates/calendar/partials/_post_card.html:161
 #: templates/composer/compose.html:573
 msgid "Clone"
 msgstr "Clonar"
@@ -17867,6 +17879,7 @@ msgid "Post details"
 msgstr "Informações do post"
 
 #: templates/calendar/partials/_post_card.html:72
+#: templates/composer/partials/_pinterest_pin.html:22
 msgid "Created on"
 msgstr "Criado em"
 
@@ -17882,7 +17895,16 @@ msgstr "Previsto para"
 msgid "Scheduled for"
 msgstr "Agendado para"
 
-#: templates/calendar/partials/_post_card.html:112
+#: templates/calendar/partials/_post_card.html:110
+#, python-format
+msgid "Id on %(platform)s"
+msgstr "ID no %(platform)s"
+
+#: templates/calendar/partials/_post_card.html:126
+msgid "Check on Pinterest"
+msgstr "Conferir no Pinterest"
+
+#: templates/calendar/partials/_post_card.html:143
 #: templates/calendar/partials/day_grid.html:42
 #: templates/calendar/partials/day_grid.html:53
 #: templates/calendar/partials/week_grid.html:50
@@ -17894,7 +17916,7 @@ msgstr "Agendado para"
 msgid "Open"
 msgstr "Abrir"
 
-#: templates/calendar/partials/_post_card.html:117
+#: templates/calendar/partials/_post_card.html:148
 #: templates/onboarding/staff_help_videos.html:41
 msgid "Edit text"
 msgstr "Editar texto"
@@ -20529,6 +20551,19 @@ msgstr "As hashtags das suas publicações vão aparecer aqui."
 #: templates/media_library/library_index.html:80
 msgid "New folder"
 msgstr "Nova pasta"
+
+#: templates/composer/partials/_pinterest_pin.html:14
+msgid "Pinterest has this pin"
+msgstr "O Pinterest tem este pin"
+
+#: templates/composer/partials/_pinterest_pin.html:18
+msgid "Pin id"
+msgstr "ID do pin"
+
+#: templates/composer/partials/_pinterest_pin.html:21
+msgctxt "pinterest"
+msgid "Board"
+msgstr "Pasta"
 
 #: templates/composer/partials/_place_picker.html:11
 msgid "Location"
@@ -29728,9 +29763,6 @@ msgstr "Enviar convite"
 
 #~ msgid "No boards found. Create a board on Pinterest first."
 #~ msgstr "Nenhuma pasta encontrada. Crie uma pasta no Pinterest primeiro."
-
-#~ msgid "Create a board on Pinterest"
-#~ msgstr "Criar pasta no Pinterest"
 
 #~ msgid "Add mention"
 #~ msgstr "Adicionar menção"

@@ -67,6 +67,7 @@ urlpatterns = [
     path("compose/unsplash-import/", views.unsplash_import, name="unsplash_import"),
     path("compose/<uuid:post_id>/unsplash-import/", views.unsplash_import, name="unsplash_import_post"),
     path("compose/pinterest-boards/<uuid:account_id>/", views.pinterest_boards, name="pinterest_boards"),
+    path("compose/pinterest-pins/<uuid:platform_post_id>/", views.pinterest_pin, name="pinterest_pin"),
     path(
         "compose/pinterest-boards/<uuid:account_id>/create/",
         views.pinterest_board_create,
