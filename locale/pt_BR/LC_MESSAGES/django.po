@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 20:56+0000\n"
+"POT-Creation-Date: 2026-11-27 21:49+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -464,7 +464,7 @@ msgid "Pin title"
 msgstr "Título do pin"
 
 #: apps/ads/forms.py:296 apps/composer/forms.py:253
-#: apps/social_accounts/models.py:597 apps/social_accounts/models.py:605
+#: apps/social_accounts/models.py:638 apps/social_accounts/models.py:646
 #: templates/automations/flow_builder.html:1164
 #: templates/composer/create_landing.html:430
 #: templates/composer/create_landing.html:615
@@ -1131,7 +1131,7 @@ msgstr "Stories"
 #: apps/ads/services.py:657 apps/ads/services.py:658 apps/ads/services.py:659
 #: apps/analytics/services.py:813 apps/composer/models.py:557
 #: apps/composer/models.py:1151 apps/composer/services.py:1285
-#: apps/social_accounts/models.py:680 apps/tasks/creative_formats.py:96
+#: apps/social_accounts/models.py:721 apps/tasks/creative_formats.py:96
 #: apps/tasks/creative_formats.py:106
 msgid "Reels"
 msgstr "Reels"
@@ -4555,7 +4555,7 @@ msgstr "Redes"
 msgid "Icon"
 msgstr "Ícone"
 
-#: apps/composer/forms.py:252 apps/social_accounts/models.py:643
+#: apps/composer/forms.py:252 apps/social_accounts/models.py:684
 #: templates/composer/compose.html:595 templates/composer/compose.html:2499
 #: templates/composer/create_landing.html:395
 #: templates/composer/create_landing.html:578
@@ -4705,7 +4705,7 @@ msgid "Deadline"
 msgstr "Prazo"
 
 #: apps/composer/idea_icons.py:51 apps/composer/models.py:559
-#: apps/composer/services.py:1287 apps/social_accounts/models.py:682
+#: apps/composer/services.py:1287 apps/social_accounts/models.py:723
 #: apps/tasks/creative_formats.py:152 templates/accounts/settings.html:47
 msgid "Photo"
 msgstr "Foto"
@@ -4813,14 +4813,14 @@ msgid "Post"
 msgstr "Publicação"
 
 #: apps/composer/models.py:556 apps/composer/services.py:1284
-#: apps/social_accounts/models.py:679 apps/tasks/creative_formats.py:95
+#: apps/social_accounts/models.py:720 apps/tasks/creative_formats.py:95
 #: apps/tasks/creative_formats.py:105 apps/tasks/creative_formats.py:131
 msgctxt "publishing format"
 msgid "Story"
 msgstr "Story"
 
 #: apps/composer/models.py:558 apps/composer/services.py:1286
-#: apps/social_accounts/models.py:681
+#: apps/social_accounts/models.py:722
 msgid "Shorts"
 msgstr "Shorts"
 
@@ -5603,10 +5603,12 @@ msgid "Last 7 days"
 msgstr "Últimos 7 dias"
 
 #: apps/contacts/views.py:70
+#: templates/social_accounts/partials/_import_data_modal.html:32
 msgid "Last 30 days"
 msgstr "Últimos 30 dias"
 
 #: apps/contacts/views.py:71
+#: templates/social_accounts/partials/_import_data_modal.html:33
 msgid "Last 90 days"
 msgstr "Últimos 90 dias"
 
@@ -6719,7 +6721,7 @@ msgid "Reconnect this account before sending DMs."
 msgstr "Reconecte esta conta antes de enviar mensagens diretas."
 
 #: apps/inbox/reply_policy.py:63
-#: templates/social_accounts/partials/_account_card.html:157
+#: templates/social_accounts/partials/_account_card.html:151
 msgid ""
 "Instagram DM access is unavailable for this connection. Contact your "
 "administrator to enable it."
@@ -8919,44 +8921,44 @@ msgstr "Token expirando"
 msgid "Disconnected"
 msgstr "Desconectada"
 
-#: apps/social_accounts/models.py:596
+#: apps/social_accounts/models.py:637
 msgid "Video Title"
 msgstr "Título do vídeo"
 
-#: apps/social_accounts/models.py:604
+#: apps/social_accounts/models.py:645
 msgid "Pin Title"
 msgstr "Título do Pin"
 
-#: apps/social_accounts/models.py:634
+#: apps/social_accounts/models.py:675
 msgid "Article Title"
 msgstr "Título do artigo"
 
-#: apps/social_accounts/models.py:635
+#: apps/social_accounts/models.py:676
 msgid "Body (Markdown)"
 msgstr "Corpo (Markdown)"
 
-#: apps/social_accounts/models.py:644
+#: apps/social_accounts/models.py:685
 #: templates/calendar/partials/list_view.html:14
 #: templates/composer/manual_publish.html:43
 msgid "Caption"
 msgstr "Legenda"
 
-#: apps/social_accounts/models.py:672
+#: apps/social_accounts/models.py:713
 #, python-format
 msgid "%(platform)s Stories"
 msgstr "%(platform)s Stories"
 
-#: apps/social_accounts/models.py:673
+#: apps/social_accounts/models.py:714
 #, python-format
 msgid "%(platform)s Reels"
 msgstr "%(platform)s Reels"
 
-#: apps/social_accounts/models.py:674
+#: apps/social_accounts/models.py:715
 #, python-format
 msgid "%(platform)s Shorts"
 msgstr "%(platform)s Shorts"
 
-#: apps/social_accounts/models.py:675
+#: apps/social_accounts/models.py:716
 #, python-format
 msgid "%(platform)s photo"
 msgstr "%(platform)s · Foto"
@@ -9204,6 +9206,7 @@ msgid "Order saved"
 msgstr "Ordem salva"
 
 #: apps/social_accounts/views.py:1233 apps/social_accounts/views.py:1268
+#: apps/social_accounts/views.py:1327
 #, python-format
 msgid "Reconnect %(label)s first — its connection isn't healthy."
 msgstr "Reconecte %(label)s primeiro — a conexão não está saudável."
@@ -9218,62 +9221,97 @@ msgid "Couldn't set up real-time updates. Please try again."
 msgstr ""
 "Não foi possível ativar as atualizações em tempo real. Tente novamente."
 
-#: apps/social_accounts/views.py:1292
+#: apps/social_accounts/views.py:1292 apps/social_accounts/views.py:1359
 #, python-format
 msgid "Importing the history of %(label)s. This card shows when it is done."
 msgstr ""
 "Importando o histórico de %(label)s. Este cartão avisa quando terminar."
 
-#: apps/social_accounts/views.py:1311
+#: apps/social_accounts/views.py:1324
+#, python-format
+msgid "Choose what to import from %(label)s."
+msgstr "Escolha o que importar de %(label)s."
+
+#: apps/social_accounts/views.py:1339
+#, python-format
+msgid ""
+"%(count)s old post of %(label)s imported. Its numbers arrive with the next "
+"sync."
+msgid_plural ""
+"%(count)s old posts of %(label)s imported. Their numbers arrive with the "
+"next sync."
+msgstr[0] ""
+"%(count)s publicação antiga de %(label)s importada. Os números chegam na "
+"próxima sincronização."
+msgstr[1] ""
+"%(count)s publicações antigas de %(label)s importadas. Os números chegam na "
+"próxima sincronização."
+
+#: apps/social_accounts/views.py:1346
+#, python-format
+msgid "%(label)s has no old posts left to import."
+msgstr "%(label)s não tem publicações antigas para importar."
+
+#: apps/social_accounts/views.py:1351
+#, python-format
+msgid "The numbers of %(label)s before the connection are in the reports."
+msgstr "Os números de %(label)s de antes da conexão estão nos relatórios."
+
+#: apps/social_accounts/views.py:1354
+#, python-format
+msgid "%(label)s has no earlier numbers to add."
+msgstr "%(label)s não tem números anteriores para acrescentar."
+
+#: apps/social_accounts/views.py:1379
 #, python-format
 msgid "Removing the old history of %(label)s. This card shows when it is done."
 msgstr ""
 "Removendo o histórico antigo de %(label)s. Este cartão avisa quando terminar."
 
-#: apps/social_accounts/views.py:1335
+#: apps/social_accounts/views.py:1403
 msgid "The old history could not be removed. Try again."
 msgstr "Não foi possível remover o histórico antigo. Tente de novo."
 
-#: apps/social_accounts/views.py:1337
+#: apps/social_accounts/views.py:1405
 msgid "The history could not be imported. Try again."
 msgstr "Não foi possível importar o histórico. Tente de novo."
 
-#: apps/social_accounts/views.py:1343
+#: apps/social_accounts/views.py:1411
 #, python-format
 msgid "Old history removed: %(count)s message."
 msgid_plural "Old history removed: %(count)s messages."
 msgstr[0] "Histórico antigo removido: %(count)s mensagem."
 msgstr[1] "Histórico antigo removido: %(count)s mensagens."
 
-#: apps/social_accounts/views.py:1345
+#: apps/social_accounts/views.py:1413
 #, python-format
 msgid "History imported: %(count)s message."
 msgid_plural "History imported: %(count)s messages."
 msgstr[0] "Histórico importado: %(count)s mensagem."
 msgstr[1] "Histórico importado: %(count)s mensagens."
 
-#: apps/social_accounts/views.py:1377
+#: apps/social_accounts/views.py:1445
 #, python-format
 msgid "Disconnected %(name)s. YouTube data was deleted immediately."
 msgstr ""
 "%(name)s desconectada. Os dados do YouTube foram excluídos imediatamente."
 
-#: apps/social_accounts/views.py:1404
+#: apps/social_accounts/views.py:1472
 #, python-format
 msgid "Disconnected %(name)s."
 msgstr "%(name)s desconectada."
 
-#: apps/social_accounts/views.py:1443
+#: apps/social_accounts/views.py:1511
 msgid "Template sent for review"
 msgstr "Modelo enviado para revisão"
 
-#: apps/social_accounts/views.py:1444
+#: apps/social_accounts/views.py:1512
 msgid "WhatsApp reviews it before it can be used, usually within a day."
 msgstr ""
 "O WhatsApp analisa o modelo antes de ele poder ser usado, em geral em até um "
 "dia."
 
-#: apps/social_accounts/views.py:1647
+#: apps/social_accounts/views.py:1715
 #, python-format
 msgid ""
 "This workspace already has a %(platform)s account. Disconnect it before "
@@ -10774,6 +10812,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/social_accounts/mastodon_connect.html:38
 #: templates/social_accounts/partials/_connect_guide.html:57
 #: templates/social_accounts/partials/_disconnect_confirm.html:47
+#: templates/social_accounts/partials/_import_data_modal.html:78
 #: templates/social_accounts/partials/_posting_slots_grid.html:87
 #: templates/social_accounts/partials/_posting_slots_grid.html:121
 #: templates/support/staff_chat_console.html:323
@@ -10833,7 +10872,7 @@ msgstr "Não recebeu o e-mail?"
 #: templates/analytics/_meta_ads_body.html:16
 #: templates/analytics/_shopee_body.html:13
 #: templates/calendar/partials/_board_columns.html:88
-#: templates/social_accounts/partials/_account_card.html:196
+#: templates/social_accounts/partials/_account_card.html:190
 msgid "Try again"
 msgstr "Tentar novamente"
 
@@ -11509,11 +11548,12 @@ msgstr "Esta campanha não tem anúncios."
 #: templates/organizations/workspaces.html:283
 #: templates/radar/partials/_share_dialog.html:18
 #: templates/radar/partials/_source_card.html:121
-#: templates/social_accounts/partials/_account_card.html:127
-#: templates/social_accounts/partials/_account_card.html:204
-#: templates/social_accounts/partials/_account_card.html:223
-#: templates/social_accounts/partials/_account_card.html:244
+#: templates/social_accounts/partials/_account_card.html:121
+#: templates/social_accounts/partials/_account_card.html:198
+#: templates/social_accounts/partials/_account_card.html:218
+#: templates/social_accounts/partials/_account_card.html:232
 #: templates/social_accounts/partials/_connect_guide.html:19
+#: templates/social_accounts/partials/_import_data_modal.html:16
 #: templates/support/staff_chat_console.html:147 templates/tasks/board.html:121
 #: templates/tasks/partials/_art_thumb.html:29
 #: templates/tasks/partials/_new_item_modal.html:29
@@ -12056,6 +12096,7 @@ msgstr ""
 
 #: templates/ads/pinterest/campaign_new.html:237
 #: templates/components/_period_picker.html:14 templates/funnels/board.html:31
+#: templates/social_accounts/partials/_import_data_modal.html:30
 msgid "Period"
 msgstr "Período"
 
@@ -12380,9 +12421,9 @@ msgstr ""
 
 #: templates/ads/pinterest/settings.html:37 templates/ads/settings.html:47
 #: templates/radar/partials/_source_card.html:61
-#: templates/social_accounts/partials/_account_card.html:107
-#: templates/social_accounts/partials/_account_card.html:205
-#: templates/social_accounts/partials/_account_card.html:245
+#: templates/social_accounts/partials/_account_card.html:101
+#: templates/social_accounts/partials/_account_card.html:199
+#: templates/social_accounts/partials/_account_card.html:233
 #: templates/social_accounts/partials/_ads_card.html:40
 #: templates/social_accounts/partials/_disconnect_confirm.html:56
 msgid "Disconnect"
@@ -13527,7 +13568,7 @@ msgstr "Estimado pelo Connekt Flow"
 msgid "Estimated by Connekt Flow from per-%(content_noun)s counts"
 msgstr "Estimado pelo Connekt Flow a partir das contagens por %(content_noun)s"
 
-#: templates/analytics/_history_offer.html:31
+#: templates/analytics/_history_offer.html:33
 #, python-format
 msgid "%(counter)s post imported. Its metrics arrive on the next sync."
 msgid_plural ""
@@ -13539,7 +13580,7 @@ msgstr[1] ""
 "%(counter)s publicações importadas. As métricas chegam na próxima "
 "sincronização."
 
-#: templates/analytics/_history_offer.html:42
+#: templates/analytics/_history_offer.html:44
 msgid ""
 "Every post was already here. The chart now covers the days before this "
 "channel was connected."
@@ -13547,19 +13588,19 @@ msgstr ""
 "Todas as publicações já estavam aqui. O gráfico agora cobre os dias "
 "anteriores à conexão deste canal."
 
-#: templates/analytics/_history_offer.html:44
+#: templates/analytics/_history_offer.html:46
 msgid "Nothing new to import — every post on this channel is already here."
 msgstr ""
 "Nada novo para importar — todas as publicações deste canal já estão aqui."
 
-#: templates/analytics/_history_offer.html:54
+#: templates/analytics/_history_offer.html:56
 #, python-format
 msgid "%(counter)s post on this channel isn't here yet"
 msgid_plural "%(counter)s posts on this channel aren't here yet"
 msgstr[0] "%(counter)s publicação deste canal ainda não está aqui"
 msgstr[1] "%(counter)s publicações deste canal ainda não estão aqui"
 
-#: templates/analytics/_history_offer.html:67
+#: templates/analytics/_history_offer.html:69
 msgid ""
 "Posts published outside Connekt Flow. Import them to see them here — their "
 "metrics follow on the next sync."
@@ -13567,7 +13608,8 @@ msgstr ""
 "Publicações feitas fora do Connekt Flow. Importe para vê-las aqui — as "
 "métricas chegam na próxima sincronização."
 
-#: templates/analytics/_history_offer.html:78
+#: templates/analytics/_history_offer.html:80
+#: templates/social_accounts/partials/_import_data_modal.html:79
 msgid "Import"
 msgstr "Importar"
 
@@ -13653,9 +13695,9 @@ msgstr ""
 #: templates/analytics/_page.html:16
 #: templates/radar/partials/_source_card.html:53
 #: templates/radar/partials/_source_card.html:57
-#: templates/social_accounts/partials/_account_card.html:176
-#: templates/social_accounts/partials/_account_card.html:209
-#: templates/social_accounts/partials/_account_card.html:249
+#: templates/social_accounts/partials/_account_card.html:170
+#: templates/social_accounts/partials/_account_card.html:203
+#: templates/social_accounts/partials/_account_card.html:237
 #: templates/social_accounts/partials/_ads_card.html:26
 #: templates/social_accounts/partials/_ads_card.html:39
 msgid "Reconnect"
@@ -19319,7 +19361,6 @@ msgstr "Horários de publicação"
 
 #: templates/calendar/posting_slots.html:5
 #: templates/calendar/posting_slots.html:10
-#: templates/social_accounts/partials/_account_card.html:237
 msgid "Posting Schedule"
 msgstr "Agenda de publicação"
 
@@ -28657,47 +28698,24 @@ msgstr "Ver detalhes"
 msgid "Attention"
 msgstr "Atenção"
 
-#: templates/social_accounts/partials/_account_card.html:83
-#: templates/social_accounts/partials/_account_card.html:229
+#: templates/social_accounts/partials/_account_card.html:84
+#: templates/social_accounts/partials/_account_card.html:224
 msgid "Manage connection"
 msgstr "Gerenciar conexão"
-
-#: templates/social_accounts/partials/_account_card.html:84
-msgid "Move one place back"
-msgstr "Mover uma posição para trás"
-
-#: templates/social_accounts/partials/_account_card.html:85
-msgid "Move one place forward"
-msgstr "Mover uma posição para frente"
 
 #: templates/social_accounts/partials/_account_card.html:87
 msgid "Message templates"
 msgstr "Modelos de mensagem"
 
-#: templates/social_accounts/partials/_account_card.html:91
-msgid "Import the history?"
-msgstr "Importar o histórico?"
+#: templates/social_accounts/partials/_account_card.html:90
+msgid "Import data…"
+msgstr "Importar dados…"
 
-#: templates/social_accounts/partials/_account_card.html:92
-msgid ""
-"The comments and conversations from before this account was connected come "
-"into the inbox, without notifications. You can take them out again with "
-"Remove old history."
-msgstr ""
-"Os comentários e as conversas de antes da conexão desta conta entram na "
-"caixa de entrada, sem gerar notificações. Você pode tirá-los de novo em "
-"Remover histórico antigo."
-
-#: templates/social_accounts/partials/_account_card.html:93
-#: templates/social_accounts/partials/_account_card.html:95
-msgid "Import history"
-msgstr "Importar histórico"
-
-#: templates/social_accounts/partials/_account_card.html:100
+#: templates/social_accounts/partials/_account_card.html:94
 msgid "Remove the old history?"
 msgstr "Remover o histórico antigo?"
 
-#: templates/social_accounts/partials/_account_card.html:101
+#: templates/social_accounts/partials/_account_card.html:95
 #, python-format
 msgid ""
 "The comments and conversations from before %(date)s, the day this account "
@@ -28708,28 +28726,28 @@ msgstr ""
 "foi conectada, saem da caixa de entrada, junto com as respostas e anotações "
 "feitas neles. Nada é apagado na rede social."
 
-#: templates/social_accounts/partials/_account_card.html:102
-#: templates/social_accounts/partials/_account_card.html:104
+#: templates/social_accounts/partials/_account_card.html:96
+#: templates/social_accounts/partials/_account_card.html:98
 msgid "Remove old history"
 msgstr "Remover histórico antigo"
 
-#: templates/social_accounts/partials/_account_card.html:116
+#: templates/social_accounts/partials/_account_card.html:110
 msgid "Removing old history…"
 msgstr "Removendo histórico antigo…"
 
-#: templates/social_accounts/partials/_account_card.html:116
+#: templates/social_accounts/partials/_account_card.html:110
 msgid "Importing history…"
 msgstr "Importando histórico…"
 
-#: templates/social_accounts/partials/_account_card.html:135
+#: templates/social_accounts/partials/_account_card.html:129
 msgid "The connection was lost"
 msgstr "A conexão foi perdida"
 
-#: templates/social_accounts/partials/_account_card.html:135
+#: templates/social_accounts/partials/_account_card.html:129
 msgid "Some features are unavailable."
 msgstr "Alguns recursos estão indisponíveis."
 
-#: templates/social_accounts/partials/_account_card.html:141
+#: templates/social_accounts/partials/_account_card.html:135
 msgid ""
 "Connekt Flow can no longer reach this account. Scheduled posts for it will "
 "fail and new comments stop arriving until you reconnect."
@@ -28738,7 +28756,7 @@ msgstr ""
 "agendadas para ela vão falhar e novos comentários deixam de chegar até você "
 "reconectar."
 
-#: templates/social_accounts/partials/_account_card.html:143
+#: templates/social_accounts/partials/_account_card.html:137
 msgid ""
 "The access to this account expires soon. Reconnect to renew it before "
 "scheduled posts start failing."
@@ -28746,7 +28764,7 @@ msgstr ""
 "O acesso a esta conta expira em breve. Reconecte para renová-lo antes que as "
 "publicações agendadas comecem a falhar."
 
-#: templates/social_accounts/partials/_account_card.html:154
+#: templates/social_accounts/partials/_account_card.html:148
 #, python-format
 msgid ""
 "This account was connected without %(scopes)s. Anything relying on them will "
@@ -28755,7 +28773,7 @@ msgstr ""
 "Esta conta foi conectada sem %(scopes)s. Tudo o que depende disso vai falhar "
 "até a permissão ser concedida — reconecte para tentar de novo."
 
-#: templates/social_accounts/partials/_account_card.html:159
+#: templates/social_accounts/partials/_account_card.html:153
 msgid ""
 "DMs unavailable: grant messaging access on the linked Facebook Page, then "
 "reconnect this account."
@@ -28763,33 +28781,26 @@ msgstr ""
 "DMs indisponíveis: conceda acesso a mensagens na página do Facebook "
 "vinculada e reconecte esta conta."
 
-#: templates/social_accounts/partials/_account_card.html:170
+#: templates/social_accounts/partials/_account_card.html:164
 msgid "Some real-time inbox updates are unavailable."
 msgstr ""
 "Algumas atualizações em tempo real da caixa de entrada não estão disponíveis."
 
-#: templates/social_accounts/partials/_account_card.html:171
+#: templates/social_accounts/partials/_account_card.html:165
 msgid "We couldn't set up real-time updates for this account."
 msgstr ""
 "Não conseguimos configurar as atualizações em tempo real para esta conta."
 
-#: templates/social_accounts/partials/_account_card.html:172
+#: templates/social_accounts/partials/_account_card.html:166
 msgid ""
 "Activity with the required permissions can still arrive through polling."
 msgstr ""
 "A atividade com as permissões necessárias ainda pode chegar por "
 "sincronização periódica."
 
-#: templates/social_accounts/partials/_account_card.html:196
+#: templates/social_accounts/partials/_account_card.html:190
 msgid "Trying…"
 msgstr "Tentando…"
-
-#: templates/social_accounts/partials/_account_card.html:238
-msgid ""
-"Set recurring time slots for when queued posts are automatically published."
-msgstr ""
-"Defina horários recorrentes para a publicação automática das publicações em "
-"fila."
 
 #: templates/social_accounts/partials/_bluesky_fields.html:12
 msgid "Username"
@@ -28949,6 +28960,100 @@ msgstr ""
 #: templates/workspaces/dashboard.html:133
 msgid "Connect Your First Account"
 msgstr "Conecte sua primeira conta"
+
+#: templates/social_accounts/partials/_import_data_modal.html:22
+msgid "Import data"
+msgstr "Importar dados"
+
+#: templates/social_accounts/partials/_import_data_modal.html:27
+msgid ""
+"Choose what to bring in from before this account was connected, or from "
+"outside Connekt Flow. Importing again only adds what is missing."
+msgstr ""
+"Escolha o que trazer de antes da conexão desta conta, ou do que foi feito "
+"fora do Connekt Flow. Importar de novo só acrescenta o que falta."
+
+#: templates/social_accounts/partials/_import_data_modal.html:34
+msgid "Last 6 months"
+msgstr "Últimos 6 meses"
+
+#: templates/social_accounts/partials/_import_data_modal.html:35
+msgid "Last year"
+msgstr "Último ano"
+
+#: templates/social_accounts/partials/_import_data_modal.html:36
+msgid "Everything the network gives"
+msgstr "Tudo o que a rede permitir"
+
+#: templates/social_accounts/partials/_import_data_modal.html:38
+msgid ""
+"Applies to everything ticked below. Each network keeps a limited past: what "
+"it no longer has cannot come in."
+msgstr ""
+"Vale para tudo o que estiver marcado abaixo. Cada rede guarda um passado "
+"limitado: o que ela não tem mais não pode ser importado."
+
+#: templates/social_accounts/partials/_import_data_modal.html:45
+msgid "Old pins"
+msgstr "Pins antigos"
+
+#: templates/social_accounts/partials/_import_data_modal.html:45
+msgid "Old posts"
+msgstr "Publicações antigas"
+
+#: templates/social_accounts/partials/_import_data_modal.html:46
+msgid ""
+"What the account already published, including outside Connekt Flow. They "
+"come into the reports and the calendar as published, and their numbers "
+"arrive with the next sync."
+msgstr ""
+"O que a conta já publicou, inclusive fora do Connekt Flow. Entram nos "
+"relatórios e no calendário como publicadas, e os números chegam na próxima "
+"sincronização."
+
+#: templates/social_accounts/partials/_import_data_modal.html:55
+msgid "Numbers before the connection"
+msgstr "Números de antes da conexão"
+
+#: templates/social_accounts/partials/_import_data_modal.html:56
+msgid ""
+"The account's daily numbers for the days before it was connected, so the "
+"reports' chart starts earlier. The network keeps at most 90 days of them."
+msgstr ""
+"Os números diários da conta nos dias antes da conexão, para o gráfico dos "
+"relatórios começar antes. A rede guarda no máximo 90 dias deles."
+
+#: templates/social_accounts/partials/_import_data_modal.html:65
+msgid "Comments and conversations"
+msgstr "Comentários e conversas"
+
+#: templates/social_accounts/partials/_import_data_modal.html:67
+msgid "Being imported now. The card shows when it is done."
+msgstr "Importando agora. O cartão avisa quando terminar."
+
+#: templates/social_accounts/partials/_import_data_modal.html:68
+msgid ""
+"Already in the inbox. Remove old history in the account menu takes them out "
+"again."
+msgstr ""
+"Já estão no inbox. \"Remover histórico antigo\", no menu da conta, tira de "
+"novo."
+
+#: templates/social_accounts/partials/_import_data_modal.html:69
+msgid ""
+"The comments and conversations from before the connection come into the "
+"inbox, without notifications."
+msgstr ""
+"Os comentários e as conversas de antes da conexão entram no inbox, sem "
+"notificações."
+
+#: templates/social_accounts/partials/_import_data_modal.html:75
+msgid ""
+"Ad campaigns and their numbers need no import: they are read from the ad "
+"account each time."
+msgstr ""
+"Campanhas de anúncio e seus números não precisam de importação: são lidos da "
+"conta de anúncios a cada vez."
 
 #: templates/social_accounts/partials/_mastodon_fields.html:10
 msgid "Server"
@@ -30830,6 +30935,25 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 #: templates/workspaces/team.html:159
 msgid "Send invitation"
 msgstr "Enviar convite"
+
+#~ msgid "Move one place back"
+#~ msgstr "Mover uma posição para trás"
+
+#~ msgid "Move one place forward"
+#~ msgstr "Mover uma posição para frente"
+
+#~ msgid ""
+#~ "Set recurring time slots for when queued posts are automatically "
+#~ "published."
+#~ msgstr ""
+#~ "Defina horários recorrentes para a publicação automática das publicações "
+#~ "em fila."
+
+#~ msgid "Import the history?"
+#~ msgstr "Importar o histórico?"
+
+#~ msgid "Import history"
+#~ msgstr "Importar histórico"
 
 #~ msgid "Open on Pinterest"
 #~ msgstr "Abrir no Pinterest"

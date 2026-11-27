@@ -472,16 +472,12 @@ def history_import_view(request: HttpRequest, workspace_id, account_id) -> HttpR
     if not _can_import_history(request, workspace):
         raise PermissionDenied("You cannot import history for this workspace.")
 
-    result = history_import.import_history(account)
-
     # The posts and the chart are two halves of the same gap: the table was
     # empty because this product published none of these posts, and the chart
     # started at connection because nothing had measured the days before it.
     # One button closes both, because to the person looking at the page they
     # are the same complaint.
-    from .tasks import backfill_account_series
-
-    historical_rows = backfill_account_series(account)
+    result, historical_rows = history_import.import_channel_history(account)
 
     return render(
         request,

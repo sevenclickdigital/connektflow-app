@@ -1293,6 +1293,74 @@ def import_inbox_history(request, workspace_id, account_id):
     )
 
 
+# "Import data"'s period, in days; "all" (or anything else) is everything the network gives.
+IMPORT_PERIODS = {"30": 30, "90": 90, "180": 180, "365": 365}
+
+
+@login_required
+@require_permission("manage_social_accounts")
+@require_POST
+@ratelimit(key="user", rate="10/m", method="POST", block=True)
+def import_account_data(request, workspace_id, account_id):
+    """The account menu's "Import data": bring in what was ticked of what the
+    account offers (``SocialAccount.import_options``).
+
+    ``posts`` and ``series`` run here, as the analytics page runs them (each is
+    one bounded read); ``inbox`` is queued as its own job, as "Import history"
+    always was, because reading a whole inbox is too slow for a request. A kind
+    not on offer for the account is ignored, whatever the form sent. ``period``
+    (``IMPORT_PERIODS``) limits how far back all three go; the account chart
+    stays within what the platform keeps (``BACKFILL_DAYS_PER_PLATFORM``).
+    """
+    from apps.analytics import history_import
+    from apps.analytics.tasks import backfill_account_series
+    from apps.inbox.tasks import import_inbox_history as inbox_task
+
+    account = get_object_or_404(SocialAccount.objects.for_workspace(workspace_id), id=account_id)
+    offered = {kind for kind, state in account.import_options.items() if state == "ready"}
+    kinds = [kind for kind in request.POST.getlist("kinds") if kind in offered]
+    label = account.display_label
+    if not kinds:
+        messages.info(request, _("Choose what to import from %(label)s.") % {"label": label})
+        return redirect("social_accounts:list", workspace_id=workspace_id)
+    if account.needs_reconnect:
+        messages.error(request, _("Reconnect %(label)s first — its connection isn't healthy.") % {"label": label})
+        return redirect("social_accounts:list", workspace_id=workspace_id)
+
+    days = IMPORT_PERIODS.get(request.POST.get("period", ""))
+    since = timezone.now() - timedelta(days=days) if days else None
+
+    if "posts" in kinds:
+        result = history_import.import_history(account, since=since)
+        if result.imported:
+            messages.success(
+                request,
+                ngettext(
+                    "%(count)s old post of %(label)s imported. Its numbers arrive with the next sync.",
+                    "%(count)s old posts of %(label)s imported. Their numbers arrive with the next sync.",
+                    result.imported,
+                )
+                % {"count": result.imported, "label": label},
+            )
+        else:
+            messages.info(request, _("%(label)s has no old posts left to import.") % {"label": label})
+    if "series" in kinds:
+        filled = backfill_account_series(account, days=days)
+        if filled:
+            messages.success(
+                request, _("The numbers of %(label)s before the connection are in the reports.") % {"label": label}
+            )
+        else:
+            messages.info(request, _("%(label)s has no earlier numbers to add.") % {"label": label})
+    if "inbox" in kinds:
+        account.set_inbox_history_job("import", "running")
+        inbox_task(str(account.id), since.isoformat() if since else "")
+        messages.success(
+            request, _("Importing the history of %(label)s. This card shows when it is done.") % {"label": label}
+        )
+    return redirect("social_accounts:list", workspace_id=workspace_id)
+
+
 @login_required
 @require_permission("manage_social_accounts")
 @require_POST

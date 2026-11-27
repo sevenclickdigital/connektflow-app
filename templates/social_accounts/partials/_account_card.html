@@ -28,8 +28,8 @@ that finds the job finished brings the toast with the result.
      data-name="{{ account.get_platform_display|lower }} {{ account.display_label|lower }}"
      data-account-id="{{ account.id }}"
      x-show="typeof matches !== 'function' || matches($el)"
-     x-data="{ detail: false, manage: false, menu: false, confirmDisconnect: false }"
-     @keydown.escape.window="detail = false; manage = false">
+     x-data="{ detail: false, manage: false, menu: false, confirmDisconnect: false, importing: false }"
+     @keydown.escape.window="detail = false; manage = false; importing = false">
     <button type="button" data-drag-handle
             class="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 cursor-grab active:cursor-grabbing"
             title="{% translate 'Drag to reorder' %}" aria-label="{% translate 'Drag to reorder' %}">
@@ -80,20 +80,14 @@ that finds the job finished brings the toast with the result.
             </button>
             <div x-show="menu" x-cloak @click.away="menu = false" x-transition
                  class="absolute right-0 top-full mt-1 z-20 w-48 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1">
+                {% if account.platform == "instagram" and account.instagram_analytics_message %}
                 <button type="button" @click="menu = false; manage = true" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Manage connection" %}</button>
-                <button type="button" @click="menu = false; $dispatch('move-account', { id: '{{ account.id }}', step: -1 })" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Move one place back" %}</button>
-                <button type="button" @click="menu = false; $dispatch('move-account', { id: '{{ account.id }}', step: 1 })" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Move one place forward" %}</button>
+                {% endif %}
                 {% if account.platform == "whatsapp" %}
                 <a href="{% url 'social_accounts:whatsapp_templates' workspace_id=workspace_id account_id=account.id %}" class="block w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50">{% translate "Message templates" %}</a>
                 {% endif %}
-                {% if account.can_import_inbox_history %}
-                <form method="post" action="{% url 'social_accounts:import_inbox_history' workspace_id=workspace_id account_id=account.id %}"
-                      data-confirm="{% translate 'Import the history?' %}"
-                      data-confirm-body="{% translate 'The comments and conversations from before this account was connected come into the inbox, without notifications. You can take them out again with Remove old history.' %}"
-                      data-confirm-label="{% translate 'Import history' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Import history" %}</button>
-                </form>
+                {% if account.import_options %}
+                <button type="button" @click="menu = false; importing = true" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Import data…" %}</button>
                 {% endif %}
                 {% if account.can_clear_inbox_history %}
                 <form method="post" action="{% url 'social_accounts:clear_inbox_history' workspace_id=workspace_id account_id=account.id %}"
@@ -211,7 +205,8 @@ that finds the job finished brings the toast with the result.
     </div>
     {% endif %}
 
-    <!-- Manage connection: posting schedule, analytics status, disconnect -->
+    <!-- Manage connection: the Instagram analytics status, and disconnect -->
+    {% if account.import_options %}{% include "social_accounts/partials/_import_data_modal.html" %}{% endif %}
     <div x-show="manage" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="account-manage-title-{{ account.id }}"
          x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
          x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
@@ -229,13 +224,6 @@ that finds the job finished brings the toast with the result.
             </div>
             <div class="modal-body">
                 {% include "analytics/_instagram_status.html" %}
-                {% if account.connection_status == "connected" %}
-                <div>
-                    <h4 class="text-xs font-semibold text-neutral-800 uppercase tracking-wider">{% translate "Posting Schedule" %}</h4>
-                    <p class="text-xs text-neutral-500 mt-0.5 mb-3">{% translate "Set recurring time slots for when queued posts are automatically published." %}</p>
-                    {% include "social_accounts/partials/_posting_slots_grid.html" with account=account workspace_id=workspace_id %}
-                </div>
-                {% endif %}
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-ghost" @click="manage = false">{% translate "Close" %}</button>

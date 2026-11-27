@@ -222,6 +222,28 @@ def test_the_walk_brings_in_what_the_polls_had_dropped_and_lifts_the_floor(accou
     assert account.inbox_history_job["count"] == 2
 
 
+def test_a_period_moves_the_floor_down_to_it_and_never_up(account):
+    floor = account.inbox_history_cutoff
+    patcher = _history([])
+    try:
+        with patch.object(InboxSyncEngine, "import_history", return_value=0) as walk:
+            two_days_ago = timezone.now() - timedelta(days=2)
+            import_inbox_history.now(str(account.id), two_days_ago.isoformat())
+            assert walk.call_args.kwargs["since"] == two_days_ago
+            account.refresh_from_db()
+            assert account.inbox_history_cutoff == two_days_ago
+            # Still on offer: a longer period can be imported later.
+            assert account.can_import_inbox_history
+
+            # A period shorter than what the inbox already shows leaves the floor where it is.
+            import_inbox_history.now(str(account.id), (timezone.now() - timedelta(minutes=5)).isoformat())
+            account.refresh_from_db()
+            assert account.inbox_history_cutoff == two_days_ago
+    finally:
+        patcher.stop()
+    assert two_days_ago < floor
+
+
 def test_a_failed_walk_leaves_the_floor_and_says_why(account):
     from providers.exceptions import APIError
 

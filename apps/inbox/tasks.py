@@ -12,6 +12,7 @@ from django.db import transaction
 from django.db.models import Count
 from django.db.models.fields.json import KT
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from apps.common import quota
 from apps.members.models import WorkspaceMembership
@@ -795,11 +796,14 @@ def _history_job_account(account_id: str):
 
 
 @background(schedule=0)
-def import_inbox_history(account_id: str):
+def import_inbox_history(account_id: str, since: str = ""):
     """Bring in what an account's inbox held before it was connected.
 
-    Queued by "Import history" on the account's card. The floor is lifted only
-    once the walk succeeded, so a failure leaves the account as it was and the
+    Queued by "Import data" on the account's card. ``since`` (ISO date-time,
+    empty for all the network gives) limits how far back: the floor then moves
+    down to it instead of going away, so the polls keep ignoring what is older
+    and a longer period can still be imported later. The floor moves only once
+    the walk succeeded, so a failure leaves the account as it was and the
     action on offer again; how it ended goes to ``inbox_history_job`` for the
     card to show. Safe to run twice: messages are matched on the platform's id.
     """
@@ -808,13 +812,19 @@ def import_inbox_history(account_id: str):
     account = _history_job_account(account_id)
     if account is None:
         return
+    floor = parse_datetime(since) if since else None
     try:
-        count = InboxSyncEngine().import_history(account)
+        count = InboxSyncEngine().import_history(account, since=floor)
     except Exception as exc:
         logger.exception("Inbox history import failed for account %s (%s)", account.id, account.platform)
         account.set_inbox_history_job("import", "failed", error=str(friendly_health_check_error(exc)))
         return
-    SocialAccount.objects.filter(pk=account.pk).update(inbox_history_cutoff=None)
+    # The floor only ever moves down: a period shorter than the time since the
+    # connection must not hide what the inbox already shows.
+    current = account.inbox_history_cutoff
+    if floor is not None and current is not None:
+        floor = min(floor, current)
+    SocialAccount.objects.filter(pk=account.pk).update(inbox_history_cutoff=floor)
     account.set_inbox_history_job("import", "done", count=count)
     logger.info("Inbox history imported for account %s (%s): %s messages", account.id, account.platform, count)
 

@@ -212,3 +212,18 @@ def test_a_title_in_extra_is_kept_and_none_leaves_it_unset(account):
     _run(account, FakeProvider([titled, plain]))
     assert PlatformPost.objects.get(platform_post_id="p1").platform_specific_title == "Meu pin"
     assert PlatformPost.objects.get(platform_post_id="p2").platform_specific_title is None
+
+
+@pytest.mark.django_db
+def test_a_start_date_keeps_only_the_posts_from_then_on(account):
+    since = timezone.now() - timedelta(days=10)
+    undated = ExistingPost(platform_post_id="undated", caption="?")
+    result = import_history(
+        account,
+        provider=FakeProvider([_existing("recent", days_ago=3), _existing("old", days_ago=40), undated]),
+        access_token="tok",
+        since=since,
+    )
+    assert result.imported == 2
+    ids = set(PlatformPost.objects.filter(social_account=account).values_list("platform_post_id", flat=True))
+    assert ids == {"recent", "undated"}

@@ -159,6 +159,36 @@ def offers_account_picker(platform: str) -> bool:
     return provider_cls.offers_account_picker
 
 
+def reads_post_history(platform: str) -> bool:
+    """Whether ``platform`` can list the posts its account already had.
+
+    True where the provider implements ``list_existing_posts``, which the
+    history import reads (``apps.analytics.history_import``). Read from the
+    registered class, as ``polls_inbox`` is.
+    """
+    from .base import SocialProvider as BaseProvider
+
+    provider_cls = PROVIDER_REGISTRY.get(platform)
+    if provider_cls is None:
+        return False
+    return provider_cls.list_existing_posts is not BaseProvider.list_existing_posts
+
+
+def reads_account_series(platform: str) -> bool:
+    """Whether ``platform`` gives the account's daily numbers for days already past.
+
+    True where the provider implements ``get_account_metrics_series``, which
+    fills the account chart for the days before the connection
+    (``apps.analytics.tasks.backfill_account_series``).
+    """
+    from .base import SocialProvider as BaseProvider
+
+    provider_cls = PROVIDER_REGISTRY.get(platform)
+    if provider_cls is None:
+        return False
+    return provider_cls.get_account_metrics_series is not BaseProvider.get_account_metrics_series
+
+
 def polls_inbox(platform: str) -> bool:
     """Whether ``platform`` has an inbox we read by asking for it.
 

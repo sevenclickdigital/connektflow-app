@@ -379,6 +379,47 @@ class SocialAccount(models.Model):
         return self.inbox_history_cutoff is not None and self._reads_inbox_history
 
     @property
+    def can_import_post_history(self) -> bool:
+        """Whether the old posts can be imported: the platform lists its account's own
+        posts (``providers.reads_post_history``) and the account is connected."""
+        from providers import reads_post_history
+
+        return self.connection_status == self.ConnectionStatus.CONNECTED and reads_post_history(self.platform)
+
+    @property
+    def can_import_account_series(self) -> bool:
+        """Whether the account's numbers before the connection can be filled in
+        (``providers.reads_account_series``)."""
+        from providers import reads_account_series
+
+        return self.connection_status == self.ConnectionStatus.CONNECTED and reads_account_series(self.platform)
+
+    @property
+    def import_options(self) -> dict[str, str]:
+        """What "Import data" can bring in for this account, as ``{kind: state}``.
+
+        ``posts`` (old posts or pins), ``series`` (the account's numbers before the
+        connection) and ``inbox`` (comments and conversations). A kind the platform
+        cannot give is absent; a present one is ``"ready"``, or for the inbox
+        ``"running"`` while a job runs and ``"done"`` once it is in.
+        """
+        from providers import polls_inbox
+
+        options: dict[str, str] = {}
+        if self.can_import_post_history:
+            options["posts"] = "ready"
+        if self.can_import_account_series:
+            options["series"] = "ready"
+        if polls_inbox(self.platform):
+            if self.inbox_history_job_state == "running":
+                options["inbox"] = "running"
+            elif self.can_import_inbox_history:
+                options["inbox"] = "ready"
+            else:
+                options["inbox"] = "done"
+        return options
+
+    @property
     def can_clear_inbox_history(self) -> bool:
         """Whether "Remove old history" has anything to do: the inbox has no floor."""
         return self.inbox_history_cutoff is None and self._reads_inbox_history

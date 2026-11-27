@@ -70,6 +70,11 @@ urlpatterns = [
         name="import_inbox_history",
     ),
     path(
+        "<uuid:workspace_id>/<uuid:account_id>/import-data/",
+        views.import_account_data,
+        name="import_account_data",
+    ),
+    path(
         "<uuid:workspace_id>/<uuid:account_id>/clear-inbox-history/",
         views.clear_inbox_history,
         name="clear_inbox_history",

@@ -103,8 +103,11 @@ def _known_platform_post_ids(account, candidate_ids: list[str]) -> set[str]:
 
 
 @transaction.atomic
-def import_history(account, *, provider=None, access_token: str | None = None, limit=DEFAULT_IMPORT_LIMIT):
+def import_history(account, *, provider=None, access_token: str | None = None, limit=DEFAULT_IMPORT_LIMIT, since=None):
     """Create ``PlatformPost`` rows for this account's existing posts.
+
+    ``since`` (an aware datetime) keeps only the posts published from then on;
+    a post whose date the platform does not give is kept.
 
     Idempotent by ``platform_post_id``: a post already known — whether this
     product published it or a previous import created it — is skipped, so
@@ -113,6 +116,8 @@ def import_history(account, *, provider=None, access_token: str | None = None, l
     from apps.composer.models import PlatformPost, Post
 
     existing = _read_history(account, provider=provider, access_token=access_token, limit=limit)
+    if since is not None:
+        existing = [p for p in existing if p.published_at is None or p.published_at >= since]
     if not existing:
         return ImportResult()
 
@@ -162,3 +167,16 @@ def import_history(account, *, provider=None, access_token: str | None = None, l
         len(known),
     )
     return ImportResult(imported=created, skipped=len(known), available=len(existing))
+
+
+def import_channel_history(account):
+    """The posts the channel already had and, where the platform gives a daily
+    series, the account chart for the days before the connection: one action,
+    as the analytics page and the account's menu offer it.
+
+    Returns the posts' ``ImportResult`` and how many chart days were filled in.
+    """
+    from .tasks import backfill_account_series
+
+    result = import_history(account)
+    return result, backfill_account_series(account)

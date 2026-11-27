@@ -1,0 +1,83 @@
+{% load i18n %}
+{% comment %}
+The account menu's "Import data…": what this account can bring in
+(``SocialAccount.import_options``), one box each, posted to
+social_accounts:import_account_data. Only what the platform gives is listed;
+the inbox shows as running or already imported instead of a box when it is.
+Included inside the account card's Alpine scope, which owns ``importing``.
+{% endcomment %}
+{% with options=account.import_options %}
+<div x-show="importing" x-cloak class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="account-import-title-{{ account.id }}"
+     x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+     @click.self="importing = false">
+    <form method="post" action="{% url 'social_accounts:import_account_data' workspace_id=workspace_id account_id=account.id %}" class="modal-panel" style="max-width: 32rem;">
+        {% csrf_token %}
+        <button type="button" class="modal-close" @click="importing = false" aria-label="{% translate 'Close' %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <div class="modal-header">
+            {% include "social_accounts/partials/_platform_tile.html" with platform=account.platform %}
+            <div class="min-w-0">
+                <div id="account-import-title-{{ account.id }}" class="modal-title">{% translate "Import data" %}</div>
+                <div class="modal-meta">{{ account.get_platform_display }} · {{ account.display_label }}</div>
+            </div>
+        </div>
+        <div class="modal-body space-y-3">
+            <p class="text-sm text-neutral-600">{% translate "Choose what to bring in from before this account was connected, or from outside Connekt Flow. Importing again only adds what is missing." %}</p>
+
+            <div>
+                <label for="import-period-{{ account.id }}" class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Period" %}</label>
+                <select id="import-period-{{ account.id }}" name="period" class="form-input-styled w-full">
+                    <option value="30">{% translate "Last 30 days" %}</option>
+                    <option value="90" selected>{% translate "Last 90 days" %}</option>
+                    <option value="180">{% translate "Last 6 months" %}</option>
+                    <option value="365">{% translate "Last year" %}</option>
+                    <option value="all">{% translate "Everything the network gives" %}</option>
+                </select>
+                <p class="text-xs mt-1.5 text-neutral-600">{% translate "Applies to everything ticked below. Each network keeps a limited past: what it no longer has cannot come in." %}</p>
+            </div>
+
+            {% if options.posts %}
+            <label class="flex items-start gap-3 p-3 rounded-xl border border-neutral-300 bg-white cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                <input type="checkbox" name="kinds" value="posts" checked class="bb-checkbox w-4 h-4 mt-0.5">
+                <span>
+                    <span class="block text-sm font-semibold text-neutral-950">{% if account.platform == "pinterest" %}{% translate "Old pins" %}{% else %}{% translate "Old posts" %}{% endif %}</span>
+                    <span class="block text-xs text-neutral-600">{% translate "What the account already published, including outside Connekt Flow. They come into the reports and the calendar as published, and their numbers arrive with the next sync." %}</span>
+                </span>
+            </label>
+            {% endif %}
+
+            {% if options.series %}
+            <label class="flex items-start gap-3 p-3 rounded-xl border border-neutral-300 bg-white cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                <input type="checkbox" name="kinds" value="series" checked class="bb-checkbox w-4 h-4 mt-0.5">
+                <span>
+                    <span class="block text-sm font-semibold text-neutral-950">{% translate "Numbers before the connection" %}</span>
+                    <span class="block text-xs text-neutral-600">{% translate "The account's daily numbers for the days before it was connected, so the reports' chart starts earlier. The network keeps at most 90 days of them." %}</span>
+                </span>
+            </label>
+            {% endif %}
+
+            {% if options.inbox %}
+            <label class="flex items-start gap-3 p-3 rounded-xl border border-neutral-300 bg-white {% if options.inbox == 'ready' %}cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50{% else %}opacity-70{% endif %}">
+                <input type="checkbox" name="kinds" value="inbox" class="bb-checkbox w-4 h-4 mt-0.5" {% if options.inbox == "ready" %}checked{% else %}disabled{% endif %}>
+                <span>
+                    <span class="block text-sm font-semibold text-neutral-950">{% translate "Comments and conversations" %}</span>
+                    <span class="block text-xs text-neutral-600">
+                        {% if options.inbox == "running" %}{% translate "Being imported now. The card shows when it is done." %}
+                        {% elif options.inbox == "done" %}{% translate "Already in the inbox. Remove old history in the account menu takes them out again." %}
+                        {% else %}{% translate "The comments and conversations from before the connection come into the inbox, without notifications." %}{% endif %}
+                    </span>
+                </span>
+            </label>
+            {% endif %}
+
+            <p class="text-xs text-neutral-600">{% translate "Ad campaigns and their numbers need no import: they are read from the ad account each time." %}</p>
+        </div>
+        <div class="modal-footer flex justify-end gap-2">
+            <button type="button" class="btn-outline" @click="importing = false">{% translate "Cancel" %}</button>
+            <button type="submit" class="btn-brand">{% translate "Import" %}</button>
+        </div>
+    </form>
+</div>
+{% endwith %}
