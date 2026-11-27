@@ -128,11 +128,7 @@ class TestDisconnectRevocation:
     def test_the_revocation_claim_matches_the_provider(self, platform):
         """The disconnect confirmation promises revocation on these platforms,
         so each one's provider must actually call out to revoke — and every
-        other provider must not, or the copy undersells what happens.
-
-        Bluesky is the one provider that calls out without revoking: its
-        ``deleteSession`` wants the refresh JWT, and the app password outlives
-        any session anyway."""
+        other provider must not, or the copy undersells what happens."""
         from providers import PROVIDER_REGISTRY
 
         provider = PROVIDER_REGISTRY[platform](
@@ -147,7 +143,7 @@ class TestDisconnectRevocation:
         provider.revoke_token("token")
 
         account = SocialAccount(platform=platform)
-        calls_out = provider._request.called and platform != "bluesky"
+        calls_out = provider._request.called
         assert account.revokes_platform_grant_on_disconnect is calls_out, platform
         if calls_out:
             assert not account.keeps_platform_grant_on_disconnect, platform
@@ -160,6 +156,11 @@ class TestDisconnectRevocation:
     def test_youtube_falls_back_to_the_access_token(self):
         account = SocialAccount(platform="youtube", oauth_access_token="access")
         assert account.revocation_token == "access"
+
+    def test_bluesky_deletes_its_session_with_the_refresh_token(self):
+        """``deleteSession`` answers the access JWT with "Invalid token type"."""
+        account = SocialAccount(platform="bluesky", oauth_access_token="access", oauth_refresh_token="refresh")
+        assert account.revocation_token == "refresh"
 
     def test_other_platforms_revoke_with_the_access_token(self):
         account = SocialAccount(platform="tiktok", oauth_access_token="access", oauth_refresh_token="refresh")

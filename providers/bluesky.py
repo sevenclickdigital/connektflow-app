@@ -164,7 +164,11 @@ class BlueskyProvider(SocialProvider):
     # ------------------------------------------------------------------
 
     def revoke_token(self, access_token: str) -> bool:
-        """Delete the AT Protocol session (logout)."""
+        """Delete the AT Protocol session (logout).
+
+        ``access_token`` must be the session's refresh JWT: ``deleteSession``
+        refuses the access JWT ("Invalid token type").
+        """
         try:
             self._request(
                 "POST",

@@ -146,7 +146,8 @@ class TestAccountListView:
         assert remaining_error in body
         assert "Some real-time inbox updates are unavailable" in body
         assert ("Reconnect" in body) is needs_reconnect
-        assert ("Try again" in body) is not needs_reconnect
+        # The retry button by its endpoint: the page's other widgets also say "Try again".
+        assert ("/retry-webhooks/" in body) is not needs_reconnect
         if "pages_manage_metadata" not in missing_scopes:
             assert dm_error not in body
         assert account.webhook_warning.needs_reconnect is needs_reconnect
@@ -1020,7 +1021,7 @@ class TestRetryWebhooksView:
 
         body = response.content.decode()
         assert "Real-time comments are off" not in body
-        assert "Try again" not in body
+        assert "/retry-webhooks/" not in body
         assert "Reconnect" in body
 
     def test_the_stale_card_is_answered_with_the_reconnect_state(self, authenticated_client, workspace):

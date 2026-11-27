@@ -705,9 +705,9 @@ class SocialAccount(models.Model):
         The disconnect confirmation promises exactly this, so it lists only the
         providers whose ``revoke_token`` calls a revocation endpoint with the
         token disconnect hands it. Left out, besides the Facebook-Page flows:
-        Pinterest, Threads and DEV.to have no revocation call, and Bluesky's
-        ``deleteSession`` wants the refresh JWT rather than the access JWT it
-        gets — and the app password outlives any session regardless.
+        Pinterest, Threads and DEV.to have no revocation call. Bluesky counts:
+        deleting the session ends the only access we hold, since the app
+        password it was created with is never stored.
         """
         return self.platform in {
             PlatformCredential.Platform.YOUTUBE,
@@ -718,6 +718,7 @@ class SocialAccount(models.Model):
             PlatformCredential.Platform.MASTODON,
             PlatformCredential.Platform.INSTAGRAM_LOGIN,
             PlatformCredential.Platform.X,
+            PlatformCredential.Platform.BLUESKY,
         }
 
     @property
@@ -727,13 +728,15 @@ class SocialAccount(models.Model):
         Google refuses to revoke an expired access token, and ours lives an
         hour, so by the time someone disconnects it is usually dead and the
         grant would survive. The refresh token revokes the same grant and
-        outlives it.
+        outlives it. Bluesky deletes a session only for its refresh JWT, and
+        answers the access JWT with "Invalid token type".
         """
         if (
             self.platform
             in {
                 PlatformCredential.Platform.YOUTUBE,
                 PlatformCredential.Platform.GOOGLE_BUSINESS,
+                PlatformCredential.Platform.BLUESKY,
             }
             and self.oauth_refresh_token
         ):

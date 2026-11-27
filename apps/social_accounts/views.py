@@ -1199,6 +1199,7 @@ def reorder(request, workspace_id):
     return toast_response(tone="success", title=_("Order saved"))
 
 
+@login_required
 @require_permission("manage_social_accounts")
 @require_POST
 @ratelimit(key="user", rate="10/m", method="POST", block=True)
