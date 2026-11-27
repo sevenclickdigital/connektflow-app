@@ -93,8 +93,12 @@ Legenda dos passos:
 ## Pinterest (publicação e Pinterest Ads)
 - [x] API configurada — trial aprovado (26/11/2026), chaves no `.env` e no Dokploy com
   `PINTEREST_API_BASE` no Sandbox, as 4 redirect URIs cadastradas (publicação e Ads, produção e localhost)
-- [ ] Permissões conferidas
-- [ ] Vídeo gravado (para o acesso Standard)
+- [x] Permissões conferidas — publicação: `user_accounts:read`, `boards:read/write`, `pins:read/write`;
+  Ads: `ads:read/write` (nenhum `*_secret`)
+- [ ] Vídeo gravado (para o acesso Standard) — no Sandbox: pin só de **imagem** (o Sandbox não cria pin
+  de vídeo) e sem mostrar as métricas do pin (a análise do pin não está entre os endpoints do Sandbox);
+  o Pinterest pede o fluxo do OAuth inteiro e uma ação real pela API. O Trial tem 1.000 chamadas/dia.
+  Ligar o Pinterest em `/staff/` → Plataformas só durante a gravação
 - [ ] Enviado para aprovação (Standard)
 - [ ] Aprovado
 

@@ -180,6 +180,14 @@ class TestClient:
             client.create_campaign("token", ACCOUNT, {"name": "x"})
         assert caught.value.user_message == "Daily budget too low."
 
+    def test_list_filters_go_as_one_comma_separated_value(self):
+        """Pinterest reads only the last of a repeated parameter, which hid paused campaigns."""
+        fake, patch = fake_pinterest({("GET", f"ad_accounts/{ACCOUNT}/campaigns"): {"items": [], "bookmark": None}})
+        with patch:
+            pinterest_ads.PinterestAdsClient({"app_id": "a", "app_secret": "s"}).campaigns("token", ACCOUNT)
+        params = fake.sent("GET", f"ad_accounts/{ACCOUNT}/campaigns")["params"]
+        assert params["entity_statuses"] == "ACTIVE,PAUSED,ARCHIVED"
+
     def test_connect_asks_for_the_ads_scopes(self):
         client = pinterest_ads.PinterestAdsClient({"app_id": "a", "app_secret": "s"})
         url = client.get_auth_url("https://app.example.com/ads/pinterest/callback/", "state")
@@ -545,6 +553,33 @@ class TestScreens:
             response = _logged_in(manager).get(_url("pinterest_campaign_new", workspace))
         assert response.status_code == 200
         assert "Meu pin" in response.content.decode()
+
+    def test_each_published_pin_is_offered_with_its_image(self, workspace, manager, connection):
+        from apps.composer.models import PlatformPost, Post, PostMedia
+        from apps.media_library.models import MediaAsset
+        from apps.social_accounts.models import SocialAccount
+
+        account = SocialAccount.objects.create(
+            workspace=workspace, platform="pinterest", account_platform_id="acc", account_name="Pins"
+        )
+        post = Post.objects.create(workspace=workspace, author=manager, caption="Novidade")
+        asset = MediaAsset.objects.create(
+            organization=workspace.organization,
+            workspace=workspace,
+            uploaded_by=manager,
+            file="test/robo-pinterest.jpg",
+            filename="robo-pinterest.jpg",
+            media_type=MediaAsset.MediaType.IMAGE,
+            mime_type="image/jpeg",
+        )
+        PostMedia.objects.create(post=post, media_asset=asset)
+        PlatformPost.objects.create(
+            post=post, social_account=account, status=PlatformPost.Status.PUBLISHED, platform_post_id="444"
+        )
+
+        body = _logged_in(manager).get(_url("pinterest_campaign_new", workspace)).content.decode()
+        assert 'value="444"' in body
+        assert "robo-pinterest.jpg" in body
 
     def test_the_settings_list_the_ad_accounts_and_offer_a_new_one(self, workspace, manager, connection):
         fake, patch = fake_pinterest(

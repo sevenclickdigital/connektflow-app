@@ -605,7 +605,8 @@ def create_campaign(connection: AdsConnection, new: NewCampaign) -> str:
 def promotable_pins(workspace, limit: int = 48) -> list[dict]:
     """The workspace's published pins, newest first, for the ad's picker.
 
-    ``is_video`` decides the ad's creative type, which Pinterest wants told.
+    ``is_video`` decides the ad's creative type, which Pinterest wants told;
+    ``post`` carries the media for the picker's thumbnail.
     """
     from apps.composer.models import PlatformPost
     from apps.composer.services import media_types_by_post
@@ -621,6 +622,7 @@ def promotable_pins(workspace, limit: int = 48) -> list[dict]:
         .exclude(platform_post_id="")
         .exclude(platform_post_id__isnull=True)
         .select_related("post", "social_account")
+        .prefetch_related("post__media_attachments__media_asset")
         .order_by("-published_at")[:limit]
     )
     media = media_types_by_post([row.post_id for row in rows])
@@ -631,6 +633,7 @@ def promotable_pins(workspace, limit: int = 48) -> list[dict]:
         pins.append(
             {
                 "id": str(row.platform_post_id),
+                "post": row.post,
                 "title": row.platform_specific_title or row.post.title or "",
                 "caption": row.platform_specific_caption or row.post.caption or "",
                 "account": row.social_account.account_name,

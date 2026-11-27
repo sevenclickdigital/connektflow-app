@@ -53,6 +53,7 @@
                 {% for pin in pins %}
                 <label class="flex items-center gap-3 px-3 py-2 bg-white rounded-xl border border-neutral-300 cursor-pointer transition-colors hover:border-brand-200 has-[:checked]:border-brand-500 has-[:checked]:ring-2 has-[:checked]:ring-brand-100">
                     <input type="radio" name="{{ form.pin_id.html_name }}" value="{{ pin.id }}" {% if chosen == pin.id %}checked{% endif %} class="bb-checkbox w-4 h-4 flex-shrink-0">
+                    {% include "calendar/partials/_post_thumb.html" with post=pin.post classes="w-12 h-12 rounded-lg" %}
                     <span class="flex-1 min-w-0">
                         <span class="block text-sm font-semibold text-neutral-950 truncate">{% if pin.title %}{{ pin.title }}{% else %}{{ pin.caption|truncatechars:80|default:pin.id }}{% endif %}</span>
                         <span class="block text-xs text-neutral-600 truncate">{{ pin.account }} · {% if pin.published_at %}{{ pin.published_at|date:"SHORT_DATE_FORMAT" }} · {% endif %}<span class="font-mono">{{ pin.id }}</span>{% if pin.is_video %} · {% translate "Video" %}{% endif %}</span>

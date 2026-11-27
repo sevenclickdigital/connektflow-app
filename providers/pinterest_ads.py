@@ -160,7 +160,17 @@ class PinterestAdsClient(PinterestProvider):
     # ------------------------------------------------------------------
 
     def _get(self, token: str, path: str, params: dict | None = None):
-        return self._request("GET", f"{API_BASE}/{path}", access_token=token, params=params).json()
+        """GET ``path``; a list parameter goes as one comma-separated value.
+
+        Pinterest reads only the last of a repeated parameter: sent as
+        ``entity_statuses=ACTIVE&entity_statuses=PAUSED&entity_statuses=ARCHIVED``
+        the campaigns list filtered on ARCHIVED alone and hid the paused ones.
+        """
+        query = {
+            key: ",".join(map(str, value)) if isinstance(value, list | tuple) else value
+            for key, value in (params or {}).items()
+        }
+        return self._request("GET", f"{API_BASE}/{path}", access_token=token, params=query).json()
 
     def _get_all(self, token: str, path: str, params: dict | None = None) -> list[dict]:
         """Every item of a bookmark-paged list, up to ``MAX_PAGES`` pages."""
