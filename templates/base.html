@@ -603,12 +603,12 @@
                     </button>
                     <div class="sidebar-subnav{% if not app == 'calendar' and not app == 'composer' and not app == 'tasks' %} sidebar-subnav-pending{% endif %}" data-nav="publish" x-show="open">
                     {% comment %}No "new post" entry here: a post starts from a day of the calendar, so it always has a date.{% endcomment %}
-                    <a href="{% url 'calendar:calendar' workspace_id=request.workspace.id %}?mode=calendar" class="sidebar-subnav-item {% if app == 'calendar' or app == 'composer' and url_name == 'compose' %}active{% endif %}">{% translate "Calendar" context "menu" %}</a>
+                    <a href="{% url 'calendar:calendar' workspace_id=request.workspace.id %}?mode=calendar" class="sidebar-subnav-item {% if app == 'calendar' or app == 'composer' and url_name == 'compose' or app == 'composer' and url_name == 'compose_edit' %}active{% endif %}">{% translate "Calendar" context "menu" %}</a>
                     {% if request.workspace_membership and request.workspace_membership.workspace_role != "client" %}
                     <a href="{% url 'tasks:board' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'tasks' %}active{% endif %}">{% translate "Task management" context "menu" %}</a>
                     {% endif %}
                     {% if request.workspace_membership.effective_permissions.create_posts %}
-                    <a href="{% url 'composer:create_landing' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'composer' and url_name != 'compose' %}active{% endif %}">{% translate "Idea hub" %}</a>
+                    <a href="{% url 'composer:create_landing' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'composer' and url_name != 'compose' and url_name != 'compose_edit' %}active{% endif %}">{% translate "Idea hub" %}</a>
                     {% endif %}
                     </div>
                 </div>
