@@ -38,6 +38,10 @@ data-category and data-name on each card: the whole page is already here.
             const q = this.query.trim().toLowerCase();
             return !q || el.dataset.name.includes(q);
         },
+        // Whether a group of the connect grid has a card the filters let through.
+        shows(group) {
+            return [...this.$root.querySelectorAll('[data-connect-group=' + group + '] [data-state]')].some(el => this.matches(el));
+        },
      }"
      @show-available-platforms.window="tab = 'available'">
 
@@ -131,7 +135,7 @@ data-category and data-name on each card: the whole page is already here.
             <button type="button" class="chip" :class="category === '{{ key }}' && 'active'" @click="category = '{{ key }}'">{{ label }}</button>
             {% endfor %}
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" data-connect-group="networks">
             {% for platform in available_platforms %}
             <div class="a-card {% if platform.configured %}a-card-hover{% endif %} p-4 flex items-center gap-3"
                  data-state="available" data-category="{{ platform.category }}" data-name="{{ platform.label|lower }}"
@@ -156,7 +160,10 @@ data-category and data-name on each card: the whole page is already here.
                 {% endif %}
             </div>
             {% endfor %}
-            {# The ad platforms after the networks, which catalog.connect_order puts in their display order. #}
+        </div>
+        {# The ad platforms in their own row, under a line, so they are not looked for among the networks. #}
+        <div class="divider-text my-5" x-show="shows('networks') && shows('ads')">{% translate "Ads" %}</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" data-connect-group="ads">
             {% for ad in ad_platforms %}{% if not ad.connection %}{% include "social_accounts/partials/_ads_card.html" %}{% endif %}{% endfor %}
         </div>
         {% for platform in available_platforms %}
