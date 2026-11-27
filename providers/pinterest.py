@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import logging
 import os
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
 
 from .base import SocialProvider
@@ -28,6 +29,8 @@ AUTH_URL = "https://www.pinterest.com/oauth/"
 # An empty value, as an env file leaves it, means production.
 API_BASE = os.environ.get("PINTEREST_API_BASE") or "https://api.pinterest.com/v5"
 TOKEN_URL = f"{API_BASE}/oauth/token"
+# How far back Pin analytics reach.
+PIN_ANALYTICS_DAYS = 90
 
 
 class PinterestProvider(SocialProvider):
@@ -337,6 +340,19 @@ class PinterestProvider(SocialProvider):
     # Analytics
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def metrics_window(today=None) -> dict[str, str]:
+        """The widest window Pin analytics accept: the last 90 days, up to today (UTC).
+
+        Pinterest refuses a start date further back than 90 days or an end date
+        in the future, so a pin's numbers are its last 90 days, not its lifetime.
+        """
+        today = today or datetime.now(UTC).date()
+        return {
+            "start_date": (today - timedelta(days=PIN_ANALYTICS_DAYS)).isoformat(),
+            "end_date": today.isoformat(),
+        }
+
     def get_post_metrics(self, access_token: str, post_id: str) -> PostMetrics:
         resp = self._request(
             "GET",
@@ -344,8 +360,7 @@ class PinterestProvider(SocialProvider):
             access_token=access_token,
             params={
                 "metric_types": "IMPRESSION,PIN_CLICK,SAVE,OUTBOUND_CLICK",
-                "start_date": "2020-01-01",
-                "end_date": "2099-12-31",
+                **self.metrics_window(),
             },
         )
         body = resp.json()

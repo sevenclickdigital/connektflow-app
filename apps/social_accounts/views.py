@@ -299,6 +299,8 @@ def _ads_cards(request, workspace_id) -> list[dict]:
 
     ``connection`` is None while the workspace has not signed in; ``configured``
     says whether the platform's app is set up for the Connect button to work.
+    Pinterest Ads hidden in the administrative area is left out unless the
+    workspace is already connected (it can still open or disconnect it).
     """
     from django.urls import reverse
 
@@ -329,7 +331,7 @@ def _ads_cards(request, workspace_id) -> list[dict]:
             },
         }
 
-    return [
+    cards = [
         card(
             "meta_ads",
             _("Meta Ads"),
@@ -355,6 +357,7 @@ def _ads_cards(request, workspace_id) -> list[dict]:
             ),
         ),
     ]
+    return [c for c in cards if c["key"] != "pinterest_ads" or c["connection"] or pinterest_ads.is_offered()]
 
 
 def _whatsapp_signup_config(org_id, available_platforms):

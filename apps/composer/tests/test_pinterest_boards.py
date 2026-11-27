@@ -163,3 +163,15 @@ class PinterestPinCheckTests(ComposerAuthorizationBase):
             response = self.client.get(url)
         assert response.status_code in (403, 404)
         get_pin.assert_not_called()
+
+
+def test_pin_metrics_ask_for_the_last_90_days_up_to_today():
+    """Pinterest refuses a start date older than 90 days or an end date in the future."""
+    from datetime import date
+
+    from providers.pinterest import PinterestProvider
+
+    assert PinterestProvider.metrics_window(date(2026, 11, 27)) == {
+        "start_date": "2026-08-29",
+        "end_date": "2026-11-27",
+    }

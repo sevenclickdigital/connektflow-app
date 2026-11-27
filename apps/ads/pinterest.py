@@ -86,6 +86,16 @@ CURRENCIES = ("BRL", "EUR", "USD")
 # ------------------------------------------------------------------
 
 
+def is_offered() -> bool:
+    """Whether Pinterest Ads may be connected: it follows Pinterest's switch in
+    the administrative area (``PlatformVisibility``), since both sign in through
+    the same Pinterest app. A workspace already connected keeps its connection.
+    """
+    from apps.social_accounts.models import PlatformVisibility
+
+    return CREDENTIAL_PLATFORM not in PlatformVisibility.hidden_keys()
+
+
 def app_credentials(org_id) -> dict:
     creds = resolve_platform_credentials(CREDENTIAL_PLATFORM, org_id)
     client_id = str(creds.get("client_id") or creds.get("app_id") or "").strip()

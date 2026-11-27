@@ -210,6 +210,7 @@ The Pinterest counterpart of Meta Ads, on the same rules (one connection per wor
 - **Campaign** (`ads/pinterest/campaigns/<id>/`): its numbers, ad groups (status, budget, countries) and ads (status, review, the promoted pin). "Edit campaign" (managers) changes the name, daily budget and end in one form, and pauses, activates (with confirmation) or archives.
 - **New campaign** (`ads/pinterest/campaigns/new/`): name, objective (Awareness or Consideration, both budgeted on the campaign), daily budget, start/end, countries, and the pin to promote: one the workspace published (`pinterest.promotable_pins`, video pins sent as video ads) or another pin's ID. It creates the campaign **paused**, one ad group with automatic bidding in those countries, and the ad; a failure part-way archives the campaign.
 - While the Pinterest app has Trial access every call goes to the Sandbox (`PINTEREST_API_BASE`), where ad accounts and numbers are test data.
+- Hiding Pinterest in the administrative area (`/staff/` → platforms) hides the Pinterest Ads card and refuses its sign-in too (`pinterest.is_offered`); a workspace already connected keeps its card to open or disconnect it.
 
 ## 3. Inbox & engagement
 

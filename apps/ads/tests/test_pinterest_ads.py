@@ -20,6 +20,7 @@ from apps.ads import pinterest
 from apps.ads.models import AdsConnection
 from apps.ads.services import AdsError
 from apps.members.models import OrgMembership, WorkspaceMembership
+from apps.social_accounts.models import PlatformVisibility
 from providers import pinterest_ads
 from providers.exceptions import APIError, TokenExpiredError
 
@@ -453,6 +454,28 @@ class TestSocialAccountsCard:
         response = client.post(_url("pinterest_disconnect", workspace), {"return_to": "accounts"})
         assert response["Location"] == reverse("social_accounts:list", kwargs={"workspace_id": workspace.id})
         assert not AdsConnection.objects.filter(pk=connection.pk).exists()
+
+    def test_hiding_pinterest_hides_its_ads_card_and_refuses_the_sign_in(self, workspace, manager):
+        PlatformVisibility.set_visible("pinterest", False)
+        client = _logged_in(manager)
+        body = client.get(reverse("social_accounts:list", kwargs={"workspace_id": workspace.id})).content.decode()
+        assert "guide = 'pinterest_ads'" not in body
+        assert _url("pinterest_connect", workspace) not in body
+
+        response = client.post(_url("pinterest_connect", workspace))
+        assert response["Location"] == reverse("social_accounts:list", kwargs={"workspace_id": workspace.id})
+        assert "pinterest.com/oauth" not in response["Location"]
+
+    def test_a_workspace_already_connected_keeps_its_card_when_pinterest_is_hidden(
+        self, workspace, manager, connection
+    ):
+        PlatformVisibility.set_visible("pinterest", False)
+        body = (
+            _logged_in(manager)
+            .get(reverse("social_accounts:list", kwargs={"workspace_id": workspace.id}))
+            .content.decode()
+        )
+        assert _url("pinterest_disconnect", workspace) in body
 
 
 # ------------------------------------------------------------------

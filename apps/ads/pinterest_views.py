@@ -110,6 +110,9 @@ def overview(request, workspace_id):
 @finish_in_popup
 def connect(request, workspace_id):
     """Send the person to Pinterest's consent screen with the ads scopes."""
+    if not pinterest.is_offered():
+        messages.error(request, _("This platform is not available."))
+        return redirect("social_accounts:list", workspace_id=workspace_id)
     try:
         client = pinterest.client_for_org(request.org.id)
     except services.AdsNotConfiguredError as exc:
