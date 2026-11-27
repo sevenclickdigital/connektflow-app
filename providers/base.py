@@ -62,7 +62,7 @@ class HttpProvider(ABC):
         access_token: str | None = None,
         headers: dict | None = None,
         params: dict | None = None,
-        json: dict | None = None,
+        json: dict | list | None = None,
         data: dict | bytes | Iterable[bytes] | IO[bytes] | None = None,
         files: dict | None = None,
         timeout: float = REQUEST_TIMEOUT,

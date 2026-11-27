@@ -28,6 +28,7 @@
 
 {% block content %}
 {% include "composer/partials/_ideas_hero.html" with tab="ads" %}
+{% include "ads/partials/_platform_tabs.html" %}
 {% if not connection %}
 <div class="a-card p-6 max-w-xl">
     <p class="text-sm text-neutral-600">{% translate "Meta Ads is not connected to this brand yet. Ask a workspace owner or manager to connect it in Social Accounts." %}</p>

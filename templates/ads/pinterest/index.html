@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load common_extras i18n %}
+{% block title %}{% translate "Pinterest Ads" %} - Connekt Flow{% endblock %}
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "Pinterest Ads" %}</h1>
+        <p class="page-description">{% translate "Campaigns of your Pinterest ad account, their status and their results." %}</p>
+    </div>
+    {% if connection.ad_account_id %}
+    <div class="flex items-center gap-2 flex-wrap">
+        {% period_picker period range_choices %}
+        {% if can_manage %}
+        <a href="{% url 'ads:pinterest_settings' workspace_id=workspace_id %}" class="btn-soft">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            {% translate "Settings" %}
+        </a>
+        <a href="{% url 'ads:pinterest_campaign_new' workspace_id=workspace_id %}" class="btn-brand">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            {% translate "New campaign" %}
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+{% include "ads/partials/_platform_tabs.html" %}
+{% if not connection %}
+<div class="a-card p-6 max-w-xl">
+    <p class="text-sm text-neutral-600">{% translate "Pinterest Ads is not connected to this brand yet. Ask a workspace owner or manager to connect it in Social Accounts." %}</p>
+</div>
+{% elif not connection.ad_account_id %}
+<div class="a-card p-6 max-w-xl">
+    <p class="text-sm text-neutral-600">{% translate "Pinterest Ads is connected, but no ad account was chosen yet. Ask a workspace owner or manager to finish the setup." %}</p>
+</div>
+{% else %}
+    {% if connection.status == "error" %}
+    <div class="alert-error mb-4 flex items-center justify-between gap-4 flex-wrap">
+        <span>{{ connection.last_error|default:_("The Pinterest sign-in needs to be renewed.") }}</span>
+        {% if can_manage %}
+        <form method="post" action="{% url 'ads:pinterest_connect' workspace_id=workspace_id %}" data-oauth-popup>{% csrf_token %}<button type="submit" class="btn-outline">{% translate "Connect again" %}</button></form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="flex items-center gap-x-6 gap-y-1 flex-wrap text-sm text-neutral-600 mb-4">
+        <span>{% translate "Ad account" %}: <strong class="text-neutral-950">{{ connection.ad_account_name }}</strong> · {{ connection.currency }}</span>
+        <span>{% translate "Pinterest keeps the numbers of the last 90 days." %}</span>
+    </div>
+
+    {% comment %}
+    The numbers come from Pinterest on every visit (nothing is stored): the page
+    shows at once and they load into this placeholder.
+    {% endcomment %}
+    <div hx-get="{% url 'ads:pinterest_overview' workspace_id=workspace_id %}?{{ period.query }}" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#lazy-load-status">
+        {% translate "Fetching the numbers from Pinterest…" as loading_label %}{% include "components/_skeleton.html" with label=loading_label %}
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% include "social_accounts/partials/_oauth_popup.html" %}
+{% endblock %}

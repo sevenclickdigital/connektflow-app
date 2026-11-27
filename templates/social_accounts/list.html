@@ -106,14 +106,14 @@ data-category and data-name on each card: the whole page is already here.
     </section>
 
     <!-- Connected ad accounts -->
-    {% if meta_ads.connection %}
+    {% if has_ad_connections %}
     <section x-show="tab !== 'available'" class="mb-8">
         <h2 class="section-title">
             <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8v18l-18-8z"/><path d="M7 12.5V18a2 2 0 004 0v-3.5"/></svg>
             {% translate "Ad accounts" %}
         </h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {% include "social_accounts/partials/_meta_ads_card.html" %}
+            {% for ad in ad_platforms %}{% if ad.connection %}{% include "social_accounts/partials/_ads_card.html" %}{% endif %}{% endfor %}
         </div>
     </section>
     {% endif %}
@@ -156,8 +156,8 @@ data-category and data-name on each card: the whole page is already here.
                 {% endif %}
             </div>
             {% endfor %}
-            {# Meta Ads after the networks, which catalog.connect_order puts in their display order. #}
-            {% if not meta_ads.connection %}{% include "social_accounts/partials/_meta_ads_card.html" %}{% endif %}
+            {# The ad platforms after the networks, which catalog.connect_order puts in their display order. #}
+            {% for ad in ad_platforms %}{% if not ad.connection %}{% include "social_accounts/partials/_ads_card.html" %}{% endif %}{% endfor %}
         </div>
         {% for platform in available_platforms %}
         {% if platform.configured and platform.guide %}{% include "social_accounts/partials/_connect_guide.html" with platform=platform workspace_id=workspace_id %}{% endif %}
@@ -165,7 +165,7 @@ data-category and data-name on each card: the whole page is already here.
     </section>
     {% endif %}
 
-    {% if meta_ads.configured %}{% include "social_accounts/partials/_connect_guide.html" with platform=meta_ads.platform workspace_id=workspace_id %}{% endif %}
+    {% for ad in ad_platforms %}{% if ad.configured %}{% include "social_accounts/partials/_connect_guide.html" with platform=ad.platform workspace_id=workspace_id %}{% endif %}{% endfor %}
 
     <!-- Opportunity sources: they feed the Radar, not the composer -->
     {% if opportunity_cards %}

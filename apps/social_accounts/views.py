@@ -264,15 +264,16 @@ def _overview_context(request, workspace_id):
     # Ones the user can connect right now first, in the catalogue's order; unconfigured ones trail.
     available_platforms.sort(key=lambda platform: (not platform["configured"], connect_order(platform["value"])))
     problem_count = sum(1 for a in accounts if a.health == "error")
-    meta_ads = _meta_ads_card(request, workspace_id)
+    ad_platforms = _ads_cards(request, workspace_id)
     connected_count = len(accounts) - problem_count
     available_count = len(available_platforms)
-    if meta_ads["connection"] is None:
-        available_count += 1
-    elif meta_ads["connection"].status == "error":
-        problem_count += 1
-    else:
-        connected_count += 1
+    for card in ad_platforms:
+        if card["connection"] is None:
+            available_count += 1
+        elif card["connection"].status == "error":
+            problem_count += 1
+        else:
+            connected_count += 1
     return {
         "accounts": accounts,
         "workspace_id": workspace_id,
@@ -283,36 +284,77 @@ def _overview_context(request, workspace_id):
             "connected": connected_count,
             "available": available_count,
             "problems": problem_count,
-            "total": len(accounts) + len(available_platforms) + 1,
+            "total": len(accounts) + len(available_platforms) + len(ad_platforms),
         },
-        "meta_ads": meta_ads,
+        "ad_platforms": ad_platforms,
+        "has_ad_connections": any(card["connection"] for card in ad_platforms),
         "opportunity_cards": source_cards(workspace_id),
         "whatsapp_signup": _whatsapp_signup_config(request.org.id, available_platforms),
     }
 
 
-def _meta_ads_card(request, workspace_id):
-    """The Meta Ads card: an ad account is not a ``SocialAccount``, so it has its own connection.
+def _ads_cards(request, workspace_id) -> list[dict]:
+    """The ad platform cards (Meta Ads, Pinterest Ads): an ad account is not a
+    ``SocialAccount``, so each has its own connection (``apps.ads``).
 
     ``connection`` is None while the workspace has not signed in; ``configured``
-    says whether the Meta app is set up for the Connect button to work.
+    says whether the platform's app is set up for the Connect button to work.
     """
     from django.urls import reverse
 
-    from apps.ads import services as ads_services
+    from apps.ads import pinterest as pinterest_ads
+    from apps.ads import services as meta_ads
 
-    return {
-        "connection": ads_services.get_connection(workspace_id),
-        "configured": ads_services.is_configured(request.org.id),
-        # Shaped like a row of ``available_platforms`` for _connect_guide.html.
-        "platform": {
-            "value": "meta_ads",
-            "label": _("Meta Ads"),
-            "guide": connect_guide("meta_ads"),
-            "flow": "oauth",
-            "connect_url": reverse("ads:connect", kwargs={"workspace_id": workspace_id}),
-        },
-    }
+    def card(key, label, description, service, tile, prefix, consequence):
+        def url(name):
+            return reverse(f"ads:{prefix}{name}", kwargs={"workspace_id": workspace_id})
+
+        return {
+            "key": key,
+            "label": label,
+            "description": description,
+            "tile": tile,
+            "connection": service.get_connection(workspace_id),
+            "configured": service.is_configured(request.org.id),
+            "open_url": url("index"),
+            "disconnect_url": url("disconnect"),
+            "consequence": consequence,
+            # Shaped like a row of ``available_platforms`` for _connect_guide.html.
+            "platform": {
+                "value": key,
+                "label": label,
+                "guide": connect_guide(key),
+                "flow": "oauth",
+                "connect_url": url("connect"),
+            },
+        }
+
+    return [
+        card(
+            "meta_ads",
+            _("Meta Ads"),
+            _("Campaigns, Pixel and results"),
+            meta_ads,
+            "meta_ads",
+            "",
+            _(
+                "This removes the Meta Ads sign-in from Connekt Flow. Campaigns keep running in the ad account "
+                "until you stop them there."
+            ),
+        ),
+        card(
+            "pinterest_ads",
+            _("Pinterest Ads"),
+            _("Campaigns that promote your pins"),
+            pinterest_ads,
+            "pinterest",
+            "pinterest_",
+            _(
+                "This removes the Pinterest Ads sign-in from Connekt Flow. Campaigns keep running in the ad "
+                "account until you stop them there."
+            ),
+        ),
+    ]
 
 
 def _whatsapp_signup_config(org_id, available_platforms):

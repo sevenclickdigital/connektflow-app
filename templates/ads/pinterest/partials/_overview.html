@@ -1,0 +1,18 @@
+{% load i18n %}
+{% comment %}
+The ad account's numbers and campaigns, read from Pinterest by
+pinterest_views.overview and swapped into the index page in place of its
+placeholder. Without the previous period (Pinterest keeps 90 days) the cards
+show no arrows.
+{% endcomment %}
+<div>
+{% if error %}
+<div class="alert-error mb-4">{{ error }}</div>
+{% elif overview %}
+{% include "ads/partials/_insights.html" with totals=overview.totals series=overview.series changes=overview.changes currency=connection.currency %}
+
+{% translate "Open in Pinterest Ads Manager" as manager_label %}
+{% translate "On the ad groups" as no_budget_label %}
+{% include "ads/partials/_campaigns_table.html" with detail_url_name="ads:pinterest_campaign_detail" manager_label=manager_label no_budget_label=no_budget_label %}
+{% endif %}
+</div>

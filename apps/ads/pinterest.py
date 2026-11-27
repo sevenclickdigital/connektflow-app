@@ -1,0 +1,631 @@
+"""Pinterest Ads for one workspace: the connection, its campaigns and their numbers.
+
+The Pinterest side of ``apps.ads``; the Meta side is ``apps.ads.services``,
+whose ``Campaign``, comparison with the previous window and daily series are
+reused here so both platforms' screens read the same objects.
+
+Every call goes through the workspace's Pinterest ``AdsConnection`` token. A
+campaign id from the browser is only ever read inside the chosen ad account
+(``ad_accounts/<id>/campaigns/<campaign>``), so another account's campaign is
+not found. The ad account itself is checked against the ones the token lists.
+
+Campaigns made here are created with the campaign **paused** and its ad group
+and ad active, so the campaign's own status is the one switch that spends, as
+on Meta.
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
+
+from django.db import transaction
+from django.utils import timezone
+from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy
+
+from apps.credentials.models import resolve_platform_credentials
+from providers import pinterest_ads
+from providers.exceptions import ProviderError, RateLimitError, TokenExpiredError
+from providers.meta_ads import Insights
+
+from . import services
+from .models import AdsConnection
+from .services import AdsError, AdsNotConfiguredError, Campaign
+
+logger = logging.getLogger(__name__)
+
+# The Pinterest app is the one the publishing accounts connect through.
+CREDENTIAL_PLATFORM = "pinterest"
+# Renew the access token this long before Pinterest's expiry.
+REFRESH_MARGIN = timedelta(days=1)
+
+OBJECTIVES = {
+    "AWARENESS": gettext_lazy("Awareness"),
+    "CONSIDERATION": gettext_lazy("Consideration"),
+    "VIDEO_COMPLETION": gettext_lazy("Video views"),
+    "VIDEO_VIEW": gettext_lazy("Video views"),
+    "SALES": gettext_lazy("Sales"),
+    "LEADS": gettext_lazy("Leads"),
+    "WEB_CONVERSION": gettext_lazy("Conversions"),
+    "CATALOG_SALES": gettext_lazy("Catalog sales"),
+    "WEB_SESSIONS": gettext_lazy("Website visits"),
+    "APP_INSTALL": gettext_lazy("App installs"),
+    "ENGAGEMENT": gettext_lazy("Engagement"),
+    "AWARENESS_RESERVED": gettext_lazy("Awareness"),
+}
+# What the simplified creation offers, and what each ad group is billed on.
+# Both are budgeted on the campaign (Pinterest's campaign budget optimization).
+CREATABLE_OBJECTIVES = ("AWARENESS", "CONSIDERATION")
+BILLABLE_EVENTS = {"AWARENESS": "IMPRESSION", "CONSIDERATION": "CLICKTHROUGH"}
+
+# ``summary_status`` (what is happening) → (label, pill tone).
+SUMMARY_STATUSES = {
+    "RUNNING": (gettext_lazy("Active"), "success"),
+    "ACTIVE": (gettext_lazy("Active"), "success"),
+    "PAUSED": (gettext_lazy("Paused"), "neutral"),
+    "NOT_STARTED": (gettext_lazy("Scheduled"), "info"),
+    "COMPLETED": (gettext_lazy("Completed"), "neutral"),
+    "ADVERTISER_DISABLED": (gettext_lazy("Disabled"), "warning"),
+    "ARCHIVED": (gettext_lazy("Archived"), "neutral"),
+    "DRAFT": (gettext_lazy("Draft"), "neutral"),
+    "PENDING": (gettext_lazy("In review"), "info"),
+    "APPROVED": (gettext_lazy("Approved"), "success"),
+    "REJECTED": (gettext_lazy("Rejected"), "error"),
+}
+
+# What a new ad account can be opened in.
+COUNTRIES = {"BR": gettext_lazy("Brazil"), "PT": gettext_lazy("Portugal"), "US": gettext_lazy("United States")}
+CURRENCIES = ("BRL", "EUR", "USD")
+
+
+# ------------------------------------------------------------------
+# Credentials, tokens and errors
+# ------------------------------------------------------------------
+
+
+def app_credentials(org_id) -> dict:
+    creds = resolve_platform_credentials(CREDENTIAL_PLATFORM, org_id)
+    client_id = str(creds.get("client_id") or creds.get("app_id") or "").strip()
+    client_secret = str(creds.get("client_secret") or creds.get("app_secret") or "").strip()
+    if not client_id or not client_secret:
+        raise AdsNotConfiguredError(_("The Pinterest app is not configured. Ask your administrator to set it up."))
+    return {"client_id": client_id, "client_secret": client_secret}
+
+
+def is_configured(org_id) -> bool:
+    try:
+        app_credentials(org_id)
+    except AdsNotConfiguredError:
+        return False
+    return True
+
+
+def client_for_org(org_id) -> pinterest_ads.PinterestAdsClient:
+    return pinterest_ads.PinterestAdsClient(app_credentials(org_id))
+
+
+def describe_error(exc: ProviderError) -> str:
+    if isinstance(exc, TokenExpiredError):
+        return _("The Pinterest sign-in expired or was revoked. Connect Pinterest Ads again.")
+    if isinstance(exc, RateLimitError):
+        return _("Pinterest is limiting requests to this ad account right now. Try again in a few minutes.")
+    detail = exc.user_message or str(exc).removeprefix("Pinterest Ads: ").strip()
+    return _("Pinterest refused the request: %(detail)s") % {"detail": detail or _("no reason given")}
+
+
+def _expires_at(tokens) -> datetime | None:
+    return timezone.now() + timedelta(seconds=tokens.expires_in) if tokens.expires_in else None
+
+
+def _client(connection: AdsConnection) -> pinterest_ads.PinterestAdsClient:
+    """Kept on the connection, so the several calls of one page resolve the app once."""
+    client = getattr(connection, "_ads_client", None)
+    if client is None:
+        client = client_for_org(connection.workspace.organization_id)
+        connection._ads_client = client  # type: ignore[attr-defined]
+    return client
+
+
+def _refresh(connection: AdsConnection) -> bool:
+    """Trade the refresh token for a new access token; False when there is none or Pinterest refuses."""
+    if not connection.refresh_token:
+        return False
+    try:
+        tokens = _client(connection).refresh_token(connection.refresh_token)
+    except ProviderError as exc:
+        logger.warning("Pinterest Ads token refresh failed for workspace %s: %s", connection.workspace_id, exc)
+        return False
+    connection.access_token = tokens.access_token
+    connection.refresh_token = tokens.refresh_token or connection.refresh_token
+    connection.token_expires_at = _expires_at(tokens)
+    connection.save(update_fields=["access_token", "refresh_token", "token_expires_at", "updated_at"])
+    return True
+
+
+def _record_failure(connection: AdsConnection, exc: ProviderError) -> None:
+    if isinstance(exc, TokenExpiredError):
+        connection.status = AdsConnection.Status.ERROR
+        connection.last_error = describe_error(exc)
+        connection.save(update_fields=["status", "last_error", "updated_at"])
+
+
+def _call(connection: AdsConnection, fn, *args, **kwargs):
+    """Run a client call with the connection's token, renewed first when it is about to lapse.
+
+    A 401 gets one renewal and one retry; Pinterest's refusal becomes an ``AdsError``.
+    """
+    client = _client(connection)
+    expires = connection.token_expires_at
+    if expires and expires - timezone.now() <= REFRESH_MARGIN:
+        _refresh(connection)
+    try:
+        try:
+            return fn(client, connection.access_token, *args, **kwargs)
+        except TokenExpiredError:
+            if not _refresh(connection):
+                raise
+            return fn(client, connection.access_token, *args, **kwargs)
+    except ProviderError as exc:
+        logger.warning("Pinterest Ads call %s failed for workspace %s: %s", fn.__name__, connection.workspace_id, exc)
+        _record_failure(connection, exc)
+        raise AdsError(describe_error(exc)) from exc
+
+
+# ------------------------------------------------------------------
+# Connection
+# ------------------------------------------------------------------
+
+
+def get_connection(workspace_id) -> AdsConnection | None:
+    return (
+        AdsConnection.objects.for_workspace(workspace_id)
+        .filter(platform=AdsConnection.Platform.PINTEREST)
+        .select_related("workspace")
+        .first()
+    )
+
+
+def finish_sign_in(*, workspace, user, code: str, redirect_uri: str) -> AdsConnection:
+    """Trade the code for tokens and keep them on the workspace.
+
+    A reconnect keeps the ad account already chosen while the new token still
+    reaches it; otherwise the choice starts over.
+    """
+    client = pinterest_ads.PinterestAdsClient(app_credentials(workspace.organization_id))
+    try:
+        tokens = client.exchange_code(code, redirect_uri)
+        profile = client.get_profile(tokens.access_token)
+        reachable = {account.id for account in client.ad_accounts(tokens.access_token)}
+    except ProviderError as exc:
+        logger.warning("Pinterest Ads sign-in failed for workspace %s: %s", workspace.id, exc)
+        raise AdsError(describe_error(exc)) from exc
+
+    with transaction.atomic():
+        connection = (
+            AdsConnection.objects.select_for_update()
+            .filter(workspace=workspace, platform=AdsConnection.Platform.PINTEREST)
+            .first()
+        )
+        if connection is None:
+            connection = AdsConnection(workspace=workspace, platform=AdsConnection.Platform.PINTEREST)
+        connection.access_token = tokens.access_token
+        connection.refresh_token = tokens.refresh_token or ""
+        connection.token_expires_at = _expires_at(tokens)
+        connection.meta_user_id = profile.platform_id
+        connection.meta_user_name = profile.handle or profile.name
+        connection.connected_by = user
+        connection.last_error = ""
+        if connection.ad_account_id and connection.ad_account_id in reachable:
+            connection.status = AdsConnection.Status.CONNECTED
+        else:
+            connection.ad_account_id = connection.ad_account_name = connection.currency = ""
+            connection.status = AdsConnection.Status.PENDING
+        connection.save()
+    return connection
+
+
+def ad_accounts(connection: AdsConnection) -> list[pinterest_ads.AdAccount]:
+    return _call(connection, pinterest_ads.PinterestAdsClient.ad_accounts)
+
+
+def choose_account(connection: AdsConnection, ad_account_id: str) -> AdsConnection:
+    """Keep the ad account, only if this token really reaches it."""
+    account = next((a for a in ad_accounts(connection) if a.id == ad_account_id), None)
+    if account is None:
+        raise AdsError(_("Choose one of the ad accounts your Pinterest sign-in can manage."))
+    _keep_account(connection, account)
+    return connection
+
+
+def _keep_account(connection: AdsConnection, account: pinterest_ads.AdAccount) -> None:
+    connection.ad_account_id = account.id
+    connection.ad_account_name = account.name
+    connection.currency = account.currency
+    connection.status = AdsConnection.Status.CONNECTED
+    connection.last_error = ""
+    connection.save()
+
+
+def create_ad_account(connection: AdsConnection, *, name: str, country: str, currency: str) -> AdsConnection:
+    """Open an ad account owned by the Pinterest user who signed in, and choose it."""
+    if country not in COUNTRIES or currency not in CURRENCIES:
+        raise AdsError(_("Choose one of the offered countries and currencies."))
+    account = _call(
+        connection,
+        pinterest_ads.PinterestAdsClient.create_ad_account,
+        name=name,
+        country=country,
+        currency=currency,
+        owner_user_id=connection.meta_user_id,
+    )
+    _keep_account(connection, account)
+    return connection
+
+
+def disconnect(connection: AdsConnection) -> None:
+    """Forget the tokens. Campaigns keep running on Pinterest: they belong to the ad account."""
+    connection.delete()
+
+
+# ------------------------------------------------------------------
+# Campaigns
+# ------------------------------------------------------------------
+
+
+def _status(value: str) -> tuple[str, str]:
+    label, tone = SUMMARY_STATUSES.get(value, (value.replace("_", " ").capitalize(), "neutral"))
+    return str(label), tone
+
+
+def _from_unix(value) -> datetime | None:
+    try:
+        return datetime.fromtimestamp(int(value), tz=UTC) if value else None
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def _manager_url(connection: AdsConnection) -> str:
+    return f"https://ads.pinterest.com/advertiser/{connection.ad_account_id}/"
+
+
+def _campaign_from_row(connection: AdsConnection, row: dict) -> Campaign:
+    objective = row.get("objective_type") or ""
+    label, tone = _status(row.get("summary_status") or row.get("status") or "")
+    return Campaign(
+        id=str(row.get("id")),
+        name=row.get("name") or "",
+        objective=objective,
+        objective_label=str(OBJECTIVES.get(objective, objective.replace("_", " ").capitalize())),
+        status=row.get("status") or "",
+        effective_status=row.get("summary_status") or "",
+        status_label=label,
+        status_tone=tone,
+        daily_budget=pinterest_ads.from_micro(row.get("daily_spend_cap")),
+        lifetime_budget=pinterest_ads.from_micro(row.get("lifetime_spend_cap")),
+        start_time=_from_unix(row.get("start_time")),
+        stop_time=_from_unix(row.get("end_time")),
+        manager_url=_manager_url(connection),
+    )
+
+
+def earliest_day() -> date:
+    """The first day Pinterest still has numbers for."""
+    return timezone.now().astimezone(UTC).date() - timedelta(days=pinterest_ads.ANALYTICS_DAYS - 1)
+
+
+def _windows(days: int, end: date | None) -> tuple[tuple[str, str], tuple[str, str] | None]:
+    """The window asked for and the one before it, or None for the latter when
+    Pinterest no longer has it. A window Pinterest does not have is an ``AdsError``."""
+    current = services.date_window(days, end)
+    if date.fromisoformat(current[0]) < earliest_day():
+        raise AdsError(_("Pinterest keeps the numbers of the last 90 days. Choose a period inside them."))
+    previous = services.previous_window(days, end)
+    return current, (previous if date.fromisoformat(previous[0]) >= earliest_day() else None)
+
+
+def _per_campaign(connection: AdsConnection, ids: list[str], window: tuple[str, str]) -> dict[str, Insights]:
+    if not ids:
+        return {}
+    rows = _call(
+        connection,
+        pinterest_ads.PinterestAdsClient.campaign_analytics,
+        connection.ad_account_id,
+        ids,
+        since=window[0],
+        until=window[1],
+    )
+    return {row.campaign_id: row for row in rows}
+
+
+def list_campaigns(
+    connection: AdsConnection, *, days: int = services.DEFAULT_RANGE, end: date | None = None
+) -> list[Campaign]:
+    """The ad account's campaigns (archived ones last), each with its numbers for the
+    window and, when Pinterest still has it, for the window before."""
+    current, previous = _windows(days, end)
+    rows = _call(connection, pinterest_ads.PinterestAdsClient.campaigns, connection.ad_account_id)
+    campaigns = [_campaign_from_row(connection, row) for row in rows]
+    ids = [c.id for c in campaigns]
+    now = _per_campaign(connection, ids, current)
+    before = _per_campaign(connection, ids, previous) if previous else {}
+    for campaign in campaigns:
+        campaign.insights = now.get(campaign.id, Insights())
+        campaign.previous = before.get(campaign.id, Insights())
+        campaign.compared = previous is not None
+    campaigns.sort(key=lambda c: (c.status == "ARCHIVED", c.status != "ACTIVE"))
+    return campaigns
+
+
+def get_campaign(connection: AdsConnection, campaign_id: str) -> Campaign:
+    """One campaign of *this* ad account, or ``AdsError``."""
+    if not campaign_id.isdigit():
+        raise AdsError(_("This campaign was not found in the connected ad account."))
+    row = _call(connection, pinterest_ads.PinterestAdsClient.campaign, connection.ad_account_id, campaign_id)
+    if str(row.get("ad_account_id") or connection.ad_account_id) != connection.ad_account_id:
+        raise AdsError(_("This campaign was not found in the connected ad account."))
+    return _campaign_from_row(connection, row)
+
+
+@dataclass
+class AdGroup:
+    id: str
+    name: str
+    status_label: str
+    status_tone: str
+    budget: Decimal | None
+    budget_type: str
+    countries: list[str] = field(default_factory=list)
+
+
+def _first(rows: list[Insights]) -> Insights:
+    return rows[0] if rows else Insights()
+
+
+def _account_rows(connection: AdsConnection, window: tuple[str, str], *, daily: bool = False) -> list[Insights]:
+    return _call(
+        connection,
+        pinterest_ads.PinterestAdsClient.account_analytics,
+        connection.ad_account_id,
+        since=window[0],
+        until=window[1],
+        daily=daily,
+    )
+
+
+def account_overview(connection: AdsConnection, *, days: int = services.DEFAULT_RANGE, end: date | None = None) -> dict:
+    """The ad account's totals and daily series for the window, and how each total
+    moved against the window before it when Pinterest still has it."""
+    current, previous = _windows(days, end)
+    totals = _first(_account_rows(connection, current))
+    changes = services.compare_all(totals, _first(_account_rows(connection, previous))) if previous else {}
+    daily = _account_rows(connection, current, daily=True)
+    return {"totals": totals, "changes": changes, "series": services.daily_series(daily, *current)}
+
+
+def campaign_detail(
+    connection: AdsConnection, campaign_id: str, *, days: int = services.DEFAULT_RANGE, end: date | None = None
+) -> dict:
+    """A campaign's numbers, its ad groups and its ads."""
+    current, previous = _windows(days, end)
+    campaign = get_campaign(connection, campaign_id)
+
+    def rows(window, daily=False):
+        return _call(
+            connection,
+            pinterest_ads.PinterestAdsClient.campaign_analytics,
+            connection.ad_account_id,
+            [campaign.id],
+            since=window[0],
+            until=window[1],
+            daily=daily,
+        )
+
+    totals = _first(rows(current))
+    before = _first(rows(previous)) if previous else Insights()
+    campaign.insights, campaign.previous, campaign.compared = totals, before, previous is not None
+
+    ad_groups = []
+    for row in _call(connection, pinterest_ads.PinterestAdsClient.ad_groups, connection.ad_account_id, campaign.id):
+        label, tone = _status(row.get("summary_status") or row.get("status") or "")
+        ad_groups.append(
+            AdGroup(
+                id=str(row.get("id")),
+                name=row.get("name") or "",
+                status_label=label,
+                status_tone=tone,
+                budget=pinterest_ads.from_micro(row.get("budget_in_micro_currency")),
+                budget_type=row.get("budget_type") or "",
+                countries=list((row.get("targeting_spec") or {}).get("GEO") or []),
+            )
+        )
+    ads = []
+    for row in _call(connection, pinterest_ads.PinterestAdsClient.ads, connection.ad_account_id, campaign.id):
+        review = row.get("review_status") or ""
+        # A rejected or pending review says more than "active".
+        label, tone = _status(review if review in ("PENDING", "REJECTED") else row.get("summary_status") or "")
+        pin_id = str(row.get("pin_id") or "")
+        ads.append(
+            {
+                "id": row.get("id"),
+                "name": row.get("name") or pin_id,
+                "status_label": label,
+                "status_tone": tone,
+                "pin_id": pin_id,
+                "pin_url": f"https://www.pinterest.com/pin/{pin_id}/" if pin_id.isdigit() else "",
+            }
+        )
+    return {
+        "campaign": campaign,
+        "ad_groups": ad_groups,
+        "ads": ads,
+        "totals": totals,
+        "changes": services.compare_all(totals, before) if previous else {},
+        "series": services.daily_series(rows(current, daily=True), *current),
+    }
+
+
+def set_campaign_status(connection: AdsConnection, campaign_id: str, status: str) -> Campaign:
+    """Start (``ACTIVE``) or stop (``PAUSED``) a campaign; ``ARCHIVED`` retires it for good."""
+    if status not in ("ACTIVE", "PAUSED", "ARCHIVED"):
+        raise AdsError(_("Unknown campaign status."))
+    campaign = get_campaign(connection, campaign_id)
+    _call(
+        connection,
+        pinterest_ads.PinterestAdsClient.update_campaign,
+        connection.ad_account_id,
+        campaign.id,
+        {"status": status},
+    )
+    campaign.status = status
+    return campaign
+
+
+def update_campaign(
+    connection: AdsConnection,
+    campaign_id: str,
+    *,
+    name: str,
+    daily_budget: Decimal | None,
+    end_time: datetime | None,
+) -> None:
+    """Rename a campaign and change its daily budget and end. The budget is the
+    campaign's: the simplified creation budgets on the campaign."""
+    campaign = get_campaign(connection, campaign_id)
+    fields: dict = {"name": name}
+    if daily_budget is not None:
+        if campaign.lifetime_budget:
+            raise AdsError(_("This campaign has a lifetime budget. Change it in Pinterest Ads Manager."))
+        fields["daily_spend_cap"] = pinterest_ads.to_micro(daily_budget)
+    if end_time is not None:
+        fields["end_time"] = int(end_time.timestamp())
+    _call(connection, pinterest_ads.PinterestAdsClient.update_campaign, connection.ad_account_id, campaign.id, fields)
+
+
+# ------------------------------------------------------------------
+# Creation
+# ------------------------------------------------------------------
+
+
+@dataclass
+class NewCampaign:
+    name: str
+    objective: str
+    daily_budget: Decimal
+    start_time: datetime | None
+    end_time: datetime | None
+    countries: list[str]
+    pin_id: str
+    is_video: bool = False
+
+
+def build_campaign_payload(new: NewCampaign) -> dict:
+    payload: dict = {
+        "name": new.name,
+        "objective_type": new.objective,
+        "status": "PAUSED",
+        "daily_spend_cap": pinterest_ads.to_micro(new.daily_budget),
+    }
+    if new.start_time:
+        payload["start_time"] = int(new.start_time.timestamp())
+    if new.end_time:
+        payload["end_time"] = int(new.end_time.timestamp())
+    return payload
+
+
+def build_ad_group_payload(new: NewCampaign, campaign_id: str) -> dict:
+    """One ad group in the campaign's countries, bid automatically, billed per the objective.
+
+    No budget of its own: the campaign carries it (budget optimization).
+    """
+    payload: dict = {
+        "name": f"{new.name} — {_('Ad group')}",
+        "campaign_id": campaign_id,
+        "status": "ACTIVE",
+        "billable_event": BILLABLE_EVENTS[new.objective],
+        "bid_strategy_type": "AUTOMATIC_BID",
+        "targeting_spec": {"GEO": new.countries},
+    }
+    if new.start_time:
+        payload["start_time"] = int(new.start_time.timestamp())
+    if new.end_time:
+        payload["end_time"] = int(new.end_time.timestamp())
+    return payload
+
+
+def build_ad_payload(new: NewCampaign, ad_group_id: str) -> dict:
+    return {
+        "ad_group_id": ad_group_id,
+        "pin_id": new.pin_id,
+        "creative_type": "VIDEO" if new.is_video else "REGULAR",
+        "status": "ACTIVE",
+        "name": new.name,
+    }
+
+
+def create_campaign(connection: AdsConnection, new: NewCampaign) -> str:
+    """Create the campaign, its ad group and the ad that promotes the pin; return the campaign id.
+
+    The campaign is created paused. Pinterest has no deleting a campaign, so a
+    failure part-way archives it, which also stops its ad group and ad.
+    """
+    if not connection.is_ready:
+        raise AdsError(_("Finish connecting Pinterest Ads before creating campaigns."))
+    if new.objective not in CREATABLE_OBJECTIVES:
+        raise AdsError(_("Choose one of the offered objectives."))
+    if not new.pin_id.isdigit():
+        raise AdsError(_("Choose the pin the ad promotes."))
+    account = connection.ad_account_id
+    client = pinterest_ads.PinterestAdsClient
+    campaign_id = _call(connection, client.create_campaign, account, build_campaign_payload(new))
+    try:
+        ad_group_id = _call(connection, client.create_ad_group, account, build_ad_group_payload(new, campaign_id))
+        _call(connection, client.create_ad, account, build_ad_payload(new, ad_group_id))
+    except AdsError:
+        try:
+            _call(connection, client.update_campaign, account, campaign_id, {"status": "ARCHIVED"})
+        except AdsError:
+            logger.error("Pinterest Ads campaign %s was left half-created and could not be archived", campaign_id)
+        raise
+    return campaign_id
+
+
+def promotable_pins(workspace, limit: int = 48) -> list[dict]:
+    """The workspace's published pins, newest first, for the ad's picker.
+
+    ``is_video`` decides the ad's creative type, which Pinterest wants told.
+    """
+    from apps.composer.models import PlatformPost
+    from apps.composer.services import media_types_by_post
+    from apps.media_library.models import MediaAsset
+
+    rows = (
+        PlatformPost.objects.filter(
+            post__workspace=workspace,
+            social_account__workspace=workspace,
+            social_account__platform="pinterest",
+            status=PlatformPost.Status.PUBLISHED,
+        )
+        .exclude(platform_post_id="")
+        .exclude(platform_post_id__isnull=True)
+        .select_related("post", "social_account")
+        .order_by("-published_at")[:limit]
+    )
+    media = media_types_by_post([row.post_id for row in rows])
+    pins = []
+    for row in rows:
+        if not str(row.platform_post_id).isdigit():
+            continue
+        pins.append(
+            {
+                "id": str(row.platform_post_id),
+                "title": row.platform_specific_title or row.post.title or "",
+                "caption": row.platform_specific_caption or row.post.caption or "",
+                "account": row.social_account.account_name,
+                "published_at": row.published_at,
+                "is_video": MediaAsset.MediaType.VIDEO in media.get(row.post_id, set()),
+            }
+        )
+    return pins

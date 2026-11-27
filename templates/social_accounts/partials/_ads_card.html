@@ -1,0 +1,49 @@
+{% comment %}
+An ad platform (Meta Ads, Pinterest Ads) on the Social Accounts page, in the
+shape of the platform cards.
+Usage: {% include "social_accounts/partials/_ads_card.html" with ad=card workspace_id=workspace_id %}
+``ad`` is one of social_accounts.views._ads_cards. Not connected: it sits in
+the connect grid and its button starts the platform's sign-in (apps.ads).
+Connected: it sits under "Ad accounts", opens the platform's Ads screen, and
+its "⋯" menu reconnects or disconnects it (back to this page). Connect and
+Reconnect open the page's connect guide (``guide = ad.key``), which the page
+includes once, outside the card.
+{% endcomment %}
+{% load i18n %}
+{% translate "Ads" as ads_label %}
+{% with connection=ad.connection %}
+<div class="a-card {% if ad.configured or connection %}a-card-hover{% endif %} p-4 flex items-center gap-3"
+     data-state="{% if not connection %}available{% elif connection.status == 'error' %}problem{% else %}connected{% endif %}"
+     data-category="ads" data-name="{{ ad.label|lower }} {{ ads_label|lower }}"
+     x-show="matches($el)">
+    <div class="{% if not connection and not ad.configured %}opacity-60{% endif %}">{% include "social_accounts/partials/_platform_tile.html" with platform=ad.tile %}</div>
+    <div class="flex-1 min-w-0 {% if not connection and not ad.configured %}opacity-60{% endif %}">
+        <div class="text-sm font-semibold text-neutral-950 truncate">{{ ad.label }}</div>
+        <div class="text-xs text-neutral-500 truncate">{% if connection.ad_account_name %}{{ connection.ad_account_name }}{% else %}{{ ad.description }}{% endif %}</div>
+    </div>
+    {% if connection %}
+        {% if connection.status == "error" %}
+        <button type="button" class="btn-soft py-1.5 px-3" @click="guide = '{{ ad.key }}'">{% translate "Reconnect" %}</button>
+        {% else %}
+        <a href="{{ ad.open_url }}" class="btn-soft py-1.5 px-3">{% translate "Open" %}</a>
+        {% endif %}
+        {% comment %}The "⋯" menu of the social account cards: disconnecting here as there.{% endcomment %}
+        <div class="relative" x-data="{ menu: false, confirmDisconnect: false }">
+            <button type="button" @click="menu = !menu" class="w-8 h-8 inline-flex items-center justify-center rounded-md text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50 cursor-pointer" aria-label="{% translate 'More actions' %}">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+            </button>
+            <div x-show="menu" x-cloak @click.away="menu = false" x-transition
+                 class="absolute right-0 top-full mt-1 z-20 w-48 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1">
+                <a href="{{ ad.open_url }}" class="block px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50">{% translate "Open" %}</a>
+                {% if ad.configured %}<button type="button" @click="menu = false; guide = '{{ ad.key }}'" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Reconnect" %}</button>{% endif %}
+                <button type="button" @click="menu = false; confirmDisconnect = true" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer">{% translate "Disconnect" %}</button>
+            </div>
+            {% include "social_accounts/partials/_disconnect_confirm.html" with action_url=ad.disconnect_url name=ad.label consequence=ad.consequence return_to="accounts" position="right-0 top-full mt-1" %}
+        </div>
+    {% elif ad.configured %}
+    <button type="button" class="btn-soft py-1.5 px-3" @click="guide = '{{ ad.key }}'">{% translate "Connect" %}</button>
+    {% else %}
+    <span class="pill pill-neutral" title="{% translate 'Platform credentials not configured. Contact your administrator.' %}">{% translate "Not Configured" %}</span>
+    {% endif %}
+</div>
+{% endwith %}

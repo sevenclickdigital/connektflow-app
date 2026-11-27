@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load common_extras i18n %}
+{% block title %}{% if campaign %}{{ campaign.name }}{% else %}{% translate "Campaign" %}{% endif %} - Connekt Flow{% endblock %}
+{% block page_header %}
+<div class="page-header" x-data="{ editing: false }">
+    <div>
+        <h1 class="page-title">{% if campaign %}{{ campaign.name }}{% else %}{% translate "Campaign" %}{% endif %}</h1>
+        {% if campaign %}
+        <p class="page-description flex items-center gap-2 flex-wrap">
+            {% include "social_accounts/partials/_platform_icon.html" with platform="pinterest" size="4" %}
+            <span class="pill pill-{{ campaign.status_tone }}"><i></i>{{ campaign.status_label }}</span>
+            <span>{{ campaign.objective_label }}</span>
+        </p>
+        {% endif %}
+    </div>
+    {% if campaign %}
+    <div class="flex items-center gap-2 flex-wrap">
+        {% period_picker period range_choices %}
+        {% if can_manage %}
+        <button type="button" class="btn-outline" @click="editing = true">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+            {% translate "Edit campaign" %}
+        </button>
+        {% include "ads/pinterest/partials/_campaign_edit_modal.html" %}
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="alert-error">{{ error }}</div>
+{% else %}
+{% comment %}
+The numbers come from Pinterest on every visit (nothing is stored): the page
+shows at once and they load into this placeholder.
+{% endcomment %}
+<div hx-get="{% url 'ads:pinterest_campaign_body' workspace_id=workspace_id campaign_id=campaign.id %}?{{ period.query }}" hx-trigger="load" hx-swap="outerHTML" data-inline-error="#lazy-load-status">
+    {% translate "Fetching the numbers from Pinterest…" as loading_label %}{% include "components/_skeleton.html" with label=loading_label %}
+</div>
+{% endif %}
+{% endblock %}

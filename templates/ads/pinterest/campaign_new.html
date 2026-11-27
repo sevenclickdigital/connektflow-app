@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "New campaign" %} - Connekt Flow{% endblock %}
+{% block page_header %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{% translate "New Pinterest campaign" %}</h1>
+        <p class="page-description">{% blocktranslate with account=connection.ad_account_name %}In the ad account {{ account }}, promoting one of your pins. It is created paused: nothing is spent until you activate it.{% endblocktranslate %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="max-w-3xl space-y-6">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+
+    <section class="a-card p-5 space-y-4">
+        <h2 class="section-title">{% translate "Campaign" %}</h2>
+        {% include "components/_form_field.html" with field=form.name %}
+        <fieldset>
+            <legend class="block text-sm font-semibold text-neutral-950 mb-2">{{ form.objective.label }}</legend>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {% for radio in form.objective %}
+                <label class="flex items-center gap-2 a-card px-3 py-2 cursor-pointer hover:border-brand-700">
+                    {{ radio.tag }} <span class="text-sm text-neutral-950">{{ radio.choice_label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <p class="text-xs mt-1.5 text-neutral-600">{% translate "Awareness shows the pin to as many people as possible. Consideration brings clicks to the pin and its link." %}</p>
+            {% for error in form.objective.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
+        </fieldset>
+    </section>
+
+    <section class="a-card p-5 space-y-4">
+        <h2 class="section-title">{% translate "Budget, schedule and audience" %}</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {% include "components/_form_field.html" with field=form.daily_budget %}
+            {% include "components/_form_field.html" with field=form.start_time %}
+            {% include "components/_form_field.html" with field=form.end_time %}
+        </div>
+        {% include "components/_form_field.html" with field=form.countries %}
+        <p class="text-xs text-neutral-600">{% translate "Without a start, delivery begins as soon as the campaign is activated. Without an end, it runs until you pause it. Pinterest bids automatically and finds the audience within these countries." %}</p>
+    </section>
+
+    <section class="a-card p-5 space-y-4">
+        <h2 class="section-title">{% translate "Pin to promote" %}</h2>
+        <fieldset>
+            <legend class="sr-only">{{ form.pin_id.label }}</legend>
+            {% if pins %}
+            <div class="space-y-2 max-h-96 overflow-y-auto">
+                {% with chosen=form.pin_id.value|default:"" %}
+                {% for pin in pins %}
+                <label class="flex items-center gap-3 px-3 py-2 bg-white rounded-xl border border-neutral-300 cursor-pointer transition-colors hover:border-brand-200 has-[:checked]:border-brand-500 has-[:checked]:ring-2 has-[:checked]:ring-brand-100">
+                    <input type="radio" name="{{ form.pin_id.html_name }}" value="{{ pin.id }}" {% if chosen == pin.id %}checked{% endif %} class="bb-checkbox w-4 h-4 flex-shrink-0">
+                    <span class="flex-1 min-w-0">
+                        <span class="block text-sm font-semibold text-neutral-950 truncate">{% if pin.title %}{{ pin.title }}{% else %}{{ pin.caption|truncatechars:80|default:pin.id }}{% endif %}</span>
+                        <span class="block text-xs text-neutral-600 truncate">{{ pin.account }} · {% if pin.published_at %}{{ pin.published_at|date:"SHORT_DATE_FORMAT" }} · {% endif %}<span class="font-mono">{{ pin.id }}</span>{% if pin.is_video %} · {% translate "Video" %}{% endif %}</span>
+                    </span>
+                </label>
+                {% endfor %}
+                {% endwith %}
+            </div>
+            {% else %}
+            <p class="text-sm text-neutral-600">{% translate "No pin was published from Connekt Flow yet. Publish one, or paste the ID of a pin below." %}</p>
+            {% endif %}
+            {% for error in form.pin_id.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
+        </fieldset>
+        {% include "components/_form_field.html" with field=form.other_pin_id %}
+        <p class="text-xs text-neutral-600">{% translate "The ad shows the pin as it is on Pinterest, with its image, title and link." %}</p>
+    </section>
+
+    <div class="flex justify-end gap-2">
+        <a href="{% url 'ads:pinterest_index' workspace_id=workspace_id %}" class="btn-outline">{% translate "Cancel" %}</a>
+        <button type="submit" class="btn-brand">{% translate "Create paused campaign" %}</button>
+    </div>
+</form>
+{% endblock %}

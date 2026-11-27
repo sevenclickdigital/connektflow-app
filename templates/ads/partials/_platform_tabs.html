@@ -1,0 +1,12 @@
+{% comment %}
+The Meta Ads / Pinterest Ads switch in the header of the Ads pages.
+Expects: platform_tabs (apps.ads.views.platform_tabs), empty unless the
+workspace has both.
+{% endcomment %}
+{% if platform_tabs %}
+<nav class="flex gap-2 mb-4" aria-label="{{ platform_tabs.0.label }} / {{ platform_tabs.1.label }}">
+    {% for tab in platform_tabs %}
+    <a href="{{ tab.url }}" class="chip {% if tab.active %}active{% endif %}" {% if tab.active %}aria-current="page"{% endif %}>{{ tab.label }}</a>
+    {% endfor %}
+</nav>
+{% endif %}

@@ -14,17 +14,24 @@ TOKEN_WARNING_DAYS = 7
 
 
 class AdsConnection(WorkspaceScopedModel):
-    """A workspace's link to one Meta ad account, with the Pixel and Page its ads use.
+    """A workspace's link to one ad account of one ad platform (Meta or Pinterest).
+
+    A workspace has at most one per platform. The Meta one also keeps the Pixel
+    and the Page its ads use; those fields stay blank for Pinterest.
 
     Kept apart from ``SocialAccount`` on purpose: a social account is a publish
     target that the composer, publisher, inbox and analytics all iterate, and an
     ad account is none of those. Campaigns themselves are not copied here; they
     are read from Meta each time, so what the screen shows is what Meta runs.
 
-    The token is the Meta user's long-lived token (about 60 days). It has no
+    Meta's token is the user's long-lived token (about 60 days). It has no
     refresh: when it lapses the connection turns ``error`` and the person signs
-    in again.
+    in again. Pinterest's lasts 30 days and is renewed with ``refresh_token``.
     """
+
+    class Platform(models.TextChoices):
+        META = "meta", "Meta Ads"
+        PINTEREST = "pinterest", "Pinterest Ads"
 
     class Status(models.TextChoices):
         PENDING = "pending", _("Choosing the ad account")
@@ -32,12 +39,16 @@ class AdsConnection(WorkspaceScopedModel):
         ERROR = "error", _("Needs attention")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    platform = models.CharField(
+        max_length=20, choices=Platform.choices, default=Platform.META, db_default=Platform.META
+    )
     access_token = EncryptedTextField()
+    refresh_token = EncryptedTextField(null=True, blank=True)
     token_expires_at = models.DateTimeField(null=True, blank=True)
-    # The Facebook user who signed in, shown so the team knows whose access it is.
+    # The user who signed in (on Facebook or Pinterest), shown so the team knows whose access it is.
     meta_user_id = models.CharField(max_length=64, blank=True, default="")
     meta_user_name = models.CharField(max_length=255, blank=True, default="")
-    # "act_<number>", as every Marketing API edge takes it.
+    # Meta: "act_<number>", as every Marketing API edge takes it. Pinterest: the number.
     ad_account_id = models.CharField(max_length=64, blank=True, default="")
     ad_account_name = models.CharField(max_length=255, blank=True, default="")
     currency = models.CharField(max_length=3, blank=True, default="")
@@ -62,11 +73,11 @@ class AdsConnection(WorkspaceScopedModel):
     class Meta:
         db_table = "ads_connection"
         constraints = [
-            models.UniqueConstraint(fields=["workspace"], name="ads_one_connection_per_workspace"),
+            models.UniqueConstraint(fields=["workspace", "platform"], name="ads_one_connection_per_platform"),
         ]
 
     def __str__(self):
-        return f"Meta Ads ({self.ad_account_name or self.ad_account_id or 'pending'})"
+        return f"{self.get_platform_display()} ({self.ad_account_name or self.ad_account_id or 'pending'})"
 
     @property
     def is_ready(self) -> bool:

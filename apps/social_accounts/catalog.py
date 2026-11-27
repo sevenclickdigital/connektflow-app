@@ -322,6 +322,28 @@ _CONNECT_GUIDES["meta_ads"] = {
     ),
 }
 
+# Pinterest Ads, like Meta Ads, is an ad account rather than a SocialAccount.
+_CONNECT_GUIDES["pinterest_ads"] = {
+    "steps": (
+        (
+            _("Sign in to Pinterest"),
+            _("Use the Pinterest business account that owns the ad account, or that was given access to it."),
+        ),
+        (
+            _SIGN_IN_AND_ALLOW,
+            _("When Pinterest asks, allow Connekt Flow to see and manage your ads."),
+        ),
+        (
+            _("Choose the ad account"),
+            _("Back here, pick the ad account the campaigns run in, or open a new one."),
+        ),
+    ),
+    "note": _(
+        "Pinterest runs ads only from business accounts, and the ad account needs a payment method on Pinterest "
+        "before a campaign can be activated. The ads promote pins already published."
+    ),
+}
+
 # The platform's official site, linked from its guide ("Learn more on the
 # official site") for someone who does not know the network yet.
 _OFFICIAL_SITES = {
@@ -341,6 +363,7 @@ _OFFICIAL_SITES = {
     "bluesky": "https://bsky.social/",
     "devto": "https://dev.to/",
     "meta_ads": "https://www.facebook.com/business/ads",
+    "pinterest_ads": "https://ads.pinterest.com/",
 }
 for _platform, _site in _OFFICIAL_SITES.items():
     _CONNECT_GUIDES[_platform]["site"] = _site

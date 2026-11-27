@@ -738,12 +738,13 @@ before enabling enforcement. Intelligence is outside this remediation.
 ### Pinterest
 
 1. Go to the [Pinterest Developer Portal](https://developers.pinterest.com/) and create a new app
-2. Under your app settings, add the redirect URI:
+2. Under your app settings, add the redirect URIs (the second one is Pinterest Ads):
    ```
    {APP_URL}/social-accounts/callback/pinterest/
+   {APP_URL}/ads/pinterest/callback/
    ```
 3. Copy the **App ID** and **App Secret**
-4. Required scopes: `user_accounts:read`, `boards:read`, `boards:write`, `pins:read`, `pins:write`
+4. Required scopes: `user_accounts:read`, `boards:read`, `boards:write`, `pins:read`, `pins:write`, and `ads:read`, `ads:write` for Pinterest Ads
 5. Set the environment variables:
    ```
    PLATFORM_PINTEREST_APP_ID=your-app-id

@@ -1,0 +1,61 @@
+{% load i18n %}
+{% comment %}
+The Pinterest ad accounts the sign-in reaches, to choose from, and the form
+that opens a new one. Loaded after the page shows (pinterest_views.
+connection_settings with partial=body), and rendered inline by a POST that
+failed so its errors show.
+{% endcomment %}
+<div class="flex flex-col flex-1">
+{% if error %}
+<div class="alert-error mt-5">{{ error }}</div>
+{% else %}
+{% if accounts %}
+<form method="post" action="{% url 'ads:pinterest_settings' workspace_id=workspace_id %}" class="flex flex-col">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert-error mt-5">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    {% if form.ad_account_id.errors %}<div class="alert-error mt-5">{{ form.ad_account_id.errors|join:" " }}</div>{% endif %}
+    <div class="mt-6 mb-3">
+        <h2 class="text-base font-semibold text-neutral-950">{% translate "Ad account" %} <span class="text-neutral-600 font-normal">· {{ accounts|length }}</span></h2>
+        <p class="text-xs text-neutral-600">{% translate "Campaigns, numbers and new campaigns all use this account." %}</p>
+    </div>
+    <div class="space-y-2">
+        {% with chosen=form.ad_account_id.value|default:"" %}
+        {% for account in accounts %}
+        <label class="flex items-center gap-4 px-4 py-3 bg-white rounded-xl border border-neutral-300 cursor-pointer transition-colors hover:border-brand-200 has-[:checked]:border-brand-500 has-[:checked]:ring-2 has-[:checked]:ring-brand-100 has-[:checked]:bg-brand-50/40">
+            <input type="radio" name="ad_account_id" value="{{ account.id }}" {% if chosen == account.id %}checked{% endif %} required class="bb-checkbox w-4 h-4 flex-shrink-0">
+            <span class="w-11 h-11 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-600 text-sm font-semibold flex-shrink-0" aria-hidden="true">{{ account.name|make_list|first|upper }}</span>
+            <span class="flex-1 min-w-0">
+                <span class="block text-sm font-semibold text-neutral-950 truncate">{{ account.name }}</span>
+                <span class="block text-xs text-neutral-600 truncate">ID {{ account.id }} · {{ account.currency }}{% if account.country %} · {{ account.country }}{% endif %}{% if account.owner_username %} · @{{ account.owner_username }}{% endif %}</span>
+            </span>
+            {% if account.id == connection.ad_account_id %}<span class="pill pill-success hidden sm:inline-flex"><i></i>{% translate "In use" %}</span>{% endif %}
+        </label>
+        {% endfor %}
+        {% endwith %}
+    </div>
+    <div class="flex items-center justify-end gap-3 mt-4">
+        {% if connection.ad_account_id %}
+        <a href="{% url 'ads:pinterest_index' workspace_id=workspace_id %}" class="px-3 py-2 text-sm font-semibold text-neutral-700 hover:text-neutral-950">{% translate "Cancel" %}</a>
+        {% endif %}
+        <button type="submit" class="btn-brand">{% translate "Save" %}</button>
+    </div>
+</form>
+{% else %}
+<div class="alert-info mt-5">{% translate "This Pinterest sign-in manages no ad account yet. Open one below, or sign in with an account that already has one." %}</div>
+{% endif %}
+
+<details class="a-card mt-6 p-4" {% if not accounts %}open{% endif %}>
+    <summary class="text-sm font-semibold text-neutral-950 cursor-pointer">{% translate "Open a new ad account" %}</summary>
+    <p class="text-xs text-neutral-600 mt-2">{% translate "Pinterest opens it in the name of the Pinterest account that signed in, which has to be a business account. Add the payment method on Pinterest before activating campaigns." %}</p>
+    <form method="post" action="{% url 'ads:pinterest_account_create' workspace_id=workspace_id %}" class="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-4 items-end">
+        {% csrf_token %}
+        {% include "components/_form_field.html" with field=create_form.name class="sm:col-span-2" %}
+        {% include "components/_form_field.html" with field=create_form.country %}
+        {% include "components/_form_field.html" with field=create_form.currency %}
+        <div class="sm:col-span-4 flex justify-end">
+            <button type="submit" class="btn-outline">{% translate "Open ad account" %}</button>
+        </div>
+    </form>
+</details>
+{% endif %}
+</div>

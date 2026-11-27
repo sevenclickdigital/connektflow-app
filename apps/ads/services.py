@@ -18,6 +18,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.db import transaction
@@ -172,7 +173,13 @@ def _call(connection: AdsConnection, fn, *args, **kwargs):
 
 
 def get_connection(workspace_id) -> AdsConnection | None:
-    return AdsConnection.objects.for_workspace(workspace_id).select_related("workspace").first()
+    """The workspace's Meta Ads connection (Pinterest's is ``apps.ads.pinterest.get_connection``)."""
+    return (
+        AdsConnection.objects.for_workspace(workspace_id)
+        .filter(platform=AdsConnection.Platform.META)
+        .select_related("workspace")
+        .first()
+    )
 
 
 def finish_sign_in(*, workspace, user, code: str, redirect_uri: str) -> AdsConnection:
@@ -198,9 +205,13 @@ def finish_sign_in(*, workspace, user, code: str, redirect_uri: str) -> AdsConne
 
     expires_at = timezone.now() + timedelta(seconds=tokens.expires_in) if tokens.expires_in else None
     with transaction.atomic():
-        connection = AdsConnection.objects.select_for_update().filter(workspace=workspace).first()
+        connection = (
+            AdsConnection.objects.select_for_update()
+            .filter(workspace=workspace, platform=AdsConnection.Platform.META)
+            .first()
+        )
         if connection is None:
-            connection = AdsConnection(workspace=workspace)
+            connection = AdsConnection(workspace=workspace, platform=AdsConnection.Platform.META)
         connection.access_token = tokens.access_token
         connection.token_expires_at = expires_at
         connection.meta_user_id = profile.platform_id
@@ -301,6 +312,11 @@ class Campaign:
     insights: meta_ads.Insights = field(default_factory=meta_ads.Insights)
     # The same numbers for the window of equal length just before.
     previous: meta_ads.Insights = field(default_factory=meta_ads.Insights)
+    # False when the platform has no numbers for that earlier window (Pinterest
+    # keeps 90 days): then nothing is compared.
+    compared: bool = True
+    # The campaign in the platform's own ads manager.
+    manager_url: str = ""
 
     @property
     def is_active(self) -> bool:
@@ -330,12 +346,14 @@ class Campaign:
 
     @property
     def key_change(self) -> Change | None:
+        if not self.compared:
+            return None
         return compare(self.insights, self.previous, self.key_metric)
 
     @property
     def pays_back(self) -> bool | None:
         """Sales campaigns only: whether the purchases brought back at least what was spent."""
-        if self.objective != "OUTCOME_SALES" or self.insights.roas is None:
+        if self.objective not in SALES_OBJECTIVES or self.insights.roas is None:
             return None
         return self.insights.roas >= 1
 
@@ -360,14 +378,24 @@ BETTER = {
     "cost_per_lead": "lower",
 }
 
-# objective → the metric a campaign of that objective is judged by.
+# objective → the metric a campaign of that objective is judged by. Meta's
+# objectives and Pinterest's (``objective_type``) have different names, so both
+# sit here.
 KEY_METRICS = {
     "OUTCOME_SALES": "roas",
     "OUTCOME_LEADS": "cost_per_lead",
     "OUTCOME_TRAFFIC": "cpc",
     "OUTCOME_ENGAGEMENT": "cpc",
     "OUTCOME_AWARENESS": "cpm",
+    "SALES": "roas",
+    "WEB_CONVERSION": "roas",
+    "CATALOG_SALES": "roas",
+    "LEADS": "cost_per_lead",
+    "CONSIDERATION": "cpc",
+    "WEB_SESSIONS": "cpc",
+    "AWARENESS": "cpm",
 }
+SALES_OBJECTIVES = frozenset({"OUTCOME_SALES", "SALES", "WEB_CONVERSION", "CATALOG_SALES"})
 
 KEY_METRIC_LABELS = {
     "roas": _("Return on ad spend"),
@@ -435,12 +463,14 @@ def _status(effective: str) -> tuple[str, str]:
     return str(label), tone
 
 
-def _campaign_from_row(row: dict, currency: str) -> Campaign:
+def _campaign_from_row(row: dict, currency: str, ad_account_id: str = "") -> Campaign:
+    """``ad_account_id`` is the number, without "act_": it only builds the Ads Manager link."""
     effective = row.get("effective_status") or row.get("status") or ""
     label, tone = _status(effective)
     objective = row.get("objective") or ""
+    campaign_id = str(row.get("id"))
     return Campaign(
-        id=str(row.get("id")),
+        id=campaign_id,
         name=row.get("name") or "",
         objective=objective,
         objective_label=str(OBJECTIVES.get(objective, objective)),
@@ -452,6 +482,10 @@ def _campaign_from_row(row: dict, currency: str) -> Campaign:
         lifetime_budget=meta_ads.from_minor_units(row.get("lifetime_budget"), currency),
         start_time=_parse_time(row.get("start_time")),
         stop_time=_parse_time(row.get("stop_time")),
+        manager_url=(
+            "https://adsmanager.facebook.com/adsmanager/manage/campaigns?"
+            + urlencode({"act": ad_account_id, "selected_campaign_ids": campaign_id})
+        ),
     )
 
 
@@ -483,7 +517,7 @@ def list_campaigns(connection: AdsConnection, *, days: int = DEFAULT_RANGE, end:
     """The ad account's campaigns (archived ones last), each with its numbers for the window
     and for the window before it."""
     rows = _call(connection, meta_ads.MetaAdsClient.campaigns, connection.ad_account_id)
-    campaigns = [_campaign_from_row(row, connection.currency) for row in rows]
+    campaigns = [_campaign_from_row(row, connection.currency, _numeric_account_id(connection)) for row in rows]
     current = _per_campaign(connection, *date_window(days, end))
     previous = _per_campaign(connection, *previous_window(days, end))
     for campaign in campaigns:
@@ -508,7 +542,7 @@ def get_campaign(connection: AdsConnection, campaign_id: str) -> tuple[Campaign,
     row = _call(connection, meta_ads.MetaAdsClient.campaign, campaign_id)
     if str(row.get("account_id") or "") != _numeric_account_id(connection):
         raise AdsError(_("This campaign was not found in the connected ad account."))
-    return _campaign_from_row(row, connection.currency), row
+    return _campaign_from_row(row, connection.currency, _numeric_account_id(connection)), row
 
 
 @dataclass

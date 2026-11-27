@@ -29,7 +29,7 @@ from apps.members.models import WorkspaceMembership
 from apps.social_accounts.views import _sign_state, _unsign_state, finish_in_popup
 from apps.workspaces.models import Workspace
 
-from . import services
+from . import pinterest, services
 from .forms import AdSetEditForm, AssetChoiceForm, CampaignCreateForm, CampaignRenameForm
 from .models import AdsConnection
 
@@ -49,6 +49,25 @@ def _period(request) -> Period:
 def _can_manage(request) -> bool:
     membership = request.workspace_membership
     return bool(membership and membership.effective_permissions.get("manage_social_accounts"))
+
+
+def platform_tabs(workspace_id, current: str) -> list[dict]:
+    """The Meta Ads / Pinterest Ads switch of the Ads pages, when the workspace has both."""
+    platforms = set(AdsConnection.objects.for_workspace(workspace_id).values_list("platform", flat=True).distinct())
+    if len(platforms) < 2:
+        return []
+    return [
+        {
+            "label": _("Meta Ads"),
+            "url": reverse("ads:index", kwargs={"workspace_id": workspace_id}),
+            "active": current == AdsConnection.Platform.META,
+        },
+        {
+            "label": _("Pinterest Ads"),
+            "url": reverse("ads:pinterest_index", kwargs={"workspace_id": workspace_id}),
+            "active": current == AdsConnection.Platform.PINTEREST,
+        },
+    ]
 
 
 def _ready_connection(request, workspace_id):
@@ -75,12 +94,16 @@ def index(request, workspace_id):
     (``overview``). Not connected: whoever can connect goes to Social Accounts;
     anyone else is told it is not set up."""
     connection = services.get_connection(request.workspace.id)
+    if connection is None and pinterest.get_connection(request.workspace.id) is not None:
+        # The sidebar's Ads entry leads here; Pinterest Ads alone lives on its own page.
+        return redirect("ads:pinterest_index", workspace_id=workspace_id)
     context = {
         "workspace_id": workspace_id,
         "connection": connection,
         "can_manage": _can_manage(request),
         "period": _period(request),
         "range_choices": services.RANGE_CHOICES,
+        "platform_tabs": platform_tabs(request.workspace.id, AdsConnection.Platform.META),
     }
     if connection is None and context["can_manage"]:
         # Connecting happens on the Social Accounts page, with the other platforms.
@@ -139,44 +162,40 @@ def connect(request, workspace_id):
     except services.AdsNotConfiguredError as exc:
         messages.error(request, str(exc))
         return redirect("ads:index", workspace_id=workspace_id)
-    nonce = secrets.token_urlsafe(32)
-    request.session[OAUTH_SESSION_KEY] = {"nonce": nonce, "workspace_id": str(workspace_id)}
-    state = _sign_state(workspace_id, STATE_PLATFORM, request.user.id, nonce)
+    state = start_sign_in(request, workspace_id, session_key=OAUTH_SESSION_KEY, state_platform=STATE_PLATFORM)
     redirect_uri = request.build_absolute_uri(reverse("ads_callback:meta_callback"))
     return redirect(client.get_auth_url(redirect_uri, state))
 
 
-@login_required
-@ratelimit(key="user", rate="20/m", block=True)
-@require_GET
-@finish_in_popup
-def meta_callback(request):
-    """Meta's Login dialog comes back here, outside any workspace URL.
+def checked_callback(request, *, session_key: str, state_platform: str, index_url_name: str, cancelled: str):
+    """Check an ads sign-in coming back outside any workspace URL.
 
     The signed state names the workspace; the session nonce, the user and the
-    permission are all checked again before the token is kept.
+    permission are all checked again before anything is kept. Returns
+    ``(workspace, code, None)``, or ``(None, "", response)`` with where to go
+    instead (the message already queued).
     """
-    session_data = request.session.pop(OAUTH_SESSION_KEY, {})
+    session_data = request.session.pop(session_key, {})
     fallback_workspace = session_data.get("workspace_id")
     if request.GET.get("error"):
-        messages.error(request, _("The Meta sign-in was cancelled or refused."))
+        messages.error(request, cancelled)
         if fallback_workspace:
-            return redirect("ads:index", workspace_id=fallback_workspace)
-        return redirect("dashboard")
+            return None, "", redirect(index_url_name, workspace_id=fallback_workspace)
+        return None, "", redirect("dashboard")
 
     try:
         state = _unsign_state(request.GET.get("state", ""))
     except signing.BadSignature:
         messages.error(request, _("Invalid or expired OAuth state. Please try again."))
-        return redirect("dashboard")
+        return None, "", redirect("dashboard")
     if (
-        state.get("platform") != STATE_PLATFORM
+        state.get("platform") != state_platform
         or not session_data
         or session_data.get("nonce") != state.get("nonce")
         or session_data.get("workspace_id") != state.get("workspace_id")
     ):
         messages.error(request, _("OAuth session mismatch. Please try again."))
-        return redirect("dashboard")
+        return None, "", redirect("dashboard")
     if str(request.user.id) != state.get("user_id"):
         raise PermissionDenied("OAuth state does not match current user.")
 
@@ -191,7 +210,32 @@ def meta_callback(request):
     code = request.GET.get("code", "")
     if not code:
         messages.error(request, _("Missing authorization code or state parameter."))
-        return redirect("ads:index", workspace_id=workspace_id)
+        return None, "", redirect(index_url_name, workspace_id=workspace_id)
+    return workspace, code, None
+
+
+def start_sign_in(request, workspace_id, *, session_key: str, state_platform: str) -> str:
+    """Remember the sign-in in the session and return the signed state to send."""
+    nonce = secrets.token_urlsafe(32)
+    request.session[session_key] = {"nonce": nonce, "workspace_id": str(workspace_id)}
+    return _sign_state(workspace_id, state_platform, request.user.id, nonce)
+
+
+@login_required
+@ratelimit(key="user", rate="20/m", block=True)
+@require_GET
+@finish_in_popup
+def meta_callback(request):
+    """Meta's Login dialog comes back here, outside any workspace URL."""
+    workspace, code, elsewhere = checked_callback(
+        request,
+        session_key=OAUTH_SESSION_KEY,
+        state_platform=STATE_PLATFORM,
+        index_url_name="ads:index",
+        cancelled=_("The Meta sign-in was cancelled or refused."),
+    )
+    if elsewhere:
+        return elsewhere
     try:
         services.finish_sign_in(
             workspace=workspace,
@@ -201,9 +245,9 @@ def meta_callback(request):
         )
     except services.AdsError as exc:
         messages.error(request, str(exc))
-        return redirect("ads:index", workspace_id=workspace_id)
+        return redirect("ads:index", workspace_id=workspace.id)
     messages.success(request, _("Meta Ads connected. Choose the ad account, Pixel and Page to use."))
-    return redirect("ads:settings", workspace_id=workspace_id)
+    return redirect("ads:settings", workspace_id=workspace.id)
 
 
 @login_required
@@ -261,7 +305,9 @@ def connection_settings(request, workspace_id):
 @require_POST
 def disconnect(request, workspace_id):
     """Forget the workspace's Meta Ads sign-in; back to the Social Accounts page when it came from there."""
-    connection = get_object_or_404(AdsConnection, workspace_id=request.workspace.id)
+    connection = get_object_or_404(
+        AdsConnection, workspace_id=request.workspace.id, platform=AdsConnection.Platform.META
+    )
     services.disconnect(connection)
     messages.success(
         request, _("Meta Ads disconnected. Campaigns keep running in the ad account until you stop them there.")
