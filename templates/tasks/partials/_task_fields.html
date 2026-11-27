@@ -45,7 +45,7 @@ fields follow the board's ``taskEditing``: disabled, and not even opened, until 
             <div class="relative" title="{% translate 'Where the task is on the board.' %}">
                 <span class="new-item-dot" :class="'kanban-tone-' + columnTone()" aria-hidden="true"></span>
                 <select id="{{ prefix }}-column" name="column" x-model="column" class="form-input-styled bb-select w-full text-sm cursor-pointer !pl-8">
-                    {% for col in columns %}<option value="{{ col.id }}" data-tone="{{ col.tone }}">{{ col.name }}</option>{% endfor %}
+                    {% for col in columns %}<option value="{{ col.id }}" data-tone="{{ col.tone }}">{{ col.display_name }}</option>{% endfor %}
                 </select>
             </div>
         </div>

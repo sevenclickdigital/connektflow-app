@@ -28,7 +28,7 @@ menu opens the task and, for whoever can edit, moves it to another column or del
                 <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500 border-t border-neutral-200 mt-1">{% translate "Move to" %}</div>
                 {% for other in columns %}{% if other.id != column.id %}
                 <button type="button" class="w-full text-left px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50 cursor-pointer truncate"
-                        @click="open = false; moveTask('{{ task.id }}', '{{ other.id }}')">{{ other.name }}</button>
+                        @click="open = false; moveTask('{{ task.id }}', '{{ other.id }}')">{{ other.display_name }}</button>
                 {% endif %}{% endfor %}
                 <div class="border-t border-neutral-200 mt-1 pt-1">
                     <button type="button" class="w-full text-left px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 cursor-pointer"

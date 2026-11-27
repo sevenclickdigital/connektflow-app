@@ -16,7 +16,7 @@ from django.utils.translation import override
 from apps.members.models import WorkspaceMembership
 
 from . import creative_formats
-from .models import Task, TaskChecklist, TaskChecklistItem, TaskColumn, TaskComment
+from .models import DEFAULT_COLUMN_NAMES, Task, TaskChecklist, TaskChecklistItem, TaskColumn, TaskComment
 
 
 def ensure_columns(workspace) -> list[TaskColumn]:
@@ -32,11 +32,18 @@ def ensure_columns(workspace) -> list[TaskColumn]:
     tone = TaskColumn.Tone
     with override(settings.LANGUAGE_CODE):
         defaults = [
-            (_("To do"), tone.BRAND, False, False, False),
-            (_("In progress"), tone.INFO, False, False, False),
-            (_("In review"), tone.WARNING, True, False, False),
-            (_("Changes requested"), tone.ERROR, False, True, False),
-            (_("Ready to publish"), tone.SUCCESS, False, False, True),
+            (str(name), colour, review, changes, done)
+            for name, (colour, review, changes, done) in zip(
+                DEFAULT_COLUMN_NAMES,
+                [
+                    (tone.BRAND, False, False, False),
+                    (tone.INFO, False, False, False),
+                    (tone.WARNING, True, False, False),
+                    (tone.ERROR, False, True, False),
+                    (tone.SUCCESS, False, False, True),
+                ],
+                strict=True,
+            )
         ]
     return [
         TaskColumn.objects.create(

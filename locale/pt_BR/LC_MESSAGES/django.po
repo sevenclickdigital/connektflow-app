@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 00:40+0000\n"
+"POT-Creation-Date: 2026-11-27 00:48+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -552,7 +552,7 @@ msgid "Processing"
 msgstr "Processando"
 
 #: apps/ads/services.py:74 apps/social_accounts/whatsapp_templates.py:34
-#: apps/social_accounts/whatsapp_templates.py:35 apps/tasks/services.py:37
+#: apps/social_accounts/whatsapp_templates.py:35 apps/tasks/models.py:22
 msgid "In review"
 msgstr "Em revisão"
 
@@ -1206,7 +1206,7 @@ msgstr ""
 "não informados por %(platform)s: %(listed)s."
 
 #: apps/analytics/services.py:510 apps/composer/views.py:868
-#: apps/composer/views.py:877 apps/composer/views.py:5382
+#: apps/composer/views.py:877 apps/composer/views.py:5385
 #: templates/composer/compose.html:1659
 msgid "and"
 msgstr "e"
@@ -4668,7 +4668,7 @@ msgid "Saved %(time)s"
 msgstr "Salvo às %(time)s"
 
 #: apps/composer/views.py:2416 apps/composer/views.py:3372
-#: apps/composer/views.py:4408
+#: apps/composer/views.py:4411
 msgid "No file provided"
 msgstr "Nenhum arquivo enviado"
 
@@ -4824,66 +4824,66 @@ msgstr "Ideias prontas para produção."
 msgid "Ideas that will not be used."
 msgstr "Ideias que não serão utilizadas."
 
-#: apps/composer/views.py:4249 apps/media_library/cropping.py:32
+#: apps/composer/views.py:4252 apps/media_library/cropping.py:32
 #: apps/media_library/services.py:985 apps/tasks/views.py:971
 msgid "Storage quota exceeded. Free up space or upgrade your plan."
 msgstr ""
 "Cota de armazenamento excedida. Libere espaço ou faça upgrade do seu plano."
 
-#: apps/composer/views.py:4322
+#: apps/composer/views.py:4325
 msgid "The template is now one of your ideas."
 msgstr "O modelo agora é uma das suas ideias."
 
-#: apps/composer/views.py:4831
+#: apps/composer/views.py:4834
 msgid "Name is required."
 msgstr "O nome é obrigatório."
 
-#: apps/composer/views.py:4860
+#: apps/composer/views.py:4863
 msgid "Column must be empty before deleting."
 msgstr "A coluna precisa estar vazia antes de ser excluída."
 
-#: apps/composer/views.py:5100
+#: apps/composer/views.py:5103
 msgid "CSV file too large (max 5 MB)."
 msgstr "Arquivo CSV muito grande (máx. 5 MB)."
 
-#: apps/composer/views.py:5110
+#: apps/composer/views.py:5113
 msgid "CSV file is empty."
 msgstr "O arquivo CSV está vazio."
 
-#: apps/composer/views.py:5422
+#: apps/composer/views.py:5425
 msgid "Tag name is required."
 msgstr "O nome da tag é obrigatório."
 
-#: apps/composer/views.py:5425
+#: apps/composer/views.py:5428
 msgid "Unknown tag kind."
 msgstr "Tipo de etiqueta desconhecido."
 
-#: apps/composer/views.py:5440
+#: apps/composer/views.py:5443
 msgid "Group name is required."
 msgstr "O nome do grupo é obrigatório."
 
-#: apps/composer/views.py:5451
+#: apps/composer/views.py:5454
 msgid "A group with this name already exists."
 msgstr "Já existe um grupo com este nome."
 
-#: apps/composer/views.py:5474
+#: apps/composer/views.py:5477
 msgid "The template was not sent."
 msgstr "O modelo não foi enviado."
 
-#: apps/composer/views.py:5487
+#: apps/composer/views.py:5490
 #, python-format
 msgid "You already have %(count)s templates waiting for approval."
 msgstr "Você já tem %(count)s modelos aguardando aprovação."
 
-#: apps/composer/views.py:5492
+#: apps/composer/views.py:5495
 msgid "Template sent. Thank you!"
 msgstr "Modelo enviado. Obrigado!"
 
-#: apps/composer/views.py:5493
+#: apps/composer/views.py:5496
 msgid "It reaches every brand's shelf once our team approves it."
 msgstr "Ele aparece para todas as marcas assim que a nossa equipe aprovar."
 
-#: apps/composer/views.py:5525
+#: apps/composer/views.py:5528
 msgid "This tag no longer exists."
 msgstr "Esta tag não existe mais."
 
@@ -6033,7 +6033,7 @@ msgstr "Perdida"
 msgid "Violet"
 msgstr "Violeta"
 
-#: apps/funnels/models.py:51 apps/tasks/models.py:25
+#: apps/funnels/models.py:51 apps/tasks/models.py:35
 msgid "Blue"
 msgstr "Azul"
 
@@ -6041,15 +6041,15 @@ msgstr "Azul"
 msgid "Amber"
 msgstr "Âmbar"
 
-#: apps/funnels/models.py:53 apps/tasks/models.py:24
+#: apps/funnels/models.py:53 apps/tasks/models.py:34
 msgid "Purple"
 msgstr "Roxo"
 
-#: apps/funnels/models.py:54 apps/tasks/models.py:27
+#: apps/funnels/models.py:54 apps/tasks/models.py:37
 msgid "Green"
 msgstr "Verde"
 
-#: apps/funnels/models.py:55 apps/tasks/models.py:28
+#: apps/funnels/models.py:55 apps/tasks/models.py:38
 msgid "Red"
 msgstr "Vermelho"
 
@@ -9194,74 +9194,74 @@ msgid "Video cover"
 msgstr "Capa do vídeo"
 
 #: apps/tasks/migrations/0006_changes_requested_column.py:13
-#: apps/tasks/services.py:38
+#: apps/tasks/models.py:23
 msgid "Changes requested"
 msgstr "Alterações solicitadas"
 
 #: apps/tasks/migrations/0008_ready_to_publish_column.py:11
-#: apps/tasks/services.py:39
+#: apps/tasks/models.py:24
 msgid "Ready to publish"
 msgstr "Pronto para publicar"
 
-#: apps/tasks/models.py:26
-msgid "Yellow"
-msgstr "Amarelo"
-
-#: apps/tasks/models.py:57
-msgid "Low"
-msgstr "Baixa"
-
-#: apps/tasks/models.py:58
-msgid "Medium"
-msgstr "Média"
-
-#: apps/tasks/models.py:59
-msgid "High"
-msgstr "Alta"
-
-#: apps/tasks/services.py:35
+#: apps/tasks/models.py:20
 msgid "To do"
 msgstr "A fazer"
 
-#: apps/tasks/services.py:36
+#: apps/tasks/models.py:21
 msgid "In progress"
 msgstr "Em produção"
 
-#: apps/tasks/services.py:81 templates/tasks/board.html:4
+#: apps/tasks/models.py:36
+msgid "Yellow"
+msgstr "Amarelo"
+
+#: apps/tasks/models.py:74
+msgid "Low"
+msgstr "Baixa"
+
+#: apps/tasks/models.py:75
+msgid "Medium"
+msgstr "Média"
+
+#: apps/tasks/models.py:76
+msgid "High"
+msgstr "Alta"
+
+#: apps/tasks/services.py:88 templates/tasks/board.html:4
 #: templates/tasks/board.html:13
 msgid "Tasks"
 msgstr "Tarefas"
 
-#: apps/tasks/services.py:164
+#: apps/tasks/services.py:171
 #, python-format
 msgid "Checklist %(number)s"
 msgstr "Checklist %(number)s"
 
-#: apps/tasks/services.py:643
+#: apps/tasks/services.py:650
 #, python-format
 msgid "New task: %(title)s"
 msgstr "Nova tarefa: %(title)s"
 
-#: apps/tasks/services.py:644
+#: apps/tasks/services.py:651
 #, python-format
 msgid "%(who)s made you responsible for this task."
 msgstr "%(who)s colocou você como responsável por esta tarefa."
 
-#: apps/tasks/services.py:657
+#: apps/tasks/services.py:664
 #, python-format
 msgid "Ready for review: %(title)s"
 msgstr "Pronta para revisão: %(title)s"
 
-#: apps/tasks/services.py:658
+#: apps/tasks/services.py:665
 msgid "The task was sent for review."
 msgstr "A tarefa foi enviada para revisão."
 
-#: apps/tasks/services.py:684
+#: apps/tasks/services.py:691
 #, python-format
 msgid "Due tomorrow: %(title)s"
 msgstr "Prazo amanhã: %(title)s"
 
-#: apps/tasks/services.py:860
+#: apps/tasks/services.py:867
 msgid "Other to-dos"
 msgstr "Outras tarefas"
 
@@ -17897,7 +17897,7 @@ msgstr "Agendado para"
 
 #: templates/calendar/partials/_post_card.html:110
 #, python-format
-msgid "Id on %(platform)s"
+msgid "ID on %(platform)s"
 msgstr "ID no %(platform)s"
 
 #: templates/calendar/partials/_post_card.html:126
@@ -19858,11 +19858,11 @@ msgid "Choose a board for the pin."
 msgstr "Escolha uma pasta para o pin."
 
 #: templates/composer/compose.html:2558
-msgid "Add an image or a video, or unpick this channel."
+msgid "Add an image or a video, or deselect this channel."
 msgstr "Adicione uma imagem ou um vídeo, ou desmarque este canal."
 
 #: templates/composer/compose.html:2559
-msgid "Add a video, or unpick this channel."
+msgid "Add a video, or deselect this channel."
 msgstr "Adicione um vídeo, ou desmarque este canal."
 
 #: templates/composer/compose.html:2560
@@ -19941,7 +19941,7 @@ msgstr ""
 "seu público."
 
 #: templates/composer/create_landing.html:175
-msgid "Keep, organise and develop the ideas for your next content."
+msgid "Capture, organize and develop ideas for your next posts."
 msgstr "Guarde, organize e desenvolva as ideias dos seus próximos conteúdos."
 
 #: templates/composer/create_landing.html:183
@@ -20557,7 +20557,7 @@ msgid "Pinterest has this pin"
 msgstr "O Pinterest tem este pin"
 
 #: templates/composer/partials/_pinterest_pin.html:18
-msgid "Pin id"
+msgid "Pin ID"
 msgstr "ID do pin"
 
 #: templates/composer/partials/_pinterest_pin.html:21

@@ -105,7 +105,7 @@ gets this card back) and view_url (the post on its network, or empty).
                 {% if pp.platform_post_id %}
                 <li class="flex items-start gap-2" x-data="{ copied: false }">
                     <svg class="w-4 h-4 flex-shrink-0 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/></svg>
-                    <span class="min-w-0">{% blocktranslate with platform=account.get_platform_display %}Id on {{ platform }}{% endblocktranslate %}<br>
+                    <span class="min-w-0">{% blocktranslate with platform=account.get_platform_display %}ID on {{ platform }}{% endblocktranslate %}<br>
                         <span class="inline-flex items-center gap-1.5">
                             <span class="font-mono text-neutral-800 break-all" x-ref="networkId">{{ pp.platform_post_id }}</span>
                             <button type="button" class="text-brand-700 hover:text-brand-800 font-semibold cursor-pointer"

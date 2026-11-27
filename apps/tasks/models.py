@@ -14,6 +14,16 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.common.managers import WorkspaceScopedManager
 
+#: The columns a board is created with (services.ensure_columns), in order.
+#: Stored in the site's language; ``TaskColumn.display_name`` shows them in the reader's.
+DEFAULT_COLUMN_NAMES = (
+    _("To do"),
+    _("In progress"),
+    _("In review"),
+    _("Changes requested"),
+    _("Ready to publish"),
+)
+
 
 class TaskColumn(models.Model):
     """A column of the board. Exactly the columns flagged ``is_done`` count as finished."""
@@ -43,6 +53,13 @@ class TaskColumn(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = WorkspaceScopedManager()
+
+    @property
+    def display_name(self) -> str:
+        """The name to show: a default column's in the reader's language, a renamed one as written."""
+        from apps.common.seeded_names import localized_seed_name
+
+        return localized_seed_name(self.name, DEFAULT_COLUMN_NAMES)
 
     class Meta:
         db_table = "tasks_column"

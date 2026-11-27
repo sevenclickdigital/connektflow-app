@@ -15,7 +15,7 @@ Expects: pin ({id, title, description, board_id, created_at, image_url}) or erro
     </p>
     {% if pin.image_url %}<img src="{{ pin.image_url }}" alt="" class="w-full max-h-40 object-contain rounded-md bg-neutral-50">{% endif %}
     <dl class="space-y-1">
-        <div><dt class="inline font-semibold text-neutral-900">{% translate "Pin id" %}:</dt> <dd class="inline font-mono break-all">{{ pin.id }}</dd></div>
+        <div><dt class="inline font-semibold text-neutral-900">{% translate "Pin ID" %}:</dt> <dd class="inline font-mono break-all">{{ pin.id }}</dd></div>
         {% if pin.title %}<div><dt class="inline font-semibold text-neutral-900">{% translate "Title" %}:</dt> <dd class="inline">{{ pin.title }}</dd></div>{% endif %}
         {% if pin.description %}<div><dt class="inline font-semibold text-neutral-900">{% translate "Description" %}:</dt> <dd class="inline whitespace-pre-line">{{ pin.description|truncatechars:300 }}</dd></div>{% endif %}
         {% if pin.board_id %}<div><dt class="inline font-semibold text-neutral-900">{% translate "Board" context "pinterest" %}:</dt> <dd class="inline font-mono break-all">{{ pin.board_id }}</dd></div>{% endif %}

@@ -4034,6 +4034,9 @@ def _idea_columns(workspace, tag=None):
     )
     with override(settings.LANGUAGE_CODE):
         default_names = _default_idea_column_names()
+    # The default names are stored in the site's language; a column still
+    # carrying one reads in the reader's language (a renamed one as written).
+    reader_names = _default_idea_column_names()
     columns = []
     for index, grp in enumerate(groups):
         is_default = index < len(hints) and grp.name == default_names[index]
@@ -4041,7 +4044,7 @@ def _idea_columns(workspace, tag=None):
             {
                 "id": str(grp.id),
                 "key": str(grp.id),
-                "label": grp.name,
+                "label": reader_names[index] if is_default else grp.name,
                 "hint": hints[index] if is_default else "",
                 # The colour says what the column means, so it follows the same
                 # rule as the description; any other column takes the brand's.

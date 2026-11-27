@@ -20,15 +20,15 @@ Expects: column (with task_list), column_tones, can_edit, workspace.
     <button type="button" class="kanban-column-strip" x-show="closed" x-cloak
             @click="closed = false"
             @dragover="dragOver($event)" @dragleave="dragLeave($event)" @drop="drop($event, '{{ column.id }}')"
-            aria-label="{% blocktranslate with name=column.name %}Open the column {{ name }}{% endblocktranslate %}">
+            aria-label="{% blocktranslate with name=column.display_name %}Open the column {{ name }}{% endblocktranslate %}">
         <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
-        <span class="kanban-column-strip-label">{{ column.name }}</span>
+        <span class="kanban-column-strip-label">{{ column.display_name }}</span>
         <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold bg-white text-neutral-600">{{ column.task_list|length }}</span>
     </button>
 
     <header class="flex items-center justify-between gap-2 px-3 py-2.5" x-show="!closed">
         <div class="flex-1 flex items-center gap-2 min-w-0" x-show="!renaming">
-            <h2 class="min-w-0 text-[13px] font-bold text-neutral-900 truncate" title="{{ column.name }}">{{ column.name }}</h2>
+            <h2 class="min-w-0 text-[13px] font-bold text-neutral-900 truncate" title="{{ column.display_name }}">{{ column.display_name }}</h2>
             <span class="kanban-count flex-shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold">{{ column.task_list|length }}</span>
         </div>
         {% if can_edit %}
@@ -114,7 +114,7 @@ Expects: column (with task_list), column_tones, can_edit, workspace.
             {% endif %}
             <button type="button" @click="closed = true"
                     class="w-6 h-6 rounded-md text-neutral-600 hover:text-neutral-700 hover:bg-white/80 flex items-center justify-center transition-colors cursor-pointer"
-                    title="{% translate 'Close column' %}" aria-label="{% blocktranslate with name=column.name %}Close the column {{ name }}{% endblocktranslate %}">
+                    title="{% translate 'Close column' %}" aria-label="{% blocktranslate with name=column.display_name %}Close the column {{ name }}{% endblocktranslate %}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
         </div>
