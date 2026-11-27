@@ -554,6 +554,18 @@ class TestSocialAccountsPage:
         assert "Loja" in page
         assert response.context["stats"]["connected"] == 1
 
+    def test_a_connected_ad_account_can_be_disconnected_from_its_card(self, workspace, manager, connection):
+        client = _logged_in(manager)
+        kwargs = {"workspace_id": workspace.id}
+        page = client.get(reverse("social_accounts:list", kwargs=kwargs)).content.decode()
+        assert f'action="{reverse("ads:disconnect", kwargs=kwargs)}"' in page
+
+        response = client.post(reverse("ads:disconnect", kwargs=kwargs), {"return_to": "accounts"})
+
+        assert response.status_code == 302
+        assert response.url == reverse("social_accounts:list", kwargs=kwargs)
+        assert not AdsConnection.objects.filter(pk=connection.pk).exists()
+
     def test_connect_opens_the_guide_which_posts_into_the_popup(self, workspace, manager):
         page = _logged_in(manager).get(reverse("social_accounts:list", kwargs={"workspace_id": workspace.id}))
         html = page.content.decode()

@@ -4,7 +4,8 @@ Usage: {% include "social_accounts/partials/_meta_ads_card.html" with meta_ads=m
 meta_ads comes from social_accounts.views._meta_ads_card. Not connected: it sits
 in the connect grid and its button starts the Meta sign-in (apps.ads). Connected:
 it sits under "Ad accounts", the heading other ad
-platforms join, and opens the Ads screen. Connect and
+platforms join, opens the Ads screen, and its "⋯" menu reconnects or
+disconnects it (ads:disconnect, back to this page). Connect and
 Reconnect open the page's connect guide (``guide = 'meta_ads'``), which the page
 includes once, outside the card.
 {% endcomment %}
@@ -26,6 +27,22 @@ includes once, outside the card.
         {% else %}
         <a href="{% url 'ads:index' workspace_id=workspace_id %}" class="btn-soft py-1.5 px-3">{% translate "Open" %}</a>
         {% endif %}
+        {% comment %}The "⋯" menu of the social account cards: disconnecting here as there.{% endcomment %}
+        <div class="relative" x-data="{ menu: false, confirmDisconnect: false }">
+            <button type="button" @click="menu = !menu" class="w-8 h-8 inline-flex items-center justify-center rounded-md text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50 cursor-pointer" aria-label="{% translate 'More actions' %}">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+            </button>
+            <div x-show="menu" x-cloak @click.away="menu = false" x-transition
+                 class="absolute right-0 top-full mt-1 z-20 w-48 bg-white rounded-lg shadow-lg ring-1 ring-neutral-300 py-1">
+                <a href="{% url 'ads:index' workspace_id=workspace_id %}" class="block px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50">{% translate "Open" %}</a>
+                {% if meta_ads.configured %}<button type="button" @click="menu = false; guide = 'meta_ads'" class="w-full text-left px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50 cursor-pointer">{% translate "Reconnect" %}</button>{% endif %}
+                <button type="button" @click="menu = false; confirmDisconnect = true" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer">{% translate "Disconnect" %}</button>
+            </div>
+            {% url 'ads:disconnect' workspace_id=workspace_id as disconnect_url %}
+            {% translate "Meta Ads" as ads_name %}
+            {% translate "This removes the Meta Ads sign-in from Connekt Flow. Campaigns keep running in the ad account until you stop them there." as consequence %}
+            {% include "social_accounts/partials/_disconnect_confirm.html" with action_url=disconnect_url name=ads_name consequence=consequence return_to="accounts" position="right-0 top-full mt-1" %}
+        </div>
     {% elif meta_ads.configured %}
     <button type="button" class="btn-soft py-1.5 px-3" @click="guide = 'meta_ads'">{% translate "Connect" %}</button>
     {% else %}

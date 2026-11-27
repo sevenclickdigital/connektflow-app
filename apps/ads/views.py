@@ -260,11 +260,14 @@ def connection_settings(request, workspace_id):
 @require_permission("manage_social_accounts")
 @require_POST
 def disconnect(request, workspace_id):
+    """Forget the workspace's Meta Ads sign-in; back to the Social Accounts page when it came from there."""
     connection = get_object_or_404(AdsConnection, workspace_id=request.workspace.id)
     services.disconnect(connection)
     messages.success(
         request, _("Meta Ads disconnected. Campaigns keep running in the ad account until you stop them there.")
     )
+    if request.POST.get("return_to") == "accounts":
+        return redirect("social_accounts:list", workspace_id=workspace_id)
     return redirect("ads:index", workspace_id=workspace_id)
 
 
