@@ -24,7 +24,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext as _
-from django.utils.translation import gettext_lazy
+from django.utils.translation import gettext_lazy, pgettext_lazy
 
 from apps.credentials.models import resolve_platform_credentials
 from providers import meta_ads
@@ -77,7 +77,7 @@ EFFECTIVE_STATUSES = {
     "WITH_ISSUES": (gettext_lazy("With issues"), "warning"),
     "PENDING_BILLING_INFO": (gettext_lazy("Billing pending"), "warning"),
     "DISAPPROVED": (gettext_lazy("Rejected"), "error"),
-    "ARCHIVED": (gettext_lazy("Archived"), "neutral"),
+    "ARCHIVED": (pgettext_lazy("ad status", "Archived"), "neutral"),
     "DELETED": (gettext_lazy("Deleted"), "neutral"),
 }
 

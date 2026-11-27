@@ -135,16 +135,34 @@ class PinterestPinCheckTests(ComposerAuthorizationBase):
             "title": "Oi",
             "description": "Prazer, sou o MOTI!",
             "board_id": "b1",
+            "created_at": "2026-11-27T19:13:25",
             "media": {"images": {"600x": {"url": "https://i.pinimg.com/564x/a.jpg"}}},
         }
-        with mock.patch.object(PinterestProvider, "get_pin", return_value=pin) as get_pin:
+        with (
+            mock.patch.object(PinterestProvider, "get_pin", return_value=pin) as get_pin,
+            mock.patch.object(PinterestProvider, "get_board", return_value={"name": "Connekt Flow News"}) as get_board,
+        ):
             response = self.client.get(self.url)
         assert response.status_code == 200
         assert get_pin.call_args.args[1] == "1129559150354629778"
+        assert get_board.call_args.args[1] == "b1"
         body = response.content.decode()
         assert "1129559150354629778" in body
         assert "Prazer, sou o MOTI!" in body
         assert "https://i.pinimg.com/564x/a.jpg" in body
+        assert "Connekt Flow News" in body
+        assert "2026-11-27T19:13:25" not in body
+
+    def test_the_board_id_stands_in_when_its_name_cannot_be_read(self):
+        pin = {"id": "1129559150354629778", "board_id": "b1"}
+        error = ProviderError("500", platform="pinterest")
+        with (
+            mock.patch.object(PinterestProvider, "get_pin", return_value=pin),
+            mock.patch.object(PinterestProvider, "get_board", side_effect=error),
+        ):
+            response = self.client.get(self.url)
+        assert response.status_code == 200
+        assert "b1" in response.content.decode()
 
     def test_a_refusal_shows_the_reason(self):
         error = ProviderError("404", platform="pinterest", user_message="Pin not found.")

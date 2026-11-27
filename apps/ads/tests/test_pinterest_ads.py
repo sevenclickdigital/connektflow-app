@@ -118,6 +118,15 @@ def _logged_in(user):
     return client
 
 
+NO_CHOICES = {"interests": [], "audiences": [], "conversion_tags": [], "errors": {}}
+
+
+@pytest.fixture
+def no_choices():
+    with mock.patch.object(pinterest, "targeting_choices", return_value=NO_CHOICES):
+        yield
+
+
 def _new_campaign(**overrides):
     values = dict(
         name="Natal",
@@ -359,7 +368,7 @@ class TestCreation:
     def test_an_objective_not_offered_is_refused_before_spending_anything(self, connection):
         fake, patch = fake_pinterest({})
         with patch, pytest.raises(AdsError):
-            pinterest.create_campaign(connection, _new_campaign(objective="SALES"))
+            pinterest.create_campaign(connection, _new_campaign(objective="LEADS"))
         assert fake.calls == []
 
     def test_only_this_workspaces_published_pins_are_offered(self, workspace, connection, organization, manager):
@@ -544,7 +553,7 @@ class TestScreens:
         assert "Grupo" in text
         assert "https://www.pinterest.com/pin/123/" in text
 
-    def test_the_new_campaign_page_lists_the_published_pins(self, workspace, manager, connection):
+    def test_the_new_campaign_page_lists_the_published_pins(self, workspace, manager, connection, no_choices):
         with mock.patch.object(
             pinterest,
             "promotable_pins",
@@ -554,7 +563,7 @@ class TestScreens:
         assert response.status_code == 200
         assert "Meu pin" in response.content.decode()
 
-    def test_each_published_pin_is_offered_with_its_image(self, workspace, manager, connection):
+    def test_each_published_pin_is_offered_with_its_image(self, workspace, manager, connection, no_choices):
         from apps.composer.models import PlatformPost, Post, PostMedia
         from apps.media_library.models import MediaAsset
         from apps.social_accounts.models import SocialAccount
@@ -580,6 +589,8 @@ class TestScreens:
         body = _logged_in(manager).get(_url("pinterest_campaign_new", workspace)).content.decode()
         assert 'value="444"' in body
         assert "robo-pinterest.jpg" in body
+        assert 'data-image="/media/test/robo-pinterest.jpg"' in body
+        assert 'data-account="Pins"' in body
 
     def test_the_settings_list_the_ad_accounts_and_offer_a_new_one(self, workspace, manager, connection):
         fake, patch = fake_pinterest(
@@ -592,3 +603,202 @@ class TestScreens:
         body = response.content.decode()
         assert "Loja" in body
         assert _url("pinterest_account_create", workspace) in body
+
+
+# ------------------------------------------------------------------
+# The full creation: audience, placement, bid
+# ------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestFullCreation:
+    def test_the_ad_group_carries_the_whole_audience_placement_and_bid(self, connection):
+        fake, patch = fake_pinterest(
+            {**CREATION_ROUTES, ("POST", f"ad_accounts/{ACCOUNT}/keywords"): {"keywords": [{}], "errors": []}}
+        )
+        new = _new_campaign(
+            regions=["BR-SP", "BR-RJ"],
+            age_min="25",
+            age_max="44",
+            genders=["female"],
+            locales=["pt"],
+            interests=["935249274030"],
+            keywords=["moveis planejados", "marcenaria"],
+            audiences_include=["2542620905473"],
+            audiences_exclude=["2542620905475"],
+            auto_targeting=False,
+            placement="SEARCH",
+            devices=["iphone", "android_mobile"],
+            bid_strategy="MAX_BID",
+            bid_amount=Decimal("1.50"),
+        )
+        with patch:
+            pinterest.create_campaign(connection, new)
+        (group,) = fake.sent("POST", f"ad_accounts/{ACCOUNT}/ad_groups")["json"]
+        assert group["targeting_spec"] == {
+            "GEO": ["BR-SP", "BR-RJ"],
+            "MINIMUM_AGE": "25",
+            "MAXIMUM_AGE": "44",
+            "GENDER": ["female"],
+            "LOCALE": ["pt"],
+            "INTEREST": ["935249274030"],
+            "AUDIENCE_INCLUDE": ["2542620905473"],
+            "AUDIENCE_EXCLUDE": ["2542620905475"],
+            "APPTYPE": ["iphone", "android_mobile"],
+        }
+        assert group["placement_group"] == "SEARCH"
+        assert group["auto_targeting_enabled"] is False
+        assert group["bid_strategy_type"] == "MAX_BID"
+        assert group["bid_in_micro_currency"] == 1_500_000
+        keywords = fake.sent("POST", f"ad_accounts/{ACCOUNT}/keywords")["json"]
+        assert keywords == {
+            "parent_id": "ag-1",
+            "keywords": [
+                {"match_type": "BROAD", "value": "moveis planejados"},
+                {"match_type": "BROAD", "value": "marcenaria"},
+            ],
+        }
+
+    def test_a_sales_campaign_budgets_its_ad_group_and_optimises_for_the_tag(self, connection):
+        fake, patch = fake_pinterest(dict(CREATION_ROUTES))
+        with patch:
+            pinterest.create_campaign(connection, _new_campaign(objective="SALES", conversion_tag_id="2612345"))
+        (campaign,) = fake.sent("POST", f"ad_accounts/{ACCOUNT}/campaigns")["json"]
+        assert "daily_spend_cap" not in campaign
+        (group,) = fake.sent("POST", f"ad_accounts/{ACCOUNT}/ad_groups")["json"]
+        assert group["budget_in_micro_currency"] == 25_500_000
+        assert group["billable_event"] == "IMPRESSION"
+        goal = group["optimization_goal_metadata"]["conversion_tag_v3_goal_metadata"]
+        assert goal["conversion_tag_id"] == "2612345"
+        assert goal["conversion_event"] == "CHECKOUT"
+
+    def test_refused_keywords_archive_the_campaign_again(self, connection):
+        routes = {
+            **CREATION_ROUTES,
+            ("POST", f"ad_accounts/{ACCOUNT}/keywords"): {"keywords": [], "errors": [{"message": "Bad keyword."}]},
+            ("PATCH", f"ad_accounts/{ACCOUNT}/campaigns"): _batch({"id": "c-1", "status": "ARCHIVED"}),
+        }
+        fake, patch = fake_pinterest(routes)
+        with patch, pytest.raises(AdsError) as caught:
+            pinterest.create_campaign(connection, _new_campaign(keywords=["x"]))
+        assert "Bad keyword." in str(caught.value)
+        assert fake.sent("PATCH", f"ad_accounts/{ACCOUNT}/campaigns")["json"] == [{"id": "c-1", "status": "ARCHIVED"}]
+        assert not [c for c in fake.calls if c[1] == f"ad_accounts/{ACCOUNT}/ads"]
+
+    def test_the_choices_come_from_the_ad_account_and_a_refusal_does_not_break_the_form(self, connection):
+        from django.core.cache import cache
+
+        cache.delete(f"pinterest-ads:interests:{ACCOUNT}")
+        interests = [
+            {"id": "1", "name": "Home decor", "child_interests": [{"id": "2", "name": "Bedroom"}]},
+            {"3": "Art"},
+        ]
+        routes = {
+            ("GET", "resources/targeting/interest"): interests,
+            ("GET", f"ad_accounts/{ACCOUNT}/audiences"): {
+                "items": [{"id": "9", "name": "Clientes", "status": "READY"}, {"id": "8", "status": "TOO_SMALL"}],
+                "bookmark": None,
+            },
+            ("GET", f"ad_accounts/{ACCOUNT}/conversion_tags"): APIError(
+                "403", status_code=403, platform="Pinterest Ads", user_message="No access to tags."
+            ),
+        }
+        fake, patch = fake_pinterest(routes)
+        with patch:
+            choices = pinterest.targeting_choices(connection)
+        assert [o["name"] for o in choices["interests"]] == ["Art", "Bedroom", "Home decor"]
+        assert choices["audiences"] == [{"id": "9", "name": "Clientes"}]
+        assert choices["conversion_tags"] == []
+        assert "No access to tags." in choices["errors"]["conversion_tags"]
+
+
+FORM_POST = {
+    "name": "Natal",
+    "objective": "CONSIDERATION",
+    "pin_id": "123",
+    "countries": ["BR"],
+    "placement": "ALL",
+    "bid_strategy": "AUTOMATIC_BID",
+    "daily_budget": "30",
+    "auto_targeting": "on",
+}
+PINS = [{"id": "123", "title": "Meu pin", "caption": "", "account": "Pins", "is_video": False}]
+CHOICES = {
+    "interests": [{"id": "77", "name": "Home decor"}],
+    "audiences": [{"id": "9", "name": "Clientes"}],
+    "conversion_tags": [],
+    "errors": {},
+}
+
+
+def _form(connection, **changes):
+    from apps.ads.forms import PinterestCampaignCreateForm
+
+    data = {**FORM_POST, **changes}
+    return PinterestCampaignCreateForm(data, connection=connection, pins=PINS, choices=CHOICES)
+
+
+@pytest.mark.django_db
+class TestCreationForm:
+    def test_a_full_form_becomes_the_new_campaign(self, connection):
+        form = _form(
+            connection,
+            age_min="25",
+            age_max="65+",
+            genders=["male"],
+            interests=["77"],
+            keywords="marcenaria, Marcenaria\nmóveis",
+            devices=["web"],
+        )
+        assert form.is_valid(), form.errors
+        new = form.to_new_campaign()
+        assert new.keywords == ["marcenaria", "móveis"]
+        assert new.interests == ["77"]
+        assert new.age_max == "65+"
+        assert new.auto_targeting is True
+
+    @pytest.mark.parametrize(
+        ("changes", "field", "step"),
+        [
+            ({"keywords": "x", "placement": "BROWSE"}, "keywords", 2),
+            ({"objective": "SALES"}, "conversion_tag_id", 1),
+            ({"objective": "VIDEO_COMPLETION"}, "objective", 1),
+            ({"countries": ["BR", "PT"], "regions": ["BR-SP"]}, "regions", 2),
+            ({"audiences_include": ["9"], "audiences_exclude": ["9"]}, "audiences_exclude", 2),
+            ({"bid_strategy": "MAX_BID"}, "bid_amount", 4),
+            ({"age_min": "40", "age_max": "30"}, "age_max", 2),
+            ({"frequency_cap": "3"}, "frequency_cap", 4),
+            ({"interests": ["not-offered"]}, "interests", 2),
+        ],
+    )
+    def test_what_pinterest_would_refuse_is_caught_on_its_step(self, connection, changes, field, step):
+        form = _form(connection, **changes)
+        assert not form.is_valid()
+        assert field in form.errors
+        assert form.first_step_with_errors() == step
+
+    def test_a_refused_post_reopens_the_step_of_the_error(self, workspace, manager, connection):
+        with (
+            mock.patch.object(pinterest, "targeting_choices", return_value=CHOICES),
+            mock.patch.object(pinterest, "promotable_pins", return_value=PINS),
+        ):
+            response = _logged_in(manager).post(
+                _url("pinterest_campaign_new", workspace), {**FORM_POST, "keywords": "x", "placement": "BROWSE"}
+            )
+        assert response.status_code == 200
+        assert "campaignWizard(2)" in response.content.decode()
+
+    def test_a_valid_post_creates_the_campaign_with_its_audience(self, workspace, manager, connection):
+        fake, patch = fake_pinterest(dict(CREATION_ROUTES))
+        with (
+            patch,
+            mock.patch.object(pinterest, "targeting_choices", return_value=CHOICES),
+            mock.patch.object(pinterest, "promotable_pins", return_value=PINS),
+        ):
+            response = _logged_in(manager).post(
+                _url("pinterest_campaign_new", workspace), {**FORM_POST, "interests": ["77"], "genders": ["female"]}
+            )
+        assert response.status_code == 302
+        (group,) = fake.sent("POST", f"ad_accounts/{ACCOUNT}/ad_groups")["json"]
+        assert group["targeting_spec"]["INTEREST"] == ["77"]
+        assert group["targeting_spec"]["GENDER"] == ["female"]

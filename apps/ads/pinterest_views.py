@@ -243,19 +243,33 @@ def campaign_new(request, workspace_id):
     if elsewhere:
         return elsewhere
     pins = pinterest.promotable_pins(request.workspace)
-    form = PinterestCampaignCreateForm(request.POST or None, connection=connection, pins=pins)
-    if request.method == "POST" and form.is_valid():
-        try:
-            campaign_id = pinterest.create_campaign(connection, form.to_new_campaign())
-        except services.AdsError as exc:
-            form.add_error(None, str(exc))
+    choices = pinterest.targeting_choices(connection)
+    form = PinterestCampaignCreateForm(request.POST or None, connection=connection, pins=pins, choices=choices)
+    step = 1
+    if request.method == "POST":
+        if form.is_valid():
+            try:
+                campaign_id = pinterest.create_campaign(connection, form.to_new_campaign())
+            except services.AdsError as exc:
+                form.add_error(None, str(exc))
+                step = 4
+            else:
+                messages.success(request, _("Campaign created, paused. Review it and activate it when you are ready."))
+                return redirect("ads:pinterest_campaign_detail", workspace_id=workspace_id, campaign_id=campaign_id)
         else:
-            messages.success(request, _("Campaign created, paused. Review it and activate it when you are ready."))
-            return redirect("ads:pinterest_campaign_detail", workspace_id=workspace_id, campaign_id=campaign_id)
+            step = form.first_step_with_errors()
     return render(
         request,
         "ads/pinterest/campaign_new.html",
-        {"workspace_id": workspace_id, "connection": connection, "form": form, "pins": pins},
+        {
+            "workspace_id": workspace_id,
+            "connection": connection,
+            "form": form,
+            "pins": pins,
+            "choices": choices,
+            "step": step,
+            "regions": pinterest.BR_REGIONS,
+        },
     )
 
 

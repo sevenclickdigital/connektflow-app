@@ -24,7 +24,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext as _
-from django.utils.translation import gettext_lazy
+from django.utils.translation import gettext_lazy, pgettext_lazy
 
 from apps.credentials.models import resolve_platform_credentials
 from providers import pinterest_ads
@@ -56,10 +56,65 @@ OBJECTIVES = {
     "ENGAGEMENT": gettext_lazy("Engagement"),
     "AWARENESS_RESERVED": gettext_lazy("Awareness"),
 }
-# What the simplified creation offers, and what each ad group is billed on.
-# Both are budgeted on the campaign (Pinterest's campaign budget optimization).
-CREATABLE_OBJECTIVES = ("AWARENESS", "CONSIDERATION")
-BILLABLE_EVENTS = {"AWARENESS": "IMPRESSION", "CONSIDERATION": "CLICKTHROUGH"}
+# What the creation offers, and what each ad group is billed on. Awareness,
+# Consideration and Video completion are budgeted on the campaign (Pinterest's
+# campaign budget optimization); Sales on its ad group, optimising for a
+# Pinterest tag's checkouts.
+CREATABLE_OBJECTIVES = ("AWARENESS", "CONSIDERATION", "VIDEO_COMPLETION", "SALES")
+CBO_OBJECTIVES = ("AWARENESS", "CONSIDERATION", "VIDEO_COMPLETION")
+BILLABLE_EVENTS = {
+    "AWARENESS": "IMPRESSION",
+    "CONSIDERATION": "CLICKTHROUGH",
+    "VIDEO_COMPLETION": "IMPRESSION",
+    "SALES": "IMPRESSION",
+}
+
+# Targeting values, as Pinterest names them (``targeting_spec``).
+AGES = [str(age) for age in range(18, 66)]
+GENDERS = {"female": gettext_lazy("Women"), "male": gettext_lazy("Men"), "unknown": gettext_lazy("Unspecified")}
+# The languages Pinterest targets (ISO 639-1); the page names them in its own language.
+LOCALES = (
+    "pt", "en", "es", "fr", "de", "it", "nl", "sv", "da", "nb", "fi", "pl",
+    "cs", "sk", "hu", "ro", "el", "tr", "ru", "ja", "ko", "zh", "id", "hi",
+)  # fmt: skip
+# The countries Pinterest delivers ads in (ISO 3166-1); named by the page too.
+AD_COUNTRIES = (
+    "AR", "AT", "AU", "BE", "BR", "CA", "CH", "CL", "CO", "CY", "CZ", "DE", "DK", "ES", "FI", "FR", "GB",
+    "GR", "HU", "IE", "IT", "JP", "LU", "MT", "MX", "NL", "NO", "NZ", "PL", "PT", "RO", "SE", "SK", "US",
+)  # fmt: skip
+# Brazil's states as ISO 3166-2 region codes (``GEO``), to narrow a Brazilian audience.
+BR_REGIONS = {
+    "BR-AC": "Acre", "BR-AL": "Alagoas", "BR-AP": "Amapá", "BR-AM": "Amazonas", "BR-BA": "Bahia",
+    "BR-CE": "Ceará", "BR-DF": "Distrito Federal", "BR-ES": "Espírito Santo", "BR-GO": "Goiás",
+    "BR-MA": "Maranhão", "BR-MT": "Mato Grosso", "BR-MS": "Mato Grosso do Sul", "BR-MG": "Minas Gerais",
+    "BR-PA": "Pará", "BR-PB": "Paraíba", "BR-PR": "Paraná", "BR-PE": "Pernambuco", "BR-PI": "Piauí",
+    "BR-RJ": "Rio de Janeiro", "BR-RN": "Rio Grande do Norte", "BR-RS": "Rio Grande do Sul",
+    "BR-RO": "Rondônia", "BR-RR": "Roraima", "BR-SC": "Santa Catarina", "BR-SP": "São Paulo",
+    "BR-SE": "Sergipe", "BR-TO": "Tocantins",
+}  # fmt: skip
+PLACEMENTS = {
+    "ALL": gettext_lazy("Feed and search"),
+    "BROWSE": gettext_lazy("Home feed and related pins"),
+    "SEARCH": gettext_lazy("Search results"),
+}
+DEVICES = {
+    "iphone": "iPhone",
+    "ipad": "iPad",
+    "android_mobile": gettext_lazy("Android phone"),
+    "android_tablet": gettext_lazy("Android tablet"),
+    "web": gettext_lazy("Computer"),
+    "web_mobile": gettext_lazy("Mobile browser"),
+}
+BID_STRATEGIES = {
+    "AUTOMATIC_BID": gettext_lazy("Automatic"),
+    "MAX_BID": gettext_lazy("Maximum bid"),
+    "TARGET_AVG": gettext_lazy("Target average cost"),
+}
+# Keywords only show where people search, so they need a placement that includes search.
+KEYWORD_PLACEMENTS = ("ALL", "SEARCH")
+MAX_KEYWORDS = 200
+# Pinterest's interest list barely changes; read once a day per ad account.
+INTEREST_CACHE_SECONDS = 24 * 3600
 
 # ``summary_status`` (what is happening) → (label, pill tone).
 SUMMARY_STATUSES = {
@@ -69,7 +124,7 @@ SUMMARY_STATUSES = {
     "NOT_STARTED": (gettext_lazy("Scheduled"), "info"),
     "COMPLETED": (gettext_lazy("Completed"), "neutral"),
     "ADVERTISER_DISABLED": (gettext_lazy("Disabled"), "warning"),
-    "ARCHIVED": (gettext_lazy("Archived"), "neutral"),
+    "ARCHIVED": (pgettext_lazy("ad status", "Archived"), "neutral"),
     "DRAFT": (gettext_lazy("Draft"), "neutral"),
     "PENDING": (gettext_lazy("In review"), "info"),
     "APPROVED": (gettext_lazy("Approved"), "success"),
@@ -529,15 +584,29 @@ class NewCampaign:
     countries: list[str]
     pin_id: str
     is_video: bool = False
+    regions: list[str] = field(default_factory=list)
+    age_min: str = ""
+    age_max: str = ""
+    genders: list[str] = field(default_factory=list)
+    locales: list[str] = field(default_factory=list)
+    interests: list[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
+    audiences_include: list[str] = field(default_factory=list)
+    audiences_exclude: list[str] = field(default_factory=list)
+    auto_targeting: bool = True
+    placement: str = "ALL"
+    devices: list[str] = field(default_factory=list)
+    bid_strategy: str = "AUTOMATIC_BID"
+    bid_amount: Decimal | None = None
+    frequency_cap: int | None = None
+    conversion_tag_id: str = ""
 
 
 def build_campaign_payload(new: NewCampaign) -> dict:
-    payload: dict = {
-        "name": new.name,
-        "objective_type": new.objective,
-        "status": "PAUSED",
-        "daily_spend_cap": pinterest_ads.to_micro(new.daily_budget),
-    }
+    """The campaign, paused. Budget-optimised objectives carry the daily budget here."""
+    payload: dict = {"name": new.name, "objective_type": new.objective, "status": "PAUSED"}
+    if new.objective in CBO_OBJECTIVES:
+        payload["daily_spend_cap"] = pinterest_ads.to_micro(new.daily_budget)
     if new.start_time:
         payload["start_time"] = int(new.start_time.timestamp())
     if new.end_time:
@@ -545,19 +614,56 @@ def build_campaign_payload(new: NewCampaign) -> dict:
     return payload
 
 
-def build_ad_group_payload(new: NewCampaign, campaign_id: str) -> dict:
-    """One ad group in the campaign's countries, bid automatically, billed per the objective.
+def build_targeting_spec(new: NewCampaign) -> dict:
+    """``targeting_spec`` from the chosen audience; an empty choice is left out, which
+    Pinterest reads as "everyone" for that dimension."""
+    spec: dict = {"GEO": new.regions or new.countries}
+    if new.age_min or new.age_max:
+        spec["MINIMUM_AGE"] = new.age_min or "18"
+        spec["MAXIMUM_AGE"] = new.age_max or "65+"
+    optional = {
+        "GENDER": new.genders,
+        "LOCALE": new.locales,
+        "INTEREST": new.interests,
+        "AUDIENCE_INCLUDE": new.audiences_include,
+        "AUDIENCE_EXCLUDE": new.audiences_exclude,
+        "APPTYPE": new.devices,
+    }
+    spec.update({key: values for key, values in optional.items() if values})
+    return spec
 
-    No budget of its own: the campaign carries it (budget optimization).
+
+def build_ad_group_payload(new: NewCampaign, campaign_id: str) -> dict:
+    """The campaign's one ad group: its audience, placement and bid, billed per the objective.
+
+    A budget-optimised campaign carries the budget; a Sales one puts it here and
+    optimises for the chosen Pinterest tag's checkouts.
     """
     payload: dict = {
         "name": f"{new.name} — {_('Ad group')}",
         "campaign_id": campaign_id,
         "status": "ACTIVE",
         "billable_event": BILLABLE_EVENTS[new.objective],
-        "bid_strategy_type": "AUTOMATIC_BID",
-        "targeting_spec": {"GEO": new.countries},
+        "bid_strategy_type": new.bid_strategy,
+        "targeting_spec": build_targeting_spec(new),
+        "placement_group": new.placement,
+        "auto_targeting_enabled": new.auto_targeting,
     }
+    if new.bid_strategy != "AUTOMATIC_BID" and new.bid_amount:
+        payload["bid_in_micro_currency"] = pinterest_ads.to_micro(new.bid_amount)
+    if new.objective not in CBO_OBJECTIVES:
+        payload["budget_in_micro_currency"] = pinterest_ads.to_micro(new.daily_budget)
+        payload["budget_type"] = "DAILY"
+    if new.objective == "SALES":
+        payload["optimization_goal_metadata"] = {
+            "conversion_tag_v3_goal_metadata": {
+                "conversion_tag_id": new.conversion_tag_id,
+                "conversion_event": "CHECKOUT",
+                "attribution_windows": {"click_window_days": 30, "engagement_window_days": 30, "view_window_days": 1},
+            }
+        }
+    if new.frequency_cap and new.objective == "AWARENESS" and new.end_time:
+        payload["lifetime_frequency_cap"] = new.frequency_cap
     if new.start_time:
         payload["start_time"] = int(new.start_time.timestamp())
     if new.end_time:
@@ -576,7 +682,8 @@ def build_ad_payload(new: NewCampaign, ad_group_id: str) -> dict:
 
 
 def create_campaign(connection: AdsConnection, new: NewCampaign) -> str:
-    """Create the campaign, its ad group and the ad that promotes the pin; return the campaign id.
+    """Create the campaign, its ad group (with its keywords) and the ad that promotes
+    the pin; return the campaign id.
 
     The campaign is created paused. Pinterest has no deleting a campaign, so a
     failure part-way archives it, which also stops its ad group and ad.
@@ -592,6 +699,8 @@ def create_campaign(connection: AdsConnection, new: NewCampaign) -> str:
     campaign_id = _call(connection, client.create_campaign, account, build_campaign_payload(new))
     try:
         ad_group_id = _call(connection, client.create_ad_group, account, build_ad_group_payload(new, campaign_id))
+        if new.keywords and new.placement in KEYWORD_PLACEMENTS:
+            _call(connection, client.create_keywords, account, ad_group_id, new.keywords)
         _call(connection, client.create_ad, account, build_ad_payload(new, ad_group_id))
     except AdsError:
         try:
@@ -602,11 +711,104 @@ def create_campaign(connection: AdsConnection, new: NewCampaign) -> str:
     return campaign_id
 
 
+# ------------------------------------------------------------------
+# What the creation form offers from the ad account
+# ------------------------------------------------------------------
+
+
+def _option(row) -> dict | None:
+    """One targeting option as ``{"id", "name"}``; Pinterest answers either an object
+    with ``id``/``name`` or a one-entry ``{id: name}`` map."""
+    if not isinstance(row, dict):
+        return None
+    if "id" in row:
+        return {"id": str(row["id"]), "name": str(row.get("name") or row["id"])}
+    if len(row) == 1:
+        key, value = next(iter(row.items()))
+        return {"id": str(key), "name": str(value)}
+    return None
+
+
+def _flatten_interests(rows) -> list[dict]:
+    """Interests with their sub-interests, each once, sorted by name."""
+    found: dict[str, dict] = {}
+    stack = list(rows or [])
+    while stack:
+        row = stack.pop()
+        option = _option(row)
+        if option:
+            found.setdefault(option["id"], option)
+        if isinstance(row, dict):
+            stack.extend(row.get("child_interests") or row.get("children") or [])
+    return sorted(found.values(), key=lambda o: o["name"].lower())
+
+
+def targeting_choices(connection: AdsConnection) -> dict:
+    """What the ad account offers the creation form: interests, its audiences and its
+    Pinterest tags. Each is read on its own; one Pinterest refuses comes back as its
+    reason in ``errors`` and the form goes on without it."""
+    from django.core.cache import cache
+
+    client = pinterest_ads.PinterestAdsClient
+    account = connection.ad_account_id
+    choices: dict = {"interests": [], "audiences": [], "conversion_tags": [], "errors": {}}
+
+    cache_key = f"pinterest-ads:interests:{account}"
+    interests = cache.get(cache_key)
+    if interests is None:
+        try:
+            interests = _flatten_interests(_call(connection, client.targeting_options, account, "interest"))
+        except AdsError as exc:
+            choices["errors"]["interests"] = str(exc)
+            interests = []
+        else:
+            cache.set(cache_key, interests, INTEREST_CACHE_SECONDS)
+    choices["interests"] = interests
+
+    try:
+        rows = _call(connection, client.audiences, account)
+    except AdsError as exc:
+        choices["errors"]["audiences"] = str(exc)
+    else:
+        choices["audiences"] = [
+            {"id": str(row.get("id")), "name": row.get("name") or str(row.get("id"))}
+            for row in rows
+            if row.get("id") and row.get("status") in (None, "READY")
+        ]
+
+    try:
+        rows = _call(connection, client.conversion_tags, account)
+    except AdsError as exc:
+        choices["errors"]["conversion_tags"] = str(exc)
+    else:
+        choices["conversion_tags"] = [
+            {"id": str(row.get("id")), "name": row.get("name") or str(row.get("id"))}
+            for row in rows
+            if row.get("id") and row.get("status") in (None, "ACTIVE")
+        ]
+    return choices
+
+
+def _preview_image(post) -> str:
+    """The picture a post shows first: its first media's thumbnail, or an image's own file."""
+    attachments = post.media_attachments.all()
+    if not attachments:
+        return ""
+    asset = attachments[0].media_asset
+    if asset.thumbnail:
+        return asset.thumbnail.url
+    if asset.media_type == asset.MediaType.IMAGE and asset.file:
+        return asset.file.url
+    return ""
+
+
 def promotable_pins(workspace, limit: int = 48) -> list[dict]:
     """The workspace's published pins, newest first, for the ad's picker.
 
     ``is_video`` decides the ad's creative type, which Pinterest wants told;
-    ``post`` carries the media for the picker's thumbnail.
+    ``post`` carries the media for the picker's thumbnail, ``image_url`` the
+    picture the ad preview shows (the first media's thumbnail, or the image
+    itself), ``avatar_url`` the account's picture.
     """
     from apps.composer.models import PlatformPost
     from apps.composer.services import media_types_by_post
@@ -639,6 +841,8 @@ def promotable_pins(workspace, limit: int = 48) -> list[dict]:
                 "account": row.social_account.account_name,
                 "published_at": row.published_at,
                 "is_video": MediaAsset.MediaType.VIDEO in media.get(row.post_id, set()),
+                "image_url": _preview_image(row.post),
+                "avatar_url": row.social_account.avatar_url,
             }
         )
     return pins

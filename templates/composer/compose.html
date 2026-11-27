@@ -2026,11 +2026,12 @@
         </div>
         {% endif %}
 
-        {% if not post_is_readonly %}
-        <!-- Auto-save trigger (every 30 seconds) -->
-        <!-- Tracks autosaved post ID to prevent duplicate drafts -->
-        <!-- A read-only post has nothing to save; the endpoint refuses it too. -->
+        <!-- The post being edited: autosave reuses it instead of making a draft, and the
+             live preview reads its media from it, read-only posts included. -->
         <input type="hidden" name="_autosave_post_id" :value="autosavedPostId" form="composer-form">
+        {% if not post_is_readonly %}
+        <!-- Auto-save trigger (every 30 seconds). A read-only post has nothing to save;
+             the endpoint refuses it too. -->
         <div id="autosave-trigger"
              hx-post="{% if post %}{% url 'composer:autosave_edit' workspace_id=workspace.id post_id=post.id %}{% else %}{% url 'composer:autosave' workspace_id=workspace.id %}{% endif %}"
              hx-trigger="every 30s, autosaveNow"

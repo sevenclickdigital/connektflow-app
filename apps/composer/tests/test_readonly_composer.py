@@ -141,6 +141,11 @@ class ActionBarGatingTests(ReadonlyComposerTestsBase):
         body = self._compose(self._make_post(PlatformPost.Status.PUBLISHED)).content.decode("utf-8")
         self.assertNotIn(AUTOSAVE_TRIGGER, body)
 
+    def test_readonly_post_still_names_itself_to_the_live_preview(self):
+        """The preview reads the post's media from this id; without it a published pin showed no image."""
+        body = self._compose(self._make_post(PlatformPost.Status.PUBLISHED)).content.decode("utf-8")
+        self.assertIn('name="_autosave_post_id"', body)
+
     def test_readonly_post_hides_submit_for_approval(self):
         # With approvals on, a published post must not offer to re-enter the
         # workflow — show_submit_button would otherwise be True.

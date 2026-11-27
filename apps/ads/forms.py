@@ -226,32 +226,33 @@ class PinterestAdAccountCreateForm(forms.Form):
         currency.choices = [(code, code) for code in pinterest.CURRENCIES]
 
 
-class PinterestCampaignCreateForm(forms.Form):
-    """A campaign that promotes one pin: objective, daily budget, dates and countries.
+def _multi(choices=()):
+    return forms.MultipleChoiceField(required=False, choices=choices, widget=forms.CheckboxSelectMultiple)
 
-    The pin is one the workspace published (``pinterest.promotable_pins``) or
-    an id typed in, for a pin made outside Connekt Flow; Pinterest refuses a pin
-    the ad account cannot promote.
+
+class PinterestCampaignCreateForm(forms.Form):
+    """A campaign that promotes one pin, with its whole ad group: audience, placement,
+    bid, budget and dates. The page shows it in four steps; ``STEPS`` says which
+    step each field belongs to, so a refused field reopens its step.
+
+    The pin is one the workspace published (``pinterest.promotable_pins``) or an
+    id typed in, for a pin made outside Connekt Flow; Pinterest refuses a pin the
+    ad account cannot promote. Interests, audiences and Pinterest tags come from
+    the ad account (``pinterest.targeting_choices``).
     """
+
+    STEPS = {
+        1: ("name", "objective", "pin_id", "other_pin_id", "conversion_tag_id"),
+        2: (
+            "age_min", "age_max", "genders", "locales", "countries", "regions", "interests", "keywords",
+            "audiences_include", "audiences_exclude", "auto_targeting",
+        ),
+        3: ("placement", "devices"),
+        4: ("daily_budget", "bid_strategy", "bid_amount", "start_time", "end_time", "frequency_cap"),
+    }  # fmt: skip
 
     name = forms.CharField(label=_("Campaign name"), max_length=200, widget=_input())
     objective = forms.ChoiceField(label=_("Objective"), widget=forms.RadioSelect, initial="CONSIDERATION")
-    daily_budget = forms.DecimalField(
-        label=_("Daily budget"),
-        min_value=Decimal("1"),
-        max_digits=12,
-        decimal_places=2,
-        widget=forms.NumberInput(attrs={"class": "form-input-styled w-full", "step": "0.01", "min": "1"}),
-    )
-    start_time = forms.DateTimeField(label=_("Starts"), required=False, widget=DATETIME_INPUT)
-    end_time = forms.DateTimeField(label=_("Ends"), required=False, widget=DATETIME_INPUT)
-    countries = forms.CharField(
-        label=_("Countries"),
-        initial="BR",
-        max_length=200,
-        help_text=_("Two-letter codes separated by commas, e.g. BR, PT."),
-        widget=_input(),
-    )
     pin_id = forms.CharField(label=_("Pin"), required=False, max_length=32)
     other_pin_id = forms.CharField(
         label=_("Or the ID of another pin"),
@@ -260,19 +261,118 @@ class PinterestCampaignCreateForm(forms.Form):
         help_text=_("The number at the end of the pin's address on Pinterest."),
         widget=_input(inputmode="numeric"),
     )
+    conversion_tag_id = forms.ChoiceField(label=_("Pinterest tag"), required=False)
 
-    def __init__(self, *args, connection, pins, **kwargs):
+    age_min = forms.ChoiceField(label=_("Minimum age"), required=False)
+    age_max = forms.ChoiceField(label=_("Maximum age"), required=False)
+    genders = _multi(pinterest.GENDERS.items())
+    locales = _multi([(code, code) for code in pinterest.LOCALES])
+    countries = forms.MultipleChoiceField(
+        label=_("Countries"),
+        choices=[(code, code) for code in pinterest.AD_COUNTRIES],
+        initial=["BR"],
+        widget=forms.CheckboxSelectMultiple,
+        error_messages={"required": _("Choose at least one country.")},
+    )
+    regions = _multi(pinterest.BR_REGIONS.items())
+    interests = _multi()
+    keywords = forms.CharField(
+        label=_("Keywords"),
+        required=False,
+        max_length=8000,
+        widget=forms.Textarea(attrs={"class": "form-input-styled w-full", "rows": 2}),
+    )
+    audiences_include = _multi()
+    audiences_exclude = _multi()
+    auto_targeting = forms.BooleanField(label=_("Expand the audience automatically"), required=False, initial=True)
+
+    placement = forms.ChoiceField(
+        label=_("Where it appears"),
+        choices=list(pinterest.PLACEMENTS.items()),
+        initial="ALL",
+        widget=forms.RadioSelect,
+    )
+    devices = _multi(pinterest.DEVICES.items())
+
+    daily_budget = forms.DecimalField(
+        label=_("Daily budget"),
+        min_value=Decimal("1"),
+        max_digits=12,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={"class": "form-input-styled w-full", "step": "0.01", "min": "1"}),
+    )
+    bid_strategy = forms.ChoiceField(
+        label=_("Bid"),
+        choices=list(pinterest.BID_STRATEGIES.items()),
+        initial="AUTOMATIC_BID",
+        widget=forms.RadioSelect,
+    )
+    bid_amount = forms.DecimalField(
+        label=_("Bid amount"),
+        required=False,
+        min_value=Decimal("0.01"),
+        max_digits=12,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={"class": "form-input-styled w-full", "step": "0.01", "min": "0.01"}),
+    )
+    start_time = forms.DateTimeField(label=_("Starts"), required=False, widget=DATETIME_INPUT)
+    end_time = forms.DateTimeField(label=_("Ends"), required=False, widget=DATETIME_INPUT)
+    frequency_cap = forms.IntegerField(
+        label=_("Frequency cap"),
+        required=False,
+        min_value=1,
+        max_value=1000,
+        help_text=_("At most this many times per person in 30 days. Awareness with an end date only."),
+        widget=_input(type="number", min="1"),
+    )
+
+    def __init__(self, *args, connection, pins, choices, **kwargs):
         super().__init__(*args, **kwargs)
         self.pins = {pin["id"]: pin for pin in pins}
-        objective = self.fields["objective"]
-        assert isinstance(objective, forms.ChoiceField)
-        objective.choices = [(key, pinterest.OBJECTIVES[key]) for key in pinterest.CREATABLE_OBJECTIVES]
+        self._set_choices("objective", [(key, pinterest.OBJECTIVES[key]) for key in pinterest.CREATABLE_OBJECTIVES])
+        self._set_choices("age_min", [("", _("Any"))] + [(a, a) for a in pinterest.AGES])
+        self._set_choices("age_max", [("", _("Any"))] + [(a, a) for a in pinterest.AGES] + [("65+", "65+")])
+        self._set_choices("interests", [(o["id"], o["name"]) for o in choices.get("interests", [])])
+        audiences = [(o["id"], o["name"]) for o in choices.get("audiences", [])]
+        self._set_choices("audiences_include", audiences)
+        self._set_choices("audiences_exclude", audiences)
+        self._set_choices(
+            "conversion_tag_id", [("", "—")] + [(o["id"], o["name"]) for o in choices.get("conversion_tags", [])]
+        )
+        for name in ("age_min", "age_max", "conversion_tag_id"):
+            self.fields[name].widget.attrs["class"] = "form-input-styled w-full"
+        self.fields["auto_targeting"].widget.attrs["class"] = "bb-checkbox w-4 h-4 mt-0.5"
+        for name in ("genders", "devices"):
+            self.fields[name].widget.attrs["class"] = "bb-checkbox w-4 h-4"
+        currency = connection.currency or ""
         self.fields["daily_budget"].help_text = _("In %(currency)s, the ad account's currency.") % {
-            "currency": connection.currency or ""
+            "currency": currency
+        }
+        self.fields["bid_amount"].help_text = _("In %(currency)s, per click or per 1,000 impressions.") % {
+            "currency": currency
         }
 
-    def clean_countries(self):
-        return _clean_country_codes(self.cleaned_data["countries"])
+    def _set_choices(self, name, choices):
+        field = self.fields[name]
+        assert isinstance(field, forms.ChoiceField)
+        field.choices = choices
+
+    def first_step_with_errors(self) -> int:
+        for step, names in self.STEPS.items():
+            if any(name in self.errors for name in names):
+                return step
+        return 1
+
+    def clean_keywords(self):
+        raw = self.cleaned_data.get("keywords") or ""
+        values = []
+        for part in raw.replace("\n", ",").split(","):
+            value = part.strip()
+            if value and value.lower() not in {v.lower() for v in values}:
+                values.append(value[:120])
+        if len(values) > pinterest.MAX_KEYWORDS:
+            raise forms.ValidationError(_("At most %(count)s keywords.") % {"count": pinterest.MAX_KEYWORDS})
+        return values
 
     def clean(self):
         data = super().clean()
@@ -287,20 +387,63 @@ class PinterestCampaignCreateForm(forms.Form):
             data["pin_id"] = other
         elif picked not in self.pins:
             self.add_error("pin_id", _("Choose the pin the ad promotes."))
+
+        objective = data.get("objective")
+        pin = self.pins.get(data.get("pin_id") or "", {})
+        if objective == "VIDEO_COMPLETION":
+            if not pin.get("is_video"):
+                self.add_error("objective", _("Video views promote a video pin. Choose one of your video pins."))
+            if data.get("bid_strategy") not in (None, "AUTOMATIC_BID"):
+                self.add_error("bid_strategy", _("Video views only take the automatic bid."))
+        if objective == "SALES" and not data.get("conversion_tag_id"):
+            self.add_error("conversion_tag_id", _("Sales optimise for a Pinterest tag. Choose the tag of your site."))
+        if data.get("bid_strategy") in ("MAX_BID", "TARGET_AVG") and not data.get("bid_amount"):
+            self.add_error("bid_amount", _("Say how much to bid."))
+
+        age_min, age_max = data.get("age_min"), data.get("age_max")
+        if age_min and age_max and age_max != "65+" and int(age_min) > int(age_max):
+            self.add_error("age_max", _("The maximum age must not be below the minimum."))
+        regions, countries = data.get("regions") or [], data.get("countries") or []
+        if regions and countries != ["BR"]:
+            self.add_error("regions", _("States narrow a Brazilian audience: choose Brazil as the only country."))
+        if data.get("keywords") and data.get("placement") not in pinterest.KEYWORD_PLACEMENTS:
+            self.add_error("keywords", _("Keywords only work in search. Show the ad in search too, or remove them."))
+        overlap = set(data.get("audiences_include") or []) & set(data.get("audiences_exclude") or [])
+        if overlap:
+            self.add_error("audiences_exclude", _("An audience cannot be both included and excluded."))
+        if data.get("frequency_cap") and (objective != "AWARENESS" or not end):
+            self.add_error("frequency_cap", _("The frequency cap needs the Awareness objective and an end date."))
         return data
 
     def to_new_campaign(self):
         data = self.cleaned_data
         pin = self.pins.get(data["pin_id"], {})
+        strategy = data["bid_strategy"]
         return pinterest.NewCampaign(
             name=data["name"],
             objective=data["objective"],
             daily_budget=data["daily_budget"],
             start_time=data.get("start_time"),
             end_time=data.get("end_time"),
-            countries=data["countries"],
+            countries=list(data["countries"]),
             pin_id=data["pin_id"],
             is_video=bool(pin.get("is_video")),
+            regions=list(data.get("regions") or []),
+            age_min=data.get("age_min") or "",
+            age_max=data.get("age_max") or "",
+            genders=list(data.get("genders") or []),
+            locales=list(data.get("locales") or []),
+            interests=list(data.get("interests") or []),
+            keywords=data.get("keywords") or [],
+            audiences_include=list(data.get("audiences_include") or []),
+            audiences_exclude=list(data.get("audiences_exclude") or []),
+            auto_targeting=bool(data.get("auto_targeting")),
+            placement=data.get("placement") or "ALL",
+            devices=list(data.get("devices") or []),
+            bid_strategy=strategy,
+            bid_amount=data.get("bid_amount") if strategy != "AUTOMATIC_BID" else None,
+            frequency_cap=data.get("frequency_cap"),
+            conversion_tag_id=data.get("conversion_tag_id") or "",
         )
 
 

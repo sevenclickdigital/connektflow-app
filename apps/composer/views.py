@@ -22,7 +22,7 @@ from django.http import FileResponse, Http404, HttpResponse, JsonResponse, Strea
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
-from django.utils.dateparse import parse_date
+from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.html import format_html, strip_tags
 from django.utils.text import get_text_list
 from django.utils.translation import gettext as _
@@ -2985,6 +2985,14 @@ def pinterest_boards(request, workspace_id, account_id):
     return JsonResponse({"boards": [{"id": b.get("id"), "name": b.get("name")} for b in boards]})
 
 
+def _pinterest_time(value):
+    """Pinterest's ``created_at`` (UTC, usually without an offset) as an aware datetime, or None."""
+    parsed = parse_datetime(str(value or ""))
+    if parsed is not None and timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, UTC)
+    return parsed
+
+
 @login_required
 @require_GET
 def pinterest_pin(request, workspace_id, platform_post_id):
@@ -3016,12 +3024,21 @@ def pinterest_pin(request, workspace_id, platform_post_id):
         return render(request, "composer/partials/_pinterest_pin.html", context)
     images = (pin.get("media") or {}).get("images") or {}
     image = images.get("600x") or images.get("400x300") or next(iter(images.values()), None)
+    board_id = str(pin.get("board_id") or "")
+    board_name = ""
+    if board_id:
+        # The name reads better than the id; without it the id still identifies the board.
+        try:
+            board_name = provider.get_board(access_token, board_id).get("name") or ""
+        except Exception:
+            logger.warning("Pinterest board read failed for platform post %s", pp.id, exc_info=True)
     context["pin"] = {
         "id": pin.get("id", ""),
         "title": pin.get("title") or "",
         "description": pin.get("description") or "",
-        "board_id": pin.get("board_id") or "",
-        "created_at": pin.get("created_at") or "",
+        "board_id": board_id,
+        "board_name": board_name,
+        "created_at": _pinterest_time(pin.get("created_at")),
         "image_url": (image or {}).get("url", ""),
     }
     return render(request, "composer/partials/_pinterest_pin.html", context)

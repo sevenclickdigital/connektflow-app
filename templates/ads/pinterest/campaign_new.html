@@ -3,77 +3,374 @@
 {% block title %}{% translate "New campaign" %} - Connekt Flow{% endblock %}
 {% block page_header %}
 <div class="page-header">
-    <div>
-        <h1 class="page-title">{% translate "New Pinterest campaign" %}</h1>
-        <p class="page-description">{% blocktranslate with account=connection.ad_account_name %}In the ad account {{ account }}, promoting one of your pins. It is created paused: nothing is spent until you activate it.{% endblocktranslate %}</p>
+    <div class="flex items-center gap-3">
+        <span class="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">{% include "partials/_platform_icon.html" with platform="pinterest" size="md" %}</span>
+        <div>
+            <h1 class="page-title">{% translate "New Pinterest campaign" %}</h1>
+            <p class="page-description">{% blocktranslate with account=connection.ad_account_name %}In the ad account {{ account }}, promoting one of your pins. It is created paused: nothing is spent until you activate it.{% endblocktranslate %}</p>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<form method="post" class="max-w-3xl space-y-6">
+{% comment %}
+The whole campaign in one form shown in four steps (Alpine ``step``): the
+campaign and its pin, the audience, where it appears, budget and launch. The
+form posts once at the end; a refused field reopens its step (``step`` from
+the view, PinterestCampaignCreateForm.STEPS). The summary on the side reads
+the form as it changes.
+{% endcomment %}
+{% translate "Everyone" as lbl_everyone %}{% translate "All ages" as lbl_all_ages %}{% translate "All devices" as lbl_all_devices %}{% translate "No dates set" as lbl_no_dates %}{% translate "From" as lbl_from %}{% translate "until" as lbl_until %}{% translate "years" as lbl_years %}{% translate "per day" as lbl_per_day %}
+{{ connection.currency|json_script:"wizard-currency" }}
+<form method="post" x-ref="form" x-data="campaignWizard({{ step }})" @change="refresh()" @input.debounce.200ms="refresh()"
+      data-everyone="{{ lbl_everyone }}" data-all-ages="{{ lbl_all_ages }}" data-all-devices="{{ lbl_all_devices }}"
+      data-no-dates="{{ lbl_no_dates }}" data-from="{{ lbl_from }}" data-until="{{ lbl_until }}" data-years="{{ lbl_years }}" data-per-day="{{ lbl_per_day }}">
     {% csrf_token %}
-    {% if form.non_field_errors %}<div class="alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
 
-    <section class="a-card p-5 space-y-4">
-        <h2 class="section-title">{% translate "Campaign" %}</h2>
-        {% include "components/_form_field.html" with field=form.name %}
-        <fieldset>
-            <legend class="block text-sm font-semibold text-neutral-950 mb-2">{{ form.objective.label }}</legend>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {% for radio in form.objective %}
-                <label class="flex items-center gap-2 a-card px-3 py-2 cursor-pointer hover:border-brand-700">
-                    {{ radio.tag }} <span class="text-sm text-neutral-950">{{ radio.choice_label }}</span>
-                </label>
-                {% endfor %}
+    <ol class="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm mb-6" aria-label="{% translate 'Steps' %}">
+        {% translate "Campaign" as s1 %}{% translate "Audience" as s2 %}{% translate "Where it appears" as s3 %}{% translate "Budget and launch" as s4 %}
+        <li><button type="button" @click="step = 1" class="flex items-center gap-2" :aria-current="step === 1 ? 'step' : null">
+            <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border" :class="step === 1 ? 'bg-brand-700 text-white border-brand-700' : (step > 1 ? 'bg-brand-100 text-brand-800 border-brand-100' : 'bg-white text-neutral-600 border-neutral-300')">1</span>
+            <span :class="step === 1 ? 'font-semibold text-brand-800' : 'text-neutral-700'">{{ s1 }}</span></button></li>
+        <li class="w-8 sm:w-16 h-px bg-neutral-300" aria-hidden="true"></li>
+        <li><button type="button" @click="step = 2" class="flex items-center gap-2" :aria-current="step === 2 ? 'step' : null">
+            <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border" :class="step === 2 ? 'bg-brand-700 text-white border-brand-700' : (step > 2 ? 'bg-brand-100 text-brand-800 border-brand-100' : 'bg-white text-neutral-600 border-neutral-300')">2</span>
+            <span :class="step === 2 ? 'font-semibold text-brand-800' : 'text-neutral-700'">{{ s2 }}</span></button></li>
+        <li class="w-8 sm:w-16 h-px bg-neutral-300" aria-hidden="true"></li>
+        <li><button type="button" @click="step = 3" class="flex items-center gap-2" :aria-current="step === 3 ? 'step' : null">
+            <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border" :class="step === 3 ? 'bg-brand-700 text-white border-brand-700' : (step > 3 ? 'bg-brand-100 text-brand-800 border-brand-100' : 'bg-white text-neutral-600 border-neutral-300')">3</span>
+            <span :class="step === 3 ? 'font-semibold text-brand-800' : 'text-neutral-700'">{{ s3 }}</span></button></li>
+        <li class="w-8 sm:w-16 h-px bg-neutral-300" aria-hidden="true"></li>
+        <li><button type="button" @click="step = 4" class="flex items-center gap-2" :aria-current="step === 4 ? 'step' : null">
+            <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border" :class="step === 4 ? 'bg-brand-700 text-white border-brand-700' : 'bg-white text-neutral-600 border-neutral-300'">4</span>
+            <span :class="step === 4 ? 'font-semibold text-brand-800' : 'text-neutral-700'">{{ s4 }}</span></button></li>
+    </ol>
+
+    {% if form.non_field_errors %}<div class="alert-error mb-4" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div class="lg:col-span-2 space-y-6">
+
+            {# ── Step 1: the campaign and its pin ── #}
+            <div x-show="step === 1" class="space-y-6">
+                <section class="a-card p-5 space-y-5">
+                    <h2 class="section-title">{% translate "Campaign details" %}</h2>
+                    {% include "components/_form_field.html" with field=form.name %}
+                    <fieldset>
+                        <legend class="block text-sm font-semibold text-neutral-950 mb-2">{{ form.objective.label }}</legend>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                            {% for radio in form.objective %}
+                            <label class="relative flex flex-col gap-1.5 p-4 bg-white rounded-xl border border-neutral-300 cursor-pointer transition-colors hover:border-brand-300 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:ring-2 has-[:checked]:ring-brand-100">
+                                <span class="flex items-center gap-2">
+                                    <input type="radio" name="{{ radio.data.name }}" value="{{ radio.data.value }}" {% if radio.data.selected %}checked{% endif %} class="bb-checkbox w-4 h-4" data-summary="{{ radio.choice_label }}">
+                                    <svg class="w-5 h-5 text-brand-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                                        {% if radio.data.value == "AWARENESS" %}<path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+                                        {% elif radio.data.value == "CONSIDERATION" %}<path stroke-linecap="round" stroke-linejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/>
+                                        {% elif radio.data.value == "SALES" %}<path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                        {% else %}<path stroke-linecap="round" stroke-linejoin="round" d="M5 3l14 9-14 9V3z"/>{% endif %}
+                                    </svg>
+                                </span>
+                                <span class="text-sm font-semibold text-neutral-950">{{ radio.choice_label }}</span>
+                                <span class="text-xs text-neutral-600">
+                                    {% if radio.data.value == "AWARENESS" %}{% translate "Show your pin to as many people as possible." %}
+                                    {% elif radio.data.value == "CONSIDERATION" %}{% translate "Bring clicks to your pin and its site." %}
+                                    {% elif radio.data.value == "SALES" %}{% translate "Bring checkouts on your site, measured by the Pinterest tag." %}
+                                    {% else %}{% translate "Get your video pin watched to the end." %}{% endif %}
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% for error in form.objective.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
+                    </fieldset>
+                    <div x-show="objective === 'SALES'" x-cloak>
+                        {% if choices.conversion_tags %}
+                        {% include "components/_form_field.html" with field=form.conversion_tag_id hide_optional=True %}
+                        <p class="text-xs mt-1.5 text-neutral-600">{% translate "Pinterest optimises the ads for the checkouts this tag records on your site." %}</p>
+                        {% else %}
+                        <div class="alert-info text-sm">{% if choices.errors.conversion_tags %}{{ choices.errors.conversion_tags }}{% else %}{% translate "This ad account has no Pinterest tag yet. Install the tag on your site in Pinterest Ads Manager to run Sales campaigns." %}{% endif %}</div>
+                        {% for error in form.conversion_tag_id.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
+                        {% endif %}
+                    </div>
+                    <p x-show="objective === 'VIDEO_COMPLETION'" x-cloak class="text-xs text-neutral-600">{% translate "Video views promote a video pin and always bid automatically." %}</p>
+                </section>
+
+                <section class="a-card p-5 space-y-4">
+                    <div>
+                        <h2 class="section-title">{% translate "Pin to promote" %}</h2>
+                        <p class="text-xs text-neutral-600 mt-1">{% translate "The ad shows the pin as it is on Pinterest, with its image, title and link." %}</p>
+                    </div>
+                    <fieldset>
+                        <legend class="sr-only">{{ form.pin_id.label }}</legend>
+                        {% if pins %}
+                        <div class="space-y-2 max-h-96 overflow-y-auto">
+                            {% with chosen=form.pin_id.value|default:"" %}
+                            {% for pin in pins %}
+                            <label class="flex items-center gap-3 px-3 py-2 bg-white rounded-xl border border-neutral-300 cursor-pointer transition-colors hover:border-brand-200 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:ring-2 has-[:checked]:ring-brand-100">
+                                <input type="radio" name="{{ form.pin_id.html_name }}" value="{{ pin.id }}" {% if chosen == pin.id %}checked{% endif %} class="bb-checkbox w-4 h-4 flex-shrink-0"
+                                       data-title="{% if pin.title %}{{ pin.title }}{% else %}{{ pin.caption|truncatechars:80 }}{% endif %}" data-image="{{ pin.image_url }}" data-account="{{ pin.account }}" data-avatar="{{ pin.avatar_url }}">
+                                {% include "calendar/partials/_post_thumb.html" with post=pin.post classes="w-12 h-12 rounded-lg" %}
+                                <span class="flex-1 min-w-0">
+                                    <span class="block text-sm font-semibold text-neutral-950 truncate">{% if pin.title %}{{ pin.title }}{% else %}{{ pin.caption|truncatechars:80|default:pin.id }}{% endif %}</span>
+                                    <span class="block text-xs text-neutral-600 truncate">{{ pin.account }} · {% if pin.published_at %}{{ pin.published_at|date:"SHORT_DATE_FORMAT" }} · {% endif %}<span class="font-mono">{{ pin.id }}</span>{% if pin.is_video %} · {% translate "Video" %}{% endif %}</span>
+                                </span>
+                                <a href="https://www.pinterest.com/pin/{{ pin.id }}/" target="_blank" rel="noopener noreferrer" class="p-1.5 rounded-lg text-neutral-500 hover:text-brand-700 hover:bg-white" title="{% translate 'Open on Pinterest' %}" @click.stop>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                </a>
+                            </label>
+                            {% endfor %}
+                            {% endwith %}
+                        </div>
+                        {% else %}
+                        <p class="text-sm text-neutral-600">{% translate "No pin was published from Connekt Flow yet. Publish one, or paste the ID of a pin below." %}</p>
+                        {% endif %}
+                        {% for error in form.pin_id.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
+                    </fieldset>
+                    {% include "components/_form_field.html" with field=form.other_pin_id %}
+                </section>
             </div>
-            <p class="text-xs mt-1.5 text-neutral-600">{% translate "Awareness shows the pin to as many people as possible. Consideration brings clicks to the pin and its link." %}</p>
-            {% for error in form.objective.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
-        </fieldset>
-    </section>
 
-    <section class="a-card p-5 space-y-4">
-        <h2 class="section-title">{% translate "Budget, schedule and audience" %}</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {% include "components/_form_field.html" with field=form.daily_budget %}
-            {% include "components/_form_field.html" with field=form.start_time %}
-            {% include "components/_form_field.html" with field=form.end_time %}
-        </div>
-        {% include "components/_form_field.html" with field=form.countries %}
-        <p class="text-xs text-neutral-600">{% translate "Without a start, delivery begins as soon as the campaign is activated. Without an end, it runs until you pause it. Pinterest bids automatically and finds the audience within these countries." %}</p>
-    </section>
-
-    <section class="a-card p-5 space-y-4">
-        <h2 class="section-title">{% translate "Pin to promote" %}</h2>
-        <fieldset>
-            <legend class="sr-only">{{ form.pin_id.label }}</legend>
-            {% if pins %}
-            <div class="space-y-2 max-h-96 overflow-y-auto">
-                {% with chosen=form.pin_id.value|default:"" %}
-                {% for pin in pins %}
-                <label class="flex items-center gap-3 px-3 py-2 bg-white rounded-xl border border-neutral-300 cursor-pointer transition-colors hover:border-brand-200 has-[:checked]:border-brand-500 has-[:checked]:ring-2 has-[:checked]:ring-brand-100">
-                    <input type="radio" name="{{ form.pin_id.html_name }}" value="{{ pin.id }}" {% if chosen == pin.id %}checked{% endif %} class="bb-checkbox w-4 h-4 flex-shrink-0">
-                    {% include "calendar/partials/_post_thumb.html" with post=pin.post classes="w-12 h-12 rounded-lg" %}
-                    <span class="flex-1 min-w-0">
-                        <span class="block text-sm font-semibold text-neutral-950 truncate">{% if pin.title %}{{ pin.title }}{% else %}{{ pin.caption|truncatechars:80|default:pin.id }}{% endif %}</span>
-                        <span class="block text-xs text-neutral-600 truncate">{{ pin.account }} · {% if pin.published_at %}{{ pin.published_at|date:"SHORT_DATE_FORMAT" }} · {% endif %}<span class="font-mono">{{ pin.id }}</span>{% if pin.is_video %} · {% translate "Video" %}{% endif %}</span>
+            {# ── Step 2: the audience ── #}
+            <section x-show="step === 2" x-cloak class="a-card p-5 space-y-5">
+                <div>
+                    <h2 class="section-title">{% translate "Audience" %}</h2>
+                    <p class="text-xs text-neutral-600 mt-1">{% translate "Who sees the ad on Pinterest. Anything left empty means everyone." %}</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {% include "components/_form_field.html" with field=form.age_min hide_optional=True %}
+                    {% include "components/_form_field.html" with field=form.age_max hide_optional=True %}
+                </div>
+                <fieldset>
+                    <legend class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Gender" %}</legend>
+                    <div class="flex flex-wrap gap-2">
+                        {% for box in form.genders %}
+                        <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-neutral-300 bg-white text-sm cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                            {{ box.tag }} <span>{{ box.choice_label }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs mt-1.5 text-neutral-600">{% translate "None ticked: everyone." %}</p>
+                </fieldset>
+                <div>
+                    <label class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Languages" %}</label>
+                    {% translate "Every language" as ph_lang %}
+                    {% include "ads/pinterest/partials/_multi_pick.html" with field=form.locales placeholder=ph_lang names="language" %}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-neutral-950 mb-2">{{ form.countries.label }}</label>
+                    {% translate "Search a country…" as ph_country %}
+                    {% include "ads/pinterest/partials/_multi_pick.html" with field=form.countries placeholder=ph_country names="region" %}
+                    {% for error in form.countries.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
+                </div>
+                <div x-show="onlyBrazil" x-cloak>
+                    <label class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "States" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></label>
+                    {% translate "Every state" as ph_states %}
+                    {% include "ads/pinterest/partials/_multi_pick.html" with field=form.regions placeholder=ph_states %}
+                    {% for error in form.regions.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Interests" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></label>
+                    {% if choices.interests %}
+                    {% translate "Search interests…" as ph_interests %}
+                    {% include "ads/pinterest/partials/_multi_pick.html" with field=form.interests placeholder=ph_interests %}
+                    <p class="text-xs mt-1.5 text-neutral-600">{% translate "People who engage with these subjects on Pinterest." %}</p>
+                    {% else %}
+                    <p class="text-sm text-neutral-600">{% if choices.errors.interests %}{% blocktranslate with reason=choices.errors.interests %}Pinterest did not send its interests: {{ reason }}{% endblocktranslate %}{% else %}{% translate "Pinterest offers no interests for this ad account." %}{% endif %}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    {% include "components/_form_field.html" with field=form.keywords %}
+                    <p class="text-xs mt-1.5 text-neutral-600">{% translate "Separated by commas. They show the ad to people who search these words, so they need search in Where it appears." %}</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Include audiences" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></label>
+                        {% if choices.audiences %}
+                        {% translate "Your audiences…" as ph_aud %}
+                        {% include "ads/pinterest/partials/_multi_pick.html" with field=form.audiences_include placeholder=ph_aud %}
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Exclude audiences" %} <span class="font-normal text-neutral-500">({% translate "optional" %})</span></label>
+                        {% if choices.audiences %}
+                        {% include "ads/pinterest/partials/_multi_pick.html" with field=form.audiences_exclude placeholder=ph_aud %}
+                        {% endif %}
+                        {% for error in form.audiences_exclude.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
+                    </div>
+                    {% if not choices.audiences %}
+                    <p class="sm:col-span-2 -mt-2 text-sm text-neutral-600">{% if choices.errors.audiences %}{% blocktranslate with reason=choices.errors.audiences %}Pinterest did not send your audiences: {{ reason }}{% endblocktranslate %}{% else %}{% translate "This ad account has no audiences yet: customer lists, site visitors and look-alikes are made in Pinterest Ads Manager." %}{% endif %}</p>
+                    {% endif %}
+                </div>
+                <label class="flex items-start gap-3 p-3 rounded-xl border border-neutral-300 bg-white cursor-pointer">
+                    {{ form.auto_targeting }}
+                    <span>
+                        <span class="block text-sm font-semibold text-neutral-950">{{ form.auto_targeting.label }}</span>
+                        <span class="block text-xs text-neutral-600">{% translate "Pinterest Performance+: Pinterest also shows the ad to people likely to respond beyond what you chose." %}</span>
                     </span>
                 </label>
-                {% endfor %}
-                {% endwith %}
-            </div>
-            {% else %}
-            <p class="text-sm text-neutral-600">{% translate "No pin was published from Connekt Flow yet. Publish one, or paste the ID of a pin below." %}</p>
-            {% endif %}
-            {% for error in form.pin_id.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
-        </fieldset>
-        {% include "components/_form_field.html" with field=form.other_pin_id %}
-        <p class="text-xs text-neutral-600">{% translate "The ad shows the pin as it is on Pinterest, with its image, title and link." %}</p>
-    </section>
+            </section>
 
-    <div class="flex justify-end gap-2">
-        <a href="{% url 'ads:pinterest_index' workspace_id=workspace_id %}" class="btn-outline">{% translate "Cancel" %}</a>
-        <button type="submit" class="btn-brand">{% translate "Create paused campaign" %}</button>
+            {# ── Step 3: where it appears ── #}
+            <section x-show="step === 3" x-cloak class="a-card p-5 space-y-5">
+                <h2 class="section-title">{% translate "Where it appears" %}</h2>
+                <fieldset>
+                    <legend class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Placement" %}</legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {% for radio in form.placement %}
+                        <label class="flex flex-col gap-1 p-4 bg-white rounded-xl border border-neutral-300 cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:ring-2 has-[:checked]:ring-brand-100">
+                            <span class="flex items-center gap-2"><input type="radio" name="{{ radio.data.name }}" value="{{ radio.data.value }}" {% if radio.data.selected %}checked{% endif %} class="bb-checkbox w-4 h-4" data-summary="{{ radio.choice_label }}"><span class="text-sm font-semibold text-neutral-950">{{ radio.choice_label }}</span></span>
+                            <span class="text-xs text-neutral-600">{% if radio.data.value == "ALL" %}{% translate "Pinterest chooses where the ad does best (recommended)." %}{% elif radio.data.value == "BROWSE" %}{% translate "In the home feed and next to related pins." %}{% else %}{% translate "Among the results when people search." %}{% endif %}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend class="block text-sm font-semibold text-neutral-950 mb-2">{% translate "Devices" %}</legend>
+                    <div class="flex flex-wrap gap-2">
+                        {% for box in form.devices %}
+                        <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-neutral-300 bg-white text-sm cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">{{ box.tag }} {{ box.choice_label }}</label>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs mt-1.5 text-neutral-600">{% translate "None ticked: every device." %}</p>
+                </fieldset>
+            </section>
+
+            {# ── Step 4: budget and launch ── #}
+            <section x-show="step === 4" x-cloak class="a-card p-5 space-y-5">
+                <h2 class="section-title">{% translate "Budget and launch" %}</h2>
+                {% include "components/_form_field.html" with field=form.daily_budget %}
+                <fieldset>
+                    <legend class="block text-sm font-semibold text-neutral-950 mb-2">{{ form.bid_strategy.label }}</legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {% for radio in form.bid_strategy %}
+                        <label class="flex flex-col gap-1 p-4 bg-white rounded-xl border border-neutral-300 cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:ring-2 has-[:checked]:ring-brand-100">
+                            <span class="flex items-center gap-2"><input type="radio" name="{{ radio.data.name }}" value="{{ radio.data.value }}" {% if radio.data.selected %}checked{% endif %} class="bb-checkbox w-4 h-4" data-summary="{{ radio.choice_label }}"><span class="text-sm font-semibold text-neutral-950">{{ radio.choice_label }}</span></span>
+                            <span class="text-xs text-neutral-600">{% if radio.data.value == "AUTOMATIC_BID" %}{% translate "Pinterest bids to get the most out of the budget (recommended)." %}{% elif radio.data.value == "MAX_BID" %}{% translate "Never pay more than this per click or per 1,000 impressions." %}{% else %}{% translate "Keep the average cost close to this value." %}{% endif %}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% for error in form.bid_strategy.errors %}<p class="text-xs mt-1.5 text-[var(--error-700)]">{{ error }}</p>{% endfor %}
+                </fieldset>
+                <div x-show="bid !== 'AUTOMATIC_BID'" x-cloak>
+                    {% include "components/_form_field.html" with field=form.bid_amount hide_optional=True %}
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {% include "components/_form_field.html" with field=form.start_time %}
+                    {% include "components/_form_field.html" with field=form.end_time %}
+                </div>
+                <p class="text-xs text-neutral-600">{% translate "Without a start, delivery begins as soon as the campaign is activated. Without an end, it runs until you pause it." %}</p>
+                <div x-show="objective === 'AWARENESS'" x-cloak>
+                    {% include "components/_form_field.html" with field=form.frequency_cap %}
+                </div>
+            </section>
+
+            <div class="flex items-center justify-between gap-2">
+                <a href="{% url 'ads:pinterest_index' workspace_id=workspace_id %}" class="btn-outline">{% translate "Cancel" %}</a>
+                <div class="flex gap-2">
+                    <button type="button" class="btn-outline" x-show="step > 1" x-cloak @click="step--">{% translate "Back" %}</button>
+                    <button type="button" class="btn-brand" x-show="step < 4" @click="step++">{% translate "Next" context "wizard step" %}</button>
+                    <button type="submit" class="btn-brand" x-show="step === 4" x-cloak>{% translate "Create paused campaign" %}</button>
+                </div>
+            </div>
+        </div>
+
+        {# ── Summary ── #}
+        <aside class="space-y-4 lg:sticky lg:top-6">
+            {% include "ads/pinterest/partials/_ad_preview.html" %}
+            <section class="a-card p-5">
+                <h2 class="section-title mb-3">{% translate "Campaign summary" %}</h2>
+                <dl class="divide-y divide-neutral-200 text-sm">
+                    <div class="py-2.5"><dt class="font-semibold text-neutral-950">{% translate "Objective" %}</dt><dd class="text-neutral-600" x-text="summary.objective"></dd></div>
+                    <div class="py-2.5"><dt class="font-semibold text-neutral-950">{% translate "Audience" %}</dt><dd class="text-neutral-600" x-text="summary.audience"></dd></div>
+                    <div class="py-2.5"><dt class="font-semibold text-neutral-950">{% translate "Where it appears" %}</dt><dd class="text-neutral-600" x-text="summary.placement"></dd></div>
+                    <div class="py-2.5"><dt class="font-semibold text-neutral-950">{{ form.bid_strategy.label }}</dt><dd class="text-neutral-600" x-text="summary.bid"></dd></div>
+                    <div class="py-2.5"><dt class="font-semibold text-neutral-950">{{ form.daily_budget.label }}</dt><dd class="text-neutral-600" x-text="summary.budget"></dd></div>
+                    <div class="py-2.5"><dt class="font-semibold text-neutral-950">{% translate "Period" %}</dt><dd class="text-neutral-600" x-text="summary.period"></dd></div>
+                </dl>
+            </section>
+            <section class="a-card p-5">
+                <h2 class="section-title mb-2">{% translate "Campaign tips" %}</h2>
+                <ul class="list-disc pl-5 space-y-1.5 text-sm text-neutral-700">
+                    <li>{% translate "Use vertical, high-quality images (2:3)." %}</li>
+                    <li>{% translate "Choose interests and keywords that match the pin." %}</li>
+                    <li>{% translate "Set a budget that fits the objective; Pinterest needs a few days to learn." %}</li>
+                </ul>
+            </section>
+        </aside>
     </div>
 </form>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    // The browser names ISO country and language codes in the page's language.
+    const lang = document.documentElement.lang || undefined;
+    const namer = (type) => { try { return new Intl.DisplayNames(lang ? [lang] : undefined, { type }); } catch (e) { return null; } };
+    const names = { region: namer('region'), language: namer('language') };
+
+    Alpine.data('multiPick', (kind) => ({
+        open: false, q: '', chosen: [], anyMatch: true,
+        removeLabel: '',
+        init() {
+            this.removeLabel = this.$refs.panel.dataset.removeLabel;
+            const n = names[kind];
+            if (n) this.$refs.panel.querySelectorAll('[data-pick-label]').forEach((el) => {
+                try { const name = n.of(el.dataset.code); if (name) el.textContent = name.charAt(0).toLocaleUpperCase(lang) + name.slice(1); } catch (e) {}
+            });
+            this.refresh();
+        },
+        boxes() { return [...this.$refs.panel.querySelectorAll('input[type=checkbox]')]; },
+        refresh() {
+            this.chosen = this.boxes().filter((b) => b.checked).map((b) => ({ value: b.value, label: b.nextElementSibling.textContent.trim() }));
+            this.anyMatch = this.boxes().some((b) => this.matches(b.parentElement));
+        },
+        matches(el) { const q = this.q.trim().toLowerCase(); return !q || el.textContent.toLowerCase().includes(q); },
+        unpick(value) {
+            const box = this.boxes().find((b) => b.value === value);
+            if (box) { box.checked = false; box.dispatchEvent(new Event('change', { bubbles: true })); }
+        },
+    }));
+
+    Alpine.data('campaignWizard', (initialStep) => ({
+        step: initialStep, objective: '', bid: 'AUTOMATIC_BID', onlyBrazil: false,
+        pin: null, keyword: '', placement: 'ALL', tabs: ['feed', 'search', 'closeup'], tab: 0,
+        summary: { objective: '', audience: '', placement: '', bid: '', budget: '', period: '' },
+        init() { this.refresh(); this.$watch('step', () => window.scrollTo({ top: 0, behavior: 'smooth' })); },
+        checkedLabel(name) { const el = this.$refs.form.querySelector(`input[name="${name}"]:checked`); return el ? el.dataset.summary : ''; },
+        refresh() {
+            const form = this.$refs.form, data = new FormData(form), t = form.dataset;
+            this.objective = data.get('objective') || '';
+            const chosenPin = form.querySelector('input[name="pin_id"]:checked');
+            const otherPin = (data.get('other_pin_id') || '').trim();
+            this.pin = otherPin ? { title: '', image: '', account: '', avatar: '' }
+                : chosenPin ? { ...chosenPin.dataset } : null;
+            this.keyword = (data.get('keywords') || '').split(/[,\n]/).map((k) => k.trim()).find(Boolean) || '';
+            this.placement = data.get('placement') || 'ALL';
+            const tabs = { ALL: ['feed', 'search', 'closeup'], BROWSE: ['feed', 'closeup'], SEARCH: ['search', 'closeup'] }[this.placement];
+            if (tabs.join() !== this.tabs.join()) { this.tabs = tabs; this.tab = 0; }
+            this.bid = data.get('bid_strategy') || 'AUTOMATIC_BID';
+            const countries = data.getAll('countries');
+            this.onlyBrazil = countries.length === 1 && countries[0] === 'BR';
+            const countryNames = countries.map((c) => { try { return names.region ? names.region.of(c) : c; } catch (e) { return c; } });
+            const ageMin = data.get('age_min'), ageMax = data.get('age_max');
+            const ages = ageMin || ageMax ? `${ageMin || '18'}–${ageMax || '65+'} ${t.years}` : t.allAges;
+            const genders = [...form.querySelectorAll('input[name="genders"]:checked')].map((b) => b.parentElement.textContent.trim());
+            const devices = [...form.querySelectorAll('input[name="devices"]:checked')].map((b) => b.parentElement.textContent.trim());
+            const currency = JSON.parse(document.getElementById('wizard-currency').textContent) || '';
+            const budget = data.get('daily_budget');
+            const amount = data.get('bid_amount');
+            const start = data.get('start_time'), end = data.get('end_time');
+            const fmt = (v) => new Date(v).toLocaleDateString(lang);
+            const money = (v) => { try { return new Intl.NumberFormat(lang, { style: 'currency', currency }).format(Number(v)); } catch (e) { return `${currency} ${v}`; } };
+            this.summary = {
+                objective: this.checkedLabel('objective'),
+                audience: [countryNames.join(', '), ages, genders.length ? genders.join(', ') : t.everyone].filter(Boolean).join(' · '),
+                placement: [this.checkedLabel('placement'), devices.length ? devices.join(', ') : t.allDevices].join(' · '),
+                bid: this.checkedLabel('bid_strategy') + (this.bid !== 'AUTOMATIC_BID' && amount ? ` · ${money(amount)}` : ''),
+                budget: budget ? `${money(budget)} ${t.perDay}` : '—',
+                period: start || end ? [start ? `${t.from} ${fmt(start)}` : '', end ? `${t.until} ${fmt(end)}` : ''].filter(Boolean).join(' ') : t.noDates,
+            };
+        },
+    }));
+});
+</script>
 {% endblock %}

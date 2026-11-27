@@ -221,6 +221,40 @@ class PinterestAdsClient(PinterestProvider):
             {"campaign_ids": [campaign_id], "entity_statuses": ["ACTIVE", "PAUSED", "ARCHIVED"]},
         )
 
+    def audiences(self, token: str, ad_account_id: str) -> list[dict]:
+        """The ad account's own audiences (customer lists, visitors, actalikes), for targeting."""
+        return self._get_all(token, f"ad_accounts/{ad_account_id}/audiences")
+
+    def conversion_tags(self, token: str, ad_account_id: str) -> list[dict]:
+        """The ad account's Pinterest tags, which a Sales campaign optimises for."""
+        body = self._get(token, f"ad_accounts/{ad_account_id}/conversion_tags")
+        return body if isinstance(body, list) else (body.get("items") or [])
+
+    def targeting_options(self, token: str, ad_account_id: str, targeting_type: str) -> list:
+        """What Pinterest offers for one targeting type (``interest``, ``geo``…), as it answers it."""
+        body = self._get(token, f"resources/targeting/{targeting_type}", {"ad_account_id": ad_account_id})
+        return body if isinstance(body, list) else (body.get("items") or [])
+
+    def create_keywords(self, token: str, ad_account_id: str, ad_group_id: str, values: list[str]) -> None:
+        """Broad-match keywords on an ad group; raise what Pinterest refused."""
+        body = self._request(
+            "POST",
+            f"{API_BASE}/ad_accounts/{ad_account_id}/keywords",
+            access_token=token,
+            json={"parent_id": ad_group_id, "keywords": [{"match_type": "BROAD", "value": v} for v in values]},
+        ).json()
+        errors = (body.get("errors") or []) if isinstance(body, dict) else []
+        if errors:
+            message = str(errors[0].get("error_messages") or errors[0].get("message") or "")
+            raise APIError(
+                f"Pinterest Ads: keywords refused: {message or body}",
+                status_code=400,
+                platform=self.platform_name,
+                raw_response=body,
+                retryable=False,
+                user_message=message,
+            )
+
     def _analytics(self, token: str, path: str, params: dict, *, since: str, until: str, daily: bool) -> list[Insights]:
         rows = self._get(
             token,

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 13:34+0000\n"
+"POT-Creation-Date: 2026-11-27 20:12+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -311,61 +311,63 @@ msgstr "Sem Pixel"
 msgid "No Page"
 msgstr "Sem Página"
 
-#: apps/ads/forms.py:50 apps/ads/forms.py:160 apps/ads/forms.py:237
-#: apps/ads/forms.py:308 templates/calendar/partials/event_form.html:67
+#: apps/ads/forms.py:50 apps/ads/forms.py:160 apps/ads/forms.py:254
+#: apps/ads/forms.py:451 templates/calendar/partials/event_form.html:67
 msgid "Campaign name"
 msgstr "Nome da campanha"
 
-#: apps/ads/forms.py:52 apps/ads/forms.py:238 apps/composer/forms.py:174
+#: apps/ads/forms.py:52 apps/ads/forms.py:255 apps/composer/forms.py:174
+#: templates/ads/pinterest/campaign_new.html:283
 #: templates/composer/partials/template_gallery.html:356
 msgid "Objective"
 msgstr "Objetivo"
 
-#: apps/ads/forms.py:58 apps/ads/forms.py:165 apps/ads/forms.py:240
-#: apps/ads/forms.py:310 templates/ads/partials/_campaign_edit_modal.html:69
+#: apps/ads/forms.py:58 apps/ads/forms.py:165 apps/ads/forms.py:298
+#: apps/ads/forms.py:453 templates/ads/partials/_campaign_edit_modal.html:69
 msgid "Daily budget"
 msgstr "Orçamento diário"
 
-#: apps/ads/forms.py:64 apps/ads/forms.py:246
+#: apps/ads/forms.py:64 apps/ads/forms.py:318
 msgid "Starts"
 msgstr "Começa em"
 
-#: apps/ads/forms.py:65 apps/ads/forms.py:172 apps/ads/forms.py:247
-#: apps/ads/forms.py:317
+#: apps/ads/forms.py:65 apps/ads/forms.py:172 apps/ads/forms.py:319
+#: apps/ads/forms.py:460
 msgid "Ends"
 msgstr "Termina em"
 
-#: apps/ads/forms.py:67 apps/ads/forms.py:249
+#: apps/ads/forms.py:67 apps/ads/forms.py:271
 msgid "Countries"
 msgstr "Países"
 
-#: apps/ads/forms.py:70 apps/ads/forms.py:252
+#: apps/ads/forms.py:70
 msgid "Two-letter codes separated by commas, e.g. BR, PT."
 msgstr "Códigos de duas letras separados por vírgula, ex.: BR, PT."
 
-#: apps/ads/forms.py:74
+#: apps/ads/forms.py:74 apps/ads/forms.py:266
 msgid "Minimum age"
 msgstr "Idade mínima"
 
-#: apps/ads/forms.py:77
+#: apps/ads/forms.py:77 apps/ads/forms.py:267
 msgid "Maximum age"
 msgstr "Idade máxima"
 
 #: apps/ads/forms.py:80 apps/contacts/forms.py:102
-#: apps/contacts/services.py:526
+#: apps/contacts/services.py:526 templates/ads/pinterest/campaign_new.html:144
 msgid "Gender"
 msgstr "Gênero"
 
-#: apps/ads/forms.py:81 templates/composer/compose.html:2515
-#: templates/tasks/board.html:64 templates/tasks/board.html:69
+#: apps/ads/forms.py:81 templates/ads/pinterest/campaign_new.html:24
+#: templates/composer/compose.html:2516 templates/tasks/board.html:64
+#: templates/tasks/board.html:69
 msgid "Everyone"
 msgstr "Todos"
 
-#: apps/ads/forms.py:81 apps/ads/services.py:644
+#: apps/ads/forms.py:81 apps/ads/pinterest.py:74 apps/ads/services.py:644
 msgid "Men"
 msgstr "Homens"
 
-#: apps/ads/forms.py:81 apps/ads/services.py:644
+#: apps/ads/forms.py:81 apps/ads/pinterest.py:74 apps/ads/services.py:644
 msgid "Women"
 msgstr "Mulheres"
 
@@ -394,7 +396,7 @@ msgstr "Link de destino"
 msgid "Button"
 msgstr "Botão"
 
-#: apps/ads/forms.py:113 apps/ads/forms.py:270
+#: apps/ads/forms.py:113 apps/ads/forms.py:348
 #, python-format
 msgid "In %(currency)s, the ad account's currency."
 msgstr "Em %(currency)s, a moeda da conta de anúncios."
@@ -407,7 +409,7 @@ msgstr "O link deve começar com https://."
 msgid "The maximum age must be at least the minimum age."
 msgstr "A idade máxima precisa ser maior ou igual à mínima."
 
-#: apps/ads/forms.py:132 apps/ads/forms.py:281
+#: apps/ads/forms.py:132 apps/ads/forms.py:381
 msgid "The end must be after the start."
 msgstr "O fim precisa ser depois do início."
 
@@ -418,7 +420,7 @@ msgstr ""
 "Campanhas de vendas e de cadastros precisam de um Pixel. Escolha um nas "
 "configurações da conexão."
 
-#: apps/ads/forms.py:177 apps/ads/forms.py:322
+#: apps/ads/forms.py:177 apps/ads/forms.py:465
 msgid "The end must be in the future."
 msgstr "O fim precisa ser no futuro."
 
@@ -438,27 +440,127 @@ msgstr "País"
 msgid "Currency"
 msgstr "Moeda"
 
-#: apps/ads/forms.py:255 apps/tasks/creative_formats.py:146
+#: apps/ads/forms.py:256 apps/tasks/creative_formats.py:146
 #: templates/ads/pinterest/partials/_campaign_body.html:37
 #: templates/ads/pinterest/partials/_campaign_body.html:40
 msgid "Pin"
 msgstr "Pin"
 
-#: apps/ads/forms.py:257
+#: apps/ads/forms.py:258
 msgid "Or the ID of another pin"
 msgstr "Ou o ID de outro pin"
 
-#: apps/ads/forms.py:260
+#: apps/ads/forms.py:261
 msgid "The number at the end of the pin's address on Pinterest."
 msgstr "O número no fim do endereço do pin no Pinterest."
 
-#: apps/ads/forms.py:286
+#: apps/ads/forms.py:264
+msgid "Pinterest tag"
+msgstr "Tag do Pinterest"
+
+#: apps/ads/forms.py:275
+msgid "Choose at least one country."
+msgstr "Escolha pelo menos um país."
+
+#: apps/ads/forms.py:280
+msgid "Keywords"
+msgstr "Palavras-chave"
+
+#: apps/ads/forms.py:287
+msgid "Expand the audience automatically"
+msgstr "Expandir o público automaticamente"
+
+#: apps/ads/forms.py:290 templates/ads/pinterest/campaign_new.html:32
+#: templates/ads/pinterest/campaign_new.html:215
+#: templates/ads/pinterest/campaign_new.html:285
+msgid "Where it appears"
+msgstr "Onde aparece"
+
+#: apps/ads/forms.py:305
+msgid "Bid"
+msgstr "Lance"
+
+#: apps/ads/forms.py:311
+msgid "Bid amount"
+msgstr "Valor do lance"
+
+#: apps/ads/forms.py:321
+msgid "Frequency cap"
+msgstr "Limite de frequência"
+
+#: apps/ads/forms.py:325
+msgid ""
+"At most this many times per person in 30 days. Awareness with an end date "
+"only."
+msgstr ""
+"No máximo esta quantidade de vezes por pessoa em 30 dias. Só para "
+"Reconhecimento com data de fim."
+
+#: apps/ads/forms.py:333 apps/ads/forms.py:334
+msgid "Any"
+msgstr "Qualquer"
+
+#: apps/ads/forms.py:351
+#, python-format
+msgid "In %(currency)s, per click or per 1,000 impressions."
+msgstr "Em %(currency)s, por clique ou por mil impressões."
+
+#: apps/ads/forms.py:374
+#, python-format
+msgid "At most %(count)s keywords."
+msgstr "No máximo %(count)s palavras-chave."
+
+#: apps/ads/forms.py:386
 msgid "A pin ID has only digits."
 msgstr "O ID de um pin tem só números."
 
-#: apps/ads/forms.py:289 apps/ads/pinterest.py:579
+#: apps/ads/forms.py:389 apps/ads/pinterest.py:696
 msgid "Choose the pin the ad promotes."
 msgstr "Escolha o pin que o anúncio promove."
+
+#: apps/ads/forms.py:395
+msgid "Video views promote a video pin. Choose one of your video pins."
+msgstr ""
+"Visualização de vídeo promove um pin de vídeo. Escolha um dos seus pins de "
+"vídeo."
+
+#: apps/ads/forms.py:397
+msgid "Video views only take the automatic bid."
+msgstr "Visualização de vídeo só aceita o lance automático."
+
+#: apps/ads/forms.py:399
+msgid "Sales optimise for a Pinterest tag. Choose the tag of your site."
+msgstr ""
+"Vendas se otimizam por uma tag do Pinterest. Escolha a tag do seu site."
+
+#: apps/ads/forms.py:401
+msgid "Say how much to bid."
+msgstr "Informe o valor do lance."
+
+#: apps/ads/forms.py:405
+msgid "The maximum age must not be below the minimum."
+msgstr "A idade máxima não pode ser menor que a mínima."
+
+#: apps/ads/forms.py:408
+msgid "States narrow a Brazilian audience: choose Brazil as the only country."
+msgstr ""
+"Os estados restringem um público brasileiro: deixe o Brasil como único país."
+
+#: apps/ads/forms.py:410
+msgid ""
+"Keywords only work in search. Show the ad in search too, or remove them."
+msgstr ""
+"Palavras-chave só funcionam na busca. Mostre o anúncio também na busca ou "
+"remova as palavras-chave."
+
+#: apps/ads/forms.py:413
+msgid "An audience cannot be both included and excluded."
+msgstr "Um público não pode ser incluído e excluído ao mesmo tempo."
+
+#: apps/ads/forms.py:415
+msgid "The frequency cap needs the Awareness objective and an end date."
+msgstr ""
+"O limite de frequência exige o objetivo Reconhecimento e uma data de fim."
 
 #: apps/ads/models.py:37
 msgid "Choosing the ad account"
@@ -524,7 +626,54 @@ msgstr "Instalações do app"
 msgid "Engagement"
 msgstr "Engajamento"
 
-#: apps/ads/pinterest.py:66 apps/ads/pinterest.py:67 apps/ads/services.py:70
+#: apps/ads/pinterest.py:74
+msgid "Unspecified"
+msgstr "Não informado"
+
+#: apps/ads/pinterest.py:96
+msgid "Feed and search"
+msgstr "Feed e busca"
+
+#: apps/ads/pinterest.py:97
+msgid "Home feed and related pins"
+msgstr "Feed inicial e pins relacionados"
+
+#: apps/ads/pinterest.py:98 apps/ads/services.py:670
+msgid "Search results"
+msgstr "Resultados de busca"
+
+#: apps/ads/pinterest.py:103
+msgid "Android phone"
+msgstr "Celular Android"
+
+#: apps/ads/pinterest.py:104
+msgid "Android tablet"
+msgstr "Tablet Android"
+
+#: apps/ads/pinterest.py:105
+#: templates/email_center/partials/_preview_card.html:17
+#: templates/support/staff_chat_console.html:330
+#: templates/support/staff_chat_history_detail.html:49
+msgid "Computer"
+msgstr "Computador"
+
+#: apps/ads/pinterest.py:106
+msgid "Mobile browser"
+msgstr "Navegador no celular"
+
+#: apps/ads/pinterest.py:109 apps/contacts/forms.py:125
+msgid "Automatic"
+msgstr "Automático"
+
+#: apps/ads/pinterest.py:110
+msgid "Maximum bid"
+msgstr "Lance máximo"
+
+#: apps/ads/pinterest.py:111
+msgid "Target average cost"
+msgstr "Custo médio desejado"
+
+#: apps/ads/pinterest.py:121 apps/ads/pinterest.py:122 apps/ads/services.py:70
 #: apps/billing/models.py:75 apps/billing/models.py:297
 #: apps/email_center/forms.py:98 templates/api_keys/_key_row.html:10
 #: templates/billing/cancel_subscription.html:33
@@ -538,38 +687,33 @@ msgstr "Engajamento"
 msgid "Active"
 msgstr "Ativa"
 
-#: apps/ads/pinterest.py:68 apps/ads/services.py:71
+#: apps/ads/pinterest.py:123 apps/ads/services.py:71
 #: apps/automations/models.py:200 apps/social_accounts/whatsapp_templates.py:37
 msgid "Paused"
 msgstr "Pausada"
 
-#: apps/ads/pinterest.py:69 apps/approvals/templatetags/approval_extras.py:25
+#: apps/ads/pinterest.py:124 apps/approvals/templatetags/approval_extras.py:25
 #: apps/calendar/status_board.py:51 apps/composer/models.py:481
 #: templates/calendar/partials/publish_calendar_shell.html:101
 #: templates/workspaces/partials/_dashboard_goal.html:50
 msgid "Scheduled"
 msgstr "Agendado"
 
-#: apps/ads/pinterest.py:70 apps/composer/models.py:1036
+#: apps/ads/pinterest.py:125 apps/composer/models.py:1036
 #: apps/radar/reports.py:52
 msgid "Completed"
 msgstr "Concluído"
 
-#: apps/ads/pinterest.py:71 apps/social_accounts/whatsapp_templates.py:38
+#: apps/ads/pinterest.py:126 apps/social_accounts/whatsapp_templates.py:38
 msgid "Disabled"
 msgstr "Desativado"
 
-#: apps/ads/pinterest.py:72 apps/ads/services.py:80
-#: templates/billing/partials/_payment_rows.html:19
-#: templates/billing/staff_account.html:172
-#: templates/billing/staff_console.html:183
-#: templates/organizations/partials/workspace_card.html:22
-#: templates/organizations/settings.html:81
-#: templates/organizations/workspaces.html:79
+#: apps/ads/pinterest.py:127 apps/ads/services.py:80
+msgctxt "ad status"
 msgid "Archived"
-msgstr "Arquivadas"
+msgstr "Arquivada"
 
-#: apps/ads/pinterest.py:73 apps/approvals/templatetags/approval_extras.py:13
+#: apps/ads/pinterest.py:128 apps/approvals/templatetags/approval_extras.py:13
 #: apps/calendar/status_board.py:42 apps/composer/models.py:475
 #: apps/inbox/models.py:208 templates/automations/flow_builder.html:100
 #: templates/automations/staff_template_list.html:103
@@ -582,13 +726,13 @@ msgstr "Arquivadas"
 msgid "Draft"
 msgstr "Rascunho"
 
-#: apps/ads/pinterest.py:74 apps/ads/services.py:75
+#: apps/ads/pinterest.py:129 apps/ads/services.py:75
 #: apps/social_accounts/whatsapp_templates.py:34
 #: apps/social_accounts/whatsapp_templates.py:35 apps/tasks/models.py:22
 msgid "In review"
 msgstr "Em revisão"
 
-#: apps/ads/pinterest.py:75 apps/ads/services.py:76
+#: apps/ads/pinterest.py:130 apps/ads/services.py:76
 #: apps/approvals/templatetags/approval_extras.py:16
 #: apps/calendar/status_board.py:50 apps/composer/models.py:478
 #: apps/composer/models.py:1204 apps/social_accounts/whatsapp_templates.py:33
@@ -597,7 +741,7 @@ msgstr "Em revisão"
 msgid "Approved"
 msgstr "Aprovado"
 
-#: apps/ads/pinterest.py:76 apps/ads/services.py:79
+#: apps/ads/pinterest.py:131 apps/ads/services.py:79
 #: apps/affiliates/models.py:129
 #: apps/approvals/templatetags/approval_extras.py:24
 #: apps/composer/models.py:480 apps/composer/models.py:1206
@@ -608,33 +752,33 @@ msgstr "Aprovado"
 msgid "Rejected"
 msgstr "Recusado"
 
-#: apps/ads/pinterest.py:80 templates/workspaces/settings.html:83
+#: apps/ads/pinterest.py:135 templates/workspaces/settings.html:83
 msgid "Brazil"
 msgstr "Brasil"
 
-#: apps/ads/pinterest.py:80
+#: apps/ads/pinterest.py:135
 msgid "Portugal"
 msgstr "Portugal"
 
-#: apps/ads/pinterest.py:80
+#: apps/ads/pinterest.py:135
 msgid "United States"
 msgstr "Estados Unidos"
 
-#: apps/ads/pinterest.py:94
+#: apps/ads/pinterest.py:159
 msgid ""
 "The Pinterest app is not configured. Ask your administrator to set it up."
 msgstr ""
 "O app do Pinterest não está configurado. Peça ao administrador para "
 "configurá-lo."
 
-#: apps/ads/pinterest.py:112
+#: apps/ads/pinterest.py:177
 msgid ""
 "The Pinterest sign-in expired or was revoked. Connect Pinterest Ads again."
 msgstr ""
 "O login do Pinterest expirou ou foi revogado. Conecte o Pinterest Ads de "
 "novo."
 
-#: apps/ads/pinterest.py:114
+#: apps/ads/pinterest.py:179
 msgid ""
 "Pinterest is limiting requests to this ad account right now. Try again in a "
 "few minutes."
@@ -642,42 +786,42 @@ msgstr ""
 "O Pinterest está limitando os pedidos para esta conta de anúncios agora. "
 "Tente de novo em alguns minutos."
 
-#: apps/ads/pinterest.py:116
+#: apps/ads/pinterest.py:181
 #, python-format
 msgid "Pinterest refused the request: %(detail)s"
 msgstr "O Pinterest recusou o pedido: %(detail)s"
 
-#: apps/ads/pinterest.py:116 apps/ads/services.py:141
+#: apps/ads/pinterest.py:181 apps/ads/services.py:141
 msgid "no reason given"
 msgstr "nenhum motivo informado"
 
-#: apps/ads/pinterest.py:238
+#: apps/ads/pinterest.py:303
 msgid "Choose one of the ad accounts your Pinterest sign-in can manage."
 msgstr ""
 "Escolha uma das contas de anúncios que o seu login do Pinterest pode "
 "administrar."
 
-#: apps/ads/pinterest.py:255
+#: apps/ads/pinterest.py:320
 msgid "Choose one of the offered countries and currencies."
 msgstr "Escolha um dos países e uma das moedas oferecidos."
 
-#: apps/ads/pinterest.py:324
+#: apps/ads/pinterest.py:389
 msgid ""
 "Pinterest keeps the numbers of the last 90 days. Choose a period inside them."
 msgstr ""
 "O Pinterest guarda os números dos últimos 90 dias. Escolha um período dentro "
 "deles."
 
-#: apps/ads/pinterest.py:365 apps/ads/pinterest.py:368 apps/ads/services.py:541
+#: apps/ads/pinterest.py:430 apps/ads/pinterest.py:433 apps/ads/services.py:541
 #: apps/ads/services.py:544
 msgid "This campaign was not found in the connected ad account."
 msgstr "Esta campanha não foi encontrada na conta de anúncios conectada."
 
-#: apps/ads/pinterest.py:473 apps/ads/services.py:760
+#: apps/ads/pinterest.py:538 apps/ads/services.py:760
 msgid "Unknown campaign status."
 msgstr "Status de campanha desconhecido."
 
-#: apps/ads/pinterest.py:500
+#: apps/ads/pinterest.py:565
 #: templates/ads/pinterest/partials/_campaign_edit_modal.html:32
 msgid ""
 "This campaign has a lifetime budget. Change it in Pinterest Ads Manager."
@@ -685,39 +829,43 @@ msgstr ""
 "Esta campanha tem orçamento total. Altere-o no Gerenciador de Anúncios do "
 "Pinterest."
 
-#: apps/ads/pinterest.py:544
+#: apps/ads/pinterest.py:643
 msgid "Ad group"
 msgstr "Grupo de anúncios"
 
-#: apps/ads/pinterest.py:575
+#: apps/ads/pinterest.py:692
 msgid "Finish connecting Pinterest Ads before creating campaigns."
 msgstr "Termine de conectar o Pinterest Ads antes de criar campanhas."
 
-#: apps/ads/pinterest.py:577 apps/ads/services.py:889
+#: apps/ads/pinterest.py:694 apps/ads/services.py:889
 msgid "Choose one of the offered objectives."
 msgstr "Escolha um dos objetivos oferecidos."
 
-#: apps/ads/pinterest_views.py:134
+#: apps/ads/pinterest_views.py:114 apps/social_accounts/views.py:457
+msgid "This platform is not available."
+msgstr "Esta plataforma não está disponível."
+
+#: apps/ads/pinterest_views.py:137
 msgid "The Pinterest sign-in was cancelled or refused."
 msgstr "O login do Pinterest foi cancelado ou recusado."
 
-#: apps/ads/pinterest_views.py:148
+#: apps/ads/pinterest_views.py:151
 msgid "Pinterest Ads connected. Choose the ad account to use."
 msgstr "Pinterest Ads conectado. Escolha a conta de anúncios que vai usar."
 
-#: apps/ads/pinterest_views.py:185
+#: apps/ads/pinterest_views.py:188
 msgid "Pinterest Ads settings saved."
 msgstr "Configurações do Pinterest Ads salvas."
 
-#: apps/ads/pinterest_views.py:202
+#: apps/ads/pinterest_views.py:205
 msgid "Give the ad account a name and choose its country and currency."
 msgstr "Dê um nome à conta de anúncios e escolha o país e a moeda dela."
 
-#: apps/ads/pinterest_views.py:209
+#: apps/ads/pinterest_views.py:212
 msgid "Ad account opened on Pinterest and chosen for this brand."
 msgstr "Conta de anúncios aberta no Pinterest e escolhida para esta marca."
 
-#: apps/ads/pinterest_views.py:223
+#: apps/ads/pinterest_views.py:226
 msgid ""
 "Pinterest Ads disconnected. Campaigns keep running in the ad account until "
 "you stop them there."
@@ -725,26 +873,26 @@ msgstr ""
 "Pinterest Ads desconectado. As campanhas continuam rodando na conta de "
 "anúncios até você pará-las lá."
 
-#: apps/ads/pinterest_views.py:250 apps/ads/views.py:345
+#: apps/ads/pinterest_views.py:257 apps/ads/views.py:345
 msgid "Campaign created, paused. Review it and activate it when you are ready."
 msgstr "Campanha criada, pausada. Revise e ative quando estiver tudo certo."
 
-#: apps/ads/pinterest_views.py:330
+#: apps/ads/pinterest_views.py:347
 msgid ""
 "Campaign activated. Pinterest reviews new ads before they start delivering."
 msgstr ""
 "Campanha ativada. O Pinterest revisa os anúncios novos antes de começar a "
 "veiculação."
 
-#: apps/ads/pinterest_views.py:331 apps/ads/views.py:457
+#: apps/ads/pinterest_views.py:348 apps/ads/views.py:457
 msgid "Campaign paused."
 msgstr "Campanha pausada."
 
-#: apps/ads/pinterest_views.py:332 apps/ads/views.py:458
+#: apps/ads/pinterest_views.py:349 apps/ads/views.py:458
 msgid "Campaign archived."
 msgstr "Campanha arquivada."
 
-#: apps/ads/pinterest_views.py:365 apps/calendar/views.py:2214
+#: apps/ads/pinterest_views.py:382 apps/calendar/views.py:2214
 msgid "Campaign updated."
 msgstr "Campanha atualizada."
 
@@ -949,10 +1097,6 @@ msgstr "Vídeo in-stream"
 msgid "Right column"
 msgstr "Coluna da direita"
 
-#: apps/ads/services.py:670
-msgid "Search results"
-msgstr "Resultados de busca"
-
 #: apps/ads/services.py:671 templates/inbox/feed.html:7
 #: templates/inbox/feed.html:118 templates/inbox/message_detail.html:7
 msgid "Inbox"
@@ -1003,27 +1147,27 @@ msgstr ""
 "Escolha, nas configurações da conexão, a Página do Facebook em nome da qual "
 "os anúncios são publicados."
 
-#: apps/ads/views.py:61 apps/social_accounts/views.py:335
+#: apps/ads/views.py:61 apps/social_accounts/views.py:337
 #: templates/ads/index.html:7 templates/analytics/_page_header.html:23
 #: templates/analytics/_page_header.html:107
 #: templates/analytics/meta_ads.html:4
 msgid "Meta Ads"
 msgstr "Meta Ads"
 
-#: apps/ads/views.py:66 apps/social_accounts/views.py:347
+#: apps/ads/views.py:66 apps/social_accounts/views.py:349
 #: templates/ads/pinterest/index.html:3 templates/ads/pinterest/index.html:7
 msgid "Pinterest Ads"
 msgstr "Pinterest Ads"
 
-#: apps/ads/views.py:189 apps/social_accounts/views.py:538
+#: apps/ads/views.py:189 apps/social_accounts/views.py:541
 msgid "Invalid or expired OAuth state. Please try again."
 msgstr "Estado de OAuth inválido ou expirado. Tente novamente."
 
-#: apps/ads/views.py:197 apps/social_accounts/views.py:544
+#: apps/ads/views.py:197 apps/social_accounts/views.py:547
 msgid "OAuth session mismatch. Please try again."
 msgstr "A sessão de OAuth não confere. Tente novamente."
 
-#: apps/ads/views.py:212 apps/social_accounts/views.py:531
+#: apps/ads/views.py:212 apps/social_accounts/views.py:534
 msgid "Missing authorization code or state parameter."
 msgstr "Código de autorização ou parâmetro de estado ausente."
 
@@ -1353,7 +1497,7 @@ msgid "New follows"
 msgstr "Novos seguidores"
 
 #: apps/analytics/metrics.py:30 templates/analytics/_page_header.html:122
-#: templates/composer/compose.html:2517
+#: templates/composer/compose.html:2518
 #: templates/radar/partials/_instagram_results.html:28
 msgid "Followers"
 msgstr "Seguidores"
@@ -1427,7 +1571,7 @@ msgstr ""
 "não informados por %(platform)s: %(listed)s."
 
 #: apps/analytics/services.py:510 apps/composer/views.py:868
-#: apps/composer/views.py:877 apps/composer/views.py:5394
+#: apps/composer/views.py:877 apps/composer/views.py:5411
 #: templates/composer/compose.html:1659
 msgid "and"
 msgstr "e"
@@ -1443,7 +1587,7 @@ msgstr "Carrossel"
 #: apps/tasks/creative_formats.py:119 apps/tasks/creative_formats.py:127
 #: apps/tasks/creative_formats.py:134 apps/tasks/creative_formats.py:156
 #: apps/tasks/creative_formats.py:179 apps/tasks/creative_formats.py:182
-#: templates/ads/pinterest/campaign_new.html:58
+#: templates/ads/pinterest/campaign_new.html:115
 #: templates/radar/partials/_instagram_media_grid.html:15
 #: templates/support/partials/_tutorial_row.html:16
 #: templates/tasks/partials/_art_formats.html:72
@@ -4098,8 +4242,8 @@ msgstr "Em produção"
 #: templates/media_library/shared_library.html:72
 #: templates/notifications/history.html:77
 #: templates/radar/partials/_offers.html:15
-#: templates/social_accounts/list.html:67
-#: templates/social_accounts/list.html:129
+#: templates/social_accounts/list.html:71
+#: templates/social_accounts/list.html:133
 #: templates/support/staff_chat_history.html:24
 #: templates/support/staff_ticket_queue.html:29
 msgid "All"
@@ -4325,10 +4469,10 @@ msgid "Icon"
 msgstr "Ícone"
 
 #: apps/composer/forms.py:252 apps/social_accounts/models.py:643
-#: templates/composer/compose.html:595 templates/composer/compose.html:2498
+#: templates/composer/compose.html:595 templates/composer/compose.html:2499
 #: templates/composer/create_landing.html:395
 #: templates/composer/create_landing.html:578
-#: templates/composer/partials/_pinterest_pin.html:19
+#: templates/composer/partials/_pinterest_pin.html:20
 #: templates/composer/partials/template_gallery.html:117
 #: templates/email_center/partials/_editor.html:15
 #: templates/email_center/partials/_editor.html:58
@@ -4343,7 +4487,7 @@ msgstr "Título"
 #: templates/automations/flow_builder.html:1164
 #: templates/composer/create_landing.html:430
 #: templates/composer/create_landing.html:615
-#: templates/composer/partials/_pinterest_pin.html:20
+#: templates/composer/partials/_pinterest_pin.html:21
 #: templates/composer/partials/template_gallery.html:138
 #: templates/tasks/partials/_task_fields.html:25
 msgid "Description"
@@ -4361,7 +4505,7 @@ msgstr "Texto do modelo"
 #: templates/composer/partials/template_gallery.html:126
 #: templates/composer/staff_idea_templates.html:44
 #: templates/social_accounts/account_select.html:74
-#: templates/social_accounts/list.html:77
+#: templates/social_accounts/list.html:81
 #: templates/social_accounts/partials/_whatsapp_templates_list.html:19
 msgid "Category"
 msgstr "Categoria"
@@ -4659,22 +4803,22 @@ msgstr ""
 "O %(platform)s precisa de uma imagem ou um vídeo. Adicione um a esta "
 "publicação antes de agendá-la."
 
-#: apps/composer/services.py:719 templates/composer/compose.html:2557
+#: apps/composer/services.py:719 templates/composer/compose.html:2558
 #: templates/composer/partials/_preview_vertical.html:101
 msgid "A Story needs at least one photo or video."
 msgstr "Um Story precisa de pelo menos uma foto ou um vídeo."
 
-#: apps/composer/services.py:721 templates/composer/compose.html:2558
+#: apps/composer/services.py:721 templates/composer/compose.html:2559
 #: templates/composer/partials/_preview_vertical.html:101
 msgid "A Reel needs exactly one video."
 msgstr "Um Reel precisa de exatamente um vídeo."
 
-#: apps/composer/services.py:723 templates/composer/compose.html:2559
+#: apps/composer/services.py:723 templates/composer/compose.html:2560
 #: templates/composer/partials/_preview_vertical.html:101
 msgid "A Short needs exactly one video."
 msgstr "Um Short precisa de exatamente um vídeo."
 
-#: apps/composer/services.py:724 templates/composer/compose.html:2574
+#: apps/composer/services.py:724 templates/composer/compose.html:2575
 #: templates/composer/partials/_preview_vertical.html:16
 #: templates/composer/partials/_preview_vertical.html:22
 msgid "A profile photo needs exactly one image."
@@ -4698,7 +4842,7 @@ msgstr ""
 "O %(platform)s aceita vídeos de até %(limit)d MB no Story e este tem "
 "%(size).1f MB. Comprima o vídeo ou publique-o como Reels."
 
-#: apps/composer/services.py:877 templates/composer/compose.html:2562
+#: apps/composer/services.py:877 templates/composer/compose.html:2563
 msgid ""
 "YouTube only makes Shorts of vertical or square videos and this one is "
 "horizontal. Use a vertical video, or publish it as an ordinary video."
@@ -4844,7 +4988,7 @@ msgstr[0] ""
 msgstr[1] ""
 "Adicione uma imagem ou um vídeo a esta publicação ou desmarque essas contas."
 
-#: apps/composer/views.py:1766 templates/composer/compose.html:2548
+#: apps/composer/views.py:1766 templates/composer/compose.html:2549
 msgid "Scheduled time must be in the future."
 msgstr "O horário agendado precisa estar no futuro."
 
@@ -4869,8 +5013,8 @@ msgstr "Nada para salvar ainda"
 msgid "Saved %(time)s"
 msgstr "Salvo às %(time)s"
 
-#: apps/composer/views.py:2416 apps/composer/views.py:3381
-#: apps/composer/views.py:4420
+#: apps/composer/views.py:2416 apps/composer/views.py:3398
+#: apps/composer/views.py:4437
 msgid "No file provided"
 msgstr "Nenhum arquivo enviado"
 
@@ -4900,7 +5044,7 @@ msgstr ""
 "Limite de requisições do Unsplash atingido. Tente novamente em alguns "
 "minutos."
 
-#: apps/composer/views.py:2743 templates/composer/compose.html:2536
+#: apps/composer/views.py:2743 templates/composer/compose.html:2537
 msgid "Unsplash search failed. Try again."
 msgstr "A busca no Unsplash falhou. Tente novamente."
 
@@ -4921,31 +5065,31 @@ msgstr "Selecione no máximo %(count)s fotos por importação."
 msgid "Could not import the selected photos."
 msgstr "Não foi possível importar as fotos selecionadas."
 
-#: apps/composer/views.py:2965 apps/composer/views.py:3009
+#: apps/composer/views.py:2965 apps/composer/views.py:3017
 msgid "Pinterest refused to renew the connection. Reconnect the account."
 msgstr "O Pinterest recusou renovar a conexão. Reconecte a conta."
 
-#: apps/composer/views.py:2983 templates/composer/compose.html:2573
+#: apps/composer/views.py:2983 templates/composer/compose.html:2574
 msgid "Failed to fetch boards"
 msgstr "Não foi possível carregar as pastas"
 
-#: apps/composer/views.py:3005
+#: apps/composer/views.py:3013
 msgid "This pin has no Pinterest id yet."
 msgstr "Este pin ainda não tem ID no Pinterest."
 
-#: apps/composer/views.py:3015
+#: apps/composer/views.py:3023
 msgid "Pinterest did not answer for this pin."
 msgstr "O Pinterest não respondeu sobre este pin."
 
-#: apps/composer/views.py:3038
+#: apps/composer/views.py:3055
 msgid "Name the board."
 msgstr "Dê um nome à pasta."
 
-#: apps/composer/views.py:3046 templates/composer/compose.html:2569
+#: apps/composer/views.py:3063 templates/composer/compose.html:2570
 msgid "Pinterest did not create the board."
 msgstr "O Pinterest não criou a pasta."
 
-#: apps/composer/views.py:3086
+#: apps/composer/views.py:3103
 msgid ""
 "Place search isn't enabled for this app on Meta yet: it needs the Page "
 "Public Metadata Access feature approved in App Review."
@@ -4953,24 +5097,24 @@ msgstr ""
 "A busca de locais ainda não está liberada para este app na Meta: ela precisa "
 "do recurso Page Public Metadata Access aprovado na revisão do app."
 
-#: apps/composer/views.py:3090
+#: apps/composer/views.py:3107
 msgid "Could not search places right now. Try again in a moment."
 msgstr "Não foi possível buscar locais agora. Tente de novo em instantes."
 
-#: apps/composer/views.py:3560 apps/composer/views.py:3649
-#: apps/composer/views.py:3710
+#: apps/composer/views.py:3577 apps/composer/views.py:3666
+#: apps/composer/views.py:3727
 msgid "This post has already published and can't be edited."
 msgstr "Esta publicação já foi publicada e não pode ser editada."
 
-#: apps/composer/views.py:3755
+#: apps/composer/views.py:3772
 msgid "Marked as published. Thank you!"
 msgstr "Marcado como publicado. Obrigado!"
 
-#: apps/composer/views.py:3832
+#: apps/composer/views.py:3849
 msgid "You don't have permission to delete this post."
 msgstr "Você não tem permissão para excluir esta publicação."
 
-#: apps/composer/views.py:3910
+#: apps/composer/views.py:3927
 #, python-format
 msgid ""
 "%(network)s didn't give this post's link. The post may be gone from there, "
@@ -4979,30 +5123,30 @@ msgstr ""
 "%(network)s não informou o link desta publicação. Ela pode ter sido removida "
 "de lá, ou a conta pode precisar ser reconectada."
 
-#: apps/composer/views.py:3970
+#: apps/composer/views.py:3987
 msgid "Brainstorming"
 msgstr "Brainstorming"
 
-#: apps/composer/views.py:3971
+#: apps/composer/views.py:3988
 msgctxt "idea column"
 msgid "Under review"
 msgstr "Em avaliação"
 
-#: apps/composer/views.py:3972
+#: apps/composer/views.py:3989
 msgctxt "idea column"
 msgid "Approved"
 msgstr "Aprovadas"
 
-#: apps/composer/views.py:3973
+#: apps/composer/views.py:3990
 msgctxt "idea column"
 msgid "Discarded"
 msgstr "Descartadas"
 
-#: apps/composer/views.py:4005
+#: apps/composer/views.py:4022
 msgid "This is a place to plan ✍️ your content"
 msgstr "Este é o lugar para planejar ✍️ seu conteúdo"
 
-#: apps/composer/views.py:4007
+#: apps/composer/views.py:4024
 msgid ""
 "Save your Ideas before converting them into posts. Brainstorm, plan ahead, "
 "and keep everything organized in one place."
@@ -5010,83 +5154,83 @@ msgstr ""
 "Salve suas ideias antes de transformá-las em publicações. Tenha ideias, "
 "planeje com antecedência e mantenha tudo organizado em um só lugar."
 
-#: apps/composer/views.py:4039
+#: apps/composer/views.py:4056
 msgid "First ideas to explore."
 msgstr "Ideias iniciais para explorar."
 
-#: apps/composer/views.py:4040
+#: apps/composer/views.py:4057
 msgid "Weighing whether it works and in which format."
 msgstr "Analisando a viabilidade e o formato."
 
-#: apps/composer/views.py:4041
+#: apps/composer/views.py:4058
 msgid "Ideas ready for production."
 msgstr "Ideias prontas para produção."
 
-#: apps/composer/views.py:4042
+#: apps/composer/views.py:4059
 msgid "Ideas that will not be used."
 msgstr "Ideias que não serão utilizadas."
 
-#: apps/composer/views.py:4261 apps/media_library/cropping.py:32
+#: apps/composer/views.py:4278 apps/media_library/cropping.py:32
 #: apps/media_library/services.py:1007 apps/media_library/views.py:409
-#: apps/tasks/views.py:971
+#: apps/tasks/views.py:982
 msgid "Storage quota exceeded. Free up space or upgrade your plan."
 msgstr ""
 "Cota de armazenamento excedida. Libere espaço ou faça upgrade do seu plano."
 
-#: apps/composer/views.py:4334
+#: apps/composer/views.py:4351
 msgid "The template is now one of your ideas."
 msgstr "O modelo agora é uma das suas ideias."
 
-#: apps/composer/views.py:4843
+#: apps/composer/views.py:4860
 msgid "Name is required."
 msgstr "O nome é obrigatório."
 
-#: apps/composer/views.py:4872
+#: apps/composer/views.py:4889
 msgid "Column must be empty before deleting."
 msgstr "A coluna precisa estar vazia antes de ser excluída."
 
-#: apps/composer/views.py:5112
+#: apps/composer/views.py:5129
 msgid "CSV file too large (max 5 MB)."
 msgstr "Arquivo CSV muito grande (máx. 5 MB)."
 
-#: apps/composer/views.py:5122
+#: apps/composer/views.py:5139
 msgid "CSV file is empty."
 msgstr "O arquivo CSV está vazio."
 
-#: apps/composer/views.py:5434
+#: apps/composer/views.py:5451
 msgid "Tag name is required."
 msgstr "O nome da tag é obrigatório."
 
-#: apps/composer/views.py:5437
+#: apps/composer/views.py:5454
 msgid "Unknown tag kind."
 msgstr "Tipo de etiqueta desconhecido."
 
-#: apps/composer/views.py:5452
+#: apps/composer/views.py:5469
 msgid "Group name is required."
 msgstr "O nome do grupo é obrigatório."
 
-#: apps/composer/views.py:5463
+#: apps/composer/views.py:5480
 msgid "A group with this name already exists."
 msgstr "Já existe um grupo com este nome."
 
-#: apps/composer/views.py:5486
+#: apps/composer/views.py:5503
 msgid "The template was not sent."
 msgstr "O modelo não foi enviado."
 
-#: apps/composer/views.py:5499
+#: apps/composer/views.py:5516
 #, python-format
 msgid "You already have %(count)s templates waiting for approval."
 msgstr "Você já tem %(count)s modelos aguardando aprovação."
 
-#: apps/composer/views.py:5504
+#: apps/composer/views.py:5521
 msgid "Template sent. Thank you!"
 msgstr "Modelo enviado. Obrigado!"
 
-#: apps/composer/views.py:5505
+#: apps/composer/views.py:5522
 msgid "It reaches every brand's shelf once our team approves it."
 msgstr "Ele aparece para todas as marcas assim que a nossa equipe aprovar."
 
-#: apps/composer/views.py:5537
+#: apps/composer/views.py:5554
 msgid "This tag no longer exists."
 msgstr "Esta tag não existe mais."
 
@@ -5186,10 +5330,6 @@ msgstr "Notas"
 #: apps/contacts/forms.py:117 apps/contacts/services.py:524
 msgid "CPF / CNPJ"
 msgstr "CPF / CNPJ"
-
-#: apps/contacts/forms.py:125
-msgid "Automatic"
-msgstr "Automático"
 
 #: apps/contacts/forms.py:130
 msgid "e.g. Sales"
@@ -6418,7 +6558,7 @@ msgstr ""
 #: templates/composer/compose.html:1570
 #: templates/composer/partials/_preview_post.html:193
 #: templates/composer/partials/_preview_post.html:268
-#: templates/tasks/partials/_task_modal.html:193
+#: templates/tasks/partials/_task_modal.html:194
 msgid "Comment"
 msgstr "Comentário"
 
@@ -7081,6 +7221,7 @@ msgstr "Relatórios"
 #: templates/ads/partials/_campaign_body.html:14
 #: templates/ads/pinterest/partials/_campaign_body.html:29
 #: templates/analytics/_page_header.html:102 templates/base.html:654
+#: templates/social_accounts/list.html:165
 #: templates/social_accounts/partials/_ads_card.html:13
 msgid "Ads"
 msgstr "Anúncios"
@@ -7165,7 +7306,7 @@ msgstr ""
 "saber qual conectar. Peça à equipe que enviou este link para conectar o "
 "Google Business para você."
 
-#: apps/onboarding/views.py:563 apps/social_accounts/views.py:637
+#: apps/onboarding/views.py:563 apps/social_accounts/views.py:640
 msgid ""
 "No Google Business locations were found for your account. Only verified "
 "locations can be connected. If you expected to see one, check that it is "
@@ -7177,7 +7318,7 @@ msgstr ""
 "confirme que ela está verificada e que esta conta do Google tem acesso a ela "
 "em Google Business Profile → Businesses e conecte novamente."
 
-#: apps/onboarding/views.py:723 apps/social_accounts/views.py:1085
+#: apps/onboarding/views.py:723 apps/social_accounts/views.py:1088
 msgid "Invalid instance URL. Private or reserved addresses are not allowed."
 msgstr ""
 "URL de instância inválida. Endereços privados ou reservados não são "
@@ -8765,11 +8906,11 @@ msgstr "%(platform)s está visível para os clientes."
 msgid "%(platform)s is hidden from customers."
 msgstr "%(platform)s está oculto para os clientes."
 
-#: apps/social_accounts/views.py:336
+#: apps/social_accounts/views.py:338
 msgid "Campaigns, Pixel and results"
 msgstr "Campanhas, Pixel e resultados"
 
-#: apps/social_accounts/views.py:341
+#: apps/social_accounts/views.py:343
 msgid ""
 "This removes the Meta Ads sign-in from Connekt Flow. Campaigns keep running "
 "in the ad account until you stop them there."
@@ -8777,11 +8918,11 @@ msgstr ""
 "Isso remove o acesso ao Meta Ads do Connekt Flow. As campanhas continuam "
 "rodando na conta de anúncios até você pausá-las por lá."
 
-#: apps/social_accounts/views.py:348
+#: apps/social_accounts/views.py:350
 msgid "Campaigns that promote your pins"
 msgstr "Campanhas que promovem os seus pins"
 
-#: apps/social_accounts/views.py:353
+#: apps/social_accounts/views.py:355
 msgid ""
 "This removes the Pinterest Ads sign-in from Connekt Flow. Campaigns keep "
 "running in the ad account until you stop them there."
@@ -8789,20 +8930,20 @@ msgstr ""
 "Isso remove o login do Pinterest Ads do Connekt Flow. As campanhas continuam "
 "rodando na conta de anúncios até você pará-las lá."
 
-#: apps/social_accounts/views.py:379
+#: apps/social_accounts/views.py:382
 msgid "WhatsApp is still loading. Try again in a moment."
 msgstr "O WhatsApp ainda está carregando. Tente de novo em instantes."
 
-#: apps/social_accounts/views.py:380
+#: apps/social_accounts/views.py:383
 msgid "The WhatsApp connection was cancelled."
 msgstr "A conexão com o WhatsApp foi cancelada."
 
-#: apps/social_accounts/views.py:381
+#: apps/social_accounts/views.py:384
 msgid "Pick a phone number in the WhatsApp window to finish connecting."
 msgstr ""
 "Escolha um número de telefone na janela do WhatsApp para concluir a conexão."
 
-#: apps/social_accounts/views.py:383
+#: apps/social_accounts/views.py:386
 msgid ""
 "Numbers in use in the WhatsApp Business app can't be connected yet. Use a "
 "number that isn't on the app."
@@ -8810,7 +8951,7 @@ msgstr ""
 "Números em uso no app WhatsApp Business ainda não podem ser conectados. Use "
 "um número que não esteja no app."
 
-#: apps/social_accounts/views.py:385
+#: apps/social_accounts/views.py:388
 msgid ""
 "The WhatsApp window reported an error. Try again, or check the number in "
 "WhatsApp Manager."
@@ -8818,11 +8959,7 @@ msgstr ""
 "A janela do WhatsApp informou um erro. Tente de novo ou confira o número no "
 "Gerenciador do WhatsApp."
 
-#: apps/social_accounts/views.py:454
-msgid "This platform is not available."
-msgstr "Esta plataforma não está disponível."
-
-#: apps/social_accounts/views.py:460
+#: apps/social_accounts/views.py:463
 #, python-format
 msgid ""
 "Platform credentials for %(platform)s are not configured. Please contact "
@@ -8831,16 +8968,16 @@ msgstr ""
 "As credenciais da plataforma %(platform)s não estão configuradas. Fale com o "
 "administrador."
 
-#: apps/social_accounts/views.py:520
+#: apps/social_accounts/views.py:523
 #, python-format
 msgid "OAuth error: %(error)s"
 msgstr "Erro de OAuth: %(error)s"
 
-#: apps/social_accounts/views.py:549
+#: apps/social_accounts/views.py:552
 msgid "Platform mismatch in OAuth callback."
 msgstr "A plataforma não confere no retorno do OAuth."
 
-#: apps/social_accounts/views.py:628
+#: apps/social_accounts/views.py:631
 msgid ""
 "No LinkedIn Company Pages were found for your account. Only Company Pages "
 "you administer can be connected — personal profiles connect via the LinkedIn "
@@ -8854,7 +8991,7 @@ msgstr ""
 "proprietário dela para conceder acesso de Admin em LinkedIn → Admin tools → "
 "Manage admins e conecte novamente."
 
-#: apps/social_accounts/views.py:646
+#: apps/social_accounts/views.py:649
 msgid ""
 "No Instagram Business accounts were found for your account. Only Instagram "
 "Business or Creator accounts linked to a Facebook Page can be connected "
@@ -8866,7 +9003,7 @@ msgstr ""
 "uma página do Facebook. Se você esperava ver uma conta, confirme que ela "
 "está vinculada a uma página que você administra e conecte novamente."
 
-#: apps/social_accounts/views.py:653
+#: apps/social_accounts/views.py:656
 msgid ""
 "No Facebook Pages were found for your account. Only Pages can be connected — "
 "personal profiles are not supported by the Facebook API. If you expected to "
@@ -8879,24 +9016,24 @@ msgstr ""
 "remover o app em Configurações do Facebook → Integrações comerciais, depois "
 "conecte novamente."
 
-#: apps/social_accounts/views.py:675
+#: apps/social_accounts/views.py:678
 #, python-format
 msgid "Connected %(name)s successfully."
 msgstr "%(name)s conectada com sucesso."
 
-#: apps/social_accounts/views.py:695
+#: apps/social_accounts/views.py:698
 msgid "Failed to connect account. Please try again."
 msgstr "Não foi possível conectar a conta. Tente novamente."
 
-#: apps/social_accounts/views.py:711
+#: apps/social_accounts/views.py:714
 msgid "No accounts to select. Please start over."
 msgstr "Nenhuma conta para selecionar. Comece de novo."
 
-#: apps/social_accounts/views.py:750
+#: apps/social_accounts/views.py:753
 msgid "Please select at least one account."
 msgstr "Selecione ao menos uma conta."
 
-#: apps/social_accounts/views.py:768
+#: apps/social_accounts/views.py:771
 #, python-format
 msgid ""
 "Could not connect %(name)s: your Facebook access cannot create content for "
@@ -8905,7 +9042,7 @@ msgstr ""
 "Não foi possível conectar %(name)s: seu acesso no Facebook não permite criar "
 "conteúdo para esta página."
 
-#: apps/social_accounts/views.py:776
+#: apps/social_accounts/views.py:779
 #, python-format
 msgid ""
 "Could not connect %(name)s: the platform did not provide an account token."
@@ -8913,58 +9050,58 @@ msgstr ""
 "Não foi possível conectar %(name)s: a plataforma não forneceu um token de "
 "conta."
 
-#: apps/social_accounts/views.py:812
+#: apps/social_accounts/views.py:815
 #, python-format
 msgid "Could not connect %(name)s: %(reason)s"
 msgstr "Não foi possível conectar %(name)s: %(reason)s"
 
-#: apps/social_accounts/views.py:821
+#: apps/social_accounts/views.py:824
 #, python-format
 msgid "Connected: %(names)s"
 msgstr "Conectadas: %(names)s"
 
-#: apps/social_accounts/views.py:887
+#: apps/social_accounts/views.py:890
 msgid "Handle and app password are required."
 msgstr "Usuário e senha de app são obrigatórios."
 
-#: apps/social_accounts/views.py:904
+#: apps/social_accounts/views.py:907
 #, python-format
 msgid "Connected %(name)s on Bluesky."
 msgstr "%(name)s conectada no Bluesky."
 
-#: apps/social_accounts/views.py:916
+#: apps/social_accounts/views.py:919
 msgid "Failed to connect Bluesky account. Check your handle and app password."
 msgstr ""
 "Não foi possível conectar a conta do Bluesky. Confira o usuário e a senha de "
 "app."
 
-#: apps/social_accounts/views.py:941
+#: apps/social_accounts/views.py:944
 msgid "A DEV.to API key is required."
 msgstr "A chave de API do DEV.to é obrigatória."
 
-#: apps/social_accounts/views.py:952
+#: apps/social_accounts/views.py:955
 #, python-format
 msgid "Connected %(name)s on DEV.to."
 msgstr "%(name)s conectada no DEV.to."
 
-#: apps/social_accounts/views.py:958
+#: apps/social_accounts/views.py:961
 msgid "Failed to connect DEV.to account. Check your API key."
 msgstr "Não foi possível conectar a conta do DEV.to. Confira sua chave de API."
 
-#: apps/social_accounts/views.py:996
+#: apps/social_accounts/views.py:999
 msgid "WhatsApp did not finish the connection. Try again."
 msgstr "O WhatsApp não concluiu a conexão. Tente de novo."
 
-#: apps/social_accounts/views.py:999
+#: apps/social_accounts/views.py:1002
 msgid "WhatsApp is not configured. Contact your administrator."
 msgstr "O WhatsApp não está configurado. Fale com o administrador."
 
-#: apps/social_accounts/views.py:1020
+#: apps/social_accounts/views.py:1023
 msgid ""
 "That phone number does not belong to the WhatsApp account you authorized."
 msgstr "Esse número não pertence à conta do WhatsApp que você autorizou."
 
-#: apps/social_accounts/views.py:1044
+#: apps/social_accounts/views.py:1047
 msgid ""
 "Meta refused the WhatsApp connection. Try again, or check the number in "
 "WhatsApp Manager."
@@ -8972,95 +9109,95 @@ msgstr ""
 "A Meta recusou a conexão do WhatsApp. Tente de novo ou confira o número no "
 "Gerenciador do WhatsApp."
 
-#: apps/social_accounts/views.py:1050
+#: apps/social_accounts/views.py:1053
 #, python-format
 msgid "WhatsApp %(number)s connected. New messages arrive in the inbox."
 msgstr "WhatsApp %(number)s conectado. As novas mensagens chegam no inbox."
 
-#: apps/social_accounts/views.py:1077
+#: apps/social_accounts/views.py:1080
 msgid "Instance URL is required."
 msgstr "A URL da instância é obrigatória."
 
-#: apps/social_accounts/views.py:1117
+#: apps/social_accounts/views.py:1120
 #, python-format
 msgid "Failed to register with %(url)s. Check the URL."
 msgstr "Não foi possível registrar em %(url)s. Confira a URL."
 
-#: apps/social_accounts/views.py:1199
+#: apps/social_accounts/views.py:1202
 msgid "Order saved"
 msgstr "Ordem salva"
 
-#: apps/social_accounts/views.py:1229 apps/social_accounts/views.py:1264
+#: apps/social_accounts/views.py:1233 apps/social_accounts/views.py:1268
 #, python-format
 msgid "Reconnect %(label)s first — its connection isn't healthy."
 msgstr "Reconecte %(label)s primeiro — a conexão não está saudável."
 
-#: apps/social_accounts/views.py:1245
+#: apps/social_accounts/views.py:1249
 #, python-format
 msgid "Real-time updates are back on for %(label)s."
 msgstr "As atualizações em tempo real voltaram a funcionar para %(label)s."
 
-#: apps/social_accounts/views.py:1247
+#: apps/social_accounts/views.py:1251
 msgid "Couldn't set up real-time updates. Please try again."
 msgstr ""
 "Não foi possível ativar as atualizações em tempo real. Tente novamente."
 
-#: apps/social_accounts/views.py:1288
+#: apps/social_accounts/views.py:1292
 #, python-format
 msgid "Importing the history of %(label)s. This card shows when it is done."
 msgstr ""
 "Importando o histórico de %(label)s. Este cartão avisa quando terminar."
 
-#: apps/social_accounts/views.py:1307
+#: apps/social_accounts/views.py:1311
 #, python-format
 msgid "Removing the old history of %(label)s. This card shows when it is done."
 msgstr ""
 "Removendo o histórico antigo de %(label)s. Este cartão avisa quando terminar."
 
-#: apps/social_accounts/views.py:1331
+#: apps/social_accounts/views.py:1335
 msgid "The old history could not be removed. Try again."
 msgstr "Não foi possível remover o histórico antigo. Tente de novo."
 
-#: apps/social_accounts/views.py:1333
+#: apps/social_accounts/views.py:1337
 msgid "The history could not be imported. Try again."
 msgstr "Não foi possível importar o histórico. Tente de novo."
 
-#: apps/social_accounts/views.py:1339
+#: apps/social_accounts/views.py:1343
 #, python-format
 msgid "Old history removed: %(count)s message."
 msgid_plural "Old history removed: %(count)s messages."
 msgstr[0] "Histórico antigo removido: %(count)s mensagem."
 msgstr[1] "Histórico antigo removido: %(count)s mensagens."
 
-#: apps/social_accounts/views.py:1341
+#: apps/social_accounts/views.py:1345
 #, python-format
 msgid "History imported: %(count)s message."
 msgid_plural "History imported: %(count)s messages."
 msgstr[0] "Histórico importado: %(count)s mensagem."
 msgstr[1] "Histórico importado: %(count)s mensagens."
 
-#: apps/social_accounts/views.py:1373
+#: apps/social_accounts/views.py:1377
 #, python-format
 msgid "Disconnected %(name)s. YouTube data was deleted immediately."
 msgstr ""
 "%(name)s desconectada. Os dados do YouTube foram excluídos imediatamente."
 
-#: apps/social_accounts/views.py:1400
+#: apps/social_accounts/views.py:1404
 #, python-format
 msgid "Disconnected %(name)s."
 msgstr "%(name)s desconectada."
 
-#: apps/social_accounts/views.py:1439
+#: apps/social_accounts/views.py:1443
 msgid "Template sent for review"
 msgstr "Modelo enviado para revisão"
 
-#: apps/social_accounts/views.py:1440
+#: apps/social_accounts/views.py:1444
 msgid "WhatsApp reviews it before it can be used, usually within a day."
 msgstr ""
 "O WhatsApp analisa o modelo antes de ele poder ser usado, em geral em até um "
 "dia."
 
-#: apps/social_accounts/views.py:1643
+#: apps/social_accounts/views.py:1647
 #, python-format
 msgid ""
 "This workspace already has a %(platform)s account. Disconnect it before "
@@ -9499,31 +9636,31 @@ msgstr "Tarefas"
 msgid "Checklist %(number)s"
 msgstr "Checklist %(number)s"
 
-#: apps/tasks/services.py:650
+#: apps/tasks/services.py:707
 #, python-format
 msgid "New task: %(title)s"
 msgstr "Nova tarefa: %(title)s"
 
-#: apps/tasks/services.py:651
+#: apps/tasks/services.py:708
 #, python-format
 msgid "%(who)s made you responsible for this task."
 msgstr "%(who)s colocou você como responsável por esta tarefa."
 
-#: apps/tasks/services.py:664
+#: apps/tasks/services.py:721
 #, python-format
 msgid "Ready for review: %(title)s"
 msgstr "Pronta para revisão: %(title)s"
 
-#: apps/tasks/services.py:665
+#: apps/tasks/services.py:722
 msgid "The task was sent for review."
 msgstr "A tarefa foi enviada para revisão."
 
-#: apps/tasks/services.py:691
+#: apps/tasks/services.py:748
 #, python-format
 msgid "Due tomorrow: %(title)s"
 msgstr "Prazo amanhã: %(title)s"
 
-#: apps/tasks/services.py:867
+#: apps/tasks/services.py:924
 msgid "Other to-dos"
 msgstr "Outras tarefas"
 
@@ -9536,7 +9673,9 @@ msgid "The image could not be saved. Try again."
 msgstr "Não foi possível salvar a imagem. Tente novamente."
 
 #: apps/tasks/views.py:191 templates/accounts/staff_team.html:85
-#: templates/accounts/staff_team.html:87 templates/billing/checkout.html:233
+#: templates/accounts/staff_team.html:87
+#: templates/ads/pinterest/partials/_multi_pick.html:28
+#: templates/billing/checkout.html:233
 #: templates/calendar/partials/_staff_date_rows.html:18
 #: templates/client_portal/admin/partials/client_row.html:54
 #: templates/composer/compose.html:1276
@@ -9551,12 +9690,12 @@ msgid "Remove"
 msgstr "Remover"
 
 #: apps/tasks/views.py:192 templates/tasks/partials/_task_modal.html:111
-#: templates/tasks/partials/_task_modal.html:226
+#: templates/tasks/partials/_task_modal.html:227
 msgid "Checklist title"
 msgstr "Título da checklist"
 
 #: apps/tasks/views.py:193 templates/tasks/partials/_task_modal.html:122
-#: templates/tasks/partials/_task_modal.html:208
+#: templates/tasks/partials/_task_modal.html:209
 msgid "Add an item"
 msgstr "Adicionar item"
 
@@ -9613,64 +9752,64 @@ msgstr "Tarefa aprovada."
 msgid "Comments are written while the task is in review."
 msgstr "Os comentários são feitos com a tarefa em revisão."
 
-#: apps/tasks/views.py:698
+#: apps/tasks/views.py:709
 msgid "Give the column a name."
 msgstr "Dê um nome à coluna."
 
-#: apps/tasks/views.py:735
+#: apps/tasks/views.py:746
 msgid "The board needs at least one column."
 msgstr "O quadro precisa de pelo menos uma coluna."
 
-#: apps/tasks/views.py:739
+#: apps/tasks/views.py:750
 #, python-format
 msgid "Column deleted. Its tasks went to %(column)s."
 msgstr "Coluna excluída. As tarefas dela foram para %(column)s."
 
-#: apps/tasks/views.py:822
+#: apps/tasks/views.py:833
 #, python-format
 msgid "From the idea “%(title)s”"
 msgstr "Da ideia “%(title)s”"
 
-#: apps/tasks/views.py:829
+#: apps/tasks/views.py:840
 #, python-format
 msgid "From the template “%(title)s”"
 msgstr "Do modelo “%(title)s”"
 
-#: apps/tasks/views.py:862
+#: apps/tasks/views.py:873
 #, python-format
 msgid "From the special date “%(title)s”"
 msgstr "Da data comemorativa “%(title)s”"
 
-#: apps/tasks/views.py:920
+#: apps/tasks/views.py:931
 msgid "Art request settings saved."
 msgstr "Configurações de artes salvas."
 
-#: apps/tasks/views.py:957
+#: apps/tasks/views.py:968
 msgid "Choose the file of the art."
 msgstr "Escolha o arquivo da arte."
 
-#: apps/tasks/views.py:966 apps/tasks/views.py:970 apps/tasks/views.py:974
+#: apps/tasks/views.py:977 apps/tasks/views.py:981 apps/tasks/views.py:985
 msgid "The art was not uploaded."
 msgstr "A arte não foi enviada."
 
-#: apps/tasks/views.py:998
+#: apps/tasks/views.py:1009
 msgid "The art's proportions don't match the format"
 msgstr "A proporção da arte não bate com o formato"
 
-#: apps/tasks/views.py:999
+#: apps/tasks/views.py:1010
 #, python-format
 msgid "Expected %(w)s × %(h)s, received %(rw)s × %(rh)s."
 msgstr "Esperado %(w)s × %(h)s, recebido %(rw)s × %(rh)s."
 
-#: apps/tasks/views.py:1017
+#: apps/tasks/views.py:1028
 msgid "Approve the task before creating its post."
 msgstr "Aprove a tarefa antes de criar a publicação."
 
-#: apps/tasks/views.py:1023
+#: apps/tasks/views.py:1034
 msgid "There is no delivered art to publish."
 msgstr "Não há arte entregue para publicar."
 
-#: apps/tasks/views.py:1024
+#: apps/tasks/views.py:1035
 msgid ""
 "Deliver a publishable format for an account connected to this workspace."
 msgstr "Entregue um formato publicável para uma conta conectada a esta marca."
@@ -10489,7 +10628,7 @@ msgstr "Tem certeza de que deseja sair?"
 
 #: templates/account/logout.html:28 templates/ads/campaign_new.html:85
 #: templates/ads/partials/_settings_body.html:138
-#: templates/ads/pinterest/campaign_new.html:74
+#: templates/ads/pinterest/campaign_new.html:268
 #: templates/ads/pinterest/partials/_settings_body.html:38
 #: templates/affiliates/_edit_affiliate_modal.html:20
 #: templates/affiliates/_new_affiliate_modal.html:58
@@ -10515,8 +10654,8 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/components/_confirm_dialog.html:36
 #: templates/components/_period_picker.html:47
 #: templates/composer/categories.html:45 templates/composer/categories.html:91
-#: templates/composer/compose.html:1179 templates/composer/compose.html:2287
-#: templates/composer/compose.html:2363 templates/composer/compose.html:2451
+#: templates/composer/compose.html:1179 templates/composer/compose.html:2288
+#: templates/composer/compose.html:2364 templates/composer/compose.html:2452
 #: templates/composer/create_landing.html:281
 #: templates/composer/create_landing.html:800
 #: templates/composer/create_landing.html:836
@@ -10564,10 +10703,10 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/support/staff_chat_console.html:323
 #: templates/support/staff_faq_edit.html:50
 #: templates/support/ticket_new.html:55
-#: templates/tasks/partials/_checklist_item.html:114
+#: templates/tasks/partials/_checklist_item.html:115
 #: templates/tasks/partials/_column.html:79
 #: templates/tasks/partials/_new_item_modal.html:185
-#: templates/tasks/partials/_task_modal.html:196
+#: templates/tasks/partials/_task_modal.html:197
 #: templates/workspaces/partials/_dashboard_goal.html:34
 #: templates/workspaces/settings.html:180
 #: templates/workspaces/settings.html:237 templates/workspaces/team.html:158
@@ -11033,7 +11172,7 @@ msgstr ""
 #: templates/ads/partials/_campaigns_table.html:15
 #: templates/ads/pinterest/campaign_detail.html:3
 #: templates/ads/pinterest/campaign_detail.html:7
-#: templates/ads/pinterest/campaign_new.html:19
+#: templates/ads/pinterest/campaign_new.html:32
 #: templates/analytics/_meta_ads_body.html:52
 msgid "Campaign"
 msgstr "Campanha"
@@ -11096,6 +11235,7 @@ msgid "Budget and schedule"
 msgstr "Orçamento e período"
 
 #: templates/ads/campaign_new.html:45
+#: templates/ads/pinterest/campaign_new.html:261
 msgid ""
 "Without a start, delivery begins as soon as the campaign is activated. "
 "Without an end, it runs until you pause it."
@@ -11104,6 +11244,9 @@ msgstr ""
 "ela roda até você pausá-la."
 
 #: templates/ads/campaign_new.html:49
+#: templates/ads/pinterest/campaign_new.html:32
+#: templates/ads/pinterest/campaign_new.html:136
+#: templates/ads/pinterest/campaign_new.html:284
 msgid "Audience"
 msgstr "Público"
 
@@ -11116,7 +11259,7 @@ msgid "Open the gallery"
 msgstr "Abrir a galeria"
 
 #: templates/ads/campaign_new.html:86
-#: templates/ads/pinterest/campaign_new.html:75
+#: templates/ads/pinterest/campaign_new.html:272
 msgid "Create paused campaign"
 msgstr "Criar campanha pausada"
 
@@ -11189,6 +11332,7 @@ msgid "Placements"
 msgstr "Posicionamentos"
 
 #: templates/ads/partials/_breakdowns.html:25
+#: templates/ads/pinterest/campaign_new.html:217
 msgid "Placement"
 msgstr "Posicionamento"
 
@@ -11282,7 +11426,7 @@ msgstr "Esta campanha não tem anúncios."
 #: templates/calendar/partials/publish_calendar_shell.html:56
 #: templates/calendar/partials/publish_calendar_shell.html:68
 #: templates/components/_media_preview.html:23
-#: templates/composer/compose.html:2123
+#: templates/composer/compose.html:2124
 #: templates/composer/create_landing.html:362
 #: templates/composer/create_landing.html:475
 #: templates/composer/create_landing.html:548
@@ -11314,7 +11458,7 @@ msgstr "Esta campanha não tem anúncios."
 #: templates/support/staff_chat_console.html:147 templates/tasks/board.html:121
 #: templates/tasks/partials/_art_thumb.html:29
 #: templates/tasks/partials/_new_item_modal.html:29
-#: templates/tasks/partials/_task_modal.html:294
+#: templates/tasks/partials/_task_modal.html:295
 #: templates/workspaces/settings.html:167 templates/workspaces/team.html:135
 msgid "Close"
 msgstr "Fechar"
@@ -11590,7 +11734,7 @@ msgstr "Escolha uma conta de anúncios"
 #: templates/social_accounts/partials/_posting_slots_grid.html:82
 #: templates/support/staff_faq_edit.html:51
 #: templates/support/staff_ticket_detail.html:73
-#: templates/tasks/partials/_checklist_item.html:115
+#: templates/tasks/partials/_checklist_item.html:116
 #: templates/workspaces/partials/_dashboard_goal.html:33
 msgid "Save"
 msgstr "Salvar"
@@ -11600,11 +11744,11 @@ msgstr "Salvar"
 msgid "Fetching the numbers from Pinterest…"
 msgstr "Buscando os números no Pinterest…"
 
-#: templates/ads/pinterest/campaign_new.html:7
+#: templates/ads/pinterest/campaign_new.html:9
 msgid "New Pinterest campaign"
 msgstr "Nova campanha no Pinterest"
 
-#: templates/ads/pinterest/campaign_new.html:8
+#: templates/ads/pinterest/campaign_new.html:10
 #, python-format
 msgid ""
 "In the ad account %(account)s, promoting one of your pins. It is created "
@@ -11613,33 +11757,100 @@ msgstr ""
 "Na conta de anúncios %(account)s, promovendo um dos seus pins. Ela é criada "
 "pausada: nada é gasto até você ativá-la."
 
-#: templates/ads/pinterest/campaign_new.html:30
+#: templates/ads/pinterest/campaign_new.html:24
+msgid "All ages"
+msgstr "Todas as idades"
+
+#: templates/ads/pinterest/campaign_new.html:24
+msgid "All devices"
+msgstr "Todos os dispositivos"
+
+#: templates/ads/pinterest/campaign_new.html:24
+msgid "No dates set"
+msgstr "Sem data definida"
+
+#: templates/ads/pinterest/campaign_new.html:24
+msgid "From"
+msgstr "De"
+
+#: templates/ads/pinterest/campaign_new.html:24
+msgid "until"
+msgstr "até"
+
+#: templates/ads/pinterest/campaign_new.html:24
+msgid "years"
+msgstr "anos"
+
+#: templates/ads/pinterest/campaign_new.html:24
+msgid "per day"
+msgstr "por dia"
+
+#: templates/ads/pinterest/campaign_new.html:31
+#: templates/partials/_setup_steps.html:16
+msgid "Steps"
+msgstr "Etapas"
+
+#: templates/ads/pinterest/campaign_new.html:32
+#: templates/ads/pinterest/campaign_new.html:240
+msgid "Budget and launch"
+msgstr "Orçamento e lançamento"
+
+#: templates/ads/pinterest/campaign_new.html:58
+msgid "Campaign details"
+msgstr "Informações da campanha"
+
+#: templates/ads/pinterest/campaign_new.html:76
+msgid "Show your pin to as many people as possible."
+msgstr "Mostre seu pin para o máximo de pessoas."
+
+#: templates/ads/pinterest/campaign_new.html:77
+msgid "Bring clicks to your pin and its site."
+msgstr "Traga cliques para o seu pin e o site dele."
+
+#: templates/ads/pinterest/campaign_new.html:78
+msgid "Bring checkouts on your site, measured by the Pinterest tag."
+msgstr "Gere compras no seu site, medidas pela tag do Pinterest."
+
+#: templates/ads/pinterest/campaign_new.html:79
+msgid "Get your video pin watched to the end."
+msgstr "Faça seu pin de vídeo ser assistido até o fim."
+
+#: templates/ads/pinterest/campaign_new.html:89
 msgid ""
-"Awareness shows the pin to as many people as possible. Consideration brings "
-"clicks to the pin and its link."
+"Pinterest optimises the ads for the checkouts this tag records on your site."
 msgstr ""
-"Reconhecimento mostra o pin para o máximo de pessoas. Consideração traz "
-"cliques para o pin e o link dele."
+"O Pinterest otimiza os anúncios pelas compras que esta tag registra no seu "
+"site."
 
-#: templates/ads/pinterest/campaign_new.html:36
-msgid "Budget, schedule and audience"
-msgstr "Orçamento, período e público"
-
-#: templates/ads/pinterest/campaign_new.html:43
+#: templates/ads/pinterest/campaign_new.html:91
 msgid ""
-"Without a start, delivery begins as soon as the campaign is activated. "
-"Without an end, it runs until you pause it. Pinterest bids automatically and "
-"finds the audience within these countries."
+"This ad account has no Pinterest tag yet. Install the tag on your site in "
+"Pinterest Ads Manager to run Sales campaigns."
 msgstr ""
-"Sem início, a veiculação começa assim que a campanha é ativada. Sem fim, ela "
-"roda até você pausá-la. O Pinterest define os lances sozinho e encontra o "
-"público dentro desses países."
+"Esta conta de anúncios ainda não tem tag do Pinterest. Instale a tag no seu "
+"site pelo Gerenciador de Anúncios do Pinterest para criar campanhas de "
+"Vendas."
 
-#: templates/ads/pinterest/campaign_new.html:47
+#: templates/ads/pinterest/campaign_new.html:95
+msgid "Video views promote a video pin and always bid automatically."
+msgstr ""
+"Visualização de vídeo promove um pin de vídeo e sempre usa lance automático."
+
+#: templates/ads/pinterest/campaign_new.html:100
 msgid "Pin to promote"
 msgstr "Pin a promover"
 
-#: templates/ads/pinterest/campaign_new.html:65
+#: templates/ads/pinterest/campaign_new.html:101
+msgid ""
+"The ad shows the pin as it is on Pinterest, with its image, title and link."
+msgstr ""
+"O anúncio mostra o pin como ele está no Pinterest, com imagem, título e link."
+
+#: templates/ads/pinterest/campaign_new.html:117
+msgid "Open on Pinterest"
+msgstr "Abrir no Pinterest"
+
+#: templates/ads/pinterest/campaign_new.html:125
 msgid ""
 "No pin was published from Connekt Flow yet. Publish one, or paste the ID of "
 "a pin below."
@@ -11647,11 +11858,197 @@ msgstr ""
 "Nenhum pin foi publicado pelo Connekt Flow ainda. Publique um ou cole o ID "
 "de um pin abaixo."
 
-#: templates/ads/pinterest/campaign_new.html:70
+#: templates/ads/pinterest/campaign_new.html:137
+msgid "Who sees the ad on Pinterest. Anything left empty means everyone."
+msgstr "Quem vê o anúncio no Pinterest. O que ficar em branco vale para todos."
+
+#: templates/ads/pinterest/campaign_new.html:152
+msgid "None ticked: everyone."
+msgstr "Nenhum marcado: todos."
+
+#: templates/ads/pinterest/campaign_new.html:155
+msgid "Languages"
+msgstr "Idiomas"
+
+#: templates/ads/pinterest/campaign_new.html:156
+msgid "Every language"
+msgstr "Todos os idiomas"
+
+#: templates/ads/pinterest/campaign_new.html:161
+msgid "Search a country…"
+msgstr "Buscar um país…"
+
+#: templates/ads/pinterest/campaign_new.html:166
+msgid "States"
+msgstr "Estados"
+
+#: templates/ads/pinterest/campaign_new.html:166
+#: templates/ads/pinterest/campaign_new.html:172
+#: templates/ads/pinterest/campaign_new.html:187
+#: templates/ads/pinterest/campaign_new.html:194
+#: templates/components/_form_field.html:11
+#: templates/composer/create_landing.html:442
+#: templates/composer/create_landing.html:628
+#: templates/composer/partials/template_gallery.html:132
+#: templates/composer/partials/template_gallery.html:138
+#: templates/composer/partials/template_gallery.html:143
+#: templates/composer/partials/template_gallery.html:165
+#: templates/composer/partials/template_gallery.html:205
+#: templates/composer/partials/template_gallery.html:227
+#: templates/partials/_channel_picker.html:20
+#: templates/tasks/partials/_new_item_modal.html:71
+#: templates/tasks/partials/_new_item_options.html:44
+msgid "optional"
+msgstr "opcional"
+
+#: templates/ads/pinterest/campaign_new.html:167
+msgid "Every state"
+msgstr "Todos os estados"
+
+#: templates/ads/pinterest/campaign_new.html:172
+msgid "Interests"
+msgstr "Interesses"
+
+#: templates/ads/pinterest/campaign_new.html:174
+msgid "Search interests…"
+msgstr "Buscar interesses…"
+
+#: templates/ads/pinterest/campaign_new.html:176
+msgid "People who engage with these subjects on Pinterest."
+msgstr "Pessoas que interagem com esses assuntos no Pinterest."
+
+#: templates/ads/pinterest/campaign_new.html:178
+#, python-format
+msgid "Pinterest did not send its interests: %(reason)s"
+msgstr "O Pinterest não enviou os interesses: %(reason)s"
+
+#: templates/ads/pinterest/campaign_new.html:178
+msgid "Pinterest offers no interests for this ad account."
+msgstr "O Pinterest não oferece interesses para esta conta de anúncios."
+
+#: templates/ads/pinterest/campaign_new.html:183
 msgid ""
-"The ad shows the pin as it is on Pinterest, with its image, title and link."
+"Separated by commas. They show the ad to people who search these words, so "
+"they need search in Where it appears."
 msgstr ""
-"O anúncio mostra o pin como ele está no Pinterest, com imagem, título e link."
+"Separadas por vírgula. Elas mostram o anúncio para quem busca essas "
+"palavras, por isso precisam da busca em Onde aparece."
+
+#: templates/ads/pinterest/campaign_new.html:187
+msgid "Include audiences"
+msgstr "Incluir públicos"
+
+#: templates/ads/pinterest/campaign_new.html:189
+msgid "Your audiences…"
+msgstr "Seus públicos…"
+
+#: templates/ads/pinterest/campaign_new.html:194
+msgid "Exclude audiences"
+msgstr "Excluir públicos"
+
+#: templates/ads/pinterest/campaign_new.html:201
+#, python-format
+msgid "Pinterest did not send your audiences: %(reason)s"
+msgstr "O Pinterest não enviou seus públicos: %(reason)s"
+
+#: templates/ads/pinterest/campaign_new.html:201
+msgid ""
+"This ad account has no audiences yet: customer lists, site visitors and look-"
+"alikes are made in Pinterest Ads Manager."
+msgstr ""
+"Esta conta de anúncios ainda não tem públicos: listas de clientes, "
+"visitantes do site e públicos semelhantes são criados no Gerenciador de "
+"Anúncios do Pinterest."
+
+#: templates/ads/pinterest/campaign_new.html:208
+msgid ""
+"Pinterest Performance+: Pinterest also shows the ad to people likely to "
+"respond beyond what you chose."
+msgstr ""
+"Pinterest Performance+: o Pinterest também mostra o anúncio para pessoas com "
+"chance de responder além do que você escolheu."
+
+#: templates/ads/pinterest/campaign_new.html:222
+msgid "Pinterest chooses where the ad does best (recommended)."
+msgstr "O Pinterest escolhe onde o anúncio rende mais (recomendado)."
+
+#: templates/ads/pinterest/campaign_new.html:222
+msgid "In the home feed and next to related pins."
+msgstr "No feed inicial e ao lado de pins relacionados."
+
+#: templates/ads/pinterest/campaign_new.html:222
+msgid "Among the results when people search."
+msgstr "Entre os resultados quando as pessoas buscam."
+
+#: templates/ads/pinterest/campaign_new.html:228
+msgid "Devices"
+msgstr "Dispositivos"
+
+#: templates/ads/pinterest/campaign_new.html:234
+msgid "None ticked: every device."
+msgstr "Nenhum marcado: todos os dispositivos."
+
+#: templates/ads/pinterest/campaign_new.html:248
+msgid "Pinterest bids to get the most out of the budget (recommended)."
+msgstr ""
+"O Pinterest define o lance para render o máximo do orçamento (recomendado)."
+
+#: templates/ads/pinterest/campaign_new.html:248
+msgid "Never pay more than this per click or per 1,000 impressions."
+msgstr "Nunca pague mais que isso por clique ou por mil impressões."
+
+#: templates/ads/pinterest/campaign_new.html:248
+msgid "Keep the average cost close to this value."
+msgstr "Mantém o custo médio perto deste valor."
+
+#: templates/ads/pinterest/campaign_new.html:270
+#: templates/automations/flow_new.html:158
+#: templates/calendar/partials/publish_calendar_shell.html:74
+#: templates/composer/partials/_tag_groups.html:203
+#: templates/inbox/partials/_message_panel.html:16
+#: templates/inbox/partials/_post_panel.html:15
+#: templates/radar/shopee_connect.html:9
+#: templates/social_accounts/bluesky_connect.html:10
+#: templates/social_accounts/devto_connect.html:10
+#: templates/social_accounts/mastodon_connect.html:10
+#: templates/social_accounts/partials/_connect_form.html:57
+#: templates/social_accounts/partials/_connect_form.html:60
+#: templates/social_accounts/partials/_connect_form.html:63
+msgid "Back"
+msgstr "Voltar"
+
+#: templates/ads/pinterest/campaign_new.html:271
+msgctxt "wizard step"
+msgid "Next"
+msgstr "Avançar"
+
+#: templates/ads/pinterest/campaign_new.html:281
+msgid "Campaign summary"
+msgstr "Resumo da campanha"
+
+#: templates/ads/pinterest/campaign_new.html:288
+#: templates/components/_period_picker.html:14 templates/funnels/board.html:31
+msgid "Period"
+msgstr "Período"
+
+#: templates/ads/pinterest/campaign_new.html:292
+msgid "Campaign tips"
+msgstr "Dicas da campanha"
+
+#: templates/ads/pinterest/campaign_new.html:294
+msgid "Use vertical, high-quality images (2:3)."
+msgstr "Use imagens verticais e de boa qualidade (2:3)."
+
+#: templates/ads/pinterest/campaign_new.html:295
+msgid "Choose interests and keywords that match the pin."
+msgstr "Escolha interesses e palavras-chave que combinem com o pin."
+
+#: templates/ads/pinterest/campaign_new.html:296
+msgid ""
+"Set a budget that fits the objective; Pinterest needs a few days to learn."
+msgstr ""
+"Defina um orçamento compatível com o objetivo; o Pinterest precisa de alguns "
+"dias para aprender."
 
 #: templates/ads/pinterest/index.html:8
 msgid "Campaigns of your Pinterest ad account, their status and their results."
@@ -11682,6 +12079,68 @@ msgstr "O login do Pinterest precisa ser renovado."
 #: templates/ads/pinterest/index.html:50
 msgid "Pinterest keeps the numbers of the last 90 days."
 msgstr "O Pinterest guarda os números dos últimos 90 dias."
+
+#: templates/ads/pinterest/partials/_ad_preview.html:9
+msgid "__N__ of __T__"
+msgstr "__N__ de __T__"
+
+#: templates/ads/pinterest/partials/_ad_preview.html:10
+msgid "Promoted by"
+msgstr "Promovido por"
+
+#: templates/ads/pinterest/partials/_ad_preview.html:17
+msgid "Ad preview"
+msgstr "Prévia do anúncio"
+
+#: templates/ads/pinterest/partials/_ad_preview.html:18
+msgid "See how your ad may appear on Pinterest."
+msgstr "Veja como seu anúncio pode aparecer no Pinterest."
+
+#: templates/ads/pinterest/partials/_ad_preview.html:27
+msgid "Home feed"
+msgstr "Feed inicial"
+
+#: templates/ads/pinterest/partials/_ad_preview.html:28
+msgctxt "pinterest placement"
+msgid "Search"
+msgstr "Busca"
+
+#: templates/ads/pinterest/partials/_ad_preview.html:29
+msgid "Opened pin"
+msgstr "Pin aberto"
+
+#: templates/ads/pinterest/partials/_ad_preview.html:35
+msgid "Choose the pin to promote to see the preview."
+msgstr "Escolha o pin a promover para ver a prévia."
+
+#: templates/ads/pinterest/partials/_ad_preview.html:73
+msgid "Promoted"
+msgstr "Promovido"
+
+#: templates/ads/pinterest/partials/_ad_preview.html:77
+msgid "Visit site"
+msgstr "Visitar site"
+
+#: templates/ads/pinterest/partials/_ad_preview.html:84
+#: templates/affiliates/panel.html:243 templates/automations/log.html:114
+#: templates/calendar/partials/_period_toolbar.html:21
+#: templates/composer/partials/_preview_vertical.html:60
+#: templates/media_library/_asset_grid.html:65
+#: templates/media_library/_shared_asset_grid.html:25
+#: templates/partials/_scroll_arrows.html:12
+msgid "Previous"
+msgstr "Anterior"
+
+#: templates/ads/pinterest/partials/_ad_preview.html:89
+#: templates/affiliates/panel.html:244 templates/automations/log.html:118
+#: templates/calendar/partials/_period_toolbar.html:26
+#: templates/composer/partials/_preview_vertical.html:62
+#: templates/media_library/_asset_grid.html:80
+#: templates/media_library/_shared_asset_grid.html:38
+#: templates/notifications/partials/history_list.html:109
+#: templates/partials/_scroll_arrows.html:17
+msgid "Next"
+msgstr "Próxima"
 
 #: templates/ads/pinterest/partials/_campaign_body.html:13
 msgid "Ad groups"
@@ -11734,6 +12193,10 @@ msgid ""
 msgstr ""
 "Ativar esta campanha? O Pinterest começa a gastar o orçamento assim que os "
 "anúncios forem aprovados."
+
+#: templates/ads/pinterest/partials/_multi_pick.html:37
+msgid "Nothing found."
+msgstr "Nada encontrado."
 
 #: templates/ads/pinterest/partials/_overview.html:14
 msgid "Open in Pinterest Ads Manager"
@@ -11938,7 +12401,7 @@ msgstr ""
 "e o painel são liberados assim que o afiliado é criado."
 
 #: templates/affiliates/_new_affiliate_modal.html:32
-#: templates/composer/compose.html:2509
+#: templates/composer/compose.html:2510
 msgid "Change"
 msgstr "Alterar"
 
@@ -12678,25 +13141,6 @@ msgstr "Solicitar saque"
 msgid "Page %(page)s of %(total)s"
 msgstr "Página %(page)s de %(total)s"
 
-#: templates/affiliates/panel.html:243 templates/automations/log.html:114
-#: templates/calendar/partials/_period_toolbar.html:21
-#: templates/composer/partials/_preview_vertical.html:60
-#: templates/media_library/_asset_grid.html:65
-#: templates/media_library/_shared_asset_grid.html:25
-#: templates/partials/_scroll_arrows.html:12
-msgid "Previous"
-msgstr "Anterior"
-
-#: templates/affiliates/panel.html:244 templates/automations/log.html:118
-#: templates/calendar/partials/_period_toolbar.html:26
-#: templates/composer/partials/_preview_vertical.html:62
-#: templates/media_library/_asset_grid.html:80
-#: templates/media_library/_shared_asset_grid.html:38
-#: templates/notifications/partials/history_list.html:109
-#: templates/partials/_scroll_arrows.html:17
-msgid "Next"
-msgstr "Próxima"
-
 #: templates/affiliates/staff_affiliates.html:17
 msgid ""
 "Partners who bring customers by a link or a coupon and earn a share of what "
@@ -12861,7 +13305,7 @@ msgstr "Excluir afiliado"
 #: templates/calendar/partials/_post_actions_menu.html:33
 #: templates/calendar/partials/_post_card.html:174
 #: templates/calendar/staff_dates.html:79 templates/composer/compose.html:1798
-#: templates/composer/compose.html:2532
+#: templates/composer/compose.html:2533
 #: templates/composer/create_landing.html:473
 #: templates/composer/create_landing.html:659
 #: templates/composer/create_landing.html:718
@@ -12888,7 +13332,7 @@ msgstr "Excluir afiliado"
 #: templates/media_library/_shared_asset_card.html:85
 #: templates/media_library/library_index.html:350
 #: templates/organizations/partials/workspace_card.html:131
-#: templates/tasks/partials/_task_modal.html:246
+#: templates/tasks/partials/_task_modal.html:247
 msgid "Delete"
 msgstr "Excluir"
 
@@ -13136,7 +13580,7 @@ msgstr "App ID %(label)s"
 #: templates/analytics/_page_header.html:52
 #: templates/api_keys/_key_row.html:139
 #: templates/api_keys/_workspace_options.html:11
-#: templates/social_accounts/list.html:88
+#: templates/social_accounts/list.html:92
 msgid "Connected accounts"
 msgstr "Contas conectadas"
 
@@ -13696,7 +14140,7 @@ msgstr "Ver alterações"
 #: templates/client_portal/_client_card.html:64
 #: templates/composer/compose.html:2015
 #: templates/composer/staff_idea_templates.html:91
-#: templates/tasks/partials/_task_modal.html:289
+#: templates/tasks/partials/_task_modal.html:290
 msgid "Approve"
 msgstr "Aprovar"
 
@@ -13706,7 +14150,7 @@ msgstr "Retomar"
 
 #: templates/approvals/partials/_approval_row.html:129
 #: templates/client_portal/_client_card.html:66
-#: templates/tasks/partials/_task_modal.html:282
+#: templates/tasks/partials/_task_modal.html:283
 msgid "Request changes"
 msgstr "Solicitar alterações"
 
@@ -13810,7 +14254,7 @@ msgid "Version History"
 msgstr "Histórico de versões"
 
 #: templates/approvals/version_diff.html:20
-#: templates/media_library/_version_strip.html:13
+#: templates/media_library/_version_strip.html:14
 msgid "Versions"
 msgstr "Versões"
 
@@ -13884,7 +14328,7 @@ msgstr "Começar com um fluxo pronto"
 
 #: templates/automations/flow_builder.html:262
 #: templates/automations/flow_builder.html:904
-#: templates/composer/compose.html:2529
+#: templates/composer/compose.html:2530
 #: templates/composer/partials/_crop_editor.html:64
 msgid "Saving…"
 msgstr "Salvando…"
@@ -14168,14 +14612,14 @@ msgid "Search images…"
 msgstr "Buscar imagens…"
 
 #: templates/automations/flow_builder.html:953
-#: templates/composer/compose.html:2511
+#: templates/composer/compose.html:2512
 #: templates/composer/partials/media_picker.html:251
 #: templates/tasks/partials/_art_thumb.html:46
 msgid "Uploading…"
 msgstr "Enviando…"
 
 #: templates/automations/flow_builder.html:953
-#: templates/composer/compose.html:2512
+#: templates/composer/compose.html:2513
 #: templates/composer/partials/_media_picker_modal.html:64
 #: templates/media_library/library_index.html:37
 msgid "Upload"
@@ -14401,21 +14845,6 @@ msgstr "Nenhum canal conectado ainda"
 #: templates/automations/flow_new.html:116
 msgid "Connect a Facebook or Instagram account to automate replies."
 msgstr "Conecte uma conta do Facebook ou Instagram para automatizar respostas."
-
-#: templates/automations/flow_new.html:158
-#: templates/calendar/partials/publish_calendar_shell.html:74
-#: templates/composer/partials/_tag_groups.html:203
-#: templates/inbox/partials/_message_panel.html:16
-#: templates/inbox/partials/_post_panel.html:15
-#: templates/radar/shopee_connect.html:9
-#: templates/social_accounts/bluesky_connect.html:10
-#: templates/social_accounts/devto_connect.html:10
-#: templates/social_accounts/mastodon_connect.html:10
-#: templates/social_accounts/partials/_connect_form.html:57
-#: templates/social_accounts/partials/_connect_form.html:60
-#: templates/social_accounts/partials/_connect_form.html:63
-msgid "Back"
-msgstr "Voltar"
 
 #: templates/automations/flow_new.html:177
 msgid "Public reply + DM"
@@ -15060,7 +15489,7 @@ msgstr "Dê um nome acima para começar a desenhá-lo na tela."
 msgid "Dismiss"
 msgstr "Dispensar"
 
-#: templates/base.html:329 templates/composer/compose.html:2544
+#: templates/base.html:329 templates/composer/compose.html:2545
 #: templates/media_library/_video_trimmer.html:28
 msgid "Something went wrong. Please try again."
 msgstr "Algo deu errado. Tente novamente."
@@ -15187,7 +15616,7 @@ msgstr "Criar marca"
 #: templates/composer/partials/_tag_field.html:64
 #: templates/composer/partials/media_picker.html:79
 #: templates/inbox/partials/_saved_reply_form.html:21
-#: templates/tasks/partials/_task_modal.html:227
+#: templates/tasks/partials/_task_modal.html:228
 #: templates/workspaces/list.html:71
 msgid "Create"
 msgstr "Criar"
@@ -16256,14 +16685,14 @@ msgstr "Menos"
 #: templates/composer/partials/_tag_groups.html:200
 #: templates/composer/partials/template_gallery.html:214
 #: templates/funnels/partials/_pick_conversation.html:21
-#: templates/social_accounts/list.html:145
-#: templates/social_accounts/list.html:147
-#: templates/social_accounts/list.html:152
+#: templates/social_accounts/list.html:149
+#: templates/social_accounts/list.html:151
+#: templates/social_accounts/list.html:156
 #: templates/social_accounts/partials/_posting_slots_grid.html:116
 #: templates/tasks/partials/_column.html:78
 #: templates/tasks/partials/_new_item_modal.html:171
 #: templates/tasks/partials/_new_item_options.html:59
-#: templates/tasks/partials/_task_modal.html:209
+#: templates/tasks/partials/_task_modal.html:210
 msgid "Add"
 msgstr "Adicionar"
 
@@ -16525,6 +16954,15 @@ msgstr "Assinatura da marca"
 #: templates/intelligence/billing_settings.html:28
 msgid "Subscription"
 msgstr "Assinatura"
+
+#: templates/billing/partials/_payment_rows.html:19
+#: templates/billing/staff_account.html:172
+#: templates/billing/staff_console.html:183
+#: templates/organizations/partials/workspace_card.html:22
+#: templates/organizations/settings.html:81
+#: templates/organizations/workspaces.html:79
+msgid "Archived"
+msgstr "Arquivadas"
 
 #: templates/billing/partials/_payment_rows.html:22
 msgid "Boleto"
@@ -18064,7 +18502,7 @@ msgstr "Cobrado todo mês, em fatura própria, a partir de hoje."
 #: templates/calendar/calendar.html:4 templates/calendar/calendar.html:548
 #: templates/calendar/calendar.html:580
 #: templates/calendar/partials/_list_row.html:84
-#: templates/composer/compose.html:2500
+#: templates/composer/compose.html:2501
 msgid "Publish"
 msgstr "Publicar"
 
@@ -18187,7 +18625,7 @@ msgstr "Novo rascunho"
 
 #: templates/calendar/partials/_board_columns.html:117
 #: templates/social_accounts/partials/_whatsapp_template_form.html:20
-#: templates/tasks/partials/_task_modal.html:275
+#: templates/tasks/partials/_task_modal.html:276
 msgid "Send for review"
 msgstr "Enviar para revisão"
 
@@ -18228,12 +18666,12 @@ msgid "No posts on this day."
 msgstr "Nenhuma publicação neste dia."
 
 #: templates/calendar/partials/_delete_post_modal.html:39
-#: templates/composer/compose.html:2432
+#: templates/composer/compose.html:2433
 msgid "Delete post?"
 msgstr "Excluir publicação?"
 
 #: templates/calendar/partials/_delete_post_modal.html:40
-#: templates/composer/compose.html:2433
+#: templates/composer/compose.html:2434
 msgid ""
 "This action cannot be undone. The post and all associated data will be "
 "permanently removed."
@@ -18242,13 +18680,13 @@ msgstr ""
 "serão removidos permanentemente."
 
 #: templates/calendar/partials/_delete_post_modal.html:46
-#: templates/composer/compose.html:2439
+#: templates/composer/compose.html:2440
 #, python-format
 msgid "Also delete it from %(network)s"
 msgstr "Excluir também do %(network)s"
 
 #: templates/calendar/partials/_delete_post_modal.html:47
-#: templates/composer/compose.html:2440
+#: templates/composer/compose.html:2441
 msgid ""
 "Unticked, the post stays live there and only its record here is removed."
 msgstr ""
@@ -18256,7 +18694,7 @@ msgstr ""
 "removido."
 
 #: templates/calendar/partials/_delete_post_modal.html:50
-#: templates/composer/compose.html:2445
+#: templates/composer/compose.html:2446
 #, python-format
 msgid ""
 "This post stays live on %(network)s: it can't be deleted from here. Only its "
@@ -18266,7 +18704,7 @@ msgstr ""
 "aqui. Só o registro no Connekt Flow é removido."
 
 #: templates/calendar/partials/_delete_post_modal.html:59
-#: templates/composer/compose.html:2454
+#: templates/composer/compose.html:2455
 msgid "The post couldn't be deleted. Try again."
 msgstr "Não foi possível excluir a publicação. Tente novamente."
 
@@ -18378,7 +18816,7 @@ msgid "Post details"
 msgstr "Informações do post"
 
 #: templates/calendar/partials/_post_card.html:72
-#: templates/composer/partials/_pinterest_pin.html:22
+#: templates/composer/partials/_pinterest_pin.html:23
 msgid "Created on"
 msgstr "Criado em"
 
@@ -19277,21 +19715,6 @@ msgstr ""
 "Sua equipe poderá compartilhar relatórios de desempenho com você aqui. Volte "
 "em breve!"
 
-#: templates/components/_form_field.html:11
-#: templates/composer/create_landing.html:442
-#: templates/composer/create_landing.html:628
-#: templates/composer/partials/template_gallery.html:132
-#: templates/composer/partials/template_gallery.html:138
-#: templates/composer/partials/template_gallery.html:143
-#: templates/composer/partials/template_gallery.html:165
-#: templates/composer/partials/template_gallery.html:205
-#: templates/composer/partials/template_gallery.html:227
-#: templates/partials/_channel_picker.html:20
-#: templates/tasks/partials/_new_item_modal.html:71
-#: templates/tasks/partials/_new_item_options.html:44
-msgid "optional"
-msgstr "opcional"
-
 #: templates/components/_media_preview.html:20
 #: templates/composer/manual_publish.html:31
 #: templates/media_library/_asset_detail_panel.html:64
@@ -19301,10 +19724,6 @@ msgstr "opcional"
 #: templates/tasks/partials/_checklist_item.html:75
 msgid "Download"
 msgstr "Baixar"
-
-#: templates/components/_period_picker.html:14 templates/funnels/board.html:31
-msgid "Period"
-msgstr "Período"
 
 #: templates/components/_period_picker.html:18
 #, python-format
@@ -19463,7 +19882,7 @@ msgstr ""
 "Campos compartilhados, como a legenda, também são usados por aquela "
 "publicação — editá-los aqui altera o registro dela."
 
-#: templates/composer/compose.html:618 templates/composer/compose.html:2496
+#: templates/composer/compose.html:618 templates/composer/compose.html:2497
 msgid "Post content"
 msgstr "Conteúdo da publicação"
 
@@ -19471,7 +19890,7 @@ msgstr "Conteúdo da publicação"
 msgid "What would you like to share?"
 msgstr "O que você quer compartilhar?"
 
-#: templates/composer/compose.html:659 templates/composer/compose.html:2222
+#: templates/composer/compose.html:659 templates/composer/compose.html:2223
 msgid "Search Unsplash"
 msgstr "Buscar no Unsplash"
 
@@ -19514,6 +19933,8 @@ msgstr "Digitar uma hashtag"
 #: templates/composer/compose.html:826
 #: templates/composer/partials/media_picker.html:308
 #: templates/composer/partials/media_picker.html:309
+#: templates/composer/partials/media_picker.html:365
+#: templates/composer/partials/media_picker.html:366
 msgid "Insert"
 msgstr "Inserir"
 
@@ -19925,7 +20346,7 @@ msgstr ""
 msgid "Comment automation"
 msgstr "Automação de comentários"
 
-#: templates/composer/compose.html:1735 templates/composer/compose.html:2507
+#: templates/composer/compose.html:1735 templates/composer/compose.html:2508
 msgid "Set up flow"
 msgstr "Configurar fluxo"
 
@@ -19969,7 +20390,7 @@ msgstr "Para aprovação"
 msgid "Resubmit"
 msgstr "Enviar novamente"
 
-#: templates/composer/compose.html:1867 templates/composer/compose.html:2499
+#: templates/composer/compose.html:1867 templates/composer/compose.html:2500
 msgid "Schedule"
 msgstr "Agendar"
 
@@ -20047,227 +20468,227 @@ msgstr "Enviar"
 msgid "Approval History"
 msgstr "Histórico de aprovações"
 
-#: templates/composer/compose.html:2086
+#: templates/composer/compose.html:2087
 msgid "Post preview"
 msgstr "Prévia da publicação"
 
-#: templates/composer/compose.html:2090
+#: templates/composer/compose.html:2091
 msgid "Previous platform"
 msgstr "Plataforma anterior"
 
-#: templates/composer/compose.html:2093
+#: templates/composer/compose.html:2094
 msgid "Next platform"
 msgstr "Próxima plataforma"
 
-#: templates/composer/compose.html:2122
+#: templates/composer/compose.html:2123
 msgid "Media to adjust"
 msgstr "Mídias para ajustar"
 
-#: templates/composer/compose.html:2129
+#: templates/composer/compose.html:2130
 msgid "Select a media to adjust it."
 msgstr "Selecione uma mídia para ajustá-la."
 
-#: templates/composer/compose.html:2184
+#: templates/composer/compose.html:2185
 msgid "Select Thumbnail"
 msgstr "Selecionar miniatura"
 
-#: templates/composer/compose.html:2223
+#: templates/composer/compose.html:2224
 msgid "Free high-resolution photos &middot; add one or many"
 msgstr "Fotos gratuitas em alta resolução &middot; adicione uma ou várias"
 
-#: templates/composer/compose.html:2235
+#: templates/composer/compose.html:2236
 msgid "Search free high-resolution photos…"
 msgstr "Buscar fotos gratuitas em alta resolução…"
 
-#: templates/composer/compose.html:2238
+#: templates/composer/compose.html:2239
 #: templates/composer/staff_idea_templates.html:51
 #: templates/radar/instagram.html:95 templates/radar/shopee.html:138
 msgid "Search"
 msgstr "Buscar"
 
-#: templates/composer/compose.html:2255
+#: templates/composer/compose.html:2256
 msgid "No results. Try another search."
 msgstr "Nenhum resultado. Tente outra busca."
 
-#: templates/composer/compose.html:2271
+#: templates/composer/compose.html:2272
 #: templates/media_library/_asset_info.html:50
 msgctxt "Unsplash credit"
 msgid "Photo by"
 msgstr "Foto de"
 
-#: templates/composer/compose.html:2274
+#: templates/composer/compose.html:2275
 #: templates/media_library/_asset_info.html:52
 msgctxt "Unsplash credit"
 msgid "on"
 msgstr "no"
 
-#: templates/composer/compose.html:2318
+#: templates/composer/compose.html:2319
 msgid "Choose thumbnail from video"
 msgstr "Escolher miniatura do vídeo"
 
-#: templates/composer/compose.html:2319
+#: templates/composer/compose.html:2320
 msgid "Scrub to the frame you want, then grab it"
 msgstr "Avance até o quadro que quiser e capture"
 
-#: templates/composer/compose.html:2359
+#: templates/composer/compose.html:2360
 msgid "Frame at"
 msgstr "Quadro em"
 
-#: templates/composer/compose.html:2386
+#: templates/composer/compose.html:2387
 msgid "Post saved"
 msgstr "Publicação salva"
 
-#: templates/composer/compose.html:2494
+#: templates/composer/compose.html:2495
 msgid "Saved at"
 msgstr "Salvo às"
 
-#: templates/composer/compose.html:2495
+#: templates/composer/compose.html:2496
 msgid "Not saved yet"
 msgstr "Ainda não salvo"
 
-#: templates/composer/compose.html:2497
+#: templates/composer/compose.html:2498
 msgid "Caption / Description"
 msgstr "Legenda / Descrição"
 
-#: templates/composer/compose.html:2501
+#: templates/composer/compose.html:2502
 msgid "override"
 msgstr "personalizado"
 
-#: templates/composer/compose.html:2502
+#: templates/composer/compose.html:2503
 msgid "Own title for this channel…"
 msgstr "Título próprio para este canal…"
 
-#: templates/composer/compose.html:2503
+#: templates/composer/compose.html:2504
 msgid "Own caption for this channel…"
 msgstr "Legenda própria para este canal…"
 
-#: templates/composer/compose.html:2504
+#: templates/composer/compose.html:2505
 msgid "Reply to comments and send a DM automatically"
 msgstr "Responder aos comentários e enviar um direct automaticamente"
 
-#: templates/composer/compose.html:2505
+#: templates/composer/compose.html:2506
 msgid "Save this draft to set up an automation"
 msgstr "Salve este rascunho para configurar uma automação"
 
-#: templates/composer/compose.html:2506
+#: templates/composer/compose.html:2507
 msgid "Edit flow"
 msgstr "Editar fluxo"
 
-#: templates/composer/compose.html:2508
+#: templates/composer/compose.html:2509
 msgid "Enter a title…"
 msgstr "Digite um título…"
 
-#: templates/composer/compose.html:2510
+#: templates/composer/compose.html:2511
 msgid "Pick from Library"
 msgstr "Escolher da biblioteca"
 
-#: templates/composer/compose.html:2513
+#: templates/composer/compose.html:2514
 msgid "Drag & drop a thumbnail"
 msgstr "Arraste e solte uma miniatura"
 
-#: templates/composer/compose.html:2514
+#: templates/composer/compose.html:2515
 #, python-brace-format
 msgid "Posting to @{name}"
 msgstr "Publicando em @{name}"
 
-#: templates/composer/compose.html:2516
+#: templates/composer/compose.html:2517
 msgid "Friends"
 msgstr "Amigos"
 
-#: templates/composer/compose.html:2518
+#: templates/composer/compose.html:2519
 msgid "Only you"
 msgstr "Somente você"
 
-#: templates/composer/compose.html:2519
+#: templates/composer/compose.html:2520
 msgid "Your photo/video will be labeled as 'Paid partnership'"
 msgstr "Sua foto/vídeo receberá o rótulo “Parceria paga”"
 
-#: templates/composer/compose.html:2520
+#: templates/composer/compose.html:2521
 msgid "Your photo/video will be labeled as 'Promotional content'"
 msgstr "Sua foto/vídeo receberá o rótulo “Conteúdo promocional”"
 
-#: templates/composer/compose.html:2521
+#: templates/composer/compose.html:2522
 msgid "Select who can view this post"
 msgstr "Selecione quem pode ver esta publicação"
 
-#: templates/composer/compose.html:2522
+#: templates/composer/compose.html:2523
 #, python-brace-format
 msgid "Cover at {time}"
 msgstr "Capa em {time}"
 
-#: templates/composer/compose.html:2523
+#: templates/composer/compose.html:2524
 msgid "1 photo selected"
 msgstr "1 foto selecionada"
 
-#: templates/composer/compose.html:2524
+#: templates/composer/compose.html:2525
 #, python-brace-format
 msgid "{n} photos selected"
 msgstr "{n} fotos selecionadas"
 
-#: templates/composer/compose.html:2525
+#: templates/composer/compose.html:2526
 msgid "Select photos to add"
 msgstr "Selecione as fotos para adicionar"
 
-#: templates/composer/compose.html:2526
+#: templates/composer/compose.html:2527
 msgid "Adding…"
 msgstr "Adicionando…"
 
-#: templates/composer/compose.html:2527
+#: templates/composer/compose.html:2528
 #, python-brace-format
 msgid "Add {n} images"
 msgstr "Adicionar {n} imagens"
 
-#: templates/composer/compose.html:2528
+#: templates/composer/compose.html:2529
 msgid "Add images"
 msgstr "Adicionar imagens"
 
-#: templates/composer/compose.html:2530
+#: templates/composer/compose.html:2531
 msgid "Use this frame"
 msgstr "Usar este quadro"
 
-#: templates/composer/compose.html:2531
+#: templates/composer/compose.html:2532
 #: templates/composer/create_landing.html:817
 msgid "Deleting…"
 msgstr "Excluindo…"
 
-#: templates/composer/compose.html:2533
+#: templates/composer/compose.html:2534
 msgid "Thumbnail must be an image (JPG or PNG)."
 msgstr "A miniatura deve ser uma imagem (JPG ou PNG)."
 
-#: templates/composer/compose.html:2534
+#: templates/composer/compose.html:2535
 msgid "Thumbnail upload failed."
 msgstr "Falha ao enviar a miniatura."
 
-#: templates/composer/compose.html:2535
+#: templates/composer/compose.html:2536
 msgid "Unsplash search failed."
 msgstr "Falha na busca do Unsplash."
 
-#: templates/composer/compose.html:2537
+#: templates/composer/compose.html:2538
 msgid "You cannot mix images and video in one post."
 msgstr "Não é possível misturar imagens e vídeo em uma publicação."
 
-#: templates/composer/compose.html:2538
+#: templates/composer/compose.html:2539
 msgid "Import failed. Try again."
 msgstr "Falha na importação. Tente novamente."
 
-#: templates/composer/compose.html:2539
+#: templates/composer/compose.html:2540
 msgid "Frame previews unavailable for this video — use the scrubber instead."
 msgstr ""
 "Prévias de quadros indisponíveis para este vídeo — use o controle deslizante."
 
-#: templates/composer/compose.html:2540
+#: templates/composer/compose.html:2541
 msgid "Could not load video frames."
 msgstr "Não foi possível carregar os quadros do vídeo."
 
-#: templates/composer/compose.html:2541
+#: templates/composer/compose.html:2542
 msgid "Video is still loading — try again in a moment."
 msgstr "O vídeo ainda está carregando — tente novamente em instantes."
 
-#: templates/composer/compose.html:2542
+#: templates/composer/compose.html:2543
 msgid "Could not capture this frame."
 msgstr "Não foi possível capturar este quadro."
 
-#: templates/composer/compose.html:2543
+#: templates/composer/compose.html:2544
 msgid ""
 "Cannot capture frames from this video (cross-origin storage). Upload a "
 "thumbnail instead."
@@ -20275,11 +20696,11 @@ msgstr ""
 "Não é possível capturar quadros deste vídeo (armazenamento de outra origem). "
 "Envie uma miniatura."
 
-#: templates/composer/compose.html:2545
+#: templates/composer/compose.html:2546
 msgid "Only one video file can be uploaded at a time."
 msgstr "Só é possível enviar um arquivo de vídeo por vez."
 
-#: templates/composer/compose.html:2546
+#: templates/composer/compose.html:2547
 msgid ""
 "You cannot mix images and video. Please upload either images or a single "
 "video."
@@ -20287,11 +20708,11 @@ msgstr ""
 "Não é possível misturar imagens e vídeo. Envie apenas imagens ou um único "
 "vídeo."
 
-#: templates/composer/compose.html:2547
+#: templates/composer/compose.html:2548
 msgid "Please select both a date and time."
 msgstr "Selecione a data e o horário."
 
-#: templates/composer/compose.html:2549
+#: templates/composer/compose.html:2550
 msgid ""
 "Could not reach the server, so nothing was saved. Check your connection and "
 "try again."
@@ -20299,33 +20720,33 @@ msgstr ""
 "Não foi possível falar com o servidor, então nada foi salvo. Verifique sua "
 "conexão e tente novamente."
 
-#: templates/composer/compose.html:2550
+#: templates/composer/compose.html:2551
 msgid "Stories (9:16)"
 msgstr "Stories (9:16)"
 
-#: templates/composer/compose.html:2551
+#: templates/composer/compose.html:2552
 msgid "Reels (9:16)"
 msgstr "Reels (9:16)"
 
-#: templates/composer/compose.html:2552
+#: templates/composer/compose.html:2553
 msgid "Instagram feed (4:5 to 1.91:1)"
 msgstr "feed do Instagram (4:5 a 1.91:1)"
 
-#: templates/composer/compose.html:2553
+#: templates/composer/compose.html:2554
 #, python-brace-format
 msgid "1 media outside the {format} ratio"
 msgstr "1 mídia fora da proporção de {format}"
 
-#: templates/composer/compose.html:2554
+#: templates/composer/compose.html:2555
 #, python-brace-format
 msgid "{count} media outside the {format} ratio"
 msgstr "{count} mídias fora da proporção de {format}"
 
-#: templates/composer/compose.html:2555
+#: templates/composer/compose.html:2556
 msgid "outside the ratio"
 msgstr "fora da proporção"
 
-#: templates/composer/compose.html:2556
+#: templates/composer/compose.html:2557
 #, python-brace-format
 msgid ""
 "This crop applies to {format} only; the other formats keep the original "
@@ -20334,7 +20755,7 @@ msgstr ""
 "Este corte vale só para {format}; os outros formatos continuam com a imagem "
 "original."
 
-#: templates/composer/compose.html:2560
+#: templates/composer/compose.html:2561
 #, python-brace-format
 msgid ""
 "{platform} takes Story videos of up to {limit} seconds and this one has "
@@ -20343,7 +20764,7 @@ msgstr ""
 "O {platform} aceita vídeos de até {limit} segundos no Story e este tem "
 "{duration}. Corte o vídeo ou publique-o como Reels."
 
-#: templates/composer/compose.html:2561
+#: templates/composer/compose.html:2562
 #, python-brace-format
 msgid ""
 "{platform} takes Story videos of up to {limit} MB and this one has {size} "
@@ -20352,7 +20773,7 @@ msgstr ""
 "O {platform} aceita vídeos de até {limit} MB no Story e este tem {size} MB. "
 "Comprima o vídeo ou publique-o como Reels."
 
-#: templates/composer/compose.html:2563
+#: templates/composer/compose.html:2564
 #, python-brace-format
 msgid ""
 "YouTube makes Shorts of videos up to {limit} minutes and this one has "
@@ -20361,72 +20782,72 @@ msgstr ""
 "O YouTube faz Shorts de vídeos de até {limit} minutos e este tem {duration} "
 "segundos. Corte o vídeo ou publique-o como vídeo comum."
 
-#: templates/composer/compose.html:2564
+#: templates/composer/compose.html:2565
 msgid "Post settings"
 msgstr "Configurações da publicação"
 
-#: templates/composer/compose.html:2565
+#: templates/composer/compose.html:2566
 msgid "Choose a board for the pin."
 msgstr "Escolha uma pasta para o pin."
 
-#: templates/composer/compose.html:2566
+#: templates/composer/compose.html:2567
 msgid "Add an image or a video, or deselect this channel."
 msgstr "Adicione uma imagem ou um vídeo, ou desmarque este canal."
 
-#: templates/composer/compose.html:2567
+#: templates/composer/compose.html:2568
 msgid "Add a video, or deselect this channel."
 msgstr "Adicione um vídeo, ou desmarque este canal."
 
-#: templates/composer/compose.html:2568
+#: templates/composer/compose.html:2569
 msgid "Could not save the hashtag."
 msgstr "Não foi possível salvar a hashtag."
 
-#: templates/composer/compose.html:2570
+#: templates/composer/compose.html:2571
 msgid "Write the text or add an image or a video."
 msgstr "Escreva o texto ou adicione uma imagem ou um vídeo."
 
-#: templates/composer/compose.html:2571
+#: templates/composer/compose.html:2572
 #, python-brace-format
 msgid "The text has {count} characters, over the {limit} this channel takes."
 msgstr ""
 "O texto tem {count} caracteres, acima dos {limit} que este canal aceita."
 
-#: templates/composer/compose.html:2572
+#: templates/composer/compose.html:2573
 msgid "Write a title for the article."
 msgstr "Escreva um título para o artigo."
 
-#: templates/composer/compose.html:2575
+#: templates/composer/compose.html:2576
 #, python-brace-format
 msgid "Trim the video for {format}"
 msgstr "Cortar o vídeo para {format}"
 
-#: templates/composer/compose.html:2576
+#: templates/composer/compose.html:2577
 #, python-brace-format
 msgid "Compress the video for {format}"
 msgstr "Comprimir o vídeo para {format}"
 
-#: templates/composer/compose.html:2577
+#: templates/composer/compose.html:2578
 msgid "Adjust length"
 msgstr "Ajustar duração"
 
-#: templates/composer/compose.html:2578
+#: templates/composer/compose.html:2579
 #: templates/media_library/_video_trimmer.html:160
 msgid "Compress video"
 msgstr "Comprimir vídeo"
 
-#: templates/composer/compose.html:2579
+#: templates/composer/compose.html:2580
 msgid ""
 "Preparing the video for this format. It can be published once it is ready."
 msgstr ""
 "Preparando o vídeo para este formato. Dá para publicar assim que ele ficar "
 "pronto."
 
-#: templates/composer/compose.html:2580
+#: templates/composer/compose.html:2581
 #, python-brace-format
 msgid "The video for {format} is ready."
 msgstr "O vídeo para {format} está pronto."
 
-#: templates/composer/compose.html:2581
+#: templates/composer/compose.html:2582
 #, python-brace-format
 msgid "The video for {format} could not be adjusted: {reason}"
 msgstr "Não foi possível ajustar o vídeo para {format}: {reason}"
@@ -21064,15 +21485,15 @@ msgstr "As hashtags das suas publicações vão aparecer aqui."
 msgid "New folder"
 msgstr "Nova pasta"
 
-#: templates/composer/partials/_pinterest_pin.html:14
+#: templates/composer/partials/_pinterest_pin.html:15
 msgid "Pinterest has this pin"
 msgstr "O Pinterest tem este pin"
 
-#: templates/composer/partials/_pinterest_pin.html:18
+#: templates/composer/partials/_pinterest_pin.html:19
 msgid "Pin ID"
 msgstr "ID do pin"
 
-#: templates/composer/partials/_pinterest_pin.html:21
+#: templates/composer/partials/_pinterest_pin.html:22
 msgctxt "pinterest"
 msgid "Board"
 msgstr "Pasta"
@@ -21140,7 +21561,7 @@ msgstr "Repostar"
 #: templates/inbox/partials/_draft_reply_item.html:30
 #: templates/support/partials/_chat_widget.html:115
 #: templates/support/staff_chat_console.html:181
-#: templates/tasks/partials/_task_modal.html:197
+#: templates/tasks/partials/_task_modal.html:198
 msgid "Send"
 msgstr "Enviar"
 
@@ -21394,6 +21815,7 @@ msgstr "Escolha o formato"
 
 #: templates/composer/partials/_template_art_items.html:32
 #: templates/composer/partials/_template_art_items.html:34
+#: templates/tasks/partials/_item_count.html:13
 #: templates/tasks/partials/_new_item_modal.html:93
 #: templates/tasks/partials/_new_item_modal.html:129
 msgid "Quantity"
@@ -21782,8 +22204,8 @@ msgstr "Não foi possível carregar os detalhes."
 msgid "Unselect"
 msgstr "Desmarcar"
 
-#: templates/composer/partials/media_picker.html:547
-#: templates/composer/partials/media_picker.html:561
+#: templates/composer/partials/media_picker.html:582
+#: templates/composer/partials/media_picker.html:596
 #: templates/media_library/library_index.html:422
 msgid "Upload failed"
 msgstr "Falha no envio"
@@ -21997,7 +22419,7 @@ msgstr "Enviados pelos clientes"
 
 #: templates/composer/staff_idea_templates.html:46
 #: templates/social_accounts/account_select.html:76
-#: templates/social_accounts/list.html:78
+#: templates/social_accounts/list.html:82
 msgid "All categories"
 msgstr "Todas as categorias"
 
@@ -22356,7 +22778,7 @@ msgstr ""
 "também pode cadastrar contatos à mão ou importar um CSV."
 
 #: templates/contacts/partials/_row.html:10
-#: templates/media_library/_asset_card.html:127
+#: templates/media_library/_asset_card.html:130
 #: templates/media_library/_asset_list_row.html:14
 #, python-format
 msgid "Select %(name)s"
@@ -22703,12 +23125,6 @@ msgstr "Prévia do e-mail"
 #: templates/email_center/partials/_preview_card.html:14
 msgid "Screen size"
 msgstr "Tamanho da tela"
-
-#: templates/email_center/partials/_preview_card.html:17
-#: templates/support/staff_chat_console.html:330
-#: templates/support/staff_chat_history_detail.html:49
-msgid "Computer"
-msgstr "Computador"
 
 #: templates/email_center/partials/_preview_card.html:22
 msgid "Mobile"
@@ -25309,7 +25725,7 @@ msgstr "Fluxo de aprovação"
 msgid "Manage team"
 msgstr "Gerenciar equipe"
 
-#: templates/media_library/_asset_card.html:79
+#: templates/media_library/_asset_card.html:82
 #: templates/media_library/_shared_asset_card.html:35
 #, python-format
 msgid "%(count)s version"
@@ -25317,16 +25733,16 @@ msgid_plural "%(count)s versions"
 msgstr[0] "%(count)s versão"
 msgstr[1] "%(count)s versões"
 
-#: templates/media_library/_asset_card.html:86
+#: templates/media_library/_asset_card.html:89
 #: templates/media_library/_shared_asset_card.html:40
 msgid "SHARED"
 msgstr "COMPARTILHADA"
 
-#: templates/media_library/_asset_card.html:112
+#: templates/media_library/_asset_card.html:115
 msgid "Enlarge"
 msgstr "Ampliar"
 
-#: templates/media_library/_asset_card.html:112
+#: templates/media_library/_asset_card.html:115
 #, python-format
 msgid "Enlarge %(name)s"
 msgstr "Ampliar %(name)s"
@@ -25485,7 +25901,7 @@ msgid "Add tag..."
 msgstr "Adicionar etiqueta..."
 
 #: templates/media_library/_version_list.html:28
-#: templates/media_library/_version_strip.html:45
+#: templates/media_library/_version_strip.html:51
 #, python-format
 msgid "Version %(number)s"
 msgstr "Versão %(number)s"
@@ -25508,7 +25924,7 @@ msgstr "Restaurar"
 msgid "No version history yet. Edits will appear here."
 msgstr "Ainda não há histórico de versões. As edições aparecerão aqui."
 
-#: templates/media_library/_version_strip.html:45
+#: templates/media_library/_version_strip.html:51
 msgid "Original"
 msgstr "Original"
 
@@ -26325,9 +26741,9 @@ msgstr "Business e Creator"
 #: templates/radar/partials/_shopee_connect_form.html:43
 #: templates/radar/partials/_source_card.html:80
 #: templates/radar/partials/_source_card.html:87
-#: templates/social_accounts/list.html:145
-#: templates/social_accounts/list.html:147
-#: templates/social_accounts/list.html:152
+#: templates/social_accounts/list.html:149
+#: templates/social_accounts/list.html:151
+#: templates/social_accounts/list.html:156
 #: templates/social_accounts/partials/_ads_card.html:45
 #: templates/social_accounts/partials/_connect_form.html:58
 #: templates/social_accounts/partials/_connect_form.html:61
@@ -27308,10 +27724,6 @@ msgstr ""
 msgid "Leave a review"
 msgstr "Deixar uma avaliação"
 
-#: templates/partials/_setup_steps.html:16
-msgid "Steps"
-msgstr "Etapas"
-
 #: templates/partials/_setup_steps.html:21
 #: templates/partials/_setup_steps.html:27
 msgid "Your company"
@@ -27997,39 +28409,39 @@ msgstr ""
 msgid "Connect new platform"
 msgstr "Conectar nova plataforma"
 
-#: templates/social_accounts/list.html:48
-#: templates/social_accounts/list.html:68
+#: templates/social_accounts/list.html:52
+#: templates/social_accounts/list.html:72
 msgctxt "accounts, plural"
 msgid "Connected"
 msgstr "Conectadas"
 
-#: templates/social_accounts/list.html:52
-#: templates/social_accounts/list.html:69
+#: templates/social_accounts/list.html:56
+#: templates/social_accounts/list.html:73
 msgctxt "platforms, plural"
 msgid "Available"
 msgstr "Disponíveis"
 
-#: templates/social_accounts/list.html:56
-#: templates/social_accounts/list.html:70
+#: templates/social_accounts/list.html:60
+#: templates/social_accounts/list.html:74
 msgid "With problems"
 msgstr "Com problemas"
 
-#: templates/social_accounts/list.html:60
+#: templates/social_accounts/list.html:64
 msgid "Platforms in total"
 msgstr "Plataformas no total"
 
-#: templates/social_accounts/list.html:75
+#: templates/social_accounts/list.html:79
 msgid "Search platform…"
 msgstr "Buscar plataforma…"
 
-#: templates/social_accounts/list.html:91
+#: templates/social_accounts/list.html:95
 msgid ""
 "Drag the cards to choose the order the accounts appear in when you publish."
 msgstr ""
 "Arraste os cartões para escolher a ordem em que as contas aparecem quando "
 "você publica."
 
-#: templates/social_accounts/list.html:101
+#: templates/social_accounts/list.html:105
 #, python-format
 msgid ""
 "%(counter)s account connected. Health checks run automatically every 6 hours."
@@ -28043,25 +28455,25 @@ msgstr[1] ""
 "%(counter)s contas conectadas. As verificações de saúde rodam "
 "automaticamente a cada 6 horas."
 
-#: templates/social_accounts/list.html:113
+#: templates/social_accounts/list.html:117
 msgid "Ad accounts"
 msgstr "Contas de anúncio"
 
-#: templates/social_accounts/list.html:126
+#: templates/social_accounts/list.html:130
 msgid "Connect other platforms"
 msgstr "Conectar outras plataformas"
 
-#: templates/social_accounts/list.html:155
+#: templates/social_accounts/list.html:159
 #: templates/social_accounts/partials/_ads_card.html:47
 msgid "Platform credentials not configured. Contact your administrator."
 msgstr "Credenciais da plataforma não configuradas. Fale com o administrador."
 
-#: templates/social_accounts/list.html:155
+#: templates/social_accounts/list.html:159
 #: templates/social_accounts/partials/_ads_card.html:47
 msgid "Not Configured"
 msgstr "Não configurada"
 
-#: templates/social_accounts/list.html:175
+#: templates/social_accounts/list.html:182
 #: templates/social_accounts/staff_platforms.html:57
 msgid "Business & opportunities"
 msgstr "Negócios e oportunidades"
@@ -29410,34 +29822,34 @@ msgstr "Entregar arte"
 msgid "In the media library"
 msgstr "Na galeria"
 
-#: templates/tasks/partials/_checklist_item.html:90
+#: templates/tasks/partials/_checklist_item.html:91
 #: templates/tasks/partials/_new_item_modal.html:139
 msgid "Item settings"
 msgstr "Configurações do item"
 
-#: templates/tasks/partials/_checklist_item.html:96
+#: templates/tasks/partials/_checklist_item.html:97
 #: templates/tasks/partials/_new_item_modal.html:144
 msgid "Ask for a file"
 msgstr "Pedir arquivo"
 
-#: templates/tasks/partials/_checklist_item.html:104
+#: templates/tasks/partials/_checklist_item.html:105
 #: templates/tasks/partials/_new_item_modal.html:151
 msgid "Size (px)"
 msgstr "Tamanho (px)"
 
-#: templates/tasks/partials/_checklist_item.html:106
 #: templates/tasks/partials/_checklist_item.html:107
+#: templates/tasks/partials/_checklist_item.html:108
 #: templates/tasks/partials/_new_item_modal.html:153
 msgid "Width"
 msgstr "Largura"
 
-#: templates/tasks/partials/_checklist_item.html:109
 #: templates/tasks/partials/_checklist_item.html:110
+#: templates/tasks/partials/_checklist_item.html:111
 #: templates/tasks/partials/_new_item_modal.html:155
 msgid "Height"
 msgstr "Altura"
 
-#: templates/tasks/partials/_checklist_item.html:121
+#: templates/tasks/partials/_checklist_item.html:122
 msgid "Remove item"
 msgstr "Remover item"
 
@@ -29512,7 +29924,7 @@ msgid "Split the work into lists, each with its own title and items."
 msgstr "Divida o trabalho em listas, cada uma com seu título e seus itens."
 
 #: templates/tasks/partials/_new_item_modal.html:179
-#: templates/tasks/partials/_task_modal.html:221
+#: templates/tasks/partials/_task_modal.html:222
 msgid "New checklist"
 msgstr "Nova checklist"
 
@@ -29562,7 +29974,7 @@ msgid "Open task"
 msgstr "Abrir tarefa"
 
 #: templates/tasks/partials/_task_card.html:36
-#: templates/tasks/partials/_task_modal.html:246
+#: templates/tasks/partials/_task_modal.html:247
 msgid "Delete this task? This cannot be undone."
 msgstr "Excluir esta tarefa? Isso não pode ser desfeito."
 
@@ -29592,7 +30004,7 @@ msgstr "Coluna (status)"
 
 #: templates/tasks/partials/_task_fields.html:43
 #: templates/tasks/partials/_task_fields.html:45
-#: templates/tasks/partials/_task_modal.html:239
+#: templates/tasks/partials/_task_modal.html:240
 msgid "Where the task is on the board."
 msgstr "Onde a tarefa está no quadro."
 
@@ -29639,40 +30051,40 @@ msgstr "Excluir esta checklist e os itens dela?"
 msgid "Delete checklist"
 msgstr "Excluir checklist"
 
-#: templates/tasks/partials/_task_modal.html:174
+#: templates/tasks/partials/_task_modal.html:175
 msgid "Former member"
 msgstr "Ex-membro"
 
-#: templates/tasks/partials/_task_modal.html:188
+#: templates/tasks/partials/_task_modal.html:189
 msgctxt "verb"
 msgid "Comment"
 msgstr "Comentar"
 
-#: templates/tasks/partials/_task_modal.html:193
+#: templates/tasks/partials/_task_modal.html:194
 msgid "What should change in this group?"
 msgstr "O que deve mudar neste grupo?"
 
-#: templates/tasks/partials/_task_modal.html:226
+#: templates/tasks/partials/_task_modal.html:227
 msgid "Checklist title, e.g. Shooting"
 msgstr "Título da checklist, ex.: Gravação"
 
-#: templates/tasks/partials/_task_modal.html:250
+#: templates/tasks/partials/_task_modal.html:251
 msgid "Open the post"
 msgstr "Abrir publicação"
 
-#: templates/tasks/partials/_task_modal.html:253
+#: templates/tasks/partials/_task_modal.html:254
 msgid "Each art goes to the format it was made for."
 msgstr "Cada arte vai para o formato em que foi feita."
 
-#: templates/tasks/partials/_task_modal.html:254
+#: templates/tasks/partials/_task_modal.html:255
 msgid "Create post with these arts"
 msgstr "Criar publicação com estas artes"
 
-#: templates/tasks/partials/_task_modal.html:268
+#: templates/tasks/partials/_task_modal.html:269
 msgid "Start production"
 msgstr "Iniciar produção"
 
-#: templates/tasks/partials/_task_modal.html:292
+#: templates/tasks/partials/_task_modal.html:293
 msgid "Save task"
 msgstr "Salvar tarefa"
 
@@ -30289,6 +30701,28 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 #: templates/workspaces/team.html:159
 msgid "Send invitation"
 msgstr "Enviar convite"
+
+#~ msgid "devices"
+#~ msgstr "dispositivos"
+
+#~ msgid ""
+#~ "Awareness shows the pin to as many people as possible. Consideration "
+#~ "brings clicks to the pin and its link."
+#~ msgstr ""
+#~ "Reconhecimento mostra o pin para o máximo de pessoas. Consideração traz "
+#~ "cliques para o pin e o link dele."
+
+#~ msgid "Budget, schedule and audience"
+#~ msgstr "Orçamento, período e público"
+
+#~ msgid ""
+#~ "Without a start, delivery begins as soon as the campaign is activated. "
+#~ "Without an end, it runs until you pause it. Pinterest bids automatically "
+#~ "and finds the audience within these countries."
+#~ msgstr ""
+#~ "Sem início, a veiculação começa assim que a campanha é ativada. Sem fim, "
+#~ "ela roda até você pausá-la. O Pinterest define os lances sozinho e "
+#~ "encontra o público dentro desses países."
 
 #~ msgid "No boards found. Create a board on Pinterest first."
 #~ msgstr "Nenhuma pasta encontrada. Crie uma pasta no Pinterest primeiro."

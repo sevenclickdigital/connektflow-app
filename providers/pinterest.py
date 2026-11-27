@@ -328,6 +328,10 @@ class PinterestProvider(SocialProvider):
         """The pin as Pinterest has it (``pins:read``): title, description, board, images."""
         return self._request("GET", f"{API_BASE}/pins/{pin_id}", access_token=access_token).json()
 
+    def get_board(self, access_token: str, board_id: str) -> dict:
+        """One board of the authenticated account (``boards:read``): its name and privacy."""
+        return self._request("GET", f"{API_BASE}/boards/{board_id}", access_token=access_token).json()
+
     def create_board(self, access_token: str, name: str) -> dict:
         """Create a board on the authenticated account and return it.
 
