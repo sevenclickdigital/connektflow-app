@@ -13,6 +13,7 @@ from .exceptions import OAuthError, PublishError
 from .types import (
     AccountProfile,
     AuthType,
+    ExistingPost,
     MediaType,
     OAuthTokens,
     PostMetrics,
@@ -31,6 +32,46 @@ API_BASE = os.environ.get("PINTEREST_API_BASE") or "https://api.pinterest.com/v5
 TOKEN_URL = f"{API_BASE}/oauth/token"
 # How far back Pin analytics reach.
 PIN_ANALYTICS_DAYS = 90
+PINS_PAGE_SIZE = 100
+MAX_HISTORY_PAGES = 20
+
+
+def _pin_image(media: dict) -> str:
+    """The pin's picture: a 600px-wide image, the largest image, or a video's cover."""
+    images = media.get("images") or {}
+    image = images.get("600x") or images.get("1200x") or next(iter(images.values()), None)
+    if isinstance(image, dict) and image.get("url"):
+        return str(image["url"])
+    return str(media.get("cover_image_url") or "")
+
+
+def _existing_pin(row: dict) -> ExistingPost | None:
+    """One pin of ``GET /pins`` as history, or None for what is not the profile's own."""
+    pin_id = str(row.get("id") or "")
+    if not pin_id or row.get("is_removable") or row.get("is_owner") is False:
+        return None
+    media = row.get("media") or {}
+    media_type = str(media.get("media_type") or "")
+    created = row.get("created_at")
+    published_at = None
+    if created:
+        try:
+            published_at = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
+        except ValueError:
+            published_at = None
+        if published_at and published_at.tzinfo is None:
+            published_at = published_at.replace(tzinfo=UTC)
+    image = _pin_image(media)
+    return ExistingPost(
+        platform_post_id=pin_id,
+        caption=str(row.get("description") or ""),
+        published_at=published_at,
+        permalink=f"https://www.pinterest.com/pin/{pin_id}/",
+        media_url=image,
+        thumbnail_url=image,
+        media_kind={"video": "video", "multiple_images": "carousel"}.get(media_type, "image"),
+        extra={"title": str(row.get("title") or ""), "board_id": str(row.get("board_id") or "")},
+    )
 
 
 class PinterestProvider(SocialProvider):
@@ -323,6 +364,29 @@ class PinterestProvider(SocialProvider):
             if not bookmark:
                 break
         return boards
+
+    def list_existing_posts(self, access_token: str, *, limit: int = 100) -> list[ExistingPost]:
+        """The account's own pins, newest first (``pins:read``).
+
+        Repins of other people's pins are filtered out by Pinterest
+        (``exclude_repins``), and ad-only pins (``is_removable``) are left out:
+        they never show on the profile, so they are not its history.
+        """
+        posts: list[ExistingPost] = []
+        params: dict = {"page_size": min(PINS_PAGE_SIZE, max(limit, 1)), "pin_filter": "exclude_repins"}
+        # A guard against a bookmark chain that never ends (the Sandbox answers
+        # empty pages with a bookmark), not a limit an account should reach.
+        for _page in range(MAX_HISTORY_PAGES):
+            body = self._request("GET", f"{API_BASE}/pins", access_token=access_token, params=params).json()
+            for row in body.get("items") or []:
+                post = _existing_pin(row)
+                if post:
+                    posts.append(post)
+            bookmark = body.get("bookmark")
+            if len(posts) >= limit or not bookmark:
+                break
+            params = {**params, "bookmark": bookmark}
+        return posts[:limit]
 
     def get_pin(self, access_token: str, pin_id: str) -> dict:
         """The pin as Pinterest has it (``pins:read``): title, description, board, images."""

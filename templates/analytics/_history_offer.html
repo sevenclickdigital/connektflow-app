@@ -18,10 +18,12 @@ result (ImportResult, only after an import ran).
        {% comment %}
        The table is a sibling, not a child, so the new rows only appear if it
        is asked to re-render. Triggered from here rather than returned in this
-       response because the two are swapped into different targets.
+       response because the two are swapped into different targets. Only when
+       the table is on the page: the empty state of an account with no data yet
+       offers the import too, and has no table.
        {% endcomment %}
        hx-get="{% url 'analytics:account' workspace_id=workspace.id account_id=account.id %}?partial=table"
-       hx-trigger="load delay:300ms"
+       hx-trigger="load[document.getElementById('analytics-post-table')] delay:300ms"
        hx-target="#analytics-post-table"
        hx-swap="outerHTML">
     <svg style="width: 18px; height: 18px; color: var(--success-600, #16A34A); flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>

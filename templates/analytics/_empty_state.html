@@ -20,5 +20,11 @@
         <div style="margin-top: 28px; display: flex; gap: 10px; justify-content: center;">
             <a href="{% url 'composer:create_landing' workspace_id=workspace.id %}" class="btn-brand" style="width: auto; padding: 9px 20px;">{% translate "Create a post" %}</a>
         </div>
+        {# The posts the channel already had: an account with no data yet is where importing them helps most. #}
+        {% if active_account.id %}
+        <div class="mt-6 text-left">
+            <div hx-get="{% url 'analytics:history_offer' workspace_id=workspace.id account_id=active_account.id %}" hx-trigger="load" hx-swap="outerHTML"></div>
+        </div>
+        {% endif %}
     </div>
 </div>

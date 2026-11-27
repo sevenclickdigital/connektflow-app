@@ -388,6 +388,26 @@ class TestCreation:
         pin(Workspace.objects.create(name="Other", organization=organization), "333")
         assert [p["id"] for p in pinterest.promotable_pins(workspace)] == ["111"]
 
+    def test_a_pin_imported_from_the_history_is_offered_with_pinterests_picture(self, workspace, manager):
+        from apps.composer.models import PlatformPost, Post
+        from apps.social_accounts.models import SocialAccount
+
+        account = SocialAccount.objects.create(
+            workspace=workspace, platform="pinterest", account_platform_id="acc-h", account_name="Pins"
+        )
+        post = Post.objects.create(workspace=workspace, author=manager, caption="antigo")
+        PlatformPost.objects.create(
+            post=post,
+            social_account=account,
+            status=PlatformPost.Status.PUBLISHED,
+            platform_post_id="555",
+            platform_specific_title="Pin antigo",
+            platform_extra={"imported_from_platform": True, "thumbnail_url": "https://i.pinimg.com/600x/old.jpg"},
+        )
+        (offered,) = pinterest.promotable_pins(workspace)
+        assert offered["title"] == "Pin antigo"
+        assert offered["image_url"] == "https://i.pinimg.com/600x/old.jpg"
+
 
 # ------------------------------------------------------------------
 # Who may do what

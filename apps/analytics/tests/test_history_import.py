@@ -203,3 +203,12 @@ def test_imported_posts_belong_to_the_accounts_workspace(account):
     _run(account, FakeProvider([_existing("p1")]))
 
     assert Post.objects.get(caption="hello").workspace_id == account.workspace_id
+
+
+@pytest.mark.django_db
+def test_a_title_in_extra_is_kept_and_none_leaves_it_unset(account):
+    titled = ExistingPost(platform_post_id="p1", caption="desc", extra={"title": "Meu pin"})
+    plain = _existing("p2")
+    _run(account, FakeProvider([titled, plain]))
+    assert PlatformPost.objects.get(platform_post_id="p1").platform_specific_title == "Meu pin"
+    assert PlatformPost.objects.get(platform_post_id="p2").platform_specific_title is None

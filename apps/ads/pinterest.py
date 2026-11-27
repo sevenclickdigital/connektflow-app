@@ -841,13 +841,21 @@ def _preview_image(post) -> str:
     return ""
 
 
+def _imported_image(platform_post) -> str:
+    """A pin imported from the account's history has no media of ours: its picture is
+    the one Pinterest gave (``apps.analytics.history_import``)."""
+    extra = platform_post.platform_extra or {}
+    return str(extra.get("thumbnail_url") or extra.get("media_url") or "")
+
+
 def promotable_pins(workspace, limit: int = 500) -> list[dict]:
     """The workspace's published pins, newest first, for the ad's picker.
 
     ``is_video`` decides the ad's creative type, which Pinterest wants told;
     ``post`` carries the media for the picker's thumbnail, ``image_url`` the
-    picture the ad preview shows (the first media's thumbnail, or the image
-    itself), ``avatar_url`` the account's picture.
+    picture the ad preview shows (the first media's thumbnail, the image itself,
+    or for an imported pin the picture Pinterest gave), ``avatar_url`` the
+    account's picture. Pins imported from the account's history count too.
     """
     from apps.composer.models import PlatformPost
     from apps.composer.services import media_types_by_post
@@ -880,7 +888,7 @@ def promotable_pins(workspace, limit: int = 500) -> list[dict]:
                 "account": row.social_account.account_name,
                 "published_at": row.published_at,
                 "is_video": MediaAsset.MediaType.VIDEO in media.get(row.post_id, set()),
-                "image_url": _preview_image(row.post),
+                "image_url": _preview_image(row.post) or _imported_image(row),
                 "avatar_url": row.social_account.avatar_url,
             }
         )

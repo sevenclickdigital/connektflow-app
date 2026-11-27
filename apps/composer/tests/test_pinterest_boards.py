@@ -193,3 +193,71 @@ def test_pin_metrics_ask_for_the_last_90_days_up_to_today():
         "start_date": "2026-08-29",
         "end_date": "2026-11-27",
     }
+
+
+class TestPinHistory:
+    """``list_existing_posts``: the account's own pins become history; repins and ad-only pins do not."""
+
+    def _provider(self, pages):
+        import httpx
+
+        from providers.pinterest import PinterestProvider
+
+        provider = PinterestProvider({"app_id": "a", "app_secret": "s"})
+        calls = []
+
+        def answer(method, url, **kwargs):
+            calls.append(kwargs.get("params"))
+            return httpx.Response(200, json=pages[len(calls) - 1], request=httpx.Request(method, url))
+
+        return provider, calls, answer
+
+    def test_own_pins_are_read_newest_first_and_others_are_left_out(self):
+        pages = [
+            {
+                "items": [
+                    {
+                        "id": "11",
+                        "title": "Novidade",
+                        "description": "Conheça",
+                        "created_at": "2026-11-27T19:13:25",
+                        "media": {
+                            "media_type": "image",
+                            "images": {"600x": {"url": "https://i.pinimg.com/600x/a.jpg"}},
+                        },
+                    },
+                    {"id": "12", "is_removable": True, "media": {}},
+                    {"id": "13", "is_owner": False, "media": {}},
+                ],
+                "bookmark": "b2",
+            },
+            {
+                "items": [
+                    {"id": "14", "media": {"media_type": "video", "cover_image_url": "https://i.pinimg.com/v.jpg"}}
+                ],
+                "bookmark": None,
+            },
+        ]
+        provider, calls, answer = self._provider(pages)
+        with mock.patch.object(provider, "_request", side_effect=answer):
+            posts = provider.list_existing_posts("tok", limit=50)
+        assert [p.platform_post_id for p in posts] == ["11", "14"]
+        first = posts[0]
+        assert first.extra["title"] == "Novidade"
+        assert first.caption == "Conheça"
+        assert first.thumbnail_url == "https://i.pinimg.com/600x/a.jpg"
+        assert first.permalink == "https://www.pinterest.com/pin/11/"
+        assert first.published_at.tzinfo is not None
+        assert posts[1].media_kind == "video"
+        assert posts[1].thumbnail_url == "https://i.pinimg.com/v.jpg"
+        assert calls[0]["pin_filter"] == "exclude_repins"
+        assert calls[1]["bookmark"] == "b2"
+
+    def test_a_bookmark_chain_that_never_ends_stops(self):
+        from providers.pinterest import MAX_HISTORY_PAGES
+
+        pages = [{"items": [], "bookmark": "again"}] * (MAX_HISTORY_PAGES + 5)
+        provider, calls, answer = self._provider(pages)
+        with mock.patch.object(provider, "_request", side_effect=answer):
+            assert provider.list_existing_posts("tok", limit=50) == []
+        assert len(calls) == MAX_HISTORY_PAGES

@@ -141,6 +141,8 @@ def import_history(account, *, provider=None, access_token: str | None = None, l
             status=PlatformPost.Status.PUBLISHED,
             platform_post_id=entry.platform_post_id,
             platform_specific_caption=entry.caption,
+            # Platforms with a title of their own (a pin's) hand it over in ``extra``.
+            platform_specific_title=(entry.extra or {}).get("title") or None,
             published_at=entry.published_at or now,
             platform_extra={
                 IMPORT_MARKER: True,
