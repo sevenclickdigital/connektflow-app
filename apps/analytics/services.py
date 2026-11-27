@@ -413,7 +413,7 @@ def hero_cards(
     if bundle is None:
         bundle = account_analytics_bundle(account, days, end)
     return [
-        {"metric": m, "label": _label(m), "derived": _derive_metric(bundle, m, days)}
+        {"metric": m, "label": metric_label(m), "derived": _derive_metric(bundle, m, days)}
         for m in hero_card_metrics(account.platform)
     ]
 
@@ -453,14 +453,14 @@ def engagement_card(
         present_by_metric=bundle["present_map"],
     )
     parts: list[dict[str, Any]] = [
-        {"metric": m, "label": _label(m), "derived": _derive_metric(bundle, m, days)}
+        {"metric": m, "label": metric_label(m), "derived": _derive_metric(bundle, m, days)}
         for m in PLATFORM_METRICS.get(account.platform, [])
         if m in ENGAGEMENT_PARTS
     ]
     rate.estimated = any(p["derived"].estimated for p in parts) or rate.denominator in bundle["estimated_metrics"]
     formula = denominator_label = None
     if rate.denominator is not None:
-        denominator_label = "Followers" if rate.denominator == "followers" else _label(rate.denominator)
+        denominator_label = "Followers" if rate.denominator == "followers" else metric_label(rate.denominator)
         numerator = " + ".join(p["label"] for p in parts)
         formula = f"({numerator}) ÷ {denominator_label}" if len(parts) > 1 else f"{numerator} ÷ {denominator_label}"
     return {"rate": rate, "parts": parts, "formula": formula, "denominator_label": denominator_label}
@@ -544,8 +544,8 @@ def hero_chart_data(
     labels = [(end - timedelta(days=days - 1 - i)).isoformat() for i in range(days)]
     return {
         "metric": selected,
-        "label": _label(selected),
-        "chips": [{"key": m, "label": _label(m)} for m in chips],
+        "label": metric_label(selected),
+        "chips": [{"key": m, "label": metric_label(m)} for m in chips],
         "derived": derived,
         "labels": labels,
     }
@@ -726,7 +726,7 @@ def all_posts_for(
 
     return {
         "metrics": metrics,
-        "metric_labels": [{"key": m, "label": _label(m), "kind": kind_of(m)} for m in metrics],
+        "metric_labels": [{"key": m, "label": metric_label(m), "kind": kind_of(m)} for m in metrics],
         "media_kinds": sorted({r["media_kind"] for r in rows} - {""}),
         "type_filter": type_filter,
         "rows": page_rows,
@@ -772,7 +772,7 @@ def post_detail(post: PlatformPost) -> dict[str, Any]:
         "metric_tiles": [
             {
                 "key": m,
-                "label": _label(m),
+                "label": metric_label(m),
                 "value": stats.get(m) if account.platform == "youtube" else stats.get(m, 0),
                 "kind": kind_of(m),
                 "sparkline": sparklines_by_metric.get(m, []),
@@ -901,7 +901,8 @@ def post_performance(account: SocialAccount, days: int, tz, end: dt_date | None 
 # --- helpers -------------------------------------------------------------
 
 
-def _label(metric_key: str) -> str:
+def metric_label(metric_key: str) -> str:
+    """The English name of a metric (translated where it is shown)."""
     from .metrics import METRICS
 
     return METRICS.get(metric_key, {}).get("label", metric_key.replace("_", " ").title())

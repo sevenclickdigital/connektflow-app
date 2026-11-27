@@ -501,12 +501,13 @@ def workspace_dashboard(request, workspace_id):
         # Each card recomputes its account's analytics: loaded after the page.
         context["network_cards"] = [dashboard.network_card(account, days, end) for account in accounts]
         return render(request, "workspaces/partials/_dashboard_networks.html", context)
-    if selected is not None:
+    if selected is not None and request.htmx and request.GET.get("partial") == "chart":
+        # The results chart computes the account's analytics: the page draws
+        # its card at once and the chart loads into it (and again per metric chip).
         bundle = analytics.account_analytics_bundle(selected, days, end)
         chart = analytics.hero_chart_data(
             selected, days, metric=request.GET.get("chart_metric"), bundle=bundle, end=end
         )
-        primary = PLATFORM_PRIMARY.get(selected.platform, "")
         context.update(
             {
                 # The names analytics/_hero_chart.html reads; chart_query keeps
@@ -518,15 +519,19 @@ def workspace_dashboard(request, workspace_id):
                 "chart_query": urlencode({"account": selected.id}) + "&",
             }
         )
-        if request.htmx and request.GET.get("partial") == "chart":
-            return render(request, "analytics/_hero_chart.html", context)
+        return render(request, "analytics/_hero_chart.html", context)
+    if selected is not None:
+        primary = PLATFORM_PRIMARY.get(selected.platform, "")
         context.update(
             {
+                "chart_query": urlencode({"account": selected.id}) + "&",
                 "top_posts": analytics.all_posts_for(selected, days_filter=days, end=end, sort_key=None, page_size=4)[
                     "rows"
                 ],
                 "primary_metric": primary,
-                "primary_label": next((c["label"] for c in chart["chips"] if c["key"] == primary), ""),
+                "primary_label": analytics.metric_label(primary)
+                if primary in analytics.hero_chart_metrics(selected)
+                else "",
                 "performance": analytics.post_performance(selected, days, tz, end),
             }
         )

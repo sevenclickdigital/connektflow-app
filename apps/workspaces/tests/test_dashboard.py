@@ -82,6 +82,17 @@ def test_a_member_sees_the_dashboard_with_its_networks(client, brand, instagram)
 
 
 @pytest.mark.django_db
+def test_the_network_cards_are_drawn_before_their_numbers(client, brand, instagram):
+    """The first render already has each account's card, with its numbers pending."""
+    AnalyticsPlatformConfig.objects.update_or_create(platform="instagram", defaults={"is_enabled": True})
+    _member(client, brand, ROLE.VIEWER)
+
+    html = client.get(_url(brand)).content.decode()
+
+    assert f'data-network-card="{instagram.id}"' in html
+
+
+@pytest.mark.django_db
 def test_someone_from_another_brand_cannot_open_it(client, brand, organization):
     other = Workspace.objects.create(organization=organization, name="Other")
     _member(client, other, ROLE.OWNER)
@@ -547,3 +558,18 @@ def test_a_network_card_shows_the_numbers_its_platform_reports(brand, platform, 
     card = network_card(account, 30)
 
     assert [stat["label"] for stat in card["stats"]] == labels
+
+
+@pytest.mark.django_db
+def test_the_results_chart_loads_after_the_page(client, brand, instagram):
+    """The page draws the results card with a placeholder; the chart comes on its own request."""
+    AnalyticsPlatformConfig.objects.update_or_create(platform="instagram", defaults={"is_enabled": True})
+    _member(client, brand, ROLE.VIEWER)
+
+    page = client.get(_url(brand))
+    chart = client.get(_url(brand), {"partial": "chart", "account": instagram.id}, HTTP_HX_REQUEST="true")
+
+    assert "chart" not in page.context
+    assert "partial=chart" in page.content.decode()
+    assert chart.status_code == 200
+    assert 'id="analytics-area-chart"' in chart.content.decode()

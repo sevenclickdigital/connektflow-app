@@ -1,44 +1,28 @@
-{% load i18n static analytics_extras %}
+{% load i18n static %}
 {% comment %}
 The "By network" cards of the dashboard: up to three headline numbers of every
 connected account, chosen per platform (dashboard.network_card). Each card recomputes that
 account's analytics, so the dashboard shows first and this row loads after
 (workspace_dashboard with partial=networks).
 {% endcomment %}
-<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-5">
-    {% for card in network_cards %}
-    <a href="?{{ period.query }}&account={{ card.account.id }}"
-       class="block bg-white border rounded-xl p-4 transition-colors {% if card.account.id == active_account.id %}border-brand-300 ring-2 ring-brand-100{% else %}border-neutral-300 hover:border-brand-300{% endif %}">
-        <div class="flex items-center gap-2.5 mb-3">
-            <div class="relative flex-shrink-0">
-                {% if card.account.avatar_url %}
-                <img src="{{ card.account.avatar_url }}" alt="" class="w-8 h-8 rounded-full object-cover">
-                {% else %}
-                <div class="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center font-bold text-neutral-600">{{ card.account.account_name|make_list|first|upper }}</div>
-                {% endif %}
-                <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=card.account.platform size="sm" %}</div>
-            </div>
-            <span class="text-sm font-semibold text-neutral-950 truncate">{{ card.account.account_name }}</span>
-        </div>
-        {% if card.available %}
-        <dl class="grid grid-cols-3 gap-2">
-            {% for stat in card.stats %}
-            <div class="min-w-0">
-                <dt class="text-xs text-neutral-600 truncate">{% translate stat.label %}</dt>
-                {% if stat.derived %}
-                <dd class="text-lg font-bold text-neutral-950">{% if stat.derived.available %}{{ stat.derived.value|fmt_metric:stat.derived.kind }}{% else %}—{% endif %}</dd>
-                {% if stat.derived.available and stat.derived.comparison_available %}<dd>{% include "analytics/_delta_chip.html" with delta=stat.derived.delta %}</dd>{% endif %}
-                {% else %}
-                <dd class="text-lg font-bold text-neutral-950">{{ stat.value|fmt_metric }}</dd>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </dl>
-        {% else %}
-        <p class="text-xs text-neutral-600">{{ card.reason }}</p>
-        {% endif %}
-    </a>
+{% comment %}
+With ``loading`` (the dashboard's first render) the same cards are drawn from
+``accounts`` with their numbers still to come, and the row fetches itself: the
+answer has the cards in the same places, so only the numbers appear. A failed
+load shows the page's error toast.
+{% endcomment %}
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-5"
+     {% if loading %}hx-get="?{{ period.query }}{% if active_account %}&account={{ active_account.id }}{% endif %}&partial=networks" hx-trigger="load" hx-swap="outerHTML" aria-busy="true"{% endif %}>
+    {% if loading %}
+    <span class="sr-only" role="status">{% translate "Calculating each network's numbers…" %}</span>
+    {% for account in accounts %}
+    {% include "workspaces/partials/_dashboard_network_card.html" with account=account card=None %}
     {% endfor %}
+    {% else %}
+    {% for card in network_cards %}
+    {% include "workspaces/partials/_dashboard_network_card.html" with account=card.account card=card %}
+    {% endfor %}
+    {% endif %}
     {% if can_connect_accounts %}
     <a href="{% url 'social_accounts:list' workspace_id=workspace.id %}" class="flex items-center gap-4 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-4 hover:border-brand-300 transition-colors">
         <img src="{% static 'img/moti/moti-conectar.webp' %}" alt="" class="h-16 flex-shrink-0">

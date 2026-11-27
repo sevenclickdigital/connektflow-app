@@ -1,0 +1,48 @@
+{% load i18n analytics_extras %}
+{% comment %}
+One "By network" card of the dashboard: the account (avatar, network, name)
+and its headline numbers. Without ``card`` the numbers are still being
+computed, so the card shows placeholders of their size in their place: the
+row is drawn at once and only the numbers change when they arrive.
+Expects: account, active_account, period; card (dashboard.network_card) or None.
+{% endcomment %}
+<a href="?{{ period.query }}&account={{ account.id }}" data-network-card="{{ account.id }}"
+   class="block bg-white border rounded-xl p-4 transition-colors {% if account.id == active_account.id %}border-brand-300 ring-2 ring-brand-100{% else %}border-neutral-300 hover:border-brand-300{% endif %}">
+    <div class="flex items-center gap-2.5 mb-3">
+        <div class="relative flex-shrink-0">
+            {% if account.avatar_url %}
+            <img src="{{ account.avatar_url }}" alt="" class="w-8 h-8 rounded-full object-cover">
+            {% else %}
+            <div class="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center font-bold text-neutral-600">{{ account.account_name|make_list|first|upper }}</div>
+            {% endif %}
+            <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">{% include "partials/_platform_icon.html" with platform=account.platform size="sm" %}</div>
+        </div>
+        <span class="text-sm font-semibold text-neutral-950 truncate">{{ account.account_name }}</span>
+    </div>
+    {% if not card %}
+    <div class="grid grid-cols-3 gap-2 animate-pulse" aria-hidden="true">
+        {% for _ in "123" %}
+        <div class="min-w-0 space-y-2 pt-0.5">
+            <div class="h-3 w-16 max-w-full rounded bg-neutral-200"></div>
+            <div class="h-5 w-12 max-w-full rounded bg-neutral-200"></div>
+        </div>
+        {% endfor %}
+    </div>
+    {% elif card.available %}
+    <dl class="grid grid-cols-3 gap-2">
+        {% for stat in card.stats %}
+        <div class="min-w-0">
+            <dt class="text-xs text-neutral-600 truncate">{% translate stat.label %}</dt>
+            {% if stat.derived %}
+            <dd class="text-lg font-bold text-neutral-950">{% if stat.derived.available %}{{ stat.derived.value|fmt_metric:stat.derived.kind }}{% else %}—{% endif %}</dd>
+            {% if stat.derived.available and stat.derived.comparison_available %}<dd>{% include "analytics/_delta_chip.html" with delta=stat.derived.delta %}</dd>{% endif %}
+            {% else %}
+            <dd class="text-lg font-bold text-neutral-950">{{ stat.value|fmt_metric }}</dd>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </dl>
+    {% else %}
+    <p class="text-xs text-neutral-600">{{ card.reason }}</p>
+    {% endif %}
+</a>

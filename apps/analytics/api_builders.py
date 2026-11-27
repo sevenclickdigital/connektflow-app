@@ -27,11 +27,11 @@ from apps.social_accounts.models import AnalyticsPlatformConfig, SocialAccount
 
 from .freshness import account_freshness, post_freshness
 from .services import (
-    _label,
     account_analytics_bundle,
     engagement_card,
     follower_growth_metric,
     hero_cards,
+    metric_label,
     post_detail,
     unavailable_reason,
 )
@@ -85,7 +85,7 @@ def build_account_analytics(account: SocialAccount, days: int) -> AccountAnalyti
     if engagement_card_payload is not None:
         rate = engagement_card_payload["rate"]
         engagement = EngagementCardResponse(
-            rate=DerivedMetricResponse.from_derived("engagement", _label("engagement"), rate, calculated=True),
+            rate=DerivedMetricResponse.from_derived("engagement", metric_label("engagement"), rate, calculated=True),
             parts=[
                 DerivedMetricResponse.from_derived(part["metric"], part["label"], part["derived"])
                 for part in engagement_card_payload["parts"]
@@ -96,7 +96,7 @@ def build_account_analytics(account: SocialAccount, days: int) -> AccountAnalyti
     growth_response = None
     if growth_pair is not None:
         growth_key, growth = growth_pair
-        growth_response = DerivedMetricResponse.from_derived(growth_key, _label(growth_key), growth)
+        growth_response = DerivedMetricResponse.from_derived(growth_key, metric_label(growth_key), growth)
 
     return AccountAnalyticsResponse(
         account_id=account.id,

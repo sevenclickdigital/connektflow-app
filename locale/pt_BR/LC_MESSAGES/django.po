@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 00:48+0000\n"
+"POT-Creation-Date: 2026-11-27 01:10+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -3691,13 +3691,13 @@ msgstr "%(first)s–%(last)s de %(month)s de %(year)s"
 
 #: apps/calendar/services.py:754
 #: templates/composer/partials/_upcoming_dates.html:26
-#: templates/workspaces/dashboard.html:189
+#: templates/workspaces/dashboard.html:211
 msgid "today"
 msgstr "hoje"
 
 #: apps/calendar/services.py:756
 #: templates/composer/partials/_upcoming_dates.html:26
-#: templates/workspaces/dashboard.html:189
+#: templates/workspaces/dashboard.html:211
 #, python-format
 msgid "in %(days)s day"
 msgid_plural "in %(days)s days"
@@ -3794,7 +3794,7 @@ msgstr "Abra a publicação e escolha quando ela sai antes de agendá-la."
 #: apps/calendar/views.py:1060 apps/inbox/views.py:236
 #: templates/billing/checkout.html:300
 #: templates/organizations/cross_calendar.html:140
-#: templates/workspaces/dashboard.html:156
+#: templates/workspaces/dashboard.html:178
 msgid "Today"
 msgstr "Hoje"
 
@@ -3879,6 +3879,14 @@ msgid "last %(days)d day"
 msgid_plural "last %(days)d days"
 msgstr[0] "último %(days)d dia"
 msgstr[1] "últimos %(days)d dias"
+
+#: apps/common/tests/test_seeded_names.py:8 apps/tasks/models.py:20
+msgid "To do"
+msgstr "A fazer"
+
+#: apps/common/tests/test_seeded_names.py:8 apps/tasks/models.py:21
+msgid "In progress"
+msgstr "Em produção"
 
 #: apps/composer/builtin_templates.py:12 apps/composer/idea_icons.py:114
 #: apps/inbox/views.py:676 apps/radar/reports.py:190
@@ -5687,7 +5695,7 @@ msgstr "Novo afiliado"
 
 #: apps/email_center/catalog.py:438 apps/email_center/catalog.py:445
 #: templates/affiliates/panel.html:14 templates/affiliates/panel.html:19
-#: templates/base.html:753 templates/layouts/settings.html:53
+#: templates/base.html:774 templates/layouts/settings.html:53
 msgid "Affiliate panel"
 msgstr "Painel do afiliado"
 
@@ -6796,7 +6804,7 @@ msgid ""
 msgstr ""
 "Cole o link de um vídeo do YouTube, como https://www.youtube.com/watch?v=…"
 
-#: apps/onboarding/models.py:119 templates/base.html:580
+#: apps/onboarding/models.py:119 templates/base.html:601
 #: templates/workspaces/dashboard.html:4
 msgctxt "menu"
 msgid "Dashboard"
@@ -6832,22 +6840,22 @@ msgstr "Modelos"
 msgid "Special dates"
 msgstr "Datas comemorativas"
 
-#: apps/onboarding/models.py:125 templates/base.html:618
+#: apps/onboarding/models.py:125 templates/base.html:639
 msgctxt "menu"
 msgid "Inbox"
 msgstr "Inbox"
 
-#: apps/onboarding/models.py:126 templates/base.html:619
+#: apps/onboarding/models.py:126 templates/base.html:640
 msgctxt "menu"
 msgid "Automation"
 msgstr "Automação"
 
-#: apps/onboarding/models.py:127 templates/base.html:620
+#: apps/onboarding/models.py:127 templates/base.html:641
 msgctxt "menu"
 msgid "Contacts"
 msgstr "Contatos"
 
-#: apps/onboarding/models.py:128 templates/base.html:627
+#: apps/onboarding/models.py:128 templates/base.html:648
 #: templates/client_portal/reports.html:3
 #: templates/client_portal/reports.html:8
 msgid "Reports"
@@ -6856,24 +6864,24 @@ msgstr "Relatórios"
 #: apps/onboarding/models.py:129 apps/social_accounts/catalog.py:19
 #: templates/ads/index.html:3 templates/ads/partials/_breakdowns.html:15
 #: templates/ads/partials/_campaign_body.html:14
-#: templates/analytics/_page_header.html:102 templates/base.html:633
+#: templates/analytics/_page_header.html:102 templates/base.html:654
 #: templates/social_accounts/partials/_meta_ads_card.html:12
 msgid "Ads"
 msgstr "Anúncios"
 
-#: apps/onboarding/models.py:130 templates/base.html:639
+#: apps/onboarding/models.py:130 templates/base.html:660
 #: templates/social_accounts/list.html:3 templates/social_accounts/list.html:8
 msgid "Social Accounts"
 msgstr "Contas sociais"
 
-#: apps/onboarding/models.py:131 templates/base.html:646
+#: apps/onboarding/models.py:131 templates/base.html:667
 #: templates/composer/partials/_media_picker_modal.html:51
 #: templates/media_library/library_index.html:12
 #: templates/media_library/library_index.html:26
 msgid "Gallery"
 msgstr "Galeria"
 
-#: apps/onboarding/models.py:132 templates/base.html:651
+#: apps/onboarding/models.py:132 templates/base.html:672
 #: templates/radar/index.html:3 templates/radar/index.html:8
 #: templates/radar/shopee.html:37
 msgid "Radar"
@@ -8847,7 +8855,7 @@ msgstr "Use só letras minúsculas, números e sublinhados."
 msgid "Lowercase letters, numbers and underscores, for example order_shipped."
 msgstr "Letras minúsculas, números e sublinhados, por exemplo pedido_enviado."
 
-#: apps/social_accounts/whatsapp_templates.py:60 templates/base.html:772
+#: apps/social_accounts/whatsapp_templates.py:60 templates/base.html:793
 #: templates/social_accounts/partials/_whatsapp_templates_list.html:20
 #: templates/support/staff_chat_console.html:276
 #: templates/support/staff_chat_history_detail.html:51
@@ -9203,14 +9211,6 @@ msgstr "Alterações solicitadas"
 msgid "Ready to publish"
 msgstr "Pronto para publicar"
 
-#: apps/tasks/models.py:20
-msgid "To do"
-msgstr "A fazer"
-
-#: apps/tasks/models.py:21
-msgid "In progress"
-msgstr "Em produção"
-
 #: apps/tasks/models.py:36
 msgid "Yellow"
 msgstr "Amarelo"
@@ -9299,7 +9299,7 @@ msgid "Add an item"
 msgstr "Adicionar item"
 
 #: apps/tasks/views.py:282 templates/tasks/board.html:70
-#: templates/workspaces/dashboard.html:143
+#: templates/workspaces/dashboard.html:165
 msgid "My tasks"
 msgstr "Minhas tarefas"
 
@@ -9512,16 +9512,16 @@ msgstr "Removido da marca."
 msgid "Team updated."
 msgstr "Equipe atualizada."
 
-#: apps/workspaces/views.py:561
+#: apps/workspaces/views.py:566
 #, python-format
 msgid "Enter a goal between 1 and %(max)s posts."
 msgstr "Informe uma meta entre 1 e %(max)s posts."
 
-#: apps/workspaces/views.py:567
+#: apps/workspaces/views.py:572
 msgid "Monthly goal saved."
 msgstr "Meta do mês salva."
 
-#: apps/workspaces/views.py:567
+#: apps/workspaces/views.py:572
 msgid "Monthly goal removed."
 msgstr "Meta do mês removida."
 
@@ -10236,7 +10236,7 @@ msgstr "Tem certeza de que deseja sair?"
 #: templates/automations/flow_builder.html:900
 #: templates/automations/flow_builder.html:1121
 #: templates/automations/flow_new.html:158 templates/automations/form.html:392
-#: templates/base.html:1205 templates/base.html:1262
+#: templates/base.html:1226 templates/base.html:1283
 #: templates/billing/checkout.html:570 templates/billing/checkout.html:599
 #: templates/billing/partials/_staff_brand_courtesy_form.html:31
 #: templates/billing/staff_console.html:397
@@ -10502,7 +10502,7 @@ msgstr ""
 "Crie uma marca para começar a agendar publicações, gerenciar conteúdo e "
 "colaborar com sua equipe."
 
-#: templates/accounts/dashboard.html:55 templates/base.html:1200
+#: templates/accounts/dashboard.html:55 templates/base.html:1221
 #: templates/workspaces/list.html:65
 msgid "Workspace name"
 msgstr "Nome da marca"
@@ -10549,7 +10549,7 @@ msgstr "Enviar foto"
 msgid "Role"
 msgstr "Função"
 
-#: templates/accounts/settings.html:75 templates/base.html:696
+#: templates/accounts/settings.html:75 templates/base.html:717
 #: templates/billing/partials/_staff_role_label.html:3
 #: templates/billing/staff_console.html:229
 #: templates/billing/staff_console.html:292
@@ -10561,7 +10561,7 @@ msgstr "Função"
 msgid "Owner"
 msgstr "Proprietário"
 
-#: templates/accounts/settings.html:75 templates/base.html:696
+#: templates/accounts/settings.html:75 templates/base.html:717
 #: templates/billing/partials/_staff_role_label.html:3
 #: templates/billing/staff_console.html:229
 #: templates/billing/staff_console.html:292
@@ -10574,7 +10574,7 @@ msgstr "Proprietário"
 msgid "Admin"
 msgstr "Administrador"
 
-#: templates/accounts/settings.html:75 templates/base.html:696
+#: templates/accounts/settings.html:75 templates/base.html:717
 #: templates/billing/partials/_staff_role_label.html:3
 #: templates/billing/staff_console.html:229
 #: templates/billing/staff_console.html:292
@@ -12881,8 +12881,8 @@ msgstr ""
 msgid "e.g. Zapier bot, content pipeline"
 msgstr "ex.: bot do Zapier, pipeline de conteúdo"
 
-#: templates/api_keys/_issue_modal.html:51 templates/base.html:415
-#: templates/base.html:425 templates/billing/staff_subscriptions.html:171
+#: templates/api_keys/_issue_modal.html:51 templates/base.html:437
+#: templates/base.html:447 templates/billing/staff_subscriptions.html:171
 msgid "Workspace"
 msgstr "Marca"
 
@@ -14557,130 +14557,130 @@ msgstr ""
 msgid "Name one above to start drawing it on the canvas."
 msgstr "Dê um nome acima para começar a desenhá-lo na tela."
 
-#: templates/base.html:302 templates/partials/_review_banner.html:22
+#: templates/base.html:324 templates/partials/_review_banner.html:22
 msgid "Dismiss"
 msgstr "Dispensar"
 
-#: templates/base.html:307 templates/composer/compose.html:2536
+#: templates/base.html:329 templates/composer/compose.html:2536
 #: templates/media_library/_video_trimmer.html:28
 msgid "Something went wrong. Please try again."
 msgstr "Algo deu errado. Tente novamente."
 
-#: templates/base.html:308
+#: templates/base.html:330
 msgid "Select date…"
 msgstr "Selecionar data…"
 
-#: templates/base.html:309
+#: templates/base.html:331
 msgid "Select time…"
 msgstr "Selecionar horário…"
 
-#: templates/base.html:310 templates/composer/create_landing.html:859
+#: templates/base.html:332 templates/composer/create_landing.html:859
 msgid "Security token missing. Please reload the page."
 msgstr "Token de segurança ausente. Recarregue a página."
 
-#: templates/base.html:311 templates/composer/create_landing.html:863
+#: templates/base.html:333 templates/composer/create_landing.html:863
 msgid "Could not save the idea. Please try again."
 msgstr "Não foi possível salvar a ideia. Tente novamente."
 
-#: templates/base.html:474
+#: templates/base.html:496
 msgid "No workspaces"
 msgstr "Nenhuma marca"
 
-#: templates/base.html:489
+#: templates/base.html:511
 msgid "Manage organizations"
 msgstr "Gerenciar organizações"
 
-#: templates/base.html:503
+#: templates/base.html:524
 msgid "Expand sidebar"
 msgstr "Expandir barra lateral"
 
-#: templates/base.html:503 templates/base.html:504
+#: templates/base.html:524 templates/base.html:525
 msgid "Collapse sidebar"
 msgstr "Recolher barra lateral"
 
-#: templates/base.html:519
+#: templates/base.html:540
 msgid "Add new"
 msgstr "Adicionar novo"
 
-#: templates/base.html:539
+#: templates/base.html:560
 msgid "New post"
 msgstr "Novo post"
 
-#: templates/base.html:555
+#: templates/base.html:576
 msgid "New idea"
 msgstr "Nova ideia"
 
-#: templates/base.html:590
+#: templates/base.html:611
 msgctxt "menu"
 msgid "Publish"
 msgstr "Publicar"
 
-#: templates/base.html:596
+#: templates/base.html:617
 msgctxt "menu"
 msgid "Calendar"
 msgstr "Calendário"
 
-#: templates/base.html:598
+#: templates/base.html:619
 msgctxt "menu"
 msgid "Task management"
 msgstr "Gestão de Tarefas"
 
-#: templates/base.html:601 templates/composer/create_landing.html:172
+#: templates/base.html:622 templates/composer/create_landing.html:172
 msgid "Idea hub"
 msgstr "Central de ideias"
 
-#: templates/base.html:614
+#: templates/base.html:635
 msgctxt "menu"
 msgid "Engage"
 msgstr "Engajar"
 
-#: templates/base.html:643 templates/billing/checkout.html:709
+#: templates/base.html:664 templates/billing/checkout.html:709
 msgid "More"
 msgstr "Mais"
 
-#: templates/base.html:658 templates/notifications/history.html:4
+#: templates/base.html:679 templates/notifications/history.html:4
 #: templates/notifications/history.html:12
 #: templates/notifications/partials/drawer.html:5
 msgid "Notifications"
 msgstr "Notificações"
 
-#: templates/base.html:662
+#: templates/base.html:683
 msgid "Help and support"
 msgstr "Ajuda e suporte"
 
-#: templates/base.html:667 templates/intelligence/playground.html:4
+#: templates/base.html:688 templates/intelligence/playground.html:4
 #: templates/intelligence/playground.html:9
 msgid "Intelligence"
 msgstr "Inteligência"
 
-#: templates/base.html:677
+#: templates/base.html:698
 msgid "Moti, the Connekt Flow robot, working on a laptop"
 msgstr "Moti, o robô do Connekt Flow, trabalhando no notebook"
 
-#: templates/base.html:700 templates/base.html:786
+#: templates/base.html:721 templates/base.html:807
 #: templates/billing/subscribe_modal.html:250
 #: templates/client_portal/portal_base.html:69
 #: templates/partials/_setup_header.html:35
 msgid "Log out"
 msgstr "Sair"
 
-#: templates/base.html:739
+#: templates/base.html:760
 msgid "My profile"
 msgstr "Meu perfil"
 
-#: templates/base.html:746
+#: templates/base.html:767
 msgid "Manage organization"
 msgstr "Gerenciar organização"
 
-#: templates/base.html:807
+#: templates/base.html:828
 msgid "Toggle menu"
 msgstr "Alternar menu"
 
-#: templates/base.html:1196 templates/organizations/workspaces.html:174
+#: templates/base.html:1217 templates/organizations/workspaces.html:174
 msgid "Create workspace"
 msgstr "Criar marca"
 
-#: templates/base.html:1209 templates/base.html:1265
+#: templates/base.html:1230 templates/base.html:1286
 #: templates/calendar/queues.html:64 templates/composer/compose.html:1177
 #: templates/composer/create_landing.html:4
 #: templates/composer/create_landing.html:288
@@ -14693,11 +14693,11 @@ msgstr "Criar marca"
 msgid "Create"
 msgstr "Criar"
 
-#: templates/base.html:1236 templates/organizations/workspaces.html:15
+#: templates/base.html:1257 templates/organizations/workspaces.html:15
 msgid "Create organization"
 msgstr "Criar organização"
 
-#: templates/base.html:1237
+#: templates/base.html:1258
 msgid ""
 "For another company of yours. It has its own brands, team and billing data, "
 "separate from the others."
@@ -14705,30 +14705,30 @@ msgstr ""
 "Para outra empresa sua. Ela tem marcas, equipe e dados de cobrança próprios, "
 "separados das outras."
 
-#: templates/base.html:1240 templates/organizations/settings.html:28
+#: templates/base.html:1261 templates/organizations/settings.html:28
 msgid "Organization Name"
 msgstr "Nome da organização"
 
-#: templates/base.html:1245 templates/billing/checkout.html:322
+#: templates/base.html:1266 templates/billing/checkout.html:322
 #: templates/billing/subscribe_modal.html:216
 #: templates/organizations/settings.html:42
 msgid "CPF or CNPJ"
 msgstr "CPF ou CNPJ"
 
-#: templates/base.html:1250 templates/billing/checkout.html:330
+#: templates/base.html:1271 templates/billing/checkout.html:330
 #: templates/billing/subscribe_modal.html:219
 #: templates/organizations/settings.html:47
 msgid "Phone with area code"
 msgstr "Telefone com DDD"
 
-#: templates/base.html:1255
+#: templates/base.html:1276
 msgid ""
 "Of the organization. They go on its invoices and are what the free trial "
 "asks for."
 msgstr ""
 "Da organização. Eles vão nas faturas dela e são o que o teste grátis pede."
 
-#: templates/base.html:1256
+#: templates/base.html:1277
 msgid "Name of its first brand"
 msgstr "Nome da primeira marca dela"
 
@@ -16034,7 +16034,7 @@ msgstr "Boleto"
 #: templates/billing/partials/_payment_rows.html:26
 #: templates/billing/staff_subscriptions.html:65
 #: templates/billing/staff_subscriptions.html:112
-#: templates/workspaces/dashboard.html:154
+#: templates/workspaces/dashboard.html:176
 msgid "Overdue"
 msgstr "Em atraso"
 
@@ -20486,7 +20486,7 @@ msgstr "Mostrar dicas"
 #: templates/composer/partials/_special_dates_tab.html:160
 #: templates/composer/partials/_upcoming_dates.html:8
 #: templates/composer/partials/_upcoming_dates.html:10
-#: templates/workspaces/dashboard.html:172
+#: templates/workspaces/dashboard.html:194
 msgid "Upcoming dates"
 msgstr "Próximas datas"
 
@@ -27872,7 +27872,7 @@ msgstr ""
 "mensagens e acompanha os resultados, tudo por aqui."
 
 #: templates/social_accounts/partials/_first_network_card.html:16
-#: templates/workspaces/dashboard.html:109
+#: templates/workspaces/dashboard.html:133
 msgid "Connect Your First Account"
 msgstr "Conecte sua primeira conta"
 
@@ -29333,11 +29333,15 @@ msgstr "Tudo em dia: nada pendente."
 msgid "Network"
 msgstr "Rede"
 
-#: templates/workspaces/dashboard.html:104
+#: templates/workspaces/dashboard.html:121
+msgid "Loading the results…"
+msgstr "Carregando os resultados…"
+
+#: templates/workspaces/dashboard.html:128
 msgid "No results to show yet"
 msgstr "Ainda não há resultados"
 
-#: templates/workspaces/dashboard.html:105
+#: templates/workspaces/dashboard.html:129
 msgid ""
 "Connect a network with reports to follow its reach, followers and engagement "
 "here."
@@ -29345,86 +29349,82 @@ msgstr ""
 "Conecte uma rede com relatórios para acompanhar aqui o alcance, os "
 "seguidores e o engajamento."
 
-#: templates/workspaces/dashboard.html:124
+#: templates/workspaces/dashboard.html:148
 msgid "By network"
 msgstr "Por rede"
 
-#: templates/workspaces/dashboard.html:130
-msgid "Calculating each network's numbers…"
-msgstr "Calculando os números de cada rede…"
-
-#: templates/workspaces/dashboard.html:144
+#: templates/workspaces/dashboard.html:166
 msgid "See board"
 msgstr "Ver quadro"
 
-#: templates/workspaces/dashboard.html:165
+#: templates/workspaces/dashboard.html:187
 msgid "No open task assigned to you."
 msgstr "Nenhuma tarefa sua em aberto."
 
-#: templates/workspaces/dashboard.html:173
+#: templates/workspaces/dashboard.html:195
 msgid "See all"
 msgstr "Ver todas"
 
-#: templates/workspaces/dashboard.html:189
+#: templates/workspaces/dashboard.html:211
 msgid "Post ready"
 msgstr "Post pronto"
 
-#: templates/workspaces/dashboard.html:192
+#: templates/workspaces/dashboard.html:214
 msgid "See more"
 msgstr "Ver mais"
 
-#: templates/workspaces/dashboard.html:198
+#: templates/workspaces/dashboard.html:220
 msgid "No special date or campaign in the next 90 days."
 msgstr "Nenhuma data comemorativa ou campanha nos próximos 90 dias."
 
-#: templates/workspaces/dashboard.html:207
+#: templates/workspaces/dashboard.html:229
 #, python-format
 msgid "Best posts · %(name)s"
 msgstr "Melhores posts · %(name)s"
 
-#: templates/workspaces/dashboard.html:208
+#: templates/workspaces/dashboard.html:230
 msgid "See reports"
 msgstr "Ver relatórios"
 
-#: templates/workspaces/dashboard.html:223
+#: templates/workspaces/dashboard.html:245
 msgid "No caption"
 msgstr "Sem legenda"
 
-#: templates/workspaces/dashboard.html:230
+#: templates/workspaces/dashboard.html:252
 #, python-format
 msgid "No posts published on this network in the period %(dates)s."
 msgstr "Nenhum post publicado nesta rede no período de %(dates)s."
 
-#: templates/workspaces/dashboard.html:230
+#: templates/workspaces/dashboard.html:252
 #, python-format
 msgid "No posts published on this network in the last %(days)s days."
 msgstr "Nenhum post publicado nesta rede nos últimos %(days)s dias."
 
-#: templates/workspaces/dashboard.html:235
+#: templates/workspaces/dashboard.html:257
 msgid "What works best"
 msgstr "O que mais funciona"
 
-#: templates/workspaces/dashboard.html:241
+#: templates/workspaces/dashboard.html:263
 #, python-format
 msgid "%(total)s post"
 msgid_plural "%(total)s posts"
 msgstr[0] "%(total)s post"
 msgstr[1] "%(total)s posts"
 
-#: templates/workspaces/dashboard.html:250
+#: templates/workspaces/dashboard.html:272
 msgid "Best day"
 msgstr "Melhor dia"
 
-#: templates/workspaces/dashboard.html:251
+#: templates/workspaces/dashboard.html:273
 msgid "Best time"
 msgstr "Melhor horário"
 
-#: templates/workspaces/dashboard.html:251
+#: templates/workspaces/dashboard.html:273
 #, python-format
 msgid "%(start)sh–%(end)sh"
 msgstr "%(start)sh–%(end)sh"
 
-#: templates/workspaces/dashboard.html:253
+#: templates/workspaces/dashboard.html:275
 msgid ""
 "The best day and time show up once there are a few more published posts with "
 "results."
@@ -29432,7 +29432,7 @@ msgstr ""
 "O melhor dia e horário aparecem quando houver mais alguns posts publicados "
 "com resultados."
 
-#: templates/workspaces/dashboard.html:255
+#: templates/workspaces/dashboard.html:277
 msgid ""
 "Average engagement rate per post (engagements ÷ views or reach), calculated "
 "by Connekt Flow from the network's numbers."
@@ -29440,12 +29440,12 @@ msgstr ""
 "Taxa média de engajamento por post (interações ÷ visualizações ou alcance), "
 "calculada pelo Connekt Flow com os números da rede."
 
-#: templates/workspaces/dashboard.html:258
+#: templates/workspaces/dashboard.html:280
 #, python-format
 msgid "No published post with results in the period %(dates)s."
 msgstr "Nenhum post publicado com resultados no período de %(dates)s."
 
-#: templates/workspaces/dashboard.html:258
+#: templates/workspaces/dashboard.html:280
 #, python-format
 msgid "No published post with results in the last %(days)s days yet."
 msgstr "Ainda não há post publicado com resultados nos últimos %(days)s dias."
@@ -29572,15 +29572,19 @@ msgid_plural "%(days)s days left in the month."
 msgstr[0] "falta %(days)s dia para acabar o mês."
 msgstr[1] "faltam %(days)s dias para acabar o mês."
 
-#: templates/workspaces/partials/_dashboard_networks.html:46
+#: templates/workspaces/partials/_dashboard_networks.html:17
+msgid "Calculating each network's numbers…"
+msgstr "Calculando os números de cada rede…"
+
+#: templates/workspaces/partials/_dashboard_networks.html:30
 msgid "Connect another network"
 msgstr "Conecte mais uma rede"
 
-#: templates/workspaces/partials/_dashboard_networks.html:47
+#: templates/workspaces/partials/_dashboard_networks.html:31
 msgid "TikTok, LinkedIn, YouTube and more"
 msgstr "TikTok, LinkedIn, YouTube e mais"
 
-#: templates/workspaces/partials/_dashboard_networks.html:48
+#: templates/workspaces/partials/_dashboard_networks.html:32
 msgid "Connect account"
 msgstr "Conectar conta"
 
