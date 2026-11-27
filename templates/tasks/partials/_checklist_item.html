@@ -79,6 +79,7 @@ proportion warning under it.
         {% endif %}
     </div>
     {% if can_edit %}
+    {% if not in_set %}{% include "tasks/partials/_item_count.html" with count=1 %}{% endif %}
     {% comment %}
     The item's settings, while editing: "Ask for a file" (it then takes a delivery, as an art
     item does) and the size that file should have (its proportions are checked on delivery).

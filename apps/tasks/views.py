@@ -690,6 +690,17 @@ def item_settings(request, workspace_id, task_id, item_id):
 @require_board_access
 @require_permission("create_posts")
 @require_POST
+def item_count(request, workspace_id, task_id, item_id):
+    """How many of the item the task asks for (its "× n", while editing): numbered copies."""
+    item = _item(request, task_id, item_id)
+    services.set_item_count(item, request.POST.get("count"))
+    return _render_card(request, item.task)
+
+
+@login_required
+@require_board_access
+@require_permission("create_posts")
+@require_POST
 def column_create(request, workspace_id):
     """A new column, right after the column ``after`` names (a column of this board), or at the end."""
     workspace = request.workspace

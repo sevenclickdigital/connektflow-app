@@ -138,7 +138,8 @@ review each named checklist also takes comments ("Comment"), shown under it from
                     {% endcomment %}
                     <li class="rounded-lg border border-neutral-200 px-3 py-2">
                         <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <span class="text-sm font-semibold text-neutral-900">{{ row.set.label }} <span class="text-neutral-500 font-medium">× {{ row.set.entries|length }}</span></span>
+                            <span class="text-sm font-semibold text-neutral-900">{{ row.set.label }} <span class="text-neutral-500 font-medium"{% if can_edit %} x-show="!taskEditing"{% endif %}>× {{ row.set.entries|length }}</span></span>
+                            {% if can_edit %}{% include "tasks/partials/_item_count.html" with item=row.set.entries.0.item count=row.set.entries|length %}{% endif %}
                             {% if row.set.width and row.set.height %}<span class="task-pill task-pill--art">{{ row.set.width }} × {{ row.set.height }}</span>{% endif %}
                             <span class="ml-auto text-[11px] font-semibold text-neutral-500 tabular-nums">{{ row.set.done }}/{{ row.set.entries|length }}</span>
                         </div>

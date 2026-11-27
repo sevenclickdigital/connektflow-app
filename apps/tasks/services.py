@@ -7,7 +7,7 @@ import uuid
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Max, Prefetch, Q
+from django.db.models import Count, F, Max, Prefetch, Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -332,6 +332,63 @@ def configure_item(item, *, accepts_file, width, height) -> None:
     item.accepts_file = bool(accepts_file)
     item.width, item.height = clean_item_size(width, height)
     item.save(update_fields=["accepts_file", "width", "height"])
+
+
+@transaction.atomic
+def set_item_count(item, count) -> None:
+    """Ask for ``count`` of ``item`` (1 to creative_formats.MAX_ART_COUNT), as the new task
+    window's "× n" does: the set it belongs to (_art_runs: the item alone, a format asked for
+    several times, or numbered copies "Text 1/3") is renumbered, new copies sharing its
+    settings join right after it and the last ones go (a delivered file stays in the media
+    library)."""
+    try:
+        count = int(count)
+    except (TypeError, ValueError):
+        return
+    count = max(1, min(creative_formats.MAX_ART_COUNT, count))
+    siblings = list(item.task.checklist.filter(checklist_id=item.checklist_id))
+    run, name, note = [item], item.text, ""
+    for row in _art_runs(siblings):
+        if "set" in row and any(entry["item"].pk == item.pk for entry in row["set"]["entries"]):
+            run = [entry["item"] for entry in row["set"]["entries"]]
+            name, note = row["set"]["label"] or run[0].text, row["set"]["note"]
+            break
+    else:
+        if item.format_key:
+            name, _sep, note = item.text.partition(" — ")
+        elif match := _NUMBERED.match(item.text):
+            name = match["name"]
+    if count == len(run) and len(run) > 1:
+        return
+
+    def text(number):
+        base = name if count == 1 else f"{name} {number}/{count}"
+        return (f"{base} — {note}" if note else base)[:255]
+
+    for gone in run[count:]:
+        gone.delete()
+    kept = run[:count]
+    for number, piece in enumerate(kept, start=1):
+        if piece.text != text(number):
+            piece.text = text(number)
+            piece.save(update_fields=["text"])
+    extra = count - len(kept)
+    if extra:
+        last = kept[-1]
+        item.task.checklist.filter(position__gt=last.position).update(position=F("position") + extra)
+        TaskChecklistItem.objects.bulk_create(
+            TaskChecklistItem(
+                task=last.task,
+                checklist=last.checklist,
+                text=text(len(kept) + offset),
+                position=last.position + offset,
+                format_key=last.format_key,
+                accepts_file=last.accepts_file,
+                width=last.width,
+                height=last.height,
+            )
+            for offset in range(1, extra + 1)
+        )
 
 
 MAX_REFERENCES = 10

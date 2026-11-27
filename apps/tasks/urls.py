@@ -25,6 +25,7 @@ urlpatterns = [
     path("<uuid:task_id>/items/<uuid:item_id>/art/crop/", views.item_art_crop, name="item_art_crop"),
     path("<uuid:task_id>/items/<uuid:item_id>/toggle/", views.item_toggle, name="item_toggle"),
     path("<uuid:task_id>/items/<uuid:item_id>/settings/", views.item_settings, name="item_settings"),
+    path("<uuid:task_id>/items/<uuid:item_id>/count/", views.item_count, name="item_count"),
     path("<uuid:task_id>/items/<uuid:item_id>/delete/", views.item_delete, name="item_delete"),
     path("columns/create/", views.column_create, name="column_create"),
     path("columns/reorder/", views.column_reorder, name="column_reorder"),

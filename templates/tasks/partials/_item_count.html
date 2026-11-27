@@ -1,0 +1,16 @@
+{% load i18n %}
+{% comment %}
+How many of an item the task asks for, while editing: the new task window's "× n" on a
+saved item (tasks:item_count renumbers its set, adds copies or removes the last ones).
+Enter or leaving the field saves it.
+Expects: item (the item, or any piece of its set), count, task, workspace.
+{% endcomment %}
+<form class="flex-shrink-0" x-show="taskEditing" x-cloak
+      hx-post="{% url 'tasks:item_count' workspace_id=workspace.id task_id=task.id item_id=item.id %}" hx-target="#task-modal-body" hx-trigger="change"
+      @submit.prevent="$el.querySelector('input').blur()">
+    <label class="flex items-center gap-1 text-[11px] text-neutral-600">
+        <span aria-hidden="true">×</span>
+        <span class="sr-only">{% translate "Quantity" %}</span>
+        <input type="number" name="count" min="1" max="20" value="{{ count }}" required class="form-input-styled w-14 text-xs !py-1 !px-2">
+    </label>
+</form>

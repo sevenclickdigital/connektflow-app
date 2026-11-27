@@ -888,3 +888,74 @@ def test_the_new_task_windows_items_carry_their_settings(workspace, owner):
         1350,
     )
     assert (items["Half size"].accepts_file, items["Half size"].width) == (False, None)
+
+
+def _count_url(task, item, workspace=None):
+    return reverse(
+        "tasks:item_count",
+        kwargs={"workspace_id": (workspace or task.workspace).id, "task_id": task.id, "item_id": item.id},
+    )
+
+
+def test_an_items_quantity_is_changed_while_editing_like_in_the_new_task_window(workspace, owner):
+    """The edit window's "× n" turns a saved item into numbered copies sharing its
+    settings, right after it, and shrinks or undoes the set the same way."""
+    task = services.create_task(
+        workspace,
+        owner,
+        title="Shoot",
+        checklists=[
+            {
+                "title": "Photos",
+                "items": [{"text": "Banner", "accepts_file": True, "width": 1200, "height": 600}, "Last"],
+            }
+        ],
+    )
+    banner = task.checklist.get(text="Banner")
+    client = _client(owner)
+
+    client.post(_count_url(task, banner), {"count": "3"})
+    texts = list(task.checklist.values_list("text", flat=True))
+    assert texts == ["Banner 1/3", "Banner 2/3", "Banner 3/3", "Last"]
+    copies = task.checklist.filter(text__startswith="Banner")
+    assert all(c.accepts_file and (c.width, c.height) == (1200, 600) for c in copies)
+    assert {c.checklist_id for c in copies} == {banner.checklist_id}
+
+    client.post(_count_url(task, task.checklist.get(text="Banner 3/3")), {"count": "2"})
+    assert list(task.checklist.values_list("text", flat=True)) == ["Banner 1/2", "Banner 2/2", "Last"]
+
+    client.post(_count_url(task, task.checklist.get(text="Banner 2/2")), {"count": "1"})
+    assert list(task.checklist.values_list("text", flat=True)) == ["Banner", "Last"]
+
+    client.post(_count_url(task, task.checklist.get(text="Banner")), {"count": "99"})
+    assert task.checklist.filter(text__startswith="Banner").count() == 20
+
+
+def test_an_arts_quantity_keeps_its_format_and_note(workspace, owner):
+    task = services.request_arts(
+        workspace,
+        owner,
+        title="Arts",
+        format_keys=["ig_story"],
+        art_items=[{"format": "ig_story", "count": 1, "note": "Holiday"}],
+    )
+    story = task.checklist.get()
+    label = story.text.partition(" — ")[0]
+
+    _client(owner).post(_count_url(task, story), {"count": "2"})
+
+    items = list(task.checklist.all())
+    assert [i.text for i in items] == [f"{label} 1/2 — Holiday", f"{label} 2/2 — Holiday"]
+    assert {(i.format_key, i.width, i.height) for i in items} == {("ig_story", story.width, story.height)}
+
+
+def test_another_workspace_or_a_viewer_cannot_change_an_items_quantity(workspace, owner):
+    task = services.create_task(workspace, owner, title="Shoot", checklists=[{"title": "A", "items": ["Banner"]}])
+    item = task.checklist.get()
+    viewer = _user("viewer@example.com", workspace, Role.VIEWER)
+    other = Workspace.objects.create(organization=Organization.objects.create(name="Other org"), name="Other")
+    stranger = _user("stranger@example.com", other, Role.OWNER)
+
+    assert _client(viewer).post(_count_url(task, item), {"count": "3"}).status_code == 403
+    assert _client(stranger).post(_count_url(task, item, other), {"count": "3"}).status_code == 404
+    assert list(task.checklist.values_list("text", flat=True)) == ["Banner"]
