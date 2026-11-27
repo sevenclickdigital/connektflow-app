@@ -29,6 +29,12 @@
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
             document.documentElement.classList.add('sidebar-is-collapsed');
         }
+        // The menu groups the user left open, for the same reason.
+        ['publish', 'engage'].forEach(function (group) {
+            if (localStorage.getItem('nav:' + group) === 'open') {
+                document.documentElement.classList.add('nav-' + group + '-open');
+            }
+        });
     </script>
     <style>
         [x-cloak] { display: none !important; }
@@ -49,6 +55,20 @@
         html.sidebar-is-collapsed .sidebar-initial .sidebar-org-footer { padding: 0.5rem; }
         html.sidebar-is-collapsed .sidebar-initial .sidebar-org-expanded { display: none; }
         html.sidebar-is-collapsed .sidebar-initial .sidebar-org-collapsed { display: flex !important; }
+        /* What only one state shows, and the header's padding, before Alpine:
+           x-cloak would hide the expanded content until the script ran, and
+           the layout would jump into place on every load. */
+        html.sidebar-is-collapsed .sidebar-initial .sidebar-expanded-only { display: none; }
+        .sidebar-initial .sidebar-collapsed-only { display: none; }
+        html.sidebar-is-collapsed .sidebar-initial .sidebar-collapsed-only { display: block; }
+        html.sidebar-is-collapsed .sidebar-initial .sidebar-header { justify-content: center; padding-left: 0; padding-right: 0; }
+        html.sidebar-is-collapsed .sidebar-initial .sidebar-ws-wrap { padding-left: 0.5rem; padding-right: 0.5rem; }
+        /* A menu group's links before Alpine: open when the page is in it (the
+           server renders those without this class) or the user left it open. */
+        .sidebar-initial .sidebar-subnav-pending { display: none; }
+        html.nav-publish-open .sidebar-initial .sidebar-subnav-pending[data-nav="publish"],
+        html.nav-engage-open .sidebar-initial .sidebar-subnav-pending[data-nav="engage"] { display: block; }
+        html.sidebar-is-collapsed .sidebar-initial .sidebar-subnav { display: none; }
 
         /* Mobile: hide sidebar off-screen before Alpine loads */
         @media (max-width: 1023px) {
@@ -388,11 +408,11 @@
             Keyed on having workspaces, not on who the user is: the
             condition that matters is whether the control leads anywhere.
             {% endcomment %}
-            <div class="flex items-center flex-shrink-0 pt-4 pb-3" :class="sidebarCollapsed ? 'justify-center px-0' : 'px-4'">
-                <img src="{% static 'img/connektflow-wordmark-dark.svg' %}" alt="Connekt Flow" class="h-7 w-auto" x-show="!sidebarCollapsed">
-                <img src="{% static 'img/connektflow-symbol.svg' %}" alt="Connekt Flow" class="w-9 h-9 object-contain" x-show="sidebarCollapsed" x-cloak>
+            <div class="sidebar-header flex items-center flex-shrink-0 pt-4 pb-3" :class="sidebarCollapsed ? 'justify-center px-0' : 'px-4'">
+                <img src="{% static 'img/connektflow-wordmark-dark.svg' %}" alt="Connekt Flow" class="sidebar-expanded-only h-7 w-auto" x-show="!sidebarCollapsed">
+                <img src="{% static 'img/connektflow-symbol.svg' %}" alt="Connekt Flow" class="sidebar-collapsed-only w-9 h-9 object-contain" x-show="sidebarCollapsed">
             </div>
-            <div class="pb-2" :class="sidebarCollapsed ? 'px-2' : 'px-3'">
+            <div class="sidebar-ws-wrap pb-2" :class="sidebarCollapsed ? 'px-2' : 'px-3'">
             {% block sidebar_workspace_switcher %}
             {% if sidebar_workspaces or request.workspace %}
             <div class="relative" x-data="{ wsOpen: false }">
@@ -406,7 +426,7 @@
                     {% else %}
                     <div class="sidebar-logo-mark flex-shrink-0" style="width:26px;height:26px;font-size:12px">{{ current_ws.name|make_list|first|upper }}</div>
                     {% endif %}
-                    <span class="flex-1 min-w-0" x-show="!sidebarCollapsed" x-cloak>
+                    <span class="sidebar-expanded-only flex-1 min-w-0" x-show="!sidebarCollapsed">
                         <span class="block text-[10px] font-semibold uppercase tracking-wider text-neutral-500 leading-none">{% translate "Workspace" %}</span>
                         <span class="block text-sm font-semibold text-neutral-950 truncate leading-tight mt-0.5">{{ current_ws.name }}</span>
                     </span>
@@ -416,13 +436,13 @@
                     {% else %}
                     <div class="sidebar-logo-mark flex-shrink-0" style="width:26px;height:26px;font-size:12px">{{ sidebar_workspaces.0.name|make_list|first|upper }}</div>
                     {% endif %}
-                    <span class="flex-1 min-w-0" x-show="!sidebarCollapsed" x-cloak>
+                    <span class="sidebar-expanded-only flex-1 min-w-0" x-show="!sidebarCollapsed">
                         <span class="block text-[10px] font-semibold uppercase tracking-wider text-neutral-500 leading-none">{% translate "Workspace" %}</span>
                         <span class="block text-sm font-semibold text-neutral-950 truncate leading-tight mt-0.5">{{ sidebar_workspaces.0.name }}</span>
                     </span>
                     {% endif %}
                     {% endwith %}
-                    <svg class="w-4 h-4 text-neutral-500 flex-shrink-0 transition-transform" :class="wsOpen && 'rotate-180'" x-show="!sidebarCollapsed" x-cloak fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    <svg class="sidebar-expanded-only w-4 h-4 text-neutral-500 flex-shrink-0 transition-transform" :class="wsOpen && 'rotate-180'" x-show="!sidebarCollapsed" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
 
                 {# Wider than the sidebar, over the page, so long organization and brand names fit on one line. #}
@@ -490,8 +510,7 @@
             {% endblock %}
             {# Collapse toggle: a tab on the sidebar's right edge, level with the header. #}
             <button type="button" @click="sidebarCollapsed = !sidebarCollapsed"
-                    class="hidden lg:flex absolute top-4 z-50 w-6 h-6 items-center justify-center rounded-full bg-white text-neutral-500 ring-1 ring-neutral-300 shadow-sm hover:text-neutral-800 hover:ring-neutral-400 transition-colors cursor-pointer"
-                    :class="'-right-3'"
+                    class="hidden lg:flex absolute top-4 -right-3 z-50 w-6 h-6 items-center justify-center rounded-full bg-white text-neutral-500 ring-1 ring-neutral-300 shadow-sm hover:text-neutral-800 hover:ring-neutral-400 transition-colors cursor-pointer"
                     :title="sidebarCollapsed ? $el.dataset.expand : $el.dataset.collapse"
                     data-expand="{% translate 'Expand sidebar' %}" data-collapse="{% translate 'Collapse sidebar' %}"
                     title="{% translate 'Collapse sidebar' %}">
@@ -580,7 +599,7 @@
                         <span class="sidebar-nav-label">{% translate "Publish" context "menu" %}</span>
                         <svg class="sidebar-nav-chevron" :class="open && 'rotate-180'" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
                     </button>
-                    <div class="sidebar-subnav" x-show="open" x-cloak>
+                    <div class="sidebar-subnav{% if not app == 'calendar' and not app == 'composer' and not app == 'tasks' %} sidebar-subnav-pending{% endif %}" data-nav="publish" x-show="open">
                     {% comment %}No "new post" entry here: a post starts from a day of the calendar, so it always has a date.{% endcomment %}
                     <a href="{% url 'calendar:calendar' workspace_id=request.workspace.id %}?mode=calendar" class="sidebar-subnav-item {% if app == 'calendar' or app == 'composer' and url_name == 'compose' %}active{% endif %}">{% translate "Calendar" context "menu" %}</a>
                     {% if request.workspace_membership and request.workspace_membership.workspace_role != "client" %}
@@ -602,7 +621,7 @@
                         <span class="sidebar-nav-label">{% translate "Engage" context "menu" %}</span>
                         <svg class="sidebar-nav-chevron" :class="open && 'rotate-180'" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
                     </button>
-                    <div class="sidebar-subnav" x-show="open" x-cloak>
+                    <div class="sidebar-subnav{% if not app == 'inbox' and not app == 'funnels' and not app == 'automations' and not app == 'contacts' %} sidebar-subnav-pending{% endif %}" data-nav="engage" x-show="open">
                     <a href="{% url 'inbox:feed' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'inbox' or app == 'funnels' %}active{% endif %}">{% translate "Inbox" context "menu" %}{% if sidebar_unread_inbox_count %}<span class="sidebar-badge">{{ sidebar_unread_inbox_count }}</span>{% endif %}</a>
                     <a href="{% url 'automations:list' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'automations' %}active{% endif %}">{% translate "Automation" context "menu" %}</a>
                     <a href="{% url 'contacts:list' workspace_id=request.workspace.id %}" class="sidebar-subnav-item {% if app == 'contacts' %}active{% endif %}">{% translate "Contacts" context "menu" %}</a>
@@ -661,7 +680,7 @@
             {% if show_review_banner %}
             {% include "partials/_review_banner.html" %}
             {% else %}
-            <div class="sidebar-mascot px-4 pt-2 flex-shrink-0" x-show="!sidebarCollapsed">
+            <div class="sidebar-mascot sidebar-expanded-only px-4 pt-2 flex-shrink-0" x-show="!sidebarCollapsed">
                 <img src="{% static 'img/moti/moti-computador.webp' %}" alt="{% translate 'Moti, the Connekt Flow robot, working on a laptop' %}" class="w-44 -mb-1 mx-auto">
             </div>
             {% endif %}
