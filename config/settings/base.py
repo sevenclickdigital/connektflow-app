@@ -575,6 +575,9 @@ CSP_FORM_ACTION = (
     "https://threads.net",
     "https://www.linkedin.com",
     "https://www.pinterest.com",
+    # Pinterest sends the sign-in on to the country's domain (br.pinterest.com…), and
+    # form-action also applies to the redirects of a form's submission.
+    "https://*.pinterest.com",
     "https://www.tiktok.com",
     # X's sign-in, on its current and its former domain.
     "https://x.com",

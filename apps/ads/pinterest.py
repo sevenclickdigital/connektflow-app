@@ -177,6 +177,8 @@ def describe_error(exc: ProviderError) -> str:
         return _("The Pinterest sign-in expired or was revoked. Connect Pinterest Ads again.")
     if isinstance(exc, RateLimitError):
         return _("Pinterest is limiting requests to this ad account right now. Try again in a few minutes.")
+    if getattr(exc, "status_code", None) == 401 and "missing" in (exc.user_message or "").lower():
+        return _("The Pinterest Ads sign-in does not allow this yet. Connect Pinterest Ads again to grant it.")
     detail = exc.user_message or str(exc).removeprefix("Pinterest Ads: ").strip()
     return _("Pinterest refused the request: %(detail)s") % {"detail": detail or _("no reason given")}
 
@@ -206,7 +208,8 @@ def _refresh(connection: AdsConnection) -> bool:
     connection.access_token = tokens.access_token
     connection.refresh_token = tokens.refresh_token or connection.refresh_token
     connection.token_expires_at = _expires_at(tokens)
-    connection.save(update_fields=["access_token", "refresh_token", "token_expires_at", "updated_at"])
+    connection.scopes = tokens.scope or connection.scopes
+    connection.save(update_fields=["access_token", "refresh_token", "token_expires_at", "scopes", "updated_at"])
     return True
 
 
@@ -279,6 +282,7 @@ def finish_sign_in(*, workspace, user, code: str, redirect_uri: str) -> AdsConne
         connection.access_token = tokens.access_token
         connection.refresh_token = tokens.refresh_token or ""
         connection.token_expires_at = _expires_at(tokens)
+        connection.scopes = tokens.scope or ""
         connection.meta_user_id = profile.platform_id
         connection.meta_user_name = profile.handle or profile.name
         connection.connected_by = user
@@ -600,6 +604,27 @@ class NewCampaign:
     bid_amount: Decimal | None = None
     frequency_cap: int | None = None
     conversion_tag_id: str = ""
+    # An image uploaded for the ad, made into an ad-only pin before the campaign
+    # (``create_ad_only_pin``); then ``pin_id`` is left empty and filled in.
+    new_pin: NewPin | None = None
+
+
+@dataclass
+class NewPin:
+    image: bytes
+    content_type: str
+    title: str = ""
+    description: str = ""
+    link: str = ""
+
+
+# Creating an ad-only pin needs these; a connection signed in before they were asked
+# for lacks them until it signs in again.
+UPLOAD_SCOPES = ("pins:write", "boards:write")
+
+
+def can_upload_images(connection: AdsConnection) -> bool:
+    return all(connection.has_scope(scope) for scope in UPLOAD_SCOPES)
 
 
 def build_campaign_payload(new: NewCampaign) -> dict:
@@ -683,7 +708,8 @@ def build_ad_payload(new: NewCampaign, ad_group_id: str) -> dict:
 
 def create_campaign(connection: AdsConnection, new: NewCampaign) -> str:
     """Create the campaign, its ad group (with its keywords) and the ad that promotes
-    the pin; return the campaign id.
+    the pin; return the campaign id. An uploaded image first becomes an ad-only pin;
+    if the campaign then fails, that pin stays hidden on Pinterest's ad-only board.
 
     The campaign is created paused. Pinterest has no deleting a campaign, so a
     failure part-way archives it, which also stops its ad group and ad.
@@ -692,10 +718,23 @@ def create_campaign(connection: AdsConnection, new: NewCampaign) -> str:
         raise AdsError(_("Finish connecting Pinterest Ads before creating campaigns."))
     if new.objective not in CREATABLE_OBJECTIVES:
         raise AdsError(_("Choose one of the offered objectives."))
-    if not new.pin_id.isdigit():
-        raise AdsError(_("Choose the pin the ad promotes."))
     account = connection.ad_account_id
     client = pinterest_ads.PinterestAdsClient
+    if new.new_pin is not None:
+        pin = new.new_pin
+        new.pin_id = _call(
+            connection,
+            client.create_ad_only_pin,
+            account,
+            image=pin.image,
+            content_type=pin.content_type,
+            title=pin.title,
+            description=pin.description,
+            link=pin.link,
+        )
+        new.is_video = False
+    if not new.pin_id.isdigit():
+        raise AdsError(_("Choose the pin the ad promotes."))
     campaign_id = _call(connection, client.create_campaign, account, build_campaign_payload(new))
     try:
         ad_group_id = _call(connection, client.create_ad_group, account, build_ad_group_payload(new, campaign_id))
@@ -802,7 +841,7 @@ def _preview_image(post) -> str:
     return ""
 
 
-def promotable_pins(workspace, limit: int = 48) -> list[dict]:
+def promotable_pins(workspace, limit: int = 500) -> list[dict]:
     """The workspace's published pins, newest first, for the ad's picker.
 
     ``is_video`` decides the ad's creative type, which Pinterest wants told;

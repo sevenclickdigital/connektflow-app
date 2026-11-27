@@ -45,6 +45,9 @@ class AdsConnection(WorkspaceScopedModel):
     access_token = EncryptedTextField()
     refresh_token = EncryptedTextField(null=True, blank=True)
     token_expires_at = models.DateTimeField(null=True, blank=True)
+    # What the platform granted at sign-in, as it answered (Pinterest: "ads:read,pins:write,…").
+    # A connection made before a scope was asked for lacks it until it signs in again.
+    scopes = models.CharField(max_length=500, blank=True, default="", db_default="")
     # The user who signed in (on Facebook or Pinterest), shown so the team knows whose access it is.
     meta_user_id = models.CharField(max_length=64, blank=True, default="")
     meta_user_name = models.CharField(max_length=255, blank=True, default="")
@@ -83,6 +86,10 @@ class AdsConnection(WorkspaceScopedModel):
     def is_ready(self) -> bool:
         """An ad account is chosen and the token was last seen working."""
         return self.status == self.Status.CONNECTED and bool(self.ad_account_id)
+
+    def has_scope(self, scope: str) -> bool:
+        """Whether the sign-in granted ``scope``; the list is kept as the platform wrote it."""
+        return scope in {part.strip() for part in self.scopes.replace(",", " ").split()}
 
     @property
     def token_expired(self) -> bool:

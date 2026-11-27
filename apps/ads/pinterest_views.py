@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy, pgettext_lazy
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from django_ratelimit.decorators import ratelimit
 
@@ -244,7 +245,9 @@ def campaign_new(request, workspace_id):
         return elsewhere
     pins = pinterest.promotable_pins(request.workspace)
     choices = pinterest.targeting_choices(connection)
-    form = PinterestCampaignCreateForm(request.POST or None, connection=connection, pins=pins, choices=choices)
+    form = PinterestCampaignCreateForm(
+        request.POST or None, request.FILES or None, connection=connection, pins=pins, choices=choices
+    )
     step = 1
     if request.method == "POST":
         if form.is_valid():
@@ -252,7 +255,7 @@ def campaign_new(request, workspace_id):
                 campaign_id = pinterest.create_campaign(connection, form.to_new_campaign())
             except services.AdsError as exc:
                 form.add_error(None, str(exc))
-                step = 4
+                step = len(CAMPAIGN_STEPS)
             else:
                 messages.success(request, _("Campaign created, paused. Review it and activate it when you are ready."))
                 return redirect("ads:pinterest_campaign_detail", workspace_id=workspace_id, campaign_id=campaign_id)
@@ -268,9 +271,21 @@ def campaign_new(request, workspace_id):
             "pins": pins,
             "choices": choices,
             "step": step,
-            "regions": pinterest.BR_REGIONS,
+            "steps": CAMPAIGN_STEPS,
+            "can_upload": pinterest.can_upload_images(connection),
         },
     )
+
+
+# The new campaign form's steps; the form says which fields each of the first four
+# holds (PinterestCampaignCreateForm.STEPS), the last is the review and the button.
+CAMPAIGN_STEPS = (
+    gettext_lazy("Campaign"),
+    gettext_lazy("Audience"),
+    gettext_lazy("Where it appears"),
+    gettext_lazy("Budget and launch"),
+    pgettext_lazy("wizard step", "Review"),
+)
 
 
 @login_required

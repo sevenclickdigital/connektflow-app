@@ -340,7 +340,7 @@ _CONNECT_GUIDES["pinterest_ads"] = {
     ),
     "note": _(
         "Pinterest runs ads only from business accounts, and the ad account needs a payment method on Pinterest "
-        "before a campaign can be activated. The ads promote pins already published."
+        "before a campaign can be activated. An ad promotes a published pin or a new image uploaded for it."
     ),
 }
 

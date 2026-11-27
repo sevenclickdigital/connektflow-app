@@ -19,6 +19,7 @@ Analytics reach back at most 90 days and cover at most 90 days per call.
 
 from __future__ import annotations
 
+import base64
 import logging
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
@@ -33,8 +34,16 @@ from .pinterest import API_BASE, PinterestProvider
 logger = logging.getLogger(__name__)
 
 # ``ads:read`` for the accounts, campaigns and analytics; ``ads:write`` to
-# create and change them; ``user_accounts:read`` for who signed in.
-ADS_SCOPES = ["user_accounts:read", "ads:read", "ads:write"]
+# create and change them; ``user_accounts:read`` for who signed in;
+# ``pins:read``/``pins:write`` with ``boards:read``/``boards:write`` to create the
+# ad-only pin of an image uploaded for an ad: Pinterest puts it on its hidden
+# "Ad-only Pins" board and refuses it without ``boards:write``.
+ADS_SCOPES = [
+    "user_accounts:read", "ads:read", "ads:write", "pins:read", "pins:write", "boards:read", "boards:write",
+]  # fmt: skip
+# What an uploaded ad image may be, as Pinterest takes it in ``image_base64``.
+AD_IMAGE_TYPES = ("image/jpeg", "image/png")
+AD_IMAGE_MAX_BYTES = 20 * 1024 * 1024
 
 MICRO = Decimal(1_000_000)
 PAGE_SIZE = 100
@@ -136,6 +145,18 @@ class PinterestAdsClient(PinterestProvider):
         body = self._safe_json(response)
         message = str(body.get("message") or "") if isinstance(body, dict) else ""
         technical = f"Pinterest Ads: HTTP {response.status_code} {message}".strip()
+        if response.status_code == 401 and "missing" in message.lower():
+            # A scope the sign-in did not grant ("Missing: ['pins:write']"): signing in
+            # again fixes it, but the token itself still works, so the connection is
+            # not marked expired.
+            return APIError(
+                technical,
+                status_code=401,
+                platform=self.platform_name,
+                raw_response=body,
+                retryable=False,
+                user_message=message,
+            )
         if response.status_code == 401:
             return TokenExpiredError(
                 technical,
@@ -337,6 +358,46 @@ class PinterestAdsClient(PinterestProvider):
 
     def create_ad(self, token: str, ad_account_id: str, payload: dict) -> str:
         return str(self._batch("POST", token, f"ad_accounts/{ad_account_id}/ads", payload)["id"])
+
+    def create_ad_only_pin(
+        self,
+        token: str,
+        ad_account_id: str,
+        *,
+        image: bytes,
+        content_type: str,
+        title: str = "",
+        description: str = "",
+        link: str = "",
+    ) -> str:
+        """Create an ad-only pin from an image and return its id.
+
+        ``is_removable`` makes it ad-only: it is kept on Pinterest's hidden
+        "Ad-only Pins" board, never on the profile or another board. The image
+        goes in the body (``image_base64``), so it need not be hosted anywhere.
+        """
+        payload: dict = {
+            "is_removable": True,
+            "media_source": {
+                "source_type": "image_base64",
+                "content_type": content_type,
+                "data": base64.b64encode(image).decode("ascii"),
+            },
+        }
+        if title:
+            payload["title"] = title[:100]
+        if description:
+            payload["description"] = description[:500]
+        if link:
+            payload["link"] = link
+        body = self._request(
+            "POST",
+            f"{API_BASE}/pins",
+            access_token=token,
+            params={"ad_account_id": ad_account_id},
+            json=payload,
+        ).json()
+        return str(body.get("id") or "")
 
     def update_campaign(self, token: str, ad_account_id: str, campaign_id: str, fields: dict) -> dict:
         return self._batch("PATCH", token, f"ad_accounts/{ad_account_id}/campaigns", {"id": campaign_id, **fields})

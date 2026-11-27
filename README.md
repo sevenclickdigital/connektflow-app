@@ -754,7 +754,7 @@ before enabling enforcement. Intelligence is outside this remediation.
    {APP_URL}/ads/pinterest/callback/
    ```
 3. Copy the **App ID** and **App Secret**
-4. Required scopes: `user_accounts:read`, `boards:read`, `boards:write`, `pins:read`, `pins:write`, and `ads:read`, `ads:write` for Pinterest Ads
+4. Required scopes: `user_accounts:read`, `boards:read`, `boards:write`, `pins:read`, `pins:write`, and `ads:read`, `ads:write` for Pinterest Ads (whose sign-in also asks `pins:read`, `pins:write`, `boards:read` and `boards:write`, to create the ad-only pin of an uploaded image)
 5. Set the environment variables:
    ```
    PLATFORM_PINTEREST_APP_ID=your-app-id

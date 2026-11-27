@@ -791,7 +791,7 @@ class TestCreationForm:
                 _url("pinterest_campaign_new", workspace), {**FORM_POST, "keywords": "x", "placement": "BROWSE"}
             )
         assert response.status_code == 200
-        assert "campaignWizard(2)" in response.content.decode()
+        assert "campaignWizard(2, 5)" in response.content.decode()
 
     def test_a_valid_post_creates_the_campaign_with_its_audience(self, workspace, manager, connection):
         fake, patch = fake_pinterest(dict(CREATION_ROUTES))
@@ -807,3 +807,115 @@ class TestCreationForm:
         (group,) = fake.sent("POST", f"ad_accounts/{ACCOUNT}/ad_groups")["json"]
         assert group["targeting_spec"]["INTEREST"] == ["77"]
         assert group["targeting_spec"]["GENDER"] == ["female"]
+
+
+# ------------------------------------------------------------------
+# An image uploaded for the ad becomes an ad-only pin
+# ------------------------------------------------------------------
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+
+
+def _upload(name="robo.png", content=PNG, content_type="image/png"):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    return SimpleUploadedFile(name, content, content_type=content_type)
+
+
+@pytest.mark.django_db
+class TestUploadedImage:
+    def _form(self, connection, files, **changes):
+        from apps.ads.forms import PinterestCampaignCreateForm
+
+        data = {**FORM_POST, "pin_source": "upload", "pin_id": "", **changes}
+        return PinterestCampaignCreateForm(data, files, connection=connection, pins=PINS, choices=CHOICES)
+
+    def test_the_image_becomes_an_ad_only_pin_that_the_campaign_promotes(self, connection):
+        form = self._form(
+            connection,
+            {"new_image": _upload()},
+            new_title="Novidade",
+            new_description="Conheça",
+            new_link="https://connektflow.com.br",
+        )
+        assert form.is_valid(), form.errors
+        fake, patch = fake_pinterest({**CREATION_ROUTES, ("POST", "pins"): {"id": "9988776655"}})
+        with patch:
+            pinterest.create_campaign(connection, form.to_new_campaign())
+        sent = fake.sent("POST", "pins")
+        assert sent["params"] == {"ad_account_id": ACCOUNT}
+        body = sent["json"]
+        assert body["is_removable"] is True
+        assert "board_id" not in body
+        assert body["media_source"]["source_type"] == "image_base64"
+        assert body["media_source"]["content_type"] == "image/png"
+        assert body["title"] == "Novidade"
+        assert body["link"] == "https://connektflow.com.br"
+        (ad,) = fake.sent("POST", f"ad_accounts/{ACCOUNT}/ads")["json"]
+        assert ad["pin_id"] == "9988776655"
+        assert ad["creative_type"] == "REGULAR"
+
+    @pytest.mark.parametrize(
+        ("files", "changes"),
+        [
+            ({}, {}),
+            ({"new_image": _upload("x.png", b"not an image")}, {}),
+            ({"new_image": _upload("x.gif", b"GIF89a", "image/gif")}, {}),
+        ],
+    )
+    def test_a_missing_or_wrong_file_is_refused_on_the_first_step(self, connection, files, changes):
+        form = self._form(connection, files, **changes)
+        assert not form.is_valid()
+        assert "new_image" in form.errors
+        assert form.first_step_with_errors() == 1
+
+    def test_video_views_cannot_run_on_an_uploaded_image(self, connection):
+        form = self._form(connection, {"new_image": _upload()}, objective="VIDEO_COMPLETION")
+        assert not form.is_valid()
+        assert "objective" in form.errors
+
+    def test_a_missing_scope_is_not_an_expired_sign_in(self, connection):
+        client = pinterest_ads.PinterestAdsClient({"app_id": "a", "app_secret": "s"})
+        exc = client._error_for_response(httpx.Response(401, json={"code": 3, "message": "Missing: ['pins:write']"}))
+        assert not isinstance(exc, TokenExpiredError)
+        fake, patch = fake_pinterest({("POST", "pins"): exc})
+        new = _new_campaign(pin_id="", new_pin=pinterest.NewPin(image=PNG, content_type="image/png"))
+        with patch, pytest.raises(AdsError) as caught:
+            pinterest.create_campaign(connection, new)
+        # Pinterest's raw "Missing: [...]" is replaced by the sentence asking to sign in again.
+        assert "Missing" not in str(caught.value)
+        assert "Pinterest Ads" in str(caught.value)
+        connection.refresh_from_db()
+        assert connection.status == AdsConnection.Status.CONNECTED
+        assert not [c for c in fake.calls if c[1].endswith("/campaigns")]
+
+    def test_the_upload_is_offered_only_when_the_sign_in_allows_creating_pins(self, workspace, manager, connection):
+        client = _logged_in(manager)
+        with (
+            mock.patch.object(pinterest, "targeting_choices", return_value=CHOICES),
+            mock.patch.object(pinterest, "promotable_pins", return_value=PINS),
+        ):
+            before = client.get(_url("pinterest_campaign_new", workspace)).content.decode()
+            connection.scopes = "user_accounts:read,ads:read,ads:write,pins:read,pins:write,boards:read,boards:write"
+            connection.save(update_fields=["scopes"])
+            after = client.get(_url("pinterest_campaign_new", workspace)).content.decode()
+        assert _url("pinterest_connect", workspace) in before
+        assert 'name="new_image"' not in before
+        assert 'name="new_image"' in after
+
+    def test_the_sign_in_keeps_the_granted_scopes(self, workspace, manager):
+        from providers.types import AccountProfile, OAuthTokens
+
+        tokens = OAuthTokens(
+            access_token="t", refresh_token="r", expires_in=3600, scope="ads:read,pins:write,boards:write"
+        )
+        profile = AccountProfile(platform_id="u1", name="Loja", handle="loja")
+        with (
+            mock.patch.object(pinterest_ads.PinterestAdsClient, "exchange_code", return_value=tokens),
+            mock.patch.object(pinterest_ads.PinterestAdsClient, "get_profile", return_value=profile),
+            mock.patch.object(pinterest_ads.PinterestAdsClient, "ad_accounts", return_value=[]),
+        ):
+            connection = pinterest.finish_sign_in(
+                workspace=workspace, user=manager, code="c", redirect_uri="https://x/"
+            )
+        assert pinterest.can_upload_images(connection)

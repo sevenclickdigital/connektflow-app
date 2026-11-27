@@ -226,6 +226,25 @@ class PinterestAdAccountCreateForm(forms.Form):
         currency.choices = [(code, code) for code in pinterest.CURRENCIES]
 
 
+def pinterest_ads_types():
+    from providers.pinterest_ads import AD_IMAGE_TYPES
+
+    return AD_IMAGE_TYPES
+
+
+def pinterest_ads_max_bytes():
+    from providers.pinterest_ads import AD_IMAGE_MAX_BYTES
+
+    return AD_IMAGE_MAX_BYTES
+
+
+def _looks_like(content: bytes, content_type: str) -> bool:
+    """The file's first bytes match its declared type (JPEG or PNG), so a renamed file is refused."""
+    if content_type == "image/png":
+        return content.startswith(b"\x89PNG\r\n\x1a\n")
+    return content.startswith(b"\xff\xd8\xff")
+
+
 def _multi(choices=()):
     return forms.MultipleChoiceField(required=False, choices=choices, widget=forms.CheckboxSelectMultiple)
 
@@ -242,7 +261,10 @@ class PinterestCampaignCreateForm(forms.Form):
     """
 
     STEPS = {
-        1: ("name", "objective", "pin_id", "other_pin_id", "conversion_tag_id"),
+        1: (
+            "name", "objective", "pin_source", "pin_id", "other_pin_id", "new_image", "new_title",
+            "new_description", "new_link", "conversion_tag_id",
+        ),
         2: (
             "age_min", "age_max", "genders", "locales", "countries", "regions", "interests", "keywords",
             "audiences_include", "audiences_exclude", "auto_targeting",
@@ -262,6 +284,23 @@ class PinterestCampaignCreateForm(forms.Form):
         widget=_input(inputmode="numeric"),
     )
     conversion_tag_id = forms.ChoiceField(label=_("Pinterest tag"), required=False)
+    pin_source = forms.ChoiceField(
+        choices=[("existing", "existing"), ("upload", "upload"), ("id", "id")],
+        required=False,
+        initial="existing",
+        widget=forms.HiddenInput,
+    )
+    new_image = forms.FileField(label=_("Image"), required=False)
+    new_title = forms.CharField(label=_("Pin title"), required=False, max_length=100, widget=_input())
+    new_description = forms.CharField(
+        label=_("Description"),
+        required=False,
+        max_length=500,
+        widget=forms.Textarea(attrs={"class": "form-input-styled w-full", "rows": 3}),
+    )
+    new_link = forms.URLField(
+        label=_("Destination link"), required=False, max_length=2000, assume_scheme="https", widget=_input()
+    )
 
     age_min = forms.ChoiceField(label=_("Minimum age"), required=False)
     age_max = forms.ChoiceField(label=_("Maximum age"), required=False)
@@ -379,9 +418,13 @@ class PinterestCampaignCreateForm(forms.Form):
         start, end = data.get("start_time"), data.get("end_time")
         if end and end <= (start or timezone.now()):
             self.add_error("end_time", _("The end must be after the start."))
+        source = data.get("pin_source") or "existing"
         other = (data.get("other_pin_id") or "").strip()
         picked = data.get("pin_id") or ""
-        if other:
+        if source == "upload":
+            self._clean_new_image(data)
+            data["pin_id"] = ""
+        elif source == "id":
             if not other.isdigit():
                 self.add_error("other_pin_id", _("A pin ID has only digits."))
             data["pin_id"] = other
@@ -389,6 +432,8 @@ class PinterestCampaignCreateForm(forms.Form):
             self.add_error("pin_id", _("Choose the pin the ad promotes."))
 
         objective = data.get("objective")
+        if objective == "VIDEO_COMPLETION" and source == "upload":
+            self.add_error("objective", _("Video views promote a video pin; an uploaded image cannot run them."))
         pin = self.pins.get(data.get("pin_id") or "", {})
         if objective == "VIDEO_COMPLETION":
             if not pin.get("is_video"):
@@ -415,9 +460,39 @@ class PinterestCampaignCreateForm(forms.Form):
             self.add_error("frequency_cap", _("The frequency cap needs the Awareness objective and an end date."))
         return data
 
+    def _clean_new_image(self, data):
+        image = data.get("new_image")
+        if not image:
+            self.add_error("new_image", _("Choose the image of the ad."))
+            return
+        content_type = (getattr(image, "content_type", "") or "").lower()
+        if content_type == "image/jpg":
+            content_type = "image/jpeg"
+        if content_type not in pinterest_ads_types():
+            self.add_error("new_image", _("Use a JPG or PNG image."))
+            return
+        if image.size > pinterest_ads_max_bytes():
+            self.add_error("new_image", _("The image is over 20 MB."))
+            return
+        content = image.read()
+        if not _looks_like(content, content_type):
+            self.add_error("new_image", _("This file is not a JPG or PNG image."))
+            return
+        self.new_image_bytes = content
+        self.new_image_type = content_type
+
     def to_new_campaign(self):
         data = self.cleaned_data
         pin = self.pins.get(data["pin_id"], {})
+        new_pin = None
+        if data.get("pin_source") == "upload":
+            new_pin = pinterest.NewPin(
+                image=self.new_image_bytes,
+                content_type=self.new_image_type,
+                title=data.get("new_title") or "",
+                description=data.get("new_description") or "",
+                link=data.get("new_link") or "",
+            )
         strategy = data["bid_strategy"]
         return pinterest.NewCampaign(
             name=data["name"],
@@ -444,6 +519,7 @@ class PinterestCampaignCreateForm(forms.Form):
             bid_amount=data.get("bid_amount") if strategy != "AUTOMATIC_BID" else None,
             frequency_cap=data.get("frequency_cap"),
             conversion_tag_id=data.get("conversion_tag_id") or "",
+            new_pin=new_pin,
         )
 
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Connekt Flow\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 20:27+0000\n"
+"POT-Creation-Date: 2026-11-27 20:56+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Seven Click\n"
 "Language-Team: Português (Brasil)\n"
@@ -311,32 +311,32 @@ msgstr "Sem Pixel"
 msgid "No Page"
 msgstr "Sem Página"
 
-#: apps/ads/forms.py:50 apps/ads/forms.py:160 apps/ads/forms.py:254
-#: apps/ads/forms.py:451 templates/calendar/partials/event_form.html:67
+#: apps/ads/forms.py:50 apps/ads/forms.py:160 apps/ads/forms.py:276
+#: apps/ads/forms.py:527 templates/calendar/partials/event_form.html:67
 msgid "Campaign name"
 msgstr "Nome da campanha"
 
-#: apps/ads/forms.py:52 apps/ads/forms.py:255 apps/composer/forms.py:174
-#: templates/ads/pinterest/campaign_new.html:283
+#: apps/ads/forms.py:52 apps/ads/forms.py:277 apps/composer/forms.py:174
+#: templates/ads/pinterest/campaign_new.html:232
 #: templates/composer/partials/template_gallery.html:356
 msgid "Objective"
 msgstr "Objetivo"
 
-#: apps/ads/forms.py:58 apps/ads/forms.py:165 apps/ads/forms.py:298
-#: apps/ads/forms.py:453 templates/ads/partials/_campaign_edit_modal.html:69
+#: apps/ads/forms.py:58 apps/ads/forms.py:165 apps/ads/forms.py:337
+#: apps/ads/forms.py:529 templates/ads/partials/_campaign_edit_modal.html:69
 msgid "Daily budget"
 msgstr "Orçamento diário"
 
-#: apps/ads/forms.py:64 apps/ads/forms.py:318
+#: apps/ads/forms.py:64 apps/ads/forms.py:357
 msgid "Starts"
 msgstr "Começa em"
 
-#: apps/ads/forms.py:65 apps/ads/forms.py:172 apps/ads/forms.py:319
-#: apps/ads/forms.py:460
+#: apps/ads/forms.py:65 apps/ads/forms.py:172 apps/ads/forms.py:358
+#: apps/ads/forms.py:536
 msgid "Ends"
 msgstr "Termina em"
 
-#: apps/ads/forms.py:67 apps/ads/forms.py:271
+#: apps/ads/forms.py:67 apps/ads/forms.py:310
 msgid "Countries"
 msgstr "Países"
 
@@ -344,16 +344,16 @@ msgstr "Países"
 msgid "Two-letter codes separated by commas, e.g. BR, PT."
 msgstr "Códigos de duas letras separados por vírgula, ex.: BR, PT."
 
-#: apps/ads/forms.py:74 apps/ads/forms.py:266
+#: apps/ads/forms.py:74 apps/ads/forms.py:305
 msgid "Minimum age"
 msgstr "Idade mínima"
 
-#: apps/ads/forms.py:77 apps/ads/forms.py:267
+#: apps/ads/forms.py:77 apps/ads/forms.py:306
 msgid "Maximum age"
 msgstr "Idade máxima"
 
 #: apps/ads/forms.py:80 apps/contacts/forms.py:102
-#: apps/contacts/services.py:526 templates/ads/pinterest/campaign_new.html:144
+#: apps/contacts/services.py:526 templates/ads/pinterest/campaign_new.html:103
 msgid "Gender"
 msgstr "Gênero"
 
@@ -371,7 +371,7 @@ msgstr "Homens"
 msgid "Women"
 msgstr "Mulheres"
 
-#: apps/ads/forms.py:86 apps/composer/idea_icons.py:57
+#: apps/ads/forms.py:86 apps/ads/forms.py:293 apps/composer/idea_icons.py:57
 #: apps/media_library/models.py:93
 msgid "Image"
 msgstr "Imagem"
@@ -388,7 +388,7 @@ msgstr "Texto principal"
 msgid "Headline"
 msgstr "Título"
 
-#: apps/ads/forms.py:98
+#: apps/ads/forms.py:98 apps/ads/forms.py:302
 msgid "Destination link"
 msgstr "Link de destino"
 
@@ -396,7 +396,7 @@ msgstr "Link de destino"
 msgid "Button"
 msgstr "Botão"
 
-#: apps/ads/forms.py:113 apps/ads/forms.py:348
+#: apps/ads/forms.py:113 apps/ads/forms.py:387
 #, python-format
 msgid "In %(currency)s, the ad account's currency."
 msgstr "Em %(currency)s, a moeda da conta de anúncios."
@@ -409,7 +409,7 @@ msgstr "O link deve começar com https://."
 msgid "The maximum age must be at least the minimum age."
 msgstr "A idade máxima precisa ser maior ou igual à mínima."
 
-#: apps/ads/forms.py:132 apps/ads/forms.py:381
+#: apps/ads/forms.py:132 apps/ads/forms.py:420
 msgid "The end must be after the start."
 msgstr "O fim precisa ser depois do início."
 
@@ -420,7 +420,7 @@ msgstr ""
 "Campanhas de vendas e de cadastros precisam de um Pixel. Escolha um nas "
 "configurações da conexão."
 
-#: apps/ads/forms.py:177 apps/ads/forms.py:465
+#: apps/ads/forms.py:177 apps/ads/forms.py:541
 msgid "The end must be in the future."
 msgstr "O fim precisa ser no futuro."
 
@@ -440,55 +440,71 @@ msgstr "País"
 msgid "Currency"
 msgstr "Moeda"
 
-#: apps/ads/forms.py:256 apps/tasks/creative_formats.py:146
+#: apps/ads/forms.py:278 apps/tasks/creative_formats.py:146
+#: templates/ads/pinterest/campaign_new.html:231
 #: templates/ads/pinterest/partials/_campaign_body.html:37
 #: templates/ads/pinterest/partials/_campaign_body.html:40
 msgid "Pin"
 msgstr "Pin"
 
-#: apps/ads/forms.py:258
+#: apps/ads/forms.py:280
 msgid "Or the ID of another pin"
 msgstr "Ou o ID de outro pin"
 
-#: apps/ads/forms.py:261
+#: apps/ads/forms.py:283
 msgid "The number at the end of the pin's address on Pinterest."
 msgstr "O número no fim do endereço do pin no Pinterest."
 
-#: apps/ads/forms.py:264
+#: apps/ads/forms.py:286
 msgid "Pinterest tag"
 msgstr "Tag do Pinterest"
 
-#: apps/ads/forms.py:275
+#: apps/ads/forms.py:294
+msgid "Pin title"
+msgstr "Título do pin"
+
+#: apps/ads/forms.py:296 apps/composer/forms.py:253
+#: apps/social_accounts/models.py:597 apps/social_accounts/models.py:605
+#: templates/automations/flow_builder.html:1164
+#: templates/composer/create_landing.html:430
+#: templates/composer/create_landing.html:615
+#: templates/composer/partials/_pinterest_pin.html:21
+#: templates/composer/partials/template_gallery.html:138
+#: templates/tasks/partials/_task_fields.html:25
+msgid "Description"
+msgstr "Descrição"
+
+#: apps/ads/forms.py:314
 msgid "Choose at least one country."
 msgstr "Escolha pelo menos um país."
 
-#: apps/ads/forms.py:280
+#: apps/ads/forms.py:319
 msgid "Keywords"
 msgstr "Palavras-chave"
 
-#: apps/ads/forms.py:287
+#: apps/ads/forms.py:326
 msgid "Expand the audience automatically"
 msgstr "Expandir o público automaticamente"
 
-#: apps/ads/forms.py:290 templates/ads/pinterest/campaign_new.html:32
-#: templates/ads/pinterest/campaign_new.html:215
-#: templates/ads/pinterest/campaign_new.html:285
+#: apps/ads/forms.py:329 apps/ads/pinterest_views.py:285
+#: templates/ads/pinterest/campaign_new.html:174
+#: templates/ads/pinterest/campaign_new.html:234
 msgid "Where it appears"
 msgstr "Onde aparece"
 
-#: apps/ads/forms.py:305
+#: apps/ads/forms.py:344
 msgid "Bid"
 msgstr "Lance"
 
-#: apps/ads/forms.py:311
+#: apps/ads/forms.py:350
 msgid "Bid amount"
 msgstr "Valor do lance"
 
-#: apps/ads/forms.py:321
+#: apps/ads/forms.py:360
 msgid "Frequency cap"
 msgstr "Limite de frequência"
 
-#: apps/ads/forms.py:325
+#: apps/ads/forms.py:364
 msgid ""
 "At most this many times per person in 30 days. Awareness with an end date "
 "only."
@@ -496,71 +512,93 @@ msgstr ""
 "No máximo esta quantidade de vezes por pessoa em 30 dias. Só para "
 "Reconhecimento com data de fim."
 
-#: apps/ads/forms.py:333 apps/ads/forms.py:334
+#: apps/ads/forms.py:372 apps/ads/forms.py:373
 msgid "Any"
 msgstr "Qualquer"
 
-#: apps/ads/forms.py:351
+#: apps/ads/forms.py:390
 #, python-format
 msgid "In %(currency)s, per click or per 1,000 impressions."
 msgstr "Em %(currency)s, por clique ou por mil impressões."
 
-#: apps/ads/forms.py:374
+#: apps/ads/forms.py:413
 #, python-format
 msgid "At most %(count)s keywords."
 msgstr "No máximo %(count)s palavras-chave."
 
-#: apps/ads/forms.py:386
+#: apps/ads/forms.py:429
 msgid "A pin ID has only digits."
 msgstr "O ID de um pin tem só números."
 
-#: apps/ads/forms.py:389 apps/ads/pinterest.py:696
+#: apps/ads/forms.py:432 apps/ads/pinterest.py:737
 msgid "Choose the pin the ad promotes."
 msgstr "Escolha o pin que o anúncio promove."
 
-#: apps/ads/forms.py:395
+#: apps/ads/forms.py:436
+msgid "Video views promote a video pin; an uploaded image cannot run them."
+msgstr ""
+"Visualização de vídeo promove um pin de vídeo; uma imagem enviada não serve "
+"para esse objetivo."
+
+#: apps/ads/forms.py:440
 msgid "Video views promote a video pin. Choose one of your video pins."
 msgstr ""
 "Visualização de vídeo promove um pin de vídeo. Escolha um dos seus pins de "
 "vídeo."
 
-#: apps/ads/forms.py:397
+#: apps/ads/forms.py:442
 msgid "Video views only take the automatic bid."
 msgstr "Visualização de vídeo só aceita o lance automático."
 
-#: apps/ads/forms.py:399
+#: apps/ads/forms.py:444
 msgid "Sales optimise for a Pinterest tag. Choose the tag of your site."
 msgstr ""
 "Vendas se otimizam por uma tag do Pinterest. Escolha a tag do seu site."
 
-#: apps/ads/forms.py:401
+#: apps/ads/forms.py:446
 msgid "Say how much to bid."
 msgstr "Informe o valor do lance."
 
-#: apps/ads/forms.py:405
+#: apps/ads/forms.py:450
 msgid "The maximum age must not be below the minimum."
 msgstr "A idade máxima não pode ser menor que a mínima."
 
-#: apps/ads/forms.py:408
+#: apps/ads/forms.py:453
 msgid "States narrow a Brazilian audience: choose Brazil as the only country."
 msgstr ""
 "Os estados restringem um público brasileiro: deixe o Brasil como único país."
 
-#: apps/ads/forms.py:410
+#: apps/ads/forms.py:455
 msgid ""
 "Keywords only work in search. Show the ad in search too, or remove them."
 msgstr ""
 "Palavras-chave só funcionam na busca. Mostre o anúncio também na busca ou "
 "remova as palavras-chave."
 
-#: apps/ads/forms.py:413
+#: apps/ads/forms.py:458
 msgid "An audience cannot be both included and excluded."
 msgstr "Um público não pode ser incluído e excluído ao mesmo tempo."
 
-#: apps/ads/forms.py:415
+#: apps/ads/forms.py:460
 msgid "The frequency cap needs the Awareness objective and an end date."
 msgstr ""
 "O limite de frequência exige o objetivo Reconhecimento e uma data de fim."
+
+#: apps/ads/forms.py:466
+msgid "Choose the image of the ad."
+msgstr "Escolha a imagem do anúncio."
+
+#: apps/ads/forms.py:472
+msgid "Use a JPG or PNG image."
+msgstr "Use uma imagem JPG ou PNG."
+
+#: apps/ads/forms.py:475
+msgid "The image is over 20 MB."
+msgstr "A imagem tem mais de 20 MB."
+
+#: apps/ads/forms.py:479
+msgid "This file is not a JPG or PNG image."
+msgstr "Este arquivo não é uma imagem JPG ou PNG."
 
 #: apps/ads/models.py:37
 msgid "Choosing the ad account"
@@ -787,41 +825,49 @@ msgstr ""
 "Tente de novo em alguns minutos."
 
 #: apps/ads/pinterest.py:181
+msgid ""
+"The Pinterest Ads sign-in does not allow this yet. Connect Pinterest Ads "
+"again to grant it."
+msgstr ""
+"O login do Pinterest Ads ainda não permite isso. Conecte o Pinterest Ads de "
+"novo para liberar."
+
+#: apps/ads/pinterest.py:183
 #, python-format
 msgid "Pinterest refused the request: %(detail)s"
 msgstr "O Pinterest recusou o pedido: %(detail)s"
 
-#: apps/ads/pinterest.py:181 apps/ads/services.py:141
+#: apps/ads/pinterest.py:183 apps/ads/services.py:141
 msgid "no reason given"
 msgstr "nenhum motivo informado"
 
-#: apps/ads/pinterest.py:303
+#: apps/ads/pinterest.py:307
 msgid "Choose one of the ad accounts your Pinterest sign-in can manage."
 msgstr ""
 "Escolha uma das contas de anúncios que o seu login do Pinterest pode "
 "administrar."
 
-#: apps/ads/pinterest.py:320
+#: apps/ads/pinterest.py:324
 msgid "Choose one of the offered countries and currencies."
 msgstr "Escolha um dos países e uma das moedas oferecidos."
 
-#: apps/ads/pinterest.py:389
+#: apps/ads/pinterest.py:393
 msgid ""
 "Pinterest keeps the numbers of the last 90 days. Choose a period inside them."
 msgstr ""
 "O Pinterest guarda os números dos últimos 90 dias. Escolha um período dentro "
 "deles."
 
-#: apps/ads/pinterest.py:430 apps/ads/pinterest.py:433 apps/ads/services.py:541
+#: apps/ads/pinterest.py:434 apps/ads/pinterest.py:437 apps/ads/services.py:541
 #: apps/ads/services.py:544
 msgid "This campaign was not found in the connected ad account."
 msgstr "Esta campanha não foi encontrada na conta de anúncios conectada."
 
-#: apps/ads/pinterest.py:538 apps/ads/services.py:760
+#: apps/ads/pinterest.py:542 apps/ads/services.py:760
 msgid "Unknown campaign status."
 msgstr "Status de campanha desconhecido."
 
-#: apps/ads/pinterest.py:565
+#: apps/ads/pinterest.py:569
 #: templates/ads/pinterest/partials/_campaign_edit_modal.html:32
 msgid ""
 "This campaign has a lifetime budget. Change it in Pinterest Ads Manager."
@@ -829,43 +875,43 @@ msgstr ""
 "Esta campanha tem orçamento total. Altere-o no Gerenciador de Anúncios do "
 "Pinterest."
 
-#: apps/ads/pinterest.py:643
+#: apps/ads/pinterest.py:668
 msgid "Ad group"
 msgstr "Grupo de anúncios"
 
-#: apps/ads/pinterest.py:692
+#: apps/ads/pinterest.py:718
 msgid "Finish connecting Pinterest Ads before creating campaigns."
 msgstr "Termine de conectar o Pinterest Ads antes de criar campanhas."
 
-#: apps/ads/pinterest.py:694 apps/ads/services.py:889
+#: apps/ads/pinterest.py:720 apps/ads/services.py:889
 msgid "Choose one of the offered objectives."
 msgstr "Escolha um dos objetivos oferecidos."
 
-#: apps/ads/pinterest_views.py:114 apps/social_accounts/views.py:457
+#: apps/ads/pinterest_views.py:115 apps/social_accounts/views.py:457
 msgid "This platform is not available."
 msgstr "Esta plataforma não está disponível."
 
-#: apps/ads/pinterest_views.py:137
+#: apps/ads/pinterest_views.py:138
 msgid "The Pinterest sign-in was cancelled or refused."
 msgstr "O login do Pinterest foi cancelado ou recusado."
 
-#: apps/ads/pinterest_views.py:151
+#: apps/ads/pinterest_views.py:152
 msgid "Pinterest Ads connected. Choose the ad account to use."
 msgstr "Pinterest Ads conectado. Escolha a conta de anúncios que vai usar."
 
-#: apps/ads/pinterest_views.py:188
+#: apps/ads/pinterest_views.py:189
 msgid "Pinterest Ads settings saved."
 msgstr "Configurações do Pinterest Ads salvas."
 
-#: apps/ads/pinterest_views.py:205
+#: apps/ads/pinterest_views.py:206
 msgid "Give the ad account a name and choose its country and currency."
 msgstr "Dê um nome à conta de anúncios e escolha o país e a moeda dela."
 
-#: apps/ads/pinterest_views.py:212
+#: apps/ads/pinterest_views.py:213
 msgid "Ad account opened on Pinterest and chosen for this brand."
 msgstr "Conta de anúncios aberta no Pinterest e escolhida para esta marca."
 
-#: apps/ads/pinterest_views.py:226
+#: apps/ads/pinterest_views.py:227
 msgid ""
 "Pinterest Ads disconnected. Campaigns keep running in the ad account until "
 "you stop them there."
@@ -873,26 +919,51 @@ msgstr ""
 "Pinterest Ads desconectado. As campanhas continuam rodando na conta de "
 "anúncios até você pará-las lá."
 
-#: apps/ads/pinterest_views.py:257 apps/ads/views.py:345
+#: apps/ads/pinterest_views.py:260 apps/ads/views.py:345
 msgid "Campaign created, paused. Review it and activate it when you are ready."
 msgstr "Campanha criada, pausada. Revise e ative quando estiver tudo certo."
 
-#: apps/ads/pinterest_views.py:347
+#: apps/ads/pinterest_views.py:283 templates/ads/campaign_detail.html:3
+#: templates/ads/campaign_detail.html:7 templates/ads/campaign_new.html:22
+#: templates/ads/partials/_campaigns_table.html:15
+#: templates/ads/pinterest/campaign_detail.html:3
+#: templates/ads/pinterest/campaign_detail.html:7
+#: templates/analytics/_meta_ads_body.html:52
+msgid "Campaign"
+msgstr "Campanha"
+
+#: apps/ads/pinterest_views.py:284 templates/ads/campaign_new.html:49
+#: templates/ads/pinterest/campaign_new.html:95
+#: templates/ads/pinterest/campaign_new.html:233
+msgid "Audience"
+msgstr "Público"
+
+#: apps/ads/pinterest_views.py:286
+#: templates/ads/pinterest/campaign_new.html:199
+msgid "Budget and launch"
+msgstr "Orçamento e lançamento"
+
+#: apps/ads/pinterest_views.py:287
+msgctxt "wizard step"
+msgid "Review"
+msgstr "Revisão"
+
+#: apps/ads/pinterest_views.py:362
 msgid ""
 "Campaign activated. Pinterest reviews new ads before they start delivering."
 msgstr ""
 "Campanha ativada. O Pinterest revisa os anúncios novos antes de começar a "
 "veiculação."
 
-#: apps/ads/pinterest_views.py:348 apps/ads/views.py:457
+#: apps/ads/pinterest_views.py:363 apps/ads/views.py:457
 msgid "Campaign paused."
 msgstr "Campanha pausada."
 
-#: apps/ads/pinterest_views.py:349 apps/ads/views.py:458
+#: apps/ads/pinterest_views.py:364 apps/ads/views.py:458
 msgid "Campaign archived."
 msgstr "Campanha arquivada."
 
-#: apps/ads/pinterest_views.py:382 apps/calendar/views.py:2254
+#: apps/ads/pinterest_views.py:397 apps/calendar/views.py:2254
 msgid "Campaign updated."
 msgstr "Campanha atualizada."
 
@@ -1587,7 +1658,7 @@ msgstr "Carrossel"
 #: apps/tasks/creative_formats.py:119 apps/tasks/creative_formats.py:127
 #: apps/tasks/creative_formats.py:134 apps/tasks/creative_formats.py:156
 #: apps/tasks/creative_formats.py:179 apps/tasks/creative_formats.py:182
-#: templates/ads/pinterest/campaign_new.html:115
+#: templates/ads/pinterest/partials/_pin_source.html:51
 #: templates/radar/partials/_instagram_media_grid.html:15
 #: templates/support/partials/_tutorial_row.html:16
 #: templates/tasks/partials/_art_formats.html:72
@@ -4497,17 +4568,6 @@ msgstr "Ícone"
 #: templates/inbox/partials/_saved_reply_form.html:8
 msgid "Title"
 msgstr "Título"
-
-#: apps/composer/forms.py:253 apps/social_accounts/models.py:597
-#: apps/social_accounts/models.py:605
-#: templates/automations/flow_builder.html:1164
-#: templates/composer/create_landing.html:430
-#: templates/composer/create_landing.html:615
-#: templates/composer/partials/_pinterest_pin.html:21
-#: templates/composer/partials/template_gallery.html:138
-#: templates/tasks/partials/_task_fields.html:25
-msgid "Description"
-msgstr "Descrição"
 
 #: apps/composer/forms.py:254
 #: templates/composer/partials/template_gallery.html:169
@@ -8706,12 +8766,12 @@ msgstr ""
 #: apps/social_accounts/catalog.py:342
 msgid ""
 "Pinterest runs ads only from business accounts, and the ad account needs a "
-"payment method on Pinterest before a campaign can be activated. The ads "
-"promote pins already published."
+"payment method on Pinterest before a campaign can be activated. An ad "
+"promotes a published pin or a new image uploaded for it."
 msgstr ""
 "O Pinterest só veicula anúncios de contas comerciais, e a conta de anúncios "
 "precisa de uma forma de pagamento no Pinterest antes de ativar uma campanha. "
-"Os anúncios promovem pins já publicados."
+"O anúncio promove um pin publicado ou uma imagem nova enviada para ele."
 
 #: apps/social_accounts/error_messages.py:86
 msgid ""
@@ -10644,7 +10704,7 @@ msgstr "Tem certeza de que deseja sair?"
 
 #: templates/account/logout.html:28 templates/ads/campaign_new.html:85
 #: templates/ads/partials/_settings_body.html:138
-#: templates/ads/pinterest/campaign_new.html:268
+#: templates/ads/pinterest/campaign_new.html:242
 #: templates/ads/pinterest/partials/_settings_body.html:38
 #: templates/affiliates/_edit_affiliate_modal.html:20
 #: templates/affiliates/_new_affiliate_modal.html:58
@@ -11183,16 +11243,6 @@ msgstr ""
 "A conta é excluída e não consegue mais entrar. O registro de acessos mantém "
 "o e-mail dela."
 
-#: templates/ads/campaign_detail.html:3 templates/ads/campaign_detail.html:7
-#: templates/ads/campaign_new.html:22
-#: templates/ads/partials/_campaigns_table.html:15
-#: templates/ads/pinterest/campaign_detail.html:3
-#: templates/ads/pinterest/campaign_detail.html:7
-#: templates/ads/pinterest/campaign_new.html:32
-#: templates/analytics/_meta_ads_body.html:52
-msgid "Campaign"
-msgstr "Campanha"
-
 #: templates/ads/campaign_detail.html:21
 #: templates/ads/partials/_campaign_edit_modal.html:20
 #: templates/ads/pinterest/campaign_detail.html:22
@@ -11251,20 +11301,13 @@ msgid "Budget and schedule"
 msgstr "Orçamento e período"
 
 #: templates/ads/campaign_new.html:45
-#: templates/ads/pinterest/campaign_new.html:261
+#: templates/ads/pinterest/campaign_new.html:220
 msgid ""
 "Without a start, delivery begins as soon as the campaign is activated. "
 "Without an end, it runs until you pause it."
 msgstr ""
 "Sem início, a veiculação começa assim que a campanha for ativada. Sem fim, "
 "ela roda até você pausá-la."
-
-#: templates/ads/campaign_new.html:49
-#: templates/ads/pinterest/campaign_new.html:32
-#: templates/ads/pinterest/campaign_new.html:136
-#: templates/ads/pinterest/campaign_new.html:284
-msgid "Audience"
-msgstr "Público"
 
 #: templates/ads/campaign_new.html:72
 msgid "There are no images in the gallery yet."
@@ -11275,7 +11318,7 @@ msgid "Open the gallery"
 msgstr "Abrir a galeria"
 
 #: templates/ads/campaign_new.html:86
-#: templates/ads/pinterest/campaign_new.html:272
+#: templates/ads/pinterest/campaign_new.html:246
 msgid "Create paused campaign"
 msgstr "Criar campanha pausada"
 
@@ -11348,7 +11391,7 @@ msgid "Placements"
 msgstr "Posicionamentos"
 
 #: templates/ads/partials/_breakdowns.html:25
-#: templates/ads/pinterest/campaign_new.html:217
+#: templates/ads/pinterest/campaign_new.html:176
 msgid "Placement"
 msgstr "Posicionamento"
 
@@ -11801,44 +11844,48 @@ msgstr "anos"
 msgid "per day"
 msgstr "por dia"
 
+#: templates/ads/pinterest/campaign_new.html:24
+msgid "New image"
+msgstr "Nova imagem"
+
+#: templates/ads/pinterest/campaign_new.html:24
+#: templates/composer/partials/_pinterest_pin.html:19
+msgid "Pin ID"
+msgstr "ID do pin"
+
 #: templates/ads/pinterest/campaign_new.html:31
 #: templates/partials/_setup_steps.html:16
 msgid "Steps"
 msgstr "Etapas"
 
-#: templates/ads/pinterest/campaign_new.html:32
-#: templates/ads/pinterest/campaign_new.html:240
-msgid "Budget and launch"
-msgstr "Orçamento e lançamento"
-
-#: templates/ads/pinterest/campaign_new.html:58
+#: templates/ads/pinterest/campaign_new.html:49
 msgid "Campaign details"
 msgstr "Informações da campanha"
 
-#: templates/ads/pinterest/campaign_new.html:76
+#: templates/ads/pinterest/campaign_new.html:67
 msgid "Show your pin to as many people as possible."
 msgstr "Mostre seu pin para o máximo de pessoas."
 
-#: templates/ads/pinterest/campaign_new.html:77
+#: templates/ads/pinterest/campaign_new.html:68
 msgid "Bring clicks to your pin and its site."
 msgstr "Traga cliques para o seu pin e o site dele."
 
-#: templates/ads/pinterest/campaign_new.html:78
+#: templates/ads/pinterest/campaign_new.html:69
 msgid "Bring checkouts on your site, measured by the Pinterest tag."
 msgstr "Gere compras no seu site, medidas pela tag do Pinterest."
 
-#: templates/ads/pinterest/campaign_new.html:79
+#: templates/ads/pinterest/campaign_new.html:70
 msgid "Get your video pin watched to the end."
 msgstr "Faça seu pin de vídeo ser assistido até o fim."
 
-#: templates/ads/pinterest/campaign_new.html:89
+#: templates/ads/pinterest/campaign_new.html:80
 msgid ""
 "Pinterest optimises the ads for the checkouts this tag records on your site."
 msgstr ""
 "O Pinterest otimiza os anúncios pelas compras que esta tag registra no seu "
 "site."
 
-#: templates/ads/pinterest/campaign_new.html:91
+#: templates/ads/pinterest/campaign_new.html:82
 msgid ""
 "This ad account has no Pinterest tag yet. Install the tag on your site in "
 "Pinterest Ads Manager to run Sales campaigns."
@@ -11847,61 +11894,39 @@ msgstr ""
 "site pelo Gerenciador de Anúncios do Pinterest para criar campanhas de "
 "Vendas."
 
-#: templates/ads/pinterest/campaign_new.html:95
+#: templates/ads/pinterest/campaign_new.html:86
 msgid "Video views promote a video pin and always bid automatically."
 msgstr ""
 "Visualização de vídeo promove um pin de vídeo e sempre usa lance automático."
 
-#: templates/ads/pinterest/campaign_new.html:100
-msgid "Pin to promote"
-msgstr "Pin a promover"
-
-#: templates/ads/pinterest/campaign_new.html:101
-msgid ""
-"The ad shows the pin as it is on Pinterest, with its image, title and link."
-msgstr ""
-"O anúncio mostra o pin como ele está no Pinterest, com imagem, título e link."
-
-#: templates/ads/pinterest/campaign_new.html:117
-msgid "Open on Pinterest"
-msgstr "Abrir no Pinterest"
-
-#: templates/ads/pinterest/campaign_new.html:125
-msgid ""
-"No pin was published from Connekt Flow yet. Publish one, or paste the ID of "
-"a pin below."
-msgstr ""
-"Nenhum pin foi publicado pelo Connekt Flow ainda. Publique um ou cole o ID "
-"de um pin abaixo."
-
-#: templates/ads/pinterest/campaign_new.html:137
+#: templates/ads/pinterest/campaign_new.html:96
 msgid "Who sees the ad on Pinterest. Anything left empty means everyone."
 msgstr "Quem vê o anúncio no Pinterest. O que ficar em branco vale para todos."
 
-#: templates/ads/pinterest/campaign_new.html:152
+#: templates/ads/pinterest/campaign_new.html:111
 msgid "None ticked: everyone."
 msgstr "Nenhum marcado: todos."
 
-#: templates/ads/pinterest/campaign_new.html:155
+#: templates/ads/pinterest/campaign_new.html:114
 msgid "Languages"
 msgstr "Idiomas"
 
-#: templates/ads/pinterest/campaign_new.html:156
+#: templates/ads/pinterest/campaign_new.html:115
 msgid "Every language"
 msgstr "Todos os idiomas"
 
-#: templates/ads/pinterest/campaign_new.html:161
+#: templates/ads/pinterest/campaign_new.html:120
 msgid "Search a country…"
 msgstr "Buscar um país…"
 
-#: templates/ads/pinterest/campaign_new.html:166
+#: templates/ads/pinterest/campaign_new.html:125
 msgid "States"
 msgstr "Estados"
 
-#: templates/ads/pinterest/campaign_new.html:166
-#: templates/ads/pinterest/campaign_new.html:172
-#: templates/ads/pinterest/campaign_new.html:187
-#: templates/ads/pinterest/campaign_new.html:194
+#: templates/ads/pinterest/campaign_new.html:125
+#: templates/ads/pinterest/campaign_new.html:131
+#: templates/ads/pinterest/campaign_new.html:146
+#: templates/ads/pinterest/campaign_new.html:153
 #: templates/components/_form_field.html:11
 #: templates/composer/create_landing.html:442
 #: templates/composer/create_landing.html:628
@@ -11917,32 +11942,32 @@ msgstr "Estados"
 msgid "optional"
 msgstr "opcional"
 
-#: templates/ads/pinterest/campaign_new.html:167
+#: templates/ads/pinterest/campaign_new.html:126
 msgid "Every state"
 msgstr "Todos os estados"
 
-#: templates/ads/pinterest/campaign_new.html:172
+#: templates/ads/pinterest/campaign_new.html:131
 msgid "Interests"
 msgstr "Interesses"
 
-#: templates/ads/pinterest/campaign_new.html:174
+#: templates/ads/pinterest/campaign_new.html:133
 msgid "Search interests…"
 msgstr "Buscar interesses…"
 
-#: templates/ads/pinterest/campaign_new.html:176
+#: templates/ads/pinterest/campaign_new.html:135
 msgid "People who engage with these subjects on Pinterest."
 msgstr "Pessoas que interagem com esses assuntos no Pinterest."
 
-#: templates/ads/pinterest/campaign_new.html:178
+#: templates/ads/pinterest/campaign_new.html:137
 #, python-format
 msgid "Pinterest did not send its interests: %(reason)s"
 msgstr "O Pinterest não enviou os interesses: %(reason)s"
 
-#: templates/ads/pinterest/campaign_new.html:178
+#: templates/ads/pinterest/campaign_new.html:137
 msgid "Pinterest offers no interests for this ad account."
 msgstr "O Pinterest não oferece interesses para esta conta de anúncios."
 
-#: templates/ads/pinterest/campaign_new.html:183
+#: templates/ads/pinterest/campaign_new.html:142
 msgid ""
 "Separated by commas. They show the ad to people who search these words, so "
 "they need search in Where it appears."
@@ -11950,24 +11975,24 @@ msgstr ""
 "Separadas por vírgula. Elas mostram o anúncio para quem busca essas "
 "palavras, por isso precisam da busca em Onde aparece."
 
-#: templates/ads/pinterest/campaign_new.html:187
+#: templates/ads/pinterest/campaign_new.html:146
 msgid "Include audiences"
 msgstr "Incluir públicos"
 
-#: templates/ads/pinterest/campaign_new.html:189
+#: templates/ads/pinterest/campaign_new.html:148
 msgid "Your audiences…"
 msgstr "Seus públicos…"
 
-#: templates/ads/pinterest/campaign_new.html:194
+#: templates/ads/pinterest/campaign_new.html:153
 msgid "Exclude audiences"
 msgstr "Excluir públicos"
 
-#: templates/ads/pinterest/campaign_new.html:201
+#: templates/ads/pinterest/campaign_new.html:160
 #, python-format
 msgid "Pinterest did not send your audiences: %(reason)s"
 msgstr "O Pinterest não enviou seus públicos: %(reason)s"
 
-#: templates/ads/pinterest/campaign_new.html:201
+#: templates/ads/pinterest/campaign_new.html:160
 msgid ""
 "This ad account has no audiences yet: customer lists, site visitors and look-"
 "alikes are made in Pinterest Ads Manager."
@@ -11976,7 +12001,7 @@ msgstr ""
 "visitantes do site e públicos semelhantes são criados no Gerenciador de "
 "Anúncios do Pinterest."
 
-#: templates/ads/pinterest/campaign_new.html:208
+#: templates/ads/pinterest/campaign_new.html:167
 msgid ""
 "Pinterest Performance+: Pinterest also shows the ad to people likely to "
 "respond beyond what you chose."
@@ -11984,40 +12009,57 @@ msgstr ""
 "Pinterest Performance+: o Pinterest também mostra o anúncio para pessoas com "
 "chance de responder além do que você escolheu."
 
-#: templates/ads/pinterest/campaign_new.html:222
+#: templates/ads/pinterest/campaign_new.html:181
 msgid "Pinterest chooses where the ad does best (recommended)."
 msgstr "O Pinterest escolhe onde o anúncio rende mais (recomendado)."
 
-#: templates/ads/pinterest/campaign_new.html:222
+#: templates/ads/pinterest/campaign_new.html:181
 msgid "In the home feed and next to related pins."
 msgstr "No feed inicial e ao lado de pins relacionados."
 
-#: templates/ads/pinterest/campaign_new.html:222
+#: templates/ads/pinterest/campaign_new.html:181
 msgid "Among the results when people search."
 msgstr "Entre os resultados quando as pessoas buscam."
 
-#: templates/ads/pinterest/campaign_new.html:228
+#: templates/ads/pinterest/campaign_new.html:187
 msgid "Devices"
 msgstr "Dispositivos"
 
-#: templates/ads/pinterest/campaign_new.html:234
+#: templates/ads/pinterest/campaign_new.html:193
 msgid "None ticked: every device."
 msgstr "Nenhum marcado: todos os dispositivos."
 
-#: templates/ads/pinterest/campaign_new.html:248
+#: templates/ads/pinterest/campaign_new.html:207
 msgid "Pinterest bids to get the most out of the budget (recommended)."
 msgstr ""
 "O Pinterest define o lance para render o máximo do orçamento (recomendado)."
 
-#: templates/ads/pinterest/campaign_new.html:248
+#: templates/ads/pinterest/campaign_new.html:207
 msgid "Never pay more than this per click or per 1,000 impressions."
 msgstr "Nunca pague mais que isso por clique ou por mil impressões."
 
-#: templates/ads/pinterest/campaign_new.html:248
+#: templates/ads/pinterest/campaign_new.html:207
 msgid "Keep the average cost close to this value."
 msgstr "Mantém o custo médio perto deste valor."
 
-#: templates/ads/pinterest/campaign_new.html:270
+#: templates/ads/pinterest/campaign_new.html:228
+msgid "Campaign summary"
+msgstr "Resumo da campanha"
+
+#: templates/ads/pinterest/campaign_new.html:228
+msgid ""
+"Check everything before creating. The campaign is created paused: nothing is "
+"spent until you activate it."
+msgstr ""
+"Confira tudo antes de criar. A campanha é criada pausada: nada é gasto até "
+"você ativá-la."
+
+#: templates/ads/pinterest/campaign_new.html:237
+#: templates/components/_period_picker.html:14 templates/funnels/board.html:31
+msgid "Period"
+msgstr "Período"
+
+#: templates/ads/pinterest/campaign_new.html:244
 #: templates/automations/flow_new.html:158
 #: templates/calendar/partials/publish_calendar_shell.html:74
 #: templates/composer/partials/_tag_groups.html:203
@@ -12033,38 +12075,10 @@ msgstr "Mantém o custo médio perto deste valor."
 msgid "Back"
 msgstr "Voltar"
 
-#: templates/ads/pinterest/campaign_new.html:271
+#: templates/ads/pinterest/campaign_new.html:245
 msgctxt "wizard step"
 msgid "Next"
 msgstr "Avançar"
-
-#: templates/ads/pinterest/campaign_new.html:281
-msgid "Campaign summary"
-msgstr "Resumo da campanha"
-
-#: templates/ads/pinterest/campaign_new.html:288
-#: templates/components/_period_picker.html:14 templates/funnels/board.html:31
-msgid "Period"
-msgstr "Período"
-
-#: templates/ads/pinterest/campaign_new.html:292
-msgid "Campaign tips"
-msgstr "Dicas da campanha"
-
-#: templates/ads/pinterest/campaign_new.html:294
-msgid "Use vertical, high-quality images (2:3)."
-msgstr "Use imagens verticais e de boa qualidade (2:3)."
-
-#: templates/ads/pinterest/campaign_new.html:295
-msgid "Choose interests and keywords that match the pin."
-msgstr "Escolha interesses e palavras-chave que combinem com o pin."
-
-#: templates/ads/pinterest/campaign_new.html:296
-msgid ""
-"Set a budget that fits the objective; Pinterest needs a few days to learn."
-msgstr ""
-"Defina um orçamento compatível com o objetivo; o Pinterest precisa de alguns "
-"dias para aprender."
 
 #: templates/ads/pinterest/index.html:8
 msgid "Campaigns of your Pinterest ad account, their status and their results."
@@ -12221,6 +12235,86 @@ msgstr "Abrir no Gerenciador de Anúncios do Pinterest"
 #: templates/ads/pinterest/partials/_overview.html:15
 msgid "On the ad groups"
 msgstr "Nos grupos"
+
+#: templates/ads/pinterest/partials/_pin_source.html:17
+msgid "Pin to promote"
+msgstr "Pin a promover"
+
+#: templates/ads/pinterest/partials/_pin_source.html:18
+msgid ""
+"The ad shows the pin as it is on Pinterest, with its image, title and link."
+msgstr ""
+"O anúncio mostra o pin como ele está no Pinterest, com imagem, título e link."
+
+#: templates/ads/pinterest/partials/_pin_source.html:24
+msgid "Published pins"
+msgstr "Pins publicados"
+
+#: templates/ads/pinterest/partials/_pin_source.html:28
+msgid "Upload a new image"
+msgstr "Enviar nova imagem"
+
+#: templates/ads/pinterest/partials/_pin_source.html:37
+msgid "Search your pins…"
+msgstr "Buscar nos seus pins…"
+
+#: templates/ads/pinterest/partials/_pin_source.html:58
+msgid "No pin matches the search."
+msgstr "Nenhum pin corresponde à busca."
+
+#: templates/ads/pinterest/partials/_pin_source.html:60
+msgid "Show more"
+msgstr "Mostrar mais"
+
+#: templates/ads/pinterest/partials/_pin_source.html:63
+msgid ""
+"No pin was published from Connekt Flow yet. Upload a new image, or use the "
+"ID of a pin."
+msgstr ""
+"Nenhum pin foi publicado pelo Connekt Flow ainda. Envie uma nova imagem ou "
+"use o ID de um pin."
+
+#: templates/ads/pinterest/partials/_pin_source.html:66
+msgid "Use the ID of a pin made elsewhere"
+msgstr "Usar o ID de um pin feito fora do Connekt Flow"
+
+#: templates/ads/pinterest/partials/_pin_source.html:72
+msgid "Back to my pins"
+msgstr "Voltar para os meus pins"
+
+#: templates/ads/pinterest/partials/_pin_source.html:87
+msgid "Drag an image here or click to choose"
+msgstr "Arraste uma imagem aqui ou clique para escolher"
+
+#: templates/ads/pinterest/partials/_pin_source.html:88
+msgid "JPG or PNG, up to 20 MB. Vertical 2:3 images work best."
+msgstr "JPG ou PNG, até 20 MB. Imagens verticais 2:3 funcionam melhor."
+
+#: templates/ads/pinterest/partials/_pin_source.html:94
+msgid ""
+"Choose the image again: the browser does not keep it after the page reloads."
+msgstr ""
+"Escolha a imagem de novo: o navegador não a guarda quando a página recarrega."
+
+#: templates/ads/pinterest/partials/_pin_source.html:98
+msgid ""
+"The pin is made only for the ad: it does not appear on your profile or "
+"boards."
+msgstr ""
+"O pin é criado só para o anúncio: ele não aparece no seu perfil nem nas suas "
+"pastas."
+
+#: templates/ads/pinterest/partials/_pin_source.html:101
+msgid ""
+"To upload images, sign in to Pinterest Ads again so Connekt Flow may create "
+"the ad's pin."
+msgstr ""
+"Para enviar imagens, conecte o Pinterest Ads de novo, liberando o Connekt "
+"Flow a criar o pin do anúncio."
+
+#: templates/ads/pinterest/partials/_pin_source.html:102
+msgid "Reconnect Pinterest Ads"
+msgstr "Reconectar o Pinterest Ads"
 
 #: templates/ads/pinterest/partials/_settings_body.html:19
 msgid "Campaigns, numbers and new campaigns all use this account."
@@ -21532,10 +21626,6 @@ msgstr "Nova pasta"
 msgid "Pinterest has this pin"
 msgstr "O Pinterest tem este pin"
 
-#: templates/composer/partials/_pinterest_pin.html:19
-msgid "Pin ID"
-msgstr "ID do pin"
-
 #: templates/composer/partials/_pinterest_pin.html:22
 msgctxt "pinterest"
 msgid "Board"
@@ -30740,6 +30830,24 @@ msgstr "A pessoa entra na organização como membro, com acesso só a esta marca
 #: templates/workspaces/team.html:159
 msgid "Send invitation"
 msgstr "Enviar convite"
+
+#~ msgid "Open on Pinterest"
+#~ msgstr "Abrir no Pinterest"
+
+#~ msgid "Campaign tips"
+#~ msgstr "Dicas da campanha"
+
+#~ msgid "Use vertical, high-quality images (2:3)."
+#~ msgstr "Use imagens verticais e de boa qualidade (2:3)."
+
+#~ msgid "Choose interests and keywords that match the pin."
+#~ msgstr "Escolha interesses e palavras-chave que combinem com o pin."
+
+#~ msgid ""
+#~ "Set a budget that fits the objective; Pinterest needs a few days to learn."
+#~ msgstr ""
+#~ "Defina um orçamento compatível com o objetivo; o Pinterest precisa de "
+#~ "alguns dias para aprender."
 
 #~ msgid "devices"
 #~ msgstr "dispositivos"
